@@ -532,11 +532,12 @@ void CGDebugInfo::CreateCompileUnit() {
   // file to determine the real absolute path for the file.
   std::string MainFileDir;
   if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
-    MainFileDir = MainFile->getDir()->getName();
+    MainFileDir = std::string(MainFile->getDir()->getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
       llvm::SmallString<1024> MainFileDirSS(MainFileDir);
       llvm::sys::path::append(MainFileDirSS, MainFileName);
-      MainFileName = llvm::sys::path::remove_leading_dotslash(MainFileDirSS);
+      MainFileName =
+          std::string(llvm::sys::path::remove_leading_dotslash(MainFileDirSS));
     }
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for
@@ -813,6 +814,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   // Bit size and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(BT);
   return DBuilder.createBasicType(BTName, Size, Encoding);
+}
+
+llvm::DIType *CGDebugInfo::CreateType(const AutoType *Ty) {
+  return DBuilder.createUnspecifiedType("auto");
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
@@ -1462,16 +1467,18 @@ void CGDebugInfo::CollectRecordFields(
 
 llvm::DISubroutineType *
 CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
-                                   llvm::DIFile *Unit) {
+                                   llvm::DIFile *Unit, bool decl) {
   const FunctionProtoType *Func = Method->getType()->getAs<FunctionProtoType>();
   if (Method->isStatic())
     return cast_or_null<llvm::DISubroutineType>(
         getOrCreateType(QualType(Func, 0), Unit));
-  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit);
+  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit, decl);
 }
 
-llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
-    QualType ThisPtr, const FunctionProtoType *Func, llvm::DIFile *Unit) {
+llvm::DISubroutineType *
+CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
+                                           const FunctionProtoType *Func,
+                                           llvm::DIFile *Unit, bool decl) {
   // Add "this" pointer.
   llvm::DITypeRefArray Args(
       cast<llvm::DISubroutineType>(getOrCreateType(QualType(Func, 0), Unit))
@@ -1479,9 +1486,12 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   assert(Args.size() && "Invalid number of arguments!");
 
   SmallVector<llvm::Metadata *, 16> Elts;
-
   // First element is always return type. For 'void' functions it is NULL.
-  Elts.push_back(Args[0]);
+  QualType temp = Func->getReturnType();
+  if (temp->getTypeClass() == Type::Auto && decl)
+    Elts.push_back(CreateType(cast<AutoType>(temp)));
+  else
+    Elts.push_back(Args[0]);
 
   // "this" pointer is always first argument.
   const CXXRecordDecl *RD = ThisPtr->getPointeeCXXRecordDecl();
@@ -1540,7 +1550,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
 
   StringRef MethodName = getFunctionName(Method);
-  llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
+  llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit, true);
 
   // Since a single ctor/dtor corresponds to multiple functions, it doesn't
   // make sense to give a single ctor/dtor a linkage name.
@@ -2776,7 +2786,7 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
   return DBuilder.createMemberPointerType(
       getOrCreateInstanceMethodType(
           CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),
-          FPT, U),
+          FPT, U, false),
       ClassType, Size, /*Align=*/0, Flags);
 }
 
@@ -3551,7 +3561,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray(None));
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
-    return getOrCreateMethodType(Method, F);
+    return getOrCreateMethodType(Method, F, false);
 
   const auto *FTy = FnType->getAs<FunctionType>();
   CallingConv CC = FTy ? FTy->getCallConv() : CallingConv::CC_C;

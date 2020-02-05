@@ -69,11 +69,19 @@ ProgramHeaders:
     Sections:
       - Section: .dynsym
 
-## Case 2: Check the two-letter alias --dt is equivalent to the --dyn-symbols
+## Case 2: Check the output for aliases.
+## a) Check the two-letter alias --dt is equivalent to the --dyn-symbols
 ## full flag name.
 # RUN: llvm-readobj --dt %t1.so > %t.readobj-dt-alias
 # RUN: llvm-readobj --dyn-symbols %t1.so > %t.readobj-dt-no-alias
 # RUN: cmp %t.readobj-dt-alias %t.readobj-dt-no-alias
+## b) Check --dyn-syms equals --dyn-symbols, --dt for llvm-readobj.
+# RUN: llvm-readobj --dyn-syms %t1.so > %t.readobj-dyn-syms
+# RUN: cmp %t.readobj-dt-alias %t.readobj-dyn-syms
+## c) Check --dyn-syms equals --dyn-symbols for llvm-readelf.
+# RUN: llvm-readelf --dyn-syms %t1.so > %t.readelf-dyn-syms
+# RUN: llvm-readelf --dyn-symbols %t1.so > %t.readelf-dyn-symbols
+# RUN: cmp %t.readelf-dyn-symbols %t.readelf-dyn-syms
 
 ## Case 3: Check that we are able to dump the dynamic symbol table even when we have no program headers.
 ## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
@@ -282,3 +290,114 @@ DynamicSymbols:
   - Name: foo
   - Name: bar
   - Name: zed
+
+## Case 8: Check what we print when:
+## a) The dynamic symbol table does not exist.
+# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: llvm-readobj --dyn-symbols %t7 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
+# RUN: llvm-readelf --dyn-symbols %t7 | count 0
+## b) The dynamic symbol table has a size of 0.
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: llvm-readobj --dyn-symbols %t8 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
+# RUN: llvm-readelf --dyn-symbols %t8 | count 0
+## c) The dynamic symbol table only contains the null symbol.
+# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: llvm-readobj --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-LLVM
+# RUN: llvm-readelf --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-GNU
+
+# NO-DYNSYM-LLVM:      DynamicSymbols [
+# NO-DYNSYM-LLVM-NEXT: ]
+
+# DYNSYM-EMPTY-LLVM:      DynamicSymbols [
+# DYNSYM-EMPTY-LLVM-NEXT:  Symbol {
+# DYNSYM-EMPTY-LLVM-NEXT:  Name: (0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Value: 0x0
+# DYNSYM-EMPTY-LLVM-NEXT:  Size: 0
+# DYNSYM-EMPTY-LLVM-NEXT:  Binding: Local (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Type: None (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Other: 0
+# DYNSYM-EMPTY-LLVM-NEXT:  Section: Undefined (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  }
+# DYNSYM-EMPTY-LLVM-NEXT: ]
+
+# DYNSYM-EMPTY-GNU:      Symbol table '.dynsym' contains 1 entries:
+# DYNSYM-EMPTY-GNU-NEXT:   Num:    Value  Size Type    Bind   Vis       Ndx Name
+# DYNSYM-EMPTY-GNU-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+DynamicSymbols: []
+
+## Case 9: Check what we print when:
+## a) The size of the dynamic symbol table is not a multiple of its entry size.
+# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: llvm-readobj --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
+# RUN: llvm-readelf --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
+## b) The same, but the DT_SYMTAB tag is present. In this case the dynamic tag has priority over the
+##    information about a location and an entity size of the dynamic symbol table from the section header.
+##    The code uses sizeof(Elf_Sym) for an entity size, so it can't be incorrect and
+##    the message printed is a bit shorter.
+# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: llvm-readobj --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
+# RUN: llvm-readelf --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
+
+# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
+
+# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': section with index 2 has invalid size (0x1){{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0x1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x100
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x100
+    Size:    0x1
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x100
+    Sections:
+      - Section: .dynsym

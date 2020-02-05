@@ -174,7 +174,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   if (!D.SysRoot.empty()) {
     SmallString<128> P(D.SysRoot);
     llvm::sys::path::append(P, "lib");
-    getFilePaths().push_back(P.str());
+    getFilePaths().push_back(std::string(P.str()));
   }
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
@@ -183,7 +183,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
       if (auto CXXStdlibPath = getCXXStdlibPath()) {
         SmallString<128> P(*CXXStdlibPath);
         llvm::sys::path::append(P, M.gccSuffix());
-        FP.push_back(P.str());
+        FP.push_back(std::string(P.str()));
       }
     }
     return FP;
@@ -340,6 +340,7 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
+  Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   return Res;

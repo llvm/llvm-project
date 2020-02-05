@@ -1,6 +1,6 @@
 //===- ConvertLaunchFuncToCudaCalls.cpp - MLIR CUDA lowering passes -------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -307,7 +307,7 @@ Value GpuLaunchFuncToCudaCallsPass::generateKernelNameConstant(
   std::vector<char> kernelName(name.begin(), name.end());
   kernelName.push_back('\0');
 
-  std::string globalName = llvm::formatv("{0}_kernel_name", name);
+  std::string globalName = std::string(llvm::formatv("{0}_kernel_name", name));
   return LLVM::createGlobalString(
       loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
       LLVM::Linkage::Internal, llvmDialect);

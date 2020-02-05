@@ -301,7 +301,7 @@ void VFABI::setVectorVariantNames(
 #ifndef NDEBUG
   for (const std::string &VariantMapping : VariantMappings) {
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping);
+    Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
     assert(VI.hasValue() && "Cannot add an invalid VFABI name.");
     assert(M->getNamedValue(VI.getValue().VectorName) &&
            "Cannot add variant to attribute: "

@@ -171,7 +171,7 @@ private:
   class LLDBPreprocessorCallbacks;
   LLDBPreprocessorCallbacks *m_pp_callbacks; ///< Called when the preprocessor
                                              ///encounters module imports
-  std::unique_ptr<ClangASTContext> m_ast_context;
+  std::unique_ptr<TypeSystemClang> m_ast_context;
 
   std::vector<std::string> m_include_directories;
   /// File name used for the user expression.

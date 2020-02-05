@@ -73,17 +73,19 @@
 # CHECK: (lldb) breakpoint list -v
 # CHECK-NEXT: Current breakpoints:
 # CHECK-NEXT: 1: name = 'multiplyByThree'
-# CHECK-NEXT:  1.1: 
+# CHECK-NEXT:  1.1:
 # CHECK-NEXT:  module = {{.*}}/minidebuginfo-set-and-hit-breakpoint.test.tmp.binary
 # CHECK-NEXT:  symbol = multiplyByThree
 # CHECK-NEXT:  address = 0x{{.*}}
 # CHECK-NEXT:  resolved = true
-# CHECK-NEXT:  hit count = 1 
+# CHECK-NEXT:  hardware = false
+# CHECK-NEXT:  hit count = 1
 
 # CHECK: 2: name = 'multiplyByFour'
-# CHECK-NEXT:  2.1: 
+# CHECK-NEXT:  2.1:
 # CHECK-NEXT:  module = {{.*}}/minidebuginfo-set-and-hit-breakpoint.test.tmp.binary
 # CHECK-NEXT:  symbol = multiplyByFour
 # CHECK-NEXT:  address = 0x{{.*}}
 # CHECK-NEXT:  resolved = true
-# CHECK-NEXT:  hit count = 1 
+# CHECK-NEXT:  hardware = false
+# CHECK-NEXT:  hit count = 1

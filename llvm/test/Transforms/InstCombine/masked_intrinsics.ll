@@ -258,7 +258,7 @@ define void @scatter_zeromask(<2 x double*> %ptrs, <2 x double> %val)  {
 ; CHECK-LABEL: @scatter_zeromask(
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32 6, <2 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32 8, <2 x i1> zeroinitializer)
   ret void
 }
 

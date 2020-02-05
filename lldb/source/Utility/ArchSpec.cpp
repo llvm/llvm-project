@@ -1,4 +1,4 @@
-//===-- ArchSpec.cpp --------------------------------------------*- C++ -*-===//
+//===-- ArchSpec.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -217,6 +217,8 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::UnknownArch,
      ArchSpec::eCore_uknownMach64, "unknown-mach-64"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arc, ArchSpec::eCore_arc, "arc"},
+
+    {eByteOrderLittle, 2, 2, 4, llvm::Triple::avr, ArchSpec::eCore_avr, "avr"},
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
@@ -448,6 +450,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // HEXAGON
     {ArchSpec::eCore_arc, llvm::ELF::EM_ARC_COMPACT2, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARC
+    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu}, // AVR
 };
 
 static const ArchDefinition g_elf_arch_def = {

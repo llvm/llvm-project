@@ -330,10 +330,10 @@ TEST_F(GISelMITest, BuildMerge) {
     return;
 
   LLT S32 = LLT::scalar(32);
-  Register RegC0 = B.buildConstant(S32, 0)->getOperand(0).getReg();
-  Register RegC1 = B.buildConstant(S32, 1)->getOperand(0).getReg();
-  Register RegC2 = B.buildConstant(S32, 2)->getOperand(0).getReg();
-  Register RegC3 = B.buildConstant(S32, 3)->getOperand(0).getReg();
+  Register RegC0 = B.buildConstant(S32, 0).getReg(0);
+  Register RegC1 = B.buildConstant(S32, 1).getReg(0);
+  Register RegC2 = B.buildConstant(S32, 2).getReg(0);
+  Register RegC3 = B.buildConstant(S32, 3).getReg(0);
 
   // Merging plain constants as one big blob of bit should produce a
   // G_MERGE_VALUES.
@@ -341,9 +341,9 @@ TEST_F(GISelMITest, BuildMerge) {
   // Merging plain constants to a vector should produce a G_BUILD_VECTOR.
   LLT V2x32 = LLT::vector(2, 32);
   Register RegC0C1 =
-      B.buildMerge(V2x32, {RegC0, RegC1})->getOperand(0).getReg();
+      B.buildMerge(V2x32, {RegC0, RegC1}).getReg(0);
   Register RegC2C3 =
-      B.buildMerge(V2x32, {RegC2, RegC3})->getOperand(0).getReg();
+      B.buildMerge(V2x32, {RegC2, RegC3}).getReg(0);
   // Merging vector constants to a vector should produce a G_CONCAT_VECTORS.
   B.buildMerge(LLT::vector(4, 32), {RegC0C1, RegC2C3});
   // Merging vector constants to a plain type is not allowed.

@@ -181,7 +181,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
       llvm::raw_string_ostream OS(Name);
       Mang.getNameWithPrefix(OS, GV, false);
     } else {
-      Name = C->getName();
+      Name = std::string(C->getName());
     }
 
     storage::Comdat Comdat;

@@ -1,4 +1,4 @@
-//===-- Args.cpp ------------------------------------------------*- C++ -*-===//
+//===-- Args.cpp ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -635,7 +635,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
   // If the string doesn't start with a dash, we just have no options and just
   // a raw part.
   if (!arg_string.startswith("-")) {
-    m_suffix = original_args;
+    m_suffix = std::string(original_args);
     return;
   }
 
@@ -655,7 +655,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
       // The remaining line is the raw suffix, and the line we parsed so far
       // needs to be interpreted as arguments.
       m_has_args = true;
-      m_suffix = arg_string;
+      m_suffix = std::string(arg_string);
       found_suffix = true;
 
       // The length of the prefix after parsing.
@@ -681,6 +681,6 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
   // If we didn't find a suffix delimiter, the whole string is the raw suffix.
   if (!found_suffix) {
     found_suffix = true;
-    m_suffix = original_args;
+    m_suffix = std::string(original_args);
   }
 }

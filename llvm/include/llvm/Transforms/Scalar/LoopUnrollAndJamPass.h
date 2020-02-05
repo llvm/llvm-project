@@ -9,13 +9,9 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPUNROLLANDJAMPASS_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPUNROLLANDJAMPASS_H
 
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-
-class Function;
 
 /// A simple loop rotation transformation.
 class LoopUnrollAndJamPass : public PassInfoMixin<LoopUnrollAndJamPass> {

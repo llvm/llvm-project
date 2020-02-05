@@ -96,7 +96,7 @@ void IRSpeculationLayer::emit(MaterializationResponsibility R,
               M, LoadValueTy, false, GlobalValue::LinkageTypes::InternalLinkage,
               ConstantInt::get(LoadValueTy, 0),
               "__orc_speculate.guard.for." + Fn.getName());
-          SpeculatorGuard->setAlignment(Align::None());
+          SpeculatorGuard->setAlignment(Align(1));
           SpeculatorGuard->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
 
           BasicBlock &ProgramEntry = Fn.getEntryBlock();

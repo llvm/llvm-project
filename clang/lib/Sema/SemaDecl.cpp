@@ -1153,6 +1153,10 @@ Corrected:
     return ParsedType::make(T);
   }
 
+  if (isa<ConceptDecl>(FirstDecl))
+    return NameClassification::Concept(
+        TemplateName(cast<TemplateDecl>(FirstDecl)));
+
   // We can have a type template here if we're classifying a template argument.
   if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl) &&
       !isa<VarTemplateDecl>(FirstDecl))
@@ -2737,21 +2741,19 @@ static void diagnoseMissingConstinit(Sema &S, const VarDecl *InitDecl,
   // heroics.
   std::string SuitableSpelling;
   if (S.getLangOpts().CPlusPlus2a)
-    SuitableSpelling =
-        S.PP.getLastMacroWithSpelling(InsertLoc, {tok::kw_constinit});
+    SuitableSpelling = std::string(
+        S.PP.getLastMacroWithSpelling(InsertLoc, {tok::kw_constinit}));
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)
-    SuitableSpelling = S.PP.getLastMacroWithSpelling(
-        InsertLoc,
-        {tok::l_square, tok::l_square, S.PP.getIdentifierInfo("clang"),
-         tok::coloncolon,
-         S.PP.getIdentifierInfo("require_constant_initialization"),
-         tok::r_square, tok::r_square});
+    SuitableSpelling = std::string(S.PP.getLastMacroWithSpelling(
+        InsertLoc, {tok::l_square, tok::l_square,
+                    S.PP.getIdentifierInfo("clang"), tok::coloncolon,
+                    S.PP.getIdentifierInfo("require_constant_initialization"),
+                    tok::r_square, tok::r_square}));
   if (SuitableSpelling.empty())
-    SuitableSpelling = S.PP.getLastMacroWithSpelling(
-        InsertLoc,
-        {tok::kw___attribute, tok::l_paren, tok::r_paren,
-         S.PP.getIdentifierInfo("require_constant_initialization"),
-         tok::r_paren, tok::r_paren});
+    SuitableSpelling = std::string(S.PP.getLastMacroWithSpelling(
+        InsertLoc, {tok::kw___attribute, tok::l_paren, tok::r_paren,
+                    S.PP.getIdentifierInfo("require_constant_initialization"),
+                    tok::r_paren, tok::r_paren}));
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus2a)
     SuitableSpelling = "constinit";
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)
@@ -8656,11 +8658,21 @@ static Scope *getTagInjectionScope(Scope *S, const LangOptions &LangOpts) {
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
-                              MultiTemplateParamsArg TemplateParamLists,
+                              MultiTemplateParamsArg TemplateParamListsRef,
                               bool &AddToScope) {
   QualType R = TInfo->getType();
 
   assert(R->isFunctionType());
+  SmallVector<TemplateParameterList *, 4> TemplateParamLists;
+  for (TemplateParameterList *TPL : TemplateParamListsRef)
+    TemplateParamLists.push_back(TPL);
+  if (TemplateParameterList *Invented = D.getInventedTemplateParameterList()) {
+    if (!TemplateParamLists.empty() &&
+        Invented->getDepth() == TemplateParamLists.back()->getDepth())
+      TemplateParamLists.back() = Invented;
+    else
+      TemplateParamLists.push_back(Invented);
+  }
 
   // TODO: consider using NameInfo for diagnostic.
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
@@ -8740,15 +8752,16 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Match up the template parameter lists with the scope specifier, then
     // determine whether we have a template or a template specialization.
     bool Invalid = false;
-    if (TemplateParameterList *TemplateParams =
-            MatchTemplateParametersToScopeSpecifier(
-                D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
-                D.getCXXScopeSpec(),
-                D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
-                    ? D.getName().TemplateId
-                    : nullptr,
-                TemplateParamLists, isFriend, isMemberSpecialization,
-                Invalid)) {
+    TemplateParameterList *TemplateParams =
+        MatchTemplateParametersToScopeSpecifier(
+            D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
+            D.getCXXScopeSpec(),
+            D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+                ? D.getName().TemplateId
+                : nullptr,
+            TemplateParamLists, isFriend, isMemberSpecialization,
+            Invalid);
+    if (TemplateParams) {
       if (TemplateParams->size() > 0) {
         // This is a function template
 
@@ -8781,7 +8794,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         // For source fidelity, store the other template param lists.
         if (TemplateParamLists.size() > 1) {
           NewFD->setTemplateParameterListsInfo(Context,
-                                               TemplateParamLists.drop_back(1));
+              ArrayRef<TemplateParameterList *>(TemplateParamLists)
+                  .drop_back(1));
         }
       } else {
         // This is a function template specialization.

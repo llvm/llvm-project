@@ -637,7 +637,7 @@ public:
   }
 
   static const ASTTemplateArgumentListInfo *
-  Create(ASTContext &C, const TemplateArgumentListInfo &List);
+  Create(const ASTContext &C, const TemplateArgumentListInfo &List);
 };
 
 /// Represents an explicit template argument list in C++, e.g.,
@@ -698,6 +698,11 @@ inline const TemplateArgument &
 
 inline const TemplateArgument &
     DependentTemplateSpecializationType::getArg(unsigned Idx) const {
+  assert(Idx < getNumArgs() && "Template argument out of range");
+  return getArgs()[Idx];
+}
+
+inline const TemplateArgument &AutoType::getArg(unsigned Idx) const {
   assert(Idx < getNumArgs() && "Template argument out of range");
   return getArgs()[Idx];
 }

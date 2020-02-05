@@ -421,6 +421,7 @@ enum Kind {
   kw_sizeM1,
   kw_bitMask,
   kw_inlineBits,
+  kw_vcall_visibility,
   kw_wpdResolutions,
   kw_wpdRes,
   kw_indir,

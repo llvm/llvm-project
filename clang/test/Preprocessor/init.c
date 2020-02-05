@@ -187,6 +187,7 @@
 //
 //
 // RUN: %clang_cc1 -x objective-c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix OBJC %s
+// RUN: %clang_cc1 -x objective-c++ -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix OBJC %s
 //
 // OBJC:#define OBJC_NEW_PROPERTIES 1
 // OBJC:#define __NEXT_RUNTIME__ 1
@@ -9272,6 +9273,7 @@
 // RUN:   -fgnuc-version=4.2.1 -triple=aarch64-apple-macosx10.12 < /dev/null \
 // RUN: | FileCheck -check-prefix=DARWIN %s
 
+// DARWIN-NOT: OBJC_NEW_PROPERTIES
 // DARWIN:#define __STDC_NO_THREADS__ 1
 
 // RUN: %clang_cc1 -triple i386-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-32 %s

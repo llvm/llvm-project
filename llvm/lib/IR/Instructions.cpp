@@ -352,6 +352,12 @@ bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
   return false;
 }
 
+void CallBase::getOperandBundlesAsDefs(
+    SmallVectorImpl<OperandBundleDef> &Defs) const {
+  for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
+    Defs.emplace_back(getOperandBundleAt(i));
+}
+
 CallBase::op_iterator
 CallBase::populateBundleOperandInfos(ArrayRef<OperandBundleDef> Bundles,
                                      const unsigned BeginIndex) {

@@ -2294,9 +2294,10 @@ are created implicitly. The following spellings are accepted:
   ============  ================================================================
   ``GNU``       Spelled with a GNU-style ``__attribute__((attr))`` syntax and
                 placement.
-  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax. If the attribute
-                is meant to be used by Clang, it should set the namespace to
-                ``"clang"``.
+  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
+                vendor-specific namespace.
+  ``C2x``       Spelled with a C-style ``[[attr]]` syntax with an optional
+                vendor-specific namespace.
   ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
   ``Keyword``   The attribute is spelled as a keyword, and required custom
                 parsing.
@@ -2304,6 +2305,11 @@ are created implicitly. The following spellings are accepted:
                 the second is a C++-style spelling with the ``gnu`` namespace.
                 Attributes should only specify this spelling for attributes
                 supported by GCC.
+  ``Clang``     Specifies two or three spellings: the first is a GNU-style
+                spelling, the second is a C++-style spelling with the ``clang``
+                namespace, and the third is an optional C-style spelling with
+                the ``clang`` namespace. By default, a C-style spelling is
+                provided.
   ``Pragma``    The attribute is spelled as a ``#pragma``, and requires custom
                 processing within the preprocessor. If the attribute is meant to
                 be used by Clang, it should set the namespace to ``"clang"``.

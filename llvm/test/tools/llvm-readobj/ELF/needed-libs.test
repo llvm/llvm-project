@@ -1,0 +1,94 @@
+## In this test we check the --needed-libs option.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj --needed-libs %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=NEEDED-LIBS
+# RUN: llvm-readelf --needed-libs %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=NEEDED-LIBS
+
+## Check that library names are sorted when printed.
+## Document that we also sort error entries.
+
+#      NEEDED-LIBS:NeededLibraries [
+# NEEDED-LIBS-NEXT:  <Invalid offset 0x1111111>
+# NEEDED-LIBS-NEXT:  <Invalid offset 0x9999999>
+# NEEDED-LIBS-NEXT:  aaa
+# NEEDED-LIBS-NEXT:  bbb
+# NEEDED-LIBS-NEXT:  ccc
+# NEEDED-LIBS-NEXT:]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+    Content: '00616161006262620063636300' ## 0,a,a,a,0,b,b,b,0,c,c,c,0
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0000000000000000
+      - Tag:   DT_NEEDED
+        Value: 0x9999999
+      - Tag:   DT_NEEDED
+        Value: 9
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 5
+      - Tag:   DT_NEEDED
+        Value: 0x1111111
+      - Tag:   DT_STRSZ
+        Value: 0xD
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+
+## Check what we print when the dynamic string table is empty.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj --needed-libs %t2 | FileCheck %s --check-prefix=EMPTY-DYNSTR
+# RUN: llvm-readelf --needed-libs %t2 | FileCheck %s --check-prefix=EMPTY-DYNSTR
+
+# EMPTY-DYNSTR:      NeededLibraries [
+# EMPTY-DYNSTR-NEXT:   <String table is empty or was not found>
+# EMPTY-DYNSTR-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0000000000000000
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_STRSZ
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic

@@ -1,4 +1,4 @@
-//===-- CommandObjectBreakpointCommand.cpp ----------------------*- C++ -*-===//
+//===-- CommandObjectBreakpointCommand.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -292,7 +292,7 @@ are no syntax errors may indicate that a function was declared but never called.
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
-        m_one_liner = option_arg;
+        m_one_liner = std::string(option_arg);
         break;
 
       case 's':

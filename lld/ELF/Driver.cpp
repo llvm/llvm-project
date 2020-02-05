@@ -602,8 +602,13 @@ static DiscardPolicy getDiscard(opt::InputArgList &args) {
 
 static StringRef getDynamicLinker(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
-  if (!arg || arg->getOption().getID() == OPT_no_dynamic_linker)
+  if (!arg)
     return "";
+  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
+    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
+    config->noDynamicLinker = true;
+    return "";
+  }
   return arg->getValue();
 }
 
@@ -876,7 +881,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
                                      !args.hasArg(OPT_relocatable);
-  config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
+  config->fixCortexA8 =
+      args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
   config->forceBTI = hasZOption(args, "force-bti");
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   config->gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
@@ -893,6 +899,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
+  config->ltoWholeProgramVisibility =
+      args.hasArg(OPT_lto_whole_program_visibility);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);

@@ -48,13 +48,13 @@ add %cx, %bx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -     0.67   1.00   0.67   0.67    -      -      -      -      -     1.00
+# CHECK-NEXT:  -      -      -     0.67   1.00   0.67   0.67    -      -      -      -      -     1.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -     1.00   imulw	%ax, %bx
-# CHECK-NEXT:  -      -     0.33    -     0.33   0.33    -      -      -      -      -      -     lzcntw	%ax, %bx
-# CHECK-NEXT:  -      -     0.33    -     0.33   0.33    -      -      -      -      -      -     addw	%cx, %bx
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   imulw	%ax, %bx
+# CHECK-NEXT:  -      -      -     0.33    -     0.33   0.33    -      -      -      -      -      -     lzcntw	%ax, %bx
+# CHECK-NEXT:  -      -      -     0.33    -     0.33   0.33    -      -      -      -      -      -     addw	%cx, %bx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          01234567
@@ -64,7 +64,7 @@ add %cx, %bx
 # CHECK-NEXT: [0,1]     D===eER   .    .    .    .    .    . .   lzcntw	%ax, %bx
 # CHECK-NEXT: [0,2]     D====eER  .    .    .    .    .    . .   addw	%cx, %bx
 # CHECK-NEXT: [1,0]     D=====eeeER    .    .    .    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [1,1]     .D=======eER   .    .    .    .    . .   lzcntw %ax, %bx
+# CHECK-NEXT: [1,1]     .D=======eER   .    .    .    .    . .   lzcntw	%ax, %bx
 # CHECK-NEXT: [1,2]     .D========eER  .    .    .    .    . .   addw	%cx, %bx
 # CHECK-NEXT: [2,0]     .D=========eeeER    .    .    .    . .   imulw	%ax, %bx
 # CHECK-NEXT: [2,1]     .D============eER   .    .    .    . .   lzcntw	%ax, %bx
@@ -92,3 +92,4 @@ add %cx, %bx
 # CHECK-NEXT: 0.     7     14.1   0.1    0.0       imulw	%ax, %bx
 # CHECK-NEXT: 1.     7     16.9   0.0    0.0       lzcntw	%ax, %bx
 # CHECK-NEXT: 2.     7     17.6   0.0    0.0       addw	%cx, %bx
+# CHECK-NEXT:        7     16.2   0.0    0.0       <total>

@@ -1,4 +1,4 @@
-//===-- MessageObjects.cpp --------------------------------------*- C++ -*-===//
+//===-- MessageObjects.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,7 +96,8 @@ Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
                                             ArrayRef<RegisterInfo> RegInfos) {
   JThreadsInfo jthreads_info;
 
-  StructuredData::ObjectSP json = StructuredData::ParseJSON(Response);
+  StructuredData::ObjectSP json =
+      StructuredData::ParseJSON(std::string(Response));
   StructuredData::Array *array = json->GetAsArray();
   if (!array)
     return make_parsing_error("JThreadsInfo: JSON array");

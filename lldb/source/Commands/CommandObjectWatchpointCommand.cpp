@@ -1,4 +1,4 @@
-//===-- CommandObjectWatchpointCommand.cpp ----------------------*- C++ -*-===//
+//===-- CommandObjectWatchpointCommand.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -327,7 +327,7 @@ are no syntax errors may indicate that a function was declared but never called.
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
-        m_one_liner = option_arg;
+        m_one_liner = std::string(option_arg);
         break;
 
       case 's':
@@ -359,7 +359,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'F':
         m_use_one_liner = false;
-        m_function_name.assign(option_arg);
+        m_function_name.assign(std::string(option_arg));
         break;
 
       default:

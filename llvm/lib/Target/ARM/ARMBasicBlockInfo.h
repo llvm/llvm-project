@@ -87,10 +87,10 @@ struct BasicBlockInfo {
   /// Compute the offset immediately following this block.  If Align is
   /// specified, return the offset the successor block will get if it has
   /// this alignment.
-  unsigned postOffset(Align Alignment = Align::None()) const {
+  unsigned postOffset(Align Alignment = Align(1)) const {
     unsigned PO = Offset + Size;
     const Align PA = std::max(PostAlign, Alignment);
-    if (PA == Align::None())
+    if (PA == Align(1))
       return PO;
     // Add alignment padding from the terminator.
     return PO + UnknownPadding(PA, internalKnownBits());
@@ -101,7 +101,7 @@ struct BasicBlockInfo {
   /// instruction alignment.  An aligned terminator may increase the number
   /// of know bits.
   /// If LogAlign is given, also consider the alignment of the next block.
-  unsigned postKnownBits(Align Align = Align::None()) const {
+  unsigned postKnownBits(Align Align = llvm::Align(1)) const {
     return std::max(Log2(std::max(PostAlign, Align)), internalKnownBits());
   }
 };

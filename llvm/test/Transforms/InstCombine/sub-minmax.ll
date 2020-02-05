@@ -147,7 +147,7 @@ define i32 @na_minus_max_na_bi_use(i32 %A, i32 %Bi) {
 
 define i32 @max_bi_na_minus_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
 ; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
@@ -165,7 +165,7 @@ define i32 @max_bi_na_minus_na_use(i32 %A, i32 %Bi) {
 
 define i32 @na_minus_max_bi_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_bi_na_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
 ; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
@@ -223,7 +223,7 @@ define i32 @na_minus_max_na_bi_use2(i32 %A, i32 %Bi) {
 define i32 @max_bi_na_minus_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[BI:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
 ; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
@@ -244,7 +244,7 @@ define i32 @max_bi_na_minus_na_use2(i32 %A, i32 %Bi) {
 define i32 @na_minus_max_bi_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_bi_na_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[BI:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
 ; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
@@ -264,7 +264,7 @@ define i32 @na_minus_max_bi_na_use2(i32 %A, i32 %Bi) {
 
 define i8 @umin_not_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Y]]
 ; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP2]], [[X]]
@@ -286,7 +286,7 @@ define i8 @umin_not_sub(i8 %x, i8 %y) {
 
 define i8 @umin_not_sub_rev(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub_rev(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Y]]
 ; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP2]]

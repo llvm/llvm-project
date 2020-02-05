@@ -1,4 +1,4 @@
-//===-- Disassembler.cpp ----------------------------------------*- C++ -*-===//
+//===-- Disassembler.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1346,7 +1346,7 @@ void PseudoInstruction::SetOpcode(size_t opcode_size, void *opcode_data) {
 }
 
 void PseudoInstruction::SetDescription(llvm::StringRef description) {
-  m_description = description;
+  m_description = std::string(description);
 }
 
 Instruction::Operand Instruction::Operand::BuildRegister(ConstString &r) {

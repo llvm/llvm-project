@@ -1028,6 +1028,18 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   return new ScoreboardHazardRecognizer(II, DAG, "post-RA-sched");
 }
 
+// Default implementation of getMemOperandWithOffset.
+bool TargetInstrInfo::getMemOperandWithOffset(
+    const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
+    const TargetRegisterInfo *TRI) const {
+  SmallVector<const MachineOperand *, 4> BaseOps;
+  if (!getMemOperandsWithOffset(MI, BaseOps, Offset, TRI) ||
+      BaseOps.size() != 1)
+    return false;
+  BaseOp = BaseOps.front();
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //  SelectionDAG latency interface.
 //===----------------------------------------------------------------------===//

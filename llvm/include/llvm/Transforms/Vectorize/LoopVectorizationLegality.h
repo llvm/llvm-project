@@ -208,7 +208,7 @@ public:
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
-  using ReductionList = DenseMap<PHINode *, RecurrenceDescriptor>;
+  using ReductionList = MapVector<PHINode *, RecurrenceDescriptor>;
 
   /// InductionList saves induction variables and maps them to the
   /// induction descriptor.

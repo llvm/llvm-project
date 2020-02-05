@@ -40,7 +40,7 @@ int AddNamesMatchingPartialString(
   const bool add_all = cmd_str.empty();
 
   for (auto iter = in_map.begin(), end = in_map.end(); iter != end; iter++) {
-    if (add_all || (iter->first.find(cmd_str, 0) == 0)) {
+    if (add_all || (iter->first.find(std::string(cmd_str), 0) == 0)) {
       ++number_added;
       matches.AppendString(iter->first.c_str());
       if (descriptions)

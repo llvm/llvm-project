@@ -253,7 +253,7 @@ bool MipsDAGToDAGISel::selectVecAddAsVecSubIfProfitable(SDNode *Node) {
   SDLoc DL(Node);
 
   SDValue NegC = CurDAG->FoldConstantArithmetic(
-      ISD::SUB, DL, VT, CurDAG->getConstant(0, DL, VT).getNode(), C.getNode());
+      ISD::SUB, DL, VT, {CurDAG->getConstant(0, DL, VT), C});
   assert(NegC && "Constant-folding failed!");
   SDValue NewNode = CurDAG->getNode(ISD::SUB, DL, VT, X, NegC);
 

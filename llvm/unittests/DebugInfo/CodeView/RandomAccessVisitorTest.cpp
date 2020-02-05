@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"

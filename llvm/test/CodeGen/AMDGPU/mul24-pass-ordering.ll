@@ -112,7 +112,7 @@ bb:
 
 bb19:                                             ; preds = %bb
   %tmp20 = uitofp i32 %arg6 to float
-  %tmp21 = fdiv float 1.000000e+00, %tmp20
+  %tmp21 = fdiv float 1.000000e+00, %tmp20, !fpmath !0
   %tmp22 = and i32 %arg6, 16777215
   br label %bb23
 
@@ -258,3 +258,5 @@ declare float @llvm.fmuladd.f32(float, float, float) #1
 
 attributes #0 = { nounwind willreturn }
 attributes #1 = { nounwind readnone speculatable }
+
+!0 = !{float 2.500000e+00}

@@ -107,7 +107,15 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   if (DstTy.isVector())
     return; // TODO: Handle vectors.
 
-  if (Depth == getMaxDepth())
+  // Depth may get bigger than max depth if it gets passed to a different
+  // GISelKnownBits object.
+  // This may happen when say a generic part uses a GISelKnownBits object
+  // with some max depth, but then we hit TL.computeKnownBitsForTargetInstr
+  // which creates a new GISelKnownBits object with a different and smaller
+  // depth. If we just check for equality, we would never exit if the depth
+  // that is passed down to the target specific GISelKnownBits object is
+  // already bigger than its max depth.
+  if (Depth >= getMaxDepth())
     return;
 
   if (!DemandedElts)
@@ -120,20 +128,39 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     TL.computeKnownBitsForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                       Depth);
     break;
-  case TargetOpcode::COPY: {
-    MachineOperand Dst = MI.getOperand(0);
-    MachineOperand Src = MI.getOperand(1);
-    // Look through trivial copies but don't look through trivial copies of the
-    // form `%1:(s32) = OP %0:gpr32` known-bits analysis is currently unable to
-    // determine the bit width of a register class.
-    //
-    // We can't use NoSubRegister by name as it's defined by each target but
-    // it's always defined to be 0 by tablegen.
-    if (Dst.getSubReg() == 0 /*NoSubRegister*/ && Src.getReg().isVirtual() &&
-        Src.getSubReg() == 0 /*NoSubRegister*/ &&
-        MRI.getType(Src.getReg()).isValid()) {
-      // Don't increment Depth for this one since we didn't do any work.
-      computeKnownBitsImpl(Src.getReg(), Known, DemandedElts, Depth);
+  case TargetOpcode::COPY:
+  case TargetOpcode::G_PHI:
+  case TargetOpcode::PHI: {
+    Known.One = APInt::getAllOnesValue(BitWidth);
+    Known.Zero = APInt::getAllOnesValue(BitWidth);
+    // Destination registers should not have subregisters at this
+    // point of the pipeline, otherwise the main live-range will be
+    // defined more than once, which is against SSA.
+    assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
+    // PHI's operand are a mix of registers and basic blocks interleaved.
+    // We only care about the register ones.
+    for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
+      const MachineOperand &Src = MI.getOperand(Idx);
+      Register SrcReg = Src.getReg();
+      // Look through trivial copies and phis but don't look through trivial
+      // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
+      // analysis is currently unable to determine the bit width of a
+      // register class.
+      //
+      // We can't use NoSubRegister by name as it's defined by each target but
+      // it's always defined to be 0 by tablegen.
+      if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
+          MRI.getType(SrcReg).isValid()) {
+        // For COPYs we don't do anything, don't increase the depth.
+        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
+                             Depth + (Opcode != TargetOpcode::COPY));
+        Known.One &= Known2.One;
+        Known.Zero &= Known2.Zero;
+      } else {
+        // We know nothing.
+        Known = KnownBits(BitWidth);
+        break;
+      }
     }
     break;
   }
@@ -150,18 +177,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SUB: {
-    // If low bits are known to be zero in both operands, then we know they are
-    // going to be 0 in the result. Both addition and complement operations
-    // preserve the low zero bits.
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
-    if (KnownZeroLow == 0)
-      break;
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
-    Known.Zero.setLowBits(KnownZeroLow);
+    Known = KnownBits::computeForAddSub(/*Add*/ false, /*NSW*/ false, Known,
+                                        Known2);
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -185,24 +206,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     LLVM_FALLTHROUGH;
   }
   case TargetOpcode::G_ADD: {
-    // Output known-0 bits are known if clear or set in both the low clear bits
-    // common to both LHS & RHS.  For example, 8+(X<<3) is known to have the
-    // low 3 bits clear.
-    // Output known-0 bits are also known if the top bits of each input are
-    // known to be clear. For example, if one input has the top 10 bits clear
-    // and the other has the top 8 bits clear, we know the top 7 bits of the
-    // output must be clear.
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    unsigned KnownZeroHigh = Known2.countMinLeadingZeros();
-    unsigned KnownZeroLow = Known2.countMinTrailingZeros();
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    KnownZeroHigh = std::min(KnownZeroHigh, Known2.countMinLeadingZeros());
-    KnownZeroLow = std::min(KnownZeroLow, Known2.countMinTrailingZeros());
-    Known.Zero.setLowBits(KnownZeroLow);
-    if (KnownZeroHigh > 1)
-      Known.Zero.setHighBits(KnownZeroHigh - 1);
+    Known =
+        KnownBits::computeForAddSub(/*Add*/ true, /*NSW*/ false, Known, Known2);
     break;
   }
   case TargetOpcode::G_AND: {

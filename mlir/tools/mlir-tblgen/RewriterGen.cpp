@@ -1,6 +1,6 @@
 //===- RewriterGen.cpp - MLIR pattern rewriter generator ------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -198,7 +198,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
                              " does not have the 'constBuilderCall' field");
 
   // TODO(jpienaar): Verify the constants here
-  return tgfmt(attr.getConstBuilderTemplate(), &fmtCtx, value);
+  return std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx, value));
 }
 
 // Helper function to match patterns.
@@ -298,8 +298,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
           formatv("(*castedOp{0}.getODSOperands({1}).begin()).getType()", depth,
                   argIndex);
       os.indent(indent) << "if (!("
-                        << tgfmt(matcher.getConditionTemplate(),
-                                 &fmtCtx.withSelf(self))
+                        << std::string(tgfmt(matcher.getConditionTemplate(),
+                                             &fmtCtx.withSelf(self)))
                         << ")) return matchFailure();\n";
     }
   }
@@ -336,8 +336,8 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
   // TODO(antiagainst): This should use getter method to avoid duplication.
   if (attr.hasDefaultValue()) {
     os.indent(indent) << "if (!tblgen_attr) tblgen_attr = "
-                      << tgfmt(attr.getConstBuilderTemplate(), &fmtCtx,
-                               attr.getDefaultValue())
+                      << std::string(tgfmt(attr.getConstBuilderTemplate(),
+                                           &fmtCtx, attr.getDefaultValue()))
                       << ";\n";
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
@@ -358,8 +358,8 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
     // If a constraint is specified, we need to generate C++ statements to
     // check the constraint.
     os.indent(indent) << "if (!("
-                      << tgfmt(matcher.getConditionTemplate(),
-                               &fmtCtx.withSelf("tblgen_attr"))
+                      << std::string(tgfmt(matcher.getConditionTemplate(),
+                                           &fmtCtx.withSelf("tblgen_attr")))
                       << ")) return matchFailure();\n";
   }
 
@@ -593,7 +593,8 @@ void PatternEmitter::emitRewriteLogic() {
 }
 
 std::string PatternEmitter::getUniqueSymbol(const Operator *op) {
-  return formatv("tblgen_{0}_{1}", op->getCppClassName(), nextValueId++);
+  return std::string(
+      formatv("tblgen_{0}_{1}", op->getCppClassName(), nextValueId++));
 }
 
 std::string PatternEmitter::handleResultPattern(DagNode resultTree,
@@ -634,7 +635,7 @@ std::string PatternEmitter::handleReplaceWithValue(DagNode tree) {
     PrintFatalError(loc, "cannot bind symbol to replaceWithValue");
   }
 
-  return tree.getArgName(0);
+  return std::string(tree.getArgName(0));
 }
 
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
@@ -665,7 +666,7 @@ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
     auto repl = tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(argName));
     LLVM_DEBUG(llvm::dbgs() << "replace " << patArgName << " with '" << repl
                             << "' (via NativeCodeCall)\n");
-    return repl;
+    return std::string(repl);
   }
   PrintFatalError(loc, "unhandled case when rewriting op");
 }
@@ -687,8 +688,8 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree) {
     LLVM_DEBUG(llvm::dbgs() << "NativeCodeCall argument #" << i
                             << " replacement: " << attrs[i] << "\n");
   }
-  return tgfmt(fmt, &fmtCtx, attrs[0], attrs[1], attrs[2], attrs[3], attrs[4],
-               attrs[5], attrs[6], attrs[7]);
+  return std::string(tgfmt(fmt, &fmtCtx, attrs[0], attrs[1], attrs[2], attrs[3],
+                           attrs[4], attrs[5], attrs[6], attrs[7]));
 }
 
 int PatternEmitter::getNodeValueCount(DagNode node) {
@@ -748,10 +749,10 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     // unique name.
     valuePackName = resultValue = getUniqueSymbol(&resultOp);
   } else {
-    resultValue = tree.getSymbol();
+    resultValue = std::string(tree.getSymbol());
     // Strip the index to get the name for the value pack and use it to name the
     // local variable for the op.
-    valuePackName = SymbolInfoMap::getValuePackName(resultValue);
+    valuePackName = std::string(SymbolInfoMap::getValuePackName(resultValue));
   }
 
   // Create the local variable for this op.
@@ -855,13 +856,13 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
 
     std::string varName;
     if (operand->isVariadic()) {
-      varName = formatv("tblgen_values_{0}", valueIndex++);
+      varName = std::string(formatv("tblgen_values_{0}", valueIndex++));
       os.indent(6) << formatv("SmallVector<Value, 4> {0};\n", varName);
       std::string range;
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames[argIndex];
       } else {
-        range = node.getArgName(argIndex);
+        range = std::string(node.getArgName(argIndex));
       }
       // Resolve the symbol for all range use so that we have a uniform way of
       // capturing the values.
@@ -869,7 +870,7 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
       os.indent(6) << formatv("for (auto v : {0}) {1}.push_back(v);\n", range,
                               varName);
     } else {
-      varName = formatv("tblgen_value_{0}", valueIndex++);
+      varName = std::string(formatv("tblgen_value_{0}", valueIndex++));
       os.indent(6) << formatv("Value {0} = ", varName);
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(childNodeNames[argIndex]);
@@ -878,7 +879,8 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
         auto symbol =
             symbolInfoMap.getValueAndRangeUse(node.getArgName(argIndex));
         if (leaf.isNativeCodeCall()) {
-          os << tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol));
+          os << std::string(
+              tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol)));
         } else {
           os << symbol;
         }
@@ -974,7 +976,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames.lookup(argIndex);
       } else {
-        range = node.getArgName(argIndex);
+        range = std::string(node.getArgName(argIndex));
       }
       // Resolve the symbol for all range use so that we have a uniform way of
       // capturing the values.
@@ -991,7 +993,8 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         auto symbol =
             symbolInfoMap.getValueAndRangeUse(node.getArgName(argIndex));
         if (leaf.isNativeCodeCall()) {
-          os << tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol));
+          os << std::string(
+              tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol)));
         } else {
           os << symbol;
         }
@@ -1023,7 +1026,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
       // appending unique suffix.
       name = baseRewriterName + llvm::utostr(rewriterIndex++);
     } else {
-      name = p->getName();
+      name = std::string(p->getName());
     }
     LLVM_DEBUG(llvm::dbgs()
                << "=== start generating pattern '" << name << "' ===\n");

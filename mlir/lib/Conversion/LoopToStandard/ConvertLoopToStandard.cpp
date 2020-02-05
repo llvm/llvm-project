@@ -1,6 +1,6 @@
 //===- ConvertLoopToStandard.cpp - ControlFlow to CFG conversion ----------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,6 +14,7 @@
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
@@ -142,14 +143,11 @@ struct IfLowering : public OpRewritePattern<IfOp> {
                                      PatternRewriter &rewriter) const override;
 };
 
-struct TerminatorLowering : public OpRewritePattern<TerminatorOp> {
-  using OpRewritePattern<TerminatorOp>::OpRewritePattern;
+struct ParallelLowering : public OpRewritePattern<mlir::loop::ParallelOp> {
+  using OpRewritePattern<mlir::loop::ParallelOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(TerminatorOp op,
-                                     PatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
-    return matchSuccess();
-  }
+  PatternMatchResult matchAndRewrite(mlir::loop::ParallelOp parallelOp,
+                                     PatternRewriter &rewriter) const override;
 };
 } // namespace
 
@@ -178,6 +176,7 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   // Append the induction variable stepping logic to the last body block and
   // branch back to the condition block.  Construct an expression f :
   // (x -> x+step) and apply this expression to the induction variable.
+  rewriter.eraseOp(lastBodyBlock->getTerminator());
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.step();
   auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
@@ -220,6 +219,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
   // place it before the continuation block, and branch to it.
   auto &thenRegion = ifOp.thenRegion();
   auto *thenBlock = &thenRegion.front();
+  rewriter.eraseOp(thenRegion.back().getTerminator());
   rewriter.setInsertionPointToEnd(&thenRegion.back());
   rewriter.create<BranchOp>(loc, continueBlock);
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
@@ -231,6 +231,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
   auto &elseRegion = ifOp.elseRegion();
   if (!elseRegion.empty()) {
     elseBlock = &elseRegion.front();
+    rewriter.eraseOp(elseRegion.back().getTerminator());
     rewriter.setInsertionPointToEnd(&elseRegion.back());
     rewriter.create<BranchOp>(loc, continueBlock);
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
@@ -246,9 +247,42 @@ IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
   return matchSuccess();
 }
 
+PatternMatchResult
+ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
+                                  PatternRewriter &rewriter) const {
+  Location loc = parallelOp.getLoc();
+  BlockAndValueMapping mapping;
+
+  if (parallelOp.getNumResults() != 0) {
+    // TODO: Implement lowering of parallelOp with reductions.
+    return matchFailure();
+  }
+
+  // For a parallel loop, we essentially need to create an n-dimensional loop
+  // nest. We do this by translating to loop.for ops and have those lowered in
+  // a further rewrite.
+  for (auto loop_operands :
+       llvm::zip(parallelOp.getInductionVars(), parallelOp.lowerBound(),
+                 parallelOp.upperBound(), parallelOp.step())) {
+    Value iv, lower, upper, step;
+    std::tie(iv, lower, upper, step) = loop_operands;
+    ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step);
+    mapping.map(iv, forOp.getInductionVar());
+    rewriter.setInsertionPointToStart(forOp.getBody());
+  }
+
+  // Now copy over the contents of the body.
+  for (auto &op : parallelOp.body().front().without_terminator())
+    rewriter.clone(op, mapping);
+
+  rewriter.eraseOp(parallelOp);
+
+  return matchSuccess();
+}
+
 void mlir::populateLoopToStdConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<ForLowering, IfLowering, TerminatorLowering>(ctx);
+  patterns.insert<ForLowering, IfLowering, ParallelLowering>(ctx);
 }
 
 void LoopToStandardPass::runOnOperation() {

@@ -1,6 +1,6 @@
 //===- Serializer.cpp - MLIR SPIR-V Serialization -------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1764,12 +1764,9 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
   auto funcName = op.callee();
   uint32_t resTypeID = 0;
 
-  SmallVector<Type, 1> resultTypes(op.getResultTypes());
-  if (failed(processType(op.getLoc(),
-                         (resultTypes.empty() ? getVoidType() : resultTypes[0]),
-                         resTypeID))) {
+  Type resultTy = op.getNumResults() ? *op.result_type_begin() : getVoidType();
+  if (failed(processType(op.getLoc(), resultTy, resTypeID)))
     return failure();
-  }
 
   auto funcID = getOrCreateFunctionID(funcName);
   auto funcCallID = getNextID();
@@ -1781,9 +1778,8 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
     operands.push_back(valueID);
   }
 
-  if (!resultTypes.empty()) {
+  if (!resultTy.isa<NoneType>())
     valueIDMap[op.getResult(0)] = funcCallID;
-  }
 
   return encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionCall,
                                operands);

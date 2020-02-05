@@ -209,6 +209,15 @@ def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
                                                  "VectorsUseTwoUnits",
                                                  "true",
                                                  "Vectors use two units">;
+def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
+                                           "true",
+                                           "Enable prefixed instructions",
+                                           [FeatureISA3_0, FeatureP8Vector,
+                                            FeatureP9Altivec]>;
+def FeaturePCRelativeMemops :
+  SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
+                   "Enable PC relative Memory Ops",
+                   [FeatureISA3_0]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -298,7 +307,8 @@ def ProcessorFeatures {
   // For future CPU we assume that all of the existing features from Power 9
   // still exist with the exception of those we know are Power 9 specific.
   list<SubtargetFeature> FutureAdditionalFeatures = [];
-  list<SubtargetFeature> FutureSpecificFeatures = [];
+  list<SubtargetFeature> FutureSpecificFeatures =
+    [FeaturePrefixInstrs, FeaturePCRelativeMemops];
   list<SubtargetFeature> FutureInheritableFeatures =
     !listconcat(P9InheritableFeatures, FutureAdditionalFeatures);
   list<SubtargetFeature> FutureFeatures =

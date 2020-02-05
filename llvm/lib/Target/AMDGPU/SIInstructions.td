@@ -109,7 +109,7 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins InterpSlot:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_mov_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (int_amdgcn_interp_mov (i32 imm:$vsrc),
+  [(set f32:$vdst, (int_amdgcn_interp_mov (i32 timm:$vsrc),
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
 } // End Uses = [M0, EXEC]
@@ -960,18 +960,22 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
   let SubtargetPredicate = Has16BitInsts;
 }
 
-multiclass SelectPat <ValueType vt> {
-  def : GCNPat <
-    (vt (select i1:$src0, (VOP3Mods_f32 vt:$src1, i32:$src1_mods),
-                          (VOP3Mods_f32 vt:$src2, i32:$src2_mods))),
-    (V_CNDMASK_B32_e64 $src2_mods, $src2, $src1_mods, $src1, $src0)
-  >;
-}
+class VOPSelectModsPat <ValueType vt> : GCNPat <
+  (vt (select i1:$src0, (VOP3Mods vt:$src1, i32:$src1_mods),
+                        (VOP3Mods vt:$src2, i32:$src2_mods))),
+  (V_CNDMASK_B32_e64 FP32InputMods:$src2_mods, VSrc_b32:$src2,
+                     FP32InputMods:$src1_mods, VSrc_b32:$src1, SSrc_i1:$src0)
+>;
 
-defm : SelectPat <i16>;
-defm : SelectPat <i32>;
-defm : SelectPat <f16>;
-defm : SelectPat <f32>;
+class VOPSelectPat <ValueType vt> : GCNPat <
+  (vt (select i1:$src0, vt:$src1, vt:$src2)),
+  (V_CNDMASK_B32_e64 0, VSrc_b32:$src2, 0, VSrc_b32:$src1, SSrc_i1:$src0)
+>;
+
+def : VOPSelectModsPat <i32>;
+def : VOPSelectModsPat <f32>;
+def : VOPSelectPat <f16>;
+def : VOPSelectPat <i16>;
 
 let AddedComplexity = 1 in {
 def : GCNPat <
@@ -2091,11 +2095,12 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask, timm:$bank_mask,
-                           timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO $src, $src, (as_i32imm $dpp_ctrl),
-                        (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                        (as_i1imm $bound_ctrl))
+  (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,
+                           timm:$bank_mask, timm:$bound_ctrl)),
+  (V_MOV_B64_DPP_PSEUDO VReg_64:$src, VReg_64:$src,
+                        (as_i32timm $dpp_ctrl), (as_i32timm $row_mask),
+                        (as_i32timm $bank_mask),
+                        (as_i1timm $bound_ctrl))
 >;
 
 def : GCNPat <
@@ -2279,12 +2284,105 @@ def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+class BufferLoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+class TBufferLoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset, untyped_imm_0:$format,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_BUFFER_LOAD_UBYTE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SBYTE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_USHORT : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SSHORT : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_FORMAT : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
+def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
+def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
+
+class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+class TBufferStoreGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$format,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_BUFFER_STORE : BufferStoreGenericInstruction;
+def G_AMDGPU_BUFFER_STORE_BYTE : BufferStoreGenericInstruction;
+def G_AMDGPU_BUFFER_STORE_SHORT : BufferStoreGenericInstruction;
+def G_AMDGPU_BUFFER_STORE_FORMAT : BufferStoreGenericInstruction;
+def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
+def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
+def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.
 def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$oldval);
-  let InOperandList = (ins ptype1:$addr, type0:$cmpval_nnenwval);
+  let InOperandList = (ins ptype1:$addr, type0:$cmpval_newval);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+let Namespace = "AMDGPU" in {
+def G_AMDGPU_ATOMIC_INC : G_ATOMICRMW_OP;
+def G_AMDGPU_ATOMIC_DEC : G_ATOMICRMW_OP;
+}
+
+class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_BUFFER_ATOMIC_SWAP : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_ADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_SUB : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_SMIN : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_UMIN : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_SMAX : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_UMAX : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_AND : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_OR : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
+
+def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vdata, type0:$cmp, type1:$rsrc, type2:$vindex,
+                           type2:$voffset, type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 1;

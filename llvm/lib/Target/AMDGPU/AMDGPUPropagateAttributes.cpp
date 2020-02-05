@@ -273,7 +273,7 @@ AMDGPUPropagateAttributes::cloneWithFeatures(Function &F,
   // Swap names. If that is the only clone it will retain the name of now
   // dead value.
   if (F.hasName()) {
-    std::string NewName = NewF->getName();
+    std::string NewName = std::string(NewF->getName());
     NewF->takeName(&F);
     F.setName(NewName);
 

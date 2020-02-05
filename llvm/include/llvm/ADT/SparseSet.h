@@ -21,7 +21,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/Support/AllocatorBase.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>

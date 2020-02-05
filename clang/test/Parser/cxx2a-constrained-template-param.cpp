@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
 
 namespace type
 {

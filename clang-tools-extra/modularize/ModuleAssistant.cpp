@@ -139,7 +139,7 @@ static const char *const ReservedNames[] = {
 // Prepends a '_' to the name if and only if the name is a keyword.
 static std::string
 ensureNoCollisionWithReservedName(llvm::StringRef MightBeReservedName) {
-  std::string SafeName = MightBeReservedName;
+  std::string SafeName(MightBeReservedName);
   for (int Index = 0; ReservedNames[Index] != nullptr; ++Index) {
     if (MightBeReservedName == ReservedNames[Index]) {
       SafeName.insert(0, "_");
@@ -153,7 +153,7 @@ ensureNoCollisionWithReservedName(llvm::StringRef MightBeReservedName) {
 // Prepends a '_' to the name if and only if the name is a keyword.
 static std::string
 ensureVaidModuleName(llvm::StringRef MightBeInvalidName) {
-  std::string SafeName = MightBeInvalidName;
+  std::string SafeName(MightBeInvalidName);
   std::replace(SafeName.begin(), SafeName.end(), '-', '_');
   std::replace(SafeName.begin(), SafeName.end(), '.', '_');
   if (isdigit(SafeName[0]))
@@ -176,9 +176,9 @@ static bool addModuleDescription(Module *RootModule,
   llvm::sys::path::native(HeaderFilePath, NativePath);
   llvm::sys::path::native(HeaderPrefix, NativePrefix);
   if (NativePath.startswith(NativePrefix))
-    FilePath = NativePath.substr(NativePrefix.size() + 1);
+    FilePath = std::string(NativePath.substr(NativePrefix.size() + 1));
   else
-    FilePath = HeaderFilePath;
+    FilePath = std::string(HeaderFilePath);
   int Count = FileDependents.size();
   // Headers that go into modules must not depend on other files being
   // included first.  If there are any dependents, warn user and omit.
@@ -197,7 +197,7 @@ static bool addModuleDescription(Module *RootModule,
        I != E; ++I) {
     if ((*I)[0] == '.')
       continue;
-    std::string Stem = llvm::sys::path::stem(*I);
+    std::string Stem(llvm::sys::path::stem(*I));
     Stem = ensureNoCollisionWithReservedName(Stem);
     Stem = ensureVaidModuleName(Stem);
     Module *SubModule = CurrentModule->findSubModule(Stem);

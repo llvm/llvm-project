@@ -1,5 +1,4 @@
-//===-- AppleObjCTrampolineHandler.cpp ----------------------------*- C++
-//-*-===//
+//===-- AppleObjCTrampolineHandler.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +18,7 @@
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Expression/UtilityFunction.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -521,8 +520,8 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     Process *process = exe_ctx.GetProcessPtr();
     const ABI *abi = process->GetABI().get();
 
-    ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process->GetTarget());
+    TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
@@ -657,6 +656,27 @@ const AppleObjCTrampolineHandler::DispatchFunction
          DispatchFunction::eFixUpFixed},
 };
 
+// This is the table of ObjC "accelerated dispatch" functions.  They are a set
+// of objc methods that are "seldom overridden" and so the compiler replaces the
+// objc_msgSend with a call to one of the dispatch functions.  That will check
+// whether the method has been overridden, and directly call the Foundation 
+// implementation if not.  
+// This table is supposed to be complete.  If ones get added in the future, we
+// will have to add them to the table.
+const char *AppleObjCTrampolineHandler::g_opt_dispatch_names[] = {
+    "objc_alloc",
+    "objc_autorelease",
+    "objc_release",
+    "objc_retain",
+    "objc_alloc_init",
+    "objc_allocWithZone",
+    "objc_opt_class",
+    "objc_opt_isKindOfClass",
+    "objc_opt_new",
+    "objc_opt_respondsToSelector",
+    "objc_opt_self",
+};
+
 AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     const ProcessSP &process_sp, const ModuleSP &objc_module_sp)
     : m_process_wp(), m_objc_module_sp(objc_module_sp),
@@ -751,6 +771,20 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
       m_msgSend_map.insert(std::pair<lldb::addr_t, int>(sym_addr, i));
     }
   }
+  
+  // Similarly, cache the addresses of the "optimized dispatch" function.
+  for (size_t i = 0; i != llvm::array_lengthof(g_opt_dispatch_names); i++) {
+    ConstString name_const_str(g_opt_dispatch_names[i]);
+    const Symbol *msgSend_symbol =
+        m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
+                                                         eSymbolTypeCode);
+    if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
+      lldb::addr_t sym_addr =
+          msgSend_symbol->GetAddressRef().GetOpcodeLoadAddress(target);
+
+      m_opt_dispatch_map.emplace(sym_addr, i);
+    }
+  }
 
   // Build our vtable dispatch handler here:
   m_vtables_up.reset(new AppleObjCVTables(process_sp, m_objc_module_sp));
@@ -804,8 +838,8 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
       }
 
       // Next make the runner function for our implementation utility function.
-      ClangASTContext *clang_ast_context =
-          ClangASTContext::GetScratch(thread.GetProcess()->GetTarget());
+      TypeSystemClang *clang_ast_context =
+          TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
       if (!clang_ast_context)
         return LLDB_INVALID_ADDRESS;
 
@@ -846,45 +880,53 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
   return args_addr;
 }
 
+const AppleObjCTrampolineHandler::DispatchFunction *
+AppleObjCTrampolineHandler::FindDispatchFunction(lldb::addr_t addr) {
+  MsgsendMap::iterator pos;
+  pos = m_msgSend_map.find(addr);
+  if (pos != m_msgSend_map.end()) {
+    return &g_dispatch_functions[(*pos).second];
+  }
+  return nullptr;
+}
+
+void
+AppleObjCTrampolineHandler::ForEachDispatchFunction(
+    std::function<void(lldb::addr_t, 
+                       const DispatchFunction &)> callback) {
+  for (auto elem : m_msgSend_map) {
+    callback(elem.first, g_dispatch_functions[elem.second]);
+  }
+}
+
 ThreadPlanSP
 AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
                                                        bool stop_others) {
   ThreadPlanSP ret_plan_sp;
   lldb::addr_t curr_pc = thread.GetRegisterContext()->GetPC();
 
-  DispatchFunction this_dispatch;
-  bool found_it = false;
+  DispatchFunction vtable_dispatch
+      = {"vtable", 0, false, false, DispatchFunction::eFixUpFixed};
 
   // First step is to look and see if we are in one of the known ObjC
   // dispatch functions.  We've already compiled a table of same, so
   // consult it.
 
-  MsgsendMap::iterator pos;
-  pos = m_msgSend_map.find(curr_pc);
-  if (pos != m_msgSend_map.end()) {
-    this_dispatch = g_dispatch_functions[(*pos).second];
-    found_it = true;
-  }
-
+  const DispatchFunction *this_dispatch = FindDispatchFunction(curr_pc);
+  
   // Next check to see if we are in a vtable region:
 
-  if (!found_it) {
+  if (!this_dispatch && m_vtables_up) {
     uint32_t flags;
-    if (m_vtables_up) {
-      found_it = m_vtables_up->IsAddressInVTables(curr_pc, flags);
-      if (found_it) {
-        this_dispatch.name = "vtable";
-        this_dispatch.stret_return =
-            (flags & AppleObjCVTables::eOBJC_TRAMPOLINE_STRET) ==
-            AppleObjCVTables::eOBJC_TRAMPOLINE_STRET;
-        this_dispatch.is_super = false;
-        this_dispatch.is_super2 = false;
-        this_dispatch.fixedup = DispatchFunction::eFixUpFixed;
-      }
+    if (m_vtables_up->IsAddressInVTables(curr_pc, flags)) {
+      vtable_dispatch.stret_return =
+          (flags & AppleObjCVTables::eOBJC_TRAMPOLINE_STRET) ==
+          AppleObjCVTables::eOBJC_TRAMPOLINE_STRET;
+      this_dispatch = &vtable_dispatch;
     }
   }
 
-  if (found_it) {
+  if (this_dispatch) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
     // We are decoding a method dispatch.  First job is to pull the
@@ -901,7 +943,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     TargetSP target_sp(thread.CalculateTarget());
 
-    ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(*target_sp);
+    TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
     if (!clang_ast_context)
       return ret_plan_sp;
 
@@ -921,7 +963,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     // the return struct pointer, and the object is the second, and
     // the selector is the third.  Otherwise the object is the first
     // and the selector the second.
-    if (this_dispatch.stret_return) {
+    if (this_dispatch->stret_return) {
       obj_index = 1;
       sel_index = 2;
       argument_values.PushValue(void_ptr_value);
@@ -963,8 +1005,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     // run-to-address plan directly.  Otherwise we have to figure out
     // where the implementation lives.
 
-    if (this_dispatch.is_super) {
-      if (this_dispatch.is_super2) {
+    if (this_dispatch->is_super) {
+      if (this_dispatch->is_super2) {
         // In the objc_msgSendSuper2 case, we don't get the object
         // directly, we get a structure containing the object and the
         // class to which the super message is being sent.  So we need
@@ -1087,25 +1129,25 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       // flag_value.SetContext (Value::eContextTypeClangType, clang_int_type);
       flag_value.SetCompilerType(clang_int_type);
 
-      if (this_dispatch.stret_return)
+      if (this_dispatch->stret_return)
         flag_value.GetScalar() = 1;
       else
         flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
-      if (this_dispatch.is_super)
+      if (this_dispatch->is_super)
         flag_value.GetScalar() = 1;
       else
         flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
-      if (this_dispatch.is_super2)
+      if (this_dispatch->is_super2)
         flag_value.GetScalar() = 1;
       else
         flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
-      switch (this_dispatch.fixedup) {
+      switch (this_dispatch->fixedup) {
       case DispatchFunction::eFixUpNone:
         flag_value.GetScalar() = 0;
         dispatch_values.PushValue(flag_value);
@@ -1135,13 +1177,33 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       // stop_others value passed in to us here:
       const bool trampoline_stop_others = false;
       ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughObjCTrampoline>(
-          thread, this, dispatch_values, isa_addr, sel_addr,
+          thread, *this, dispatch_values, isa_addr, sel_addr,
           trampoline_stop_others);
       if (log) {
         StreamString s;
         ret_plan_sp->GetDescription(&s, eDescriptionLevelFull);
         LLDB_LOGF(log, "Using ObjC step plan: %s.\n", s.GetData());
       }
+    }
+  }
+  
+  // Finally, check if we have hit an "optimized dispatch" function.  This will
+  // either directly call the base implementation or dispatch an objc_msgSend
+  // if the method has been overridden.  So we just do a "step in/step out",
+  // setting a breakpoint on objc_msgSend, and if we hit the msgSend, we 
+  // will automatically step in again.  That's the job of the 
+  // AppleThreadPlanStepThroughDirectDispatch.
+  if (!this_dispatch && !ret_plan_sp) {
+    MsgsendMap::iterator pos;
+    pos = m_opt_dispatch_map.find(curr_pc);
+    if (pos != m_opt_dispatch_map.end()) {
+
+      const char *opt_name = g_opt_dispatch_names[(*pos).second];
+
+      bool trampoline_stop_others = false;
+      LazyBool step_in_should_stop = eLazyBoolCalculate;
+      ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch> (
+          thread, *this, opt_name, trampoline_stop_others, step_in_should_stop);
     }
   }
 

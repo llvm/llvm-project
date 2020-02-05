@@ -385,6 +385,12 @@ public:
     return getFlags() & Scope::FunctionPrototypeScope;
   }
 
+  /// isFunctionDeclarationScope - Return true if this scope is a
+  /// function prototype scope.
+  bool isFunctionDeclarationScope() const {
+    return getFlags() & Scope::FunctionDeclarationScope;
+  }
+
   /// isAtCatchScope - Return true if this scope is \@catch.
   bool isAtCatchScope() const {
     return getFlags() & Scope::AtCatchScope;

@@ -1,4 +1,4 @@
-//===-- BlockPointer.cpp ----------------------------------------*- C++ -*-===//
+//===-- BlockPointer.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,14 +8,14 @@
 
 #include "BlockPointer.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
-
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 
@@ -45,18 +45,24 @@ public:
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(
           lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
-          std::move(err), "Failed to get scratch ClangASTContext");
+          std::move(err), "Failed to get scratch TypeSystemClang");
       return;
     }
 
-    ClangASTContext *clang_ast_context =
-        llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
+    TypeSystemClang *clang_ast_context =
+        llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
 
     if (!clang_ast_context) {
       return;
     }
 
-    ClangASTImporterSP clang_ast_importer = target_sp->GetClangASTImporter();
+    lldb::ClangASTImporterSP clang_ast_importer;
+    auto *state = target_sp->GetPersistentExpressionStateForLanguage(
+        lldb::eLanguageTypeC_plus_plus);
+    if (state) {
+      auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
+      clang_ast_importer = persistent_vars->GetClangASTImporter();
+    }
 
     if (!clang_ast_importer) {
       return;

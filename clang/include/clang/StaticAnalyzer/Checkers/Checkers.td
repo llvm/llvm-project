@@ -227,6 +227,16 @@ def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
   Dependencies<[StackAddrEscapeBase]>,
   Documentation<HasAlphaDocumentation>;
 
+def PthreadLockBase : Checker<"PthreadLockBase">,
+  HelpText<"Helper registering multiple checks.">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def C11LockChecker : Checker<"C11Lock">,
+  HelpText<"Simple lock -> unlock checker">,
+  Dependencies<[PthreadLockBase]>,
+  Documentation<HasAlphaDocumentation>;
+
 } // end "alpha.core"
 
 //===----------------------------------------------------------------------===//
@@ -431,6 +441,7 @@ def ChrootChecker : Checker<"Chroot">,
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
+  Dependencies<[PthreadLockBase]>,
   Documentation<HasAlphaDocumentation>;
 
 def StreamChecker : Checker<"Stream">,
@@ -591,6 +602,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def ContainerModeling : Checker<"ContainerModeling">,
+  HelpText<"Models C++ containers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
@@ -602,6 +618,7 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 
 def IteratorModeling : Checker<"IteratorModeling">,
   HelpText<"Models iterators of C++ containers">,
+  Dependencies<[ContainerModeling]>,
   Documentation<NotDocumented>,
   Hidden;
 
@@ -1362,9 +1379,14 @@ def ReportStmts : Checker<"ReportStmts">,
   HelpText<"Emits a warning for every statement.">,
   Documentation<NotDocumented>;
 
+def DebugContainerModeling : Checker<"DebugContainerModeling">,
+  HelpText<"Check the analyzer's understanding of C++ containers">,
+  Dependencies<[ContainerModeling]>,
+  Documentation<NotDocumented>;
+
 def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
   HelpText<"Check the analyzer's understanding of C++ iterators">,
-  Dependencies<[IteratorModeling]>,
+  Dependencies<[DebugContainerModeling, IteratorModeling]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
@@ -1440,6 +1462,11 @@ let ParentPackage = Fuchsia in {
 
 def FuchsiaHandleChecker : Checker<"HandleChecker">,
   HelpText<"A Checker that detect leaks related to Fuchsia handles">,
+  Documentation<HasDocumentation>;
+
+def FuchsiaLockChecker : Checker<"Lock">,
+  HelpText<"Check for the correct usage of locking APIs.">,
+  Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
 } // end fuchsia

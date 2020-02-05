@@ -114,6 +114,7 @@ static_library("AST") {
     "OSLog.cpp",
     "OpenMPClause.cpp",
     "ParentMap.cpp",
+    "ParentMapContext.cpp",
     "PrintfFormatString.cpp",
     "QualTypeNames.cpp",
     "RawCommentList.cpp",

@@ -1,4 +1,4 @@
-//===-- NSIndexPath.cpp -----------------------------------------*- C++ -*-===//
+//===-- NSIndexPath.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
@@ -53,7 +53,7 @@ public:
     if (!type_system)
       return false;
 
-    ClangASTContext *ast = ClangASTContext::GetScratch(
+    TypeSystemClang *ast = TypeSystemClang::GetScratch(
         *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
       return false;

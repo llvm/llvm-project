@@ -66,7 +66,7 @@ Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
     ArchiveBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
-    FatBinaryName = ArchiveFilename;
+    FatBinaryName = std::string(ArchiveFilename);
     ArchiveBuffers =
         getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }
@@ -105,7 +105,7 @@ Error BinaryHolder::ObjectEntry::load(StringRef Filename, bool Verbose) {
     ObjectBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
-    FatBinaryName = Filename;
+    FatBinaryName = std::string(Filename);
     ObjectBuffers =
         getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }

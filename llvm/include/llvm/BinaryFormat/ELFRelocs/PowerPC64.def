@@ -26,6 +26,7 @@
 #undef R_PPC64_GOT16_LO
 #undef R_PPC64_GOT16_HI
 #undef R_PPC64_GOT16_HA
+#undef R_PPC64_COPY
 #undef R_PPC64_GLOB_DAT
 #undef R_PPC64_JMP_SLOT
 #undef R_PPC64_RELATIVE
@@ -119,6 +120,7 @@ ELF_RELOC(R_PPC64_GOT16,                14)
 ELF_RELOC(R_PPC64_GOT16_LO,             15)
 ELF_RELOC(R_PPC64_GOT16_HI,             16)
 ELF_RELOC(R_PPC64_GOT16_HA,             17)
+ELF_RELOC(R_PPC64_COPY,                 19)
 ELF_RELOC(R_PPC64_GLOB_DAT,             20)
 ELF_RELOC(R_PPC64_JMP_SLOT,             21)
 ELF_RELOC(R_PPC64_RELATIVE,             22)

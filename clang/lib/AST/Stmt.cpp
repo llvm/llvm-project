@@ -732,7 +732,7 @@ std::string GCCAsmStmt::generateAsmString(const ASTContext &C) const {
 /// Assemble final IR asm string (MS-style).
 std::string MSAsmStmt::generateAsmString(const ASTContext &C) const {
   // FIXME: This needs to be translated into the IR string representation.
-  return AsmStr;
+  return std::string(AsmStr);
 }
 
 Expr *MSAsmStmt::getOutputExpr(unsigned i) {

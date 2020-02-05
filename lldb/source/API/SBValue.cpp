@@ -1,4 +1,4 @@
-//===-- SBValue.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBValue.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1493,7 +1493,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
           StreamString ss;
           // True to show fullpath for declaration file.
           decl.DumpStopContext(&ss, true);
-          watchpoint_sp->SetDeclInfo(ss.GetString());
+          watchpoint_sp->SetDeclInfo(std::string(ss.GetString()));
         }
       }
     }

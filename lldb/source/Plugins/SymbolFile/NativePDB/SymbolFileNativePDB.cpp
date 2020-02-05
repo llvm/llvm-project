@@ -1,4 +1,4 @@
-//===-- SymbolFileNativePDB.cpp ---------------------------------*- C++ -*-===//
+//===-- SymbolFileNativePDB.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamBuffer.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
@@ -139,7 +139,7 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   ec = llvm::identify_magic(pdb_file, magic);
   if (ec || magic != llvm::file_magic::pdb)
     return nullptr;
-  std::unique_ptr<PDBFile> pdb = loadPDBFile(pdb_file, allocator);
+  std::unique_ptr<PDBFile> pdb = loadPDBFile(std::string(pdb_file), allocator);
   if (!pdb)
     return nullptr;
 
@@ -331,7 +331,7 @@ void SymbolFileNativePDB::InitializeObject() {
                    std::move(err), "Failed to initialize");
   } else {
     ts_or_err->SetSymbolFile(this);
-    auto *clang = llvm::cast_or_null<ClangASTContext>(&ts_or_err.get());
+    auto *clang = llvm::cast_or_null<TypeSystemClang>(&ts_or_err.get());
     lldbassert(clang);
     m_ast = std::make_unique<PdbAstBuilder>(*m_objfile_sp, *m_index, *clang);
   }
@@ -452,7 +452,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
 
   std::string name;
   if (mr.ModifiedType.isSimple())
-    name = GetSimpleTypeName(mr.ModifiedType.getSimpleKind());
+    name = std::string(GetSimpleTypeName(mr.ModifiedType.getSimpleKind()));
   else
     name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
@@ -532,14 +532,14 @@ static std::string GetUnqualifiedTypeName(const TagRecord &record) {
     MSVCUndecoratedNameParser parser(record.Name);
     llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
 
-    return specs.back().GetBaseName();
+    return std::string(specs.back().GetBaseName());
   }
 
   llvm::ms_demangle::Demangler demangler;
   StringView sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
   if (demangler.Error)
-    return record.Name;
+    return std::string(record.Name);
 
   llvm::ms_demangle::IdentifierNode *idn =
       ttn->QualifiedName->getUnqualifiedIdentifier();

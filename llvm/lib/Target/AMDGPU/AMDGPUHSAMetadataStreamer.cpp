@@ -47,7 +47,7 @@ void MetadataStreamerV2::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   HSAMD::Metadata FromHSAMetadataString;
-  if (fromString(HSAMetadataString, FromHSAMetadataString)) {
+  if (fromString(std::string(HSAMetadataString), FromHSAMetadataString)) {
     errs() << "FAIL\n";
     return;
   }
@@ -259,7 +259,8 @@ void MetadataStreamerV2::emitPrintf(const Module &Mod) {
 
   for (auto Op : Node->operands())
     if (Op->getNumOperands())
-      Printf.push_back(cast<MDString>(Op->getOperand(0))->getString());
+      Printf.push_back(
+          std::string(cast<MDString>(Op->getOperand(0))->getString()));
 }
 
 void MetadataStreamerV2::emitKernelLanguage(const Function &Func) {
@@ -367,8 +368,8 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   HSAMetadata.mKernels.back().mArgs.push_back(Kernel::Arg::Metadata());
   auto &Arg = HSAMetadata.mKernels.back().mArgs.back();
 
-  Arg.mName = Name;
-  Arg.mTypeName = TypeName;
+  Arg.mName = std::string(Name);
+  Arg.mTypeName = std::string(TypeName);
   Arg.mSize = DL.getTypeAllocSize(Ty);
   Arg.mAlign = DL.getABITypeAlignment(Ty);
   Arg.mValueKind = ValueKind;
@@ -479,7 +480,7 @@ void MetadataStreamerV2::emitKernel(const MachineFunction &MF,
   HSAMetadata.mKernels.push_back(Kernel::Metadata());
   auto &Kernel = HSAMetadata.mKernels.back();
 
-  Kernel.mName = Func.getName();
+  Kernel.mName = std::string(Func.getName());
   Kernel.mSymbolName = (Twine(Func.getName()) + Twine("@kd")).str();
   emitKernelLanguage(Func);
   emitKernelAttrs(Func);

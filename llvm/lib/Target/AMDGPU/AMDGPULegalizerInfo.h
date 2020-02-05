@@ -50,12 +50,17 @@ public:
                               MachineIRBuilder &B) const;
   bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
+  bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &B, bool Signed) const;
   bool legalizeMinNumMaxNum(MachineInstr &MI, MachineRegisterInfo &MRI,
                             MachineIRBuilder &B) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B) const;
   bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
+  bool legalizeShuffleVector(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B) const;
+
   bool legalizeSinCos(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
@@ -74,7 +79,8 @@ public:
 
   bool legalizeAtomicCmpXChg(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
-
+  bool legalizeFlog(MachineInstr &MI, MachineIRBuilder &B,
+                    double Log2BaseInverted) const;
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
 
@@ -102,13 +108,37 @@ public:
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
+  std::tuple<Register, unsigned, unsigned>
+  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
+
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
   bool legalizeRawBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B, bool IsFormat) const;
-  bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &B) const override;
+  bool legalizeRawBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B, bool IsFormat) const;
+  Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
+                              bool IsFormat) const;
 
+  bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B, bool IsTyped,
+                           bool IsFormat) const;
+  bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B, bool IsTyped,
+                          bool IsFormat) const;
+  bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
+                            Intrinsic::ID IID) const;
+
+  bool legalizeImageIntrinsic(
+      MachineInstr &MI, MachineIRBuilder &B,
+      GISelChangeObserver &Observer,
+      const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
+
+  bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
+                            bool IsInc) const;
+
+  bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &B,
+                         GISelChangeObserver &Observer) const override;
 };
 } // End llvm namespace.
 #endif

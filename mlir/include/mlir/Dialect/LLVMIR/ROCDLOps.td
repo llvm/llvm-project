@@ -1,6 +1,6 @@
 //===-- ROCDLOps.td - ROCDL IR dialect op definition file --*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -42,8 +42,7 @@ class ROCDL_SpecialRegisterOp<string mnemonic,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createIntrinsicCall(builder,"
     # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic) # ");";
-  let parser = [{ return parseROCDLOp(parser, result); }];
-  let printer = [{ printROCDLOp(p, this->getOperation()); }];
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
@@ -52,8 +51,7 @@ class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
   # device_function # "\", " # parameter # ");";
-  let parser = [{ return parseROCDLOp(parser, result); }];
-  let printer = [{ printROCDLOp(p, this->getOperation()); }];
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,5 +1,4 @@
-//===-- Status.cpp -----------------------------------------------*- C++
-//-*-===//
+//===-- Status.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -242,7 +241,7 @@ void Status::SetErrorString(llvm::StringRef err_str) {
     if (Success())
       SetErrorToGenericError();
   }
-  m_string = err_str;
+  m_string = std::string(err_str);
 }
 
 /// Set the current error string to a formatted error string.
@@ -271,7 +270,7 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 
     llvm::SmallString<1024> buf;
     VASprintf(buf, format, args);
-    m_string = buf.str();
+    m_string = std::string(buf.str());
     return buf.size();
   } else {
     m_string.clear();

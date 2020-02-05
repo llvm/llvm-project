@@ -1,4 +1,4 @@
-//===-- ClangExpressionSourceCode.cpp ---------------------------*- C++ -*-===//
+//===-- ClangExpressionSourceCode.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -478,7 +478,7 @@ bool ClangExpressionSourceCode::GetText(
       break;
     }
 
-    text = wrap_stream.GetString();
+    text = std::string(wrap_stream.GetString());
   } else {
     text.append(m_body);
   }

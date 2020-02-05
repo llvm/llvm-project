@@ -15,6 +15,7 @@
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/WithColor.h"
 
+#include "llvm/DWARFLinker/DWARFLinker.h"
 #include <string>
 
 namespace llvm {
@@ -23,13 +24,6 @@ namespace dsymutil {
 enum class OutputFileType {
   Object,
   Assembly,
-};
-
-/// The kind of accelerator tables we should emit.
-enum class AccelTableKind {
-  Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
-  Dwarf,   ///< DWARF v5 .debug_names.
-  Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
 };
 
 struct LinkOptions {

@@ -86,7 +86,7 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
   }
 
   errs() << "Writing '" << Filename << "'... ";
-  return Filename.str();
+  return std::string(Filename.str());
 }
 
 // Execute the graph viewer. Return true if there were errors.
@@ -147,7 +147,7 @@ static const char *getProgramName(GraphProgram::Name program) {
 
 bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
                         GraphProgram::Name program) {
-  std::string Filename = FilenameRef;
+  std::string Filename = std::string(FilenameRef);
   std::string ErrMsg;
   std::string ViewerPath;
   GraphSession S;

@@ -763,21 +763,30 @@ void Sema::PrintInstantiationStack() {
     
     case CodeSynthesisContext::ConstraintsCheck: {
       unsigned DiagID = 0;
+      if (!Active->Entity) {
+        Diags.Report(Active->PointOfInstantiation,
+                     diag::note_nested_requirement_here)
+          << Active->InstantiationRange;
+        break;
+      }
       if (isa<ConceptDecl>(Active->Entity))
         DiagID = diag::note_concept_specialization_here;
       else if (isa<TemplateDecl>(Active->Entity))
         DiagID = diag::note_checking_constraints_for_template_id_here;
       else if (isa<VarTemplatePartialSpecializationDecl>(Active->Entity))
         DiagID = diag::note_checking_constraints_for_var_spec_id_here;
-      else {
-        assert(isa<ClassTemplatePartialSpecializationDecl>(Active->Entity));
+      else if (isa<ClassTemplatePartialSpecializationDecl>(Active->Entity))
         DiagID = diag::note_checking_constraints_for_class_spec_id_here;
+      else {
+        assert(isa<FunctionDecl>(Active->Entity));
+        DiagID = diag::note_checking_constraints_for_function_here;
       }
       SmallVector<char, 128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       cast<NamedDecl>(Active->Entity)->printName(OS);
-      printTemplateArgumentList(OS, Active->template_arguments(),
-                                getPrintingPolicy());
+      if (!isa<FunctionDecl>(Active->Entity))
+        printTemplateArgumentList(OS, Active->template_arguments(),
+                                  getPrintingPolicy());
       Diags.Report(Active->PointOfInstantiation, DiagID) << OS.str()
         << Active->InstantiationRange;
       break;

@@ -1,6 +1,6 @@
 //===- Builders.h - MLIR Declarative Builder Classes ------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -339,6 +339,7 @@ public:
 
   /// Implicit conversion useful for automatic conversion to Container<Value>.
   operator Value() const { return getValue(); }
+  operator Type() const { return getType(); }
   operator bool() const { return hasValue(); }
 
   /// Generic mlir::Op create. This is the key to being extensible to the whole

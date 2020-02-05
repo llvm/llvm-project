@@ -398,8 +398,8 @@ func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>
 }
 
 // CHECK-LABEL: @ops
-func @ops(f32, f32, i32, i32) -> (f32, i32) {
-^bb0(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32):
+func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
+^bb0(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64):
 // CHECK-NEXT:  %0 = llvm.fsub %arg0, %arg1 : !llvm.float
   %0 = subf %arg0, %arg1: f32
 // CHECK-NEXT:  %1 = llvm.sub %arg2, %arg3 : !llvm.i32
@@ -440,7 +440,10 @@ func @ops(f32, f32, i32, i32) -> (f32, i32) {
   %19 = shift_right_signed %arg2, %arg3 : i32
 // CHECK-NEXT: %19 = llvm.lshr %arg2, %arg3 : !llvm.i32
   %20 = shift_right_unsigned %arg2, %arg3 : i32
-
+// CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg0) : (!llvm.float) -> !llvm.float
+  %21 = std.sqrt %arg0 : f32
+// CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg4) : (!llvm.double) -> !llvm.double
+  %22 = std.sqrt %arg4 : f64
   return %0, %4 : f32, i32
 }
 

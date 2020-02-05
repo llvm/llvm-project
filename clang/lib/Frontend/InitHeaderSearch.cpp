@@ -47,11 +47,9 @@ class InitHeaderSearch {
   bool HasSysroot;
 
 public:
-
   InitHeaderSearch(HeaderSearch &HS, bool verbose, StringRef sysroot)
-    : Headers(HS), Verbose(verbose), IncludeSysroot(sysroot),
-      HasSysroot(!(sysroot.empty() || sysroot == "/")) {
-  }
+      : Headers(HS), Verbose(verbose), IncludeSysroot(std::string(sysroot)),
+        HasSysroot(!(sysroot.empty() || sysroot == "/")) {}
 
   /// AddPath - Add the specified path to the specified group list, prefixing
   /// the sysroot if used.
@@ -67,7 +65,7 @@ public:
   /// AddSystemHeaderPrefix - Add the specified prefix to the system header
   /// prefix list.
   void AddSystemHeaderPrefix(StringRef Prefix, bool IsSystemHeader) {
-    SystemHeaderPrefixes.emplace_back(Prefix, IsSystemHeader);
+    SystemHeaderPrefixes.emplace_back(std::string(Prefix), IsSystemHeader);
   }
 
   /// AddGnuCPlusPlusIncludePaths - Add the necessary paths to support a gnu
@@ -355,7 +353,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
         // files is <SDK_DIR>/host_tools/lib/clang
         SmallString<128> P = StringRef(HSOpts.ResourceDir);
         llvm::sys::path::append(P, "../../..");
-        BaseSDKPath = P.str();
+        BaseSDKPath = std::string(P.str());
       }
     }
     AddPath(BaseSDKPath + "/target/include", System, false);

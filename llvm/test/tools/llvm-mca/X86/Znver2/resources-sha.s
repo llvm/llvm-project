@@ -68,16 +68,16 @@ sha256rnds2 (%rax), %xmm2
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sha1msg1	%xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     0.50   0.50    -      -     sha1msg1	(%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     sha1msg1	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sha1msg2	%xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     0.50   0.50    -      -     sha1msg2	(%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     sha1msg2	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     sha1nexte	%xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     1.00    -      -      -     sha1nexte	(%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     1.00    -      -      -     sha1nexte	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     sha1rnds4	$3, %xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     1.00    -      -      -     sha1rnds4	$3, (%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     1.00    -      -      -     sha1rnds4	$3, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     sha256msg1	%xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     0.50   0.50    -      -     sha256msg1	(%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     sha256msg1	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     sha256msg2	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     sha256msg2	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     sha256rnds2	%xmm0, %xmm0, %xmm2
-# CHECK-NEXT: 0.33  0.33   0.33     -      -      -      -      -      -     1.00    -      -      -     sha256rnds2	%xmm0, (%rax), %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     1.00    -      -      -     sha256rnds2	%xmm0, (%rax), %xmm2

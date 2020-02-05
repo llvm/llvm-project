@@ -35,6 +35,7 @@
 
 ; Legacy PM, Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t2.o,test,px \
 ; RUN:   -r=%t2.o,_ZN1A1nEi,p \
@@ -48,6 +49,7 @@
 
 ; New PM, Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t2.o,test,px \
 ; RUN:   -r=%t2.o,_ZN1A1nEi,p \
@@ -62,6 +64,7 @@
 ; Legacy PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
@@ -84,6 +87,7 @@
 ; New PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \

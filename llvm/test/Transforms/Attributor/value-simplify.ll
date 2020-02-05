@@ -210,7 +210,7 @@ define i32* @complicated_args_inalloca() {
 
 define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test_sret
-; CHECK-SAME: (%struct.X* nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly dereferenceable(8) [[B:%.*]])
+; CHECK-SAME: (%struct.X* noalias nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly dereferenceable(8) [[B:%.*]])
 ; CHECK-NEXT:    store %struct.X* [[A]], %struct.X** [[B]]
 ; CHECK-NEXT:    ret void
 ;
@@ -220,7 +220,7 @@ define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 define void @complicated_args_sret(%struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_sret
 ; CHECK-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; CHECK-NEXT:    call void @test_sret(%struct.X* nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly [[B]])
+; CHECK-NEXT:    call void @test_sret(%struct.X* noalias nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly [[B]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
@@ -246,7 +246,7 @@ define %struct.X* @complicated_args_nest() {
 @S = external global %struct.X
 define internal void @test_byval(%struct.X* byval %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
-; CHECK-SAME: (%struct.X* nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
+; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    store i8* null, i8** [[G0]], align 8
 ; CHECK-NEXT:    ret void

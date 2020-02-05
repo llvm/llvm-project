@@ -885,7 +885,8 @@ entry:
 ; GFX89:         flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX10WGP:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GFX10CU-NOT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GFX89-NOT:     s_waitcnt vmcnt(0){{$}}
+; GFX89:         s_waitcnt lgkmcnt(0){{$}}
+; GFX89:         s_waitcnt vmcnt(0){{$}}
 ; GFX10WGP:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX89-NOT:     buffer_wbinvl1_vol
 ; GFX10WGP-NEXT: buffer_gl0_inv
@@ -912,7 +913,8 @@ entry:
 ; GFX89:         flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX10WGP:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GFX10CU:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
-; GFX89-NOT:     s_waitcnt vmcnt(0){{$}}
+; GFX89:         s_waitcnt lgkmcnt(0){{$}}
+; GFX89:         s_waitcnt vmcnt(0){{$}}
 ; GFX10WGP-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX89-NOT:     buffer_wbinvl1_vol
 ; GFX10WGP-NEXT: buffer_gl0_inv

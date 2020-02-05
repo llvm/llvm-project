@@ -3,7 +3,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc %s -triple x86_64-pc-linux -filetype=obj >%t
-# RUN: lldb %t -o "breakpoint set -n f" -b | FileCheck %s
+# RUN: %lldb %t -o "breakpoint set -n f" -b | FileCheck %s
 
 # CHECK: Breakpoint 1: where = {{.*}}`f, address = 0x0000000000000047
 

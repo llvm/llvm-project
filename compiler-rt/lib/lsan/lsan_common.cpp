@@ -211,6 +211,13 @@ void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg) {
   ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);
 }
 
+#if SANITIZER_FUCHSIA
+
+// Fuchsia handles all threads together with its own callback.
+static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
+
+#else
+
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
@@ -307,6 +314,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     }
   }
 }
+
+#endif  // SANITIZER_FUCHSIA
 
 void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
                     uptr region_begin, uptr region_end, bool is_readable) {
@@ -443,25 +452,23 @@ void ProcessPC(Frontier *frontier) {
 }
 
 // Sets the appropriate tag on each chunk.
-static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
-  // Holds the flood fill frontier.
-  Frontier frontier;
+static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
+                              Frontier *frontier) {
+  ForEachChunk(CollectIgnoredCb, frontier);
+  ProcessGlobalRegions(frontier);
+  ProcessThreads(suspended_threads, frontier);
+  ProcessRootRegions(frontier);
+  FloodFillTag(frontier, kReachable);
 
-  ForEachChunk(CollectIgnoredCb, &frontier);
-  ProcessGlobalRegions(&frontier);
-  ProcessThreads(suspended_threads, &frontier);
-  ProcessRootRegions(&frontier);
-  FloodFillTag(&frontier, kReachable);
-
-  CHECK_EQ(0, frontier.size());
-  ProcessPC(&frontier);
+  CHECK_EQ(0, frontier->size());
+  ProcessPC(frontier);
 
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
   // otherwise.
   LOG_POINTERS("Processing platform-specific allocations.\n");
-  ProcessPlatformSpecificAllocations(&frontier);
-  FloodFillTag(&frontier, kReachable);
+  ProcessPlatformSpecificAllocations(frontier);
+  FloodFillTag(frontier, kReachable);
 
   // Iterate over leaked chunks and mark those that are reachable from other
   // leaked chunks.
@@ -521,11 +528,6 @@ static void PrintMatchedSuppressions() {
   Printf("%s\n\n", line);
 }
 
-struct CheckForLeaksParam {
-  bool success;
-  LeakReport leak_report;
-};
-
 static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   const InternalMmapVector<tid_t> &suspended_threads =
       *(const InternalMmapVector<tid_t> *)arg;
@@ -537,6 +539,14 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
              tctx->os_id);
   }
 }
+
+#if SANITIZER_FUCHSIA
+
+// Fuchsia provides a libc interface that guarantees all threads are
+// covered, and SuspendedThreadList is never really used.
+static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+
+#else  // !SANITIZER_FUCHSIA
 
 static void ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
@@ -550,13 +560,15 @@ static void ReportUnsuspendedThreads(
       &ReportIfNotSuspended, &threads);
 }
 
+#endif  // !SANITIZER_FUCHSIA
+
 static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
                                   void *arg) {
   CheckForLeaksParam *param = reinterpret_cast<CheckForLeaksParam *>(arg);
   CHECK(param);
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
-  ClassifyAllChunks(suspended_threads);
+  ClassifyAllChunks(suspended_threads, &param->frontier);
   ForEachChunk(CollectLeaksCb, &param->leak_report);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
@@ -569,7 +581,6 @@ static bool CheckForLeaks() {
       return false;
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
-  param.success = false;
   LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
 
   if (!param.success) {

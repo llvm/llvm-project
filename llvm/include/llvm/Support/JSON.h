@@ -565,7 +565,7 @@ inline bool Object::erase(StringRef K) {
 // See comments on Value.
 inline bool fromJSON(const Value &E, std::string &Out) {
   if (auto S = E.getAsString()) {
-    Out = *S;
+    Out = std::string(*S);
     return true;
   }
   return false;
@@ -598,6 +598,13 @@ inline bool fromJSON(const Value &E, bool &Out) {
   }
   return false;
 }
+inline bool fromJSON(const Value &E, std::nullptr_t &Out) {
+  if (auto S = E.getAsNull()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
 template <typename T> bool fromJSON(const Value &E, llvm::Optional<T> &Out) {
   if (E.getAsNull()) {
     Out = llvm::None;
@@ -625,7 +632,7 @@ bool fromJSON(const Value &E, std::map<std::string, T> &Out) {
   if (auto *O = E.getAsObject()) {
     Out.clear();
     for (const auto &KV : *O)
-      if (!fromJSON(KV.second, Out[llvm::StringRef(KV.first)]))
+      if (!fromJSON(KV.second, Out[std::string(llvm::StringRef(KV.first))]))
         return false;
     return true;
   }

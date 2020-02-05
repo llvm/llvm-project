@@ -5,15 +5,7 @@ void *my_aligned_alloc(int size, int alignment) __attribute__((assume_aligned(32
 
 // CHECK-LABEL: @t0_immediate0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i8* @my_aligned_alloc(i32 320, i32 16)
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
-// CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR2:%.*]] = and i64 [[PTRINT1]], 15
-// CHECK-NEXT:    [[MASKCOND3:%.*]] = icmp eq i64 [[MASKEDPTR2]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND3]])
+// CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 320, i32 16)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
 void *t0_immediate0() {
@@ -22,15 +14,7 @@ void *t0_immediate0() {
 
 // CHECK-LABEL: @t1_immediate1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i8* @my_aligned_alloc(i32 320, i32 32)
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
-// CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR2:%.*]] = and i64 [[PTRINT1]], 31
-// CHECK-NEXT:    [[MASKCOND3:%.*]] = icmp eq i64 [[MASKEDPTR2]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND3]])
+// CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 320, i32 32)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
 void *t1_immediate1() {
@@ -39,15 +23,7 @@ void *t1_immediate1() {
 
 // CHECK-LABEL: @t2_immediate2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i8* @my_aligned_alloc(i32 320, i32 64)
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
-// CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR2:%.*]] = and i64 [[PTRINT1]], 63
-// CHECK-NEXT:    [[MASKCOND3:%.*]] = icmp eq i64 [[MASKEDPTR2]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND3]])
+// CHECK-NEXT:    [[CALL:%.*]] = call align 64 i8* @my_aligned_alloc(i32 320, i32 64)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
 void *t2_immediate2() {
@@ -59,17 +35,13 @@ void *t2_immediate2() {
 // CHECK-NEXT:    [[ALIGNMENT_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[ALIGNMENT:%.*]], i32* [[ALIGNMENT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ALIGNMENT_ADDR]], align 4
-// CHECK-NEXT:    [[CALL:%.*]] = call i8* @my_aligned_alloc(i32 320, i32 [[TMP0]])
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 320, i32 [[TMP0]])
 // CHECK-NEXT:    [[ALIGNMENTCAST:%.*]] = zext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENTCAST]], 1
-// CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR2:%.*]] = and i64 [[PTRINT1]], [[MASK]]
-// CHECK-NEXT:    [[MASKCOND3:%.*]] = icmp eq i64 [[MASKEDPTR2]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND3]])
+// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
+// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK]]
+// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
 void *t3_variable(int alignment) {

@@ -58,3 +58,14 @@ func @test_undo_region_clone() {
   %ignored = "test.illegal_op_f"() : () -> (i32)
   "test.return"() : () -> ()
 }
+
+// -----
+
+// Test that unknown operations can be dynamically legal.
+func @test_unknown_dynamically_legal() {
+  "foo.unknown_op"() {test.dynamically_legal} : () -> ()
+
+  // expected-error@+1 {{failed to legalize operation 'foo.unknown_op'}}
+  "foo.unknown_op"() {} : () -> ()
+  "test.return"() : () -> ()
+}

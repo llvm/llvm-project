@@ -626,6 +626,9 @@ namespace llvm {
       // Vector signed/unsigned integer to float/double.
       STRICT_CVTSI2P, STRICT_CVTUI2P,
 
+      // Strict FMA nodes.
+      STRICT_FNMADD, STRICT_FMSUB, STRICT_FNMSUB,
+
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LCMPXCHG8_DAG,

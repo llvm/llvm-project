@@ -19,10 +19,15 @@ define internal i32 @f(%struct.ss* inalloca  %s) {
 ; ATTRIBUTOR-NEXT:    ret i32 [[R]]
 ;
 ; GLOBALOPT_ATTRIBUTOR-LABEL: define {{[^@]+}}@f
-; GLOBALOPT_ATTRIBUTOR-SAME: (%struct.ss* noalias nocapture nofree nonnull readonly align 4 dereferenceable(8) [[S:%.*]]) unnamed_addr
+; GLOBALOPT_ATTRIBUTOR-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) unnamed_addr
 ; GLOBALOPT_ATTRIBUTOR-NEXT:  entry:
-; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[S]], i32 0, i32 0
-; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]]
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[S_PRIV_CAST:%.*]] = bitcast %struct.ss* [[S_PRIV]] to i32*
+; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 [[TMP0]], i32* [[S_PRIV_CAST]]
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S_PRIV]], i32 0, i32 1
+; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 [[TMP1]], i32* [[S_PRIV_0_1]]
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S_PRIV]], i32 0, i32 0
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S_PRIV]], i32 0, i32 1
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* [[F0]], align 4
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    [[B:%.*]] = load i32, i32* [[F1]], align 4
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
@@ -55,7 +60,11 @@ define i32 @main() {
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 1, i32* [[F0]], align 4
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    store i32 2, i32* [[F1]], align 4
-; GLOBALOPT_ATTRIBUTOR-NEXT:    [[R:%.*]] = call fastcc i32 @f(%struct.ss* noalias nocapture nofree nonnull readonly align 4 dereferenceable(8) [[S]])
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 1
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = load i32, i32* [[S_0_1]], align 1
+; GLOBALOPT_ATTRIBUTOR-NEXT:    [[R:%.*]] = call fastcc i32 @f(i32 [[TMP0]], i32 [[TMP1]])
 ; GLOBALOPT_ATTRIBUTOR-NEXT:    ret i32 [[R]]
 ;
 entry:

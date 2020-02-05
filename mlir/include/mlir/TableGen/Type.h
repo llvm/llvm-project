@@ -1,6 +1,6 @@
 //===- Type.h - Type class --------------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -36,6 +36,10 @@ public:
 
   // Returns true if this is a variadic type constraint.
   bool isVariadic() const;
+
+  // Returns the builder call for this constraint if this is a buildable type,
+  // returns None otherwise.
+  Optional<StringRef> getBuilderCall() const;
 };
 
 // Wrapper class with helper methods for accessing Types defined in TableGen.

@@ -191,4 +191,3 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 
 # ZNVER2-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER2-NEXT:         1     1.0    0.5    0.0       <total>
-

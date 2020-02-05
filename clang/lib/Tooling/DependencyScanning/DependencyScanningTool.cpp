@@ -8,24 +8,25 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
-#include "llvm/Support/JSON.h"
-
-static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
-  std::vector<llvm::StringRef> Strings;
-  for (auto &&I : Set)
-    Strings.push_back(I.getKey());
-  std::sort(Strings.begin(), Strings.end());
-  return llvm::json::Array(Strings);
-}
 
 namespace clang{
 namespace tooling{
 namespace dependencies{
 
+std::vector<std::string> FullDependencies::getAdditionalCommandLine(
+    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
+    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const {
+  std::vector<std::string> Ret = AdditionalNonPathCommandLine;
+
+  dependencies::detail::appendCommonModuleArguments(
+      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, Ret);
+
+  return Ret;
+}
+
 DependencyScanningTool::DependencyScanningTool(
     DependencyScanningService &Service)
-    : Format(Service.getFormat()), Worker(Service) {
-}
+    : Worker(Service) {}
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const tooling::CompilationDatabase &Compilations, StringRef CWD) {
@@ -36,7 +37,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
                               StringRef File) override {
       if (!this->Opts)
         this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
-      Dependencies.push_back(File);
+      Dependencies.push_back(std::string(File));
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -75,11 +76,36 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     std::vector<std::string> Dependencies;
   };
 
+  // We expect a single command here because if a source file occurs multiple
+  // times in the original CDB, then `computeDependencies` would run the
+  // `DependencyScanningAction` once for every time the input occured in the
+  // CDB. Instead we split up the CDB into single command chunks to avoid this
+  // behavior.
+  assert(Compilations.getAllCompileCommands().size() == 1 &&
+         "Expected a compilation database with a single command!");
+  std::string Input = Compilations.getAllCompileCommands().front().Filename;
+
+  MakeDependencyPrinterConsumer Consumer;
+  auto Result = Worker.computeDependencies(Input, CWD, Compilations, Consumer);
+  if (Result)
+    return std::move(Result);
+  std::string Output;
+  Consumer.printDependencies(Output);
+  return Output;
+}
+
+llvm::Expected<FullDependenciesResult>
+DependencyScanningTool::getFullDependencies(
+    const tooling::CompilationDatabase &Compilations, StringRef CWD,
+    const llvm::StringSet<> &AlreadySeen) {
   class FullDependencyPrinterConsumer : public DependencyConsumer {
   public:
+    FullDependencyPrinterConsumer(const llvm::StringSet<> &AlreadySeen)
+        : AlreadySeen(AlreadySeen) {}
+
     void handleFileDependency(const DependencyOutputOptions &Opts,
                               StringRef File) override {
-      Dependencies.push_back(File);
+      Dependencies.push_back(std::string(File));
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -90,55 +116,41 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
       ContextHash = std::move(Hash);
     }
 
-    void printDependencies(std::string &S, StringRef MainFile) {
-      // Sort the modules by name to get a deterministic order.
-      std::vector<StringRef> Modules;
-      for (auto &&Dep : ClangModuleDeps)
-        Modules.push_back(Dep.first);
-      std::sort(Modules.begin(), Modules.end());
+    FullDependenciesResult getFullDependencies() const {
+      FullDependencies FD;
 
-      llvm::raw_string_ostream OS(S);
+      FD.ContextHash = std::move(ContextHash);
 
-      using namespace llvm::json;
+      FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
-      Array Imports;
-      for (auto &&ModName : Modules) {
-        auto &MD = ClangModuleDeps[ModName];
+      for (auto &&M : ClangModuleDeps) {
+        auto &MD = M.second;
         if (MD.ImportedByMainFile)
-          Imports.push_back(MD.ModuleName);
+          FD.ClangModuleDeps.push_back({MD.ModuleName, ContextHash});
       }
 
-      Array Mods;
-      for (auto &&ModName : Modules) {
-        auto &MD = ClangModuleDeps[ModName];
-        Object Mod{
-            {"name", MD.ModuleName},
-            {"file-deps", toJSONSorted(MD.FileDeps)},
-            {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
-            {"clang-modulemap-file", MD.ClangModuleMapFile},
-        };
-        Mods.push_back(std::move(Mod));
+      FullDependenciesResult FDR;
+
+      for (auto &&M : ClangModuleDeps) {
+        // TODO: Avoid handleModuleDependency even being called for modules
+        //   we've already seen.
+        if (AlreadySeen.count(M.first))
+          continue;
+        FDR.DiscoveredModules.push_back(std::move(M.second));
       }
 
-      Object O{
-          {"input-file", MainFile},
-          {"clang-context-hash", ContextHash},
-          {"file-deps", Dependencies},
-          {"clang-module-deps", std::move(Imports)},
-          {"clang-modules", std::move(Mods)},
-      };
-
-      S = llvm::formatv("{0:2},\n", Value(std::move(O))).str();
-      return;
+      FDR.FullDeps = std::move(FD);
+      return FDR;
     }
 
   private:
     std::vector<std::string> Dependencies;
     std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
     std::string ContextHash;
+    std::vector<std::string> OutputPaths;
+    const llvm::StringSet<> &AlreadySeen;
   };
 
-  
   // We expect a single command here because if a source file occurs multiple
   // times in the original CDB, then `computeDependencies` would run the
   // `DependencyScanningAction` once for every time the input occured in the
@@ -147,26 +159,13 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   assert(Compilations.getAllCompileCommands().size() == 1 &&
          "Expected a compilation database with a single command!");
   std::string Input = Compilations.getAllCompileCommands().front().Filename;
-  
-  if (Format == ScanningOutputFormat::Make) {
-    MakeDependencyPrinterConsumer Consumer;
-    auto Result =
-        Worker.computeDependencies(Input, CWD, Compilations, Consumer);
-    if (Result)
-      return std::move(Result);
-    std::string Output;
-    Consumer.printDependencies(Output);
-    return Output;
-  } else {
-    FullDependencyPrinterConsumer Consumer;
-    auto Result =
-        Worker.computeDependencies(Input, CWD, Compilations, Consumer);
-    if (Result)
-      return std::move(Result);
-    std::string Output;
-    Consumer.printDependencies(Output, Input);
-    return Output;
-  }
+
+  FullDependencyPrinterConsumer Consumer(AlreadySeen);
+  llvm::Error Result =
+      Worker.computeDependencies(Input, CWD, Compilations, Consumer);
+  if (Result)
+    return std::move(Result);
+  return Consumer.getFullDependencies();
 }
 
 } // end namespace dependencies

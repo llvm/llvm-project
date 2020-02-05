@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 

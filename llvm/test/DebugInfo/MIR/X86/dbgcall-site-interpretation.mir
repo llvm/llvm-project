@@ -13,6 +13,10 @@
 # CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_fbreg +8)
 # CHECK-EMPTY: 
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
+# CHECK-EMPTY: 
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 RDI)
 # CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
 # CHECK-EMPTY:

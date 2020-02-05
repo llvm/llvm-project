@@ -14,10 +14,13 @@ set(GWP_ASAN_UNITTESTS
   backtrace.cpp
   basic.cpp
   compression.cpp
+  iterate.cpp
   driver.cpp
   mutex_test.cpp
   slot_reuse.cpp
-  thread_contention.cpp)
+  thread_contention.cpp
+  harness.cpp
+  enable_disable.cpp)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}

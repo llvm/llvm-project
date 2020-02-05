@@ -112,14 +112,14 @@ public:
 
   TypeNameSpecifierImpl(llvm::StringRef name, bool is_regex)
       : m_is_regex(is_regex), m_type() {
-    m_type.m_type_name = name;
+    m_type.m_type_name = std::string(name);
   }
 
   // if constructing with a given type, is_regex cannot be true since we are
   // giving an exact type to match
   TypeNameSpecifierImpl(lldb::TypeSP type) : m_is_regex(false), m_type() {
     if (type) {
-      m_type.m_type_name = type->GetName().GetStringRef();
+      m_type.m_type_name = std::string(type->GetName().GetStringRef());
       m_type.m_compiler_type = type->GetForwardCompilerType();
     }
   }

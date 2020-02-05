@@ -2,11 +2,17 @@
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ; CHECK: "version":4
 
+; namespace test {
+;  extern int a;
+; }
+; using test::a;
+;
 ; int GlobalConst = 42;
 ; int Global;
 ;
 ; struct S {
 ;   static const int constant = 24;
+;   int (*fn)(int);
 ; } s;
 ;
 ; int __attribute__((always_inline)) square(int i) { return i * i; }
@@ -14,13 +20,26 @@
 ;   int squared = square(i);
 ;   return squared*i;
 ; }
+;
+; int boo(int, int) {}
 
-; GlobalConst,Global,s,s.constant,square::i,cube::i,cube::squared
-; CHECK: "unique source variables":7
+; Following variables/arguments/members should be counted:
+;     - GlobalConst,
+;     - Global,
+;     - s, s.constant,
+;     - square::i,
+;     - cube::i, cube::squared
+;     - boo::1, boo::2
+; Skipped entities:
+;     - declaration of test::a,
+;     - non-constant member S:fn,
+;     - arguments of S:fn.
+
+; CHECK: "unique source variables":9
 ; +1 extra inline i.
-; CHECK: "source variables":8
+; CHECK: "source variables":10
 ; -1 square::i
-; CHECK: "variables with location":7
+; CHECK: "variables with location":9
 ; CHECK: "scope bytes total":[[BYTES:[0-9]+]]
 ; Because of the dbg.value in the middle of the function, the pc range coverage
 ; must be below 100%.
@@ -36,7 +55,7 @@ source_filename = "/tmp/quality.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-%struct.S = type { i8 }
+%struct.S = type { i8 (i32)* }
 
 @GlobalConst = global i32 42, align 4, !dbg !0
 @Global = global i32 0, align 4, !dbg !6
@@ -83,6 +102,18 @@ entry:
   ret i32 %mul, !dbg !44
 }
 
+; Function Attrs: noinline optnone uwtable
+define dso_local i32 @_Z3booii(i32 %0, i32 %1) !dbg !52 {
+entry:
+  %.addr = alloca i32, align 4
+  %.addr1 = alloca i32, align 4
+  store i32 %0, i32* %.addr, align 4
+  call void @llvm.dbg.declare(metadata i32* %.addr, metadata !55, metadata !DIExpression()), !dbg !56
+  store i32 %1, i32* %.addr1, align 4
+  call void @llvm.dbg.declare(metadata i32* %.addr1, metadata !57, metadata !DIExpression()), !dbg !58
+  ret i32 0, !dbg !58
+}
+
 attributes #0 = { alwaysinline nounwind ssp uwtable }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noinline nounwind optnone ssp uwtable }
@@ -93,7 +124,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "GlobalConst", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 6.0.0 (trunk 310529) (llvm/trunk 310534)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 6.0.0 (trunk 310529) (llvm/trunk 310534)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, imports: !48, globals: !5)
 !3 = !DIFile(filename: "/tmp/quality.cpp", directory: "/Volumes/Data/llvm")
 !4 = !{}
 !5 = !{!0, !6, !9}
@@ -103,7 +134,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
 !10 = distinct !DIGlobalVariable(name: "s", scope: !2, file: !3, line: 6, type: !11, isLocal: false, isDefinition: true)
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !3, line: 4, size: 8, elements: !12, identifier: "_ZTS1S")
-!12 = !{!13}
+!12 = !{!13, !45}
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "constant", scope: !11, file: !3, line: 5, baseType: !14, flags: DIFlagStaticMember, extraData: i32 24)
 !14 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !8)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
@@ -136,3 +167,17 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !42 = !DILocation(line: 11, column: 18, scope: !30)
 !43 = !DILocation(line: 11, column: 17, scope: !30)
 !44 = !DILocation(line: 11, column: 3, scope: !30)
+!45 = !DIDerivedType(tag: DW_TAG_member, name: "fn", scope: !11, file: !3, line: 5, baseType: !46, size: 64)
+!46 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !47, size: 64)
+!47 = !DISubroutineType(types: !22)
+!48 = !{!49}
+!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !2, entity: !50, file: !3, line: 2)
+!50 = !DIGlobalVariable(name: "a", linkageName: "_ZN4test1aE", scope: !51, file: !3, line: 2, type: !8, isLocal: false, isDefinition: false)
+!51 = !DINamespace(name: "test", scope: !2)
+!52 = distinct !DISubprogram(name: "boo", linkageName: "_Z3booii", scope: !3, file: !3, line: 10, type: !53, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!53 = !DISubroutineType(types: !54)
+!54 = !{!8, !8, !8}
+!55 = !DILocalVariable(arg: 1, scope: !52, file: !3, line: 10, type: !8)
+!56 = !DILocation(line: 10, column: 12, scope: !52)
+!57 = !DILocalVariable(arg: 2, scope: !52, file: !3, line: 10, type: !8)
+!58 = !DILocation(line: 10, column: 17, scope: !52)

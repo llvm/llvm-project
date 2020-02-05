@@ -19,7 +19,10 @@ struct MCFixupKindInfo {
     FKF_IsPCRel = (1 << 0),
 
     /// Should this fixup kind force a 4-byte aligned effective PC value?
-    FKF_IsAlignedDownTo32Bits = (1 << 1)
+    FKF_IsAlignedDownTo32Bits = (1 << 1),
+
+    /// Should this fixup be evaluated in a target dependent manner?
+    FKF_IsTarget = (1 << 2)
   };
 
   /// A target specific name for the fixup kind. The names will be unique for

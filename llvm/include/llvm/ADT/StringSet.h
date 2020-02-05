@@ -15,7 +15,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/Support/AllocatorBase.h"
 #include <cassert>
 #include <initializer_list>
 #include <utility>

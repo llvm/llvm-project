@@ -153,7 +153,8 @@ void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
   }
 }
 
-bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
+bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
+                          MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
   SmallVector<WeakTrackingVH, 8> PHIs;
@@ -163,7 +164,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
     if (PHINode *PN = dyn_cast_or_null<PHINode>(PHIs[i].operator Value*()))
-      Changed |= RecursivelyDeleteDeadPHINode(PN, TLI);
+      Changed |= RecursivelyDeleteDeadPHINode(PN, TLI, MSSAU);
 
   return Changed;
 }

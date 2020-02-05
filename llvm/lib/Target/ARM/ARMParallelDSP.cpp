@@ -772,8 +772,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
   const unsigned AddrSpace = DomLoad->getPointerAddressSpace();
   Value *VecPtr = IRB.CreateBitCast(Base->getPointerOperand(),
                                     LoadTy->getPointerTo(AddrSpace));
-  LoadInst *WideLoad = IRB.CreateAlignedLoad(LoadTy, VecPtr,
-                                             Base->getAlignment());
+  LoadInst *WideLoad = IRB.CreateAlignedLoad(LoadTy, VecPtr, Base->getAlign());
 
   // Make sure everything is in the correct order in the basic block.
   MoveBefore(Base->getPointerOperand(), VecPtr);

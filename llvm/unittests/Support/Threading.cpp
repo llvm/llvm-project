@@ -32,8 +32,10 @@ public:
     {
       std::lock_guard<std::mutex> Lock(M);
       Notified = true;
+      // Broadcast with the lock held, so it's safe to destroy the Notification
+      // after wait() returns.
+      CV.notify_all();
     }
-    CV.notify_all();
   }
 
   bool wait() {

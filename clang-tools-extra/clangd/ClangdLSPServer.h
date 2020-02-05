@@ -20,6 +20,7 @@
 #include "Transport.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
 
 namespace clang {
@@ -32,7 +33,7 @@ class SymbolIndex;
 /// MessageHandler binds the implemented LSP methods (e.g. onInitialize) to
 /// corresponding JSON-RPC methods ("initialize").
 /// The server also supports $/cancelRequest (MessageHandler provides this).
-class ClangdLSPServer : private DiagnosticsConsumer {
+class ClangdLSPServer : private ClangdServer::Callbacks {
 public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
@@ -54,12 +55,13 @@ public:
   bool run();
 
 private:
-  // Implement DiagnosticsConsumer.
+  // Implement ClangdServer::Callbacks.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void
   onHighlightingsReady(PathRef File,
                        std::vector<HighlightingToken> Highlightings) override;
+  void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -122,10 +124,10 @@ private:
   /// produce '->' and '::', respectively.
   bool shouldRunCompletion(const CompletionParams &Params) const;
 
-  /// Forces a reparse of all currently opened files.  As a result, this method
-  /// may be very expensive.  This method is normally called when the
-  /// compilation database is changed.
-  void reparseOpenedFiles();
+  /// Forces a reparse of all currently opened files which were modified. As a
+  /// result, this method may be very expensive. This method is normally called
+  /// when the compilation database is changed.
+  void reparseOpenedFiles(const llvm::StringSet<> &ModifiedFiles);
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Sends a "publishSemanticHighlighting" notification to the LSP client.
@@ -185,6 +187,12 @@ private:
   void callRaw(StringRef Method, llvm::json::Value Params,
                Callback<llvm::json::Value> CB);
   void notify(StringRef Method, llvm::json::Value Params);
+  template <typename T> void progress(const llvm::json::Value &Token, T Value) {
+    ProgressParams<T> Params;
+    Params.token = Token;
+    Params.value = std::move(Value);
+    notify("$/progress", Params);
+  }
 
   const FileSystemProvider &FSProvider;
   /// Options used for code completion
@@ -205,6 +213,24 @@ private:
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.
   bool SupportsOffsetsInSignatureHelp = false;
+  std::mutex BackgroundIndexProgressMutex;
+  enum class BackgroundIndexProgress {
+    // Client doesn't support reporting progress. No transitions possible.
+    Unsupported,
+    // The queue is idle, and the client has no progress bar.
+    // Can transition to Creating when we have some activity.
+    Empty,
+    // We've requested the client to create a progress bar.
+    // Meanwhile, the state is buffered in PendingBackgroundIndexProgress.
+    Creating,
+    // The client has a progress bar, and we can send it updates immediately.
+    Live,
+  } BackgroundIndexProgressState = BackgroundIndexProgress::Unsupported;
+  // The progress to send when the progress bar is created.
+  // Only valid in state Creating.
+  BackgroundQueue::Stats PendingBackgroundIndexProgress;
+  /// LSP extension: skip WorkDoneProgressCreate, just send progress streams.
+  bool BackgroundIndexSkipCreate = false;
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 

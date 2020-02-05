@@ -279,12 +279,10 @@ void RNBRemote::CreatePacketTable() {
                      "x", "Read data from memory"));
   t.push_back(Packet(write_data_to_memory, &RNBRemote::HandlePacket_X, NULL,
                      "X", "Write data to memory"));
-  //  t.push_back (Packet (insert_hardware_bp,
-  //  &RNBRemote::HandlePacket_UNIMPLEMENTED, NULL, "Z1", "Insert hardware
-  //  breakpoint"));
-  //  t.push_back (Packet (remove_hardware_bp,
-  //  &RNBRemote::HandlePacket_UNIMPLEMENTED, NULL, "z1", "Remove hardware
-  //  breakpoint"));
+  t.push_back(Packet(insert_hardware_bp, &RNBRemote::HandlePacket_z, NULL, "Z1",
+                     "Insert hardware breakpoint"));
+  t.push_back(Packet(remove_hardware_bp, &RNBRemote::HandlePacket_z, NULL, "z1",
+                     "Remove hardware breakpoint"));
   t.push_back(Packet(insert_write_watch_bp, &RNBRemote::HandlePacket_z, NULL,
                      "Z2", "Insert write watchpoint"));
   t.push_back(Packet(remove_write_watch_bp, &RNBRemote::HandlePacket_z, NULL,

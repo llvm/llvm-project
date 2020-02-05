@@ -1,6 +1,6 @@
 //===- LowerABIAttributesPass.cpp - Decorate composite type ---------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -191,9 +191,7 @@ FuncOpLowering::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
           funcOp.getLoc(), replacement, zero.constant());
-      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr,
-                                                   /*memory_access=*/nullptr,
-                                                   /*alignment=*/nullptr);
+      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);
   }

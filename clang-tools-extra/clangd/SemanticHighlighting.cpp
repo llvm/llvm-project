@@ -98,6 +98,8 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
   if (isa<TemplateTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
       isa<NonTypeTemplateParmDecl>(D))
     return HighlightingKind::TemplateParameter;
+  if (isa<ConceptDecl>(D))
+    return HighlightingKind::Concept;
   return llvm::None;
 }
 llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
@@ -392,6 +394,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Namespace";
   case HighlightingKind::TemplateParameter:
     return OS << "TemplateParameter";
+  case HighlightingKind::Concept:
+    return OS << "Concept";
   case HighlightingKind::Primitive:
     return OS << "Primitive";
   case HighlightingKind::Macro:
@@ -534,6 +538,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.namespace.cpp";
   case HighlightingKind::TemplateParameter:
     return "entity.name.type.template.cpp";
+  case HighlightingKind::Concept:
+    return "entity.name.type.concept.cpp";
   case HighlightingKind::Primitive:
     return "storage.type.primitive.cpp";
   case HighlightingKind::Macro:

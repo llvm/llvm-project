@@ -922,6 +922,12 @@ void LiveDebugValues::insertTransferDebugPair(
 void LiveDebugValues::transferRegisterDef(
     MachineInstr &MI, OpenRangesSet &OpenRanges, VarLocMap &VarLocIDs,
     TransferMap &Transfers) {
+
+  // Meta Instructions do not affect the debug liveness of any register they
+  // define.
+  if (MI.isMetaInstruction())
+    return;
+
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();

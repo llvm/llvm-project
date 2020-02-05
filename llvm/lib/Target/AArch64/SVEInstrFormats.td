@@ -566,7 +566,7 @@ class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -680,7 +680,7 @@ class sve_int_countvlv<bits<5> opc, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1072,7 +1072,7 @@ class sve_int_perm_insrs<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_int_perm_insrs<string asm, SDPatternOperator op> {
@@ -1102,7 +1102,7 @@ class sve_int_perm_insrv<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_int_perm_insrv<string asm, SDPatternOperator op> {
@@ -1135,7 +1135,7 @@ class sve_int_perm_extract_i<string asm>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1272,7 +1272,7 @@ class sve_int_log_imm<bits<2> opc, string asm>
 
   let Constraints = "$Zdn = $_Zdn";
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1394,7 +1394,7 @@ class sve_fp_2op_i_p_zds<bits<2> sz, bits<3> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1423,7 +1423,7 @@ class sve_fp_2op_p_zds<bits<2> sz, bits<4> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1466,7 +1466,7 @@ class sve_fp_ftmad<bits<2> sz, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1551,7 +1551,7 @@ class sve_fp_3op_p_zds_a<bits<2> sz, bits<2> opc, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1586,7 +1586,7 @@ class sve_fp_3op_p_zds_b<bits<2> sz, bits<2> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1620,7 +1620,7 @@ class sve_fp_fma_by_indexed_elem<bits<2> sz, bit opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1727,7 +1727,7 @@ class sve_fp_fcmla<bits<2> sz, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1767,7 +1767,7 @@ class sve_fp_fcmla_by_indexed_elem<bits<2> sz, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1815,7 +1815,7 @@ class sve_fp_fcadd<bits<2> sz, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1902,7 +1902,7 @@ class sve2_fp_pairwise_pred<bits<2> sz, bits<3> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -1942,7 +1942,7 @@ class sve2_fp_mla_long_by_indexed_elem<bits<2> opc, string asm>
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -1974,7 +1974,7 @@ class sve2_fp_mla_long<bits<2> opc, string asm>
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -2084,7 +2084,7 @@ class sve_fp_2op_p_zd<bits<7> opc, string asm, RegisterOperand i_zprtype,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = size;
 }
 
@@ -2176,7 +2176,7 @@ class sve_int_bin_pred_arit_log<bits<2> sz8_64, bits<2> fmt, bits<3> opc,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -2262,7 +2262,7 @@ class sve_int_mladdsub_vvv_pred<bits<2> sz8_64, bits<1> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -2299,7 +2299,7 @@ class sve_int_mlas_vvv_pred<bits<2> sz8_64, bits<1> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -2336,15 +2336,20 @@ class sve2_int_mla<bits<2> sz, bits<5> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_mla<bit S, string asm> {
+multiclass sve2_int_mla<bit S, string asm, SDPatternOperator op> {
   def _B : sve2_int_mla<0b00, { 0b1110, S }, asm, ZPR8, ZPR8>;
   def _H : sve2_int_mla<0b01, { 0b1110, S }, asm, ZPR16, ZPR16>;
   def _S : sve2_int_mla<0b10, { 0b1110, S }, asm, ZPR32, ZPR32>;
   def _D : sve2_int_mla<0b11, { 0b1110, S }, asm, ZPR64, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_int_mla_long<bits<5> opc, string asm> {
@@ -2372,39 +2377,44 @@ class sve2_int_mla_by_indexed_elem<bits<2> sz, bits<6> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_mla_by_indexed_elem<bits<2> opc, bit S, string asm> {
-  def _H : sve2_int_mla_by_indexed_elem<{0, ?}, { 0b000, opc, S }, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH> {
+multiclass sve2_int_mla_by_indexed_elem<bits<2> opc, bit S, string asm,
+                                        SDPatternOperator op> {
+  def _H : sve2_int_mla_by_indexed_elem<{0, ?}, { 0b000, opc, S }, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
     bits<3> iop;
     let Inst{22} = iop{2};
     let Inst{20-19} = iop{1-0};
     let Inst{18-16} = Zm;
   }
-  def _S : sve2_int_mla_by_indexed_elem<0b10, { 0b000, opc, S }, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS> {
+  def _S : sve2_int_mla_by_indexed_elem<0b10, { 0b000, opc, S }, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS32b> {
     bits<3> Zm;
     bits<2> iop;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _D : sve2_int_mla_by_indexed_elem<0b11, { 0b000, opc, S }, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD> {
+  def _D : sve2_int_mla_by_indexed_elem<0b11, { 0b000, opc, S }, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD32b> {
     bits<4> Zm;
     bit iop;
     let Inst{20} = iop;
     let Inst{19-16} = Zm;
   }
+
+  def : SVE_4_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
 // SVE2 Integer Multiply-Add Long - Indexed Group
 //===----------------------------------------------------------------------===//
 
-multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm> {
+multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm, SDPatternOperator op> {
   def _S : sve2_int_mla_by_indexed_elem<0b10, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
-                                        asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH> {
+                                        asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
     bits<3> iop;
     let Inst{20-19} = iop{2-1};
@@ -2412,13 +2422,16 @@ multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm> {
     let Inst{11} = iop{0};
   }
   def _D : sve2_int_mla_by_indexed_elem<0b11, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
-                                        asm, ZPR64, ZPR32, ZPR4b32, VectorIndexS> {
+                                        asm, ZPR64, ZPR32, ZPR4b32, VectorIndexS32b> {
     bits<4> Zm;
     bits<2> iop;
     let Inst{20} = iop{1};
     let Inst{19-16} = Zm;
     let Inst{11} = iop{0};
   }
+
+  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2442,7 +2455,7 @@ class sve_intx_dot<bit sz, bit U, string asm, ZPRRegOp zprty1,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_intx_dot<bit opc, string asm, SDPatternOperator op> {
@@ -2474,7 +2487,7 @@ class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_intx_dot_by_indexed_elem<bit opc, string asm,
@@ -2521,7 +2534,7 @@ class sve2_complex_int_arith<bits<2> sz, bits<4> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -2563,7 +2576,7 @@ class sve2_complex_int_arith_indexed<bits<2> sz, bits<4> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -2621,11 +2634,22 @@ class sve2_int_mul<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_int_mul<bits<3> opc, string asm> {
+multiclass sve2_int_mul<bits<3> opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_mul<0b00, opc, asm, ZPR8>;
   def _H : sve2_int_mul<0b01, opc, asm, ZPR16>;
   def _S : sve2_int_mul<0b10, opc, asm, ZPR32>;
   def _D : sve2_int_mul<0b11, opc, asm, ZPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+}
+
+multiclass sve2_int_mul_single<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve2_int_mul<0b00, opc, asm, ZPR8>;
+
+  def : SVE_2_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2648,26 +2672,31 @@ class sve2_int_mul_by_indexed_elem<bits<2> sz, bits<4> opc, string asm,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_int_mul_by_indexed_elem<bits<4> opc, string asm> {
-  def _H : sve2_int_mul_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH> {
+multiclass sve2_int_mul_by_indexed_elem<bits<4> opc, string asm,
+                                        SDPatternOperator op> {
+  def _H : sve2_int_mul_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
     bits<3> iop;
     let Inst{22} = iop{2};
     let Inst{20-19} = iop{1-0};
     let Inst{18-16} = Zm;
   }
-  def _S : sve2_int_mul_by_indexed_elem<0b10, opc, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS> {
+  def _S : sve2_int_mul_by_indexed_elem<0b10, opc, asm, ZPR32, ZPR32, ZPR3b32, VectorIndexS32b> {
     bits<3> Zm;
     bits<2> iop;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _D : sve2_int_mul_by_indexed_elem<0b11, opc, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD> {
+  def _D : sve2_int_mul_by_indexed_elem<0b11, opc, asm, ZPR64, ZPR64, ZPR4b64, VectorIndexD32b> {
     bits<4> Zm;
     bit iop;
     let Inst{20} = iop;
     let Inst{19-16} = Zm;
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_int_mul_long_by_indexed_elem<bits<3> opc, string asm> {
@@ -2702,7 +2731,7 @@ class sve2_int_arith_pred<bits<2> sz, bits<6> opc, string asm,
   bits<5> Zdn;
   let Inst{31-24} = 0b01000100;
   let Inst{23-22} = sz;
-  let Inst{21}    = 0b0;
+  let Inst{21-20} = 0b01;
   let Inst{20-16} = opc{5-1};
   let Inst{15-14} = 0b10;
   let Inst{13}    = opc{0};
@@ -2711,15 +2740,20 @@ class sve2_int_arith_pred<bits<2> sz, bits<6> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve2_int_arith_pred<bits<6> opc, string asm> {
+multiclass sve2_int_arith_pred<bits<6> opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_arith_pred<0b00, opc, asm, ZPR8>;
   def _H : sve2_int_arith_pred<0b01, opc, asm, ZPR16>;
   def _S : sve2_int_arith_pred<0b10, opc, asm, ZPR32>;
   def _D : sve2_int_arith_pred<0b11, opc, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1,  nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1,  nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_sadd_long_accum_pairwise<bits<2> sz, bit U, string asm,
@@ -2739,14 +2773,18 @@ class sve2_int_sadd_long_accum_pairwise<bits<2> sz, bit U, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty1.ElementSize;
 }
 
-multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm> {
+multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm, SDPatternOperator op> {
   def _H : sve2_int_sadd_long_accum_pairwise<0b01, U, asm, ZPR16, ZPR8>;
   def _S : sve2_int_sadd_long_accum_pairwise<0b10, U, asm, ZPR32, ZPR16>;
   def _D : sve2_int_sadd_long_accum_pairwise<0b11, U, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1, nxv8i16, nxv16i8, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv8i16, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_un_pred_arit<bits<2> sz, bit Q, bits<2> opc,
@@ -2770,19 +2808,26 @@ class sve2_int_un_pred_arit<bits<2> sz, bit Q, bits<2> opc,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve2_int_un_pred_arit_s<bits<3> opc, string asm> {
+multiclass sve2_int_un_pred_arit_s<bits<3> opc, string asm,
+                                   SDPatternOperator op> {
   def _S : sve2_int_un_pred_arit<0b10, opc{2}, opc{1-0}, asm, ZPR32>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _S)>;
 }
 
-multiclass sve2_int_un_pred_arit<bits<3> opc, string asm> {
+multiclass sve2_int_un_pred_arit<bits<3> opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_un_pred_arit<0b00, opc{2}, opc{1-0}, asm, ZPR8>;
   def _H : sve2_int_un_pred_arit<0b01, opc{2}, opc{1-0}, asm, ZPR16>;
   def _S : sve2_int_un_pred_arit<0b10, opc{2}, opc{1-0}, asm, ZPR32>;
   def _D : sve2_int_un_pred_arit<0b11, opc{2}, opc{1-0}, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2874,7 +2919,7 @@ class sve2_bitwise_xor_interleaved<bits<2> sz, bits<1> opc, string asm,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -2943,7 +2988,8 @@ class sve2_int_bin_shift_imm<bits<4> tsz8_64, bit opc, string asm,
   let Constraints = "$Zd = $_Zd";
 }
 
-multiclass sve2_int_bin_shift_imm_left<bit opc, string asm> {
+multiclass sve2_int_bin_shift_imm_left<bit opc, string asm,
+                                       SDPatternOperator op> {
   def _B : sve2_int_bin_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
   def _H : sve2_int_bin_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{19} = imm{3};
@@ -2955,9 +3001,15 @@ multiclass sve2_int_bin_shift_imm_left<bit opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftL8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftL16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftL32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftL64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve2_int_bin_shift_imm_right<bit opc, string asm> {
+multiclass sve2_int_bin_shift_imm_right<bit opc, string asm,
+                                        SDPatternOperator op> {
   def _B : sve2_int_bin_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -2969,6 +3021,11 @@ multiclass sve2_int_bin_shift_imm_right<bit opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftR8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
@@ -2990,11 +3047,12 @@ class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm> {
+multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
+                                              SDPatternOperator op> {
   def _B : sve2_int_bin_accum_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_accum_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -3006,6 +3064,11 @@ multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftR8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_cadd<bits<2> sz, bit opc, string asm, ZPRRegOp zprty>
@@ -3024,7 +3087,7 @@ class sve2_int_cadd<bits<2> sz, bit opc, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -3052,15 +3115,20 @@ class sve2_int_absdiff_accum<bits<2> sz, bits<4> opc, string asm,
   let Inst{4-0}   = Zda;
 
   let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_absdiff_accum<bit opc, string asm> {
+multiclass sve2_int_absdiff_accum<bit opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_absdiff_accum<0b00, { 0b111, opc }, asm, ZPR8, ZPR8>;
   def _H : sve2_int_absdiff_accum<0b01, { 0b111, opc }, asm, ZPR16, ZPR16>;
   def _S : sve2_int_absdiff_accum<0b10, { 0b111, opc }, asm, ZPR32, ZPR32>;
   def _D : sve2_int_absdiff_accum<0b11, { 0b111, opc }, asm, ZPR64, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_int_absdiff_accum_long<bits<2> opc, string asm> {
@@ -3300,7 +3368,7 @@ class sve_int_un_pred_arit<bits<2> sz8_64, bits<4> opc,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -3465,7 +3533,7 @@ class sve_int_arith_imm0<bits<2> sz8_64, bits<3> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -3509,7 +3577,7 @@ class sve_int_arith_imm<bits<2> sz8_64, bits<6> opc, string asm,
   let Inst{4-0} = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -3604,7 +3672,7 @@ class sve2_int_bitwise_ternary_op_d<bits<3> opc, string asm>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -3638,7 +3706,7 @@ class sve2_int_rotate_right_imm<bits<4> tsz8_64, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -3678,7 +3746,7 @@ class sve_int_dup_fpimm_pred<bits<2> sz, Operand fpimmtype,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -3713,7 +3781,7 @@ class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,
   let Inst{12-5}  = imm{7-0}; // imm8
   let Inst{4-0}   = Zd;
 
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -4346,8 +4414,7 @@ multiclass sve_int_index_rr<string asm> {
 // SVE Bitwise Shift - Predicated Group
 //===----------------------------------------------------------------------===//
 class sve_int_bin_pred_shift_imm<bits<4> tsz8_64, bits<4> opc, string asm,
-                                 ZPRRegOp zprty, Operand immtype,
-                                 ElementSizeEnum size>
+                                 ZPRRegOp zprty, Operand immtype>
 : I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, immtype:$imm),
   asm, "\t$Zdn, $Pg/m, $_Zdn, $imm",
   "",
@@ -4366,42 +4433,54 @@ class sve_int_bin_pred_shift_imm<bits<4> tsz8_64, bits<4> opc, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
-  let ElementSize = size;
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = zprty.ElementSize;
 }
 
 multiclass sve_int_bin_pred_shift_imm_left<bits<4> opc, string asm> {
-  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8,
-                                      ElementSizeB>;
-  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16,
-                                      ElementSizeH> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{8} = imm{3};
   }
-  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32,
-                                      ElementSizeS> {
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
     let Inst{9-8} = imm{4-3};
   }
-  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64,
-                                      ElementSizeD> {
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
     let Inst{22}  = imm{5};
     let Inst{9-8} = imm{4-3};
   }
 }
 
-multiclass sve_int_bin_pred_shift_imm_right<bits<4> opc, string asm,
-                                            SDPatternOperator op = null_frag> {
-  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8,
-                                      ElementSizeB>;
-  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16,
-                                      ElementSizeH> {
+multiclass sve2_int_bin_pred_shift_imm_left<bits<4> opc, string asm,
+                                            SDPatternOperator op> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{8} = imm{3};
   }
-  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32,
-                                      ElementSizeS> {
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
     let Inst{9-8} = imm{4-3};
   }
-  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64,
-                                      ElementSizeD> {
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
+    let Inst{22}  = imm{5};
+    let Inst{9-8} = imm{4-3};
+  }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i1, nxv16i8, i32, tvecshiftL8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i1,  nxv8i16, i32, tvecshiftL16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i1,  nxv4i32, i32, tvecshiftL32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i1,  nxv2i64, i32, tvecshiftL64, !cast<Instruction>(NAME # _D)>;
+}
+
+multiclass sve_int_bin_pred_shift_imm_right<bits<4> opc, string asm,
+                                            SDPatternOperator op = null_frag> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
+    let Inst{8} = imm{3};
+  }
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32> {
+    let Inst{9-8} = imm{4-3};
+  }
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64> {
     let Inst{22}  = imm{5};
     let Inst{9-8} = imm{4-3};
   }
@@ -4432,7 +4511,7 @@ class sve_int_bin_pred_shift<bits<2> sz8_64, bit wide, bits<3> opc,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -5094,6 +5173,17 @@ class sve_int_rdffr_pred<bit s, string asm>
   let Uses = [FFR];
 }
 
+multiclass sve_int_rdffr_pred<bit s, string asm, SDPatternOperator op> {
+  def _REAL : sve_int_rdffr_pred<s, asm>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def "" : Pseudo<(outs PPR8:$Pd), (ins PPRAny:$Pg), [(set (nxv16i1 PPR8:$Pd), (op (nxv16i1 PPRAny:$Pg)))]>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd, PPRAny:$Pg)>;
+  }
+}
+
 class sve_int_rdffr_unpred<string asm> : I<
   (outs PPR8:$Pd), (ins),
   asm, "\t$Pd",
@@ -5106,11 +5196,22 @@ class sve_int_rdffr_unpred<string asm> : I<
   let Uses = [FFR];
 }
 
-class sve_int_wrffr<string asm>
+multiclass sve_int_rdffr_unpred<string asm, SDPatternOperator op> {
+  def _REAL : sve_int_rdffr_unpred<asm>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def "" : Pseudo<(outs PPR8:$Pd), (ins), [(set (nxv16i1 PPR8:$Pd), (op))]>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd)>;
+  }
+}
+
+class sve_int_wrffr<string asm, SDPatternOperator op>
 : I<(outs), (ins PPR8:$Pn),
   asm, "\t$Pn",
   "",
-  []>, Sched<[]> {
+  [(op (nxv16i1 PPR8:$Pn))]>, Sched<[]> {
   bits<4> Pn;
   let Inst{31-9} = 0b00100101001010001001000;
   let Inst{8-5}  = Pn;
@@ -5120,11 +5221,11 @@ class sve_int_wrffr<string asm>
   let Defs = [FFR];
 }
 
-class sve_int_setffr<string asm>
+class sve_int_setffr<string asm, SDPatternOperator op>
 : I<(outs), (ins),
   asm, "",
   "",
-  []>, Sched<[]> {
+  [(op)]>, Sched<[]> {
   let Inst{31-0} = 0b00100101001011001001000000000000;
 
   let hasSideEffects = 1;
@@ -5219,7 +5320,7 @@ class sve_int_perm_clast_zz<bits<2> sz8_64, bit ab, string asm,
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -5317,7 +5418,7 @@ class sve_int_perm_splice<bits<2> sz8_64, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = ElementSizeNone;
 }
 
@@ -5380,7 +5481,7 @@ class sve_int_perm_rev<bits<2> sz8_64, bits<2> opc, string asm,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -5443,7 +5544,7 @@ class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -5480,7 +5581,7 @@ class sve_int_perm_cpy_v<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = Destructive;
+  let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
 }
 
@@ -5557,14 +5658,21 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
 
 multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
                                RegisterOperand listty, ZPRRegOp zprty> {
-  def "" : sve_mem_cld_si_base<dtype, nf, asm, listty>;
+  def _REAL : sve_mem_cld_si_base<dtype, nf, asm, listty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
-                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+                  (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1, mayLoad = 1 in {
+  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), []>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4)>;
+  }
 }
 
 multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
@@ -5773,6 +5881,13 @@ multiclass sve_mem_cldff_ss<bits<4> dtype, string asm, RegisterOperand listty,
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 0>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), []>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm)>;
+  }
 }
 
 multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,

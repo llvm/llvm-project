@@ -35,14 +35,19 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
 };
 } // namespace
 
@@ -262,21 +267,21 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_386_8:
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkIntUInt(loc, val, 8, type);
+    checkIntUInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_PC8:
-    checkInt(loc, val, 8, type);
+    checkInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_16:
-    checkIntUInt(loc, val, 16, type);
+    checkIntUInt(loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_386_PC16:
@@ -290,7 +295,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt(loc, val, 17, type);
+    checkInt(loc, val, 17, rel);
     write16le(loc, val);
     break;
   case R_386_32:
@@ -312,7 +317,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt(loc, val, 32, type);
+    checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
   default:
@@ -320,7 +325,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -335,7 +340,7 @@ void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc + 5, val);
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -352,14 +357,15 @@ void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
   // position dependent code.
   uint8_t reg = (loc[-1] >> 3) & 7;
 
-  if (type == R_386_TLS_IE) {
+  if (rel.type == R_386_TLS_IE) {
     if (loc[-1] == 0xa1) {
       // "movl foo@indntpoff,%eax" -> "movl $foo,%eax"
       // This case is different from the generic case below because
@@ -375,7 +381,7 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
       loc[-1] = 0xc0 | reg;
     }
   } else {
-    assert(type == R_386_TLS_GOTIE);
+    assert(rel.type == R_386_TLS_GOTIE);
     if (loc[-2] == 0x8b) {
       // "movl foo@gottpoff(%rip),%reg" -> "movl $foo,%reg"
       loc[-2] = 0xc7;
@@ -389,8 +395,9 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_386_TLS_LDO_32) {
+void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
+  if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
   }

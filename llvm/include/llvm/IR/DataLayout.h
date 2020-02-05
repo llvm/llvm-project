@@ -501,13 +501,17 @@ public:
   }
 
   /// Returns the minimum ABI-required alignment for the specified type.
+  /// FIXME: Deprecate this function once migration to Align is over.
   unsigned getABITypeAlignment(Type *Ty) const;
+
+  /// Returns the minimum ABI-required alignment for the specified type.
+  Align getABITypeAlign(Type *Ty) const;
 
   /// Helper function to return `Alignment` if it's set or the result of
   /// `getABITypeAlignment(Ty)`, in any case the result is a valid alignment.
   inline Align getValueOrABITypeAlignment(MaybeAlign Alignment,
                                           Type *Ty) const {
-    return Alignment ? *Alignment : Align(getABITypeAlignment(Ty));
+    return Alignment ? *Alignment : getABITypeAlign(Ty);
   }
 
   /// Returns the minimum ABI-required alignment for an integer type of
@@ -518,7 +522,14 @@ public:
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
+  /// FIXME: Deprecate this function once migration to Align is over.
   unsigned getPrefTypeAlignment(Type *Ty) const;
+
+  /// Returns the preferred stack/global alignment for the specified
+  /// type.
+  ///
+  /// This is always at least as good as the ABI alignment.
+  Align getPrefTypeAlign(Type *Ty) const;
 
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.

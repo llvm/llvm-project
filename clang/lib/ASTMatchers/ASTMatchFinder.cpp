@@ -143,11 +143,14 @@ public:
     Stmt *StmtToTraverse = StmtNode;
     if (auto *ExprNode = dyn_cast_or_null<Expr>(StmtNode)) {
       auto *LambdaNode = dyn_cast_or_null<LambdaExpr>(StmtNode);
-      if (LambdaNode && Finder->getASTContext().getTraversalKind() ==
-                          ast_type_traits::TK_IgnoreUnlessSpelledInSource)
+      if (LambdaNode &&
+          Finder->getASTContext().getParentMapContext().getTraversalKind() ==
+              ast_type_traits::TK_IgnoreUnlessSpelledInSource)
         StmtToTraverse = LambdaNode;
       else
-        StmtToTraverse = Finder->getASTContext().traverseIgnored(ExprNode);
+        StmtToTraverse =
+            Finder->getASTContext().getParentMapContext().traverseIgnored(
+                ExprNode);
     }
     if (Traversal ==
         ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses) {
@@ -216,7 +219,7 @@ public:
     return traverse(*CtorInit);
   }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
-    if (Finder->getASTContext().getTraversalKind() !=
+    if (Finder->getASTContext().getParentMapContext().getTraversalKind() !=
         ast_type_traits::TK_IgnoreUnlessSpelledInSource)
       return VisitorBase::TraverseLambdaExpr(Node);
     if (!Node)
@@ -456,7 +459,7 @@ public:
     Key.Node = Node;
     // Note that we key on the bindings *before* the match.
     Key.BoundNodes = *Builder;
-    Key.Traversal = Ctx.getTraversalKind();
+    Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
 
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
@@ -705,7 +708,7 @@ private:
     Key.MatcherID = Matcher.getID();
     Key.Node = Node;
     Key.BoundNodes = *Builder;
-    Key.Traversal = Ctx.getTraversalKind();
+    Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
 
     // Note that we cannot use insert and reuse the iterator, as recursive
     // calls to match might invalidate the result cache iterators.

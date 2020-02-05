@@ -204,7 +204,7 @@ unsigned MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
   if (InsertedPHIs) InsertedPHIs->push_back(InsertedPHI);
 
   LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI << "\n");
-  return InsertedPHI->getOperand(0).getReg();
+  return InsertedPHI.getReg(0);
 }
 
 static

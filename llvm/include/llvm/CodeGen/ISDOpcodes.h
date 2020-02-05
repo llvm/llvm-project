@@ -921,6 +921,11 @@ namespace ISD {
     /// known nonzero constant. The only operand here is the chain.
     GET_DYNAMIC_AREA_OFFSET,
 
+    /// VSCALE(IMM) - Returns the runtime scaling factor used to calculate the
+    /// number of elements within a scalable vector. IMM is a constant integer
+    /// multiplier that is applied to the runtime value.
+    VSCALE,
+
     /// Generic reduction nodes. These nodes represent horizontal vector
     /// reduction operations, producing a scalar result.
     /// The STRICT variants perform reductions in sequential order. The first

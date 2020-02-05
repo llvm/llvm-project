@@ -1,6 +1,6 @@
 //===- TestVectorToVectorConversion.cpp - Test VectorTransfers lowering ---===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,6 +18,7 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
+
 #include "TestVectorTransformPatterns.h.inc"
 
 struct TestVectorToVectorConversion
@@ -31,8 +32,22 @@ struct TestVectorToVectorConversion
     applyPatternsGreedily(getFunction(), patterns);
   }
 };
+
+struct TestVectorSlicesConversion
+    : public FunctionPass<TestVectorSlicesConversion> {
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    populateVectorSlicesLoweringPatterns(patterns, &getContext());
+    applyPatternsGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 static PassRegistration<TestVectorToVectorConversion>
     pass("test-vector-to-vector-conversion",
          "Test conversion patterns between ops in the vector dialect");
+
+static PassRegistration<TestVectorSlicesConversion> slices_pass(
+    "test-vector-slices-conversion",
+    "Test conversion patterns that lower slices ops in the vector dialect");

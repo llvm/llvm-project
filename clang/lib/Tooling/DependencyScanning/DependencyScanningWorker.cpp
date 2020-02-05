@@ -118,7 +118,7 @@ public:
             .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
-    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
+    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
@@ -142,12 +142,17 @@ public:
                                                         Consumer));
       break;
     case ScanningOutputFormat::Full:
-      Compiler.addDependencyCollector(
-          std::make_shared<ModuleDepCollector>(Compiler, Consumer));
+      Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
+          std::move(Opts), Compiler, Consumer));
       break;
     }
 
-    Consumer.handleContextHash(Compiler.getInvocation().getModuleHash());
+    // Consider different header search and diagnostic options to create
+    // different modules. This avoids the unsound aliasing of module PCMs.
+    //
+    // TODO: Implement diagnostic bucketing and header search pruning to reduce
+    // the impact of strict context hashing.
+    Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
     auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);

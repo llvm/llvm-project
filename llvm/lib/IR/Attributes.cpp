@@ -143,7 +143,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
 }
 
 Attribute Attribute::getWithAlignment(LLVMContext &Context, Align A) {
-  assert(A <= 0x40000000 && "Alignment too large.");
+  assert(A <= llvm::Value::MaximumAlignment && "Alignment too large.");
   return get(Context, Alignment, A.value());
 }
 
@@ -466,7 +466,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     std::string Result;
     Result += (Twine('"') + getKindAsString() + Twine('"')).str();
 
-    std::string AttrVal = pImpl->getValueAsString();
+    std::string AttrVal = std::string(pImpl->getValueAsString());
     if (AttrVal.empty()) return Result;
 
     // Since some attribute strings contain special characters that cannot be
@@ -1481,7 +1481,7 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
 }
 
 AttrBuilder &AttrBuilder::addAttribute(StringRef A, StringRef V) {
-  TargetDepAttrs[A] = V;
+  TargetDepAttrs[std::string(A)] = std::string(V);
   return *this;
 }
 
@@ -1525,7 +1525,7 @@ AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
   if (!Align)
     return *this;
 
-  assert(*Align <= 0x40000000 && "Alignment too large.");
+  assert(*Align <= llvm::Value::MaximumAlignment && "Alignment too large.");
 
   Attrs[Attribute::Alignment] = true;
   Alignment = Align;

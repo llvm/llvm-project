@@ -1,6 +1,6 @@
 //===- EnumsGenTest.cpp - TableGen EnumsGen Tests -------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,8 +18,6 @@
 #include "EnumsGenTest.h.inc"
 // And definitions
 #include "EnumsGenTest.cpp.inc"
-
-using ::testing::StrEq;
 
 // Test namespaces and enum class/utility names
 using Outer::Inner::ConvertToEnum;
@@ -42,13 +40,13 @@ TEST(EnumsGenTest, GeneratedDenseMapInfo) {
   myMap[StrEnum::CaseA] = "zero";
   myMap[StrEnum::CaseB] = "one";
 
-  EXPECT_THAT(myMap[StrEnum::CaseA], StrEq("zero"));
-  EXPECT_THAT(myMap[StrEnum::CaseB], StrEq("one"));
+  EXPECT_EQ(myMap[StrEnum::CaseA], "zero");
+  EXPECT_EQ(myMap[StrEnum::CaseB], "one");
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToStringFn) {
-  EXPECT_THAT(ConvertToString(StrEnum::CaseA), StrEq("CaseA"));
-  EXPECT_THAT(ConvertToString(StrEnum::CaseB), StrEq("CaseB"));
+  EXPECT_EQ(ConvertToString(StrEnum::CaseA), "CaseA");
+  EXPECT_EQ(ConvertToString(StrEnum::CaseB), "CaseB");
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolFn) {
@@ -69,12 +67,12 @@ TEST(EnumsGenTest, GeneratedBitEnumDefinition) {
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToStringFnForBitEnum) {
-  EXPECT_THAT(stringifyBitEnumWithNone(BitEnumWithNone::None), StrEq("None"));
-  EXPECT_THAT(stringifyBitEnumWithNone(BitEnumWithNone::Bit1), StrEq("Bit1"));
-  EXPECT_THAT(stringifyBitEnumWithNone(BitEnumWithNone::Bit3), StrEq("Bit3"));
-  EXPECT_THAT(
+  EXPECT_EQ(stringifyBitEnumWithNone(BitEnumWithNone::None), "None");
+  EXPECT_EQ(stringifyBitEnumWithNone(BitEnumWithNone::Bit1), "Bit1");
+  EXPECT_EQ(stringifyBitEnumWithNone(BitEnumWithNone::Bit3), "Bit3");
+  EXPECT_EQ(
       stringifyBitEnumWithNone(BitEnumWithNone::Bit1 | BitEnumWithNone::Bit3),
-      StrEq("Bit1|Bit3"));
+      "Bit1|Bit3");
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
@@ -95,4 +93,22 @@ TEST(EnumsGenTest, GeneratedOperator) {
                               BitEnumWithNone::Bit1));
   EXPECT_FALSE(bitEnumContains(BitEnumWithNone::Bit1 & BitEnumWithNone::Bit3,
                                BitEnumWithNone::Bit1));
+}
+
+TEST(EnumsGenTest, GeneratedSymbolToCustomStringFn) {
+  EXPECT_EQ(stringifyPrettyIntEnum(PrettyIntEnum::Case1), "case_one");
+  EXPECT_EQ(stringifyPrettyIntEnum(PrettyIntEnum::Case2), "case_two");
+}
+
+TEST(EnumsGenTest, GeneratedCustomStringToSymbolFn) {
+  auto one = symbolizePrettyIntEnum("case_one");
+  EXPECT_TRUE(one);
+  EXPECT_EQ(*one, PrettyIntEnum::Case1);
+
+  auto two = symbolizePrettyIntEnum("case_two");
+  EXPECT_TRUE(two);
+  EXPECT_EQ(*two, PrettyIntEnum::Case2);
+
+  auto none = symbolizePrettyIntEnum("Case1");
+  EXPECT_FALSE(none);
 }

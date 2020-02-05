@@ -1,4 +1,4 @@
-//===-- IRInterpreter.cpp ---------------------------------------*- C++ -*-===//
+//===-- IRInterpreter.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -144,7 +144,7 @@ public:
       ss.Printf(" 0x%llx", (unsigned long long)addr);
     }
 
-    return ss.GetString();
+    return std::string(ss.GetString());
   }
 
   bool AssignToMatchType(lldb_private::Scalar &scalar, uint64_t u64value,
@@ -403,7 +403,7 @@ public:
         ss.Printf("%02hhx ", buf.GetBytes()[i]);
     }
 
-    return ss.GetString();
+    return std::string(ss.GetString());
   }
 
   lldb::addr_t ResolveValue(const Value *value, Module &module) {

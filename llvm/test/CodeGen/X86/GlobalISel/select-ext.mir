@@ -374,8 +374,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X32:      registers:
-# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
-# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8_abcd_l, preferred-register: '' }
 # X32-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
 #
 # X64:      registers:
@@ -386,10 +386,15 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY $edi
-# X64:          %0:gr32 = COPY $edi
-# ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
-# ALL-NEXT:     %2:gr16 = SUBREG_TO_REG 0, %1, %subreg.sub_8bit
+# X32:          %0:gr32 = COPY $edi
+# X32-NEXT:    %4:gr32_abcd = COPY %0
+# X32-NEXT:     %1:gr8_abcd_l = COPY %4.sub_8bit
+
+# X64:               %0:gr32 = COPY $edi
+# X64-NEXT:     %1:gr8 = COPY %0.sub_8bit
+
+# ALL-NEXT:     %3:gr32 = MOVZX32rr8 %1
+# ALL-NEXT:     %2:gr16 = COPY %3.sub_16bit
 # ALL-NEXT:     $ax = COPY %2
 # ALL-NEXT:     RET 0, implicit $ax
 body:             |
@@ -409,8 +414,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X32:      registers:
-# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
-# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8_abcd_l, preferred-register: '' }
 # X32-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 #
 # X64:      registers:
@@ -421,9 +426,13 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# X32:          %0:gr32_abcd = COPY $edi
+# X32:          %0:gr32 = COPY $edi
+# X32-NEXT: %3:gr32_abcd = COPY %0
+# X32-NEXT: %1:gr8_abcd_l = COPY %3.sub_8bit
+
 # X64:          %0:gr32 = COPY $edi
-# ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
+# X64-NEXT: %1:gr8 = COPY %0.sub_8bit
+
 # ALL-NEXT:     %2:gr32 = MOVZX32rr8 %1
 # ALL-NEXT:     $eax = COPY %2
 # ALL-NEXT:     RET 0, implicit $eax

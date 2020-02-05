@@ -427,9 +427,9 @@ define amdgpu_kernel void @round_v4f64(<4 x double> addrspace(1)* %out, <4 x dou
 ; CI-NEXT:    v_mov_b32_e32 v13, s13
 ; CI-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
 ; CI-NEXT:    v_bfi_b32 v12, s2, v12, v13
-; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    v_cndmask_b32_e32 v5, 0, v12, vcc
 ; CI-NEXT:    v_mov_b32_e32 v4, 0
+; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    v_add_f64 v[4:5], v[10:11], v[4:5]
 ; CI-NEXT:    v_add_f64 v[0:1], v[8:9], v[0:1]
 ; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16

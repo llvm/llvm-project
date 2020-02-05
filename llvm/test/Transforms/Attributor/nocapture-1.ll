@@ -342,5 +342,19 @@ entry:
   ret i8* %p
 }
 
+declare i8* @maybe_returned_ptr(i8* readonly %ptr) readonly nounwind
+declare i8 @maybe_returned_val(i8* %ptr) readonly nounwind
+declare void @val_use(i8 %ptr) readonly nounwind
+
+; FIXME: Both pointers should be nocapture
+define void @ptr_uses(i8* %ptr, i8* %wptr) {
+; CHECK: define void @ptr_uses(i8* %ptr, i8* nocapture nonnull writeonly dereferenceable(1) %wptr)
+  %call_ptr = call i8* @maybe_returned_ptr(i8* %ptr)
+  %call_val = call i8 @maybe_returned_val(i8* %call_ptr)
+  call void @val_use(i8 %call_val)
+  store i8 0, i8* %wptr
+  ret void
+}
+
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)

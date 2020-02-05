@@ -641,8 +641,9 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
 
   unsigned NewSize = NewVT.getStoreSizeInBits();
 
-  // If we are reducing to a 32-bit load, this is always better.
-  if (NewSize == 32)
+  // If we are reducing to a 32-bit load or a smaller multi-dword load,
+  // this is always better.
+  if (NewSize >= 32)
     return true;
 
   EVT OldVT = N->getValueType(0);
@@ -4340,9 +4341,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(KILL)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
-  NODE_NAME_CASE(INTERP_P1LL_F16)
-  NODE_NAME_CASE(INTERP_P1LV_F16)
-  NODE_NAME_CASE(INTERP_P2_F16)
   NODE_NAME_CASE(LOAD_D16_HI)
   NODE_NAME_CASE(LOAD_D16_LO)
   NODE_NAME_CASE(LOAD_D16_HI_I8)

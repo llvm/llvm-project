@@ -91,7 +91,7 @@ llvm::ErrorOr<std::vector<std::string>> GetWhiteListedSymbolPatterns() {
   llvm::StringRef Content = File.get()->getBuffer();
   Content.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (auto Line : Lines)
-    Patterns.push_back(Line.trim());
+    Patterns.push_back(std::string(Line.trim()));
   return Patterns;
 }
 

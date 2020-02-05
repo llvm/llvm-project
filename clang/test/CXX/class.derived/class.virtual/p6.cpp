@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 template<typename T>
 class A {

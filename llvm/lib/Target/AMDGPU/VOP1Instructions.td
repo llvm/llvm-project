@@ -815,11 +815,11 @@ def V_MOV_B32_indirect : VPseudoInstSI<(outs),
 let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp i32:$src, timm:$dpp_ctrl, timm:$row_mask, timm:$bank_mask,
-                      timm:$bound_ctrl)),
-  (V_MOV_B32_dpp $src, $src, (as_i32imm $dpp_ctrl),
-                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                       (as_i1imm $bound_ctrl))
+  (i32 (int_amdgcn_mov_dpp i32:$src, timm:$dpp_ctrl, timm:$row_mask,
+                           timm:$bank_mask, timm:$bound_ctrl)),
+  (V_MOV_B32_dpp VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp_ctrl),
+                       (as_i32timm $row_mask), (as_i32timm $bank_mask),
+                       (as_i1timm $bound_ctrl))
 >;
 
 def : GCNPat <
@@ -888,6 +888,7 @@ defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;
 let OtherPredicates = [isGFX10Plus] in {
 def : GCNPat <
   (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx10 $src, $src, (as_i32imm $dpp8), (i32 DPP8Mode.FI_0))
+  (V_MOV_B32_dpp8_gfx10 VGPR_32:$src, VGPR_32:$src,
+                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
 } // End OtherPredicates = [isGFX10Plus]

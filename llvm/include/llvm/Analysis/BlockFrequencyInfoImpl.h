@@ -1375,7 +1375,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
   explicit BFIDOTGraphTraitsBase(bool isSimple = false)
       : DefaultDOTGraphTraits(isSimple) {}
 
-  static std::string getGraphName(const BlockFrequencyInfoT *G) {
+  static StringRef getGraphName(const BlockFrequencyInfoT *G) {
     return G->getFunction()->getName();
   }
 

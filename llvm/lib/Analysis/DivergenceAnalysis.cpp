@@ -301,6 +301,10 @@ void DivergenceAnalysis::propagateBranchDivergence(const Instruction &Term) {
 
   markDivergent(Term);
 
+  // Don't propagate divergence from unreachable blocks.
+  if (!DT.isReachableFromEntry(Term.getParent()))
+    return;
+
   const auto *BranchLoop = LI.getLoopFor(Term.getParent());
 
   // whether there is a divergent loop exit from BranchLoop (if any)

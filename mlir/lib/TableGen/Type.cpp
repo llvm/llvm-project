@@ -1,6 +1,6 @@
 //===- Type.cpp - Type class ----------------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -27,6 +27,18 @@ TypeConstraint::TypeConstraint(const llvm::DefInit *init)
 
 bool TypeConstraint::isVariadic() const {
   return def->isSubClassOf("Variadic");
+}
+
+// Returns the builder call for this constraint if this is a buildable type,
+// returns None otherwise.
+Optional<StringRef> TypeConstraint::getBuilderCall() const {
+  const llvm::Record *baseType = def;
+  if (isVariadic())
+    baseType = baseType->getValueAsDef("baseType");
+
+  if (!baseType->isSubClassOf("BuildableType"))
+    return None;
+  return baseType->getValueAsString("builderCall");
 }
 
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}

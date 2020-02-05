@@ -149,7 +149,7 @@ bool ConstrainedFPIntrinsic::isUnaryOp() const {
   switch (getIntrinsicID()) {
     default:
       return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
     case Intrinsic::INTRINSIC:                                                 \
       return NARG == 1;
 #include "llvm/IR/ConstrainedOps.def"
@@ -160,7 +160,7 @@ bool ConstrainedFPIntrinsic::isTernaryOp() const {
   switch (getIntrinsicID()) {
     default:
       return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
     case Intrinsic::INTRINSIC:                                                 \
       return NARG == 3;
 #include "llvm/IR/ConstrainedOps.def"
@@ -169,7 +169,7 @@ bool ConstrainedFPIntrinsic::isTernaryOp() const {
 
 bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
   switch (I->getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)                  \
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
     return true;

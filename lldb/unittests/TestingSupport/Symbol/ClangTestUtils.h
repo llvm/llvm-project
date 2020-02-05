@@ -10,22 +10,23 @@
 #define LLDB_UNITTESTS_TESTINGSUPPORT_SYMBOL_CLANGTESTUTILS_H
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 
 namespace lldb_private {
 namespace clang_utils {
-inline clang::DeclarationName getDeclarationName(ClangASTContext &ast,
+inline clang::DeclarationName getDeclarationName(TypeSystemClang &ast,
                                                  llvm::StringRef name) {
   clang::IdentifierInfo &II = ast.getASTContext().Idents.get(name);
   return ast.getASTContext().DeclarationNames.getIdentifier(&II);
 }
 
-inline std::unique_ptr<ClangASTContext> createAST() {
-  return std::make_unique<ClangASTContext>(HostInfo::GetTargetTriple());
+inline std::unique_ptr<TypeSystemClang> createAST() {
+  return std::make_unique<TypeSystemClang>("test ASTContext",
+                                           HostInfo::GetTargetTriple());
 }
 
-inline CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
+inline CompilerType createRecord(TypeSystemClang &ast, llvm::StringRef name) {
   return ast.CreateRecordType(ast.getASTContext().getTranslationUnitDecl(),
                               lldb::AccessType::eAccessPublic, name, 0,
                               lldb::LanguageType::eLanguageTypeC);
@@ -33,25 +34,25 @@ inline CompilerType createRecord(ClangASTContext &ast, llvm::StringRef name) {
 
 /// Create a record with the given name and a field with the given type
 /// and name.
-inline CompilerType createRecordWithField(ClangASTContext &ast,
+inline CompilerType createRecordWithField(TypeSystemClang &ast,
                                           llvm::StringRef record_name,
                                           CompilerType field_type,
                                           llvm::StringRef field_name) {
   CompilerType t = createRecord(ast, record_name);
 
-  ClangASTContext::StartTagDeclarationDefinition(t);
+  TypeSystemClang::StartTagDeclarationDefinition(t);
   ast.AddFieldToRecordType(t, field_name, field_type,
                            lldb::AccessType::eAccessPublic, 7);
-  ClangASTContext::CompleteTagDeclarationDefinition(t);
+  TypeSystemClang::CompleteTagDeclarationDefinition(t);
 
   return t;
 }
 
-/// Constructs a ClangASTContext that contains a single RecordDecl that contains
+/// Constructs a TypeSystemClang that contains a single RecordDecl that contains
 /// a single FieldDecl. Utility class as this setup is a common starting point
 /// for unit test that exercise the ASTImporter.
 struct SourceASTWithRecord {
-  std::unique_ptr<ClangASTContext> ast;
+  std::unique_ptr<TypeSystemClang> ast;
   CompilerType record_type;
   clang::RecordDecl *record_decl = nullptr;
   clang::FieldDecl *field_decl = nullptr;

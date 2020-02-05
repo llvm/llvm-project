@@ -274,6 +274,10 @@ def ARMvmovImm   : SDNode<"ARMISD::VMOVIMM", SDTARMVMOVIMM>;
 def ARMvmvnImm   : SDNode<"ARMISD::VMVNIMM", SDTARMVMOVIMM>;
 def ARMvmovFPImm : SDNode<"ARMISD::VMOVFPIMM", SDTARMVMOVIMM>;
 
+def SDTARMVORRIMM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                                           SDTCisVT<2, i32>]>;
+def ARMvorrImm   : SDNode<"ARMISD::VORRIMM", SDTARMVORRIMM>;
+def ARMvbicImm   : SDNode<"ARMISD::VBICIMM", SDTARMVORRIMM>;
 
 def SDTARMVSHIMM : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                         SDTCisVT<2, i32>]>;

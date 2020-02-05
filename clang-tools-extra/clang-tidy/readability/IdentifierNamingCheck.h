@@ -70,7 +70,8 @@ private:
                        const NamingCheckFailure &Failure) const override;
 
   std::vector<llvm::Optional<NamingStyle>> NamingStyles;
-  bool IgnoreFailedSplit;
+  const bool IgnoreFailedSplit;
+  const bool IgnoreMainLikeFunctions;
 };
 
 } // namespace readability

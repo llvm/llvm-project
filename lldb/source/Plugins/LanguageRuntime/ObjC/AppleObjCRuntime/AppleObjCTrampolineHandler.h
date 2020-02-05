@@ -47,6 +47,9 @@ public:
 
   lldb::addr_t SetupDispatchFunction(Thread &thread,
                                      ValueList &dispatch_values);
+  const DispatchFunction *FindDispatchFunction(lldb::addr_t addr);
+  void ForEachDispatchFunction(std::function<void(lldb::addr_t, 
+                                                  const DispatchFunction &)>);
 
 private:
   static const char *g_lookup_implementation_function_name;
@@ -136,11 +139,13 @@ private:
   };
 
   static const DispatchFunction g_dispatch_functions[];
+  static const char *g_opt_dispatch_names[];
 
-  typedef std::map<lldb::addr_t, int> MsgsendMap; // This table maps an dispatch
+  using MsgsendMap = std::map<lldb::addr_t, int>; // This table maps an dispatch
                                                   // fn address to the index in
                                                   // g_dispatch_functions
   MsgsendMap m_msgSend_map;
+  MsgsendMap m_opt_dispatch_map;
   lldb::ProcessWP m_process_wp;
   lldb::ModuleSP m_objc_module_sp;
   const char *m_lookup_implementation_function_code;

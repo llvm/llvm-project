@@ -53,7 +53,7 @@ static std::string getCheckerFullName(const Record *R) {
 
 static std::string getStringValue(const Record &R, StringRef field) {
   if (StringInit *SI = dyn_cast<StringInit>(R.getValueInit(field)))
-    return SI->getValue();
+    return std::string(SI->getValue());
   return std::string();
 }
 

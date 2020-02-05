@@ -43,9 +43,6 @@ AST_MATCHER(CXXTypeidExpr, isPotentiallyEvaluated) {
   return Node.isPotentiallyEvaluated();
 }
 
-const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
-    cxxNoexceptExpr;
-
 const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
                                                           GenericSelectionExpr>
     genericSelectionExpr;

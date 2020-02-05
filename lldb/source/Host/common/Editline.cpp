@@ -1,4 +1,4 @@
-//===-- Editline.cpp --------------------------------------------*- C++ -*-===//
+//===-- Editline.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -214,7 +214,7 @@ private:
         std::string filename = m_prefix + "-history";
 #endif
         llvm::sys::path::append(lldb_history_file, filename);
-        m_path = lldb_history_file.str();
+        m_path = std::string(lldb_history_file.str());
       }
     }
 
@@ -327,7 +327,7 @@ std::string Editline::PromptForIndex(int line_index) {
     prompt_stream.Printf(
         "%*d%s", m_line_number_digits, m_base_line_number + line_index,
         (line_index == 0) ? prompt.c_str() : continuation_prompt.c_str());
-    return std::move(prompt_stream.GetString());
+    return std::string(std::move(prompt_stream.GetString()));
   }
   return (line_index == 0) ? prompt : continuation_prompt;
 }

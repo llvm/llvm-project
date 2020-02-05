@@ -52,6 +52,7 @@
 #include "ValueProfileCollector.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -63,6 +64,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -467,7 +469,7 @@ INITIALIZE_PASS(PGOInstrumentationGenCreateVarLegacyPass,
 
 ModulePass *
 llvm::createPGOInstrumentationGenCreateVarLegacyPass(StringRef CSInstrName) {
-  return new PGOInstrumentationGenCreateVarLegacyPass(CSInstrName);
+  return new PGOInstrumentationGenCreateVarLegacyPass(std::string(CSInstrName));
 }
 
 namespace {
@@ -799,6 +801,37 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   return canInstrument(InstrBB);
 }
 
+// When generating value profiling calls on Windows routines that make use of
+// handler funclets for exception processing an operand bundle needs to attached
+// to the called function. This routine will set \p OpBundles to contain the
+// funclet information, if any is needed, that should be placed on the generated
+// value profiling call for the value profile candidate call.
+static void
+populateEHOperandBundle(VPCandidateInfo &Cand,
+                        DenseMap<BasicBlock *, ColorVector> &BlockColors,
+                        SmallVectorImpl<OperandBundleDef> &OpBundles) {
+  auto *OrigCall = dyn_cast<CallBase>(Cand.AnnotatedInst);
+  if (OrigCall && !isa<IntrinsicInst>(OrigCall)) {
+    // The instrumentation call should belong to the same funclet as a
+    // non-intrinsic call, so just copy the operand bundle, if any exists.
+    Optional<OperandBundleUse> ParentFunclet =
+        OrigCall->getOperandBundle(LLVMContext::OB_funclet);
+    if (ParentFunclet)
+      OpBundles.emplace_back(OperandBundleDef(*ParentFunclet));
+  } else {
+    // Intrinsics or other instructions do not get funclet information from the
+    // front-end. Need to use the BlockColors that was computed by the routine
+    // colorEHFunclets to determine whether a funclet is needed.
+    if (!BlockColors.empty()) {
+      const ColorVector &CV = BlockColors.find(OrigCall->getParent())->second;
+      assert(CV.size() == 1 && "non-unique color for block!");
+      Instruction *EHPad = CV.front()->getFirstNonPHI();
+      if (EHPad->isEHPad())
+        OpBundles.emplace_back("funclet", EHPad);
+    }
+  }
+}
+
 // Visit all edge and instrument the edges not in MST, and do value profiling.
 // Critical edges will be split.
 static void instrumentOneFunc(
@@ -839,6 +872,15 @@ static void instrumentOneFunc(
 
   NumOfPGOICall += FuncInfo.ValueSites[IPVK_IndirectCallTarget].size();
 
+  // Intrinsic function calls do not have funclet operand bundles needed for
+  // Windows exception handling attached to them. However, if value profiling is
+  // inserted for one of these calls, then a funclet value will need to be set
+  // on the instrumentation call based on the funclet coloring.
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  if (F.hasPersonalityFn() &&
+      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+    BlockColors = colorEHFunclets(F);
+
   // For each VP Kind, walk the VP candidates and instrument each one.
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind) {
     unsigned SiteIndex = 0;
@@ -860,11 +902,14 @@ static void instrumentOneFunc(
         ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
       assert(ToProfile && "value profiling Value is of unexpected type");
 
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
           {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
            Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
-           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)});
+           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
+          OpBundles);
     }
   } // IPVK_First <= Kind <= IPVK_Last
 }
@@ -1686,7 +1731,7 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {
   if (!Node->getName().empty())
-    return Node->getName();
+    return std::string(Node->getName());
 
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
@@ -1777,7 +1822,7 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const PGOUseFunc *G) {
-    return G->getFunc().getName();
+    return std::string(G->getFunc().getName());
   }
 
   std::string getNodeLabel(const BasicBlock *Node, const PGOUseFunc *Graph) {

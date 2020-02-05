@@ -1,6 +1,6 @@
 //===- SPIRVSerializationGen.cpp - SPIR-V serialization utility generator -===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -222,7 +222,8 @@ static void emitModelDecl(const Availability &availability, raw_ostream &os) {
 static void emitInterfaceDecl(const Availability &availability,
                               raw_ostream &os) {
   StringRef interfaceName = availability.getInterfaceClassName();
-  std::string interfaceTraitsName = formatv("{0}Traits", interfaceName);
+  std::string interfaceTraitsName =
+      std::string(formatv("{0}Traits", interfaceName));
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
@@ -337,7 +338,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                                             raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
 
   // Mapping from availability class name to (enumerant, availability
@@ -1201,8 +1202,9 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
     for (const Availability &avail : opAvailabilities)
       if (avail.getClass() == availClassName) {
         os << "  "
-           << tgfmt(avail.getMergeActionCode(),
-                    &fctx.addSubst("instance", avail.getMergeInstance()))
+           << std::string(
+                  tgfmt(avail.getMergeActionCode(),
+                        &fctx.addSubst("instance", avail.getMergeInstance())))
            << ";\n";
       }
 
@@ -1251,8 +1253,8 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
          // TODO(antiagainst): use `avail.getMergeCode()` here once ODS supports
          // dialect-specific contents so that we can use not implementing the
          // availability interface as indication of no requirements.
-         << tgfmt(caseSpecs.front().second.getMergeActionCode(),
-                  &fctx.addSubst("instance", "*instance"))
+         << std::string(tgfmt(caseSpecs.front().second.getMergeActionCode(),
+                              &fctx.addSubst("instance", "*instance")))
          << ";\n";
       os << "  }\n";
     }

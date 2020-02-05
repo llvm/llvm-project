@@ -1072,9 +1072,6 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
             m_c_ICmp(UnsignedPred, m_Specific(ZeroCmpOp), m_Value(A))) &&
       match(ZeroCmpOp, m_c_Add(m_Specific(A), m_Value(B))) &&
       (ZeroICmp->hasOneUse() || UnsignedICmp->hasOneUse())) {
-    if (UnsignedICmp->getOperand(0) != ZeroCmpOp)
-      UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
-
     auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
       if (!IsKnownNonZero(NonZero))
         std::swap(NonZero, Other);
@@ -1111,8 +1108,6 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
              m_c_ICmp(UnsignedPred, m_Specific(Base), m_Specific(Offset))) ||
       !ICmpInst::isUnsigned(UnsignedPred))
     return nullptr;
-  if (UnsignedICmp->getOperand(0) != Base)
-    UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
 
   // Base >=/> Offset && (Base - Offset) != 0  <-->  Base > Offset
   // (no overflow and not null)

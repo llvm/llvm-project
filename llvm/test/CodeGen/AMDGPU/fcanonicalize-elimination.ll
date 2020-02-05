@@ -410,11 +410,10 @@ define amdgpu_kernel void @test_fold_canonicalize_cos_value_f32(float addrspace(
 }
 
 ; GCN-LABEL: test_fold_canonicalize_sin_value_f16:
-; GCN: v_sin_f32_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
-; GCN: v_cvt_f16_f32_e32 [[V:v[0-9]+]], [[V0]]
+; GCN: v_sin_f16_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
-; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V0]]
 define amdgpu_kernel void @test_fold_canonicalize_sin_value_f16(half addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, half addrspace(1)* %arg, i32 %id
@@ -426,11 +425,10 @@ define amdgpu_kernel void @test_fold_canonicalize_sin_value_f16(half addrspace(1
 }
 
 ; GCN-LABEL: test_fold_canonicalize_cos_value_f16:
-; GCN: v_cos_f32_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
-; GCN: v_cvt_f16_f32_e32 [[V:v[0-9]+]], [[V0]]
+; GCN: v_cos_f16_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
-; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V0]]
 define amdgpu_kernel void @test_fold_canonicalize_cos_value_f16(half addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, half addrspace(1)* %arg, i32 %id
@@ -880,7 +878,7 @@ define float @v_test_canonicalize_frexp_mant(float %a) {
 
 ; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
-; CHECK: .amd_amdgpu_isa
+; GCN: .amd_amdgpu_isa
 
 declare float @llvm.canonicalize.f32(float) #0
 declare float @llvm.copysign.f32(float, float) #0

@@ -1,4 +1,4 @@
-//===-- TestCompletion.cpp --------------------------------------*- C++ -*-===//
+//===-- TestCompletion.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -233,7 +233,7 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   Resolver.AddKnownUser("Lars", DirFooC);
   Resolver.AddKnownUser("Jason", DirFoo);
   Resolver.AddKnownUser("Larry", DirFooA);
-  std::string sep = path::get_separator();
+  std::string sep = std::string(path::get_separator());
 
   // Just resolving current user's home directory by itself should return the
   // directory.

@@ -1,4 +1,4 @@
-//===-- BreakpointSite.cpp --------------------------------------*- C++ -*-===//
+//===-- BreakpointSite.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -153,6 +153,13 @@ void BreakpointSite::BumpHitCounts() {
   std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
   for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations()) {
     loc_sp->BumpHitCount();
+  }
+}
+
+void BreakpointSite::SetHardwareIndex(uint32_t index) {
+  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations()) {
+    loc_sp->SetHardwareIndex(index);
   }
 }
 

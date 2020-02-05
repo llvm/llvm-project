@@ -118,8 +118,7 @@ namespace BadDeducedType {
 
   template<typename T> concept CmpCat = true;
   struct D {
-    // FIXME: Once we support P1141R2, we should give a better diagnostic here:
-    // {{deduced return type for defaulted three-way comparison operator must be 'auto', not 'CmpCat auto'}}
-    friend CmpCat auto operator<=>(const D&, const D&) = default; // expected-error {{unknown type name 'CmpCat'}}
+    // expected-error@+1 {{deduced return type for defaulted three-way comparison operator must be 'auto', not 'CmpCat auto'}}
+    friend CmpCat auto operator<=>(const D&, const D&) = default;
   };
 }

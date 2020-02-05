@@ -34,6 +34,7 @@ def SOP : RegisterOperand<SRegs>;
 def DOP : RegisterOperand<DRegs>;
 def SOME_INSN : I<(outs DRegs:$dst), (ins DOP:$src), []>;
 def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
+def SUBSOME_INSN2 : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 
 // We should skip cases where we don't have a given register class for the
 // subregister source.
@@ -131,6 +132,52 @@ def : Pat<(i16 (trunc (not DOP:$src))),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, /*RC SRegs*/0,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, /*RC DRegs*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SUBSOME_INSN,
+
+// Test an extract from an output instruction result (nonleaf)
+def : Pat<(i16 (trunc (bitreverse DOP:$src))),
+           (EXTRACT_SUBREG (SOME_INSN DOP:$src), sub0)>;
+// CHECK-LABEL: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_BITREVERSE,
+// CHECK-NEXT:  GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:  GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/Test::DRegsRegClassID,
+// CHECK-NEXT:  GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:  // (trunc:{ *:[i16] } (bitreverse:{ *:[i32] } DOP:{ *:[i32] }:$src))  =>  (EXTRACT_SUBREG:{ *:[i16] } (SOME_INSN:{ *:[i32] } DOP:{ *:[i32] }:$src), sub0:{ *:[i32] })
+// CHECK-NEXT:  GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:  GIR_BuildMI, /*InsnID*/1, /*Opcode*/MyTarget::SOME_INSN,
+// CHECK-NEXT:  GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // src
+// CHECK-NEXT:  GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
+// CHECK-NEXT:  GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:  GIR_AddTempSubRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0, sub0,
+// CHECK-NEXT:  GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:  GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC SRegs*/0,
+// CHECK-NEXT:  GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, /*RC DRegs*/1,
+
+// EXTRACT_SUBREG is subinstruction, but also doesn't have a leaf input
+
+// CHECK-LABEL: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_CTPOP,
+// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/Test::DRegsRegClassID,
+// CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT: // (trunc:{ *:[i16] } (ctpop:{ *:[i32] } DOP:{ *:[i32] }:$src))  =>  (SUBSOME_INSN2:{ *:[i16] } (EXTRACT_SUBREG:{ *:[i16] } (SOME_INSN:{ *:[i32] } DOP:{ *:[i32] }:$src), sub0:{ *:[i32] }))
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/MyTarget::SOME_INSN,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/2, /*OldInsnID*/1, /*OpIdx*/1, // src
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT: GIR_AddTempSubRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/0, sub0,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, /*RC SRegs*/0,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, /*RC DRegs*/1,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SUBSOME_INSN2,
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+def : Pat<(i16 (trunc (ctpop DOP:$src))),
+           (SUBSOME_INSN2 (EXTRACT_SUBREG (SOME_INSN DOP:$src), sub0))>;
 
 // Test an EXTRACT_SUBREG that is the final instruction.
 def : Pat<(i16 (trunc DOP:$src)),

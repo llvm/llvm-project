@@ -19,8 +19,8 @@ movntss     %xmm0, (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      2     1.00                        extrq	%xmm0, %xmm2
-# CHECK-NEXT:  1      2     1.00                        extrq	$22, $2, %xmm2
+# CHECK-NEXT:  1      3     1.00                        extrq	%xmm0, %xmm2
+# CHECK-NEXT:  1      3     1.00                        extrq	$22, $2, %xmm2
 # CHECK-NEXT:  1      4     1.00                        insertq	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00                        insertq	$22, $22, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00           *            movntsd	%xmm0, (%rax)
@@ -43,7 +43,7 @@ movntss     %xmm0, (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 0.67  0.67    0.67    -      -      -      -      -     1.00   3.00   5.00   1.00    -
+# CHECK-NEXT: 0.67   0.67   0.67    -      -      -      -      -     1.00   3.00   5.00   1.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:

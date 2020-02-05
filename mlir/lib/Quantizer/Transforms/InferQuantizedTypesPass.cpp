@@ -1,6 +1,6 @@
 //===- InferQuantizedTypesPass.cpp - Infers quantized types ---------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -141,11 +141,11 @@ void InferQuantizedTypesPass::runWithConfig(SolverContext &solverContext,
   // TODO: Only dump the GraphViz if a flag is set and move to a utility.
   // GraphViz.
   if (!solverContext.getDebugCAGDotPath().empty()) {
-    auto actFileName =
-        llvm::WriteGraph(const_cast<const CAGSlice *>(&cag), "CAG",
-                         /*ShortNames=*/false,
-                         /*Title=*/"CAG",
-                         /*Filename=*/solverContext.getDebugCAGDotPath());
+    auto actFileName = llvm::WriteGraph(
+        const_cast<const CAGSlice *>(&cag), "CAG",
+        /*ShortNames=*/false,
+        /*Title=*/"CAG",
+        /*Filename=*/std::string(solverContext.getDebugCAGDotPath()));
     llvm::errs() << "Wrote graphviz file: " << actFileName << "\n";
   }
 

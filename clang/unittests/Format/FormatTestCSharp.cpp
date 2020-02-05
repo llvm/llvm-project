@@ -235,19 +235,45 @@ TEST_F(FormatTestCSharp, CSharpUsing) {
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   verifyFormat("public void foo () {\n"
                "  using (StreamWriter sw = new StreamWriter (filenameA)) {}\n"
+               "  using () {}\n"
                "}",
                Style);
 
+  // Ensure clang-format affects top-level snippets correctly.
   verifyFormat("using (StreamWriter sw = new StreamWriter (filenameB)) {}",
                Style);
 
   Style.SpaceBeforeParens = FormatStyle::SBPO_Never;
   verifyFormat("public void foo() {\n"
                "  using(StreamWriter sw = new StreamWriter(filenameB)) {}\n"
+               "  using() {}\n"
                "}",
                Style);
 
+  // Ensure clang-format affects top-level snippets correctly.
   verifyFormat("using(StreamWriter sw = new StreamWriter(filenameB)) {}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
+  verifyFormat("public void foo() {\n"
+               "  using (StreamWriter sw = new StreamWriter(filenameA)) {}\n"
+               "  using () {}\n"
+               "}",
+               Style);
+
+  // Ensure clang-format affects top-level snippets correctly.
+  verifyFormat("using (StreamWriter sw = new StreamWriter(filenameB)) {}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_NonEmptyParentheses;
+  verifyFormat("public void foo() {\n"
+               "  using (StreamWriter sw = new StreamWriter (filenameA)) {}\n"
+               "  using() {}\n"
+               "}",
+               Style);
+
+  // Ensure clang-format affects top-level snippets correctly.
+  verifyFormat("using (StreamWriter sw = new StreamWriter (filenameB)) {}",
                Style);
 }
 
@@ -381,6 +407,54 @@ TEST_F(FormatTestCSharp, CSharpSpaceAfterCStyleCast) {
 
   Style.SpaceAfterCStyleCast = true;
   verifyFormat("(int) x / y;", Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpEscapedQuotesInVerbatimStrings) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(string str = @"""";)", Style);
+  verifyFormat(R"(string str = @"""Hello world""";)", Style);
+  verifyFormat(R"(string str = $@"""Hello {friend}""";)", Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpQuotesInInterpolatedStrings) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(string str1 = $"{null ?? "null"}";)", Style);
+  verifyFormat(R"(string str2 = $"{{{braceCount} braces";)", Style);
+  verifyFormat(R"(string str3 = $"{braceCount}}} braces";)", Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpNewlinesInVerbatimStrings) {
+  // Use MS style as Google Style inserts a line break before multiline strings.
+
+  // verifyFormat does not understand multiline C# string-literals
+  // so check the format explicitly.
+
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  std::string Code = R"(string s1 = $@"some code:
+  class {className} {{
+    {className}() {{}}
+  }}";)";
+
+  EXPECT_EQ(Code, format(Code, Style));
+
+  // Multiline string in the middle of a function call.
+  Code = R"(
+var x = foo(className, $@"some code:
+  class {className} {{
+    {className}() {{}}
+  }}",
+            y);)"; // y aligned with `className` arg.
+
+  EXPECT_EQ(Code, format(Code, Style));
+
+  // Interpolated string with embedded multiline string.
+  Code = R"(Console.WriteLine($"{string.Join(@",
+		", values)}");)";
+
+  EXPECT_EQ(Code, format(Code, Style));
 }
 
 } // namespace format

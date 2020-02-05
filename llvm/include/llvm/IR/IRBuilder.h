@@ -752,23 +752,48 @@ public:
                                  Value *PassThru = nullptr,
                                  const Twine &Name = ""),
       "Use the version that takes Align instead") {
-    return CreateMaskedLoad(Ptr, Align(Alignment), Mask, PassThru, Name);
+    return CreateMaskedLoad(Ptr, assumeAligned(Alignment), Mask, PassThru,
+                            Name);
   }
   CallInst *CreateMaskedLoad(Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
 
   /// Create a call to Masked Store intrinsic
-  CallInst *CreateMaskedStore(Value *Val, Value *Ptr, unsigned Align,
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateMaskedStore(Value *Val, Value *Ptr,
+                                                        unsigned Alignment,
+                                                        Value *Mask),
+                            "Use the version that takes Align instead") {
+    return CreateMaskedStore(Val, Ptr, assumeAligned(Alignment), Mask);
+  }
+
+  CallInst *CreateMaskedStore(Value *Val, Value *Ptr, Align Alignment,
                               Value *Mask);
 
   /// Create a call to Masked Gather intrinsic
-  CallInst *CreateMaskedGather(Value *Ptrs, unsigned Align,
-                               Value *Mask = nullptr,
-                               Value *PassThru = nullptr,
-                               const Twine& Name = "");
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedGather(Value *Ptrs, unsigned Alignment,
+                                   Value *Mask = nullptr,
+                                   Value *PassThru = nullptr,
+                                   const Twine &Name = ""),
+      "Use the version that takes Align instead") {
+    return CreateMaskedGather(Ptrs, Align(Alignment), Mask, PassThru, Name);
+  }
+
+  /// Create a call to Masked Gather intrinsic
+  CallInst *CreateMaskedGather(Value *Ptrs, Align Alignment,
+                               Value *Mask = nullptr, Value *PassThru = nullptr,
+                               const Twine &Name = "");
 
   /// Create a call to Masked Scatter intrinsic
-  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Align,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Alignment,
+                                    Value *Mask = nullptr),
+      "Use the version that takes Align instead") {
+    return CreateMaskedScatter(Val, Ptrs, Align(Alignment), Mask);
+  }
+
+  /// Create a call to Masked Scatter intrinsic
+  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, Align Alignment,
                                 Value *Mask = nullptr);
 
   /// Create an assume intrinsic call that allows the optimizer to
@@ -1751,8 +1776,10 @@ public:
   /// parameter.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use the version that takes MaybeAlign instead of this one.
-  LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
-                              const char *Name) {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
+                                                        unsigned Align,
+                                                        const char *Name),
+                            "Use the version that takes NaybeAlign instead") {
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(Align), Name);
   }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
@@ -1763,8 +1790,10 @@ public:
   }
   /// FIXME: Remove this function once transition to Align is over.
   /// Use the version that takes MaybeAlign instead of this one.
-  LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
-                              const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
+                                                        unsigned Align,
+                                                        const Twine &Name = ""),
+                            "Use the version that takes MaybeAlign instead") {
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(Align), Name);
   }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
@@ -1775,8 +1804,11 @@ public:
   }
   /// FIXME: Remove this function once transition to Align is over.
   /// Use the version that takes MaybeAlign instead of this one.
-  LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, unsigned Align,
-                              bool isVolatile, const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr,
+                                                        unsigned Align,
+                                                        bool isVolatile,
+                                                        const Twine &Name = ""),
+                            "Use the version that takes MaybeAlign instead") {
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(Align), isVolatile, Name);
   }
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
@@ -1787,21 +1819,29 @@ public:
   }
 
   // Deprecated [opaque pointer types]
-  LoadInst *CreateAlignedLoad(Value *Ptr, unsigned Align, const char *Name) {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
+                                                        unsigned Align,
+                                                        const char *Name),
+                            "Use the version that takes MaybeAlign instead") {
     return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, Name);
+                             MaybeAlign(Align), Name);
   }
   // Deprecated [opaque pointer types]
-  LoadInst *CreateAlignedLoad(Value *Ptr, unsigned Align,
-                              const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
+                                                        unsigned Align,
+                                                        const Twine &Name = ""),
+                            "Use the version that takes MaybeAlign instead") {
     return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, Name);
+                             MaybeAlign(Align), Name);
   }
   // Deprecated [opaque pointer types]
-  LoadInst *CreateAlignedLoad(Value *Ptr, unsigned Align, bool isVolatile,
-                              const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
+                                                        unsigned Align,
+                                                        bool isVolatile,
+                                                        const Twine &Name = ""),
+                            "Use the version that takes MaybeAlign instead") {
     return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, isVolatile, Name);
+                             MaybeAlign(Align), isVolatile, Name);
   }
   // Deprecated [opaque pointer types]
   LoadInst *CreateAlignedLoad(Value *Ptr, MaybeAlign Align, const char *Name) {
@@ -1821,15 +1861,19 @@ public:
                              Align, isVolatile, Name);
   }
 
-  StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, unsigned Align,
-                                bool isVolatile = false) {
-    StoreInst *SI = CreateStore(Val, Ptr, isVolatile);
-    SI->setAlignment(MaybeAlign(Align));
-    return SI;
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes MaybeAlign instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, unsigned Align,
+                                    bool isVolatile = false),
+      "Use the version that takes MaybeAlign instead") {
+    return CreateAlignedStore(Val, Ptr, MaybeAlign(Align), isVolatile);
   }
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                 bool isVolatile = false) {
-    return CreateAlignedStore(Val, Ptr, Align ? Align->value() : 0, isVolatile);
+    StoreInst *SI = CreateStore(Val, Ptr, isVolatile);
+    SI->setAlignment(Align);
+    return SI;
   }
   FenceInst *CreateFence(AtomicOrdering Ordering,
                          SyncScope::ID SSID = SyncScope::System,
@@ -2260,7 +2304,7 @@ public:
     switch (ID) {
     default:
       break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)  \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
     case Intrinsic::INTRINSIC:                                \
       HasRoundingMD = ROUND_MODE;                             \
       break;
@@ -2531,7 +2575,7 @@ public:
     switch (Callee->getIntrinsicID()) {
     default:
       break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)  \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
     case Intrinsic::INTRINSIC:                                \
       HasRoundingMD = ROUND_MODE;                             \
       break;

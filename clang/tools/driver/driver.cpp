@@ -60,7 +60,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return ExecutablePath.str();
+    return std::string(ExecutablePath.str());
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -71,7 +71,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
 static const char *GetStableCStr(std::set<std::string> &SavedStrings,
                                  StringRef S) {
-  return SavedStrings.insert(S).first->c_str();
+  return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
 /// ApplyQAOverride - Apply a list of edits to the input argument lists.
@@ -241,8 +241,6 @@ static void getCLEnvVarOptions(std::string &EnvValue, llvm::StringSaver &Saver,
       *NumberSignPtr = '=';
 }
 
-static int ExecuteCC1Tool(ArrayRef<const char *> argv);
-
 static void SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   // Handle CC_PRINT_OPTIONS and CC_PRINT_OPTIONS_FILE.
   TheDriver.CCPrintOptions = !!::getenv("CC_PRINT_OPTIONS");
@@ -267,7 +265,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   StringRef ExeBasename(llvm::sys::path::stem(Path));
   if (ExeBasename.equals_lower("cl"))
     ExeBasename = "clang-cl";
-  DiagClient->setPrefix(ExeBasename);
+  DiagClient->setPrefix(std::string(ExeBasename));
 }
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out
@@ -313,21 +311,27 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
     TheDriver.setInstalledDir(InstalledPathParent);
 }
 
-static int ExecuteCC1Tool(ArrayRef<const char *> argv) {
+static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
   // driver.
   llvm::cl::ResetAllOptionOccurrences();
-  StringRef Tool = argv[1];
-  void *GetExecutablePathVP = (void *)(intptr_t) GetExecutablePath;
-  if (Tool == "-cc1")
-    return cc1_main(argv.slice(2), argv[0], GetExecutablePathVP);
-  if (Tool == "-cc1as")
-    return cc1as_main(argv.slice(2), argv[0], GetExecutablePathVP);
-  if (Tool == "-cc1gen-reproducer")
-    return cc1gen_reproducer_main(argv.slice(2), argv[0], GetExecutablePathVP);
 
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver(A);
+  llvm::cl::ExpandResponseFiles(Saver, &llvm::cl::TokenizeGNUCommandLine, ArgV,
+                                /*MarkEOLs=*/false);
+  StringRef Tool = ArgV[1];
+  void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
+  if (Tool == "-cc1")
+    return cc1_main(makeArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
+  if (Tool == "-cc1as")
+    return cc1as_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+                      GetExecutablePathVP);
+  if (Tool == "-cc1gen-reproducer")
+    return cc1gen_reproducer_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+                                  GetExecutablePathVP);
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
                << "Valid tools include '-cc1' and '-cc1as'.\n";

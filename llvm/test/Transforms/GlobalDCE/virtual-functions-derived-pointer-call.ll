@@ -110,6 +110,8 @@ memptr.end:                                       ; preds = %memptr.nonvirtual, 
 
 declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata)
 
+!llvm.module.flags = !{!7}
+
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTSM1AFiiE.virtual"}
 !2 = !{i64 24, !"_ZTSM1AFifE.virtual"}
@@ -117,4 +119,5 @@ declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata)
 !4 = !{i64 16, !"_ZTS1B"}
 !5 = !{i64 16, !"_ZTSM1BFiiE.virtual"}
 !6 = !{i64 24, !"_ZTSM1BFifE.virtual"}
+!7 = !{i32 1, !"Virtual Function Elim", i32 1}
 !12 = !{}

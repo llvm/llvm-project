@@ -1,4 +1,4 @@
-//===-- ObjCLanguageRuntime.cpp ---------------------------------*- C++ -*-===//
+//===-- ObjCLanguageRuntime.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
@@ -127,7 +127,7 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
     for (uint32_t i = 0; i < types.GetSize(); ++i) {
       TypeSP type_sp(types.GetTypeAtIndex(i));
 
-      if (ClangASTContext::IsObjCObjectOrInterfaceType(
+      if (TypeSystemClang::IsObjCObjectOrInterfaceType(
               type_sp->GetForwardCompilerType())) {
         if (type_sp->IsCompleteObjCClass()) {
           m_complete_class_cache[name] = type_sp;
@@ -387,9 +387,9 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   CompilerType class_type;
   bool is_pointer_type = false;
 
-  if (ClangASTContext::IsObjCObjectPointerType(base_type, &class_type))
+  if (TypeSystemClang::IsObjCObjectPointerType(base_type, &class_type))
     is_pointer_type = true;
-  else if (ClangASTContext::IsObjCObjectOrInterfaceType(base_type))
+  else if (TypeSystemClang::IsObjCObjectOrInterfaceType(base_type))
     class_type = base_type;
   else
     return llvm::None;

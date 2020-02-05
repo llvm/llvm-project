@@ -23,7 +23,7 @@ class RecordDecl;
 } // namespace clang
 
 namespace lldb_private {
-class ClangASTContext;
+class TypeSystemClang;
 class CompilerType;
 } // namespace lldb_private
 
@@ -42,7 +42,7 @@ class PDBSymbolTypeUDT;
 
 class PDBASTParser {
 public:
-  PDBASTParser(lldb_private::ClangASTContext &ast);
+  PDBASTParser(lldb_private::TypeSystemClang &ast);
   ~PDBASTParser();
 
   lldb::TypeSP CreateLLDBTypeFromPDBType(const llvm::pdb::PDBSymbol &type);
@@ -103,7 +103,7 @@ private:
                   lldb_private::CompilerType &record_type,
                   const llvm::pdb::PDBSymbolFunc &method) const;
 
-  lldb_private::ClangASTContext &m_ast;
+  lldb_private::TypeSystemClang &m_ast;
   lldb_private::ClangASTImporter m_ast_importer;
 
   CXXRecordDeclToUidMap m_forward_decl_to_uid;

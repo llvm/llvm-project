@@ -221,7 +221,7 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
 
     Ty = Val->getType();
     Ptr = Builder.CreatePointerBitCastOrAddrSpaceCast(Ptr, Ty->getPointerTo(5));
-    Builder.CreateAlignedStore(Val, Ptr, 4);
+    Builder.CreateAlignedStore(Val, Ptr, Align(4));
 
     if (Ty->isFloatingPointTy())
       str += "%f";

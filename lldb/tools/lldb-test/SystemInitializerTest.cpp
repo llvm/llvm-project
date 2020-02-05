@@ -12,7 +12,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -53,8 +53,7 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
-#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV1.h"
-#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
+#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
 #include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
@@ -177,7 +176,7 @@ llvm::Error SystemInitializerTest::Initialize() {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
-  ClangASTContext::Initialize();
+  TypeSystemClang::Initialize();
 
 #define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Initialize)
 #include "llvm/Config/Targets.def"
@@ -215,8 +214,7 @@ llvm::Error SystemInitializerTest::Initialize() {
 
   SymbolFileDWARFDebugMap::Initialize();
   ItaniumABILanguageRuntime::Initialize();
-  AppleObjCRuntimeV2::Initialize();
-  AppleObjCRuntimeV1::Initialize();
+  AppleObjCRuntime::Initialize();
   SystemRuntimeMacOSX::Initialize();
   RenderScriptRuntime::Initialize();
 
@@ -270,7 +268,7 @@ void SystemInitializerTest::Terminate() {
   // Terminate and unload and loaded system or user LLDB plug-ins
   PluginManager::Terminate();
 
-  ClangASTContext::Terminate();
+  TypeSystemClang::Terminate();
 
   ArchitectureArm::Terminate();
   ArchitectureMips::Terminate();
@@ -308,8 +306,7 @@ void SystemInitializerTest::Terminate() {
 
   SymbolFileDWARFDebugMap::Terminate();
   ItaniumABILanguageRuntime::Terminate();
-  AppleObjCRuntimeV2::Terminate();
-  AppleObjCRuntimeV1::Terminate();
+  AppleObjCRuntime::Terminate();
   SystemRuntimeMacOSX::Terminate();
   RenderScriptRuntime::Terminate();
 

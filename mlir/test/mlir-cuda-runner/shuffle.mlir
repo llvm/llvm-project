@@ -21,7 +21,7 @@ func @main() {
     br ^bb1(%m1 : f32)
   ^bb1(%value : f32):
     store %value, %kernel_dst[%tx] : memref<?xf32>
-    gpu.return
+    gpu.terminator
   }
   %U = memref_cast %dst : memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%U) : (memref<*xf32>) -> ()

@@ -346,7 +346,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI;
 
   /// A handle to the function-wide block frequency pass.
-  std::unique_ptr<BranchFolder::MBFIWrapper> MBFI;
+  std::unique_ptr<MBFIWrapper> MBFI;
 
   /// A handle to the loop info.
   MachineLoopInfo *MLI;
@@ -3046,7 +3046,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   F = &MF;
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  MBFI = std::make_unique<BranchFolder::MBFIWrapper>(
+  MBFI = std::make_unique<MBFIWrapper>(
       getAnalysis<MachineBlockFrequencyInfo>());
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = MF.getSubtarget().getInstrInfo();

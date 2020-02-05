@@ -1011,6 +1011,26 @@ void CodeGenModule::EmitDeferredVTables() {
   DeferredVTables.clear();
 }
 
+bool CodeGenModule::HasLTOVisibilityPublicStd(const CXXRecordDecl *RD) {
+  if (!getCodeGenOpts().LTOVisibilityPublicStd)
+    return false;
+
+  const DeclContext *DC = RD;
+  while (1) {
+    auto *D = cast<Decl>(DC);
+    DC = DC->getParent();
+    if (isa<TranslationUnitDecl>(DC->getRedeclContext())) {
+      if (auto *ND = dyn_cast<NamespaceDecl>(D))
+        if (const IdentifierInfo *II = ND->getIdentifier())
+          if (II->isStr("std") || II->isStr("stdext"))
+            return true;
+      break;
+    }
+  }
+
+  return false;
+}
+
 bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   LinkageInfo LV = RD->getLinkageAndVisibility();
   if (!isExternallyVisible(LV.getLinkage()))
@@ -1027,22 +1047,7 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
       return false;
   }
 
-  if (getCodeGenOpts().LTOVisibilityPublicStd) {
-    const DeclContext *DC = RD;
-    while (1) {
-      auto *D = cast<Decl>(DC);
-      DC = DC->getParent();
-      if (isa<TranslationUnitDecl>(DC->getRedeclContext())) {
-        if (auto *ND = dyn_cast<NamespaceDecl>(D))
-          if (const IdentifierInfo *II = ND->getIdentifier())
-            if (II->isStr("std") || II->isStr("stdext"))
-              return false;
-        break;
-      }
-    }
-  }
-
-  return true;
+  return !HasLTOVisibilityPublicStd(RD);
 }
 
 llvm::GlobalObject::VCallVisibility
@@ -1131,9 +1136,10 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
     }
   }
 
-  if (getCodeGenOpts().VirtualFunctionElimination) {
+  if (getCodeGenOpts().VirtualFunctionElimination ||
+      getCodeGenOpts().WholeProgramVTables) {
     llvm::GlobalObject::VCallVisibility TypeVis = GetVCallVisibilityLevel(RD);
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
-      VTable->addVCallVisibilityMetadata(TypeVis);
+      VTable->setVCallVisibilityMetadata(TypeVis);
   }
 }

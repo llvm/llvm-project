@@ -147,7 +147,7 @@ struct PointerIntPairInfo {
                 "cannot use a pointer type that has all bits free");
   static_assert(IntBits <= PtrTraits::NumLowBitsAvailable,
                 "PointerIntPair with integer size too large for pointer");
-  enum : uintptr_t {
+  enum MaskAndShiftConstants : uintptr_t {
     /// PointerBitMask - The bits that come from the pointer.
     PointerBitMask =
         ~(uintptr_t)(((intptr_t)1 << PtrTraits::NumLowBitsAvailable) - 1),

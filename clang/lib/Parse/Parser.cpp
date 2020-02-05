@@ -650,6 +650,16 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     return false;
 
   case tok::eof:
+    // Check whether -fmax-tokens was reached.
+    if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
+      PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
+          << PP.getTokenCount() << PP.getMaxTokens();
+      SourceLocation OverrideLoc = PP.getMaxTokensOverrideLoc();
+      if (OverrideLoc.isValid()) {
+        PP.Diag(OverrideLoc, diag::note_max_tokens_total_override);
+      }
+    }
+
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
       Actions.SetLateTemplateParser(LateTemplateParserCallback,
@@ -1136,6 +1146,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
   // If this is C90 and the declspecs were completely missing, fudge in an
   // implicit int.  We do this here because this is the only place where
@@ -1261,6 +1272,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Break out of the ParsingDeclSpec context, too.  This const_cast is
   // safe because we're always the sole owner.
   D.getMutableDeclSpec().abort();
+
+  // With abbreviated function templates - we need to explicitly add depth to
+  // account for the implicit template parameter list induced by the template.
+  if (auto *Template = dyn_cast_or_null<FunctionTemplateDecl>(Res))
+    if (Template->isAbbreviated() &&
+        Template->getTemplateParameters()->getParam(0)->isImplicit())
+      // First template parameter is implicit - meaning no explicit template
+      // parameter list was specified.
+      CurTemplateDepthTracker.addDepth(1);
 
   if (TryConsumeToken(tok::equal)) {
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
@@ -1729,6 +1749,20 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
+      return ANK_Error;
+    return ANK_Success;
+  }
+  case Sema::NC_Concept: {
+    UnqualifiedId Id;
+    Id.setIdentifier(Name, NameLoc);
+    if (Next.is(tok::less))
+      // We have a concept name followed by '<'. Consume the identifier token so
+      // we reach the '<' and annotate it.
+      ConsumeToken();
+    if (AnnotateTemplateIdToken(
+            TemplateTy::make(Classification.getTemplateName()),
+            Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
+            /*AllowTypeAnnotation=*/false, /*TypeConstraint=*/true))
       return ANK_Error;
     return ANK_Success;
   }

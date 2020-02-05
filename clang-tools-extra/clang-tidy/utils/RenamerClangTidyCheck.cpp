@@ -133,7 +133,7 @@ static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
                      const RenamerClangTidyCheck::NamingCheckId &Decl,
                      SourceRange Range, SourceManager *SourceMgr = nullptr) {
   // Do nothing if the provided range is invalid.
-  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
+  if (Range.isInvalid())
     return;
 
   // If we have a source manager, use it to convert to the spelling location for
@@ -290,11 +290,9 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
               Value->getReturnType().getTypePtr()->getAs<TypedefType>())
         addUsage(NamingCheckFailures, Typedef->getDecl(),
                  Value->getSourceRange());
-      for (unsigned i = 0; i < Value->getNumParams(); ++i) {
-        if (const TypedefType *Typedef = Value->parameters()[i]
-                                             ->getType()
-                                             .getTypePtr()
-                                             ->getAs<TypedefType>())
+      for (const ParmVarDecl *Param : Value->parameters()) {
+        if (const TypedefType *Typedef =
+                Param->getType().getTypePtr()->getAs<TypedefType>())
           addUsage(NamingCheckFailures, Typedef->getDecl(),
                    Value->getSourceRange());
       }
@@ -340,7 +338,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
     return;
   FailureInfo &Info = *MaybeFailure;
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
   NamingCheckFailure &Failure = NamingCheckFailures[ID];
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
@@ -351,7 +349,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
 void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
                                         const MacroInfo *MI) {
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
 
   auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())

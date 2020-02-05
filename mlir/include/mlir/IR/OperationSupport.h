@@ -1,6 +1,6 @@
 //===- OperationSupport.h ---------------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -595,8 +595,8 @@ public:
   ResultRange(Operation *op);
 
   /// Returns the types of the values within this range.
-  using type_iterator = ValueTypeIterator<iterator>;
-  iterator_range<type_iterator> getTypes() const { return {begin(), end()}; }
+  using type_iterator = ArrayRef<Type>::iterator;
+  ArrayRef<Type> getTypes() const;
 
 private:
   /// See `indexed_accessor_range` for details.

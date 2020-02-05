@@ -129,7 +129,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
   assert(QName.startswith("::"));
   assert(QName.endswith(Spelling));
   if (Spelling.startswith("::"))
-    return Spelling;
+    return std::string(Spelling);
 
   auto UnspelledSpecifier = QName.drop_back(Spelling.size());
   llvm::SmallVector<llvm::StringRef, 2> UnspelledScopes;
@@ -168,7 +168,7 @@ static std::string disambiguateSpellingInScope(StringRef Spelling,
   };
 
   // Add more qualifiers until the spelling is not ambiguous.
-  std::string Disambiguated = Spelling;
+  std::string Disambiguated = std::string(Spelling);
   while (IsAmbiguousSpelling(Disambiguated)) {
     if (UnspelledScopes.empty()) {
       Disambiguated = "::" + Disambiguated;
@@ -206,8 +206,9 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
       !usingFromDifferentCanonicalNamespace(FromDecl->getDeclContext(),
                                             UseContext)) {
     auto Pos = ReplacementString.rfind("::");
-    return Pos != StringRef::npos ? ReplacementString.substr(Pos + 2)
-                                  : ReplacementString;
+    return std::string(Pos != StringRef::npos
+                           ? ReplacementString.substr(Pos + 2)
+                           : ReplacementString);
   }
   // We did not match this because of a using statement, so we will need to
   // figure out how good a namespace match we have with our destination type.

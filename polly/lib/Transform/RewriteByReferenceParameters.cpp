@@ -63,7 +63,7 @@ public:
     if (!Alloca)
       return;
 
-    std::string InstName = Alloca->getName();
+    std::string InstName = Alloca->getName().str();
 
     auto NewAlloca =
         new AllocaInst(Alloca->getType()->getElementType(), 0,

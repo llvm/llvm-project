@@ -144,7 +144,7 @@ static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
   WriteToFile(fd, buf.data(), internal_strlen(buf.data()));
 }
 
-static void BackgroundThread(void *arg) {
+static void *BackgroundThread(void *arg) {
   // This is a non-initialized non-user thread, nothing to see here.
   // We don't use ScopedIgnoreInterceptors, because we want ignores to be
   // enabled even when the thread function exits (e.g. during pthread thread
@@ -220,6 +220,7 @@ static void BackgroundThread(void *arg) {
       }
     }
   }
+  return nullptr;
 }
 
 static void StartBackgroundThread() {

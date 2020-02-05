@@ -195,8 +195,11 @@ static void ParseFlags(const Vector<std::string> &Args,
   }
 
   // Disable len_control by default, if LLVMFuzzerCustomMutator is used.
-  if (EF->LLVMFuzzerCustomMutator)
+  if (EF->LLVMFuzzerCustomMutator) {
     Flags.len_control = 0;
+    Printf("INFO: found LLVMFuzzerCustomMutator (%p). "
+           "Disabling -len_control by default.\n", EF->LLVMFuzzerCustomMutator);
+  }
 
   Inputs = new Vector<std::string>;
   for (size_t A = 1; A < Args.size(); A++) {

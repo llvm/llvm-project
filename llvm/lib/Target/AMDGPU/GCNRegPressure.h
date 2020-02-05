@@ -5,6 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the GCNRegPressure class, which tracks registry pressure
+/// by bookkeeping number of SGPR/VGPRs used, weights for large SGPR/VGPRs. It
+/// also implements a compare function, which compares different register
+/// pressures, and declares one with max occupance as winner.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H
 #define LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H

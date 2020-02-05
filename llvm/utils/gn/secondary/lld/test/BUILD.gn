@@ -117,7 +117,8 @@ action("check-lld") {
         rebase_path(lld_lit_unit_site_cfg_file, root_out_dir),
     rebase_path(".", root_out_dir),
   ]
-  outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it each time.
+  outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it
+                                           # each time.
 
   # Since check-lld is always dirty, //:default doesn't depend on it so that
   # it's not part of the default ninja target.  Hence, check-lld shouldn't

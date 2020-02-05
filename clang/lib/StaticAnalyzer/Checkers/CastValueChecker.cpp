@@ -129,7 +129,7 @@ static const NoteTag *getNoteTag(CheckerContext &C,
         Out << ' ' << (CastSucceeds ? "is a" : "is not a") << " '" << CastToName
             << '\'';
 
-        return Out.str();
+        return std::string(Out.str());
       },
       /*IsPrunable=*/true);
 }

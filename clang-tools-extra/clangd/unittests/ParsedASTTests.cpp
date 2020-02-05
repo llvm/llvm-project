@@ -173,6 +173,7 @@ TEST(ParsedASTTest, TokensAfterPreamble) {
       #include "foo.h"
       first_token;
       void test() {
+        // error-ok: invalid syntax, just examining token stream
       }
       last_token
 )cpp";
@@ -236,24 +237,26 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
     // - preamble ends
     ^ID(int A);
     // Macro arguments included.
-    ^MACRO_ARGS(^MACRO_ARGS(^MACRO_EXP(int), A), ^ID(= 2));
+    ^MACRO_ARGS(^MACRO_ARGS(^MACRO_EXP(int), E), ^ID(= 2));
 
     // Macro names inside other macros not included.
     #define ^MACRO_ARGS2(X, Y) X Y
     #define ^FOO BAR
     #define ^BAR 1
-    int A = ^FOO;
+    int F = ^FOO;
 
     // Macros from token concatenations not included.
     #define ^CONCAT(X) X##A()
     #define ^PREPEND(X) MACRO##X()
     #define ^MACROA() 123
-    int B = ^CONCAT(MACRO);
-    int D = ^PREPEND(A)
+    int G = ^CONCAT(MACRO);
+    int H = ^PREPEND(A);
 
     // Macros included not from preamble not included.
     #include "foo.inc"
 
+    int printf(const char*, ...);
+    void exit(int);
     #define ^assert(COND) if (!(COND)) { printf("%s", #COND); exit(0); }
 
     void test() {

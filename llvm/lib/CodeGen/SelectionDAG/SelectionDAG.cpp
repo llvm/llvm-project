@@ -1332,6 +1332,7 @@ SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
 
 SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
                                              const SDLoc &DL, bool LegalTypes) {
+  assert(VT.isInteger() && "Shift amount is not an integer type!");
   EVT ShiftVT = TLI->getShiftAmountTy(VT, getDataLayout(), LegalTypes);
   return getConstant(Val, DL, ShiftVT);
 }
@@ -2612,33 +2613,29 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::INSERT_SUBVECTOR: {
     // If we know the element index, demand any elements from the subvector and
-    // the remainder from the src its inserted into, otherwise demand them all.
+    // the remainder from the src its inserted into, otherwise assume we need
+    // the original demanded base elements and ALL the inserted subvector
+    // elements.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    auto *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    APInt DemandedSubElts = APInt::getAllOnesValue(NumSubElts);
+    APInt DemandedSrcElts = DemandedElts;
     if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
-      Known.One.setAllBits();
-      Known.Zero.setAllBits();
       uint64_t Idx = SubIdx->getZExtValue();
-      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
-      if (!!DemandedSubElts) {
-        Known = computeKnownBits(Sub, DemandedSubElts, Depth + 1);
-        if (Known.isUnknown())
-          break; // early-out.
-      }
-      APInt SubMask = APInt::getBitsSet(NumElts, Idx, Idx + NumSubElts);
-      APInt DemandedSrcElts = DemandedElts & ~SubMask;
-      if (!!DemandedSrcElts) {
-        Known2 = computeKnownBits(Src, DemandedSrcElts, Depth + 1);
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
-      }
-    } else {
-      Known = computeKnownBits(Sub, Depth + 1);
+      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
+    }
+    Known.One.setAllBits();
+    Known.Zero.setAllBits();
+    if (!!DemandedSubElts) {
+      Known = computeKnownBits(Sub, DemandedSubElts, Depth + 1);
       if (Known.isUnknown())
         break; // early-out.
-      Known2 = computeKnownBits(Src, Depth + 1);
+    }
+    if (!!DemandedSrcElts) {
+      Known2 = computeKnownBits(Src, DemandedSrcElts, Depth + 1);
       Known.One &= Known2.One;
       Known.Zero &= Known2.Zero;
     }
@@ -3244,57 +3241,51 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     EVT VecVT = InVec.getValueType();
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
+
     // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
     // anything about the extended bits.
     if (BitWidth > EltBitWidth)
       Known = Known.trunc(EltBitWidth);
-    ConstantSDNode *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
-    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)) {
-      // If we know the element index, just demand that vector element.
-      unsigned Idx = ConstEltNo->getZExtValue();
-      APInt DemandedElt = APInt::getOneBitSet(NumSrcElts, Idx);
-      Known = computeKnownBits(InVec, DemandedElt, Depth + 1);
-    } else {
-      // Unknown element index, so ignore DemandedElts and demand them all.
-      Known = computeKnownBits(InVec, Depth + 1);
-    }
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnesValue(NumSrcElts);
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    Known = computeKnownBits(InVec, DemandedSrcElts, Depth + 1);
     if (BitWidth > EltBitWidth)
       Known = Known.zext(BitWidth, false /* => any extend */);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
+    // If we know the element index, split the demand between the
+    // source vector and the inserted element, otherwise assume we need
+    // the original demanded vector elements and the value.
     SDValue InVec = Op.getOperand(0);
     SDValue InVal = Op.getOperand(1);
     SDValue EltNo = Op.getOperand(2);
-
-    ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    auto *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
-      // If we know the element index, split the demand between the
-      // source vector and the inserted element.
-      Known.Zero = Known.One = APInt::getAllOnesValue(BitWidth);
       unsigned EltIdx = CEltNo->getZExtValue();
-
-      // If we demand the inserted element then add its common known bits.
-      if (DemandedElts[EltIdx]) {
-        Known2 = computeKnownBits(InVal, Depth + 1);
-        Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
-        Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());
-      }
-
-      // If we demand the source vector then add its common known bits, ensuring
-      // that we don't demand the inserted element.
-      APInt VectorElts = DemandedElts & ~(APInt::getOneBitSet(NumElts, EltIdx));
-      if (!!VectorElts) {
-        Known2 = computeKnownBits(InVec, VectorElts, Depth + 1);
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
-      }
-    } else {
-      // Unknown element index, so ignore DemandedElts and demand them all.
-      Known = computeKnownBits(InVec, Depth + 1);
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+    Known.One.setAllBits();
+    Known.Zero.setAllBits();
+    if (DemandedVal) {
       Known2 = computeKnownBits(InVal, Depth + 1);
-      Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
-      Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());
+      Known.One &= Known2.One.zextOrTrunc(BitWidth);
+      Known.Zero &= Known2.Zero.zextOrTrunc(BitWidth);
+    }
+    if (!!DemandedVecElts) {
+      Known2 = computeKnownBits(InVec, DemandedVecElts, Depth + 1);
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
     }
     break;
   }
@@ -3711,18 +3702,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
 
     // Fallback - just get the minimum number of sign bits of the operands.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   }
   case ISD::UMIN:
   case ISD::UMAX:
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   case ISD::SADDO:
   case ISD::UADDO:
@@ -3752,7 +3743,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::ROTL:
   case ISD::ROTR:
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
+    if (Tmp == VTBits)
+      return VTBits;
+
+    if (ConstantSDNode *C =
+            isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
       unsigned RotAmt = C->getAPIntValue().urem(VTBits);
 
       // Handle rotate right by N like a rotate left by 32-N.
@@ -3761,7 +3759,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
       // If we aren't rotating out all of the known-in sign bits, return the
       // number that are left.  This handles rotl(sext(x), 1) for example.
-      Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
       if (Tmp > (RotAmt + 1)) return (Tmp - RotAmt);
     }
     break;
@@ -3769,13 +3766,15 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ADDC:
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
-    if (Tmp == 1) return 1;  // Early out.
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp == 1) return 1; // Early out.
 
     // Special case decrementing a value (ADD X, -1):
-    if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+    if (ConstantSDNode *CRHS =
+            isConstOrConstSplat(Op.getOperand(1), DemandedElts))
       if (CRHS->isAllOnesValue()) {
-        KnownBits Known = computeKnownBits(Op.getOperand(0), Depth+1);
+        KnownBits Known =
+            computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
 
         // If the input is known to be 0 or 1, the output is 0/-1, which is all
         // sign bits set.
@@ -3788,18 +3787,19 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
           return Tmp;
       }
 
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth+1);
-    if (Tmp2 == 1) return 1;
-    return std::min(Tmp, Tmp2)-1;
-
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (Tmp2 == 1) return 1; // Early out.
+    return std::min(Tmp, Tmp2) - 1;
   case ISD::SUB:
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth+1);
-    if (Tmp2 == 1) return 1;
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (Tmp2 == 1) return 1; // Early out.
 
     // Handle NEG.
-    if (ConstantSDNode *CLHS = isConstOrConstSplat(Op.getOperand(0)))
+    if (ConstantSDNode *CLHS =
+            isConstOrConstSplat(Op.getOperand(0), DemandedElts))
       if (CLHS->isNullValue()) {
-        KnownBits Known = computeKnownBits(Op.getOperand(1), Depth+1);
+        KnownBits Known =
+            computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
         // If the input is known to be 0 or 1, the output is 0/-1, which is all
         // sign bits set.
         if ((Known.Zero | 1).isAllOnesValue())
@@ -3815,9 +3815,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
     // Sub can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
-    if (Tmp == 1) return 1;  // Early out.
-    return std::min(Tmp, Tmp2)-1;
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp == 1) return 1; // Early out.
+    return std::min(Tmp, Tmp2) - 1;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
     unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
@@ -3852,37 +3852,30 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::max(std::min(KnownSign - rIndex * BitWidth, BitWidth), 0);
   }
   case ISD::INSERT_VECTOR_ELT: {
+    // If we know the element index, split the demand between the
+    // source vector and the inserted element, otherwise assume we need
+    // the original demanded vector elements and the value.
     SDValue InVec = Op.getOperand(0);
     SDValue InVal = Op.getOperand(1);
     SDValue EltNo = Op.getOperand(2);
-
-    ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    auto *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
-      // If we know the element index, split the demand between the
-      // source vector and the inserted element.
       unsigned EltIdx = CEltNo->getZExtValue();
-
-      // If we demand the inserted element then get its sign bits.
-      Tmp = std::numeric_limits<unsigned>::max();
-      if (DemandedElts[EltIdx]) {
-        // TODO - handle implicit truncation of inserted elements.
-        if (InVal.getScalarValueSizeInBits() != VTBits)
-          break;
-        Tmp = ComputeNumSignBits(InVal, Depth + 1);
-      }
-
-      // If we demand the source vector then get its sign bits, and determine
-      // the minimum.
-      APInt VectorElts = DemandedElts;
-      VectorElts.clearBit(EltIdx);
-      if (!!VectorElts) {
-        Tmp2 = ComputeNumSignBits(InVec, VectorElts, Depth + 1);
-        Tmp = std::min(Tmp, Tmp2);
-      }
-    } else {
-      // Unknown element index, so ignore DemandedElts and demand them all.
-      Tmp = ComputeNumSignBits(InVec, Depth + 1);
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+    Tmp = std::numeric_limits<unsigned>::max();
+    if (DemandedVal) {
+      // TODO - handle implicit truncation of inserted elements.
+      if (InVal.getScalarValueSizeInBits() != VTBits)
+        break;
       Tmp2 = ComputeNumSignBits(InVal, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    if (!!DemandedVecElts) {
+      Tmp2 = ComputeNumSignBits(InVec, DemandedVecElts, Depth + 1);
       Tmp = std::min(Tmp, Tmp2);
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
@@ -3905,7 +3898,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     // If we know the element index, just demand that vector element, else for
     // an unknown element index, ignore DemandedElts and demand them all.
     APInt DemandedSrcElts = APInt::getAllOnesValue(NumSrcElts);
-    ConstantSDNode *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
     if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
       DemandedSrcElts =
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
@@ -3946,34 +3939,30 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::INSERT_SUBVECTOR: {
     // If we know the element index, demand any elements from the subvector and
-    // the remainder from the src its inserted into, otherwise demand them all.
+    // the remainder from the src its inserted into, otherwise assume we need
+    // the original demanded base elements and ALL the inserted subvector
+    // elements.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
     auto *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    APInt DemandedSubElts = APInt::getAllOnesValue(NumSubElts);
+    APInt DemandedSrcElts = DemandedElts;
     if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
-      Tmp = std::numeric_limits<unsigned>::max();
       uint64_t Idx = SubIdx->getZExtValue();
-      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
-      if (!!DemandedSubElts) {
-        Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
-        if (Tmp == 1) return 1; // early-out
-      }
-      APInt SubMask = APInt::getBitsSet(NumElts, Idx, Idx + NumSubElts);
-      APInt DemandedSrcElts = DemandedElts & ~SubMask;
-      if (!!DemandedSrcElts) {
-        Tmp2 = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
-        Tmp = std::min(Tmp, Tmp2);
-      }
-      assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
-      return Tmp;
+      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
     }
-
-    // Not able to determine the index so just assume worst case.
-    Tmp = ComputeNumSignBits(Sub, Depth + 1);
-    if (Tmp == 1) return 1; // early-out
-    Tmp2 = ComputeNumSignBits(Src, Depth + 1);
-    Tmp = std::min(Tmp, Tmp2);
+    Tmp = std::numeric_limits<unsigned>::max();
+    if (!!DemandedSubElts) {
+      Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
+      if (Tmp == 1)
+        return 1; // early-out
+    }
+    if (!!DemandedSrcElts) {
+      Tmp2 = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
   }
@@ -4880,15 +4869,24 @@ bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
 }
 
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
-                                             EVT VT, SDNode *N1, SDNode *N2) {
+                                             EVT VT, ArrayRef<SDValue> Ops) {
   // If the opcode is a target-specific ISD node, there's nothing we can
   // do here and the operand rules may not line up with the below, so
   // bail early.
   if (Opcode >= ISD::BUILTIN_OP_END)
     return SDValue();
 
-  if (isUndef(Opcode, {SDValue(N1, 0), SDValue(N2, 0)}))
+  // For now, the array Ops should only contain two values.
+  // This enforcement will be removed once this function is merged with
+  // FoldConstantVectorArithmetic
+  if (Ops.size() != 2)
+    return SDValue();
+
+  if (isUndef(Opcode, Ops))
     return getUNDEF(VT);
+
+  SDNode *N1 = Ops[0].getNode();
+  SDNode *N2 = Ops[1].getNode();
 
   // Handle the case of two scalars.
   if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
@@ -5185,11 +5183,20 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N2C && N2C->isNullValue())
       return N1;
     break;
+  case ISD::MUL:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
+    if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
+      APInt MulImm = cast<ConstantSDNode>(N1->getOperand(0))->getAPIntValue();
+      APInt N2CImm = N2C->getAPIntValue();
+      return getVScale(DL, VT, MulImm * N2CImm);
+    }
+    break;
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::MULHU:
   case ISD::MULHS:
-  case ISD::MUL:
   case ISD::SDIV:
   case ISD::SREM:
   case ISD::SMIN:
@@ -5222,6 +5229,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Invalid FCOPYSIGN!");
     break;
   case ISD::SHL:
+    if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
+      APInt MulImm = cast<ConstantSDNode>(N1->getOperand(0))->getAPIntValue();
+      APInt ShiftImm = N2C->getAPIntValue();
+      return getVScale(DL, VT, MulImm << ShiftImm);
+    }
+    LLVM_FALLTHROUGH;
   case ISD::SRA:
   case ISD::SRL:
     if (SDValue V = simplifyShift(N1, N2))
@@ -5446,8 +5459,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   // Perform trivial constant folding.
-  if (SDValue SV =
-          FoldConstantArithmetic(Opcode, DL, VT, N1.getNode(), N2.getNode()))
+  if (SDValue SV = FoldConstantArithmetic(Opcode, DL, VT, {N1, N2}))
     return SV;
 
   if (SDValue V = foldConstantFPMath(Opcode, DL, VT, N1, N2))
@@ -6808,9 +6820,10 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
+  uint64_t Size = MemoryLocation::getSizeOrUnknown(MemVT.getStoreSize());
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, MemVT.getStoreSize(), Alignment, AAInfo, Ranges);
+      PtrInfo, MMOFlags, Size, Alignment, AAInfo, Ranges);
   return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, MemVT, MMO);
 }
 
@@ -6930,8 +6943,10 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, Val.getValueType().getStoreSize(), Alignment, AAInfo);
+  uint64_t Size =
+      MemoryLocation::getSizeOrUnknown(Val.getValueType().getStoreSize());
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
   return getStore(Chain, dl, Val, Ptr, MMO);
 }
 
@@ -7917,7 +7932,7 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   switch (OrigOpc) {
   default:
     llvm_unreachable("mutateStrictFPToFP called with unexpected opcode!");
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN: NewOpc = ISD::DAGN; break;
 #define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN: NewOpc = ISD::SETCC; break;

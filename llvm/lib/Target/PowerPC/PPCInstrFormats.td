@@ -41,6 +41,10 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   bits<1> XFormMemOp = 0;
   let TSFlags{6}  = XFormMemOp;
 
+  // Indicate that this instruction is prefixed.
+  bits<1> Prefixed = 0;
+  let TSFlags{7}  = Prefixed;
+
   // Fields used for relation models.
   string BaseName = "";
 

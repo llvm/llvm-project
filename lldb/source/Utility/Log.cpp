@@ -1,4 +1,4 @@
-//===-- Log.cpp -------------------------------------------------*- C++ -*-===//
+//===-- Log.cpp -----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -138,7 +138,7 @@ void Log::VAPrintf(const char *format, va_list args) {
 
   Stream << Content << "\n";
 
-  WriteMessage(FinalMessage.str());
+  WriteMessage(std::string(FinalMessage.str()));
 }
 
 // Printing of errors that are not fatal.

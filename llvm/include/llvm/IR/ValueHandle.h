@@ -89,7 +89,11 @@ public:
   }
 
   Value *operator->() const { return getValPtr(); }
-  Value &operator*() const { return *getValPtr(); }
+  Value &operator*() const {
+    Value *V = getValPtr();
+    assert(V && "Dereferencing deleted ValueHandle");
+    return *V;
+  }
 
 protected:
   Value *getValPtr() const { return Val; }

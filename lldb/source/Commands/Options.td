@@ -115,6 +115,8 @@ let Command = "breakpoint set" in {
   def breakpoint_set_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
     Required,
     Desc<"Specifies the line number on which to set this breakpoint.">;
+  def breakpoint_set_column : Option<"column", "u">, Group<1>, Arg<"ColumnNum">,
+    Desc<"Specifies the column number on which to set this breakpoint.">;
   def breakpoint_set_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Required,
     Desc<"Set the breakpoint at the specified address.  If the address maps "

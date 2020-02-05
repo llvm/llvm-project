@@ -57,6 +57,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Style.Language == FormatStyle::LK_TextProto)
       tryParsePythonComment();
     tryMergePreviousTokens();
+    if (Style.isCSharp())
+      // This needs to come after tokens have been merged so that C#
+      // string literals are correctly identified.
+      handleCSharpVerbatimAndInterpolatedStrings();
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->Tok.isNot(tok::eof));
@@ -74,7 +78,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (Style.isCSharp()) {
     if (tryMergeCSharpKeywordVariables())
       return;
-    if (tryMergeCSharpVerbatimStringLiteral())
+    if (tryMergeCSharpStringLiteral())
       return;
     if (tryMergeCSharpDoubleQuestion())
       return;
@@ -181,18 +185,71 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
 // Search for verbatim or interpolated string literals @"ABC" or
 // $"aaaaa{abc}aaaaa" i and mark the token as TT_CSharpStringLiteral, and to
 // prevent splitting of @, $ and ".
-bool FormatTokenLexer::tryMergeCSharpVerbatimStringLiteral() {
+// Merging of multiline verbatim strings with embedded '"' is handled in
+// handleCSharpVerbatimAndInterpolatedStrings with lower-level lexing.
+bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   if (Tokens.size() < 2)
     return false;
-  auto &At = *(Tokens.end() - 2);
-  auto &String = *(Tokens.end() - 1);
 
-  // Look for $"aaaaaa" @"aaaaaa".
-  if (!(At->is(tok::at) || At->TokenText == "$") ||
-      !String->is(tok::string_literal))
+  // Interpolated strings could contain { } with " characters inside.
+  // $"{x ?? "null"}"
+  // should not be split into $"{x ?? ", null, "}" but should treated as a
+  // single string-literal.
+  //
+  // We opt not to try and format expressions inside {} within a C#
+  // interpolated string. Formatting expressions within an interpolated string
+  // would require similar work as that done for JavaScript template strings
+  // in `handleTemplateStrings()`.
+  auto &CSharpInterpolatedString = *(Tokens.end() - 2);
+  if (CSharpInterpolatedString->Type == TT_CSharpStringLiteral &&
+      (CSharpInterpolatedString->TokenText.startswith(R"($")") ||
+       CSharpInterpolatedString->TokenText.startswith(R"($@")"))) {
+    int UnmatchedOpeningBraceCount = 0;
+
+    auto TokenTextSize = CSharpInterpolatedString->TokenText.size();
+    for (size_t Index = 0; Index < TokenTextSize; ++Index) {
+      char C = CSharpInterpolatedString->TokenText[Index];
+      if (C == '{') {
+        // "{{"  inside an interpolated string is an escaped '{' so skip it.
+        if (Index + 1 < TokenTextSize &&
+            CSharpInterpolatedString->TokenText[Index + 1] == '{') {
+          ++Index;
+          continue;
+        }
+        ++UnmatchedOpeningBraceCount;
+      } else if (C == '}') {
+        // "}}"  inside an interpolated string is an escaped '}' so skip it.
+        if (Index + 1 < TokenTextSize &&
+            CSharpInterpolatedString->TokenText[Index + 1] == '}') {
+          ++Index;
+          continue;
+        }
+        --UnmatchedOpeningBraceCount;
+      }
+    }
+
+    if (UnmatchedOpeningBraceCount > 0) {
+      auto &NextToken = *(Tokens.end() - 1);
+      CSharpInterpolatedString->TokenText =
+          StringRef(CSharpInterpolatedString->TokenText.begin(),
+                    NextToken->TokenText.end() -
+                        CSharpInterpolatedString->TokenText.begin());
+      CSharpInterpolatedString->ColumnWidth += NextToken->ColumnWidth;
+      Tokens.erase(Tokens.end() - 1);
+      return true;
+    }
+  }
+
+  // Look for @"aaaaaa" or $"aaaaaa".
+  auto &String = *(Tokens.end() - 1);
+  if (!String->is(tok::string_literal))
     return false;
 
-  if (Tokens.size() >= 2 && At->is(tok::at)) {
+  auto &At = *(Tokens.end() - 2);
+  if (!(At->is(tok::at) || At->TokenText == "$"))
+    return false;
+
+  if (Tokens.size() > 2 && At->is(tok::at)) {
     auto &Dollar = *(Tokens.end() - 3);
     if (Dollar->TokenText == "$") {
       // This looks like $@"aaaaa" so we need to combine all 3 tokens.
@@ -428,6 +485,68 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
   RegexToken->ColumnWidth = RegexToken->TokenText.size();
 
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
+}
+
+void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
+  FormatToken *CSharpStringLiteral = Tokens.back();
+
+  if (CSharpStringLiteral->Type != TT_CSharpStringLiteral)
+    return;
+
+  // Deal with multiline strings.
+  if (!(CSharpStringLiteral->TokenText.startswith(R"(@")") ||
+        CSharpStringLiteral->TokenText.startswith(R"($@")")))
+    return;
+
+  const char *StrBegin =
+      Lex->getBufferLocation() - CSharpStringLiteral->TokenText.size();
+  const char *Offset = StrBegin;
+  if (CSharpStringLiteral->TokenText.startswith(R"(@")"))
+    Offset += 2;
+  else // CSharpStringLiteral->TokenText.startswith(R"($@")")
+    Offset += 3;
+
+  // Look for a terminating '"' in the current file buffer.
+  // Make no effort to format code within an interpolated or verbatim string.
+  for (; Offset != Lex->getBuffer().end(); ++Offset) {
+    if (Offset[0] == '"') {
+      // "" within a verbatim string is an escaped double quote: skip it.
+      if (Offset + 1 < Lex->getBuffer().end() && Offset[1] == '"')
+        ++Offset;
+      else
+        break;
+    }
+  }
+
+  // Make no attempt to format code properly if a verbatim string is
+  // unterminated.
+  if (Offset == Lex->getBuffer().end())
+    return;
+
+  StringRef LiteralText(StrBegin, Offset - StrBegin + 1);
+  CSharpStringLiteral->TokenText = LiteralText;
+
+  // Adjust width for potentially multiline string literals.
+  size_t FirstBreak = LiteralText.find('\n');
+  StringRef FirstLineText = FirstBreak == StringRef::npos
+                                ? LiteralText
+                                : LiteralText.substr(0, FirstBreak);
+  CSharpStringLiteral->ColumnWidth = encoding::columnWidthWithTabs(
+      FirstLineText, CSharpStringLiteral->OriginalColumn, Style.TabWidth,
+      Encoding);
+  size_t LastBreak = LiteralText.rfind('\n');
+  if (LastBreak != StringRef::npos) {
+    CSharpStringLiteral->IsMultiline = true;
+    unsigned StartColumn = 0; // The template tail spans the entire line.
+    CSharpStringLiteral->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        LiteralText.substr(LastBreak + 1, LiteralText.size()), StartColumn,
+        Style.TabWidth, Encoding);
+  }
+
+  SourceLocation loc = Offset < Lex->getBuffer().end()
+                           ? Lex->getSourceLocation(Offset + 1)
+                           : SourceMgr.getLocForEndOfFile(ID);
+  resetLexer(SourceMgr.getFileOffset(loc));
 }
 
 void FormatTokenLexer::handleTemplateStrings() {

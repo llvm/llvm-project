@@ -20,6 +20,16 @@ class Format<bits<2> val> {
 def PseudoFrm   : Format<0>;
 def NormalFrm   : Format<1>; // Do we need any others?
 
+// Enum describing whether an instruction is
+// destructive in its first source operand.
+class DestructiveInstTypeEnum<bits<1> val> {
+  bits<1> Value = val;
+}
+def NotDestructive       : DestructiveInstTypeEnum<0>;
+// Destructive in its first operand and can be MOVPRFX'd, but has no other
+// special properties.
+def DestructiveOther     : DestructiveInstTypeEnum<1>;
+
 // AArch64 Instruction Format
 class AArch64Inst<Format f, string cstr> : Instruction {
   field bits<32> Inst; // Instruction encoding.
@@ -34,6 +44,14 @@ class AArch64Inst<Format f, string cstr> : Instruction {
   let Namespace   = "AArch64";
   Format F        = f;
   bits<2> Form    = F.Value;
+
+  // Defaults
+  DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
+  ElementSizeEnum ElementSize = ElementSizeNone;
+
+  let TSFlags{3} = DestructiveInstType.Value;
+  let TSFlags{2-0} = ElementSize.Value;
+
   let Pattern     = [];
   let Constraints = cstr;
 }
@@ -56,14 +74,6 @@ class EncodedI<string cstr, list<dag> pattern> : AArch64Inst<NormalFrm, cstr> {
   let Size = 4;
 }
 
-// Enum describing whether an instruction is
-// destructive in its first source operand.
-class DestructiveInstTypeEnum<bits<1> val> {
-  bits<1> Value = val;
-}
-def NotDestructive  : DestructiveInstTypeEnum<0>;
-def Destructive     : DestructiveInstTypeEnum<1>;
-
 // Normal instructions
 class I<dag oops, dag iops, string asm, string operands, string cstr,
         list<dag> pattern>
@@ -71,13 +81,6 @@ class I<dag oops, dag iops, string asm, string operands, string cstr,
   dag OutOperandList = oops;
   dag InOperandList  = iops;
   let AsmString      = !strconcat(asm, operands);
-
-  // Destructive operations (SVE)
-  DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
-  ElementSizeEnum ElementSize = ElementSizeB;
-
-  let TSFlags{3} = DestructiveInstType.Value;
-  let TSFlags{2-0} = ElementSize.Value;
 }
 
 class TriOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$MHS, node:$RHS), res>;
@@ -349,6 +352,8 @@ def simm7s16 : Operand<i32> {
   let PrintMethod = "printImmScale<16>";
 }
 
+def am_sve_fi : ComplexPattern<i64, 2, "SelectAddrModeFrameIndexSVE", []>;
+
 def am_indexed7s8   : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S8", []>;
 def am_indexed7s16  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S16", []>;
 def am_indexed7s32  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S32", []>;
@@ -358,6 +363,9 @@ def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
 def am_indexedu6s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedU6S128", []>;
 def am_indexeds9s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedS9S128", []>;
 
+def UImmS1XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
 def UImmS2XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() / 2, SDLoc(N), MVT::i64);
 }]>;
@@ -683,6 +691,37 @@ def vecshiftL32 : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = Imm0_31Operand;
 }
 def vecshiftL64 : Operand<i32>, ImmLeaf<i32, [{
+  return (((uint32_t)Imm) < 64);
+}]> {
+  let EncoderMethod = "getVecShiftL64OpValue";
+  let DecoderMethod = "DecodeVecShiftL64Imm";
+  let ParserMatchClass = Imm0_63Operand;
+}
+
+// Same as vecshiftL#N, but use TargetConstant (TimmLeaf) instead of Constant
+// (ImmLeaf)
+def tvecshiftL8 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) < 8);
+}]> {
+  let EncoderMethod = "getVecShiftL8OpValue";
+  let DecoderMethod = "DecodeVecShiftL8Imm";
+  let ParserMatchClass = Imm0_7Operand;
+}
+def tvecshiftL16 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) < 16);
+}]> {
+  let EncoderMethod = "getVecShiftL16OpValue";
+  let DecoderMethod = "DecodeVecShiftL16Imm";
+  let ParserMatchClass = Imm0_15Operand;
+}
+def tvecshiftL32 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) < 32);
+}]> {
+  let EncoderMethod = "getVecShiftL32OpValue";
+  let DecoderMethod = "DecodeVecShiftL32Imm";
+  let ParserMatchClass = Imm0_31Operand;
+}
+def tvecshiftL64 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 64);
 }]> {
   let EncoderMethod = "getVecShiftL64OpValue";
@@ -4728,11 +4767,11 @@ class BaseFPConversion<bits<2> type, bits<2> opcode, RegisterClass dstType,
 multiclass FPConversion<string asm> {
   // Double-precision to Half-precision
   def HDr : BaseFPConversion<0b01, 0b11, FPR16, FPR64, asm,
-                             [(set FPR16:$Rd, (fpround FPR64:$Rn))]>;
+                             [(set FPR16:$Rd, (any_fpround FPR64:$Rn))]>;
 
   // Double-precision to Single-precision
   def SDr : BaseFPConversion<0b01, 0b00, FPR32, FPR64, asm,
-                             [(set FPR32:$Rd, (fpround FPR64:$Rn))]>;
+                             [(set FPR32:$Rd, (any_fpround FPR64:$Rn))]>;
 
   // Half-precision to Double-precision
   def DHr : BaseFPConversion<0b11, 0b01, FPR64, FPR16, asm,
@@ -4748,7 +4787,7 @@ multiclass FPConversion<string asm> {
 
   // Single-precision to Half-precision
   def HSr : BaseFPConversion<0b00, 0b11, FPR16, FPR32, asm,
-                             [(set FPR16:$Rd, (fpround FPR32:$Rn))]>;
+                             [(set FPR16:$Rd, (any_fpround FPR32:$Rn))]>;
 }
 
 //---
@@ -7964,6 +8003,64 @@ multiclass SIMDFPIndexedTied<bit U, bits<4> opc, string asm> {
     let Inst{11} = idx{0};
     let Inst{21} = 0;
   }
+}
+
+multiclass SIMDIndexedHSPatterns<SDPatternOperator OpNodeLane,
+                                 SDPatternOperator OpNodeLaneQ> {
+
+  def : Pat<(v4i16 (OpNodeLane
+                     (v4i16 V64:$Rn), (v4i16 V64_lo:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v4i16_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), (v4i16 V64_lo:$Rm), dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i16 (OpNodeLaneQ
+                     (v4i16 V64:$Rn), (v8i16 V128_lo:$Rm),
+                     VectorIndexH32b:$idx)),
+            (!cast<Instruction>(NAME # v4i16_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v8i16 (OpNodeLane
+                     (v8i16 V128:$Rn), (v4i16 V64_lo:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v8i16_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), $Rm, dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v8i16 (OpNodeLaneQ
+                     (v8i16 V128:$Rn), (v8i16 V128_lo:$Rm),
+                     VectorIndexH32b:$idx)),
+            (!cast<Instruction>(NAME # v8i16_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v2i32 (OpNodeLane
+                     (v2i32 V64:$Rn), (v2i32 V64:$Rm),
+                     VectorIndexD32b:$idx)),
+            (!cast<Instruction>(NAME # v2i32_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), (v2i32 V64_lo:$Rm), dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v2i32 (OpNodeLaneQ
+                     (v2i32 V64:$Rn), (v4i32 V128:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v2i32_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i32 (OpNodeLane
+                     (v4i32 V128:$Rn), (v2i32 V64:$Rm),
+                     VectorIndexD32b:$idx)),
+            (!cast<Instruction>(NAME # v4i32_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), $Rm, dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i32 (OpNodeLaneQ
+                     (v4i32 V128:$Rn),
+                     (v4i32 V128:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v4i32_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
 }
 
 multiclass SIMDIndexedHS<bit U, bits<4> opc, string asm,

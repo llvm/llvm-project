@@ -2010,6 +2010,22 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       return despeculateCountZeros(II, TLI, DL, ModifiedDT);
     case Intrinsic::dbg_value:
       return fixupDbgValue(II);
+    case Intrinsic::vscale: {
+      // If datalayout has no special restrictions on vector data layout,
+      // replace `llvm.vscale` by an equivalent constant expression
+      // to benefit from cheap constant propagation.
+      Type *ScalableVectorTy =
+          VectorType::get(Type::getInt8Ty(II->getContext()), 1, true);
+      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinSize() == 8) {
+        auto Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
+        auto One = ConstantInt::getSigned(II->getType(), 1);
+        auto *CGep =
+            ConstantExpr::getGetElementPtr(ScalableVectorTy, Null, One);
+        II->replaceAllUsesWith(ConstantExpr::getPtrToInt(CGep, II->getType()));
+        II->eraseFromParent();
+        return true;
+      }
+    }
     }
 
     if (TLI) {
@@ -6122,6 +6138,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   BasicBlock *StartBlock = SI->getParent();
   BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
   BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
+  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
 
   // Delete the unconditional branch that was just created by the split.
   StartBlock->getTerminator()->eraseFromParent();
@@ -6793,6 +6810,14 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
                                 const TargetLowering &TLI) {
   // Handle simple but common cases only.
   Type *StoreType = SI.getValueOperand()->getType();
+
+  // The code below assumes shifting a value by <number of bits>,
+  // whereas scalable vectors would have to be shifted by
+  // <2log(vscale) + number of bits> in order to store the
+  // low/high parts. Bailing out for now.
+  if (StoreType->isVectorTy() && StoreType->getVectorIsScalable())
+    return false;
+
   if (!DL.typeSizeEqualsStoreSize(StoreType) ||
       DL.getTypeSizeInBits(StoreType) == 0)
     return false;
@@ -6860,8 +6885,8 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
       Addr = Builder.CreateGEP(
           SplitStoreType, Addr,
           ConstantInt::get(Type::getInt32Ty(SI.getContext()), 1));
-    Builder.CreateAlignedStore(
-        V, Addr, Upper ? SI.getAlignment() / 2 : SI.getAlignment());
+    Builder.CreateAlignedStore(V, Addr,
+                               Upper ? SI.getAlign() / 2 : SI.getAlign());
   };
 
   CreateSplitStore(LValue, false);

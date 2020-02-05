@@ -18,6 +18,7 @@
 ; EXTERNAL: gv: (name: "_ZTV1D", {{.*}} vTableFuncs: ((virtFunc:
 
 ; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t3.o,test,px \

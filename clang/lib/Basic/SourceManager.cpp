@@ -577,13 +577,15 @@ FileID SourceManager::createFileID(const ContentCache *File, StringRef Filename,
     SLocEntryLoaded[Index] = true;
     return FileID::get(LoadedID);
   }
+  unsigned FileSize = File->getSize();
+  if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
+        NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
+    Diag.Report(IncludePos, diag::err_include_too_large);
+    return FileID();
+  }
   LocalSLocEntryTable.push_back(
       SLocEntry::get(NextLocalOffset,
                      FileInfo::get(IncludePos, File, FileCharacter, Filename)));
-  unsigned FileSize = File->getSize();
-  assert(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
-         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset &&
-         "Ran out of source locations!");
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
   NextLocalOffset += FileSize + 1;

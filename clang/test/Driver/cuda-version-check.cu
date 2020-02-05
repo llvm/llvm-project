@@ -8,6 +8,8 @@
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
+// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
 
 // The installation at Inputs/CUDA is CUDA 7.0, which doesn't support sm_60.
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
@@ -58,3 +60,5 @@
 
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
+
+// UNKNOWN_VERSION: Unknown CUDA version 999.999. Assuming the latest supported version

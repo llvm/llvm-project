@@ -33,7 +33,8 @@ public:
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 };
 
 } // end anonymous namespace
@@ -257,11 +258,10 @@ static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
   return (v & ((1ULL << (begin + 1)) - 1)) >> end;
 }
 
-void RISCV::relocateOne(uint8_t *loc, const RelType type,
-                        const uint64_t val) const {
+void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   const unsigned bits = config->wordsize * 8;
 
-  switch (type) {
+  switch (rel.type) {
   case R_RISCV_32:
     write32le(loc, val);
     return;
@@ -270,8 +270,8 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
     return;
 
   case R_RISCV_RVC_BRANCH: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 8, type);
-    checkAlignment(loc, val, 2, type);
+    checkInt(loc, static_cast<int64_t>(val) >> 1, 8, rel);
+    checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE383;
     uint16_t imm8 = extractBits(val, 8, 8) << 12;
     uint16_t imm4_3 = extractBits(val, 4, 3) << 10;
@@ -285,8 +285,8 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   }
 
   case R_RISCV_RVC_JUMP: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 11, type);
-    checkAlignment(loc, val, 2, type);
+    checkInt(loc, static_cast<int64_t>(val) >> 1, 11, rel);
+    checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
     uint16_t imm11 = extractBits(val, 11, 11) << 12;
     uint16_t imm4 = extractBits(val, 4, 4) << 11;
@@ -304,7 +304,7 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
 
   case R_RISCV_RVC_LUI: {
     int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, imm, 6, type);
+    checkInt(loc, imm, 6, rel);
     if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
       write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
     } else {
@@ -316,8 +316,8 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   }
 
   case R_RISCV_JAL: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 20, type);
-    checkAlignment(loc, val, 2, type);
+    checkInt(loc, static_cast<int64_t>(val) >> 1, 20, rel);
+    checkAlignment(loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0xFFF;
     uint32_t imm20 = extractBits(val, 20, 20) << 31;
@@ -331,8 +331,8 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   }
 
   case R_RISCV_BRANCH: {
-    checkInt(loc, static_cast<int64_t>(val) >> 1, 12, type);
-    checkAlignment(loc, val, 2, type);
+    checkInt(loc, static_cast<int64_t>(val) >> 1, 12, rel);
+    checkAlignment(loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0x1FFF07F;
     uint32_t imm12 = extractBits(val, 12, 12) << 31;
@@ -349,10 +349,10 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   case R_RISCV_CALL:
   case R_RISCV_CALL_PLT: {
     int64_t hi = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, hi, 20, type);
+    checkInt(loc, hi, 20, rel);
     if (isInt<20>(hi)) {
-      relocateOne(loc, R_RISCV_PCREL_HI20, val);
-      relocateOne(loc + 4, R_RISCV_PCREL_LO12_I, val);
+      relocateNoSym(loc, R_RISCV_PCREL_HI20, val);
+      relocateNoSym(loc + 4, R_RISCV_PCREL_LO12_I, val);
     }
     return;
   }
@@ -364,7 +364,7 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
   case R_RISCV_TPREL_HI20:
   case R_RISCV_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(loc, SignExtend64(hi, bits) >> 12, 20, type);
+    checkInt(loc, SignExtend64(hi, bits) >> 12, 20, rel);
     write32le(loc, (read32le(loc) & 0xFFF) | (hi & 0xFFFFF000));
     return;
   }

@@ -13,5 +13,5 @@ int i;
 // expected-error@+1 {{'patchable_function_entry' attribute requires parameter 0 to be an integer constant}}
 __attribute__((patchable_function_entry(i))) void f();
 
-// expected-error@+1 {{'patchable_function_entry' attribute requires integer constant between 0 and 0 inclusive}}
-__attribute__((patchable_function_entry(1, 1))) void f();
+// expected-error@+1 {{'patchable_function_entry' attribute requires integer constant between 0 and 2 inclusive}}
+__attribute__((patchable_function_entry(2, 3))) void f();

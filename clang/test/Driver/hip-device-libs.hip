@@ -19,6 +19,13 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=COM,NOFLUSHD
 
+// Test environment variable HIP_DEVICE_LIB_PATH
+
+// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/hip_dev_lib \
+// RUN:   %clang -### -target x86_64-linux-gnu \
+// RUN:   -x hip --cuda-gpu-arch=gfx900 \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=COM
 
 // COM: {{"[^"]*clang[^"]*"}}
 // COM-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.amdgcn.bc"

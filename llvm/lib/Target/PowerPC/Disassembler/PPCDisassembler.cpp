@@ -191,6 +191,14 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeImmZeroOperand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  if (Imm != 0)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeMemRIOperands(MCInst &Inst, uint64_t Imm,
                                         int64_t Address, const void *Decoder) {
   // Decode the memri field (imm, reg), which has the low 16-bits as the
@@ -262,6 +270,35 @@ static DecodeStatus decodeMemRIX16Operands(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMemRI34PCRelOperands(MCInst &Inst, uint64_t Imm,
+                                               int64_t Address,
+                                               const void *Decoder) {
+  // Decode the memri34_pcrel field (imm, reg), which has the low 34-bits as the
+  // displacement, and the next 5 bits as an immediate 0.
+  uint64_t Base = Imm >> 34;
+  uint64_t Disp = Imm & 0x3FFFFFFFFUL;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(SignExtend64<34>(Disp)));
+  return decodeImmZeroOperand(Inst, Base, Address, Decoder);
+}
+
+static DecodeStatus decodeMemRI34Operands(MCInst &Inst, uint64_t Imm,
+                                          int64_t Address,
+                                          const void *Decoder) {
+  // Decode the memri34 field (imm, reg), which has the low 34-bits as the
+  // displacement, and the next 5 bits as the register #.
+  uint64_t Base = Imm >> 34;
+  uint64_t Disp = Imm & 0x3FFFFFFFFUL;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(SignExtend64<34>(Disp)));
+  Inst.addOperand(MCOperand::createReg(RRegsNoR0[Base]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeSPE8Operands(MCInst &Inst, uint64_t Imm,
                                          int64_t Address, const void *Decoder) {
   // Decode the spe8disp field (imm, reg), which has the low 5-bits as the
@@ -324,6 +361,29 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
+  auto *ReadFunc = IsLittleEndian ? support::endian::read32le
+                                  : support::endian::read32be;
+
+  // If this is an 8-byte prefixed instruction, handle it here.
+  // Note: prefixed instructions aren't technically 8-byte entities - the prefix
+  //       appears in memory at an address 4 bytes prior to that of the base
+  //       instruction regardless of endianness. So we read the two pieces and
+  //       rebuild the 8-byte instruction.
+  // TODO: In this function we call decodeInstruction several times with
+  //       different decoder tables. It may be possible to only call once by
+  //       looking at the top 6 bits of the instruction.
+  if (STI.getFeatureBits()[PPC::FeaturePrefixInstrs] && Bytes.size() >= 8) {
+    uint32_t Prefix = ReadFunc(Bytes.data());
+    uint32_t BaseInst = ReadFunc(Bytes.data() + 4);
+    uint64_t Inst = BaseInst | (uint64_t)Prefix << 32;
+    DecodeStatus result = decodeInstruction(DecoderTable64, MI, Inst, Address,
+                                            this, STI);
+    if (result != MCDisassembler::Fail) {
+      Size = 8;
+      return result;
+    }
+  }
+
   // Get the four bytes of the instruction.
   Size = 4;
   if (Bytes.size() < 4) {
@@ -332,8 +392,7 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   }
 
   // Read the instruction in the proper endianness.
-  uint32_t Inst = IsLittleEndian ? support::endian::read32le(Bytes.data())
-                                 : support::endian::read32be(Bytes.data());
+  uint64_t Inst = ReadFunc(Bytes.data());
 
   if (STI.getFeatureBits()[PPC::FeatureQPX]) {
     DecodeStatus result =

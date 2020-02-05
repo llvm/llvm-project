@@ -1,6 +1,6 @@
 //===- Operator.cpp - Operator class --------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -50,8 +50,8 @@ std::string tblgen::Operator::getOperationName() const {
   auto prefix = dialect.getName();
   auto opName = def.getValueAsString("opName");
   if (prefix.empty())
-    return opName;
-  return llvm::formatv("{0}.{1}", prefix, opName);
+    return std::string(opName);
+  return std::string(llvm::formatv("{0}.{1}", prefix, opName));
 }
 
 StringRef tblgen::Operator::getDialectName() const { return dialect.getName(); }
@@ -61,8 +61,8 @@ StringRef tblgen::Operator::getCppClassName() const { return cppClassName; }
 std::string tblgen::Operator::getQualCppClassName() const {
   auto prefix = dialect.getCppNamespace();
   if (prefix.empty())
-    return cppClassName;
-  return llvm::formatv("{0}::{1}", prefix, cppClassName);
+    return std::string(cppClassName);
+  return std::string(llvm::formatv("{0}::{1}", prefix, cppClassName));
 }
 
 int tblgen::Operator::getNumResults() const {

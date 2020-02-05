@@ -591,7 +591,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                         "--compile-commands-dir to an absolute path: "
                      << EC.message() << ". The argument will be ignored.\n";
       } else {
-        CompileCommandsDirPath = Path.str();
+        CompileCommandsDirPath = std::string(Path.str());
       }
     } else {
       llvm::errs()

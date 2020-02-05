@@ -1,6 +1,6 @@
 //===- StandardTypes.cpp - MLIR Standard Type Classes ---------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -723,11 +723,9 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
   auto simplifiedLayoutExpr =
       simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
   if (expr != simplifiedLayoutExpr)
-    return MemRefType::get(t.getShape(), t.getElementType(),
-                           {AffineMap::get(m.getNumDims(), m.getNumSymbols(),
-                                           {simplifiedLayoutExpr})});
-
-  return MemRefType::get(t.getShape(), t.getElementType(), {});
+    return MemRefType::Builder(t).setAffineMaps({AffineMap::get(
+        m.getNumDims(), m.getNumSymbols(), {simplifiedLayoutExpr})});
+  return MemRefType::Builder(t).setAffineMaps({});
 }
 
 /// Return true if the layout for `t` is compatible with strided semantics.

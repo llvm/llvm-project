@@ -897,7 +897,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
     const auto &Reg = *I;
-    RegStrings.add(Reg.getName());
+    RegStrings.add(std::string(Reg.getName()));
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister*> SR;
@@ -963,7 +963,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "namespace llvm {\n\n";
 
-  const std::string &TargetName = Target.getName();
+  const std::string &TargetName = std::string(Target.getName());
 
   // Emit the shared table of differential lists.
   OS << "extern const MCPhysReg " << TargetName << "RegDiffLists[] = {\n";
@@ -992,9 +992,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the string table.
   RegStrings.layout();
-  OS << "extern const char " << TargetName << "RegStrings[] = {\n";
-  RegStrings.emit(OS, printChar);
-  OS << "};\n\n";
+  RegStrings.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
+                                          "RegStrings[]");
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
@@ -1003,7 +1002,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the register descriptors now.
   i = 0;
   for (const auto &Reg : Regs) {
-    OS << "  { " << RegStrings.get(Reg.getName()) << ", "
+    OS << "  { " << RegStrings.get(std::string(Reg.getName())) << ", "
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (DiffSeqs.get(RegUnitLists[i]) * 16 + RegUnitInitScale[i]) << ", "
@@ -1065,9 +1064,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "} // end anonymous namespace\n\n";
 
   RegClassStrings.layout();
-  OS << "extern const char " << TargetName << "RegClassStrings[] = {\n";
-  RegClassStrings.emit(OS, printChar);
-  OS << "};\n\n";
+  RegClassStrings.emitStringLiteralDef(
+      OS, Twine("extern const char ") + TargetName + "RegClassStrings[]");
 
   OS << "extern const MCRegisterClass " << TargetName
      << "MCRegisterClasses[] = {\n";
@@ -1134,7 +1132,7 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
   OS << "#undef GET_REGINFO_HEADER\n\n";
 
-  const std::string &TargetName = Target.getName();
+  const std::string &TargetName = std::string(Target.getName());
   std::string ClassName = TargetName + "GenRegisterInfo";
 
   OS << "#include \"llvm/CodeGen/TargetRegisterInfo.h\"\n\n";
@@ -1430,7 +1428,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "} // end anonymous namespace\n";
 
   // Emit extra information about registers.
-  const std::string &TargetName = Target.getName();
+  const std::string &TargetName = std::string(Target.getName());
   OS << "\nstatic const TargetRegisterInfoDesc "
      << TargetName << "RegInfoDesc[] = { // Extra Descriptors\n";
   OS << "  { 0, false },\n";

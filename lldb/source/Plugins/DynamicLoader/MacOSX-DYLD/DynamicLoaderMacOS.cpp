@@ -1,4 +1,4 @@
-//===-- DynamicLoaderMacOS.cpp -----------------------------*- C++ -*-===//
+//===-- DynamicLoaderMacOS.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ABI.h"
@@ -222,8 +222,8 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     // Build up the value array to store the three arguments given above, then
     // get the values from the ABI:
 
-    ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process->GetTarget());
+    TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
@@ -481,8 +481,8 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         info_dict->HasKey("shared_cache_base_address")) {
       base_address = info_dict->GetValueForKey("shared_cache_base_address")
                          ->GetIntegerValue(LLDB_INVALID_ADDRESS);
-      std::string uuid_str =
-          info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue();
+      std::string uuid_str = std::string(
+          info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue());
       if (!uuid_str.empty())
         uuid.SetFromStringRef(uuid_str);
       if (!info_dict->GetValueForKey("no_shared_cache")->GetBooleanValue())

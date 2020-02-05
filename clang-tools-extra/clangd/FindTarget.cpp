@@ -17,6 +17,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -45,7 +46,7 @@ using ast_type_traits::DynTypedNode;
 
 LLVM_ATTRIBUTE_UNUSED std::string
 nodeToString(const ast_type_traits::DynTypedNode &N) {
-  std::string S = N.getNodeKind().asStringRef();
+  std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
     OS << ": ";
@@ -230,7 +231,7 @@ public:
   }
 
   void add(const Decl *Dcl, RelSet Flags) {
-    const NamedDecl *D = llvm::dyn_cast<NamedDecl>(Dcl);
+    const NamedDecl *D = llvm::dyn_cast_or_null<NamedDecl>(Dcl);
     if (!D)
       return;
     debug(*D, Flags);
@@ -278,6 +279,9 @@ public:
 
       void VisitCallExpr(const CallExpr *CE) {
         Outer.add(CE->getCalleeDecl(), Flags);
+      }
+      void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+        Outer.add(E->getNamedConcept(), Flags);
       }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
@@ -374,6 +378,11 @@ public:
       void VisitTagType(const TagType *TT) {
         Outer.add(TT->getAsTagDecl(), Flags);
       }
+
+      void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
+        Outer.add(ICNT->getDecl(), Flags);
+      }
+
       void VisitDecltypeType(const DecltypeType *DTT) {
         Outer.add(DTT->getUnderlyingType(), Flags | Rel::Underlying);
       }
@@ -581,6 +590,13 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
     }
 
     void VisitNamedDecl(const NamedDecl *ND) {
+      // We choose to ignore {Class, Function, Var, TypeAlias}TemplateDecls. As
+      // as their underlying decls, covering the same range, will be visited.
+      if (llvm::isa<ClassTemplateDecl>(ND) ||
+          llvm::isa<FunctionTemplateDecl>(ND) ||
+          llvm::isa<VarTemplateDecl>(ND) ||
+          llvm::isa<TypeAliasTemplateDecl>(ND))
+        return;
       // FIXME: decide on how to surface destructors when we need them.
       if (llvm::isa<CXXDestructorDecl>(ND))
         return;
@@ -603,9 +619,15 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
 
 llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
   struct Visitor : ConstStmtVisitor<Visitor> {
-    // FIXME: handle more complicated cases, e.g. ObjC, designated initializers.
+    // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc, 2> Refs;
 
+    void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+      Refs.push_back(ReferenceLoc{E->getNestedNameSpecifierLoc(),
+                                  E->getConceptNameLoc(),
+                                  /*IsDecl=*/false,
+                                  {E->getNamedConcept()}});
+    }
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
                                   E->getNameInfo().getLoc(),
@@ -637,6 +659,14 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   E->getPackLoc(),
                                   /*IsDecl=*/false,
                                   {E->getPack()}});
+    }
+
+    void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *E) {
+      Refs.push_back(ReferenceLoc{
+          NestedNameSpecifierLoc(), E->getLocation(),
+          /*IsDecl=*/false,
+          // Select the getter, setter, or @property depending on the call.
+          explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
   };
 
@@ -756,6 +786,20 @@ public:
   bool VisitExpr(Expr *E) {
     visitNode(DynTypedNode::create(*E));
     return true;
+  }
+
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *OVE) {
+    visitNode(DynTypedNode::create(*OVE));
+    // Not clear why the source expression is skipped by default...
+    // FIXME: can we just make RecursiveASTVisitor do this?
+    return RecursiveASTVisitor::TraverseStmt(OVE->getSourceExpr());
+  }
+
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *POE) {
+    visitNode(DynTypedNode::create(*POE));
+    // Traverse only the syntactic form to find the *written* references.
+    // (The semantic form also contains lots of duplication)
+    return RecursiveASTVisitor::TraverseStmt(POE->getSyntacticForm());
   }
 
   // We re-define Traverse*, since there's no corresponding Visit*.

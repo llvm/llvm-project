@@ -1,6 +1,6 @@
 //===- OpInterfaces.cpp - OpInterfaces class ------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -83,5 +83,11 @@ ArrayRef<OpInterfaceMethod> OpInterface::getMethods() const { return methods; }
 // Return the description of this method if it has one.
 llvm::Optional<StringRef> OpInterface::getDescription() const {
   auto value = def->getValueAsString("description");
+  return value.empty() ? llvm::Optional<StringRef>() : value;
+}
+
+// Return the body for this method if it has one.
+llvm::Optional<StringRef> OpInterface::getVerify() const {
+  auto value = def->getValueAsString("verify");
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }

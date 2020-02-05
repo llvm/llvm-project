@@ -940,7 +940,7 @@ bool MipsConstantIslands::isWaterInRange(unsigned UserOffset,
   MachineFunction::const_iterator NextBlock = ++Water->getIterator();
   if (NextBlock == MF->end()) {
     NextBlockOffset = BBInfo[Water->getNumber()].postOffset();
-    NextBlockAlignment = Align::None();
+    NextBlockAlignment = Align(1);
   } else {
     NextBlockOffset = BBInfo[NextBlock->getNumber()].Offset;
     NextBlockAlignment = NextBlock->getAlignment();

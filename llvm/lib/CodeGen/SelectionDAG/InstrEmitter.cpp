@@ -754,9 +754,9 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 
   // Indirect addressing is indicated by an Imm as the second parameter.
   if (SD->isIndirect())
-    Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
-
-  MIB.addReg(0U, RegState::Debug);
+    MIB.addImm(0U);
+  else
+    MIB.addReg(0U, RegState::Debug);
 
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);

@@ -1,6 +1,6 @@
 //===- ConvertStandardToLLVM.cpp - Standard to LLVM dialect conversion-----===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -652,8 +652,7 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
 
     Type packedType;
     if (numResults != 0) {
-      packedType = this->lowering.packFunctionResults(
-          llvm::to_vector<4>(op->getResultTypes()));
+      packedType = this->lowering.packFunctionResults(op->getResultTypes());
       if (!packedType)
         return this->matchFailure();
     }
@@ -806,6 +805,9 @@ struct MulIOpLowering : public BinaryOpLLVMOpLowering<MulIOp, LLVM::MulOp> {
 };
 struct SignedDivIOpLowering
     : public BinaryOpLLVMOpLowering<SignedDivIOp, LLVM::SDivOp> {
+  using Super::Super;
+};
+struct SqrtOpLowering : public UnaryOpLLVMOpLowering<SqrtOp, LLVM::SqrtOp> {
   using Super::Super;
 };
 struct UnsignedDivIOpLowering
@@ -2109,6 +2111,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SignedShiftRightOpLowering,
       SplatOpLowering,
       SplatNdOpLowering,
+      SqrtOpLowering,
       SubFOpLowering,
       SubIOpLowering,
       TanhOpLowering,

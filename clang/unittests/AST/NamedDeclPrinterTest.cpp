@@ -112,36 +112,30 @@ PrintedNamedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
 PrintedNamedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                              StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++98");
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
+  return PrintedNamedDeclMatches(Code, Args,
                                  /*SuppressUnwrittenScope*/ false,
                                  namedDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.cc");
+                                 ExpectedPrinted, "input.cc");
 }
 
 ::testing::AssertionResult
 PrintedWrittenNamedDeclCXX11Matches(StringRef Code, StringRef DeclName,
                                     StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
+  return PrintedNamedDeclMatches(Code, Args,
                                  /*SuppressUnwrittenScope*/ true,
                                  namedDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.cc");
+                                 ExpectedPrinted, "input.cc");
 }
 
 ::testing::AssertionResult
 PrintedWrittenPropertyDeclObjCMatches(StringRef Code, StringRef DeclName,
                                    StringRef ExpectedPrinted) {
   std::vector<std::string> Args{"-std=c++11", "-xobjective-c++"};
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
+  return PrintedNamedDeclMatches(Code, Args,
                                  /*SuppressUnwrittenScope*/ true,
                                  objcPropertyDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.m");
+                                 ExpectedPrinted, "input.m");
 }
 
 ::testing::AssertionResult

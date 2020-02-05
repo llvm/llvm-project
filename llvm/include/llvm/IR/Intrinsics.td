@@ -511,6 +511,20 @@ def int_memcpy  : Intrinsic<[],
                               llvm_i1_ty],
                             [IntrArgMemOnly, IntrWillReturn, NoCapture<0>, NoCapture<1>,
                              NoAlias<0>, NoAlias<1>, WriteOnly<0>, ReadOnly<1>, ImmArg<3>]>;
+
+// Memcpy semantic that is guaranteed to be inlined.
+// In particular this means that the generated code is not allowed to call any
+// external function.
+// The third argument (specifying the size) must be a constant.
+def int_memcpy_inline
+    : Intrinsic<[],
+      [ llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty ],
+      [ IntrArgMemOnly, IntrWillReturn,
+      NoCapture<0>, NoCapture<1>,
+      NoAlias<0>, NoAlias<1>,
+      WriteOnly<0>, ReadOnly<1>,
+      ImmArg<2>, ImmArg<3> ]>;
+
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
@@ -625,6 +639,13 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
+
+  def int_experimental_constrained_fmuladd : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         llvm_metadata_ty,
+                                                         llvm_metadata_ty ]>;
 
   def int_experimental_constrained_fptosi : Intrinsic<[ llvm_anyint_ty ],
                                                     [ llvm_anyfloat_ty,
@@ -1341,6 +1362,11 @@ def int_preserve_struct_access_index : Intrinsic<[llvm_anyptr_ty],
                                                   llvm_i32_ty],
                                                  [IntrNoMem, ImmArg<1>,
                                                   ImmArg<2>]>;
+
+//===---------- Intrinsics to query properties of scalable vectors --------===//
+def int_vscale : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics

@@ -65,7 +65,9 @@ enum {
   NewDef_Shift = 6,
 
   /// This instruction is an X-Form memory operation.
-  XFormMemOp = 0x1 << NewDef_Shift
+  XFormMemOp = 0x1 << NewDef_Shift,
+  /// This instruction is prefixed.
+  Prefixed = 0x1 << (NewDef_Shift+1)
 };
 } // end namespace PPCII
 
@@ -187,6 +189,10 @@ public:
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
   }
+  bool isPrefixed(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::Prefixed;
+  }
+
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] =
       { PPC::OR, PPC::OR8, PPC::FMR, PPC::VOR, PPC::XXLOR, PPC::XXLORf,

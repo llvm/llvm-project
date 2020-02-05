@@ -864,7 +864,7 @@ public:
     int          offset = 0;       // offset off of ptrVal
     uint64_t     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
-    MaybeAlign align = Align::None(); // alignment
+    MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
     IntrinsicInfo() = default;
@@ -964,7 +964,7 @@ public:
     unsigned EqOpc;
     switch (Op) {
       default: llvm_unreachable("Unexpected FP pseudo-opcode");
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN: EqOpc = ISD::DAGN; break;
 #define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN: EqOpc = ISD::SETCC; break;

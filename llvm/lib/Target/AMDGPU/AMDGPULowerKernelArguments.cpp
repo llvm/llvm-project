@@ -160,7 +160,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
                                    ArgPtr->getName() + ".cast");
     LoadInst *Load =
-        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign.value());
+        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);

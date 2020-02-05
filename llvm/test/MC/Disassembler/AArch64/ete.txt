@@ -24,7 +24,7 @@
 # CHECK:   msr TRCRSR, x0
 
 [0x80,0x08,0x11,0xd5]
-# CHECK:   msr TRCEXTINSELR, x0
+# CHECK:   msr TRCEXTINSELR0, x0
 
 [0x80,0x09,0x11,0xd5]
 # CHECK:   msr TRCEXTINSELR1, x0

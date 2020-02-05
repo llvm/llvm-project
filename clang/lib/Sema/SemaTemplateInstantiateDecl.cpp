@@ -1848,6 +1848,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   // FIXME: Concepts: Do not substitute into constraint expressions
   Expr *TrailingRequiresClause = D->getTrailingRequiresClause();
   if (TrailingRequiresClause) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult SubstRC = SemaRef.SubstExpr(TrailingRequiresClause,
                                            TemplateArgs);
     if (SubstRC.isInvalid())
@@ -2186,6 +2188,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // FIXME: Concepts: Do not substitute into constraint expressions
   Expr *TrailingRequiresClause = D->getTrailingRequiresClause();
   if (TrailingRequiresClause) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+    auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(Owner);
+    Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext,
+                                     D->getMethodQualifiers(), ThisContext);
     ExprResult SubstRC = SemaRef.SubstExpr(TrailingRequiresClause,
                                            TemplateArgs);
     if (SubstRC.isInvalid())
@@ -2684,6 +2691,16 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
         SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
         D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), DI);
+
+  if (AutoTypeLoc AutoLoc = DI->getTypeLoc().getContainedAutoTypeLoc())
+    if (AutoLoc.isConstrained())
+      if (SemaRef.AttachTypeConstraint(
+              AutoLoc, Param,
+              IsExpandedParameterPack
+                ? DI->getTypeLoc().getAs<PackExpansionTypeLoc>()
+                    .getEllipsisLoc()
+                : SourceLocation()))
+        Invalid = true;
 
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());
@@ -3719,6 +3736,8 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
   // checking satisfaction.
   Expr *InstRequiresClause = nullptr;
   if (Expr *E = L->getRequiresClause()) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult Res = SemaRef.SubstExpr(E, TemplateArgs);
     if (Res.isInvalid() || !Res.isUsable()) {
       return nullptr;
@@ -4230,21 +4249,20 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   Sema::ContextRAII savedContext(*this, Decl);
   LocalInstantiationScope Scope(*this);
 
-  MultiLevelTemplateArgumentList MLTAL =
-    getTemplateInstantiationArgs(Decl, nullptr, /*RelativeToPrimary*/true);
-
   // If this is not an explicit specialization - we need to get the instantiated
   // version of the template arguments and add them to scope for the
   // substitution.
   if (Decl->isTemplateInstantiation()) {
     InstantiatingTemplate Inst(*this, Decl->getPointOfInstantiation(),
         InstantiatingTemplate::ConstraintsCheck{}, Decl->getPrimaryTemplate(),
-        MLTAL.getInnermost(), SourceRange());
+        TemplateArgs, SourceRange());
     if (Inst.isInvalid())
       return true;
-    if (addInstantiatedParametersToScope(*this, Decl,
-                                        Decl->getTemplateInstantiationPattern(),
-                                         Scope, MLTAL))
+    MultiLevelTemplateArgumentList MLTAL(
+        *Decl->getTemplateSpecializationArgs());
+    if (addInstantiatedParametersToScope(
+            *this, Decl, Decl->getPrimaryTemplate()->getTemplatedDecl(),
+            Scope, MLTAL))
       return true;
   }
 

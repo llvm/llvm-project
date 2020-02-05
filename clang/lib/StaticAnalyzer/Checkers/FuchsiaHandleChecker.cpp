@@ -149,6 +149,10 @@ public:
       CASE(Kind::Released)
       CASE(Kind::Escaped)
     }
+    if (ErrorSym) {
+      OS << " ErrorSym: ";
+      ErrorSym->dumpToStream(OS);
+    }
   }
 
   LLVM_DUMP_METHOD void dump() const { dump(llvm::errs()); }
@@ -314,6 +318,17 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
   // Function returns an open handle.
   if (hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl)) {
     SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
+    Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
+      auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+        std::string SBuf;
+        llvm::raw_string_ostream OS(SBuf);
+        OS << "Function '" << FuncDecl->getNameAsString()
+           << "' returns an open handle";
+        return OS.str();
+      } else
+        return "";
+    });
     State =
         State->set<HStateMap>(RetSym, HandleState::getMaybeAllocated(nullptr));
   }
@@ -322,6 +337,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     if (Arg >= FuncDecl->getNumParams())
       break;
     const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
+    unsigned ParamDiagIdx = PVD->getFunctionScopeIndex() + 1;
     SymbolRef Handle =
         getFuchsiaHandleSymbol(PVD->getType(), Call.getArgSVal(Arg), State);
     if (!Handle)
@@ -335,20 +351,28 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         reportDoubleRelease(Handle, Call.getArgSourceRange(Arg), C);
         return;
       } else {
-        Notes.push_back([Handle](BugReport &BR) {
+        Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
           auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
           if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
-            return "Handle released here.";
+            std::string SBuf;
+            llvm::raw_string_ostream OS(SBuf);
+            OS << "Handle released through " << ParamDiagIdx
+               << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
+            return OS.str();
           } else
             return "";
         });
         State = State->set<HStateMap>(Handle, HandleState::getReleased());
       }
     } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
-      Notes.push_back([Handle](BugReport &BR) {
+      Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
         auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
         if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
-          return "Handle allocated here.";
+          std::string SBuf;
+          llvm::raw_string_ostream OS(SBuf);
+          OS << "Handle allocated through " << ParamDiagIdx
+             << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
+          return OS.str();
         } else
           return "";
       });
@@ -381,7 +405,13 @@ void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 2> LeakedSyms;
   HStateMapTy TrackedHandles = State->get<HStateMap>();
   for (auto &CurItem : TrackedHandles) {
-    if (!SymReaper.isDead(CurItem.first))
+    SymbolRef ErrorSym = CurItem.second.getErrorSym();
+    // Keeping zombie handle symbols. In case the error symbol is dying later
+    // than the handle symbol we might produce spurious leak warnings (in case
+    // we find out later from the status code that the handle allocation failed
+    // in the first place).
+    if (!SymReaper.isDead(CurItem.first) ||
+        (ErrorSym && !SymReaper.isDead(ErrorSym)))
       continue;
     if (CurItem.second.isAllocated() || CurItem.second.maybeAllocated())
       LeakedSyms.push_back(CurItem.first);

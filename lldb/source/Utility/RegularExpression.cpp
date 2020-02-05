@@ -1,4 +1,4 @@
-//===-- RegularExpression.cpp -----------------------------------*- C++ -*-===//
+//===-- RegularExpression.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 using namespace lldb_private;
 
 RegularExpression::RegularExpression(llvm::StringRef str)
-    : m_regex_text(str),
+    : m_regex_text(std::string(str)),
       // m_regex does not reference str anymore after it is constructed.
       m_regex(llvm::Regex(str)) {}
 

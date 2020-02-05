@@ -1,4 +1,4 @@
-//===-- DWARFASTParserClangTests.cpp ----------------------------*- C++ -*-===//
+//===-- DWARFASTParserClangTests.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 class DWARFASTParserClangTests : public testing::Test {
-  SubsystemRAII<FileSystem, HostInfo, ClangASTContext> subsystems;
+  SubsystemRAII<FileSystem, HostInfo, TypeSystemClang> subsystems;
 };
 
 namespace {
@@ -39,7 +39,7 @@ public:
 // defining here, causing this test to fail, feel free to delete it.
 TEST_F(DWARFASTParserClangTests,
        EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
-  ClangASTContext ast_ctx(HostInfoBase::GetTargetTriple());
+  TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
   DWARFUnit *unit = nullptr;

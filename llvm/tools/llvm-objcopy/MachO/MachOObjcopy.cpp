@@ -60,7 +60,7 @@ static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   for (SymbolEntry &Sym : Obj.SymTable) {
     auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
-      Sym.Name = I->getValue();
+      Sym.Name = std::string(I->getValue());
   }
 
   auto RemovePred = [Config](const std::unique_ptr<SymbolEntry> &N) {

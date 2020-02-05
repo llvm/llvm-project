@@ -57,6 +57,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <system_error>
@@ -542,6 +543,13 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   }
   StatsFile = std::move(StatsFileOrErr.get());
 
+  // Currently there is no support for enabling whole program visibility via a
+  // linker option in the old LTO API, but this call allows it to be specified
+  // via the internal option. Must be done before WPD invoked via the optimizer
+  // pipeline run below.
+  updateVCallVisibilityInModule(*MergedModule,
+                                /* WholeProgramVisibilityEnabledInLTO */ false);
+
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.
   verifyMergedModuleOnce();
@@ -624,7 +632,7 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
 
 void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<const char *> Options) {
   for (StringRef Option : Options)
-    CodegenOptions.push_back(Option);
+    CodegenOptions.push_back(std::string(Option));
 }
 
 void LTOCodeGenerator::parseCodeGenDebugOptions() {

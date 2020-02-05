@@ -106,7 +106,7 @@ static std::string fileNameToURI(StringRef Filename) {
     }
   });
 
-  return Ret.str().str();
+  return std::string(Ret);
 }
 
 static json::Object createArtifactLocation(const FileEntry &FE) {
@@ -322,7 +322,7 @@ static json::Object createRule(const PathDiagnostic &Diag) {
       {"name", CheckName},
       {"id", CheckName}};
 
-  std::string RuleURI = getRuleHelpURIStr(CheckName);
+  std::string RuleURI = std::string(getRuleHelpURIStr(CheckName));
   if (!RuleURI.empty())
     Ret["helpUri"] = RuleURI;
 

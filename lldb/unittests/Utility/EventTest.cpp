@@ -1,4 +1,4 @@
-//===-- EventTest.cpp -------------------------------------------*- C++ -*-===//
+//===-- EventTest.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ using namespace lldb_private;
 static std::string to_string(const EventDataBytes &E) {
   StreamString S;
   E.Dump(&S);
-  return S.GetString();
+  return std::string(S.GetString());
 }
 
 TEST(EventTest, DumpEventDataBytes) {

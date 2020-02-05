@@ -1,4 +1,4 @@
-//===-- ClangModulesDeclVendor.cpp ------------------------------*- C++ -*-===//
+//===-- ClangModulesDeclVendor.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -108,9 +108,9 @@ private:
   typedef std::set<ModuleID> ImportedModuleSet;
   ImportedModuleMap m_imported_modules;
   ImportedModuleSet m_user_imported_modules;
-  // We assume that every ASTContext has an ClangASTContext, so we also store
-  // a custom ClangASTContext for our internal ASTContext.
-  std::unique_ptr<ClangASTContext> m_ast_context;
+  // We assume that every ASTContext has an TypeSystemClang, so we also store
+  // a custom TypeSystemClang for our internal ASTContext.
+  std::unique_ptr<TypeSystemClang> m_ast_context;
 };
 } // anonymous namespace
 
@@ -159,8 +159,10 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
       m_compiler_instance(std::move(compiler_instance)),
       m_parser(std::move(parser)) {
 
-  // Initialize our ClangASTContext.
-  m_ast_context.reset(new ClangASTContext(m_compiler_instance->getASTContext()));
+  // Initialize our TypeSystemClang.
+  m_ast_context.reset(
+      new TypeSystemClang("ClangModulesDeclVendor ASTContext",
+                          m_compiler_instance->getASTContext()));
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
@@ -382,7 +384,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
+    decls.push_back(m_ast_context->GetCompilerDecl(named_decl));
     ++num_matches;
   }
 
@@ -604,7 +606,7 @@ ClangModulesDeclVendor::Create(Target &target) {
     const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     std::string module_cache_argument("-fmodules-cache-path=");
-    module_cache_argument.append(path.str());
+    module_cache_argument.append(std::string(path.str()));
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 

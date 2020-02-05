@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/syscall.h"
+#include "config/linux/syscall.h"
 #include "utils/UnitTest/Test.h"
 
 #include <functional>

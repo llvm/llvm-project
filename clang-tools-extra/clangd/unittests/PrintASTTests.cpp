@@ -81,7 +81,7 @@ INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
                                   template <template <class> class ...>
                                   class Aux {};
                                   template <> class ^Aux<Bar, Bar> {};
-                                  template <template <class> T>
+                                  template <template <class> class T>
                                   class ^Aux<T, T> {};)cpp",
                                 {"<Bar, Bar>", "<T, T>"}},
                             {
@@ -104,7 +104,7 @@ INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
                                   template <>
                                   int ^S<double> = 0;)cpp",
                                 {"<T *>", "<double>"}},
-                        })),);
+                        })), );
 } // namespace
 } // namespace clangd
 } // namespace clang

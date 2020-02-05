@@ -183,7 +183,7 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     unsigned Cost =
         VecTy->getElementType()->isFloatingPointTy() ? FloatFactor : 1;
 
-    // At this point unspecified alignment is considered as Align::None().
+    // At this point unspecified alignment is considered as Align(1).
     const Align BoundAlignment = std::min(Alignment.valueOrOne(), Align(8));
     unsigned AlignWidth = 8 * BoundAlignment.value();
     unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;

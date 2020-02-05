@@ -22,6 +22,8 @@ constexpr int NumOfCoverageCategories = 12;
 struct PerFunctionStats {
   /// Number of inlined instances of this function.
   unsigned NumFnInlined = 0;
+  /// Number of out-of-line instances of this function.
+  unsigned NumFnOutOfLine = 0;
   /// Number of inlined instances that have abstract origins.
   unsigned NumAbstractOrigins = 0;
   /// Number of variables and parameters with location across all inlined
@@ -29,13 +31,12 @@ struct PerFunctionStats {
   unsigned TotalVarWithLoc = 0;
   /// Number of constants with location across all inlined instances.
   unsigned ConstantMembers = 0;
+  /// Number of arificial variables, parameters or members across all instances.
+  unsigned NumArtificial = 0;
   /// List of all Variables and parameters in this function.
   StringSet<> VarsInFunction;
   /// Compile units also cover a PC range, but have this flag set to false.
   bool IsFunction = false;
-  /// Verify function definition has PC addresses (for detecting when
-  /// a function has been inlined everywhere).
-  bool HasPCAddresses = false;
   /// Function has source location information.
   bool HasSourceLocation = false;
   /// Number of function parameters.
@@ -157,6 +158,35 @@ static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
   else if (IsLocalVar)
     VarLocStats[CoverageBucket]++;
 }
+/// Construct an identifier for a given DIE from its Prefix, Name, DeclFileName
+/// and DeclLine. The identifier aims to be unique for any unique entities,
+/// but keeping the same among different instances of the same entity.
+static std::string constructDieID(DWARFDie Die,
+                                  StringRef Prefix = StringRef()) {
+  std::string IDStr;
+  llvm::raw_string_ostream ID(IDStr);
+  ID << Prefix
+     << Die.getName(DINameKind::LinkageName);
+
+  // Prefix + Name is enough for local variables and parameters.
+  if (!Prefix.empty() && !Prefix.equals("g"))
+    return ID.str();
+
+  auto DeclFile = Die.findRecursively(dwarf::DW_AT_decl_file);
+  std::string File;
+  if (DeclFile) {
+    DWARFUnit *U = Die.getDwarfUnit();
+    if (const auto *LT = U->getContext().getLineTableForUnit(U))
+      if (LT->getFileNameByIndex(
+              dwarf::toUnsigned(DeclFile, 0), U->getCompilationDir(),
+              DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File))
+        File = std::string(sys::path::filename(File));
+  }
+  ID << ":" << (File.empty() ? "/" : File);
+  ID << ":"
+     << dwarf::toUnsigned(Die.findRecursively(dwarf::DW_AT_decl_line), 0);
+  return ID.str();
+}
 
 /// Collect debug info quality metrics for one DIE.
 static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
@@ -168,12 +198,13 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   bool HasLoc = false;
   bool HasSrcLoc = false;
   bool HasType = false;
-  bool IsArtificial = false;
   uint64_t BytesCovered = 0;
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
-  bool IsLocalVar = Die.getTag() == dwarf::DW_TAG_variable;
+  bool IsVariable = Die.getTag() == dwarf::DW_TAG_variable;
+  bool IsConstantMember = Die.getTag() == dwarf::DW_TAG_member &&
+                          Die.find(dwarf::DW_AT_const_value);
 
   if (Die.getTag() == dwarf::DW_TAG_call_site ||
       Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
@@ -187,10 +218,14 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     return;
   }
 
-  if (!IsParam && !IsLocalVar && Die.getTag() != dwarf::DW_TAG_member) {
+  if (!IsParam && !IsVariable && !IsConstantMember) {
     // Not a variable or constant member.
     return;
   }
+
+  // Ignore declarations of global variables.
+  if (IsVariable && Die.find(dwarf::DW_AT_declaration))
+    return;
 
   if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
       Die.findRecursively(dwarf::DW_AT_decl_line))
@@ -199,14 +234,11 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   if (Die.findRecursively(dwarf::DW_AT_type))
     HasType = true;
 
-  if (Die.find(dwarf::DW_AT_artificial))
-    IsArtificial = true;
-
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
     DataExtractor Data(toStringRef(D),
                        Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
-    DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
+    DWARFExpression Expression(Data, U->getAddressByteSize());
     // Consider the expression containing the DW_OP_entry_value as
     // an entry value.
     return llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
@@ -220,10 +252,6 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     HasLoc = true;
     BytesCovered = BytesInScope;
   } else {
-    if (Die.getTag() == dwarf::DW_TAG_member) {
-      // Non-const member.
-      return;
-    }
     // Handle variables and function arguments.
     Expected<std::vector<DWARFLocationExpression>> Loc =
         Die.getLocations(dwarf::DW_AT_location);
@@ -253,29 +281,28 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     LocStats.NumVarParam++;
     if (IsParam)
       LocStats.NumParam++;
-    else if (IsLocalVar)
+    else if (IsVariable)
       LocStats.NumVar++;
 
     collectLocStats(BytesCovered, BytesInScope, LocStats.VarParamLocStats,
                     LocStats.ParamLocStats, LocStats.VarLocStats, IsParam,
-                    IsLocalVar);
+                    IsVariable);
     // Non debug entry values coverage statistics.
     collectLocStats(BytesCovered - BytesEntryValuesCovered, BytesInScope,
                     LocStats.VarParamNonEntryValLocStats,
                     LocStats.ParamNonEntryValLocStats,
-                    LocStats.VarNonEntryValLocStats, IsParam, IsLocalVar);
+                    LocStats.VarNonEntryValLocStats, IsParam, IsVariable);
   }
 
   // Collect PC range coverage data.
   if (DWARFDie D =
           Die.getAttributeValueAsReferencedDie(dwarf::DW_AT_abstract_origin))
     Die = D;
-  // By using the variable name + the path through the lexical block tree, the
-  // keys are consistent across duplicate abstract origins in different CUs.
-  std::string VarName = StringRef(Die.getName(DINameKind::ShortName));
-  FnStats.VarsInFunction.insert(VarPrefix + VarName);
+
+  std::string VarID = constructDieID(Die, VarPrefix);
+  FnStats.VarsInFunction.insert(VarID);
+
   if (BytesInScope) {
-    FnStats.TotalVarWithLoc += (unsigned)HasLoc;
     // Turns out we have a lot of ranges that extend past the lexical scope.
     GlobalStats.ScopeBytesCovered += std::min(BytesInScope, BytesCovered);
     GlobalStats.ScopeBytes += BytesInScope;
@@ -285,35 +312,42 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
           std::min(BytesInScope, BytesCovered);
       GlobalStats.ParamScopeBytes += BytesInScope;
       GlobalStats.ParamScopeEntryValueBytesCovered += BytesEntryValuesCovered;
-    } else if (IsLocalVar) {
+    } else if (IsVariable) {
       GlobalStats.VarScopeBytesCovered += std::min(BytesInScope, BytesCovered);
       GlobalStats.VarScopeBytes += BytesInScope;
       GlobalStats.VarScopeEntryValueBytesCovered += BytesEntryValuesCovered;
     }
     assert(GlobalStats.ScopeBytesCovered <= GlobalStats.ScopeBytes);
-  } else if (Die.getTag() == dwarf::DW_TAG_member) {
-    FnStats.ConstantMembers++;
-  } else {
-    FnStats.TotalVarWithLoc += (unsigned)HasLoc;
   }
-  if (!IsArtificial) {
-    if (IsParam) {
-      FnStats.NumParams++;
-      if (HasType)
-        FnStats.NumParamTypes++;
-      if (HasSrcLoc)
-        FnStats.NumParamSourceLocations++;
-      if (HasLoc)
-        FnStats.NumParamLocations++;
-    } else if (IsLocalVar) {
-      FnStats.NumVars++;
-      if (HasType)
-        FnStats.NumVarTypes++;
-      if (HasSrcLoc)
-        FnStats.NumVarSourceLocations++;
-      if (HasLoc)
-        FnStats.NumVarLocations++;
-    }
+
+  if (IsConstantMember) {
+    FnStats.ConstantMembers++;
+    return;
+  }
+
+  FnStats.TotalVarWithLoc += (unsigned)HasLoc;
+
+  if (Die.find(dwarf::DW_AT_artificial)) {
+    FnStats.NumArtificial++;
+    return;
+  }
+
+  if (IsParam) {
+    FnStats.NumParams++;
+    if (HasType)
+      FnStats.NumParamTypes++;
+    if (HasSrcLoc)
+      FnStats.NumParamSourceLocations++;
+    if (HasLoc)
+      FnStats.NumParamLocations++;
+  } else if (IsVariable) {
+    FnStats.NumVars++;
+    if (HasType)
+      FnStats.NumVarTypes++;
+    if (HasSrcLoc)
+      FnStats.NumVarSourceLocations++;
+    if (HasLoc)
+      FnStats.NumVarLocations++;
   }
 }
 
@@ -324,8 +358,12 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
                                   StringMap<PerFunctionStats> &FnStatMap,
                                   GlobalStats &GlobalStats,
                                   LocationStats &LocStats) {
-  // Handle any kind of lexical scope.
   const dwarf::Tag Tag = Die.getTag();
+  // Skip function types.
+  if (Tag == dwarf::DW_TAG_subroutine_type)
+    return;
+
+  // Handle any kind of lexical scope.
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
@@ -358,27 +396,25 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
     // Count the function.
     if (!IsBlock) {
-      StringRef Name = Die.getName(DINameKind::LinkageName);
-      if (Name.empty())
-        Name = Die.getName(DINameKind::ShortName);
-      FnPrefix = Name;
       // Skip over abstract origins.
       if (Die.find(dwarf::DW_AT_inline))
         return;
-      // We've seen an (inlined) instance of this function.
-      auto &FnStats = FnStatMap[Name];
+      std::string FnID = constructDieID(Die);
+      // We've seen an instance of this function.
+      auto &FnStats = FnStatMap[FnID];
+      FnStats.IsFunction = true;
       if (IsInlinedFunction) {
         FnStats.NumFnInlined++;
         if (Die.findRecursively(dwarf::DW_AT_abstract_origin))
           FnStats.NumAbstractOrigins++;
+      } else {
+        FnStats.NumFnOutOfLine++;
       }
-      FnStats.IsFunction = true;
-      if (BytesInThisScope && !IsInlinedFunction)
-        FnStats.HasPCAddresses = true;
-      std::string FnName = StringRef(Die.getName(DINameKind::ShortName));
       if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
           Die.findRecursively(dwarf::DW_AT_decl_line))
         FnStats.HasSourceLocation = true;
+      // Update function prefix.
+      FnPrefix = FnID;
     }
 
     if (BytesInThisScope) {
@@ -402,11 +438,14 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
   // Traverse children.
   unsigned LexicalBlockIndex = 0;
+  unsigned FormalParameterIndex = 0;
   DWARFDie Child = Die.getFirstChild();
   while (Child) {
     std::string ChildVarPrefix = VarPrefix;
     if (Child.getTag() == dwarf::DW_TAG_lexical_block)
       ChildVarPrefix += toHex(LexicalBlockIndex++) + '.';
+    if (Child.getTag() == dwarf::DW_TAG_formal_parameter)
+      ChildVarPrefix += 'p' + toHex(FormalParameterIndex++) + '.';
 
     collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, BytesInScope,
                           InlineDepth, FnStatMap, GlobalStats, LocStats);
@@ -486,10 +525,11 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   unsigned VarWithLoc = 0;
   for (auto &Entry : Statistics) {
     PerFunctionStats &Stats = Entry.getValue();
-    unsigned TotalVars = Stats.VarsInFunction.size() * Stats.NumFnInlined;
-    // Count variables in concrete out-of-line functions and in global scope.
-    if (Stats.HasPCAddresses || !Stats.IsFunction)
-      TotalVars += Stats.VarsInFunction.size();
+    unsigned TotalVars = Stats.VarsInFunction.size() *
+                         (Stats.NumFnInlined + Stats.NumFnOutOfLine);
+    // Count variables in global scope.
+    if (!Stats.IsFunction)
+      TotalVars = Stats.NumVars + Stats.ConstantMembers + Stats.NumArtificial;
     unsigned Constants = Stats.ConstantMembers;
     VarParamWithLoc += Stats.TotalVarWithLoc + Constants;
     VarParamTotal += TotalVars;

@@ -4150,7 +4150,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Builder.SetInsertPoint(LI);
         PointerType *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
         Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
-        LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlignment());
+        LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
         Value *NewV = propagateMetadata(V, E->Scalars);
         if (!E->ReorderIndices.empty()) {
           OrdersType Mask;

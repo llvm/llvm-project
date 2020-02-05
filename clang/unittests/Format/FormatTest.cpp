@@ -7407,6 +7407,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("typedef typeof(int(int, int))* MyFuncPtr;", Left);
   verifyFormat("[](const decltype(*a)* ptr) {}", Left);
   verifyFormat("typedef typeof /*comment*/ (int(int, int))* MyFuncPtr;", Left);
+  verifyFormat("auto x(A&&, B&&, C&&) -> D;", Left);
+  verifyFormat("auto x = [](A&&, B&&, C&&) -> D {};", Left);
+  verifyFormat("template <class T> X(T&&, T&&, T&&) -> X<T>;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
   verifyIndependentOfContext("a = &(x + y);");
@@ -13028,6 +13031,12 @@ TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
                                "IndentWidth: 34",
                                &Style),
             ParseError::Unsuitable);
+  FormatStyle BinPackedTCS = {};
+  BinPackedTCS.Language = FormatStyle::LK_JavaScript;
+  EXPECT_EQ(parseConfiguration("BinPackArguments: true\n"
+                               "InsertTrailingCommas: Wrapped",
+                               &BinPackedTCS),
+            ParseError::BinPackTrailingCommaConflict);
   EXPECT_EQ(12u, Style.IndentWidth);
   CHECK_PARSE("IndentWidth: 56", IndentWidth, 56u);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);

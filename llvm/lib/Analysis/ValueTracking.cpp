@@ -592,10 +592,6 @@ static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
     CmpInst::Predicate Pred;
     if (!match(Cmp, m_c_ICmp(Pred, m_V, m_Value(RHS))))
       return false;
-    // Canonicalize 'v' to be on the LHS of the comparison.
-    if (Cmp->getOperand(1) != RHS)
-      Pred = CmpInst::getSwappedPredicate(Pred);
-
     // assume(v u> y) -> assume(v != 0)
     if (Pred == ICmpInst::ICMP_UGT)
       return true;

@@ -78,6 +78,17 @@ public:
     bool operator<(const Task &O) const { return QueuePri < O.QueuePri; }
   };
 
+  // Describes the number of tasks processed by the queue.
+  struct Stats {
+    unsigned Enqueued = 0;  // Total number of tasks ever enqueued.
+    unsigned Active = 0;    // Tasks being currently processed by a worker.
+    unsigned Completed = 0; // Tasks that have been finished.
+    unsigned LastIdle = 0;  // Number of completed tasks when last empty.
+  };
+
+  BackgroundQueue(std::function<void(Stats)> OnProgress = nullptr)
+      : OnProgress(OnProgress) {}
+
   // Add tasks to the queue.
   void push(Task);
   void append(std::vector<Task>);
@@ -100,12 +111,15 @@ public:
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds);
 
 private:
+  void notifyProgress() const; // Requires lock Mu
+
   std::mutex Mu;
-  unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
+  Stats Stat;
   std::condition_variable CV;
   bool ShouldStop = false;
   std::vector<Task> Queue; // max-heap
   llvm::StringMap<unsigned> Boosts;
+  std::function<void(Stats)> OnProgress;
 };
 
 // Builds an in-memory index by by running the static indexer action over
@@ -121,7 +135,8 @@ public:
       Context BackgroundContext, const FileSystemProvider &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
-      size_t ThreadPoolSize = llvm::heavyweight_hardware_concurrency());
+      size_t ThreadPoolSize = llvm::heavyweight_hardware_concurrency(),
+      std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr);
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue translation units for indexing.

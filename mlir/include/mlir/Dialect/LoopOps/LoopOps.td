@@ -1,6 +1,6 @@
 //===- Ops.td - Loop operation definitions ---------------*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -177,6 +177,13 @@ def ParallelOp : Loop_Op<"parallel",
                        Variadic<Index>:$step);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    iterator_range<Block::args_iterator> getInductionVars() {
+      Block &block = body().front();
+      return {block.args_begin(), block.args_end()};
+    }
+  }];
 }
 
 def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {

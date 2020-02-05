@@ -1,6 +1,6 @@
 //===- AffineToStandard.cpp - Lower affine constructs to primitives -------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -29,16 +29,16 @@
 using namespace mlir;
 
 namespace {
-// Visit affine expressions recursively and build the sequence of operations
-// that correspond to it.  Visitation functions return an Value of the
-// expression subtree they visited or `nullptr` on error.
+/// Visit affine expressions recursively and build the sequence of operations
+/// that correspond to it.  Visitation functions return an Value of the
+/// expression subtree they visited or `nullptr` on error.
 class AffineApplyExpander
     : public AffineExprVisitor<AffineApplyExpander, Value> {
 public:
-  // This internal class expects arguments to be non-null, checks must be
-  // performed at the call site.
-  AffineApplyExpander(OpBuilder &builder, ArrayRef<Value> dimValues,
-                      ArrayRef<Value> symbolValues, Location loc)
+  /// This internal class expects arguments to be non-null, checks must be
+  /// performed at the call site.
+  AffineApplyExpander(OpBuilder &builder, ValueRange dimValues,
+                      ValueRange symbolValues, Location loc)
       : builder(builder), dimValues(dimValues), symbolValues(symbolValues),
         loc(loc) {}
 
@@ -59,15 +59,15 @@ public:
     return buildBinaryExpr<MulIOp>(expr);
   }
 
-  // Euclidean modulo operation: negative RHS is not allowed.
-  // Remainder of the euclidean integer division is always non-negative.
-  //
-  // Implemented as
-  //
-  //     a mod b =
-  //         let remainder = srem a, b;
-  //             negative = a < 0 in
-  //         select negative, remainder + b, remainder.
+  /// Euclidean modulo operation: negative RHS is not allowed.
+  /// Remainder of the euclidean integer division is always non-negative.
+  ///
+  /// Implemented as
+  ///
+  ///     a mod b =
+  ///         let remainder = srem a, b;
+  ///             negative = a < 0 in
+  ///         select negative, remainder + b, remainder.
   Value visitModExpr(AffineBinaryOpExpr expr) {
     auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
     if (!rhsConst) {
@@ -95,16 +95,16 @@ public:
     return result;
   }
 
-  // Floor division operation (rounds towards negative infinity).
-  //
-  // For positive divisors, it can be implemented without branching and with a
-  // single division operation as
-  //
-  //        a floordiv b =
-  //            let negative = a < 0 in
-  //            let absolute = negative ? -a - 1 : a in
-  //            let quotient = absolute / b in
-  //                negative ? -quotient - 1 : quotient
+  /// Floor division operation (rounds towards negative infinity).
+  ///
+  /// For positive divisors, it can be implemented without branching and with a
+  /// single division operation as
+  ///
+  ///        a floordiv b =
+  ///            let negative = a < 0 in
+  ///            let absolute = negative ? -a - 1 : a in
+  ///            let quotient = absolute / b in
+  ///                negative ? -quotient - 1 : quotient
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
     auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
     if (!rhsConst) {
@@ -136,16 +136,16 @@ public:
     return result;
   }
 
-  // Ceiling division operation (rounds towards positive infinity).
-  //
-  // For positive divisors, it can be implemented without branching and with a
-  // single division operation as
-  //
-  //     a ceildiv b =
-  //         let negative = a <= 0 in
-  //         let absolute = negative ? -a : a - 1 in
-  //         let quotient = absolute / b in
-  //             negative ? -quotient : quotient + 1
+  /// Ceiling division operation (rounds towards positive infinity).
+  ///
+  /// For positive divisors, it can be implemented without branching and with a
+  /// single division operation as
+  ///
+  ///     a ceildiv b =
+  ///         let negative = a <= 0 in
+  ///         let absolute = negative ? -a : a - 1 in
+  ///         let quotient = absolute / b in
+  ///             negative ? -quotient : quotient + 1
   Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
     auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
     if (!rhsConst) {
@@ -199,26 +199,27 @@ public:
 
 private:
   OpBuilder &builder;
-  ArrayRef<Value> dimValues;
-  ArrayRef<Value> symbolValues;
+  ValueRange dimValues;
+  ValueRange symbolValues;
 
   Location loc;
 };
 } // namespace
 
-// Create a sequence of operations that implement the `expr` applied to the
-// given dimension and symbol values.
+/// Create a sequence of operations that implement the `expr` applied to the
+/// given dimension and symbol values.
 mlir::Value mlir::expandAffineExpr(OpBuilder &builder, Location loc,
-                                   AffineExpr expr, ArrayRef<Value> dimValues,
-                                   ArrayRef<Value> symbolValues) {
+                                   AffineExpr expr, ValueRange dimValues,
+                                   ValueRange symbolValues) {
   return AffineApplyExpander(builder, dimValues, symbolValues, loc).visit(expr);
 }
 
-// Create a sequence of operations that implement the `affineMap` applied to
-// the given `operands` (as it it were an AffineApplyOp).
-Optional<SmallVector<Value, 8>> static expandAffineMap(
-    OpBuilder &builder, Location loc, AffineMap affineMap,
-    ArrayRef<Value> operands) {
+/// Create a sequence of operations that implement the `affineMap` applied to
+/// the given `operands` (as it it were an AffineApplyOp).
+Optional<SmallVector<Value, 8>> static expandAffineMap(OpBuilder &builder,
+                                                       Location loc,
+                                                       AffineMap affineMap,
+                                                       ValueRange operands) {
   auto numDims = affineMap.getNumDims();
   auto expanded = functional::map(
       [numDims, &builder, loc, operands](AffineExpr expr) {
@@ -232,20 +233,19 @@ Optional<SmallVector<Value, 8>> static expandAffineMap(
   return None;
 }
 
-// Given a range of values, emit the code that reduces them with "min" or "max"
-// depending on the provided comparison predicate.  The predicate defines which
-// comparison to perform, "lt" for "min", "gt" for "max" and is used for the
-// `cmpi` operation followed by the `select` operation:
-//
-//   %cond   = cmpi "predicate" %v0, %v1
-//   %result = select %cond, %v0, %v1
-//
-// Multiple values are scanned in a linear sequence.  This creates a data
-// dependences that wouldn't exist in a tree reduction, but is easier to
-// recognize as a reduction by the subsequent passes.
+/// Given a range of values, emit the code that reduces them with "min" or "max"
+/// depending on the provided comparison predicate.  The predicate defines which
+/// comparison to perform, "lt" for "min", "gt" for "max" and is used for the
+/// `cmpi` operation followed by the `select` operation:
+///
+///   %cond   = cmpi "predicate" %v0, %v1
+///   %result = select %cond, %v0, %v1
+///
+/// Multiple values are scanned in a linear sequence.  This creates a data
+/// dependences that wouldn't exist in a tree reduction, but is easier to
+/// recognize as a reduction by the subsequent passes.
 static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
-                                     ArrayRef<Value> values,
-                                     OpBuilder &builder) {
+                                     ValueRange values, OpBuilder &builder) {
   assert(!llvm::empty(values) && "empty min/max chain");
 
   auto valueIt = values.begin();
@@ -258,34 +258,53 @@ static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
   return value;
 }
 
-// Emit instructions that correspond to the affine map in the lower bound
-// applied to the respective operands, and compute the maximum value across
-// the results.
+/// Emit instructions that correspond to the affine map in the lower bound
+/// applied to the respective operands, and compute the maximum value across
+/// the results.
 Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
-  SmallVector<Value, 8> boundOperands(op.getLowerBoundOperands());
   auto lbValues = expandAffineMap(builder, op.getLoc(), op.getLowerBoundMap(),
-                                  boundOperands);
+                                  op.getLowerBoundOperands());
   if (!lbValues)
     return nullptr;
   return buildMinMaxReductionSeq(op.getLoc(), CmpIPredicate::sgt, *lbValues,
                                  builder);
 }
 
-// Emit instructions that correspond to the affine map in the upper bound
-// applied to the respective operands, and compute the minimum value across
-// the results.
+/// Emit instructions that correspond to computing the minimum value amoung the
+/// values of a (potentially) multi-output affine map applied to `operands`.
+static Value lowerAffineMapMin(OpBuilder &builder, Location loc, AffineMap map,
+                               ValueRange operands) {
+  if (auto values = expandAffineMap(builder, loc, map, operands))
+    return buildMinMaxReductionSeq(loc, CmpIPredicate::slt, *values, builder);
+  return nullptr;
+}
+
+/// Emit instructions that correspond to the affine map in the upper bound
+/// applied to the respective operands, and compute the minimum value across
+/// the results.
 Value mlir::lowerAffineUpperBound(AffineForOp op, OpBuilder &builder) {
-  SmallVector<Value, 8> boundOperands(op.getUpperBoundOperands());
-  auto ubValues = expandAffineMap(builder, op.getLoc(), op.getUpperBoundMap(),
-                                  boundOperands);
-  if (!ubValues)
-    return nullptr;
-  return buildMinMaxReductionSeq(op.getLoc(), CmpIPredicate::slt, *ubValues,
-                                 builder);
+  return lowerAffineMapMin(builder, op.getLoc(), op.getUpperBoundMap(),
+                           op.getUpperBoundOperands());
 }
 
 namespace {
-// Affine terminators are removed.
+class AffineMinLowering : public OpRewritePattern<AffineMinOp> {
+public:
+  using OpRewritePattern<AffineMinOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(AffineMinOp op,
+                                     PatternRewriter &rewriter) const override {
+    Value reduced =
+        lowerAffineMapMin(rewriter, op.getLoc(), op.map(), op.operands());
+    if (!reduced)
+      return matchFailure();
+
+    rewriter.replaceOp(op, reduced);
+    return matchSuccess();
+  }
+};
+
+/// Affine terminators are removed.
 class AffineTerminatorLowering : public OpRewritePattern<AffineTerminatorOp> {
 public:
   using OpRewritePattern<AffineTerminatorOp>::OpRewritePattern;
@@ -366,8 +385,8 @@ public:
   }
 };
 
-// Convert an "affine.apply" operation into a sequence of arithmetic
-// operations using the StandardOps dialect.
+/// Convert an "affine.apply" operation into a sequence of arithmetic
+/// operations using the StandardOps dialect.
 class AffineApplyLowering : public OpRewritePattern<AffineApplyOp> {
 public:
   using OpRewritePattern<AffineApplyOp>::OpRewritePattern;
@@ -384,9 +403,9 @@ public:
   }
 };
 
-// Apply the affine map from an 'affine.load' operation to its operands, and
-// feed the results to a newly created 'std.load' operation (which replaces the
-// original 'affine.load').
+/// Apply the affine map from an 'affine.load' operation to its operands, and
+/// feed the results to a newly created 'std.load' operation (which replaces the
+/// original 'affine.load').
 class AffineLoadLowering : public OpRewritePattern<AffineLoadOp> {
 public:
   using OpRewritePattern<AffineLoadOp>::OpRewritePattern;
@@ -406,9 +425,9 @@ public:
   }
 };
 
-// Apply the affine map from an 'affine.prefetch' operation to its operands, and
-// feed the results to a newly created 'std.prefetch' operation (which replaces
-// the original 'affine.prefetch').
+/// Apply the affine map from an 'affine.prefetch' operation to its operands,
+/// and feed the results to a newly created 'std.prefetch' operation (which
+/// replaces the original 'affine.prefetch').
 class AffinePrefetchLowering : public OpRewritePattern<AffinePrefetchOp> {
 public:
   using OpRewritePattern<AffinePrefetchOp>::OpRewritePattern;
@@ -430,9 +449,9 @@ public:
   }
 };
 
-// Apply the affine map from an 'affine.store' operation to its operands, and
-// feed the results to a newly created 'std.store' operation (which replaces the
-// original 'affine.store').
+/// Apply the affine map from an 'affine.store' operation to its operands, and
+/// feed the results to a newly created 'std.store' operation (which replaces
+/// the original 'affine.store').
 class AffineStoreLowering : public OpRewritePattern<AffineStoreOp> {
 public:
   using OpRewritePattern<AffineStoreOp>::OpRewritePattern;
@@ -453,9 +472,9 @@ public:
   }
 };
 
-// Apply the affine maps from an 'affine.dma_start' operation to each of their
-// respective map operands, and feed the results to a newly created
-// 'std.dma_start' operation (which replaces the original 'affine.dma_start').
+/// Apply the affine maps from an 'affine.dma_start' operation to each of their
+/// respective map operands, and feed the results to a newly created
+/// 'std.dma_start' operation (which replaces the original 'affine.dma_start').
 class AffineDmaStartLowering : public OpRewritePattern<AffineDmaStartOp> {
 public:
   using OpRewritePattern<AffineDmaStartOp>::OpRewritePattern;
@@ -493,9 +512,9 @@ public:
   }
 };
 
-// Apply the affine map from an 'affine.dma_wait' operation tag memref,
-// and feed the results to a newly created 'std.dma_wait' operation (which
-// replaces the original 'affine.dma_wait').
+/// Apply the affine map from an 'affine.dma_wait' operation tag memref,
+/// and feed the results to a newly created 'std.dma_wait' operation (which
+/// replaces the original 'affine.dma_wait').
 class AffineDmaWaitLowering : public OpRewritePattern<AffineDmaWaitOp> {
 public:
   using OpRewritePattern<AffineDmaWaitOp>::OpRewritePattern;
@@ -520,10 +539,19 @@ public:
 
 void mlir::populateAffineToStdConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  // clang-format off
   patterns.insert<
-      AffineApplyLowering, AffineDmaStartLowering, AffineDmaWaitLowering,
-      AffineLoadLowering, AffinePrefetchLowering, AffineStoreLowering,
-      AffineForLowering, AffineIfLowering, AffineTerminatorLowering>(ctx);
+      AffineApplyLowering,
+      AffineDmaStartLowering,
+      AffineDmaWaitLowering,
+      AffineLoadLowering,
+      AffineMinLowering,
+      AffinePrefetchLowering,
+      AffineStoreLowering,
+      AffineForLowering,
+      AffineIfLowering,
+      AffineTerminatorLowering>(ctx);
+  // clang-format on
 }
 
 namespace {

@@ -1217,14 +1217,13 @@ define i64 @v_test_srem24_pow2_k_den_i64(i64 %x) {
 ; GCN-LABEL: v_test_srem24_pow2_k_den_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_ashr_i64 v[2:3], v[0:1], 40
-; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GCN-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
-; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v2, v0
-; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v3, v1, vcc
+; GCN-NEXT:    v_ashr_i64 v[0:1], v[0:1], 40
+; GCN-NEXT:    v_lshrrev_b32_e32 v2, 17, v1
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, v0, v2
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff8000, v2
+; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
+; GCN-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %x.shr = ashr i64 %x, 40
   %result = srem i64 %x.shr, 32768

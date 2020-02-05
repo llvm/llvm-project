@@ -1,6 +1,6 @@
 //===- Intrinsics.h - MLIR EDSC Intrinsics for Linalg -----------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -16,8 +16,11 @@ namespace mlir {
 namespace edsc {
 namespace intrinsics {
 
+using linalg_copy = OperationBuilder<linalg::CopyOp>;
 using linalg_fill = OperationBuilder<linalg::FillOp>;
+using linalg_range = ValueBuilder<linalg::RangeOp>;
 using linalg_reshape = ValueBuilder<linalg::ReshapeOp>;
+using linalg_slice = ValueBuilder<linalg::SliceOp>;
 using linalg_yield = OperationBuilder<linalg::YieldOp>;
 
 } // namespace intrinsics

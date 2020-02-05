@@ -528,12 +528,12 @@ TEST_F(ReplacementTest, MultipleFilesReplaceAndFormat) {
 
   // Scrambled the order of replacements.
   std::map<std::string, Replacements> FileToReplaces;
-  FileToReplaces[File1] = toReplacements(
+  FileToReplaces[std::string(File1)] = toReplacements(
       {tooling::Replacement(Context.Sources, Context.getLocation(ID1, 1, 1), 6,
                             "auto "),
        tooling::Replacement(Context.Sources, Context.getLocation(ID1, 3, 10), 1,
                             "12345678901")});
-  FileToReplaces[File2] = toReplacements(
+  FileToReplaces[std::string(File2)] = toReplacements(
       {tooling::Replacement(Context.Sources, Context.getLocation(ID2, 1, 12), 0,
                             "4567890123"),
        tooling::Replacement(Context.Sources, Context.getLocation(ID2, 2, 9), 1,
@@ -612,7 +612,8 @@ public:
     assert(File);
 
     StringRef Found =
-        TemporaryFiles.insert(std::make_pair(Name, Path.str())).first->second;
+        TemporaryFiles.insert(std::make_pair(Name, std::string(Path.str())))
+            .first->second;
     assert(Found == Path);
     (void)Found;
     return Context.Sources.createFileID(*File, SourceLocation(),
@@ -628,7 +629,7 @@ public:
     // FIXME: Figure out whether there is a way to get the SourceManger to
     // reopen the file.
     auto FileBuffer = Context.Files.getBufferForFile(Path);
-    return (*FileBuffer)->getBuffer();
+    return std::string((*FileBuffer)->getBuffer());
   }
 
   llvm::StringMap<std::string> TemporaryFiles;
@@ -1044,8 +1045,8 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
 #endif
   EXPECT_TRUE(VFS->addFile(Path1, 0, llvm::MemoryBuffer::getMemBuffer("")));
   EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
-  FileToReplaces[Path1] = Replacements();
-  FileToReplaces[Path2] = Replacements();
+  FileToReplaces[std::string(Path1)] = Replacements();
+  FileToReplaces[std::string(Path2)] = Replacements();
   FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
   EXPECT_EQ(Path1, FileToReplaces.begin()->first);
@@ -1065,8 +1066,8 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
 #endif
   EXPECT_TRUE(VFS->addFile(Path1, 0, llvm::MemoryBuffer::getMemBuffer("")));
   EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
-  FileToReplaces[Path1] = Replacements();
-  FileToReplaces[Path2] = Replacements();
+  FileToReplaces[std::string(Path1)] = Replacements();
+  FileToReplaces[std::string(Path2)] = Replacements();
   FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
   EXPECT_EQ(Path1, FileToReplaces.begin()->first);
@@ -1084,8 +1085,8 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   StringRef Path1 = ".\\a\\b\\c.h";
   StringRef Path2 = "a\\b\\c.h";
 #endif
-  FileToReplaces[Path1] = Replacements();
-  FileToReplaces[Path2] = Replacements();
+  FileToReplaces[std::string(Path1)] = Replacements();
+  FileToReplaces[std::string(Path2)] = Replacements();
   FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_TRUE(FileToReplaces.empty());
 }
@@ -1306,7 +1307,7 @@ protected:
   ~ApplyAtomicChangesTest() override {}
 
   void setInput(llvm::StringRef Input) {
-    Code = Input;
+    Code = std::string(Input);
     FID = Context.createInMemoryFile(FilePath, Code);
   }
 

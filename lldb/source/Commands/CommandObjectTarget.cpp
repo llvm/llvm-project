@@ -1,4 +1,4 @@
-//===-- CommandObjectTarget.cpp ---------------------------------*- C++ -*-===//
+//===-- CommandObjectTarget.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1292,7 +1292,7 @@ static void DumpModuleArchitecture(Stream &strm, Module *module,
       module->GetArchitecture().DumpTriple(arch_strm.AsRawOstream());
     else
       arch_strm.PutCString(module->GetArchitecture().GetArchitectureName());
-    std::string arch_str = arch_strm.GetString();
+    std::string arch_str = std::string(arch_strm.GetString());
 
     if (width)
       strm.Printf("%-*s", width, arch_str.c_str());
@@ -3268,7 +3268,7 @@ public:
 
       switch (short_option) {
       case 'a': {
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeAddress;
         m_addr = OptionArgParser::ToAddress(execution_context, option_arg,
                                             LLDB_INVALID_ADDRESS, &error);
@@ -3279,7 +3279,7 @@ public:
       }
 
       case 'n':
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeFunctionOrSymbol;
         break;
 
@@ -3603,7 +3603,7 @@ public:
         break;
 
       case 's':
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeSymbol;
         break;
 
@@ -3626,17 +3626,17 @@ public:
         break;
 
       case 'F':
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeFunction;
         break;
 
       case 'n':
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeFunctionOrSymbol;
         break;
 
       case 't':
-        m_str = option_arg;
+        m_str = std::string(option_arg);
         m_type = eLookupTypeType;
         break;
 
@@ -4427,7 +4427,7 @@ public:
 
       switch (short_option) {
       case 'c':
-        m_class_name = option_arg;
+        m_class_name = std::string(option_arg);
         m_sym_ctx_specified = true;
         break;
 
@@ -4464,18 +4464,18 @@ public:
         break;
 
       case 'n':
-        m_function_name = option_arg;
+        m_function_name = std::string(option_arg);
         m_func_name_type_mask |= eFunctionNameTypeAuto;
         m_sym_ctx_specified = true;
         break;
 
       case 'f':
-        m_file_name = option_arg;
+        m_file_name = std::string(option_arg);
         m_sym_ctx_specified = true;
         break;
 
       case 's':
-        m_module_name = option_arg;
+        m_module_name = std::string(option_arg);
         m_sym_ctx_specified = true;
         break;
 
@@ -4487,12 +4487,12 @@ public:
         break;
 
       case 'T':
-        m_thread_name = option_arg;
+        m_thread_name = std::string(option_arg);
         m_thread_specified = true;
         break;
 
       case 'q':
-        m_queue_name = option_arg;
+        m_queue_name = std::string(option_arg);
         m_thread_specified = true;
         break;
 
@@ -4505,7 +4505,7 @@ public:
 
       case 'o':
         m_use_one_liner = true;
-        m_one_liner.push_back(option_arg);
+        m_one_liner.push_back(std::string(option_arg));
         break;
 
       default:

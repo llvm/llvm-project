@@ -1,4 +1,4 @@
-//===-- PlatformAndroid.cpp -------------------------------------*- C++ -*-===//
+//===-- PlatformAndroid.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -170,7 +170,7 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   if (!UriParser::Parse(url, scheme, host, port, path))
     return Status("Invalid URL: %s", url);
   if (host != "localhost")
-    m_device_id = host;
+    m_device_id = std::string(host);
 
   auto error = PlatformLinux::ConnectRemote(args);
   if (error.Success()) {

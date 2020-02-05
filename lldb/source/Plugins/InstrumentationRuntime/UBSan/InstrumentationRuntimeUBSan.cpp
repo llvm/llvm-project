@@ -1,4 +1,4 @@
-//===-- InstrumentationRuntimeUBSan.cpp -------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeUBSan.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -183,7 +183,8 @@ static std::string GetStopReasonDescription(StructuredData::ObjectSP report) {
   llvm::StringRef stop_reason_description_ref;
   report->GetAsDictionary()->GetValueForKeyAsString(
       "description", stop_reason_description_ref);
-  std::string stop_reason_description = stop_reason_description_ref;
+  std::string stop_reason_description =
+      std::string(stop_reason_description_ref);
 
   if (!stop_reason_description.size()) {
     stop_reason_description = "Undefined behavior detected";

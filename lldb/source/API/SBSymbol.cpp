@@ -1,4 +1,4 @@
-//===-- SBSymbol.cpp --------------------------------------------*- C++ -*-===//
+//===-- SBSymbol.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,9 +68,7 @@ const char *SBSymbol::GetDisplayName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled()
-               .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
-               .AsCString();
+    name = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
 
   return name;
 }

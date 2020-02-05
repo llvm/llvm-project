@@ -21,7 +21,7 @@
 #include "LogChannelDWARF.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 
 #include <vector>
@@ -36,7 +36,7 @@ struct ParsedDWARFTypeAttributes;
 
 class DWARFASTParserClang : public DWARFASTParser {
 public:
-  DWARFASTParserClang(lldb_private::ClangASTContext &ast);
+  DWARFASTParserClang(lldb_private::TypeSystemClang &ast);
 
   ~DWARFASTParserClang() override;
 
@@ -82,7 +82,7 @@ protected:
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
-  lldb_private::ClangASTContext &m_ast;
+  lldb_private::TypeSystemClang &m_ast;
   DIEToDeclMap m_die_to_decl;
   DeclToDIEMap m_decl_to_die;
   DIEToDeclContextMap m_die_to_decl_ctx;
@@ -97,11 +97,11 @@ protected:
   clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
 
   bool ParseTemplateDIE(const DWARFDIE &die,
-                        lldb_private::ClangASTContext::TemplateParameterInfos
+                        lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
   bool ParseTemplateParameterInfos(
       const DWARFDIE &parent_die,
-      lldb_private::ClangASTContext::TemplateParameterInfos
+      lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
   bool ParseChildMembers(
@@ -170,33 +170,20 @@ protected:
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
 private:
-  struct BitfieldInfo {
-    uint64_t bit_size;
-    uint64_t bit_offset;
+  struct FieldInfo {
+    uint64_t bit_size = 0;
+    uint64_t bit_offset = 0;
+    bool is_bitfield = false;
 
-    BitfieldInfo()
-        : bit_size(LLDB_INVALID_ADDRESS), bit_offset(LLDB_INVALID_ADDRESS) {}
+    FieldInfo() = default;
 
-    void Clear() {
-      bit_size = LLDB_INVALID_ADDRESS;
-      bit_offset = LLDB_INVALID_ADDRESS;
-    }
-
-    bool IsValid() const {
-      return (bit_size != LLDB_INVALID_ADDRESS) &&
-             (bit_offset != LLDB_INVALID_ADDRESS);
-    }
+    void SetIsBitfield(bool flag) { is_bitfield = flag; }
+    bool IsBitfield() { return is_bitfield; }
 
     bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
-      if (IsValid()) {
-        // This bitfield info is valid, so any subsequent bitfields must not
-        // overlap and must be at a higher bit offset than any previous bitfield
-        // + size.
-        return (bit_size + bit_offset) <= next_bit_offset;
-      } else {
-        // If the this BitfieldInfo is not valid, then any offset isOK
-        return true;
-      }
+      // Any subsequent bitfields must not overlap and must be at a higher
+      // bit offset than any previous bitfield + size.
+      return (bit_size + bit_offset) <= next_bit_offset;
     }
   };
 
@@ -208,7 +195,7 @@ private:
                     lldb::AccessType &default_accessibility,
                     DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
-                    BitfieldInfo &last_field_info);
+                    FieldInfo &last_field_info);
 
   bool CompleteRecordType(const DWARFDIE &die, lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);

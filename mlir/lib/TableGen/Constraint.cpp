@@ -1,6 +1,6 @@
 //===- Constraint.cpp - Constraint class ----------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -57,4 +57,5 @@ llvm::StringRef Constraint::getDescription() const {
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,
                                      llvm::StringRef self,
                                      std::vector<std::string> &&entities)
-    : constraint(constraint), self(self), entities(std::move(entities)) {}
+    : constraint(constraint), self(std::string(self)),
+      entities(std::move(entities)) {}

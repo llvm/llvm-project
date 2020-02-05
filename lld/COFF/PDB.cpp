@@ -178,8 +178,6 @@ private:
 
   llvm::SmallString<128> nativePath;
 
-  std::vector<pdb::SecMapEntry> sectionMap;
-
   /// Type index mappings of type server PDBs that we've loaded so far.
   std::map<codeview::GUID, CVIndexMap> typeServerIndexMappings;
 
@@ -1473,7 +1471,7 @@ static std::string quote(ArrayRef<StringRef> args) {
       a.split(s, '"');
       r.append(join(s, "\"\""));
     } else {
-      r.append(a);
+      r.append(std::string(a));
     }
     if (hasWS || hasQ)
       r.push_back('"');
@@ -1766,8 +1764,7 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> outputSections,
   ArrayRef<object::coff_section> sections = {
       (const object::coff_section *)sectionTable.data(),
       sectionTable.size() / sizeof(object::coff_section)};
-  sectionMap = pdb::DbiStreamBuilder::createSectionMap(sections);
-  dbiBuilder.setSectionMap(sectionMap);
+  dbiBuilder.createSectionMap(sections);
 
   // Add COFF section header stream.
   exitOnErr(

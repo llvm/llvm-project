@@ -1,4 +1,4 @@
-//===-- AppleObjCDeclVendor.cpp ---------------------------------*- C++ -*-===//
+//===-- AppleObjCDeclVendor.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -143,10 +143,9 @@ private:
 
 AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
     : ClangDeclVendor(eAppleObjCDeclVendor), m_runtime(runtime),
-      m_ast_ctx(runtime.GetProcess()
-                    ->GetTarget()
-                    .GetArchitecture()
-                    .GetTriple()),
+      m_ast_ctx(
+          "AppleObjCDeclVendor AST",
+          runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple()),
       m_type_realizer_sp(m_runtime.GetEncodingToType()) {
   m_external_source = new AppleObjCExternalASTSource(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> external_source_owning_ptr(
@@ -309,7 +308,7 @@ public:
   }
 
   clang::ObjCMethodDecl *
-  BuildMethod(ClangASTContext &clang_ast_ctxt,
+  BuildMethod(TypeSystemClang &clang_ast_ctxt,
               clang::ObjCInterfaceDecl *interface_decl, const char *name,
               bool instance,
               ObjCLanguageRuntime::EncodingToTypeSP type_realizer_sp) {
@@ -584,7 +583,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
                    current_id, result_iface_type.getAsString(), isa_value);
         }
 
-        decls.push_back(CompilerDecl(&m_ast_ctx, result_iface_decl));
+        decls.push_back(m_ast_ctx.GetCompilerDecl(result_iface_decl));
         ret++;
         break;
       } else {
@@ -627,7 +626,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
                new_iface_type.getAsString(), (uint64_t)isa);
     }
 
-    decls.push_back(CompilerDecl(&m_ast_ctx, iface_decl));
+    decls.push_back(m_ast_ctx.GetCompilerDecl(iface_decl));
     ret++;
     break;
   } while (false);

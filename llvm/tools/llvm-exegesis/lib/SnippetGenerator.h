@@ -97,9 +97,9 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 
 // Assigns a Random Value to all Variables in IT that are still Invalid.
 // Do not use any of the registers in `ForbiddenRegs`.
-void randomizeUnsetVariables(const ExegesisTarget &Target,
-                             const BitVector &ForbiddenRegs,
-                             InstructionTemplate &IT);
+Error randomizeUnsetVariables(const LLVMState &State,
+                              const BitVector &ForbiddenRegs,
+                              InstructionTemplate &IT);
 
 } // namespace exegesis
 } // namespace llvm

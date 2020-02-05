@@ -1,4 +1,4 @@
-//===-- BreakpointResolverFileRegex.cpp -------------------------*- C++-*-===//
+//===-- BreakpointResolverFileRegex.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,7 +65,7 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
             "BRFR::CFSD: Malformed element %zu in the names array.", i);
         return nullptr;
       }
-      names_set.insert(name);
+      names_set.insert(std::string(name));
     }
   }
 

@@ -1,6 +1,6 @@
 //===- CSE.cpp - Common Sub-expression Elimination ------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -37,10 +37,9 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     //   - Attributes
     //   - Result Types
     //   - Operands
-    return hash_combine(
-        op->getName(), op->getAttrList().getDictionary(),
-        hash_combine_range(op->result_type_begin(), op->result_type_end()),
-        hash_combine_range(op->operand_begin(), op->operand_end()));
+    return llvm::hash_combine(
+        op->getName(), op->getAttrList().getDictionary(), op->getResultTypes(),
+        llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
   }
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);

@@ -29,14 +29,14 @@ class ConceptSpecializationExpr;
 class ConstraintSatisfaction : public llvm::FoldingSetNode {
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
-  NamedDecl *ConstraintOwner = nullptr;
+  const NamedDecl *ConstraintOwner = nullptr;
   llvm::SmallVector<TemplateArgument, 4> TemplateArgs;
 
 public:
 
   ConstraintSatisfaction() = default;
 
-  ConstraintSatisfaction(NamedDecl *ConstraintOwner,
+  ConstraintSatisfaction(const NamedDecl *ConstraintOwner,
                          ArrayRef<TemplateArgument> TemplateArgs) :
       ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs.begin(),
                                                      TemplateArgs.end()) { }
@@ -57,7 +57,7 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C,
-                      NamedDecl *ConstraintOwner,
+                      const NamedDecl *ConstraintOwner,
                       ArrayRef<TemplateArgument> TemplateArgs);
 };
 

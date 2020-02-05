@@ -55,26 +55,25 @@ lzcnt 2(%rsp), %cx
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   imull	%edx, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33  0.33    -     0.33    0.33    -      -      -      -      -      -     lzcntw	(%rsp), %cx
-# CHECK-NEXT: 0.33   0.33   0.33  0.33    -     0.33    0.33    -      -      -      -      -      -     lzcntw	2(%rsp), %cx
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     0.33   0.33    -      -      -      -      -      -     lzcntw	(%rsp), %cx
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     0.33   0.33    -      -      -      -      -      -     lzcntw	2(%rsp), %cx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
-# CHECK: [0,0]     DeeeER    .    .    .    ..   imull   %edx, %ecx
-# CHECK-NEXT: [0,1]     DeeeeeER  .    .    .    ..   lzcntw  (%rsp), %cx
-# CHECK-NEXT: [0,2]     .DeeeeeER .    .    .    ..   lzcntw  2(%rsp), %cx
-# CHECK-NEXT: [1,0]     .D=====eeeER   .    .    ..   imull   %edx, %ecx
-# CHECK-NEXT: [1,1]     . D====eeeeeER .    .    ..   lzcntw  (%rsp), %cx
-# CHECK-NEXT: [1,2]     . D=====eeeeeER.    .    ..   lzcntw  2(%rsp), %cx
-# CHECK-NEXT: [2,0]     .  D=========eeeER  .    ..   imull   %edx, %ecx
-# CHECK-NEXT: [2,1]     .  D=========eeeeeER.    ..   lzcntw  (%rsp), %cx
-# CHECK-NEXT: [2,2]     .   D=========eeeeeER    ..   lzcntw  2(%rsp), %cx
-# CHECK-NEXT: [3,0]     .   D==============eeeER ..   imull   %edx, %ecx
-# CHECK-NEXT: [3,1]     .    D=============eeeeeER.   lzcntw  (%rsp), %cx
-# CHECK-NEXT: [3,2]     .    D==============eeeeeER   lzcntw  2(%rsp), %cx
-
+# CHECK:      [0,0]     DeeeER    .    .    .    ..   imull	%edx, %ecx
+# CHECK-NEXT: [0,1]     DeeeeeER  .    .    .    ..   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [0,2]     .DeeeeeER .    .    .    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [1,0]     .D=====eeeER   .    .    ..   imull	%edx, %ecx
+# CHECK-NEXT: [1,1]     . D====eeeeeER .    .    ..   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [1,2]     . D=====eeeeeER.    .    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [2,0]     .  D=========eeeER  .    ..   imull	%edx, %ecx
+# CHECK-NEXT: [2,1]     .  D=========eeeeeER.    ..   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [2,2]     .   D=========eeeeeER    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [3,0]     .   D==============eeeER ..   imull	%edx, %ecx
+# CHECK-NEXT: [3,1]     .    D=============eeeeeER.   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [3,2]     .    D==============eeeeeER   lzcntw	2(%rsp), %cx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -86,3 +85,4 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT: 0.     4     8.0    0.3    0.0       imull	%edx, %ecx
 # CHECK-NEXT: 1.     4     7.5    0.0    0.0       lzcntw	(%rsp), %cx
 # CHECK-NEXT: 2.     4     8.0    0.0    0.0       lzcntw	2(%rsp), %cx
+# CHECK-NEXT:        4     7.8    0.1    0.0       <total>

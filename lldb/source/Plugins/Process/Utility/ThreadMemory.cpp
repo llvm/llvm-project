@@ -1,5 +1,4 @@
-//===-- ThreadMemory.cpp ----------------------------------------------*- C++
-//-*-===//
+//===-- ThreadMemory.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +29,8 @@ ThreadMemory::ThreadMemory(Process &process, lldb::tid_t tid,
                            llvm::StringRef name, llvm::StringRef queue,
                            lldb::addr_t register_data_addr)
     : Thread(process, tid), m_backing_thread_sp(), m_thread_info_valobj_sp(),
-      m_name(name), m_queue(queue), m_register_data_addr(register_data_addr) {}
+      m_name(std::string(name)), m_queue(std::string(queue)),
+      m_register_data_addr(register_data_addr) {}
 
 ThreadMemory::~ThreadMemory() { DestroyThread(); }
 

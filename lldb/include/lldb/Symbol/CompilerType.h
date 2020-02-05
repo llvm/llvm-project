@@ -37,7 +37,7 @@ public:
   /// This constructor should only be called from the respective TypeSystem
   /// implementation.
   ///
-  /// \see lldb_private::ClangASTContext::GetType(clang::QualType)
+  /// \see lldb_private::TypeSystemClang::GetType(clang::QualType)
   CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type)
       : m_type(type), m_type_system(type_system) {}
 

@@ -1,6 +1,6 @@
-//===- Utils.h - VectorOps Utils ----------------------------*- C++ -*-=======//
+//===- VectorUtils.h - VectorOps Utilities ------------------*- C++ -*-=======//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,6 +15,7 @@
 
 namespace mlir {
 
+// Forward declarations.
 class AffineApplyOp;
 class AffineForOp;
 class AffineMap;
@@ -24,6 +25,29 @@ class OpBuilder;
 class Operation;
 class Value;
 class VectorType;
+
+/// Given the shape and sizes of a vector, returns the corresponding
+/// strides for each dimension.
+SmallVector<int64_t, 4> computeStrides(ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> sizes);
+
+/// Given the slice strides together with a linear index in the dimension
+/// space, returns the vector-space offsets in each dimension for a
+/// de-linearized index.
+SmallVector<int64_t, 4> delinearize(ArrayRef<int64_t> sliceStrides,
+                                    int64_t linearIndex);
+
+/// Given the target sizes of a vector, together with vector-space offsets,
+/// returns the element-space offsets for each dimension.
+SmallVector<int64_t, 4>
+computeElementOffsetsFromVectorSliceOffsets(ArrayRef<int64_t> sizes,
+                                            ArrayRef<int64_t> vectorOffsets);
+
+/// Given the shape, sizes, and element-space offsets of a vector, returns
+/// the slize sizes for each dimension.
+SmallVector<int64_t, 4> computeSliceSizes(ArrayRef<int64_t> shape,
+                                          ArrayRef<int64_t> sizes,
+                                          ArrayRef<int64_t> elementOffsets);
 
 /// Computes and returns the multi-dimensional ratio of `superShape` to
 /// `subShape`. This is calculated by performing a traversal from minor to major

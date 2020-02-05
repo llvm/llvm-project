@@ -138,6 +138,29 @@ TEST(LowLevelTypeTest, ChangeElementType) {
   EXPECT_EQ(V2S32, V2P0.changeElementType(S32));
 }
 
+TEST(LowLevelTypeTest, ChangeNumElements) {
+  const LLT P0 = LLT::pointer(0, 32);
+  const LLT V2P0 = LLT::vector(2, P0);
+  const LLT V3P0 = LLT::vector(3, P0);
+
+  const LLT S64 = LLT::scalar(64);
+  const LLT V2S64 = LLT::vector(2, 64);
+  const LLT V3S64 = LLT::vector(3, 64);
+
+  // Vector to scalar
+  EXPECT_EQ(S64, V2S64.changeNumElements(1));
+
+  // Vector to vector
+  EXPECT_EQ(V3S64, V2S64.changeNumElements(3));
+
+  // Scalar to vector
+  EXPECT_EQ(V2S64, S64.changeNumElements(2));
+
+  EXPECT_EQ(P0, V2P0.changeNumElements(1));
+  EXPECT_EQ(V3P0, V2P0.changeNumElements(3));
+  EXPECT_EQ(V2P0, P0.changeNumElements(2));
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 

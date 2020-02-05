@@ -186,32 +186,33 @@ namespace clang {
       return import(*From);
     }
 
-    template <class T>
-    Expected<std::tuple<T>>
-    importSeq(const T &From) {
-      Expected<T> ToOrErr = import(From);
-      if (!ToOrErr)
-        return ToOrErr.takeError();
-      return std::make_tuple<T>(std::move(*ToOrErr));
+    // Helper for error management in importSeq.
+    template <typename T> T checkImport(Error &Err, const T &From) {
+      // Don't attempt to import nodes if we hit an error earlier.
+      if (Err)
+        return T{};
+      Expected<T> MaybeVal = import(From);
+      if (!MaybeVal) {
+        Err = MaybeVal.takeError();
+        return T{};
+      }
+      return *MaybeVal;
     }
 
     // Import multiple objects with a single function call.
     // This should work for every type for which a variant of `import` exists.
     // The arguments are processed from left to right and import is stopped on
     // first error.
-    template <class THead, class... TTail>
-    Expected<std::tuple<THead, TTail...>>
-    importSeq(const THead &FromHead, const TTail &...FromTail) {
-      Expected<std::tuple<THead>> ToHeadOrErr = importSeq(FromHead);
-      if (!ToHeadOrErr)
-        return ToHeadOrErr.takeError();
-      Expected<std::tuple<TTail...>> ToTailOrErr = importSeq(FromTail...);
-      if (!ToTailOrErr)
-        return ToTailOrErr.takeError();
-      return std::tuple_cat(*ToHeadOrErr, *ToTailOrErr);
+    template <class... Args>
+    Expected<std::tuple<Args...>> importSeq(const Args &... args) {
+      Error E = Error::success();
+      std::tuple<Args...> Res{checkImport(E, args)...};
+      if (E)
+        return std::move(E);
+      return std::move(Res);
     }
 
-// Wrapper for an overload set.
+    // Wrapper for an overload set.
     template <typename ToDeclT> struct CallOverloadedCreateFun {
       template <typename... Args>
       auto operator()(Args &&... args)
@@ -1366,9 +1367,21 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  return Importer.getToContext().getAutoType(*ToDeducedTypeOrErr,
-                                             T->getKeyword(),
-                                             /*IsDependent*/false);
+  ExpectedDecl ToTypeConstraintConcept = import(T->getTypeConstraintConcept());
+  if (!ToTypeConstraintConcept)
+    return ToTypeConstraintConcept.takeError();
+
+  SmallVector<TemplateArgument, 2> ToTemplateArgs;
+  ArrayRef<TemplateArgument> FromTemplateArgs = T->getTypeConstraintArguments();
+  if (Error Err = ImportTemplateArguments(FromTemplateArgs.data(),
+                                          FromTemplateArgs.size(),
+                                          ToTemplateArgs))
+    return std::move(Err);
+
+  return Importer.getToContext().getAutoType(
+      *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
+      /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
+      ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
@@ -1741,7 +1754,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     // fix since operations such as code generation will expect this to be so.
     if (ImportedOrErr) {
       FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
-      Decl *ImportedDecl = (Decl*)*ImportedOrErr;
+      Decl *ImportedDecl = *ImportedOrErr;
       FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);
       if (FieldFrom && FieldTo) {
         const RecordType *RecordFrom = FieldFrom->getType()->getAs<RecordType>();
@@ -8241,7 +8254,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           // FIXME Should we remove these Decls from the LookupTable,
           // and from ImportedFromDecls?
       }
-    SavedImportPaths[FromD].clear();
+    SavedImportPaths.erase(FromD);
 
     // Do not return ToDOrErr, error was taken out of it.
     return make_error<ImportError>(ErrOut);
@@ -8274,7 +8287,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   Imported(FromD, ToD);
 
   updateFlags(FromD, ToD);
-  SavedImportPaths[FromD].clear();
+  SavedImportPaths.erase(FromD);
   return ToDOrErr;
 }
 

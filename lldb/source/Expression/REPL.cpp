@@ -1,4 +1,4 @@
-//===-- REPL.cpp ------------------------------------------------*- C++ -*-===//
+//===-- REPL.cpp ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -291,12 +291,10 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       const char *expr_prefix = nullptr;
       lldb::ValueObjectSP result_valobj_sp;
       Status error;
-      lldb::ModuleSP jit_module_sp;
       lldb::ExpressionResults execution_results =
           UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
                                    expr_prefix, result_valobj_sp, error,
-                                   nullptr, // Fixed Expression
-                                   &jit_module_sp);
+                                   nullptr); // fixed expression
 
       // CommandInterpreter &ci = debugger.GetCommandInterpreter();
 
@@ -488,14 +486,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   current_code.append("\n");
   current_code += request.GetRawLine();
 
-  StringList matches;
-  int result = CompleteCode(current_code, matches);
-  if (result == -2) {
-    assert(matches.GetSize() == 1);
-    request.AddCompletion(matches.GetStringAtIndex(0), "",
-                          CompletionMode::RewriteLine);
-  } else
-    request.AddCompletions(matches);
+  CompleteCode(current_code, request);
 }
 
 bool QuitCommandOverrideCallback(void *baton, const char **argv) {

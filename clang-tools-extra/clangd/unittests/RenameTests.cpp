@@ -49,7 +49,7 @@ std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
                                       llvm::StringRef Path) {
   RefSlab::Builder Builder;
   TestTU TU;
-  TU.HeaderCode = Code.code();
+  TU.HeaderCode = std::string(Code.code());
   auto Symbols = TU.headerSymbols();
   const auto &SymbolID = findSymbol(Symbols, SymbolName).ID;
   std::string PathURI = URI::create(Path).toString();
@@ -294,7 +294,7 @@ TEST(RenameTest, WithinFileRename) {
       // Derived destructor explicit call.
       R"cpp(
         class [[Bas^e]] {};
-        class Derived : public [[Bas^e]] {}
+        class Derived : public [[Bas^e]] {};
 
         int main() {
           [[Bas^e]] *foo = new Derived();
@@ -383,12 +383,12 @@ TEST(RenameTest, WithinFileRename) {
 
       // Typedef.
       R"cpp(
-        namespace std {
+        namespace ns {
         class basic_string {};
         typedef basic_string [[s^tring]];
-        } // namespace std
+        } // namespace ns
 
-        std::[[s^tring]] foo();
+        ns::[[s^tring]] foo();
       )cpp",
 
       // Variable.
@@ -442,6 +442,7 @@ TEST(RenameTest, WithinFileRename) {
       )cpp",
   };
   for (llvm::StringRef T : Tests) {
+    SCOPED_TRACE(T);
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
@@ -539,6 +540,13 @@ TEST(RenameTest, Renameable) {
          void fo^o() {})cpp",
        "used outside main file", !HeaderFile, nullptr /*no index*/},
 
+      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+         namespace std {
+         class str^ing {};
+         }
+       )cpp",
+       "not a supported kind", !HeaderFile, Index},
+
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -560,6 +568,7 @@ TEST(RenameTest, Renameable) {
   };
 
   for (const auto& Case : Cases) {
+    SCOPED_TRACE(Case.Code);
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.HeaderCode = CommonHeader;
@@ -664,7 +673,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   MainCode = Annotations("void [[Bar]]() { [[B^ar]](); }");
   TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   AST = TU.build();
   Results = rename({MainCode.point(), NewName, AST, MainFilePath, Index.get(),
                     /*CrossFile=*/true, GetDirtyBuffer});
@@ -711,7 +720,7 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
   auto BarPath = testPath("bar.cc");
   auto TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   auto AST = TU.build();
   std::string BarPathURI = URI::create(BarPath).toString();
   Ref XRefInBarCC = refWithRange(BarCode.range(), BarPathURI);
@@ -755,10 +764,6 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
 TEST(CrossFileRenameTests, WithUpToDateIndex) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-xc++"};
-  class IgnoreDiagnostics : public DiagnosticsConsumer {
-    void onDiagnosticsReady(PathRef File,
-                            std::vector<Diag> Diagnostics) override {}
-  } DiagConsumer;
   // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
   // expected rename occurrences.
   struct Case {
@@ -890,19 +895,20 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   };
 
   for (const auto& T : Cases) {
+    SCOPED_TRACE(T.FooH);
     Annotations FooH(T.FooH);
     Annotations FooCC(T.FooCC);
     std::string FooHPath = testPath("foo.h");
     std::string FooCCPath = testPath("foo.cc");
 
     MockFSProvider FS;
-    FS.Files[FooHPath] = FooH.code();
-    FS.Files[FooCCPath] = FooCC.code();
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooCCPath] = std::string(FooCC.code());
 
     auto ServerOpts = ClangdServer::optsForTest();
     ServerOpts.CrossFileRename = true;
     ServerOpts.BuildDynamicSymbolIndex = true;
-    ClangdServer Server(CDB, FS, DiagConsumer, ServerOpts);
+    ClangdServer Server(CDB, FS, ServerOpts);
 
     // Add all files to clangd server to make sure the dynamic index has been
     // built.
@@ -1016,6 +1022,7 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
   LangOptions LangOpts;
   LangOpts.CPlusPlus = true;
   for (const auto &T : Tests) {
+    SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
     auto ActualRanges = adjustRenameRanges(
         Draft.code(), "x", Annotations(T.IndexedCode).ranges(), LangOpts);
@@ -1023,8 +1030,7 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else
       EXPECT_THAT(Draft.ranges(),
-                  testing::UnorderedElementsAreArray(*ActualRanges))
-          << T.DraftCode;
+                  testing::UnorderedElementsAreArray(*ActualRanges));
   }
 }
 
@@ -1131,6 +1137,7 @@ TEST(RangePatchingHeuristic, GetMappedRanges) {
     }
   };
   for (const auto &T : Tests) {
+    SCOPED_TRACE(T.IndexedCode);
     auto Lexed = Annotations(T.LexedCode);
     auto LexedRanges = Lexed.ranges();
     std::vector<Range> ExpectedMatches;
@@ -1147,8 +1154,7 @@ TEST(RangePatchingHeuristic, GetMappedRanges) {
     if (!Mapped)
       EXPECT_THAT(ExpectedMatches, IsEmpty());
     else
-      EXPECT_THAT(ExpectedMatches, UnorderedElementsAreArray(*Mapped))
-          << T.IndexedCode;
+      EXPECT_THAT(ExpectedMatches, UnorderedElementsAreArray(*Mapped));
   }
 }
 
@@ -1251,13 +1257,14 @@ TEST(CrossFileRenameTests, adjustmentCost) {
     },
   };
   for (const auto &T : Tests) {
+    SCOPED_TRACE(T.RangeCode);
     Annotations C(T.RangeCode);
     std::vector<size_t> MappedIndex;
     for (size_t I = 0; I < C.ranges("lex").size(); ++I)
       MappedIndex.push_back(I);
     EXPECT_EQ(renameRangeAdjustmentCost(C.ranges("idx"), C.ranges("lex"),
                                         MappedIndex),
-              T.ExpectedCost) << T.RangeCode;
+              T.ExpectedCost);
   }
 }
 

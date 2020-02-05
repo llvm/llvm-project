@@ -173,6 +173,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   bool ContainsSomethingElse = false;
 
   Token End;
+  End.startToken();
   End.setKind(tok::eof);
   SmallVector<Token, 2> Stream{Tok, End};
 
@@ -464,7 +465,8 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
       CharAfterReturnType.empty() || !std::isspace(CharAfterReturnType[0]);
 
   std::string Auto = NeedSpaceAfterAuto ? "auto " : "auto";
-  std::string ReturnType = tooling::fixit::getText(ReturnTypeCVRange, Ctx);
+  std::string ReturnType =
+      std::string(tooling::fixit::getText(ReturnTypeCVRange, Ctx));
   keepSpecifiers(ReturnType, Auto, ReturnTypeCVRange, *F, Fr, Ctx, SM,
                  LangOpts);
 

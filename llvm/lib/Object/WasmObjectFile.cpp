@@ -708,7 +708,7 @@ Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
             "Producers section contains repeated producer",
             object_error::parse_failed);
       }
-      ProducerVec->emplace_back(Name, Version);
+      ProducerVec->emplace_back(std::string(Name), std::string(Version));
     }
   }
   if (Ctx.Ptr != Ctx.End)
@@ -732,7 +732,7 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("Unknown feature policy prefix",
                                             object_error::parse_failed);
     }
-    Feature.Name = readString(Ctx);
+    Feature.Name = std::string(readString(Ctx));
     if (!FeaturesSeen.insert(Feature.Name).second)
       return make_error<GenericBinaryError>(
           "Target features section contains repeated feature \"" +
@@ -1365,26 +1365,30 @@ WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
     return section_end();
 
   DataRefImpl Ref;
+  Ref.d.a = getSymbolSectionIdImpl(Sym);
+  return section_iterator(SectionRef(Ref, this));
+}
+
+uint32_t WasmObjectFile::getSymbolSectionId(SymbolRef Symb) const {
+  const WasmSymbol &Sym = getWasmSymbol(Symb);
+  return getSymbolSectionIdImpl(Sym);
+}
+
+uint32_t WasmObjectFile::getSymbolSectionIdImpl(const WasmSymbol &Sym) const {
   switch (Sym.Info.Kind) {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
-    Ref.d.a = CodeSection;
-    break;
+    return CodeSection;
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
-    Ref.d.a = GlobalSection;
-    break;
+    return GlobalSection;
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    Ref.d.a = DataSection;
-    break;
+    return DataSection;
   case wasm::WASM_SYMBOL_TYPE_SECTION:
-    Ref.d.a = Sym.Info.ElementIndex;
-    break;
+    return Sym.Info.ElementIndex;
   case wasm::WASM_SYMBOL_TYPE_EVENT:
-    Ref.d.a = EventSection;
-    break;
+    return EventSection;
   default:
     llvm_unreachable("Unknown WasmSymbol::SymbolType");
   }
-  return section_iterator(SectionRef(Ref, this));
 }
 
 void WasmObjectFile::moveSectionNext(DataRefImpl &Sec) const { Sec.d.a++; }

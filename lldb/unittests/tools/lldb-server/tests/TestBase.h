@@ -36,7 +36,7 @@ public:
   static std::string getInferiorPath(llvm::StringRef Name) {
     llvm::SmallString<64> Path(LLDB_TEST_INFERIOR_PATH);
     llvm::sys::path::append(Path, Name + LLDB_TEST_INFERIOR_SUFFIX);
-    return Path.str();
+    return std::string(Path.str());
   }
 
   static std::string getLogFileName();

@@ -436,10 +436,10 @@ body: |
     ; WAVE64: successors: %bb.1(0x80000000)
     ; WAVE64: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
+    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr16
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE64: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE64: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64: [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
     ; WAVE64: [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; WAVE64: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -447,9 +447,11 @@ body: |
     ; WAVE64: successors: %bb.2(0x40000000), %bb.1(0x40000000)
     ; WAVE64: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %11, %bb.1
     ; WAVE64: [[PHI1:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %4(s32), %bb.1
-    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE64: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[V_READFIRSTLANE_B32_]](s32)
+    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C1]]
+    ; WAVE64: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[ADD1]](s32)
     ; WAVE64: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE64: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; WAVE64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -462,10 +464,10 @@ body: |
     ; WAVE32: successors: %bb.1(0x80000000)
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
+    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr16
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE32: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE32: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32: [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
     ; WAVE32: [[DEF1:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; WAVE32: [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
@@ -473,9 +475,11 @@ body: |
     ; WAVE32: successors: %bb.2(0x40000000), %bb.1(0x40000000)
     ; WAVE32: [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF1]], %bb.0, %11, %bb.1
     ; WAVE32: [[PHI1:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %4(s32), %bb.1
-    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE32: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[V_READFIRSTLANE_B32_]](s32)
+    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C1]]
+    ; WAVE32: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[ADD1]](s32)
     ; WAVE32: [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE32: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
     ; WAVE32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -643,10 +647,10 @@ body: |
     ; WAVE64: successors: %bb.1(0x80000000)
     ; WAVE64: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
+    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr16
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE64: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE64: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64: [[BITCAST:%[0-9]+]]:vgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE64: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
@@ -662,12 +666,14 @@ body: |
     ; WAVE64: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %11(s32), %bb.1
     ; WAVE64: [[PHI3:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF2]](s32), %bb.0, %6(s32), %bb.1
     ; WAVE64: [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF3]](s32), %bb.0, %7(s32), %bb.1
-    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE64: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C1]](s32)
-    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
+    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C2]]
+    ; WAVE64: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ADD1]], [[C1]](s32)
+    ; WAVE64: [[ADD2:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
     ; WAVE64: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
-    ; WAVE64: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD1]](s32)
+    ; WAVE64: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD2]](s32)
     ; WAVE64: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE64: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; WAVE64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -681,10 +687,10 @@ body: |
     ; WAVE32: successors: %bb.1(0x80000000)
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
+    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr16
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE32: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE32: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32: [[BITCAST:%[0-9]+]]:vgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE32: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
@@ -700,12 +706,14 @@ body: |
     ; WAVE32: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %11(s32), %bb.1
     ; WAVE32: [[PHI3:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF2]](s32), %bb.0, %6(s32), %bb.1
     ; WAVE32: [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF3]](s32), %bb.0, %7(s32), %bb.1
-    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE32: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C1]](s32)
-    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
+    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C2]]
+    ; WAVE32: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ADD1]], [[C1]](s32)
+    ; WAVE32: [[ADD2:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
     ; WAVE32: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
-    ; WAVE32: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD1]](s32)
+    ; WAVE32: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD2]](s32)
     ; WAVE32: [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE32: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
     ; WAVE32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
@@ -736,10 +744,10 @@ body: |
     ; WAVE64: successors: %bb.1(0x80000000)
     ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE64: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE64: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64: [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
     ; WAVE64: [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; WAVE64: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -747,9 +755,11 @@ body: |
     ; WAVE64: successors: %bb.2(0x40000000), %bb.1(0x40000000)
     ; WAVE64: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %11, %bb.1
     ; WAVE64: [[PHI1:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %4(s32), %bb.1
-    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE64: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[V_READFIRSTLANE_B32_]](s32)
+    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C1]]
+    ; WAVE64: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[ADD1]](s32)
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC]](s32), implicit $exec
     ; WAVE64: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE64: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
@@ -763,10 +773,10 @@ body: |
     ; WAVE32: successors: %bb.1(0x80000000)
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE32: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE32: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32: [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
     ; WAVE32: [[DEF1:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; WAVE32: [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
@@ -774,9 +784,11 @@ body: |
     ; WAVE32: successors: %bb.2(0x40000000), %bb.1(0x40000000)
     ; WAVE32: [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[DEF1]], %bb.0, %11, %bb.1
     ; WAVE32: [[PHI1:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF]](s32), %bb.0, %4(s32), %bb.1
-    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE32: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[V_READFIRSTLANE_B32_]](s32)
+    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C1]]
+    ; WAVE32: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[ADD1]](s32)
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC]](s32), implicit $exec
     ; WAVE32: [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; WAVE32: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
@@ -807,10 +819,10 @@ body: |
     ; WAVE64: successors: %bb.1(0x80000000)
     ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE64: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE64: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64: [[BITCAST:%[0-9]+]]:sgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE64: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
@@ -826,12 +838,14 @@ body: |
     ; WAVE64: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %11(s32), %bb.1
     ; WAVE64: [[PHI3:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF2]](s32), %bb.0, %6(s32), %bb.1
     ; WAVE64: [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF3]](s32), %bb.0, %7(s32), %bb.1
-    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE64: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C1]](s32)
-    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
+    ; WAVE64: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE64: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE64: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C2]]
+    ; WAVE64: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ADD1]], [[C1]](s32)
+    ; WAVE64: [[ADD2:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
     ; WAVE64: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
-    ; WAVE64: [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD1]](s32)
+    ; WAVE64: [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD2]](s32)
     ; WAVE64: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC]](s32), implicit $exec
     ; WAVE64: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC1]](s32), implicit $exec
     ; WAVE64: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
@@ -847,10 +861,10 @@ body: |
     ; WAVE32: successors: %bb.1(0x80000000)
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; WAVE32: [[ADD:%[0-9]+]]:vgpr_32(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; WAVE32: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32: [[BITCAST:%[0-9]+]]:sgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE32: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
@@ -866,12 +880,14 @@ body: |
     ; WAVE32: [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[DEF1]](s32), %bb.0, %11(s32), %bb.1
     ; WAVE32: [[PHI3:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF2]](s32), %bb.0, %6(s32), %bb.1
     ; WAVE32: [[PHI4:%[0-9]+]]:vgpr(s32) = G_PHI [[DEF3]](s32), %bb.0, %7(s32), %bb.1
-    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[ADD]](s32), implicit $exec
-    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[ADD]](s32), implicit $exec
-    ; WAVE32: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[V_READFIRSTLANE_B32_]], [[C1]](s32)
-    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
+    ; WAVE32: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]](s32), [[COPY1]](s32), implicit $exec
+    ; WAVE32: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[V_READFIRSTLANE_B32_]], [[C2]]
+    ; WAVE32: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ADD1]], [[C1]](s32)
+    ; WAVE32: [[ADD2:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C1]]
     ; WAVE32: [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
-    ; WAVE32: [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD1]](s32)
+    ; WAVE32: [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD2]](s32)
     ; WAVE32: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC]](s32), implicit $exec
     ; WAVE32: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 [[EVEC1]](s32), implicit $exec
     ; WAVE32: [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec

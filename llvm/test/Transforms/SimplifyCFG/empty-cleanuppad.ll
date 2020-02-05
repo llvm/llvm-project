@@ -458,6 +458,55 @@ cleanupret2:
   cleanupret from %cp unwind to caller
 }
 
+; CHECK-LABEL: define void @f11(
+;   This case tests the handling of an empty cleanup pad that
+;   contains a lifetime_end intrinsic and does not dominate its
+;   successor.
+; CHECK: entry:
+; CHECK:   invoke void @g()
+; CHECK: invoke.cont:
+; CHECK:   invoke void @g()
+; CHECK: invoke.cont2:
+; CHECK:   invoke void @g()
+; CHECK-NOT: ehcleanup:
+; CHECK-NOT:   phi
+; CHECK-NOT:   cleanuppad
+; CHECK-NOT:   lifetime.end
+; CHECK: catch.dispatch:
+; CHECK:   catchswitch
+; CHECK: catch:
+; CHECK:   catchret
+; CHECK: }
+define void @f11() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+entry:
+  invoke void @g()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  invoke void @g()
+          to label %invoke.cont2 unwind label %ehcleanup
+
+invoke.cont2:                                     ; preds = %invoke.cont
+  invoke void @g()
+          to label %return unwind label %catch.dispatch
+
+ehcleanup:                                        ; preds = %invoke.cont, %entry
+  %x = phi i8* [ undef, %invoke.cont ], [ undef, %entry ]
+  %0 = cleanuppad within none []
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %x)
+  cleanupret from %0 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %ehcleanup, %invoke.cont
+  %cs1 = catchswitch within none [label %catch] unwind to caller
+
+catch:                                            ; preds = %catch.dispatch
+  %1 = catchpad within %cs1 [i8* null, i32 u0x40, i8* null]
+  catchret from %1 to label %return
+
+return:                                           ; preds = %invoke.cont, %catch.cont
+  ret void
+}
+
 %struct.S = type { i8 }
 %struct.S2 = type { i8 }
 declare void @"\01??1S2@@QEAA@XZ"(%struct.S2*)

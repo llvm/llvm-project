@@ -1,4 +1,4 @@
-//===-- InstrumentationRuntimeMainThreadChecker.cpp -------------*- C++ -*-===//
+//===-- InstrumentationRuntimeMainThreadChecker.cpp -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -178,10 +178,10 @@ bool InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit(
       instance->RetrieveReportData(context->exe_ctx_ref);
 
   if (report) {
-    std::string description = report->GetAsDictionary()
-                                  ->GetValueForKey("description")
-                                  ->GetAsString()
-                                  ->GetValue();
+    std::string description = std::string(report->GetAsDictionary()
+                                              ->GetValueForKey("description")
+                                              ->GetAsString()
+                                              ->GetValue());
     thread_sp->SetStopInfo(
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));

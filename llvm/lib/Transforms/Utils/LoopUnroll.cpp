@@ -63,39 +63,6 @@ UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
 #endif
                     );
 
-/// Convert the instruction operands from referencing the current values into
-/// those specified by VMap.
-void llvm::remapInstruction(Instruction *I, ValueToValueMapTy &VMap) {
-  for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
-    Value *Op = I->getOperand(op);
-
-    // Unwrap arguments of dbg.value intrinsics.
-    bool Wrapped = false;
-    if (auto *V = dyn_cast<MetadataAsValue>(Op))
-      if (auto *Unwrapped = dyn_cast<ValueAsMetadata>(V->getMetadata())) {
-        Op = Unwrapped->getValue();
-        Wrapped = true;
-      }
-
-    auto wrap = [&](Value *V) {
-      auto &C = I->getContext();
-      return Wrapped ? MetadataAsValue::get(C, ValueAsMetadata::get(V)) : V;
-    };
-
-    ValueToValueMapTy::iterator It = VMap.find(Op);
-    if (It != VMap.end())
-      I->setOperand(op, wrap(It->second));
-  }
-
-  if (PHINode *PN = dyn_cast<PHINode>(I)) {
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-      ValueToValueMapTy::iterator It = VMap.find(PN->getIncomingBlock(i));
-      if (It != VMap.end())
-        PN->setIncomingBlock(i, cast<BasicBlock>(It->second));
-    }
-  }
-}
-
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
 /// \param Blocks is a vector of basic blocks representing unrolled loop.
@@ -207,10 +174,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
     // Aggressively clean up dead instructions that simplifyLoopIVs already
     // identified. Any remaining should be cleaned up below.
-    while (!DeadInsts.empty())
-      if (Instruction *Inst =
-              dyn_cast_or_null<Instruction>(&*DeadInsts.pop_back_val()))
+    while (!DeadInsts.empty()) {
+      Value *V = DeadInsts.pop_back_val();
+      if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
         RecursivelyDeleteTriviallyDeadInstructions(Inst);
+    }
   }
 
   // At this point, the code is well formed.  We now do a quick sweep over the
@@ -600,7 +568,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           }
 
   for (unsigned It = 1; It != ULO.Count; ++It) {
-    std::vector<BasicBlock*> NewBlocks;
+    SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
     NewLoops[L] = L;
 
@@ -682,9 +650,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
 
     // Remap all instructions in the most recent iteration
+    remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks) {
       for (Instruction &I : *NewBlock) {
-        ::remapInstruction(&I, LastValueMap);
         if (auto *II = dyn_cast<IntrinsicInst>(&I))
           if (II->getIntrinsicID() == Intrinsic::assume)
             AC->registerAssumption(II);

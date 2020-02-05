@@ -1,11 +1,13 @@
 RUN: %cpp_compiler %S/CustomMutatorTest.cpp -o %t-CustomMutatorTest
 RUN: not %run %t-CustomMutatorTest 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutator: INFO: found LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutator: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutator: {{.*}} lim: 4096 {{.*}}
 LLVMFuzzerCustomMutator: BINGO
 
 # len_control is disabled for custom mutators by default, test that it can be enabled.
 RUN: not %run %t-CustomMutatorTest -len_control=100 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorWithLenControl
+LLVMFuzzerCustomMutatorWithLenControl: INFO: found LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: {{.*}} lim: {{[1-9][0-9]?}} {{.*}}
 LLVMFuzzerCustomMutatorWithLenControl: BINGO

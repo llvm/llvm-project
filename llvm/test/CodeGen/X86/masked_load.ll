@@ -3198,8 +3198,6 @@ define <16 x i16> @load_v16i16_v16i16(<16 x i16> %trigger, <16 x i16>* %addr, <1
 ;
 ; AVX2-LABEL: load_v16i16_v16i16:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax

@@ -55,13 +55,13 @@ static bool isSupportedExtension(StringRef Ext) {
 static bool getExtensionVersion(const Driver &D, StringRef MArch,
                                 StringRef Ext, StringRef In,
                                 std::string &Major, std::string &Minor) {
-  Major = In.take_while(isDigit);
+  Major = std::string(In.take_while(isDigit));
   In = In.substr(Major.size());
   if (Major.empty())
     return true;
 
   if (In.consume_front("p")) {
-    Minor = In.take_while(isDigit);
+    Minor = std::string(In.take_while(isDigit));
     In = In.substr(Major.size());
 
     // Expected 'p' to be followed by minor version number.
@@ -133,7 +133,7 @@ static void getExtensionFeatures(const Driver &D,
       ++I;
 
     if (I == E) {
-      std::string Error = Desc;
+      std::string Error = std::string(Desc);
       Error += " not given in canonical order";
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
         << MArch <<  Error << Ext;
@@ -144,7 +144,7 @@ static void getExtensionFeatures(const Driver &D,
     // to allow repeated extension type, e.g.: rv32ixabc_xdef.
 
     if (Name.empty()) {
-      std::string Error = Desc;
+      std::string Error = std::string(Desc);
       Error += " name missing after";
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
         << MArch << Error << Ext;

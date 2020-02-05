@@ -57,10 +57,15 @@ static bool doesNotGeneratecode(const MachineInstr &MI) {
 bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getFunction().hasFnAttribute("patchable-function-entry")) {
     MachineBasicBlock &FirstMBB = *MF.begin();
-    MachineInstr &FirstMI = *FirstMBB.begin();
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-    BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
-            TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+    if (FirstMBB.empty()) {
+      BuildMI(&FirstMBB, DebugLoc(),
+              TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+    } else {
+      MachineInstr &FirstMI = *FirstMBB.begin();
+      BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
+              TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+    }
     return true;
   }
 

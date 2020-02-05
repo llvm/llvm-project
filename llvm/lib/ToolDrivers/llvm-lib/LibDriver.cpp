@@ -65,7 +65,7 @@ static std::string getOutputPath(opt::InputArgList *Args,
     return Arg->getValue();
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   sys::path::replace_extension(Val, ".lib");
-  return Val.str();
+  return std::string(Val.str());
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
@@ -96,7 +96,7 @@ static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, File);
     if (sys::fs::exists(Path))
-      return Path.str().str();
+      return std::string(Path);
   }
   return "";
 }

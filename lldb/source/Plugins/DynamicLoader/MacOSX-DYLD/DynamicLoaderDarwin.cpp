@@ -1,4 +1,4 @@
-//===-- DynamicLoaderDarwin.cpp -----------------------------*- C++ -*-===//
+//===-- DynamicLoaderDarwin.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
@@ -383,9 +383,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("filetype")->GetAsInteger()->GetValue();
 
     if (image->HasKey("min_version_os_name")) {
-      std::string os_name = image->GetValueForKey("min_version_os_name")
-                                ->GetAsString()
-                                ->GetValue();
+      std::string os_name =
+          std::string(image->GetValueForKey("min_version_os_name")
+                          ->GetAsString()
+                          ->GetValue());
       if (os_name == "macosx")
         image_infos[i].os_type = llvm::Triple::MacOSX;
       else if (os_name == "ios" || os_name == "iphoneos")
@@ -403,9 +404,9 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     }
     if (image->HasKey("min_version_os_sdk")) {
       image_infos[i].min_version_os_sdk =
-          image->GetValueForKey("min_version_os_sdk")
-              ->GetAsString()
-              ->GetValue();
+          std::string(image->GetValueForKey("min_version_os_sdk")
+                          ->GetAsString()
+                          ->GetValue());
     }
 
     // Fields that aren't used by DynamicLoaderDarwin so debugserver doesn't
@@ -838,8 +839,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     std::vector<Address> addresses;
 
     if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name = current_symbol->GetMangled().GetName(
-          current_symbol->GetLanguage(), Mangled::ePreferMangled);
+      ConstString trampoline_name =
+          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
 
       if (trampoline_name) {
         const ModuleList &images = target_sp->GetImages();
@@ -980,8 +981,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 void DynamicLoaderDarwin::FindEquivalentSymbols(
     lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
-  ConstString trampoline_name = original_symbol->GetMangled().GetName(
-      original_symbol->GetLanguage(), Mangled::ePreferMangled);
+  ConstString trampoline_name =
+      original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
   if (!trampoline_name)
     return;
 
@@ -1072,8 +1073,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
         }
         StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
         if (frame_sp) {
-          ClangASTContext *clang_ast_context =
-              ClangASTContext::GetScratch(target);
+          TypeSystemClang *clang_ast_context =
+              TypeSystemClang::GetScratch(target);
 
           if (!clang_ast_context)
             return LLDB_INVALID_ADDRESS;

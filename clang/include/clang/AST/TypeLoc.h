@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_TYPELOC_H
 #define LLVM_CLANG_AST_TYPELOC_H
 
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -34,6 +35,7 @@ namespace clang {
 class Attr;
 class ASTContext;
 class CXXRecordDecl;
+class ConceptDecl;
 class Expr;
 class ObjCInterfaceDecl;
 class ObjCProtocolDecl;
@@ -180,6 +182,11 @@ public:
   ///   AtomicTypeLoc
   ///   AttributedTypeLoc, for those type attributes that behave as qualifiers
   TypeLoc findExplicitQualifierLoc() const;
+
+  /// Get the typeloc of an AutoType whose type will be deduced for a variable
+  /// with an initializer of this type. This looks through declarators like
+  /// pointer types, but not through decltype or typedefs.
+  AutoTypeLoc getContainedAutoTypeLoc() const;
 
   /// Initializes this to state that every location in this
   /// type is the given location.
@@ -1923,8 +1930,137 @@ class DeducedTypeLoc
     : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DeducedTypeLoc,
                                        DeducedType> {};
 
+struct AutoTypeLocInfo : TypeSpecLocInfo {
+  NestedNameSpecifierLoc NestedNameSpec;
+  SourceLocation TemplateKWLoc;
+  SourceLocation ConceptNameLoc;
+  NamedDecl *FoundDecl;
+  SourceLocation LAngleLoc;
+  SourceLocation RAngleLoc;
+};
+
 class AutoTypeLoc
-    : public InheritingConcreteTypeLoc<DeducedTypeLoc, AutoTypeLoc, AutoType> {
+    : public ConcreteTypeLoc<DeducedTypeLoc,
+                             AutoTypeLoc,
+                             AutoType,
+                             AutoTypeLocInfo> {
+public:
+  AutoTypeKeyword getAutoKeyword() const {
+    return getTypePtr()->getKeyword();
+  }
+
+  bool isConstrained() const {
+    return getTypePtr()->isConstrained();
+  }
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return getLocalData()->NestedNameSpec;
+  }
+
+  void setNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+    getLocalData()->NestedNameSpec = NNS;
+  }
+
+  SourceLocation getTemplateKWLoc() const {
+    return getLocalData()->TemplateKWLoc;
+  }
+
+  void setTemplateKWLoc(SourceLocation Loc) {
+    getLocalData()->TemplateKWLoc = Loc;
+  }
+
+  SourceLocation getConceptNameLoc() const {
+    return getLocalData()->ConceptNameLoc;
+  }
+
+  void setConceptNameLoc(SourceLocation Loc) {
+    getLocalData()->ConceptNameLoc = Loc;
+  }
+
+  NamedDecl *getFoundDecl() const {
+    return getLocalData()->FoundDecl;
+  }
+
+  void setFoundDecl(NamedDecl *D) {
+    getLocalData()->FoundDecl = D;
+  }
+
+  ConceptDecl *getNamedConcept() const {
+    return getTypePtr()->getTypeConstraintConcept();
+  }
+
+  DeclarationNameInfo getConceptNameInfo() const;
+
+  bool hasExplicitTemplateArgs() const {
+    return getLocalData()->LAngleLoc.isValid();
+  }
+
+  SourceLocation getLAngleLoc() const {
+    return this->getLocalData()->LAngleLoc;
+  }
+
+  void setLAngleLoc(SourceLocation Loc) {
+    this->getLocalData()->LAngleLoc = Loc;
+  }
+
+  SourceLocation getRAngleLoc() const {
+    return this->getLocalData()->RAngleLoc;
+  }
+
+  void setRAngleLoc(SourceLocation Loc) {
+    this->getLocalData()->RAngleLoc = Loc;
+  }
+
+  unsigned getNumArgs() const {
+    return getTypePtr()->getNumArgs();
+  }
+
+  void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
+    getArgInfos()[i] = AI;
+  }
+
+  TemplateArgumentLocInfo getArgLocInfo(unsigned i) const {
+    return getArgInfos()[i];
+  }
+
+  TemplateArgumentLoc getArgLoc(unsigned i) const {
+    return TemplateArgumentLoc(getTypePtr()->getTypeConstraintArguments()[i],
+                               getArgLocInfo(i));
+  }
+
+  SourceRange getLocalSourceRange() const {
+    return{
+        isConstrained()
+          ? (getNestedNameSpecifierLoc()
+               ? getNestedNameSpecifierLoc().getBeginLoc()
+               : (getTemplateKWLoc().isValid()
+                  ? getTemplateKWLoc()
+                  : getConceptNameLoc()))
+          : getNameLoc(),
+        getNameLoc()
+    };
+  }
+
+  void copy(AutoTypeLoc Loc) {
+    unsigned size = getFullDataSize();
+    assert(size == Loc.getFullDataSize());
+    memcpy(Data, Loc.Data, size);
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc);
+
+  unsigned getExtraLocalDataSize() const {
+    return getNumArgs() * sizeof(TemplateArgumentLocInfo);
+  }
+
+  unsigned getExtraLocalDataAlignment() const {
+    return alignof(TemplateArgumentLocInfo);
+  }
+
+private:
+  TemplateArgumentLocInfo *getArgInfos() const {
+    return static_cast<TemplateArgumentLocInfo*>(getExtraLocalData());
+  }
 };
 
 class DeducedTemplateSpecializationTypeLoc

@@ -26,6 +26,10 @@ public:
 
   ~SBLaunchInfo();
 
+  SBLaunchInfo(const SBLaunchInfo &rhs);
+
+  SBLaunchInfo &operator=(const SBLaunchInfo &rhs);
+
   lldb::pid_t GetProcessID();
 
   uint32_t GetUserID();

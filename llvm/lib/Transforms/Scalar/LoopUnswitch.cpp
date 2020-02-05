@@ -1032,7 +1032,6 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
   auto *OldBranch = dyn_cast<BranchInst>(loopPreheader->getTerminator());
   assert(OldBranch && "Failed to split the preheader");
   EmitPreheaderBranchOnCondition(Cond, Val, NewExit, NewPH, OldBranch, TI);
-  LPM->deleteSimpleAnalysisValue(OldBranch, L);
 
   // EmitPreheaderBranchOnCondition removed the OldBranch from the function.
   // Delete it, as it is no longer needed.
@@ -1283,7 +1282,6 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
     NewBlocks.push_back(NewBB);
     VMap[LoopBlocks[i]] = NewBB;  // Keep the BB mapping.
-    LPM->cloneBasicBlockSimpleAnalysis(LoopBlocks[i], NewBB, L);
   }
 
   // Splice the newly inserted blocks into the function right before the
@@ -1366,7 +1364,6 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   // Emit the new branch that selects between the two versions of this loop.
   EmitPreheaderBranchOnCondition(LIC, Val, NewBlocks[0], LoopBlocks[0], OldBR,
                                  TI);
-  LPM->deleteSimpleAnalysisValue(OldBR, L);
   if (MSSAU) {
     // Update MemoryPhis in Exit blocks.
     MSSAU->updateExitBlocksForClonedLoop(ExitBlocks, VMap, *DT);
@@ -1426,7 +1423,6 @@ static void ReplaceUsesOfWith(Instruction *I, Value *V,
   // Add users to the worklist which may be simplified now.
   for (User *U : I->users())
     Worklist.push_back(cast<Instruction>(U));
-  LPM->deleteSimpleAnalysisValue(I, L);
   RemoveFromWorklist(I, Worklist);
   I->replaceAllUsesWith(V);
   if (!I->mayHaveSideEffects()) {
@@ -1593,7 +1589,6 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
       for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i)
         if (Instruction *Use = dyn_cast<Instruction>(I->getOperand(i)))
           Worklist.push_back(Use);
-      LPM->deleteSimpleAnalysisValue(I, L);
       RemoveFromWorklist(I, Worklist);
       if (MSSAU)
         MSSAU->removeMemoryAccess(I);
@@ -1624,9 +1619,7 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         assert(SinglePred == Pred && "CFG broken");
 
         // Make the LPM and Worklist updates specific to LoopUnswitch.
-        LPM->deleteSimpleAnalysisValue(BI, L);
         RemoveFromWorklist(BI, Worklist);
-        LPM->deleteSimpleAnalysisValue(Succ, L);
         auto SuccIt = Succ->begin();
         while (PHINode *PN = dyn_cast<PHINode>(SuccIt++)) {
           for (unsigned It = 0, E = PN->getNumOperands(); It != E; ++It)
@@ -1634,7 +1627,6 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
               Worklist.push_back(Use);
           for (User *U : PN->users())
             Worklist.push_back(cast<Instruction>(U));
-          LPM->deleteSimpleAnalysisValue(PN, L);
           RemoveFromWorklist(PN, Worklist);
           ++NumSimplify;
         }

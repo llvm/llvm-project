@@ -787,7 +787,7 @@ uptr GetRSS() {
   return counters.WorkingSetSize;
 }
 
-void *internal_start_thread(void (*func)(void *arg), void *arg) { return 0; }
+void *internal_start_thread(void *(*func)(void *arg), void *arg) { return 0; }
 void internal_join_thread(void *th) { }
 
 // ---------------------- BlockingMutex ---------------- {{{1

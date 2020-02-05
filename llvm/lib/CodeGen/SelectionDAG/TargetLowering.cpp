@@ -970,6 +970,17 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     if (SimplifyDemandedBits(Src, DemandedBits, SrcElts, Known, TLO, Depth + 1))
       return true;
+
+    // Attempt to avoid multi-use src if we don't need anything from it.
+    if (!DemandedBits.isAllOnesValue() || !SrcElts.isAllOnesValue()) {
+      SDValue DemandedSrc = SimplifyMultipleUseDemandedBits(
+          Src, DemandedBits, SrcElts, TLO.DAG, Depth + 1);
+      if (DemandedSrc) {
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, DemandedSrc,
+                                        Op.getOperand(1));
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     break;
   }
   case ISD::CONCAT_VECTORS: {
@@ -1478,6 +1489,13 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - DemandedBits.countTrailingZeros();
+    if (TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
+      return TLO.CombineTo(Op, Op0);
+
     // If this is an arithmetic shift right and only the low-bit is set, we can
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
@@ -1586,6 +1604,15 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::ROTL:
+  case ISD::ROTR: {
+    SDValue Op0 = Op.getOperand(0);
+
+    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
+    if (BitWidth == TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, Op0);
+    break;
+  }
   case ISD::BITREVERSE: {
     SDValue Src = Op.getOperand(0);
     APInt DemandedSrcBits = DemandedBits.reverseBits();
@@ -1613,7 +1640,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If we only care about the highest bit, don't bother shifting right.
     if (DemandedBits.isSignMask()) {
-      unsigned NumSignBits = TLO.DAG.ComputeNumSignBits(Op0);
+      unsigned NumSignBits =
+          TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
       bool AlreadySignExtended = NumSignBits >= BitWidth - ExVTBits + 1;
       // However if the input is already sign extended we expect the sign
       // extension to be dropped altogether later and do not simplify.

@@ -8,10 +8,11 @@
 
 #include "llvm-objcopy.h"
 #include "Buffer.h"
+#include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
-#include "COFF/COFFObjcopy.h"
 #include "MachO/MachOObjcopy.h"
+#include "wasm/WasmObjcopy.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,6 +26,7 @@
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -172,6 +174,8 @@ static Error executeObjcopyOnBinary(CopyConfig &Config, object::Binary &In,
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
     return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
+  else if (auto *WasmBinary = dyn_cast<object::WasmObjectFile>(&In))
+    return objcopy::wasm::executeObjcopyOnBinary(Config, *WasmBinary, Out);
   else
     return createStringError(object_error::invalid_file_type,
                              "unsupported object file format");

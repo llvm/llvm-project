@@ -16,6 +16,7 @@
 
 #include "CGValue.h"
 #include "EHScopeStack.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"

@@ -65,7 +65,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       if (G)
         if (const TargetInstrInfo *TII = G->getSubtarget().getInstrInfo())
           if (getMachineOpcode() < TII->getNumOpcodes())
-            return TII->getName(getMachineOpcode());
+            return std::string(TII->getName(getMachineOpcode()));
       return "<<Unknown Machine Node #" + utostr(getOpcode()) + ">>";
     }
     if (G) {
@@ -170,6 +170,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CopyToReg:                  return "CopyToReg";
   case ISD::CopyFromReg:                return "CopyFromReg";
   case ISD::UNDEF:                      return "undef";
+  case ISD::VSCALE:                     return "vscale";
   case ISD::MERGE_VALUES:               return "merge_values";
   case ISD::INLINEASM:                  return "inlineasm";
   case ISD::INLINEASM_BR:               return "inlineasm_br";

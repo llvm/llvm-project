@@ -16,7 +16,7 @@ set(CMAKE_MODULE_PATH
   )
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
-  project(libunwind)
+  project(libunwind LANGUAGES C CXX ASM)
 
   # Rely on llvm-config.
   set(CONFIG_OUTPUT)

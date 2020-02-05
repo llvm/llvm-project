@@ -1,6 +1,6 @@
 //===- ConvertStandardToSPIRV.cpp - Standard to SPIR-V dialect conversion--===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -24,6 +24,17 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Convert composite constant operation to SPIR-V dialect.
+// TODO(denis0x0D) : move to DRR.
+class ConstantCompositeOpConversion final : public SPIRVOpLowering<ConstantOp> {
+public:
+  using SPIRVOpLowering<ConstantOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(ConstantOp constCompositeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 
 /// Convert constant operation with IndexType return to SPIR-V constant
 /// operation. Since IndexType is not used within SPIR-V dialect, this needs
@@ -173,6 +184,39 @@ static spirv::AccessChainOp getElementPtr(OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantOp with composite type.
+//===----------------------------------------------------------------------===//
+
+PatternMatchResult ConstantCompositeOpConversion::matchAndRewrite(
+    ConstantOp constCompositeOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  auto compositeType =
+      constCompositeOp.getResult().getType().dyn_cast<RankedTensorType>();
+  if (!compositeType)
+    return matchFailure();
+
+  auto spirvCompositeType = typeConverter.convertType(compositeType);
+  if (!spirvCompositeType)
+    return matchFailure();
+
+  auto linearizedElements =
+      constCompositeOp.value().dyn_cast<DenseElementsAttr>();
+  if (!linearizedElements)
+    return matchFailure();
+
+  // If composite type has rank greater than one, then perform linearization.
+  if (compositeType.getRank() > 1) {
+    auto linearizedType = RankedTensorType::get(compositeType.getNumElements(),
+                                                compositeType.getElementType());
+    linearizedElements = linearizedElements.reshape(linearizedType);
+  }
+
+  rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+      constCompositeOp, spirvCompositeType, linearizedElements);
+  return matchSuccess();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp with index type.
 //===----------------------------------------------------------------------===//
 
@@ -290,9 +334,7 @@ LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
   auto loadPtr = getElementPtr(rewriter, typeConverter, loadOp.getLoc(),
                                loadOp.memref().getType().cast<MemRefType>(),
                                loadOperands.memref(), loadOperands.indices());
-  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr,
-                                             /*memory_access =*/nullptr,
-                                             /*alignment =*/nullptr);
+  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
   return matchSuccess();
 }
 
@@ -337,9 +379,7 @@ StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                     storeOp.memref().getType().cast<MemRefType>(),
                     storeOperands.memref(), storeOperands.indices());
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
-                                              storeOperands.value(),
-                                              /*memory_access =*/nullptr,
-                                              /*alignment =*/nullptr);
+                                              storeOperands.value());
   return matchSuccess();
 }
 
@@ -354,7 +394,8 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      OwningRewritePatternList &patterns) {
   // Add patterns that lower operations into SPIR-V dialect.
   populateWithGenerated(context, &patterns);
-  patterns.insert<ConstantIndexOpConversion, CmpFOpConversion, CmpIOpConversion,
+  patterns.insert<ConstantCompositeOpConversion, ConstantIndexOpConversion,
+                  CmpFOpConversion, CmpIOpConversion,
                   IntegerOpConversion<AddIOp, spirv::IAddOp>,
                   IntegerOpConversion<MulIOp, spirv::IMulOp>,
                   IntegerOpConversion<SignedDivIOp, spirv::SDivOp>,

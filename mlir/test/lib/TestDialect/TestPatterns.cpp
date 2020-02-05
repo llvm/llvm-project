@@ -1,6 +1,6 @@
 //===- TestPatterns.cpp - Test dialect pattern driver ---------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -103,26 +103,6 @@ struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
       };
       return;
     }
-
-    // Verification check.
-    // TODO: Move to ops that implement type infer interface.
-    getFunction().walk([this](Operation *op) -> void {
-      auto retTypeFn = dyn_cast<InferTypeOpInterface>(op);
-      if (!retTypeFn)
-        return;
-      auto *context = &getContext();
-      SmallVector<Type, 2> inferedReturnTypes;
-      if (failed(retTypeFn.inferReturnTypes(
-              context, op->getLoc(), op->getOperands(), op->getAttrs(),
-              op->getRegions(), inferedReturnTypes)))
-        return;
-      SmallVector<Type, 1> resultTypes(op->getResultTypes());
-      if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes, resultTypes)) {
-        op->emitOpError(
-            "inferred type incompatible with return type of operation");
-        return;
-      }
-    });
   }
 };
 } // end anonymous namespace
@@ -261,7 +241,7 @@ struct TestChangeProducerTypeI32ToF32 : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is I32, change the type to F32.
-    if (!(*op->result_type_begin()).isInteger(32))
+    if (!Type(*op->result_type_begin()).isInteger(32))
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF32Type());
     return matchSuccess();
@@ -274,7 +254,7 @@ struct TestChangeProducerTypeF32ToF64 : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is F32, change the type to F64.
-    if (!(*op->result_type_begin()).isF32())
+    if (!Type(*op->result_type_begin()).isF32())
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF64Type());
     return matchSuccess();
@@ -419,6 +399,11 @@ struct TestLegalizePatternDriver
 
     // Handle a full conversion.
     if (mode == ConversionMode::Full) {
+      // Check support for marking unknown operations as dynamically legal.
+      target.markUnknownOpDynamicallyLegal([](Operation *op) {
+        return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
+      });
+
       (void)applyFullConversion(getModule(), target, patterns, &converter);
       return;
     }
@@ -492,8 +477,7 @@ struct OneVResOneVOperandOp1Converter
     remappedOperands.push_back(rewriter.getRemappedValue(origOp));
     remappedOperands.push_back(rewriter.getRemappedValue(origOp));
 
-    SmallVector<Type, 1> resultTypes(op.getResultTypes());
-    rewriter.replaceOpWithNewOp<OneVResOneVOperandOp1>(op, resultTypes,
+    rewriter.replaceOpWithNewOp<OneVResOneVOperandOp1>(op, op.getResultTypes(),
                                                        remappedOperands);
     return matchSuccess();
   }

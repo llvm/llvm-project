@@ -1413,45 +1413,26 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
+    // We might need to restore vccz to its correct value for either of two
+    // different reasons; see ST->hasReadVCCZBug() and
+    // ST->partialVCCWritesUpdateVCCZ().
     bool RestoreVCCZ = false;
     if (readsVCCZ(Inst)) {
       if (!VCCZCorrect) {
         // Restore vccz if it's not known to be correct already.
         RestoreVCCZ = true;
-      } else if (ST->hasReadVCCZBug() &&
-                 ScoreBrackets.getScoreLB(LGKM_CNT) <
-                 ScoreBrackets.getScoreUB(LGKM_CNT) &&
-                 ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-        // Restore vccz if there's an outstanding smem read, which could
-        // complete and clobber vccz at any time.
-        RestoreVCCZ = true;
-      }
-    }
-
-    // Don't examine operands unless we need to track vccz correctness.
-    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
-      // Only examine explicit defs.
-      for (auto &Op : Inst.defs()) {
-        switch (Op.getReg()) {
-        case AMDGPU::VCC:
-          if (ST->hasReadVCCZBug() &&
-              ScoreBrackets.getScoreLB(LGKM_CNT) <
-              ScoreBrackets.getScoreUB(LGKM_CNT) &&
-              ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-            // Writes to vcc while there's an outstanding smem read may get
-            // clobbered as soon as any read completes.
-            VCCZCorrect = false;
-          } else {
-            // Writes to vcc will fix any incorrect value in vccz.
-            VCCZCorrect = true;
-          }
-          break;
-        case AMDGPU::VCC_LO:
-        case AMDGPU::VCC_HI:
-          // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
-          if (!ST->partialVCCWritesUpdateVCCZ())
-            VCCZCorrect = false;
-          break;
+      } else if (ST->hasReadVCCZBug()) {
+        // There is a hardware bug on CI/SI where SMRD instruction may corrupt
+        // vccz bit, so when we detect that an instruction may read from a
+        // corrupt vccz bit, we need to:
+        // 1. Insert s_waitcnt lgkm(0) to wait for all outstanding SMRD
+        //    operations to complete.
+        // 2. Restore the correct value of vccz by writing the current value
+        //    of vcc back to vcc.
+        if (ScoreBrackets.getScoreLB(LGKM_CNT) <
+            ScoreBrackets.getScoreUB(LGKM_CNT) &&
+            ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+          RestoreVCCZ = true;
         }
       }
     }
@@ -1460,6 +1441,28 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
         const Value *Ptr = Memop->getValue();
         SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+      }
+    }
+
+    // Don't examine operands unless we need to track vccz correctness.
+    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
+          Inst.definesRegister(AMDGPU::VCC_HI)) {
+	// Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+	if (!ST->partialVCCWritesUpdateVCCZ())
+	  VCCZCorrect = false;
+      } else if (Inst.definesRegister(AMDGPU::VCC)) {
+	if (ST->hasReadVCCZBug() &&
+	    ScoreBrackets.getScoreLB(LGKM_CNT) <
+	    ScoreBrackets.getScoreUB(LGKM_CNT) &&
+	    ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+	  // Writes to vcc while there's an outstanding smem read may get
+	  // clobbered as soon as any read completes.
+	  VCCZCorrect = false;
+	} else {
+	  // Writes to vcc will fix any incorrect value in vccz.
+	  VCCZCorrect = true;
+	}
       }
     }
 

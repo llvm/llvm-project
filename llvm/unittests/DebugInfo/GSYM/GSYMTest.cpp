@@ -160,7 +160,7 @@ TEST(GSYMTest, TestFunctionInfo) {
 }
 
 static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
-                                        std::string Bytes,
+                                        StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
@@ -335,8 +335,7 @@ static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
 }
 
 static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
-                                      std::string Bytes,
-                                      const uint64_t BaseAddr,
+                                      StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
@@ -874,8 +873,7 @@ TEST(GSYMTest, TestLineTable) {
 }
 
 static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
-                                     std::string Bytes,
-                                     const uint64_t BaseAddr,
+                                     StringRef Bytes, const uint64_t BaseAddr,
                                      std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
@@ -962,7 +960,7 @@ static void TestHeaderEncodeError(const Header &H,
   checkError(ExpectedErrorMsg, std::move(Err));
 }
 
-static void TestHeaderDecodeError(std::string Bytes,
+static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
   const support::endianness ByteOrder = llvm::support::little;
   uint8_t AddressSize = 4;

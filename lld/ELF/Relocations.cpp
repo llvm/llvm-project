@@ -73,6 +73,15 @@ static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   return None;
 }
 
+static std::string getDefinedLocation(const Symbol &sym) {
+  std::string msg = "\n>>> defined in ";
+  if (sym.file)
+    msg += toString(sym.file);
+  else if (Optional<std::string> loc = getLinkerScriptLocation(sym))
+    msg += *loc;
+  return msg;
+}
+
 // Construct a message in the following format.
 //
 // >>> defined in /home/alice/src/foo.o
@@ -80,17 +89,28 @@ static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
 // >>>               /home/alice/src/bar.o:(.text+0x1)
 static std::string getLocation(InputSectionBase &s, const Symbol &sym,
                                uint64_t off) {
-  std::string msg = "\n>>> defined in ";
-  if (sym.file)
-    msg += toString(sym.file);
-  else if (Optional<std::string> loc = getLinkerScriptLocation(sym))
-    msg += *loc;
-
-  msg += "\n>>> referenced by ";
+  std::string msg = getDefinedLocation(sym) + "\n>>> referenced by ";
   std::string src = s.getSrcMsg(sym, off);
   if (!src.empty())
     msg += src + "\n>>>               ";
   return msg + s.getObjMsg(off);
+}
+
+void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
+                      int64_t min, uint64_t max) {
+  ErrorPlace errPlace = getErrorPlace(loc);
+  std::string hint;
+  if (rel.sym && !rel.sym->isLocal())
+    hint = "; references " + lld::toString(*rel.sym) +
+           getDefinedLocation(*rel.sym);
+
+  if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
+    hint += "; consider recompiling with -fdebug-types-section to reduce size "
+            "of debug sections";
+
+  errorOrWarn(errPlace.loc + "relocation " + lld::toString(rel.type) +
+              " out of range: " + v.str() + " is not in [" + Twine(min).str() +
+              ", " + Twine(max).str() + "]" + hint);
 }
 
 namespace {
@@ -761,7 +781,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
       break;
 
     // Substitute name[i].
-    newName = name;
+    newName = std::string(name);
     for (char c = '0'; c <= 'z'; ++c) {
       newName[i] = c;
       if (const Symbol *s = suggest(newName))
@@ -1198,10 +1218,16 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
                     getLocation(sec, sym, offset));
       if (!sym.isInPlt())
         addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
-      if (!sym.isDefined())
+      if (!sym.isDefined()) {
         replaceWithDefined(
             sym, in.plt,
             target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+        if (config->emachine == EM_PPC) {
+          // PPC32 canonical PLT entries are at the beginning of .glink
+          cast<Defined>(sym).value = in.plt->headerSize;
+          in.plt->headerSize += 16;
+        }
+      }
       sym.needsPltAddr = true;
       sec.relocations.push_back({expr, type, offset, addend, &sym});
       return;
@@ -1298,10 +1324,10 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     if (expr == R_GOT_PC && !isAbsoluteValue(sym)) {
       expr = target->adjustRelaxExpr(type, relocatedAddr, expr);
     } else {
-      // Addend of R_PPC_PLTREL24 is used to choose call stub type. It should be
-      // ignored if optimized to R_PC.
+      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
+      // stub type. It should be ignored if optimized to R_PC.
       if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
-        addend = 0;
+        addend &= ~0x8000;
       expr = fromPlt(expr);
     }
   }
@@ -1851,9 +1877,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
                               rel.sym->getVA(rel.addend) + getPCBias(rel.type)))
       return true;
     rel.sym = &t->destination;
-    // TODO Restore addend on all targets.
-    if (config->emachine == EM_AARCH64 || config->emachine == EM_PPC64)
-      rel.addend = t->addend;
+    rel.addend = t->addend;
     if (rel.sym->isInPlt())
       rel.expr = toPlt(rel.expr);
   }
@@ -1931,16 +1955,11 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
             rel.sym = t->getThunkTargetSym();
             rel.expr = fromPlt(rel.expr);
 
-            // On AArch64 and PPC64, a jump/call relocation may be encoded as
+            // On AArch64 and PPC, a jump/call relocation may be encoded as
             // STT_SECTION + non-zero addend, clear the addend after
             // redirection.
-            //
-            // The addend of R_PPC_PLTREL24 should be ignored after changing to
-            // R_PC.
-            if (config->emachine == EM_AARCH64 ||
-                config->emachine == EM_PPC64 ||
-                (config->emachine == EM_PPC && rel.type == R_PPC_PLTREL24))
-              rel.addend = 0;
+            if (config->emachine != EM_MIPS)
+              rel.addend = -getPCBias(rel.type);
           }
 
         for (auto &p : isd->thunkSections)

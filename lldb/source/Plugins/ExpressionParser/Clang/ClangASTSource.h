@@ -60,7 +60,7 @@ public:
   }
   void MaterializeVisibleDecls(const clang::DeclContext *DC) { return; }
 
-  void InstallASTContext(ClangASTContext &ast_context);
+  void InstallASTContext(TypeSystemClang &ast_context);
 
   //
   // APIs for ExternalASTSource
@@ -307,7 +307,7 @@ protected:
   ///     is the containing object.
   void FindObjCPropertyAndIvarDecls(NameSearchContext &context);
 
-  /// A wrapper for ClangASTContext::CopyType that sets a flag that
+  /// A wrapper for TypeSystemClang::CopyType that sets a flag that
   /// indicates that we should not respond to queries during import.
   ///
   /// \param[in] src_type
@@ -356,6 +356,10 @@ public:
   ///     True if lookup succeeded; false otherwise.
   ClangASTImporter::DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
+  /// Returns the TypeSystem that uses this ClangASTSource instance as it's
+  /// ExternalASTSource.
+  TypeSystemClang *GetTypeSystem() const { return m_clang_ast_context; }
+
 protected:
   bool FindObjCMethodDeclsWithOrigin(
       unsigned int current_id, NameSearchContext &context,
@@ -370,8 +374,8 @@ protected:
   const lldb::TargetSP m_target;
   /// The AST context requests are coming in for.
   clang::ASTContext *m_ast_context;
-  /// The ClangASTContext for m_ast_context.
-  ClangASTContext *m_clang_ast_context;
+  /// The TypeSystemClang for m_ast_context.
+  TypeSystemClang *m_clang_ast_context;
   /// The file manager paired with the AST context.
   clang::FileManager *m_file_manager;
   /// The target's AST importer.

@@ -1,4 +1,4 @@
-//===-- ConnectionGenericFileWindows.cpp ------------------------*- C++ -*-===//
+//===-- ConnectionGenericFileWindows.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -127,7 +127,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
   }
 
   m_owns_file = true;
-  m_uri.assign(path);
+  m_uri = path.str();
   return eConnectionStatusSuccess;
 }
 

@@ -66,6 +66,10 @@ static cl::opt<unsigned> LdStLimit("aarch64-load-store-scan-limit",
 static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
                                      cl::Hidden);
 
+// Enable register renaming to find additional store pairing opportunities.
+static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
+                                    cl::init(false), cl::Hidden);
+
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
 namespace {
@@ -1325,6 +1329,19 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
 
     // For defs, check if we can rename the first def of RegToRename.
     if (FoundDef) {
+      // For some pseudo instructions, we might not generate code in the end
+      // (e.g. KILL) and we would end up without a correct def for the rename
+      // register.
+      // TODO: This might be overly conservative and we could handle those cases
+      // in multiple ways:
+      //       1. Insert an extra copy, to materialize the def.
+      //       2. Skip pseudo-defs until we find an non-pseudo def.
+      if (MI.isPseudo()) {
+        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo instruction " << MI
+                          << "\n");
+        return false;
+      }
+
       for (auto &MOP : MI.operands()) {
         if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
@@ -1433,6 +1450,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
   Optional<bool> MaybeCanRename = None;
+  if (!EnableRenaming)
+    MaybeCanRename = {false};
+
   SmallPtrSet<const TargetRegisterClass *, 5> RequiredClasses;
   LiveRegUnits UsedInBetween;
   UsedInBetween.init(*TRI);

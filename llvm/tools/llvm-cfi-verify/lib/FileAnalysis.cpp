@@ -274,7 +274,8 @@ Expected<DIInliningInfo>
 FileAnalysis::symbolizeInlinedCode(object::SectionedAddress Address) {
   assert(Symbolizer != nullptr && "Symbolizer is invalid.");
 
-  return Symbolizer->symbolizeInlinedCode(Object->getFileName(), Address);
+  return Symbolizer->symbolizeInlinedCode(std::string(Object->getFileName()),
+                                          Address);
 }
 
 CFIProtectionStatus
@@ -515,8 +516,9 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     // Check if this instruction exists in the range of the DWARF metadata.
     if (!IgnoreDWARFFlag) {
-      auto LineInfo = Symbolizer->symbolizeCode(
-          Object->getFileName(), {VMAddress, Address.SectionIndex});
+      auto LineInfo =
+          Symbolizer->symbolizeCode(std::string(Object->getFileName()),
+                                    {VMAddress, Address.SectionIndex});
       if (!LineInfo) {
         handleAllErrors(LineInfo.takeError(), [](const ErrorInfoBase &E) {
           errs() << "Symbolizer failed to get line: " << E.message() << "\n";
@@ -577,7 +579,8 @@ Error FileAnalysis::parseSymbolTable() {
   return Error::success();
 }
 
-UnsupportedDisassembly::UnsupportedDisassembly(StringRef Text) : Text(Text) {}
+UnsupportedDisassembly::UnsupportedDisassembly(StringRef Text)
+    : Text(std::string(Text)) {}
 
 char UnsupportedDisassembly::ID;
 void UnsupportedDisassembly::log(raw_ostream &OS) const {

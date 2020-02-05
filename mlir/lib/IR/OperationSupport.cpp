@@ -1,6 +1,6 @@
 //===- OperationSupport.cpp -----------------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -151,6 +151,10 @@ OperandRange::OperandRange(Operation *op)
 
 ResultRange::ResultRange(Operation *op)
     : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
+
+ArrayRef<Type> ResultRange::getTypes() const {
+  return getBase()->getResultTypes();
+}
 
 /// See `indexed_accessor_range` for details.
 OpResult ResultRange::dereference(Operation *op, ptrdiff_t index) {

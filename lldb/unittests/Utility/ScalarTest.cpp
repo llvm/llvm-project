@@ -1,4 +1,4 @@
-//===-- ScalarTest.cpp ------------------------------------------*- C++ -*-===//
+//===-- ScalarTest.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -157,7 +157,7 @@ TEST(ScalarTest, ExtractBitfield) {
 template <typename T> static std::string ScalarGetValue(T value) {
   StreamString stream;
   Scalar(value).GetValue(&stream, false);
-  return stream.GetString();
+  return std::string(stream.GetString());
 }
 
 TEST(ScalarTest, GetValue) {

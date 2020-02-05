@@ -1,4 +1,4 @@
-//===-- DebugNamesDWARFIndex.cpp -------------------------------*- C++ -*-===//
+//===-- DebugNamesDWARFIndex.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,12 +53,7 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   if (!cu)
     return llvm::None;
 
-  // This initializes the DWO symbol file. It's not possible for
-  // GetDwoSymbolFile to call this automatically because of mutual recursion
-  // between this and DWARFDebugInfoEntry::GetAttributeValue.
-  cu->ExtractUnitDIEIfNeeded();
   cu = &cu->GetNonSkeletonUnit();
-
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
     return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
                   DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);

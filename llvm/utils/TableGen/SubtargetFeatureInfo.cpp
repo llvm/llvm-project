@@ -120,7 +120,7 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
 
     OS << "  if (";
     std::string CondStorage =
-        SFI.TheDef->getValueAsString("AssemblerCondString");
+        std::string(SFI.TheDef->getValueAsString("AssemblerCondString"));
     StringRef Conds = CondStorage;
     std::pair<StringRef, StringRef> Comma = Conds.split(',');
     bool First = true;

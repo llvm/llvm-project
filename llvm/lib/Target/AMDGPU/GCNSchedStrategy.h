@@ -64,6 +64,14 @@ public:
 
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
+  enum : unsigned {
+    Collect,
+    InitialSchedule,
+    UnclusteredReschedule,
+    ClusteredLowOccupancyReschedule,
+    LastStage = ClusteredLowOccupancyReschedule
+  };
+
   const GCNSubtarget &ST;
 
   SIMachineFunctionInfo &MFI;
@@ -83,6 +91,10 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Vector of regions recorder for later rescheduling
   SmallVector<std::pair<MachineBasicBlock::iterator,
                         MachineBasicBlock::iterator>, 32> Regions;
+
+  // Records if a region is not yet scheduled, or schedule has been reverted,
+  // or we generally desire to reschedule it.
+  BitVector RescheduleRegions;
 
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;

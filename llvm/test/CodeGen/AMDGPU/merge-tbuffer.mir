@@ -133,17 +133,17 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 126, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 125, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_float_32
 body:             |
@@ -170,17 +170,17 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 94, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 93, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_sint_32
 body:             |
@@ -207,17 +207,17 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 78, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 77, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_uint_32
 body:             |
@@ -492,11 +492,11 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 123, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 126, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 126, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX9: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 125, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx9_tbuffer_store_float32
 body:             |
@@ -546,11 +546,11 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 91, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 94, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 94, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX9: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 93, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx9_tbuffer_store_sint32
 body:             |
@@ -600,11 +600,11 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 75, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 78, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX9: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 78, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX9: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX9: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 77, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx9_tbuffer_store_uint32
 body:             |
@@ -911,17 +911,17 @@ body:             |
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 77, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 74, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_float_32
 body:             |
@@ -948,17 +948,17 @@ body:             |
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 76, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 73, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_sint_32
 body:             |
@@ -985,17 +985,17 @@ body:             |
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 75, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %18.sub0_sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY killed %18.sub2_sub3
+# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %16.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 72, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
 # GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %17.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_uint_32
 body:             |
@@ -1271,11 +1271,11 @@ body:             |
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 64, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 77, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 77, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX10: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 74, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx10_tbuffer_store_float32
 body:             |
@@ -1325,11 +1325,11 @@ body:             |
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 63, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 76, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 76, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX10: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 73, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx10_tbuffer_store_sint32
 body:             |
@@ -1379,11 +1379,11 @@ body:             |
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 62, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, killed %16, %subreg.sub2_sub3
-# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %18, %13, 0, 16, 75, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX10: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 75, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16, align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
-# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %17, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX10: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
 # GFX10: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 72, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
 name: gfx10_tbuffer_store_uint32
 body:             |

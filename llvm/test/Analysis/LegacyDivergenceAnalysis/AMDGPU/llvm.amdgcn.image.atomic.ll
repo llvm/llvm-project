@@ -1,4 +1,4 @@
-;RUN: opt -mtriple=amdgcn-mesa-mesa3d -analyze -divergence %s | FileCheck %s
+;RUN: opt -mtriple=amdgcn-mesa-mesa3d -amdgpu-use-legacy-divergence-analysis -analyze -divergence %s | FileCheck %s
 
 ;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(
 define float @image_atomic_swap(<8 x i32> inreg %rsrc, i32 inreg %addr, i32 inreg %data) #0 {

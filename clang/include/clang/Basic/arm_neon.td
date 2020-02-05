@@ -528,9 +528,16 @@ def VMULL_LANE    : SOpInst<"vmull_lane", "(>Q)..I", "siUsUi", OP_MULL_LN>;
 def VQDMULL_N     : SOpInst<"vqdmull_n", "(>Q).1", "si", OP_QDMULL_N>;
 def VQDMULL_LANE  : SOpInst<"vqdmull_lane", "(>Q)..I", "si", OP_QDMULL_LN>;
 def VQDMULH_N     : SOpInst<"vqdmulh_n", "..1", "siQsQi", OP_QDMULH_N>;
-def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_N    : SOpInst<"vqrdmulh_n", "..1", "siQsQi", OP_QRDMULH_N>;
+
+let ArchGuard = "!defined(__aarch64__)" in {
+def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "..qI", "siQsQi", OP_QRDMULH_LN>;
+}
+let ArchGuard = "defined(__aarch64__)" in {
+def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..qI", "siQsQi">;
+def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..qI", "siQsQi">;
+}
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
 def VQRDMLAH_LANE : SOpInst<"vqrdmlah_lane", "...qI", "siQsQi", OP_QRDMLAH_LN>;
@@ -951,9 +958,10 @@ def VQDMULL_HIGH_LANE   : SOpInst<"vqdmull_high_lane", "(>Q)Q.I", "si",
 def VQDMULL_HIGH_LANEQ  : SOpInst<"vqdmull_high_laneq", "(>Q)QQI", "si",
                                   OP_QDMULLHi_LN>;
 
-def VQDMULH_LANEQ  : SOpInst<"vqdmulh_laneq", "..QI", "siQsQi", OP_QDMULH_LN>;
-def VQRDMULH_LANEQ : SOpInst<"vqrdmulh_laneq", "..QI", "siQsQi", OP_QRDMULH_LN>;
-
+let isLaneQ = 1 in {
+def VQDMULH_LANEQ  : SInst<"vqdmulh_laneq", "..QI", "siQsQi">;
+def VQRDMULH_LANEQ : SInst<"vqrdmulh_laneq", "..QI", "siQsQi">;
+}
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
 def VQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "...QI", "siQsQi", OP_QRDMLAH_LN>;
 def VQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "...QI", "siQsQi", OP_QRDMLSH_LN>;

@@ -382,7 +382,7 @@ toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
     if (!llvm::sys::fs::exists(PrefixDir))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << PrefixDir;
   } else
-    PrefixDir = PS4SDKDir.str();
+    PrefixDir = std::string(PS4SDKDir.str());
 
   SmallString<512> PS4SDKIncludeDir(PrefixDir);
   llvm::sys::path::append(PS4SDKIncludeDir, "target/include");
@@ -407,7 +407,7 @@ toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
         << "PS4 system libraries" << PS4SDKLibDir;
     return;
   }
-  getFilePaths().push_back(PS4SDKLibDir.str());
+  getFilePaths().push_back(std::string(PS4SDKLibDir.str()));
 }
 
 Tool *toolchains::PS4CPU::buildAssembler() const {

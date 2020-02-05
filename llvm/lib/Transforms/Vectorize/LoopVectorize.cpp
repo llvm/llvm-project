@@ -2268,7 +2268,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
       }
       else
         NewLoad = Builder.CreateAlignedLoad(VecTy, AddrParts[Part],
-                                            Group->getAlignment(), "wide.vec");
+                                            Group->getAlign(), "wide.vec");
       Group->addMetadata(NewLoad);
       NewLoads.push_back(NewLoad);
     }
@@ -2343,11 +2343,11 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
       Value *ShuffledMask = Builder.CreateShuffleVector(
           BlockInMaskPart, Undefs, RepMask, "interleaved.mask");
       NewStoreInstr = Builder.CreateMaskedStore(
-          IVec, AddrParts[Part], Group->getAlignment(), ShuffledMask);
+          IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
     }
     else
-      NewStoreInstr = Builder.CreateAlignedStore(IVec, AddrParts[Part],
-                                                 Group->getAlignment());
+      NewStoreInstr =
+          Builder.CreateAlignedStore(IVec, AddrParts[Part], Group->getAlign());
 
     Group->addMetadata(NewStoreInstr);
   }
@@ -2437,8 +2437,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         Value *VectorGep = State.get(Addr, Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep,
-                                            Alignment.value(), MaskPart);
+        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
+                                            MaskPart);
       } else {
         if (Reverse) {
           // If we store to reverse consecutive memory locations, then we need
@@ -2449,11 +2449,10 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
         }
         auto *VecPtr = CreateVecPtr(Part, State.get(Addr, {0, 0}));
         if (isMaskRequired)
-          NewSI = Builder.CreateMaskedStore(
-              StoredVal, VecPtr, Alignment.value(), BlockInMaskParts[Part]);
+          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
+                                            BlockInMaskParts[Part]);
         else
-          NewSI =
-              Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment.value());
+          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
       }
       addMetadata(NewSI, SI);
     }
@@ -2468,7 +2467,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
     if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(Addr, Part);
-      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment.value(), MaskPart,
+      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment, MaskPart,
                                          nullptr, "wide.masked.gather");
       addMetadata(NewLI, LI);
     } else {
@@ -2478,8 +2477,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
             VecPtr, Alignment, BlockInMaskParts[Part], UndefValue::get(DataTy),
             "wide.masked.load");
       else
-        NewLI = Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment.value(),
-                                          "wide.load");
+        NewLI =
+            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
 
       // Add metadata to the load, but setVectorValue to the reverse shuffle.
       addMetadata(NewLI, LI);
@@ -6729,7 +6728,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   BranchInst *BI = dyn_cast<BranchInst>(Src->getTerminator());
   assert(BI && "Unexpected terminator found");
 
-  if (!BI->isConditional())
+  if (!BI->isConditional() || BI->getSuccessor(0) == BI->getSuccessor(1))
     return EdgeMaskCache[Edge] = SrcMask;
 
   VPValue *EdgeMask = Plan->getVPValue(BI->getCondition());
@@ -7131,24 +7130,35 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
   SmallPtrSet<Instruction *, 4> DeadInstructions;
   collectTriviallyDeadInstructions(DeadInstructions);
 
+  // Add assume instructions we need to drop to DeadInstructions, to prevent
+  // them from being added to the VPlan.
+  // TODO: We only need to drop assumes in blocks that get flattend. If the
+  // control flow is preserved, we should keep them.
+  auto &ConditionalAssumes = Legal->getConditionalAssumes();
+  DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
+
+  DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
+  // Dead instructions do not need sinking. Remove them from SinkAfter.
+  for (Instruction *I : DeadInstructions)
+    SinkAfter.erase(I);
+
   for (unsigned VF = MinVF; VF < MaxVF + 1;) {
     VFRange SubRange = {VF, MaxVF + 1};
-    VPlans.push_back(
-        buildVPlanWithVPRecipes(SubRange, NeedDef, DeadInstructions));
+    VPlans.push_back(buildVPlanWithVPRecipes(SubRange, NeedDef,
+                                             DeadInstructions, SinkAfter));
     VF = SubRange.End;
   }
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
+    SmallPtrSetImpl<Instruction *> &DeadInstructions,
+    const DenseMap<Instruction *, Instruction *> &SinkAfter) {
 
   // Hold a mapping from predicated instructions to their recipes, in order to
   // fix their AlsoPack behavior if a user is determined to replicate and use a
   // scalar instead of vector value.
   DenseMap<Instruction *, VPReplicateRecipe *> PredInst2Recipe;
-
-  DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
 
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
@@ -7188,13 +7198,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // Build initial VPlan: Scan the body of the loop in a topological order to
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
-
-  // Add assume instructions we need to drop to DeadInstructions, to prevent
-  // them from being added to the VPlan.
-  // TODO: We only need to drop assumes in blocks that get flattend. If the
-  // control flow is preserved, we should keep them.
-  auto &ConditionalAssumes = Legal->getConditionalAssumes();
-  DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");

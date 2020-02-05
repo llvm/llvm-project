@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
                          << "\': " << EC.message() << '\n';
       return 1;
     }
-    return msDemangle(FileOrErr->get()->getBuffer()) ? 0 : 1;
+    return msDemangle(std::string(FileOrErr->get()->getBuffer())) ? 0 : 1;
   }
 
   bool Success = true;
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
         outs() << Line << "\n";
         outs().flush();
       }
-      if (!msDemangle(Line))
+      if (!msDemangle(std::string(Line)))
         Success = false;
       outs() << "\n";
     }
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     for (StringRef S : Symbols) {
       outs() << S << "\n";
       outs().flush();
-      if (!msDemangle(S))
+      if (!msDemangle(std::string(S)))
         Success = false;
       outs() << "\n";
     }

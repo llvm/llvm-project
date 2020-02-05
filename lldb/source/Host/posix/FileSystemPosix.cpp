@@ -1,4 +1,4 @@
-//===-- FileSystem.cpp ------------------------------------------*- C++ -*-===//
+//===-- FileSystemPosix.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +43,7 @@ Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
 Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   Status error;
   char buf[PATH_MAX];
-  ssize_t count = ::readlink(src.GetCString(), buf, sizeof(buf) - 1);
+  ssize_t count = ::readlink(src.GetPath().c_str(), buf, sizeof(buf) - 1);
   if (count < 0)
     error.SetErrorToErrno();
   else {

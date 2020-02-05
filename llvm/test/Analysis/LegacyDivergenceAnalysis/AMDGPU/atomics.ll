@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -analyze -divergence %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -amdgpu-use-legacy-divergence-analysis -analyze -divergence %s | FileCheck %s
 
 ; CHECK: DIVERGENT: %orig = atomicrmw xchg i32* %ptr, i32 %val seq_cst
 define i32 @test1(i32* %ptr, i32 %val) #0 {

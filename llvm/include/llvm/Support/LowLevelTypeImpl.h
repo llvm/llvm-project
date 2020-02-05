@@ -137,6 +137,12 @@ public:
                       : LLT::scalar(NewEltSize);
   }
 
+  /// Return a vector or scalar with the same element type and the new number of
+  /// elements.
+  LLT changeNumElements(unsigned NewNumElts) const {
+    return LLT::scalarOrVector(NewNumElts, getScalarType());
+  }
+
   bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
 
   unsigned getScalarSizeInBits() const {

@@ -67,7 +67,7 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple,
   std::string SysRoot = computeSysRoot();
   path_list &Paths = getFilePaths();
 
-  const std::string OSLibDir = getOSLibDir(Triple, Args);
+  const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);
 
 #ifdef ENABLE_LINKER_BUILD_ID

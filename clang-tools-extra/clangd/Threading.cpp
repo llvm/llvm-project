@@ -20,8 +20,10 @@ void Notification::notify() {
   {
     std::lock_guard<std::mutex> Lock(Mu);
     Notified = true;
+    // Broadcast with the lock held. This ensures that it's safe to destroy
+    // a Notification after wait() returns, even from another thread.
+    CV.notify_all();
   }
-  CV.notify_all();
 }
 
 void Notification::wait() const {

@@ -1,6 +1,6 @@
 //===- Builders.h - MLIR Declarative Linalg Builders ------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -94,37 +94,63 @@ inline StringRef toString(IterType t) {
   llvm_unreachable("Unsupported IterType");
 }
 
-/// A StructuredIndexed represents a captured value that can be indexed and
-/// passed to the `makeGenericLinalgOp`. It allows writing intuitive index
-/// expressions such as:
+/// A StructuredIndexed represents an indexable quantity that is either:
+/// 1. a captured value, which is suitable for buffer and tensor operands, or;
+/// 2. a captured type, which is suitable for tensor return values.
+///
+/// A StructuredIndexed itself is indexed and passed to `makeGenericLinalgOp`.
+/// It enable an idiomatic syntax for index expressions such as:
 ///
 /// ```
-///      StructuredIndexed A(vA), B(vB), C(vC);
+///      StructuredIndexed A(buffer_or_tensor_value), B(buffer_or_tensor_value),
+///        C(buffer_value_or_tensor_type);
 ///      makeGenericLinalgOp({A({m, n}), B({k, n})}, {C({m, n})}, ... );
 /// ```
-struct StructuredIndexed {
-  StructuredIndexed(Value v) : value(v) {}
+struct StructuredIndexed : public ValueHandle {
+  StructuredIndexed(Type type) : ValueHandle(type) {}
+  StructuredIndexed(Value value) : ValueHandle(value) {}
+  StructuredIndexed(ValueHandle valueHandle) : ValueHandle(valueHandle) {}
   StructuredIndexed operator()(ArrayRef<AffineExpr> indexings) {
-    return StructuredIndexed(value, indexings);
+    return StructuredIndexed(*this, indexings);
   }
 
-  operator Value() const /* implicit */ { return value; }
   ArrayRef<AffineExpr> getExprs() { return exprs; }
 
 private:
-  StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
-      : value(v), exprs(indexings.begin(), indexings.end()) {
-    assert(v.getType().isa<MemRefType>() && "MemRefType expected");
+  StructuredIndexed(Type t, ArrayRef<AffineExpr> indexings)
+      : ValueHandle(t), exprs(indexings.begin(), indexings.end()) {
+    assert(t.isa<RankedTensorType>() && "RankedTensor expected");
   }
-  StructuredIndexed(ValueHandle v, ArrayRef<AffineExpr> indexings)
-      : StructuredIndexed(v.getValue(), indexings) {}
+  StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
+      : ValueHandle(v), exprs(indexings.begin(), indexings.end()) {
+    assert((v.getType().isa<MemRefType>() ||
+            v.getType().isa<RankedTensorType>()) &&
+           "MemRef or RankedTensor expected");
+  }
+  StructuredIndexed(ValueHandle vh, ArrayRef<AffineExpr> indexings)
+      : ValueHandle(vh), exprs(indexings.begin(), indexings.end()) {}
 
-  Value value;
   SmallVector<AffineExpr, 4> exprs;
 };
 
 inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 
+/// Build a `linalg.generic` op with the specified `inputs`, `outputs` and
+/// `region`.
+///
+/// `otherValues` and `otherAttributes` may be passed and will be appended as
+/// operands and attributes respectively.
+///
+/// Prerequisites:
+/// =============
+///
+/// 1. `inputs` may contain StructuredIndexed that capture either buffer or
+/// tensor values.
+/// 2. `outputs` may contain StructuredIndexed that capture either buffer values
+/// or tensor types. If both buffer values and tensor types are present, then
+/// all buffer values must appear before any tensor type. Without this
+/// restriction output tensor results would need to be reordered, which would
+/// result in surprising behavior when combined with region definition.
 Operation *makeGenericLinalgOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
@@ -189,7 +215,7 @@ Operation *linalg_pointwise_add(StructuredIndexed I1, StructuredIndexed I2,
                                 StructuredIndexed O);
 
 /// Build a linalg.pointwise with all `parallel` iterators and a region that
-/// computes `O = max(I!, I2)`. The client is responsible for specifying the
+/// computes `O = max(I1, I2)`. The client is responsible for specifying the
 /// proper indexings when creating the StructuredIndexed.
 Operation *linalg_pointwise_max(StructuredIndexed I1, StructuredIndexed I2,
                                 StructuredIndexed O);

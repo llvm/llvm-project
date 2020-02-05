@@ -3012,7 +3012,11 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
           << Method->getDeclName();
     }
 
-    if (ReceiverType->isObjCClassType() && !isImplicit) {
+    // Under ARC, self can't be assigned, and doing a direct call to `self`
+    // when it's a Class is hence safe.  For other cases, we can't trust `self`
+    // is what we think it is, so we reject it.
+    if (ReceiverType->isObjCClassType() && !isImplicit &&
+        !(Receiver->isObjCSelfExpr() && getLangOpts().ObjCAutoRefCount)) {
       Diag(Receiver->getExprLoc(),
            diag::err_messaging_class_with_direct_method);
       Diag(Method->getLocation(), diag::note_direct_method_declared_at)

@@ -100,6 +100,11 @@ struct MyTarget : public ConversionTarget {
     /// callback.
     addDynamicallyLegalOp<ReturnOp>([](ReturnOp op) { ... });
 
+    /// Treat unknown operations, i.e. those without a legalization action
+    /// directly set, as dynamically legal.
+    markUnknownOpDynamicallyLegal();
+    markUnknownOpDynamicallyLegal([](Operation *op) { ... });
+
     //--------------------------------------------------------------------------
     // Marking an operation as illegal.
 

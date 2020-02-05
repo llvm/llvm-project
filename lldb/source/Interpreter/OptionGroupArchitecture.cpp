@@ -1,4 +1,4 @@
-//===-- OptionGroupArchitecture.cpp -----------------------------*- C++ -*-===//
+//===-- OptionGroupArchitecture.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -42,7 +42,7 @@ OptionGroupArchitecture::SetOptionValue(uint32_t option_idx,
 
   switch (short_option) {
   case 'a':
-    m_arch_str.assign(option_arg);
+    m_arch_str.assign(std::string(option_arg));
     break;
 
   default:

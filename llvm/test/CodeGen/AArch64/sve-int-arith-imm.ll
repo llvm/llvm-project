@@ -446,3 +446,39 @@ define <vscale x 2 x i64> @mul_i64_pos(<vscale x 2 x i64> %a) {
   %res = mul <vscale x 2 x i64> %a, %splat
   ret <vscale x 2 x i64> %res
 }
+
+define <vscale x 8 x i16> @mul_i16_range(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: mul_i16_range
+; CHECK: mov w[[W:[0-9]+]], #255
+; CHECK-NEXT: mov z1.h, w[[W]]
+; CHECK: ptrue p0.h
+; CHECK-NEXT: mul z0.h, p0/m, z0.h, z1.h
+  %elt = insertelement <vscale x 8 x i16> undef, i16 255, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %res = mul <vscale x 8 x i16> %a, %splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @mul_i32_range(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: mul_i32_range
+; CHECK: mov w[[W:[0-9]+]], #255
+; CHECK-NEXT: mov z1.s, w[[W]]
+; CHECK: ptrue p0.s
+; CHECK-NEXT: mul z0.s, p0/m, z0.s, z1.s
+  %elt = insertelement <vscale x 4 x i32> undef, i32 255, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %res = mul <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @mul_i64_range(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: mul_i64_range
+; CHECK: mov w[[W:[0-9]+]], #255
+; CHECK-NEXT: mov z1.d, x[[W]]
+; CHECK: ptrue p0.d
+; CHECK-NEXT: mul z0.d, p0/m, z0.d, z1.d
+  %elt = insertelement <vscale x 2 x i64> undef, i64 255, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %res = mul <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}

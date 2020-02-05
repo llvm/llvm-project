@@ -139,7 +139,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     if (PhysRegSize > ValSize && LocSize == ValSize) {
       assert((PhysRegSize == 128 || PhysRegSize == 80)  && "We expect that to be 128 bit");
       auto MIB = MIRBuilder.buildAnyExt(LLT::scalar(PhysRegSize), ValVReg);
-      ExtReg = MIB->getOperand(0).getReg();
+      ExtReg = MIB.getReg(0);
     } else
       ExtReg = extendRegister(ValVReg, VA);
 

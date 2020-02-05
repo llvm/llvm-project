@@ -12,7 +12,7 @@ YAML is a human readable data serialization language.  The full YAML language
 spec can be read at `yaml.org 
 <http://www.yaml.org/spec/1.2/spec.html#Introduction>`_.  The simplest form of
 yaml is just "scalars", "mappings", and "sequences".  A scalar is any number
-or string.  The pound/hash symbol (#) begins a comment line.   A mapping is 
+or string.  The pound/hash symbol (#) begins a comment line.   A mapping is
 a set of key-value pairs where the key ends with a colon.  For example:
 
 .. code-block:: yaml

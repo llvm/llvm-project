@@ -55,11 +55,11 @@ struct Section {
   std::vector<RelocationInfo> Relocations;
 
   Section(StringRef SegName, StringRef SectName)
-      : Segname(SegName), Sectname(SectName),
+      : Segname(std::string(SegName)), Sectname(std::string(SectName)),
         CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
 
   Section(StringRef SegName, StringRef SectName, StringRef Content)
-      : Segname(SegName), Sectname(SectName),
+      : Segname(std::string(SegName)), Sectname(std::string(SectName)),
         CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
         Content(Content) {}
 

@@ -1,6 +1,6 @@
 //===- PatternMatch.h - PatternMatcher classes -------==---------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -318,33 +318,15 @@ public:
 
   /// This method performs the final replacement for a pattern, where the
   /// results of the operation are updated to use the specified list of SSA
-  /// values.  In addition to replacing and removing the specified operation,
-  /// clients can specify a list of other nodes that this replacement may make
-  /// (perhaps transitively) dead.  If any of those values are dead, this will
-  /// remove them as well.
-  virtual void replaceOp(Operation *op, ValueRange newValues,
-                         ValueRange valuesToRemoveIfDead);
-  void replaceOp(Operation *op, ValueRange newValues) {
-    replaceOp(op, newValues, llvm::None);
-  }
+  /// values.
+  virtual void replaceOp(Operation *op, ValueRange newValues);
 
   /// Replaces the result op with a new op that is created without verification.
   /// The result values of the two ops must be the same types.
   template <typename OpTy, typename... Args>
   void replaceOpWithNewOp(Operation *op, Args &&... args) {
     auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation(), {});
-  }
-
-  /// Replaces the result op with a new op that is created without verification.
-  /// The result values of the two ops must be the same types.  This allows
-  /// specifying a list of ops that may be removed if dead.
-  template <typename OpTy, typename... Args>
-  void replaceOpWithNewOp(ValueRange valuesToRemoveIfDead, Operation *op,
-                          Args &&... args) {
-    auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation(),
-                                    valuesToRemoveIfDead);
+    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation());
   }
 
   /// This method erases an operation that is known to have no uses.
@@ -405,10 +387,9 @@ protected:
   virtual void notifyOperationRemoved(Operation *op) {}
 
 private:
-  /// op and newOp are known to have the same number of results, replace the
-  /// uses of op with uses of newOp
-  void replaceOpWithResultsOfAnotherOp(Operation *op, Operation *newOp,
-                                       ValueRange valuesToRemoveIfDead);
+  /// 'op' and 'newOp' are known to have the same number of results, replace the
+  /// uses of op with uses of newOp.
+  void replaceOpWithResultsOfAnotherOp(Operation *op, Operation *newOp);
 };
 
 //===----------------------------------------------------------------------===//

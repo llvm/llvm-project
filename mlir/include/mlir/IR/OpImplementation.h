@@ -1,6 +1,6 @@
 //===- OpImplementation.h - Classes for implementing Op types ---*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -96,11 +96,16 @@ public:
                                       ValueRange operands) = 0;
 
   /// Print an optional arrow followed by a type list.
-  void printOptionalArrowTypeList(ArrayRef<Type> types) {
-    if (types.empty())
-      return;
+  template <typename TypeRange>
+  void printOptionalArrowTypeList(TypeRange &&types) {
+    if (types.begin() != types.end())
+      printArrowTypeList(types);
+  }
+  template <typename TypeRange> void printArrowTypeList(TypeRange &&types) {
     auto &os = getStream() << " -> ";
-    bool wrapped = types.size() != 1 || types[0].isa<FunctionType>();
+
+    bool wrapped = !has_single_element(types) ||
+                   (*types.begin()).template isa<FunctionType>();
     if (wrapped)
       os << '(';
     interleaveComma(types, *this);
@@ -110,23 +115,17 @@ public:
 
   /// Print the complete type of an operation in functional form.
   void printFunctionalType(Operation *op) {
+    printFunctionalType(op->getNonSuccessorOperands().getTypes(),
+                        op->getResultTypes());
+  }
+  /// Print the two given type ranges in a functional form.
+  template <typename InputRangeT, typename ResultRangeT>
+  void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(op->getNonSuccessorOperands(), os, [&](Value operand) {
-      if (operand)
-        printType(operand.getType());
-      else
-        os << "<<NULL>";
-    });
-    os << ") -> ";
-    if (op->getNumResults() == 1 &&
-        !op->getResult(0).getType().isa<FunctionType>()) {
-      printType(op->getResult(0).getType());
-    } else {
-      os << '(';
-      interleaveComma(op->getResultTypes(), os);
-      os << ')';
-    }
+    interleaveComma(inputs, os);
+    os << ")";
+    printArrowTypeList(results);
   }
 
   /// Print the given string as a symbol reference, i.e. a form representable by
@@ -188,6 +187,10 @@ template <typename IteratorT>
 inline OpAsmPrinter &
 operator<<(OpAsmPrinter &p,
            const iterator_range<ValueTypeIterator<IteratorT>> &types) {
+  interleaveComma(types, p);
+  return p;
+}
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
   interleaveComma(types, p);
   return p;
 }
@@ -489,6 +492,20 @@ public:
         return failure();
     return success();
   }
+  template <typename Operands, typename Types>
+  ParseResult resolveOperands(Operands &&operands, Types &&types,
+                              llvm::SMLoc loc, SmallVectorImpl<Value> &result) {
+    size_t operandSize = std::distance(operands.begin(), operands.end());
+    size_t typeSize = std::distance(types.begin(), types.end());
+    if (operandSize != typeSize)
+      return emitError(loc)
+             << operandSize << " operands present, but expected " << typeSize;
+
+    for (auto it : llvm::zip(operands, types))
+      if (resolveOperand(std::get<0>(it), std::get<1>(it), result))
+        return failure();
+    return success();
+  }
 
   /// Parses an affine map attribute where dims and symbols are SSA operands.
   /// Operand values must come from single-result sources, and be valid
@@ -556,6 +573,34 @@ public:
 
   /// Parse a type.
   virtual ParseResult parseType(Type &result) = 0;
+
+  /// Parse a type of a specific type.
+  template <typename TypeT> ParseResult parseType(TypeT &result) {
+    llvm::SMLoc loc = getCurrentLocation();
+
+    // Parse any kind of type.
+    Type type;
+    if (parseType(type))
+      return failure();
+
+    // Check for the right kind of attribute.
+    result = type.dyn_cast<TypeT>();
+    if (!result)
+      return emitError(loc, "invalid kind of type specified");
+
+    return success();
+  }
+
+  /// Parse a type list.
+  ParseResult parseTypeList(SmallVectorImpl<Type> &result) {
+    do {
+      Type type;
+      if (parseType(type))
+        return failure();
+      result.push_back(type);
+    } while (succeeded(parseOptionalComma()));
+    return success();
+  }
 
   /// Parse an optional arrow followed by a type list.
   virtual ParseResult

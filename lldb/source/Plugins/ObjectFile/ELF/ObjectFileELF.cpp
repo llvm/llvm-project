@@ -1,4 +1,4 @@
-//===-- ObjectFileELF.cpp ------------------------------------- -*- C++ -*-===//
+//===-- ObjectFileELF.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1696,7 +1696,7 @@ class VMAddressProvider {
 
 public:
   VMAddressProvider(ObjectFile::Type Type, llvm::StringRef SegmentName)
-      : ObjectType(Type), SegmentName(SegmentName) {}
+      : ObjectType(Type), SegmentName(std::string(SegmentName)) {}
 
   std::string GetNextSegmentName() const {
     return llvm::formatv("{0}[{1}]", SegmentName, SegmentCount).str();
@@ -2230,8 +2230,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       if (!mangled_name.empty())
         mangled.SetMangledName(ConstString((mangled_name + suffix).str()));
 
-      ConstString demangled =
-          mangled.GetDemangledName(lldb::eLanguageTypeUnknown);
+      ConstString demangled = mangled.GetDemangledName();
       llvm::StringRef demangled_name = demangled.GetStringRef();
       if (!demangled_name.empty())
         mangled.SetDemangledName(ConstString((demangled_name + suffix).str()));

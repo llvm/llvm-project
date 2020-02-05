@@ -1,4 +1,4 @@
-//===-- CommandObjectCommands.cpp -------------------------------*- C++ -*-===//
+//===-- CommandObjectCommands.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -652,8 +652,8 @@ protected:
     }
 
     // Save these in std::strings since we're going to shift them off.
-    const std::string alias_command(args[0].ref());
-    const std::string actual_command(args[1].ref());
+    const std::string alias_command(std::string(args[0].ref()));
+    const std::string actual_command(std::string(args[1].ref()));
 
     args.Shift(); // Shift the alias command word off the argument vector.
     args.Shift(); // Shift the old command word off the argument vector.
@@ -1114,12 +1114,12 @@ protected:
     }
 
     if (!check_only) {
-      std::string regex(regex_sed.substr(first_separator_char_pos + 1,
-                                         second_separator_char_pos -
-                                             first_separator_char_pos - 1));
-      std::string subst(regex_sed.substr(second_separator_char_pos + 1,
-                                         third_separator_char_pos -
-                                             second_separator_char_pos - 1));
+      std::string regex(std::string(regex_sed.substr(
+          first_separator_char_pos + 1,
+          second_separator_char_pos - first_separator_char_pos - 1)));
+      std::string subst(std::string(regex_sed.substr(
+          second_separator_char_pos + 1,
+          third_separator_char_pos - second_separator_char_pos - 1)));
       m_regex_cmd_up->AddRegexCommand(regex.c_str(), subst.c_str());
     }
     return error;
@@ -1150,10 +1150,10 @@ private:
 
       switch (short_option) {
       case 'h':
-        m_help.assign(option_arg);
+        m_help.assign(std::string(option_arg));
         break;
       case 's':
-        m_syntax.assign(option_arg);
+        m_syntax.assign(std::string(option_arg));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1526,15 +1526,15 @@ protected:
       switch (short_option) {
       case 'f':
         if (!option_arg.empty())
-          m_funct_name = option_arg;
+          m_funct_name = std::string(option_arg);
         break;
       case 'c':
         if (!option_arg.empty())
-          m_class_name = option_arg;
+          m_class_name = std::string(option_arg);
         break;
       case 'h':
         if (!option_arg.empty())
-          m_short_help = option_arg;
+          m_short_help = std::string(option_arg);
         break;
       case 's':
         m_synchronicity =
@@ -1643,7 +1643,7 @@ protected:
     }
 
     // Store the options in case we get multi-line input
-    m_cmd_name = command[0].ref();
+    m_cmd_name = std::string(command[0].ref());
     m_short_help.assign(m_options.m_short_help);
     m_synchronicity = m_options.m_synchronicity;
 

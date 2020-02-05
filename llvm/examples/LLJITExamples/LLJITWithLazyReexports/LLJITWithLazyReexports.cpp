@@ -54,7 +54,7 @@ const llvm::StringRef FooMod =
 
 const llvm::StringRef BarMod =
     R"(
-  define i32 @bar_body(i32 %x) {
+  define i32 @bar_body() {
   entry:
     ret i32 2
   }

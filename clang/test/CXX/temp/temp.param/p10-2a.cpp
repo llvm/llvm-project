@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
 template<typename T>
 concept C1 = sizeof(T) == 1;
@@ -94,6 +94,8 @@ concept OneOf = (is_same_v<T, Ts> || ...);
 // expected-note@-5 {{and 'is_same_v<short, char>' evaluated to false}}
 // expected-note@-6 3{{because 'is_same_v<int, char [1]>' evaluated to false}}
 // expected-note@-7 3{{and 'is_same_v<int, char [2]>' evaluated to false}}
+// expected-note@-8 2{{because 'is_same_v<nullptr_t, char>' evaluated to false}}
+// expected-note@-9 2{{and 'is_same_v<nullptr_t, int>' evaluated to false}}
 
 template<OneOf<char[1], char[2]> T, OneOf<int, long, char> U>
 // expected-note@-1 2{{because 'OneOf<char, char [1], char [2]>' evaluated to false}}
@@ -115,3 +117,24 @@ using h1 = H<char[1], int>;
 using h2 = H<int, int>;
 // expected-error@-1 {{constraints not satisfied for alias template 'H' [with Ts = <int, int>]}}
 using h3 = H<char[1], char[2]>;
+
+template<OneOf<char, int> auto x>
+// expected-note@-1 {{because 'OneOf<decltype(nullptr), char, int>' evaluated to false}}
+using I = int;
+
+using i1 = I<1>;
+using i2 = I<'a'>;
+using i3 = I<nullptr>;
+// expected-error@-1 {{constraints not satisfied for alias template 'I' [with x = nullptr]}}
+
+template<OneOf<char, int> auto... x>
+// expected-note@-1 {{because 'OneOf<decltype(nullptr), char, int>' evaluated to false}}
+using J = int;
+
+using j1 = J<1, 'b'>;
+using j2 = J<'a', nullptr>;
+// expected-error@-1 {{constraints not satisfied for alias template 'J' [with x = <'a', nullptr>]}}
+
+template<OneOf<char, int> auto &x>
+// expected-error@-1 {{constrained placeholder types other than simple 'auto' on non-type template parameters not supported yet}}
+using K = int;

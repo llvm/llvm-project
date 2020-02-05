@@ -115,9 +115,9 @@ TEST(TBDv2, ReadFile) {
   for (const auto *Sym : File->symbols()) {
     EXPECT_FALSE(Sym->isWeakReferenced());
     EXPECT_FALSE(Sym->isUndefined());
-    Exports.emplace_back(ExportedSymbol{Sym->getKind(), Sym->getName(),
-                                        Sym->isWeakDefined(),
-                                        Sym->isThreadLocalValue()});
+    Exports.emplace_back(
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined(), Sym->isThreadLocalValue()});
   }
   llvm::sort(Exports.begin(), Exports.end());
 
@@ -234,14 +234,14 @@ TEST(TBDv2, WriteFile) {
 }
 
 TEST(TBDv2, Platform_macOS) {
-  static const char tbd_v1_platform_macos[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_platform_macos[] = "--- !tapi-tbd-v2\n"
                                               "archs: [ x86_64 ]\n"
                                               "platform: macosx\n"
                                               "install-name: Test.dylib\n"
                                               "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_macos, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_platform_macos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   auto Platform = PlatformKind::macOS;
@@ -251,14 +251,14 @@ TEST(TBDv2, Platform_macOS) {
 }
 
 TEST(TBDv2, Platform_iOS) {
-  static const char tbd_v1_platform_ios[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_platform_ios[] = "--- !tapi-tbd-v2\n"
                                             "archs: [ arm64 ]\n"
                                             "platform: ios\n"
                                             "install-name: Test.dylib\n"
                                             "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_ios, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_platform_ios, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto Platform = PlatformKind::iOS;
   auto File = std::move(Result.get());
@@ -268,14 +268,14 @@ TEST(TBDv2, Platform_iOS) {
 }
 
 TEST(TBDv2, Platform_watchOS) {
-  static const char tbd_v1_platform_watchos[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_platform_watchos[] = "--- !tapi-tbd-v2\n"
                                                 "archs: [ armv7k ]\n"
                                                 "platform: watchos\n"
                                                 "install-name: Test.dylib\n"
                                                 "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_watchos, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_platform_watchos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto Platform = PlatformKind::watchOS;
   auto File = std::move(Result.get());
@@ -285,14 +285,14 @@ TEST(TBDv2, Platform_watchOS) {
 }
 
 TEST(TBDv2, Platform_tvOS) {
-  static const char tbd_v1_platform_tvos[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_platform_tvos[] = "--- !tapi-tbd-v2\n"
                                              "archs: [ arm64 ]\n"
                                              "platform: tvos\n"
                                              "install-name: Test.dylib\n"
                                              "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_tvos, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_platform_tvos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto Platform = PlatformKind::tvOS;
   auto File = std::move(Result.get());
@@ -302,14 +302,14 @@ TEST(TBDv2, Platform_tvOS) {
 }
 
 TEST(TBDv2, Platform_bridgeOS) {
-  static const char tbd_v1_platform_bridgeos[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_platform_bridgeos[] = "--- !tapi-tbd-v2\n"
                                                  "archs: [ armv7k ]\n"
                                                  "platform: bridgeos\n"
                                                  "install-name: Test.dylib\n"
                                                  "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_bridgeos, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_platform_bridgeos, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto Platform = PlatformKind::bridgeOS;
   auto File = std::move(Result.get());
@@ -319,7 +319,7 @@ TEST(TBDv2, Platform_bridgeOS) {
 }
 
 TEST(TBDv2, Swift_1_0) {
-  static const char tbd_v1_swift_1_0[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_1_0[] = "--- !tapi-tbd-v2\n"
                                          "archs: [ arm64 ]\n"
                                          "platform: ios\n"
                                          "install-name: Test.dylib\n"
@@ -327,7 +327,7 @@ TEST(TBDv2, Swift_1_0) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_1_0, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_1_0, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
@@ -335,7 +335,7 @@ TEST(TBDv2, Swift_1_0) {
 }
 
 TEST(TBDv2, Swift_1_1) {
-  static const char tbd_v1_swift_1_1[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_1_1[] = "--- !tapi-tbd-v2\n"
                                          "archs: [ arm64 ]\n"
                                          "platform: ios\n"
                                          "install-name: Test.dylib\n"
@@ -343,7 +343,7 @@ TEST(TBDv2, Swift_1_1) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_1_1, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_1_1, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
@@ -351,7 +351,7 @@ TEST(TBDv2, Swift_1_1) {
 }
 
 TEST(TBDv2, Swift_2_0) {
-  static const char tbd_v1_swift_2_0[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_2_0[] = "--- !tapi-tbd-v2\n"
                                          "archs: [ arm64 ]\n"
                                          "platform: ios\n"
                                          "install-name: Test.dylib\n"
@@ -359,7 +359,7 @@ TEST(TBDv2, Swift_2_0) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_2_0, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_2_0, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
@@ -367,7 +367,7 @@ TEST(TBDv2, Swift_2_0) {
 }
 
 TEST(TBDv2, Swift_3_0) {
-  static const char tbd_v1_swift_3_0[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_3_0[] = "--- !tapi-tbd-v2\n"
                                          "archs: [ arm64 ]\n"
                                          "platform: ios\n"
                                          "install-name: Test.dylib\n"
@@ -375,7 +375,7 @@ TEST(TBDv2, Swift_3_0) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_3_0, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_3_0, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
@@ -383,7 +383,7 @@ TEST(TBDv2, Swift_3_0) {
 }
 
 TEST(TBDv2, Swift_4_0) {
-  static const char tbd_v1_swift_4_0[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_4_0[] = "--- !tapi-tbd-v2\n"
                                          "archs: [ arm64 ]\n"
                                          "platform: ios\n"
                                          "install-name: Test.dylib\n"
@@ -391,7 +391,7 @@ TEST(TBDv2, Swift_4_0) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_4_0, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_4_0, "Test.tbd"));
   EXPECT_FALSE(!!Result);
   auto errorMessage = toString(Result.takeError());
   EXPECT_EQ("malformed file\nTest.tbd:5:16: error: invalid Swift ABI "
@@ -400,14 +400,14 @@ TEST(TBDv2, Swift_4_0) {
 }
 
 TEST(TBDv2, Swift_5) {
-  static const char tbd_v1_swift_5[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_5[] = "--- !tapi-tbd-v2\n"
                                        "archs: [ arm64 ]\n"
                                        "platform: ios\n"
                                        "install-name: Test.dylib\n"
                                        "swift-version: 5\n"
                                        "...\n";
 
-  auto Result = TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_5, "Test.tbd"));
+  auto Result = TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_5, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());
@@ -415,7 +415,7 @@ TEST(TBDv2, Swift_5) {
 }
 
 TEST(TBDv2, Swift_99) {
-  static const char tbd_v1_swift_99[] = "--- !tapi-tbd-v2\n"
+  static const char tbd_v2_swift_99[] = "--- !tapi-tbd-v2\n"
                                         "archs: [ arm64 ]\n"
                                         "platform: ios\n"
                                         "install-name: Test.dylib\n"
@@ -423,7 +423,7 @@ TEST(TBDv2, Swift_99) {
                                         "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_99, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v2_swift_99, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V2, File->getFileType());

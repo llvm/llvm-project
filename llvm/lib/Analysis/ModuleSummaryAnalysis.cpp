@@ -600,8 +600,9 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
       !V.hasComdat() && !V.hasAppendingLinkage() && !V.isInterposable() &&
       !V.hasAvailableExternallyLinkage() && !V.hasDLLExportStorageClass();
   bool Constant = V.isConstant();
-  GlobalVarSummary::GVarFlags VarFlags(
-      CanBeInternalized, Constant ? false : CanBeInternalized, Constant);
+  GlobalVarSummary::GVarFlags VarFlags(CanBeInternalized,
+                                       Constant ? false : CanBeInternalized,
+                                       Constant, V.getVCallVisibility());
   auto GVarSummary = std::make_unique<GlobalVarSummary>(Flags, VarFlags,
                                                          RefEdges.takeVector());
   if (NonRenamableLocal)
@@ -722,7 +723,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                 std::make_unique<GlobalVarSummary>(
                     GVFlags,
                     GlobalVarSummary::GVarFlags(
-                        false, false, cast<GlobalVariable>(GV)->isConstant()),
+                        false, false, cast<GlobalVariable>(GV)->isConstant(),
+                        GlobalObject::VCallVisibilityPublic),
                     ArrayRef<ValueInfo>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }

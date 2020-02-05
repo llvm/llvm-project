@@ -1,4 +1,4 @@
-//===-- ObjectFilePECOFF.cpp ------------------------------------*- C++ -*-===//
+//===-- ObjectFilePECOFF.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1169,7 +1169,7 @@ void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
 // Dump a single ELF section header to the specified output stream
 void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
                                          const section_header_t &sh) {
-  std::string name = GetSectionName(sh);
+  std::string name = std::string(GetSectionName(sh));
   s->Printf("%-16s 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%4.4x "
             "0x%4.4x 0x%8.8x\n",
             name.c_str(), sh.vmaddr, sh.vmsize, sh.offset, sh.size, sh.reloff,

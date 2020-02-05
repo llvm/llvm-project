@@ -1,6 +1,6 @@
 //===- UniformKernelUtils.h - Utilities for lowering uniform math - C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -168,8 +168,8 @@ inline Type castElementType(Type t, Type newElementType) {
     case StandardTypes::Kind::UnrankedTensor:
       return UnrankedTensorType::get(newElementType);
     case StandardTypes::Kind::MemRef:
-      return MemRefType::get(st.getShape(), newElementType,
-                             st.cast<MemRefType>().getAffineMaps());
+      return MemRefType::Builder(st.cast<MemRefType>())
+          .setElementType(newElementType);
     }
   }
   assert(t.isIntOrFloat());

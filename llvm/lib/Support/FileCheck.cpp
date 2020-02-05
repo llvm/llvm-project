@@ -25,6 +25,47 @@
 
 using namespace llvm;
 
+Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
+  switch (Value) {
+  case Kind::Unsigned:
+    return StringRef("[0-9]+");
+  case Kind::HexUpper:
+    return StringRef("[0-9A-F]+");
+  case Kind::HexLower:
+    return StringRef("[0-9a-f]+");
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "trying to match value with invalid format");
+  }
+}
+
+Expected<std::string>
+ExpressionFormat::getMatchingString(uint64_t IntegerValue) const {
+  switch (Value) {
+  case Kind::Unsigned:
+    return utostr(IntegerValue);
+  case Kind::HexUpper:
+    return utohexstr(IntegerValue, /*LowerCase=*/false);
+  case Kind::HexLower:
+    return utohexstr(IntegerValue, /*LowerCase=*/true);
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "trying to match value with invalid format");
+  }
+}
+
+Expected<uint64_t>
+ExpressionFormat::valueFromStringRepr(StringRef StrVal,
+                                      const SourceMgr &SM) const {
+  bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
+  uint64_t IntegerValue;
+  if (StrVal.getAsInteger(Hex ? 16 : 10, IntegerValue))
+    return ErrorDiagnostic::get(SM, StrVal,
+                                "unable to represent numeric value");
+
+  return IntegerValue;
+}
+
 Expected<uint64_t> NumericVariableUse::eval() const {
   Optional<uint64_t> Value = Variable->getValue();
   if (Value)
@@ -51,11 +92,28 @@ Expected<uint64_t> BinaryOperation::eval() const {
   return EvalBinop(*LeftOp, *RightOp);
 }
 
+ExpressionFormat BinaryOperation::getImplicitFormat() const {
+  ExpressionFormat LeftFormat = LeftOperand->getImplicitFormat();
+  ExpressionFormat RightFormat = RightOperand->getImplicitFormat();
+
+  ExpressionFormat Format =
+      LeftFormat != ExpressionFormat::Kind::NoFormat ? LeftFormat : RightFormat;
+  if (LeftFormat != ExpressionFormat::Kind::NoFormat &&
+      RightFormat != ExpressionFormat::Kind::NoFormat &&
+      LeftFormat != RightFormat)
+    Format = ExpressionFormat(ExpressionFormat::Kind::Conflict);
+
+  return Format;
+}
+
 Expected<std::string> NumericSubstitution::getResult() const {
-  Expected<uint64_t> EvaluatedValue = ExpressionASTPointer->eval();
+  assert(ExpressionPointer->getAST() != nullptr &&
+         "Substituting empty expression");
+  Expected<uint64_t> EvaluatedValue = ExpressionPointer->getAST()->eval();
   if (!EvaluatedValue)
     return EvaluatedValue.takeError();
-  return utostr(*EvaluatedValue);
+  ExpressionFormat Format = ExpressionPointer->getFormat();
+  return Format.getMatchingString(*EvaluatedValue);
 }
 
 Expected<std::string> StringSubstitution::getResult() const {
@@ -113,7 +171,8 @@ char NotFoundError::ID = 0;
 
 Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
     StringRef &Expr, FileCheckPatternContext *Context,
-    Optional<size_t> LineNumber, const SourceMgr &SM) {
+    Optional<size_t> LineNumber, ExpressionFormat ImplicitFormat,
+    const SourceMgr &SM) {
   Expected<VariableProperties> ParseVarResult = parseVariable(Expr, SM);
   if (!ParseVarResult)
     return ParseVarResult.takeError();
@@ -137,10 +196,14 @@ Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
 
   NumericVariable *DefinedNumericVariable;
   auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
-  if (VarTableIter != Context->GlobalNumericVariableTable.end())
+  if (VarTableIter != Context->GlobalNumericVariableTable.end()) {
     DefinedNumericVariable = VarTableIter->second;
-  else
-    DefinedNumericVariable = Context->makeNumericVariable(Name, LineNumber);
+    if (DefinedNumericVariable->getImplicitFormat() != ImplicitFormat)
+      return ErrorDiagnostic::get(
+          SM, Expr, "format different from previous variable definition");
+  } else
+    DefinedNumericVariable =
+        Context->makeNumericVariable(Name, ImplicitFormat, LineNumber);
 
   return DefinedNumericVariable;
 }
@@ -165,7 +228,8 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
   if (VarTableIter != Context->GlobalNumericVariableTable.end())
     NumericVariable = VarTableIter->second;
   else {
-    NumericVariable = Context->makeNumericVariable(Name);
+    NumericVariable = Context->makeNumericVariable(
+        Name, ExpressionFormat(ExpressionFormat::Kind::Unsigned));
     Context->GlobalNumericVariableTable[Name] = NumericVariable;
   }
 
@@ -198,7 +262,8 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
 
   // Otherwise, parse it as a literal.
   uint64_t LiteralValue;
-  if (!Expr.consumeInteger(/*Radix=*/10, LiteralValue))
+  if (!Expr.consumeInteger((AO == AllowedOperand::LegacyLiteral) ? 10 : 0,
+                           LiteralValue))
     return std::make_unique<ExpressionLiteral>(LiteralValue);
 
   return ErrorDiagnostic::get(SM, Expr,
@@ -244,7 +309,7 @@ Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
     return ErrorDiagnostic::get(SM, Expr, "missing operand in expression");
   // The second operand in a legacy @LINE expression is always a literal.
   AllowedOperand AO =
-      IsLegacyLineExpr ? AllowedOperand::Literal : AllowedOperand::Any;
+      IsLegacyLineExpr ? AllowedOperand::LegacyLiteral : AllowedOperand::Any;
   Expected<std::unique_ptr<ExpressionAST>> RightOpResult =
       parseNumericOperand(Expr, AO, LineNumber, Context, SM);
   if (!RightOpResult)
@@ -255,13 +320,47 @@ Pattern::parseBinop(StringRef &Expr, std::unique_ptr<ExpressionAST> LeftOp,
                                            std::move(*RightOpResult));
 }
 
-Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericSubstitutionBlock(
+Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     StringRef Expr, Optional<NumericVariable *> &DefinedNumericVariable,
     bool IsLegacyLineExpr, Optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
   std::unique_ptr<ExpressionAST> ExpressionASTPointer = nullptr;
   StringRef DefExpr = StringRef();
   DefinedNumericVariable = None;
+  ExpressionFormat ExplicitFormat = ExpressionFormat();
+
+  // Parse format specifier.
+  size_t FormatSpecEnd = Expr.find(',');
+  if (FormatSpecEnd != StringRef::npos) {
+    Expr = Expr.ltrim(SpaceChars);
+    if (!Expr.consume_front("%"))
+      return ErrorDiagnostic::get(
+          SM, Expr, "invalid matching format specification in expression");
+
+    // Check for unknown matching format specifier and set matching format in
+    // class instance representing this expression.
+    SMLoc fmtloc = SMLoc::getFromPointer(Expr.data());
+    switch (popFront(Expr)) {
+    case 'u':
+      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
+      break;
+    case 'x':
+      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexLower);
+      break;
+    case 'X':
+      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexUpper);
+      break;
+    default:
+      return ErrorDiagnostic::get(SM, fmtloc,
+                                  "invalid format specifier in expression");
+    }
+
+    Expr = Expr.ltrim(SpaceChars);
+    if (!Expr.consume_front(","))
+      return ErrorDiagnostic::get(
+          SM, Expr, "invalid matching format specification in expression");
+  }
+
   // Save variable definition expression if any.
   size_t DefEnd = Expr.find(':');
   if (DefEnd != StringRef::npos) {
@@ -271,6 +370,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
+  StringRef UseExpr = Expr;
   if (!Expr.empty()) {
     // The first operand in a legacy @LINE expression is always the @LINE
     // pseudo variable.
@@ -288,22 +388,44 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericSubstitutionBlock(
             "unexpected characters at end of expression '" + Expr + "'");
     }
     if (!ParseResult)
-      return ParseResult;
+      return ParseResult.takeError();
     ExpressionASTPointer = std::move(*ParseResult);
   }
+
+  // Select format of the expression, i.e. (i) its explicit format, if any,
+  // otherwise (ii) its implicit format, if any, otherwise (iii) the default
+  // format (unsigned). Error out in case of conflicting implicit format
+  // without explicit format.
+  ExpressionFormat Format,
+      ImplicitFormat = ExpressionASTPointer
+                           ? ExpressionASTPointer->getImplicitFormat()
+                           : ExpressionFormat(ExpressionFormat::Kind::NoFormat);
+  if (bool(ExplicitFormat))
+    Format = ExplicitFormat;
+  else if (ImplicitFormat == ExpressionFormat::Kind::Conflict)
+    return ErrorDiagnostic::get(
+        SM, UseExpr,
+        "variables with conflicting format specifier: need an explicit one");
+  else if (bool(ImplicitFormat))
+    Format = ImplicitFormat;
+  else
+    Format = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
+
+  std::unique_ptr<Expression> ExpressionPointer =
+      std::make_unique<Expression>(std::move(ExpressionASTPointer), Format);
 
   // Parse the numeric variable definition.
   if (DefEnd != StringRef::npos) {
     DefExpr = DefExpr.ltrim(SpaceChars);
-    Expected<NumericVariable *> ParseResult =
-        parseNumericVariableDefinition(DefExpr, Context, LineNumber, SM);
+    Expected<NumericVariable *> ParseResult = parseNumericVariableDefinition(
+        DefExpr, Context, LineNumber, ExpressionPointer->getFormat(), SM);
 
     if (!ParseResult)
       return ParseResult.takeError();
     DefinedNumericVariable = *ParseResult;
   }
 
-  return std::move(ExpressionASTPointer);
+  return std::move(ExpressionPointer);
 }
 
 bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
@@ -476,10 +598,10 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
       }
 
       // Parse numeric substitution block.
-      std::unique_ptr<ExpressionAST> ExpressionASTPointer;
+      std::unique_ptr<Expression> ExpressionPointer;
       Optional<NumericVariable *> DefinedNumericVariable;
       if (IsNumBlock) {
-        Expected<std::unique_ptr<ExpressionAST>> ParseResult =
+        Expected<std::unique_ptr<Expression>> ParseResult =
             parseNumericSubstitutionBlock(MatchStr, DefinedNumericVariable,
                                           IsLegacyLineExpr, LineNumber, Context,
                                           SM);
@@ -487,16 +609,18 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
           logAllUnhandledErrors(ParseResult.takeError(), errs());
           return true;
         }
-        ExpressionASTPointer = std::move(*ParseResult);
-        SubstNeeded = ExpressionASTPointer != nullptr;
+        ExpressionPointer = std::move(*ParseResult);
+        SubstNeeded = ExpressionPointer->getAST() != nullptr;
         if (DefinedNumericVariable) {
           IsDefinition = true;
           DefName = (*DefinedNumericVariable)->getName();
         }
         if (SubstNeeded)
           SubstStr = MatchStr;
-        else
-          MatchRegexp = "[0-9]+";
+        else {
+          ExpressionFormat Format = ExpressionPointer->getFormat();
+          MatchRegexp = cantFail(Format.getWildcardRegex());
+        }
       }
 
       // Handle variable definition: [[<def>:(...)]] and [[#(...)<def>:(...)]].
@@ -554,8 +678,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
           Substitution *Substitution =
               IsNumBlock
                   ? Context->makeNumericSubstitution(
-                        SubstStr, std::move(ExpressionASTPointer),
-                        SubstInsertIdx)
+                        SubstStr, std::move(ExpressionPointer), SubstInsertIdx)
                   : Context->makeStringSubstitution(SubstStr, SubstInsertIdx);
           Substitutions.push_back(Substitution);
         }
@@ -676,11 +799,11 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
         NumericVariableMatch.DefinedNumericVariable;
 
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
-    uint64_t Val;
-    if (MatchedValue.getAsInteger(10, Val))
-      return ErrorDiagnostic::get(SM, MatchedValue,
-                                  "Unable to represent numeric value");
-    DefinedNumericVariable->setValue(Val);
+    ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
+    Expected<uint64_t> Value = Format.valueFromStringRepr(MatchedValue, SM);
+    if (!Value)
+      return Value.takeError();
+    DefinedNumericVariable->setValue(*Value);
   }
 
   // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
@@ -837,10 +960,10 @@ FileCheckPatternContext::makeStringSubstitution(StringRef VarName,
 }
 
 Substitution *FileCheckPatternContext::makeNumericSubstitution(
-    StringRef ExpressionStr,
-    std::unique_ptr<ExpressionAST> ExpressionASTPointer, size_t InsertIdx) {
+    StringRef ExpressionStr, std::unique_ptr<Expression> Expression,
+    size_t InsertIdx) {
   Substitutions.push_back(std::make_unique<NumericSubstitution>(
-      this, ExpressionStr, std::move(ExpressionASTPointer), InsertIdx));
+      this, ExpressionStr, std::move(Expression), InsertIdx));
   return Substitutions.back().get();
 }
 
@@ -946,7 +1069,7 @@ std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
   case Check::CheckPlain:
     if (Count > 1)
       return Prefix.str() + "-COUNT";
-    return Prefix;
+    return std::string(Prefix);
   case Check::CheckNext:
     return Prefix.str() + "-NEXT";
   case Check::CheckSame:
@@ -1104,7 +1227,8 @@ FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
 void FileCheckPatternContext::createLineVariable() {
   assert(!LineVariable && "@LINE pseudo numeric variable already created");
   StringRef LineName = "@LINE";
-  LineVariable = makeNumericVariable(LineName);
+  LineVariable = makeNumericVariable(
+      LineName, ExpressionFormat(ExpressionFormat::Kind::Unsigned));
   GlobalNumericVariableTable[LineName] = LineVariable;
 }
 
@@ -1777,7 +1901,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // format as in the input file to be able to reuse
       // parseNumericSubstitutionBlock.
       CmdlineDefsDiag += (DefPrefix + CmdlineDef + " (parsed as: [[").str();
-      std::string SubstitutionStr = CmdlineDef;
+      std::string SubstitutionStr = std::string(CmdlineDef);
       SubstitutionStr[EqIdx] = ':';
       CmdlineDefsIndices.push_back(
           std::make_pair(CmdlineDefsDiag.size(), SubstitutionStr.size()));
@@ -1815,20 +1939,19 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // to create the necessary class instance.
       StringRef CmdlineDefExpr = CmdlineDef.substr(1);
       Optional<NumericVariable *> DefinedNumericVariable;
-      Expected<std::unique_ptr<ExpressionAST>> ExpressionASTResult =
+      Expected<std::unique_ptr<Expression>> ExpressionResult =
           Pattern::parseNumericSubstitutionBlock(
               CmdlineDefExpr, DefinedNumericVariable, false, None, this, SM);
-      if (!ExpressionASTResult) {
-        Errs = joinErrors(std::move(Errs), ExpressionASTResult.takeError());
+      if (!ExpressionResult) {
+        Errs = joinErrors(std::move(Errs), ExpressionResult.takeError());
         continue;
       }
-      std::unique_ptr<ExpressionAST> ExpressionASTPointer =
-          std::move(*ExpressionASTResult);
+      std::unique_ptr<Expression> Expression = std::move(*ExpressionResult);
       // Now evaluate the expression whose value this variable should be set
       // to, since the expression of a command-line variable definition should
       // only use variables defined earlier on the command-line. If not, this
       // is an error and we report it.
-      Expected<uint64_t> Value = ExpressionASTPointer->eval();
+      Expected<uint64_t> Value = Expression->getAST()->eval();
       if (!Value) {
         Errs = joinErrors(std::move(Errs), Value.takeError());
         continue;

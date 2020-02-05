@@ -216,6 +216,9 @@ protected:
   MCSection *GFIDsSection = nullptr;
   MCSection *GLJMPSection = nullptr;
 
+  // XCOFF specific sections
+  MCSection *TOCBaseSection = nullptr;
+
 public:
   void InitMCObjectFileInfo(const Triple &TT, bool PIC, MCContext &ctx,
                             bool LargeCodeModel = false);
@@ -390,6 +393,9 @@ public:
   MCSection *getSXDataSection() const { return SXDataSection; }
   MCSection *getGFIDsSection() const { return GFIDsSection; }
   MCSection *getGLJMPSection() const { return GLJMPSection; }
+
+  // XCOFF specific sections
+  MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
   MCSection *getEHFrameSection() {
     return EHFrameSection;

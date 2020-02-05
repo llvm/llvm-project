@@ -1,6 +1,7 @@
 include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(TestBigEndian)
@@ -116,6 +117,9 @@ check_cxx_compiler_flag(/wd4800 COMPILER_RT_HAS_WD4800_FLAG)
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
 
+# Includes.
+check_include_files("sys/auxv.h" COMPILER_RT_HAS_AUXV)
+
 # Libraries.
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
@@ -222,6 +226,18 @@ function(get_test_cflags_for_apple_platform platform arch cflags_out)
   string(REPLACE ";" " " test_cflags_str "${test_cflags}")
   string(APPEND test_cflags_str "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
   set(${cflags_out} "${test_cflags_str}" PARENT_SCOPE)
+endfunction()
+
+function(get_capitalized_apple_platform platform platform_capitalized)
+  # TODO(dliew): Remove uses of this function. It exists to preserve needlessly complex
+  # directory naming conventions used by the Sanitizer lit test suites.
+  is_valid_apple_platform("${platform}" is_valid_platform)
+  if (NOT is_valid_platform)
+    message(FATAL_ERROR "\"${platform}\" is not a valid apple platform")
+  endif()
+  string(TOUPPER "${platform}" platform_upper)
+  string(REGEX REPLACE "OSSIM$" "OSSim" platform_upper_capitalized "${platform_upper}")
+  set(${platform_capitalized} "${platform_upper_capitalized}" PARENT_SCOPE)
 endfunction()
 
 function(is_valid_apple_platform platform is_valid_out)
@@ -347,6 +363,7 @@ if(APPLE)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
+  set(FUZZER_SUPPORTED_OS osx)
 
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.
@@ -430,6 +447,7 @@ if(APPLE)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           list(APPEND TSAN_SUPPORTED_OS ${platform}sim)
+          list(APPEND FUZZER_SUPPORTED_OS ${platform}sim)
         endif()
         foreach(arch ${DARWIN_${platform}sim_ARCHS})
           list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
@@ -459,6 +477,7 @@ if(APPLE)
           if(DARWIN_${platform}_TSAN_ARCHS)
             list(APPEND TSAN_SUPPORTED_OS ${platform})
           endif()
+          list(APPEND FUZZER_SUPPORTED_OS ${platform})
         endif()
         foreach(arch ${DARWIN_${platform}_ARCHS})
           list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
@@ -625,7 +644,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|NetBSD")
+    OS_NAME MATCHES "Darwin|Linux|NetBSD|Fuchsia")
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
@@ -687,7 +706,8 @@ else()
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.
-if (SCUDO_STANDALONE_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux")
+if (SCUDO_STANDALONE_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux" AND
+    COMPILER_RT_HAS_AUXV)
   set(COMPILER_RT_HAS_SCUDO_STANDALONE TRUE)
 else()
   set(COMPILER_RT_HAS_SCUDO_STANDALONE FALSE)

@@ -95,7 +95,8 @@ bool FixItRewriter::WriteFixedFiles(
   for (iterator I = buffer_begin(), E = buffer_end(); I != E; ++I) {
     const FileEntry *Entry = Rewrite.getSourceMgr().getFileEntryForID(I->first);
     int fd;
-    std::string Filename = FixItOpts->RewriteFilename(Entry->getName(), fd);
+    std::string Filename =
+        FixItOpts->RewriteFilename(std::string(Entry->getName()), fd);
     std::error_code EC;
     std::unique_ptr<llvm::raw_fd_ostream> OS;
     if (fd != -1) {
@@ -113,7 +114,8 @@ bool FixItRewriter::WriteFixedFiles(
     OS->flush();
 
     if (RewrittenFiles)
-      RewrittenFiles->push_back(std::make_pair(Entry->getName(), Filename));
+      RewrittenFiles->push_back(
+          std::make_pair(std::string(Entry->getName()), Filename));
   }
 
   return false;

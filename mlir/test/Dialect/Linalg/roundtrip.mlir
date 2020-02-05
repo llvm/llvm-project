@@ -29,7 +29,7 @@ func @range(%arg0: index, %arg1: index, %arg2: index) {
   return
 }
 // CHECK-LABEL: func @range(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//  CHECK-NEXT:  linalg.range %{{.*}}:%{{.*}}:%{{.*}} : !linalg.range
+//  CHECK-NEXT:  linalg.range %{{.*}} : %{{.*}} : %{{.*}} : !linalg.range
 
 func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
   %c0 = constant 0 : index

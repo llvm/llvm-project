@@ -1056,8 +1056,6 @@ public:
                                                  const char *name,
                                                  Status &error);
 
-  lldb::ClangASTImporterSP GetClangASTImporter();
-
   // Install any files through the platform that need be to installed prior to
   // launching or attaching.
   Status Install(ProcessLaunchInfo *launch_info);
@@ -1304,7 +1302,6 @@ protected:
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
 
-  lldb::ClangASTImporterSP m_ast_importer_sp;
   lldb::ClangModulesDeclVendorUP m_clang_modules_decl_vendor_up;
 
   lldb::SourceManagerUP m_source_manager_up;

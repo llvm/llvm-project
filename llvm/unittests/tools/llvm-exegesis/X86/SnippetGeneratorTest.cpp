@@ -354,6 +354,17 @@ TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
 }
 
+TEST_F(ParallelSnippetGeneratorTest, MOV16ms) {
+  const unsigned Opcode = X86::MOV16ms;
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
+  auto Err =
+      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters())
+          .takeError();
+  EXPECT_TRUE((bool)Err);
+  EXPECT_THAT(toString(std::move(Err)),
+              testing::HasSubstr("no available registers"));
+}
+
 class FakeSnippetGenerator : public SnippetGenerator {
 public:
   FakeSnippetGenerator(const LLVMState &State, const Options &Opts)

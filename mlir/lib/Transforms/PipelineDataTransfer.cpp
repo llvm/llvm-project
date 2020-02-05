@@ -1,6 +1,6 @@
 //===- PipelineDataTransfer.cpp --- Pass for pipelining data movement ---*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -72,10 +72,9 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     SmallVector<int64_t, 4> newShape(1 + oldMemRefType.getRank());
     newShape[0] = 2;
     std::copy(oldShape.begin(), oldShape.end(), newShape.begin() + 1);
-    auto newMemRefType =
-        MemRefType::get(newShape, oldMemRefType.getElementType(), {},
-                        oldMemRefType.getMemorySpace());
-    return newMemRefType;
+    return MemRefType::Builder(oldMemRefType)
+        .setShape(newShape)
+        .setAffineMaps({});
   };
 
   auto oldMemRefType = oldMemRef.getType().cast<MemRefType>();

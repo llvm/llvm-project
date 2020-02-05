@@ -1,6 +1,6 @@
 //===- SymbolTable.cpp - MLIR Symbol Table Class --------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,23 +18,6 @@ using namespace mlir;
 /// symbol table.
 static bool isPotentiallyUnknownSymbolTable(Operation *op) {
   return !op->getDialect() && op->getNumRegions() == 1;
-}
-
-/// Returns the nearest symbol table from a given operation `from`. Returns
-/// nullptr if no valid parent symbol table could be found.
-static Operation *getNearestSymbolTable(Operation *from) {
-  assert(from && "expected valid operation");
-  if (isPotentiallyUnknownSymbolTable(from))
-    return nullptr;
-
-  while (!from->hasTrait<OpTrait::SymbolTable>()) {
-    from = from->getParentOp();
-
-    // Check that this is a valid op and isn't an unknown symbol table.
-    if (!from || isPotentiallyUnknownSymbolTable(from))
-      return nullptr;
-  }
-  return from;
 }
 
 /// Returns the string name of the given symbol, or None if this is not a
@@ -212,6 +195,23 @@ void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
   symbol->setAttr(getVisibilityAttrName(), StringAttr::get(visName, ctx));
 }
 
+/// Returns the nearest symbol table from a given operation `from`. Returns
+/// nullptr if no valid parent symbol table could be found.
+Operation *SymbolTable::getNearestSymbolTable(Operation *from) {
+  assert(from && "expected valid operation");
+  if (isPotentiallyUnknownSymbolTable(from))
+    return nullptr;
+
+  while (!from->hasTrait<OpTrait::SymbolTable>()) {
+    from = from->getParentOp();
+
+    // Check that this is a valid op and isn't an unknown symbol table.
+    if (!from || isPotentiallyUnknownSymbolTable(from))
+      return nullptr;
+  }
+  return from;
+}
+
 /// Returns the operation registered with the given symbol name with the
 /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
 /// with the 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol
@@ -230,30 +230,42 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
 }
 Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
                                        SymbolRefAttr symbol) {
+  SmallVector<Operation *, 4> resolvedSymbols;
+  if (failed(lookupSymbolIn(symbolTableOp, symbol, resolvedSymbols)))
+    return nullptr;
+  return resolvedSymbols.back();
+}
+
+LogicalResult
+SymbolTable::lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr symbol,
+                            SmallVectorImpl<Operation *> &symbols) {
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Lookup the root reference for this symbol.
   symbolTableOp = lookupSymbolIn(symbolTableOp, symbol.getRootReference());
   if (!symbolTableOp)
-    return nullptr;
+    return failure();
+  symbols.push_back(symbolTableOp);
 
   // If there are no nested references, just return the root symbol directly.
   ArrayRef<FlatSymbolRefAttr> nestedRefs = symbol.getNestedReferences();
   if (nestedRefs.empty())
-    return symbolTableOp;
+    return success();
 
   // Verify that the root is also a symbol table.
   if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>())
-    return nullptr;
+    return failure();
 
   // Otherwise, lookup each of the nested non-leaf references and ensure that
   // each corresponds to a valid symbol table.
   for (FlatSymbolRefAttr ref : nestedRefs.drop_back()) {
     symbolTableOp = lookupSymbolIn(symbolTableOp, ref.getValue());
     if (!symbolTableOp || !symbolTableOp->hasTrait<OpTrait::SymbolTable>())
-      return nullptr;
+      return failure();
+    symbols.push_back(symbolTableOp);
   }
-  return lookupSymbolIn(symbolTableOp, symbol.getLeafReference());
+  symbols.push_back(lookupSymbolIn(symbolTableOp, symbol.getLeafReference()));
+  return success(symbols.back());
 }
 
 /// Returns the operation registered with the given symbol name within the
@@ -401,35 +413,19 @@ static WalkResult walkSymbolRefs(
 }
 
 /// Walk all of the uses, for any symbol, that are nested within the given
-/// operation 'from', invoking the provided callback for each. This does not
-/// traverse into any nested symbol tables, and will also only return uses on
-/// 'from' if it does not also define a symbol table.
+/// regions, invoking the provided callback for each. This does not traverse
+/// into any nested symbol tables.
 static Optional<WalkResult> walkSymbolUses(
-    Operation *from,
+    MutableArrayRef<Region> regions,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
-  // If from is not a symbol table, check for uses. A symbol table defines a new
-  // scope, so we can't walk the attributes from the symbol table op.
-  if (!from->hasTrait<OpTrait::SymbolTable>()) {
-    if (walkSymbolRefs(from, callback).wasInterrupted())
-      return WalkResult::interrupt();
-  }
-
-  SmallVector<Region *, 1> worklist;
-  worklist.reserve(from->getNumRegions());
-  for (Region &region : from->getRegions())
-    worklist.push_back(&region);
-
+  SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
   while (!worklist.empty()) {
-    Region *region = worklist.pop_back_val();
-    for (Block &block : *region) {
+    for (Block &block : *worklist.pop_back_val()) {
       for (Operation &op : block) {
         if (walkSymbolRefs(&op, callback).wasInterrupted())
           return WalkResult::interrupt();
 
-        // If this operation has regions, and it as well as its dialect aren't
-        // registered then conservatively fail. The operation may define a
-        // symbol table, so we can't opaquely know if we should traverse to find
-        // nested uses.
+        // Check that this isn't a potentially unknown symbol table.
         if (isPotentiallyUnknownSymbolTable(&op))
           return llvm::None;
 
@@ -444,16 +440,74 @@ static Optional<WalkResult> walkSymbolUses(
   }
   return WalkResult::advance();
 }
+/// Walk all of the uses, for any symbol, that are nested within the given
+/// operaion 'from', invoking the provided callback for each. This does not
+/// traverse into any nested symbol tables.
+static Optional<WalkResult> walkSymbolUses(
+    Operation *from,
+    function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
+  // If this operation has regions, and it, as well as its dialect, isn't
+  // registered then conservatively fail. The operation may define a
+  // symbol table, so we can't opaquely know if we should traverse to find
+  // nested uses.
+  if (isPotentiallyUnknownSymbolTable(from))
+    return llvm::None;
 
-/// Walks all of the symbol scopes from 'symbol' to (inclusive) 'limit' invoking
-/// the provided callback at each one with a properly scoped reference to
-/// 'symbol'. The callback takes as parameters the symbol reference at the
-/// current scope as well as the top-level operation representing the top of
-/// that scope.
-static Optional<WalkResult> walkSymbolScopes(
-    Operation *symbol, Operation *limit,
-    function_ref<Optional<WalkResult>(SymbolRefAttr, Operation *)> callback) {
-  StringRef symbolName = SymbolTable::getSymbolName(symbol);
+  // Walk the uses on this operation.
+  if (walkSymbolRefs(from, callback).wasInterrupted())
+    return WalkResult::interrupt();
+
+  // Only recurse if this operation is not a symbol table. A symbol table
+  // defines a new scope, so we can't walk the attributes from within the symbol
+  // table op.
+  if (!from->hasTrait<OpTrait::SymbolTable>())
+    return walkSymbolUses(from->getRegions(), callback);
+  return WalkResult::advance();
+}
+
+namespace {
+/// This class represents a single symbol scope. A symbol scope represents the
+/// set of operations nested within a symbol table that may reference symbols
+/// within that table. A symbol scope does not contain the symbol table
+/// operation itself, just its contained operations. A scope ends at leaf
+/// operations or another symbol table operation.
+struct SymbolScope {
+  /// Walk the symbol uses within this scope, invoking the given callback.
+  /// This variant is used when the callback type matches that expected by
+  /// 'walkSymbolUses'.
+  template <typename CallbackT,
+            typename std::enable_if_t<!std::is_same<
+                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
+                nullptr>
+  Optional<WalkResult> walk(CallbackT cback) {
+    if (Region *region = limit.dyn_cast<Region *>())
+      return walkSymbolUses(*region, cback);
+    return walkSymbolUses(limit.get<Operation *>(), cback);
+  }
+  /// This variant is used when the callback type matches a stripped down type:
+  /// void(SymbolTable::SymbolUse use)
+  template <typename CallbackT,
+            typename std::enable_if_t<std::is_same<
+                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
+                nullptr>
+  Optional<WalkResult> walk(CallbackT cback) {
+    return walk([=](SymbolTable::SymbolUse use, ArrayRef<int>) {
+      return cback(use), WalkResult::advance();
+    });
+  }
+
+  /// The representation of the symbol within this scope.
+  SymbolRefAttr symbol;
+
+  /// The IR unit representing this scope.
+  llvm::PointerUnion<Operation *, Region *> limit;
+};
+} // end anonymous namespace
+
+/// Collect all of the symbol scopes from 'symbol' to (inclusive) 'limit'.
+static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
+                                                       Operation *limit) {
+  StringRef symName = SymbolTable::getSymbolName(symbol);
   assert(!symbol->hasTrait<OpTrait::SymbolTable>() || symbol != limit);
 
   // Compute the ancestors of 'limit'.
@@ -466,10 +520,10 @@ static Optional<WalkResult> walkSymbolScopes(
     if (limitAncestor == symbol) {
       // Check that the nearest symbol table is 'symbol's parent. SymbolRefAttr
       // doesn't support parent references.
-      if (getNearestSymbolTable(limit) != symbol->getParentOp())
-        return WalkResult::advance();
-      return callback(SymbolRefAttr::get(symbolName, symbol->getContext()),
-                      limit);
+      if (SymbolTable::getNearestSymbolTable(limit->getParentOp()) ==
+          symbol->getParentOp())
+        return {{SymbolRefAttr::get(symName, symbol->getContext()), limit}};
+      return {};
     }
 
     limitAncestors.insert(limitAncestor);
@@ -486,36 +540,45 @@ static Optional<WalkResult> walkSymbolScopes(
   // Compute the set of valid nested references for 'symbol' as far up to the
   // common ancestor as possible.
   SmallVector<SymbolRefAttr, 2> references;
-  bool collectedAllReferences = succeeded(collectValidReferencesFor(
-      symbol, symbolName, commonAncestor, references));
+  bool collectedAllReferences = succeeded(
+      collectValidReferencesFor(symbol, symName, commonAncestor, references));
 
   // Handle the case where the common ancestor is 'limit'.
   if (commonAncestor == limit) {
+    SmallVector<SymbolScope, 2> scopes;
+
     // Walk each of the ancestors of 'symbol', calling the compute function for
     // each one.
     Operation *limitIt = symbol->getParentOp();
     for (size_t i = 0, e = references.size(); i != e;
          ++i, limitIt = limitIt->getParentOp()) {
-      Optional<WalkResult> callbackResult = callback(references[i], limitIt);
-      if (callbackResult != WalkResult::advance())
-        return callbackResult;
+      assert(limitIt->hasTrait<OpTrait::SymbolTable>());
+      scopes.push_back({references[i], &limitIt->getRegion(0)});
     }
-    return WalkResult::advance();
+    return scopes;
   }
 
   // Otherwise, we just need the symbol reference for 'symbol' that will be
   // used within 'limit'. This is the last reference in the list we computed
   // above if we were able to collect all references.
   if (!collectedAllReferences)
-    return WalkResult::advance();
-  return callback(references.back(), limit);
+    return {};
+  return {{references.back(), limit}};
 }
+static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
+                                                       Region *limit) {
+  auto scopes = collectSymbolScopes(symbol, limit->getParentOp());
 
-/// Walk the symbol scopes defined by 'limit' invoking the provided callback.
-static Optional<WalkResult> walkSymbolScopes(
-    StringRef symbol, Operation *limit,
-    function_ref<Optional<WalkResult>(SymbolRefAttr, Operation *)> callback) {
-  return callback(SymbolRefAttr::get(symbol, limit->getContext()), limit);
+  // If we collected some scopes to walk, make sure to constrain the one for
+  // limit to the specific region requested.
+  if (!scopes.empty())
+    scopes.back().limit = limit;
+  return scopes;
+}
+template <typename IRUnit>
+static SmallVector<SymbolScope, 1> collectSymbolScopes(StringRef symbol,
+                                                       IRUnit *limit) {
+  return {{SymbolRefAttr::get(symbol, limit->getContext()), limit}};
 }
 
 /// Returns true if the given reference 'SubRef' is a sub reference of the
@@ -539,6 +602,18 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 //===----------------------------------------------------------------------===//
 // SymbolTable::getSymbolUses
 
+/// The implementation of SymbolTable::getSymbolUses below.
+template <typename FromT>
+static Optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
+  std::vector<SymbolTable::SymbolUse> uses;
+  auto walkFn = [&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
+    uses.push_back(symbolUse);
+    return WalkResult::advance();
+  };
+  auto result = walkSymbolUses(from, walkFn);
+  return result ? Optional<SymbolTable::UseRange>(std::move(uses)) : llvm::None;
+}
+
 /// Get an iterator range for all of the uses, for any symbol, that are nested
 /// within the given operation 'from'. This does not traverse into any nested
 /// symbol tables, and will also only return uses on 'from' if it does not
@@ -547,43 +622,34 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 /// None if there are any unknown operations that may potentially be symbol
 /// tables.
 auto SymbolTable::getSymbolUses(Operation *from) -> Optional<UseRange> {
-  std::vector<SymbolUse> uses;
-  auto walkFn = [&](SymbolUse symbolUse, ArrayRef<int>) {
-    uses.push_back(symbolUse);
-    return WalkResult::advance();
-  };
-  auto result = walkSymbolUses(from, walkFn);
-  return result ? Optional<UseRange>(std::move(uses)) : Optional<UseRange>();
+  return getSymbolUsesImpl(from);
+}
+auto SymbolTable::getSymbolUses(Region *from) -> Optional<UseRange> {
+  return getSymbolUsesImpl(MutableArrayRef<Region>(*from));
 }
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::getSymbolUses
 
 /// The implementation of SymbolTable::getSymbolUses below.
-template <typename SymbolT>
+template <typename SymbolT, typename IRUnitT>
 static Optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
-                                                         Operation *limit) {
+                                                         IRUnitT *limit) {
   std::vector<SymbolTable::SymbolUse> uses;
-  auto walkFn = [&](SymbolRefAttr symbolRefAttr, Operation *from) {
-    return walkSymbolUses(
-        from, [&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
-          if (isReferencePrefixOf(symbolRefAttr, symbolUse.getSymbolRef()))
+  for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
+    if (!scope.walk([&](SymbolTable::SymbolUse symbolUse) {
+          if (isReferencePrefixOf(scope.symbol, symbolUse.getSymbolRef()))
             uses.push_back(symbolUse);
-          return WalkResult::advance();
-        });
-  };
-  if (walkSymbolScopes(symbol, limit, walkFn))
-    return SymbolTable::UseRange(std::move(uses));
-  return llvm::None;
+        }))
+      return llvm::None;
+  }
+  return SymbolTable::UseRange(std::move(uses));
 }
 
 /// Get all of the uses of the given symbol that are nested within the given
 /// operation 'from', invoking the provided callback for each. This does not
-/// traverse into any nested symbol tables, and will also only return uses on
-/// 'from' if it does not also define a symbol table. This is because we treat
-/// the region as the boundary of the symbol table, and not the op itself. This
-/// function returns None if there are any unknown operations that may
-/// potentially be symbol tables.
+/// traverse into any nested symbol tables. This function returns None if there
+/// are any unknown operations that may potentially be symbol tables.
 auto SymbolTable::getSymbolUses(StringRef symbol, Operation *from)
     -> Optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
@@ -592,35 +658,47 @@ auto SymbolTable::getSymbolUses(Operation *symbol, Operation *from)
     -> Optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
 }
+auto SymbolTable::getSymbolUses(StringRef symbol, Region *from)
+    -> Optional<UseRange> {
+  return getSymbolUsesImpl(symbol, from);
+}
+auto SymbolTable::getSymbolUses(Operation *symbol, Region *from)
+    -> Optional<UseRange> {
+  return getSymbolUsesImpl(symbol, from);
+}
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::symbolKnownUseEmpty
 
 /// The implementation of SymbolTable::symbolKnownUseEmpty below.
-template <typename SymbolT>
-static bool symbolKnownUseEmptyImpl(SymbolT symbol, Operation *limit) {
-  // Walk all of the symbol uses looking for a reference to 'symbol'.
-  auto walkFn = [&](SymbolRefAttr symbolRefAttr, Operation *from) {
-    return walkSymbolUses(
-        from, [&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
-          return isReferencePrefixOf(symbolRefAttr, symbolUse.getSymbolRef())
+template <typename SymbolT, typename IRUnitT>
+static bool symbolKnownUseEmptyImpl(SymbolT symbol, IRUnitT *limit) {
+  for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
+    // Walk all of the symbol uses looking for a reference to 'symbol'.
+    if (scope.walk([&](SymbolTable::SymbolUse symbolUse, ArrayRef<int>) {
+          return isReferencePrefixOf(scope.symbol, symbolUse.getSymbolRef())
                      ? WalkResult::interrupt()
                      : WalkResult::advance();
-        });
-  };
-  return walkSymbolScopes(symbol, limit, walkFn) == WalkResult::advance();
+        }) != WalkResult::advance())
+      return false;
+  }
+  return true;
 }
 
 /// Return if the given symbol is known to have no uses that are nested within
 /// the given operation 'from'. This does not traverse into any nested symbol
-/// tables, and will also only count uses on 'from' if it does not also define
-/// a symbol table. This is because we treat the region as the boundary of the
-/// symbol table, and not the op itself. This function will also return false if
-/// there are any unknown operations that may potentially be symbol tables.
+/// tables. This function will also return false if there are any unknown
+/// operations that may potentially be symbol tables.
 bool SymbolTable::symbolKnownUseEmpty(StringRef symbol, Operation *from) {
   return symbolKnownUseEmptyImpl(symbol, from);
 }
 bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Operation *from) {
+  return symbolKnownUseEmptyImpl(symbol, from);
+}
+bool SymbolTable::symbolKnownUseEmpty(StringRef symbol, Region *from) {
+  return symbolKnownUseEmptyImpl(symbol, from);
+}
+bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
   return symbolKnownUseEmptyImpl(symbol, from);
 }
 
@@ -685,10 +763,9 @@ static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
 }
 
 /// The implementation of SymbolTable::replaceAllSymbolUses below.
-template <typename SymbolT>
-static LogicalResult replaceAllSymbolUsesImpl(SymbolT symbol,
-                                              StringRef newSymbol,
-                                              Operation *limit) {
+template <typename SymbolT, typename IRUnitT>
+static LogicalResult
+replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
   // A collection of operations along with their new attribute dictionary.
   std::vector<std::pair<Operation *, DictionaryAttr>> updatedAttrDicts;
 
@@ -710,26 +787,26 @@ static LogicalResult replaceAllSymbolUsesImpl(SymbolT symbol,
   // Generate a new attribute to replace the given attribute.
   MLIRContext *ctx = limit->getContext();
   FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(newSymbol, ctx);
-  auto scopeWalkFn = [&](SymbolRefAttr oldAttr,
-                         Operation *from) -> Optional<WalkResult> {
-    SymbolRefAttr newAttr = generateNewRefAttr(oldAttr, newLeafAttr);
+  for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
+    SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
     auto walkFn = [&](SymbolTable::SymbolUse symbolUse,
                       ArrayRef<int> accessChain) {
       SymbolRefAttr useRef = symbolUse.getSymbolRef();
-      if (!isReferencePrefixOf(oldAttr, useRef))
+      if (!isReferencePrefixOf(scope.symbol, useRef))
         return WalkResult::advance();
 
       // If we have a valid match, check to see if this is a proper
       // subreference. If it is, then we will need to generate a different new
       // attribute specifically for this use.
       SymbolRefAttr replacementRef = newAttr;
-      if (useRef != oldAttr) {
-        if (oldAttr.isa<FlatSymbolRefAttr>()) {
+      if (useRef != scope.symbol) {
+        if (scope.symbol.isa<FlatSymbolRefAttr>()) {
           replacementRef =
               SymbolRefAttr::get(newSymbol, useRef.getNestedReferences(), ctx);
         } else {
           auto nestedRefs = llvm::to_vector<4>(useRef.getNestedReferences());
-          nestedRefs[oldAttr.getNestedReferences().size() - 1] = newLeafAttr;
+          nestedRefs[scope.symbol.getNestedReferences().size() - 1] =
+              newLeafAttr;
           replacementRef =
               SymbolRefAttr::get(useRef.getRootReference(), nestedRefs, ctx);
         }
@@ -748,18 +825,15 @@ static LogicalResult replaceAllSymbolUsesImpl(SymbolT symbol,
       accessChains.push_back({llvm::to_vector<1>(accessChain), replacementRef});
       return WalkResult::advance();
     };
-    if (!walkSymbolUses(from, walkFn))
-      return llvm::None;
+    if (!scope.walk(walkFn))
+      return failure();
 
     // Check to see if we have a dangling op that needs to be processed.
     if (curOp) {
       updatedAttrDicts.push_back({curOp, generateNewAttrDict()});
       curOp = nullptr;
     }
-    return WalkResult::advance();
-  };
-  if (!walkSymbolScopes(symbol, limit, scopeWalkFn))
-    return failure();
+  }
 
   // Update the attribute dictionaries as necessary.
   for (auto &it : updatedAttrDicts)
@@ -769,11 +843,9 @@ static LogicalResult replaceAllSymbolUsesImpl(SymbolT symbol,
 
 /// Attempt to replace all uses of the given symbol 'oldSymbol' with the
 /// provided symbol 'newSymbol' that are nested within the given operation
-/// 'from'. This does not traverse into any nested symbol tables, and will
-/// also only replace uses on 'from' if it does not also define a symbol
-/// table. This is because we treat the region as the boundary of the symbol
-/// table, and not the op itself. If there are any unknown operations that may
-/// potentially be symbol tables, no uses are replaced and failure is returned.
+/// 'from'. This does not traverse into any nested symbol tables. If there are
+/// any unknown operations that may potentially be symbol tables, no uses are
+/// replaced and failure is returned.
 LogicalResult SymbolTable::replaceAllSymbolUses(StringRef oldSymbol,
                                                 StringRef newSymbol,
                                                 Operation *from) {
@@ -782,5 +854,15 @@ LogicalResult SymbolTable::replaceAllSymbolUses(StringRef oldSymbol,
 LogicalResult SymbolTable::replaceAllSymbolUses(Operation *oldSymbol,
                                                 StringRef newSymbol,
                                                 Operation *from) {
+  return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
+}
+LogicalResult SymbolTable::replaceAllSymbolUses(StringRef oldSymbol,
+                                                StringRef newSymbol,
+                                                Region *from) {
+  return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
+}
+LogicalResult SymbolTable::replaceAllSymbolUses(Operation *oldSymbol,
+                                                StringRef newSymbol,
+                                                Region *from) {
   return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
 }

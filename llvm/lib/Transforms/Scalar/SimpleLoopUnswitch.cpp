@@ -2868,7 +2868,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
 
   // Save the current loop name in a variable so that we can report it even
   // after it has been deleted.
-  std::string LoopName = L.getName();
+  std::string LoopName = std::string(L.getName());
 
   auto UnswitchCB = [&L, &U, &LoopName](bool CurrentLoopValid,
                                         ArrayRef<Loop *> NewLoops) {
@@ -2982,10 +2982,6 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   if (MSSA && VerifyMemorySSA)
     MSSA->verifyMemorySSA();
-
-  // If anything was unswitched, also clear any cached information about this
-  // loop.
-  LPM.deleteSimpleAnalysisLoop(L);
 
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.

@@ -1,4 +1,4 @@
-//===-- SBType.cpp ----------------------------------------------*- C++ -*-===//
+//===-- SBType.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -802,7 +802,7 @@ const char *SBTypeMemberFunction::GetDemangledName() {
     ConstString mangled_str = m_opaque_sp->GetMangledName();
     if (mangled_str) {
       Mangled mangled(mangled_str);
-      return mangled.GetDemangledName(mangled.GuessLanguage()).GetCString();
+      return mangled.GetDemangledName().GetCString();
     }
   }
   return nullptr;

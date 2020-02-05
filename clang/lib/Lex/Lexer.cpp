@@ -253,7 +253,7 @@ template <typename T> static void StringifyImpl(T &Str, char Quote) {
 }
 
 std::string Lexer::Stringify(StringRef Str, bool Charify) {
-  std::string Result = Str;
+  std::string Result = std::string(Str);
   char Quote = Charify ? '\'' : '"';
   StringifyImpl(Result, Quote);
   return Result;

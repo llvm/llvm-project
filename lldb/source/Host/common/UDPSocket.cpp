@@ -1,4 +1,4 @@
-//===-- UDPSocket.cpp -------------------------------------------*- C++ -*-===//
+//===-- UDPSocket.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -136,8 +136,8 @@ Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
 
 std::string UDPSocket::GetRemoteConnectionURI() const {
   if (m_socket != kInvalidSocketValue) {
-    return llvm::formatv("udp://[{0}]:{1}", m_sockaddr.GetIPAddress(),
-                         m_sockaddr.GetPort());
+    return std::string(llvm::formatv(
+        "udp://[{0}]:{1}", m_sockaddr.GetIPAddress(), m_sockaddr.GetPort()));
   }
   return "";
 }

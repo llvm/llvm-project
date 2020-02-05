@@ -942,7 +942,7 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
   assert(Second.is(AsmToken::Colon));
   StringRef Raw(String.data(), Third.getString().data() - String.data() +
                                    Third.getString().size());
-  std::string Collapsed = Raw;
+  std::string Collapsed = std::string(Raw);
   Collapsed.erase(llvm::remove_if(Collapsed, isspace), Collapsed.end());
   StringRef Whole = Collapsed;
   std::pair<StringRef, StringRef> DotSplit = Whole.split('.');
@@ -988,7 +988,7 @@ bool HexagonAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
     Again = (Contigious && Type) || (Workaround && Type);
     NeededWorkaround = NeededWorkaround || (Again && !(Contigious && Type));
   }
-  std::string Collapsed = RawString;
+  std::string Collapsed = std::string(RawString);
   Collapsed.erase(llvm::remove_if(Collapsed, isspace), Collapsed.end());
   StringRef FullString = Collapsed;
   std::pair<StringRef, StringRef> DotSplit = FullString.split('.');

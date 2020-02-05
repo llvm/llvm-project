@@ -51,7 +51,7 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
                              ArrayRef<FunctionCoverageSummary> Summaries) {
   std::string Name;
   if (Group.hasName()) {
-    Name = Group.getName();
+    Name = std::string(Group.getName());
   } else {
     llvm::raw_string_ostream OS(Name);
     OS << "Definition at line " << Group.getLine() << ", column "

@@ -39,9 +39,10 @@ entry:
 declare dso_local noalias nonnull i8* @_Znwm(i64)
 @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global i8*
 
-!llvm.module.flags = !{!3}
+!llvm.module.flags = !{!3, !4}
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTSM1AFvvE.virtual"}
 !2 = !{i64 2} ; translation-unit vcall visibility
 !3 = !{i32 1, !"LTOPostLink", i32 1}
+!4 = !{i32 1, !"Virtual Function Elim", i32 1}

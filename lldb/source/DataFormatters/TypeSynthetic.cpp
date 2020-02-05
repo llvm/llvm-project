@@ -1,5 +1,4 @@
-//===-- TypeSynthetic.cpp ----------------------------------------*- C++
-//-*-===//
+//===-- TypeSynthetic.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +81,7 @@ std::string TypeFilterImpl::GetDescription() {
   }
 
   sstr.Printf("}");
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 std::string CXXSyntheticChildren::GetDescription() {
@@ -92,7 +91,7 @@ std::string CXXSyntheticChildren::GetDescription() {
               SkipsReferences() ? " (skip references)" : "",
               m_description.c_str());
 
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
@@ -213,5 +212,5 @@ std::string ScriptedSyntheticChildren::GetDescription() {
               SkipsReferences() ? " (skip references)" : "",
               m_python_class.c_str());
 
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }

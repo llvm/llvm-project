@@ -1,6 +1,6 @@
 //===- Pass.cpp - Pass infrastructure implementation ----------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -601,7 +601,7 @@ void PassManager::disableMultithreading(bool disable) {
 /// of a crash or a pass failure. `outputFile` is a .mlir filename used to write
 /// the generated reproducer.
 void PassManager::enableCrashReproducerGeneration(StringRef outputFile) {
-  crashReproducerFileName = outputFile;
+  crashReproducerFileName = std::string(outputFile);
 }
 
 /// Add the provided instrumentation to the pass manager.

@@ -8,8 +8,9 @@
 
 #include "SerialSnippetGenerator.h"
 
-#include "MCInstrDescView.h"
 #include "CodeTemplate.h"
+#include "MCInstrDescView.h"
+#include "Target.h"
 #include <algorithm>
 #include <numeric>
 #include <vector>
@@ -48,7 +49,16 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     if (OtherOpcode == Instr->Description.getOpcode())
       continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
+    const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
+    // Ignore instructions that we cannot run.
+    if (OtherInstrDesc.isPseudo() ||
+        OtherInstrDesc.isBranch() || OtherInstrDesc.isIndirectBranch() ||
+        OtherInstrDesc.isCall() || OtherInstrDesc.isReturn()) {
+          continue;
+    }
     if (OtherInstr.hasMemoryOperands())
+      continue;
+    if (!State.getExegesisTarget().allowAsBackToBack(OtherInstr))
       continue;
     if (Instr->hasAliasingRegistersThrough(OtherInstr, ForbiddenRegisters))
       AliasingInstructions.push_back(&OtherInstr);
@@ -92,7 +102,7 @@ static void appendCodeTemplates(const LLVMState &State,
     // serial.
     CodeTemplate CT;
     CT.Execution = ExecutionModeBit;
-    CT.Info = ExecutionClassDescription;
+    CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(Instr);
     CodeTemplates.push_back(std::move(CT));
     return;
@@ -114,7 +124,7 @@ static void appendCodeTemplates(const LLVMState &State,
     setRandomAliasing(SelfAliasing, IT, IT);
     CodeTemplate CT;
     CT.Execution = ExecutionModeBit;
-    CT.Info = ExecutionClassDescription;
+    CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(std::move(IT));
     CodeTemplates.push_back(std::move(CT));
     return;
@@ -133,7 +143,7 @@ static void appendCodeTemplates(const LLVMState &State,
         setRandomAliasing(Back, OtherIT, ThisIT);
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;
-      CT.Info = ExecutionClassDescription;
+      CT.Info = std::string(ExecutionClassDescription);
       CT.Instructions.push_back(std::move(ThisIT));
       CT.Instructions.push_back(std::move(OtherIT));
       CodeTemplates.push_back(std::move(CT));

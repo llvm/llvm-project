@@ -1,4 +1,4 @@
-//===-- Thread.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Thread.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1773,7 +1773,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
                 "first location:\n",
                 file.GetFilename().AsCString(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = sstr.GetString();
+    *warnings = std::string(sstr.GetString());
   }
 
   if (!reg_ctx->SetPC(dest))

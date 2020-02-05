@@ -191,9 +191,9 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v4, s6
-; VI-NEXT:    v_mov_b32_e32 v5, s7
 ; VI-NEXT:    v_mov_b32_e32 v6, s4
 ; VI-NEXT:    v_mov_b32_e32 v7, s5
+; VI-NEXT:    v_mov_b32_e32 v5, s7
 ; VI-NEXT:    flat_load_dword v6, v[6:7]
 ; VI-NEXT:    flat_load_dword v4, v[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
@@ -215,9 +215,9 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s6
-; GFX9-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s5
+; GFX9-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9-NEXT:    global_load_dword v6, v[6:7], off
 ; GFX9-NEXT:    global_load_dword v4, v[4:5], off
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0

@@ -18,6 +18,16 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
+// Allow taking address of global variables in other module-like ops
+spv.globalVariable @var : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
+func @address_of() -> () {
+  // CHECK: spv._address_of @var
+  %1 = spv._address_of @var : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
+  return
+}
+
+// -----
+
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
   func @foo() -> () {
@@ -174,7 +184,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
    func @do_nothing() -> () {
-     // expected-error @+1 {{'spv.EntryPoint' op failed to verify that op must appear in a 'spv.module' block}}
+     // expected-error @+1 {{op must appear in a module-like op's block}}
      spv.EntryPoint "GLCompute" @do_something
    }
 }
@@ -229,6 +239,13 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
+// Allow initializers coming from other module-like ops
+spv.specConstant @sc = 4.0 : f32
+// CHECK: spv.globalVariable @var initializer(@sc)
+spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
+
+// -----
+
 spv.module "Logical" "GLSL450" {
   // CHECK: spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
   spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
@@ -248,6 +265,14 @@ spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
   // CHECK: spv.globalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
   spv.globalVariable @var2 {built_in = "GlobalInvocationID"} : !spv.ptr<vector<3xi32>, Input>
+}
+
+// -----
+
+// Allow in other module-like ops
+module {
+  // CHECK: spv.globalVariable
+  spv.globalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // -----
@@ -275,7 +300,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   func @foo() {
-    // expected-error @+1 {{op failed to verify that op must appear in a 'spv.module' block}}
+    // expected-error @+1 {{op must appear in a module-like op's block}}
     spv.globalVariable @var0 : !spv.ptr<f32, Input>
     spv.Return
   }
@@ -418,7 +443,7 @@ spv.module "Logical" "GLSL450" {
 //===----------------------------------------------------------------------===//
 
 func @module_end_not_in_module() -> () {
-  // expected-error @+1 {{op must appear in a 'spv.module' block}}
+  // expected-error @+1 {{op must appear in a module-like op's block}}
   spv._module_end
 }
 
@@ -457,6 +482,16 @@ spv.module "Logical" "GLSL450" {
     %2 = spv.FAdd %0, %1 : f32
     spv.ReturnValue %2 : f32
   }
+}
+
+// -----
+
+// Allow taking reference of spec constant in other module-like ops
+spv.specConstant @sc = 5 : i32
+func @reference_of() {
+  // CHECK: spv._reference_of @sc
+  %0 = spv._reference_of @sc : i32
+  return
 }
 
 // -----
@@ -519,7 +554,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 func @use_in_function() -> () {
-  // expected-error @+1 {{op must appear in a 'spv.module' block}}
+  // expected-error @+1 {{op must appear in a module-like op's block}}
   spv.specConstant @sc = false
   return
 }

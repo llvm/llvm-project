@@ -152,7 +152,8 @@ class StringAttributeImpl : public AttributeImpl {
 
 public:
   StringAttributeImpl(StringRef Kind, StringRef Val = StringRef())
-      : AttributeImpl(StringAttrEntry), Kind(Kind), Val(Val) {}
+      : AttributeImpl(StringAttrEntry), Kind(std::string(Kind)),
+        Val(std::string(Val)) {}
 
   StringRef getStringKind() const { return Kind; }
   StringRef getStringValue() const { return Val; }

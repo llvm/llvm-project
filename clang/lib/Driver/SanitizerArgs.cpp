@@ -142,7 +142,7 @@ static void addDefaultBlacklists(const Driver &D, SanitizerMask Kinds,
     clang::SmallString<64> Path(D.ResourceDir);
     llvm::sys::path::append(Path, "share", BL.File);
     if (D.getVFS().exists(Path))
-      BlacklistFiles.push_back(Path.str());
+      BlacklistFiles.push_back(std::string(Path.str()));
     else if (BL.Mask == SanitizerKind::CFI)
       // If cfi_blacklist.txt cannot be found in the resource dir, driver
       // should fail.
@@ -412,9 +412,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::SafeStack,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+                     (TC.getTriple().isOSFuchsia() ? SanitizerMask()
+                                                   : SanitizerKind::Leak) |
+                         SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Thread | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::KernelHWAddress,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
@@ -831,8 +833,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if (AllAddedKinds & SanitizerKind::SafeStack) {
-    // SafeStack runtime is built into the system on Fuchsia.
-    SafeStackRuntime = !TC.getTriple().isOSFuchsia();
+    // SafeStack runtime is built into the system on Android and Fuchsia.
+    SafeStackRuntime =
+        !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
   LinkRuntimes =

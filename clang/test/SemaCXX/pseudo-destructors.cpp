@@ -33,17 +33,21 @@ void f(A* a, Foo *f, int *i, double *d, int ii) {
   
   g().~Bar(); // expected-error{{non-scalar}}
   
-  f->::~Bar();
+  f->::~Bar(); // expected-error {{not a structure or union}}
+  f->::Bar::~Bar();
   f->N::~Wibble(); // expected-error{{'N' does not refer to a type}} expected-error{{'Wibble' does not refer to a type}}
   
-  f->::~Bar(17, 42); // expected-error{{cannot have any arguments}}
+  f->Bar::~Bar(17, 42); // expected-error{{cannot have any arguments}}
 
   i->~Integer();
   i->Integer::~Integer();
-  i->N::~OtherInteger();
+  i->N::~OtherInteger(); // expected-error{{'N' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
+                         // expected-error@-1{{'OtherInteger' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
+  i->N::OtherInteger::~OtherInteger();
   i->N::OtherInteger::~OtherInteger();
   i->N::OtherInteger::~Integer(); // expected-error{{'Integer' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
-  i->N::~Integer(); // expected-error{{'Integer' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
+  i->N::~Integer(); // expected-error{{'N' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
+  i->N::OtherInteger::~Integer(); // expected-error{{'Integer' does not refer to a type name in pseudo-destructor expression; expected the name of type 'int'}}
   i->Integer::~Double(); // expected-error{{the type of object expression ('int') does not match the type being destroyed ('Double' (aka 'double')) in pseudo-destructor expression}}
 
   ii->~Integer(); // expected-error{{member reference type 'int' is not a pointer; did you mean to use '.'?}}

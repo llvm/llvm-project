@@ -1,5 +1,6 @@
 #                                                                 -*- python -*-
 # REQUIRES: system-darwin
+# UNSUPPORTED: lldb-repro
 # DEBUG: cd %S/../../../../examples/python && cat %s | %lldb && false
 # RUN: cd %S/../../../../examples/python && cat %s | %lldb | FileCheck %s
 # CHECK-LABEL: {{S}}KIP BEYOND CHECKS

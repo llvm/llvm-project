@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -151,6 +152,10 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
   bool replaceMulWithMul24(BinaryOperator &I) const;
+
+  /// Perform same function as equivalently named function in DAGCombiner. Since
+  /// we expand some divisions here, we need to perform this before obscuring.
+  bool foldBinOpIntoSelect(BinaryOperator &I) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -525,12 +530,140 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
   return true;
 }
 
-static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv, bool HasDenormals) {
+// Find a select instruction, which may have been casted. This is mostly to deal
+// with cases where i16 selects were promoted here to i32.
+static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
+  Cast = nullptr;
+  if (SelectInst *Sel = dyn_cast<SelectInst>(V))
+    return Sel;
+
+  if ((Cast = dyn_cast<CastInst>(V))) {
+    if (SelectInst *Sel = dyn_cast<SelectInst>(Cast->getOperand(0)))
+      return Sel;
+  }
+
+  return nullptr;
+}
+
+bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
+  // Don't do this unless the old select is going away. We want to eliminate the
+  // binary operator, not replace a binop with a select.
+  int SelOpNo = 0;
+
+  CastInst *CastOp;
+
+  // TODO: Should probably try to handle some cases with multiple
+  // users. Duplicating the select may be profitable for division.
+  SelectInst *Sel = findSelectThroughCast(BO.getOperand(0), CastOp);
+  if (!Sel || !Sel->hasOneUse()) {
+    SelOpNo = 1;
+    Sel = findSelectThroughCast(BO.getOperand(1), CastOp);
+  }
+
+  if (!Sel || !Sel->hasOneUse())
+    return false;
+
+  Constant *CT = dyn_cast<Constant>(Sel->getTrueValue());
+  Constant *CF = dyn_cast<Constant>(Sel->getFalseValue());
+  Constant *CBO = dyn_cast<Constant>(BO.getOperand(SelOpNo ^ 1));
+  if (!CBO || !CT || !CF)
+    return false;
+
+  if (CastOp) {
+    if (!CastOp->hasOneUse())
+      return false;
+    CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, BO.getType(), *DL);
+    CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, BO.getType(), *DL);
+  }
+
+  // TODO: Handle special 0/-1 cases DAG combine does, although we only really
+  // need to handle divisions here.
+  Constant *FoldedT = SelOpNo ?
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, *DL) :
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, *DL);
+  if (isa<ConstantExpr>(FoldedT))
+    return false;
+
+  Constant *FoldedF = SelOpNo ?
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, *DL) :
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, *DL);
+  if (isa<ConstantExpr>(FoldedF))
+    return false;
+
+  IRBuilder<> Builder(&BO);
+  Builder.SetCurrentDebugLocation(BO.getDebugLoc());
+  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&BO))
+    Builder.setFastMathFlags(FPOp->getFastMathFlags());
+
+  Value *NewSelect = Builder.CreateSelect(Sel->getCondition(),
+                                          FoldedT, FoldedF);
+  NewSelect->takeName(&BO);
+  BO.replaceAllUsesWith(NewSelect);
+  BO.eraseFromParent();
+  if (CastOp)
+    CastOp->eraseFromParent();
+  Sel->eraseFromParent();
+  return true;
+}
+
+// Perform RCP optimizations:
+//
+// 1/x -> rcp(x) when fast unsafe rcp is legal or fpmath >= 2.5ULP with
+//                                                denormals flushed.
+//
+// a/b -> a*rcp(b) when fast unsafe rcp is legal.
+static Value *performRCPOpt(Value *Num, Value *Den, bool FastUnsafeRcpLegal,
+                            IRBuilder<> Builder, MDNode *FPMath, Module *Mod,
+                            bool HasDenormals, bool NeedHighAccuracy) {
+
+  Type *Ty = Den->getType();
+  if (!FastUnsafeRcpLegal && Ty->isFloatTy() &&
+                             (HasDenormals || NeedHighAccuracy))
+    return nullptr;
+
+  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, Ty);
+  if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
+    if (FastUnsafeRcpLegal || Ty->isFloatTy() || Ty->isHalfTy()) {
+      if (CLHS->isExactlyValue(1.0)) {
+        // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
+        // the CI documentation has a worst case error of 1 ulp.
+        // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
+        // use it as long as we aren't trying to use denormals.
+        //
+        // v_rcp_f16 and v_rsq_f16 DO support denormals.
+
+        // NOTE: v_sqrt and v_rcp will be combined to v_rsq later. So we don't
+        //       insert rsq intrinsic here.
+
+        // 1.0 / x -> rcp(x)
+        return Builder.CreateCall(Decl, { Den });
+       }
+
+       // Same as for 1.0, but expand the sign out of the constant.
+       if (CLHS->isExactlyValue(-1.0)) {
+         // -1.0 / x -> rcp (fneg x)
+         Value *FNeg = Builder.CreateFNeg(Den);
+         return Builder.CreateCall(Decl, { FNeg });
+       }
+    }
+  }
+
+  if (FastUnsafeRcpLegal) {
+    // Turn into multiply by the reciprocal.
+    // x / y -> x * (1.0 / y)
+    Value *Recip = Builder.CreateCall(Decl, { Den });
+    return Builder.CreateFMul(Num, Recip, "", FPMath);
+  }
+  return nullptr;
+}
+
+static bool shouldKeepFDivF32(Value *Num, bool FastUnsafeRcpLegal,
+                              bool HasDenormals) {
   const ConstantFP *CNum = dyn_cast<ConstantFP>(Num);
   if (!CNum)
     return HasDenormals;
 
-  if (UnsafeDiv)
+  if (FastUnsafeRcpLegal)
     return true;
 
   bool IsOne = CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0);
@@ -539,44 +672,57 @@ static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv, bool HasDenormals) {
   return HasDenormals ^ IsOne;
 }
 
-// Insert an intrinsic for fast fdiv for safe math situations where we can
-// reduce precision. Leave fdiv for situations where the generic node is
-// expected to be optimized.
+
+// Optimizations is performed based on fpmath, fast math flags as wells as
+// denormals to lower fdiv using either rcp or fdiv.fast.
+//
+// FastUnsafeRcpLegal: We determine whether it is legal to use rcp based on
+//                     unsafe-fp-math, fast math flags, denormals and fpmath
+//                     accuracy request.
+//
+// RCP Optimizations:
+//   1/x -> rcp(x) when fast unsafe rcp is legal or fpmath >= 2.5ULP with
+//                                                  denormals flushed.
+//   a/b -> a*rcp(b) when fast unsafe rcp is legal.
+//
+// Use fdiv.fast:
+//   a/b -> fdiv.fast(a, b) when RCP optimization is not performed and
+//                          fpmath >= 2.5ULP with denormals flushed.
+//
+//   1/x -> fdiv.fast(1,x)  when RCP optimization is not performed and
+//                          fpmath >= 2.5ULP with denormals.
 bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
-  Type *Ty = FDiv.getType();
 
-  if (!Ty->getScalarType()->isFloatTy())
-    return false;
+  Type *Ty = FDiv.getType()->getScalarType();
 
-  MDNode *FPMath = FDiv.getMetadata(LLVMContext::MD_fpmath);
-  if (!FPMath)
+  // No intrinsic for fdiv16 if target does not support f16.
+  if (Ty->isHalfTy() && !ST->has16BitInsts())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&FDiv);
-  float ULP = FPOp->getFPAccuracy();
-  if (ULP < 2.5f)
-    return false;
+  MDNode *FPMath = FDiv.getMetadata(LLVMContext::MD_fpmath);
+  const bool NeedHighAccuracy = !FPMath || FPOp->getFPAccuracy() < 2.5f;
 
   FastMathFlags FMF = FPOp->getFastMathFlags();
-  bool UnsafeDiv = HasUnsafeFPMath || FMF.isFast() ||
-                                      FMF.allowReciprocal();
+  // Determine whether it is ok to use rcp based on unsafe-fp-math,
+  // fast math flags, denormals and accuracy request.
+  const bool FastUnsafeRcpLegal = HasUnsafeFPMath || FMF.isFast() ||
+          (FMF.allowReciprocal() && ((!HasFP32Denormals && !NeedHighAccuracy)
+                                     || FMF.approxFunc()));
 
-  // With UnsafeDiv node will be optimized to just rcp and mul.
-  if (UnsafeDiv)
-    return false;
+  // Use fdiv.fast for only f32, fpmath >= 2.5ULP and rcp is not used.
+  const bool UseFDivFast = Ty->isFloatTy() && !NeedHighAccuracy &&
+                           !FastUnsafeRcpLegal;
 
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()), FPMath);
+  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(FMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
-
-  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
 
   Value *Num = FDiv.getOperand(0);
   Value *Den = FDiv.getOperand(1);
 
   Value *NewFDiv = nullptr;
-
-  if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
+  if (VectorType *VT = dyn_cast<VectorType>(FDiv.getType())) {
     NewFDiv = UndefValue::get(VT);
 
     // FIXME: Doesn't do the right thing for cases where the vector is partially
@@ -584,19 +730,32 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
       Value *NumEltI = Builder.CreateExtractElement(Num, I);
       Value *DenEltI = Builder.CreateExtractElement(Den, I);
-      Value *NewElt;
-
-      if (shouldKeepFDivF32(NumEltI, UnsafeDiv, HasFP32Denormals)) {
-        NewElt = Builder.CreateFDiv(NumEltI, DenEltI);
-      } else {
-        NewElt = Builder.CreateCall(Decl, { NumEltI, DenEltI });
+      Value *NewElt = nullptr;
+      if (UseFDivFast && !shouldKeepFDivF32(NumEltI, FastUnsafeRcpLegal,
+                                           HasFP32Denormals)) {
+        Function *Decl =
+                 Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
+        NewElt = Builder.CreateCall(Decl, { NumEltI, DenEltI }, "", FPMath);
       }
+      if (!NewElt) // Try rcp.
+        NewElt = performRCPOpt(NumEltI, DenEltI, FastUnsafeRcpLegal, Builder,
+                               FPMath, Mod, HasFP32Denormals, NeedHighAccuracy);
+      if (!NewElt)
+        NewElt = Builder.CreateFDiv(NumEltI, DenEltI, "", FPMath);
 
       NewFDiv = Builder.CreateInsertElement(NewFDiv, NewElt, I);
     }
-  } else {
-    if (!shouldKeepFDivF32(Num, UnsafeDiv, HasFP32Denormals))
-      NewFDiv = Builder.CreateCall(Decl, { Num, Den });
+  } else { // Scalar.
+    if (UseFDivFast && !shouldKeepFDivF32(Num, FastUnsafeRcpLegal,
+                                          HasFP32Denormals)) {
+      Function *Decl =
+               Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
+      NewFDiv = Builder.CreateCall(Decl, { Num, Den }, "", FPMath);
+    }
+    if (!NewFDiv) { // Try rcp.
+      NewFDiv = performRCPOpt(Num, Den, FastUnsafeRcpLegal, Builder, FPMath,
+                              Mod, HasFP32Denormals, NeedHighAccuracy);
+    }
   }
 
   if (NewFDiv) {
@@ -883,6 +1042,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
 }
 
 bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
+  if (foldBinOpIntoSelect(I))
+    return true;
+
   if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
       DA->isUniform(&I) && promoteUniformOpToI32(I))
     return true;

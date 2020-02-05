@@ -565,7 +565,7 @@ public:
   void flush() = delete;
 
   /// Return a StringRef for the vector contents.
-  StringRef str() { return StringRef(OS.data(), OS.size()); }
+  StringRef str() const { return StringRef(OS.data(), OS.size()); }
 };
 
 /// A raw_ostream that discards all output.

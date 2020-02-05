@@ -15,6 +15,7 @@
 
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -536,7 +537,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
       // Get the name without prefix qualifiers from NewName.
       size_t LastColonPos = NewName.find_last_of(':');
       if (LastColonPos != std::string::npos)
-        ReplacedName = NewName.substr(LastColonPos + 1);
+        ReplacedName = std::string(NewName.substr(LastColonPos + 1));
     } else {
       if (RenameInfo.FromDecl && RenameInfo.Context) {
         if (!llvm::isa<clang::TranslationUnitDecl>(

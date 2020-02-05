@@ -1,6 +1,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
@@ -42,7 +43,7 @@ SVal PlacementNewChecker::getExtentSizeOfPlace(const Expr *Place,
   NonLoc OffsetInBytes = SvalBuilder.makeArrayIndex(
       Offset.getOffset() / C.getASTContext().getCharWidth());
   DefinedOrUnknownSVal ExtentInBytes =
-      BaseRegion->castAs<SubRegion>()->getExtent(SvalBuilder);
+      getDynamicSize(State, BaseRegion, SvalBuilder);
 
   return SvalBuilder.evalBinOp(State, BinaryOperator::Opcode::BO_Sub,
                                ExtentInBytes, OffsetInBytes,
@@ -99,10 +100,10 @@ void PlacementNewChecker::checkPreStmt(const CXXNewExpr *NE,
 
   if (SizeOfPlaceCI->getValue() < SizeOfTargetCI->getValue()) {
     if (ExplodedNode *N = C.generateErrorNode(State)) {
-      std::string Msg =
+      std::string Msg = std::string(
           llvm::formatv("Storage provided to placement new is only {0} bytes, "
                         "whereas the allocated type requires {1} bytes",
-                        SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue());
+                        SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue()));
 
       auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
       bugreporter::trackExpressionValue(N, Place, *R);

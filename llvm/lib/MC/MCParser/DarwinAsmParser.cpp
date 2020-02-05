@@ -672,7 +672,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
   if (!getLexer().is(AsmToken::Comma))
     return TokError("unexpected token in '.section' directive");
 
-  std::string SectionSpec = SectionName;
+  std::string SectionSpec = std::string(SectionName);
   SectionSpec += ",";
 
   // Add all the tokens until the end of the line, ParseSectionSpecifier will

@@ -532,6 +532,17 @@ unsigned LanguageVendor(SourceLanguage L);
 
 Optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
+/// The size of a reference determined by the DWARF 32/64-bit format.
+inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
+  switch (Format) {
+  case DwarfFormat::DWARF32:
+    return 4;
+  case DwarfFormat::DWARF64:
+    return 8;
+  }
+  llvm_unreachable("Invalid Format value");
+}
+
 /// A helper struct providing information about the byte size of DW_FORM
 /// values that vary in size depending on the DWARF version, address byte
 /// size, or DWARF32/DWARF64.
@@ -551,13 +562,7 @@ struct FormParams {
 
   /// The size of a reference is determined by the DWARF 32/64-bit format.
   uint8_t getDwarfOffsetByteSize() const {
-    switch (Format) {
-    case DwarfFormat::DWARF32:
-      return 4;
-    case DwarfFormat::DWARF64:
-      return 8;
-    }
-    llvm_unreachable("Invalid Format value");
+    return dwarf::getDwarfOffsetByteSize(Format);
   }
 
   explicit operator bool() const { return Version && AddrSize; }

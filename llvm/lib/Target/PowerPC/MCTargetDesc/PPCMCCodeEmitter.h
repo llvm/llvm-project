@@ -59,6 +59,12 @@ public:
   unsigned getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
+  uint64_t getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const;
+  uint64_t getMemRI34Encoding(const MCInst &MI, unsigned OpNo,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
   unsigned getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
@@ -80,7 +86,7 @@ public:
 
   /// getMachineOpValue - Return binary encoding of operand. If the machine
   /// operand requires relocation, record the relocation and return zero.
-  unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+  uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
@@ -96,6 +102,9 @@ public:
 
   // Get the number of bytes used to encode the given MCInst.
   unsigned getInstSizeInBytes(const MCInst &MI) const;
+
+  // Is this instruction a prefixed instruction.
+  bool isPrefixedInstruction(const MCInst &MI) const;
 
 private:
   FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;

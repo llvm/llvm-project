@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the GCNRegPressure class.
+///
+//===----------------------------------------------------------------------===//
 
 #include "GCNRegPressure.h"
 #include "AMDGPUSubtarget.h"
@@ -327,8 +332,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   // update max pressure
   MaxPressure = max(AtMIPressure, MaxPressure);
 
-  for (const auto &MO : MI.defs()) {
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()) || MO.isDead())
+  for (const auto &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isDef() ||
+        !Register::isVirtualRegister(MO.getReg()) || MO.isDead())
       continue;
 
     auto Reg = MO.getReg();
@@ -403,8 +409,8 @@ void GCNDownwardRPTracker::advanceToNext() {
   LastTrackedMI = &*NextMI++;
 
   // Add new registers or mask bits.
-  for (const auto &MO : LastTrackedMI->defs()) {
-    if (!MO.isReg())
+  for (const auto &MO : LastTrackedMI->operands()) {
+    if (!MO.isReg() || !MO.isDef())
       continue;
     Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))

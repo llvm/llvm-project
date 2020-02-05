@@ -1,6 +1,6 @@
 //===- Pattern.cpp - Pattern wrapper class --------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -207,19 +207,20 @@ tblgen::SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   case Kind::Attr: {
     auto type =
         op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
-    return formatv("{0} {1};\n", type, name);
+    return std::string(formatv("{0} {1};\n", type, name));
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
     // operands).
-    return formatv("Operation::operand_range {0}(op0->getOperands());\n", name);
+    return std::string(
+        formatv("Operation::operand_range {0}(op0->getOperands());\n", name));
   }
   case Kind::Value: {
-    return formatv("ArrayRef<Value> {0};\n", name);
+    return std::string(formatv("ArrayRef<Value> {0};\n", name));
   }
   case Kind::Result: {
     // Use the op itself for captured results.
-    return formatv("{0} {1};\n", op->getQualCppClassName(), name);
+    return std::string(formatv("{0} {1};\n", op->getQualCppClassName(), name));
   }
   }
   llvm_unreachable("unknown kind");
@@ -233,7 +234,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     assert(index < 0);
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Attr)\n");
-    return repl;
+    return std::string(repl);
   }
   case Kind::Operand: {
     assert(index < 0);
@@ -243,29 +244,30 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     if (operand->isVariadic()) {
       auto repl = formatv(fmt, name);
       LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicOperand)\n");
-      return repl;
+      return std::string(repl);
     }
     auto repl = formatv(fmt, formatv("(*{0}.begin())", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (SingleOperand)\n");
-    return repl;
+    return std::string(repl);
   }
   case Kind::Result: {
     // If `index` is greater than zero, then we are referencing a specific
     // result of a multi-result op. The result can still be variadic.
     if (index >= 0) {
-      std::string v = formatv("{0}.getODSResults({1})", name, index);
+      std::string v =
+          std::string(formatv("{0}.getODSResults({1})", name, index));
       if (!op->getResult(index).isVariadic())
-        v = formatv("(*{0}.begin())", v);
+        v = std::string(formatv("(*{0}.begin())", v));
       auto repl = formatv(fmt, v);
       LLVM_DEBUG(llvm::dbgs() << repl << " (SingleResult)\n");
-      return repl;
+      return std::string(repl);
     }
 
     // If this op has no result at all but still we bind a symbol to it, it
     // means we want to capture the op itself.
     if (op->getNumResults() == 0) {
       LLVM_DEBUG(llvm::dbgs() << name << " (Op)\n");
-      return name;
+      return std::string(name);
     }
 
     // We are referencing all results of the multi-result op. A specific result
@@ -274,11 +276,11 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     values.reserve(op->getNumResults());
 
     for (int i = 0, e = op->getNumResults(); i < e; ++i) {
-      std::string v = formatv("{0}.getODSResults({1})", name, i);
+      std::string v = std::string(formatv("{0}.getODSResults({1})", name, i));
       if (!op->getResult(i).isVariadic()) {
-        v = formatv("(*{0}.begin())", v);
+        v = std::string(formatv("(*{0}.begin())", v));
       }
-      values.push_back(formatv(fmt, v));
+      values.push_back(std::string(formatv(fmt, v)));
     }
     auto repl = llvm::join(values, separator);
     LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicResult)\n");
@@ -289,7 +291,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     assert(op == nullptr);
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
-    return repl;
+    return std::string(repl);
   }
   }
   llvm_unreachable("unknown kind");
@@ -304,13 +306,13 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     assert(index < 0 && "only allowed for symbol bound to result");
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(llvm::dbgs() << repl << " (Operand/Attr)\n");
-    return repl;
+    return std::string(repl);
   }
   case Kind::Result: {
     if (index >= 0) {
       auto repl = formatv(fmt, formatv("{0}.getODSResults({1})", name, index));
       LLVM_DEBUG(llvm::dbgs() << repl << " (SingleResult)\n");
-      return repl;
+      return std::string(repl);
     }
 
     // We are referencing all results of the multi-result op. Each result should
@@ -319,8 +321,8 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     values.reserve(op->getNumResults());
 
     for (int i = 0, e = op->getNumResults(); i < e; ++i) {
-      values.push_back(
-          formatv(fmt, formatv("{0}.getODSResults({1})", name, i)));
+      values.push_back(std::string(
+          formatv(fmt, formatv("{0}.getODSResults({1})", name, i))));
     }
     auto repl = llvm::join(values, separator);
     LLVM_DEBUG(llvm::dbgs() << repl << " (VariadicResult)\n");
@@ -331,7 +333,7 @@ std::string tblgen::SymbolInfoMap::SymbolInfo::getAllRangeUse(
     assert(op == nullptr);
     auto repl = formatv(fmt, formatv("{{{0}}", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
-    return repl;
+    return std::string(repl);
   }
   }
   llvm_unreachable("unknown kind");
@@ -478,7 +480,7 @@ std::vector<tblgen::AppliedConstraint> tblgen::Pattern::getConstraints() const {
             def.getLoc(),
             "operands to additional constraints can only be symbol references");
       }
-      entities.push_back(argName->getValue());
+      entities.push_back(std::string(argName->getValue()));
     }
 
     ret.emplace_back(cast<llvm::DefInit>(dagInit->getOperator())->getDef(),

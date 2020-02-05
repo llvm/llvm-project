@@ -1,6 +1,6 @@
 //===- Promotion.cpp - Implementation of linalg Promotion -----------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/Utils/Intrinsics.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/EDSC/Helpers.h"
@@ -33,7 +33,6 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-using namespace mlir::linalg::intrinsics;
 using namespace mlir::loop;
 
 using llvm::SetVector;
@@ -93,14 +92,15 @@ static PromotionInfo promoteFullTileBuffer(OpBuilder &b, Location loc,
     Value d = rangeValue.size;
     allocSize = muli(folder, allocSize, d).getValue();
     fullRanges.push_back(d);
-    partialRanges.push_back(range(folder, zero, dim(subView, rank), one));
+    partialRanges.push_back(
+        linalg_range(folder, zero, dim(subView, rank), one));
   }
   SmallVector<int64_t, 4> dynSizes(fullRanges.size(), -1);
   auto buffer =
       allocBuffer(viewType.getElementType(), allocSize, dynamicBuffers);
   auto fullLocalView = view(
       MemRefType::get(dynSizes, viewType.getElementType()), buffer, fullRanges);
-  auto partialLocalView = slice(fullLocalView, partialRanges);
+  auto partialLocalView = linalg_slice(fullLocalView, partialRanges);
   return PromotionInfo{buffer, fullLocalView, partialLocalView};
 }
 
@@ -139,14 +139,15 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
     // TODO(ntv): fill is only necessary if `promotionInfo` has a full local
     // view that is different from the partial local view and we are on the
     // boundary.
-    fill(info->second.fullLocalView, fillVal);
+    linalg_fill(info->second.fullLocalView, fillVal);
   }
 
   for (auto v : subViews) {
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
-    copy(cast<SubViewOp>(v.getDefiningOp()), info->second.partialLocalView);
+    linalg_copy(cast<SubViewOp>(v.getDefiningOp()),
+                info->second.partialLocalView);
   }
   return res;
 }
@@ -191,7 +192,8 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
     bool isOutput =
         op.getIndexOfOutputBuffer(viewAndPartialLocalView.first).hasValue();
     if (isOutput)
-      copy(viewAndPartialLocalView.second, viewAndPartialLocalView.first);
+      linalg_copy(viewAndPartialLocalView.second,
+                  viewAndPartialLocalView.first);
   }
 
   // 4. Dealloc local buffers.

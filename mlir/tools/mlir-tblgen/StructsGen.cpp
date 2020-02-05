@@ -1,6 +1,6 @@
 //===- StructsGen.cpp - MLIR struct utility generator ---------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -174,7 +174,7 @@ bool {0}::classof(mlir::Attribute attr))";
     auto name = field.getName();
     auto type = field.getType();
     std::string condition =
-        tgfmt(type.getConditionTemplate(), &fctx.withSelf(name));
+        std::string(tgfmt(type.getConditionTemplate(), &fctx.withSelf(name)));
     os << llvm::formatv(classofArgInfo, name, condition);
   }
 

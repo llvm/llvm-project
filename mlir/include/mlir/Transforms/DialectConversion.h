@@ -1,6 +1,6 @@
 //===- DialectConversion.h - MLIR dialect conversion pass -------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -332,8 +332,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// PatternRewriter hook for replacing the results of an operation.
-  void replaceOp(Operation *op, ValueRange newValues,
-                 ValueRange valuesToRemoveIfDead) override;
+  void replaceOp(Operation *op, ValueRange newValues) override;
   using PatternRewriter::replaceOp;
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
@@ -417,7 +416,8 @@ public:
   /// dynamically legal on the target.
   using DynamicLegalityCallbackFn = std::function<bool(Operation *)>;
 
-  ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
+  ConversionTarget(MLIRContext &ctx)
+      : unknownOpsDynamicallyLegal(false), ctx(ctx) {}
   virtual ~ConversionTarget() = default;
 
   //===--------------------------------------------------------------------===//
@@ -533,6 +533,16 @@ public:
       setLegalityCallback(dialectNames, *callback);
   }
 
+  /// Register unknown operations as dynamically legal. For operations(and
+  /// dialects) that do not have a set legalization action, treat them as
+  /// dynamically legal and invoke the given callback if valid or
+  /// 'isDynamicallyLegal'.
+  void markUnknownOpDynamicallyLegal(const DynamicLegalityCallbackFn &fn) {
+    unknownOpsDynamicallyLegal = true;
+    unknownLegalityFn = fn;
+  }
+  void markUnknownOpDynamicallyLegal() { unknownOpsDynamicallyLegal = true; }
+
   /// Register the operations of the given dialects as illegal, i.e.
   /// operations of this dialect are not supported by the target.
   template <typename... Names>
@@ -586,6 +596,9 @@ private:
 
     /// If some legal instances of this operation may also be recursively legal.
     bool isRecursivelyLegal;
+
+    /// The legality callback if this operation is dynamically legal.
+    Optional<DynamicLegalityCallbackFn> legalityFn;
   };
 
   /// Get the legalization information for the given operation.
@@ -594,9 +607,6 @@ private:
   /// A deterministic mapping of operation name and its respective legality
   /// information.
   llvm::MapVector<OperationName, LegalizationInfo> legalOperations;
-
-  /// A set of dynamic legality callbacks for given operation names.
-  DenseMap<OperationName, DynamicLegalityCallbackFn> opLegalityFns;
 
   /// A set of legality callbacks for given operation names that are used to
   /// check if an operation instance is recursively legal.
@@ -608,6 +618,13 @@ private:
 
   /// A set of dynamic legality callbacks for given dialect names.
   llvm::StringMap<DynamicLegalityCallbackFn> dialectLegalityFns;
+
+  /// An optional legality callback for unknown operations.
+  Optional<DynamicLegalityCallbackFn> unknownLegalityFn;
+
+  /// Flag indicating if unknown operations should be treated as dynamically
+  /// legal.
+  bool unknownOpsDynamicallyLegal;
 
   /// The current context this target applies to.
   MLIRContext &ctx;

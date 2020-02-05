@@ -9,16 +9,16 @@
 #ifndef liblldb_ClangExternalASTSourceCallbacks_h_
 #define liblldb_ClangExternalASTSourceCallbacks_h_
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "clang/AST/ExternalASTSource.h"
 
 namespace lldb_private {
 
-class ClangASTContext;
+class TypeSystemClang;
 
 class ClangExternalASTSourceCallbacks : public clang::ExternalASTSource {
 public:
-  ClangExternalASTSourceCallbacks(ClangASTContext &ast) : m_ast(ast) {}
+  ClangExternalASTSourceCallbacks(TypeSystemClang &ast) : m_ast(ast) {}
 
   void FindExternalLexicalDecls(
       const clang::DeclContext *DC,
@@ -38,7 +38,7 @@ public:
           &VirtualBaseOffsets) override;
 
 private:
-  ClangASTContext &m_ast;
+  TypeSystemClang &m_ast;
 };
 
 } // namespace lldb_private

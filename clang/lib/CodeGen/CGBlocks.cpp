@@ -1449,7 +1449,8 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     llvm::IRBuilder<> b(llvm::BasicBlock::Create(CGM.getLLVMContext(), "entry",
           Init));
     b.CreateAlignedStore(CGM.getNSConcreteGlobalBlock(),
-        b.CreateStructGEP(literal, 0), CGM.getPointerAlign().getQuantity());
+                         b.CreateStructGEP(literal, 0),
+                         CGM.getPointerAlign().getAsAlign());
     b.CreateRetVoid();
     // We can't use the normal LLVM global initialisation array, because we
     // need to specify that this runs early in library initialisation.

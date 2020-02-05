@@ -1,4 +1,4 @@
-//===-- ClangExternalASTSourceCallbacks.cpp ---------------------*- C++ -*-===//
+//===-- ClangExternalASTSourceCallbacks.cpp -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 
 #include "clang/AST/Decl.h"
 

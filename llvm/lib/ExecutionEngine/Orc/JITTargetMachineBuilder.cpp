@@ -33,7 +33,7 @@ Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
   for (auto &Feature : FeatureMap)
     TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
 
-  TMBuilder.setCPU(llvm::sys::getHostCPUName());
+  TMBuilder.setCPU(std::string(llvm::sys::getHostCPUName()));
 
   return TMBuilder;
 }

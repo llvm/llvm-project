@@ -1,4 +1,4 @@
-//===-- PlatformPOSIX.cpp ---------------------------------------*- C++ -*-===//
+//===-- PlatformPOSIX.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -429,7 +429,7 @@ std::string PlatformPOSIX::GetPlatformSpecificConnectionInformation() {
   if (GetLocalCacheDirectory() && *GetLocalCacheDirectory())
     stream.Printf("cache dir: %s", GetLocalCacheDirectory());
   if (stream.GetSize())
-    return stream.GetString();
+    return std::string(stream.GetString());
   else
     return "";
 }
@@ -679,7 +679,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   static const char *dlopen_wrapper_name = "__lldb_dlopen_wrapper";
   Process *process = exe_ctx.GetProcessSP().get();
   // Insert the dlopen shim defines into our generic expression:
-  std::string expr(GetLibdlFunctionDeclarations(process));
+  std::string expr(std::string(GetLibdlFunctionDeclarations(process)));
   expr.append(dlopen_wrapper_code);
   Status utility_error;
   DiagnosticManager diagnostics;
@@ -706,7 +706,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
-  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
+  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
   if (!ast)
     return nullptr;
 
@@ -950,9 +950,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Value return_value;
   // Fetch the clang types we will need:
-  ClangASTContext *ast = ClangASTContext::GetScratch(process->GetTarget());
+  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
   if (!ast) {
-    error.SetErrorString("dlopen error: Unable to get ClangASTContext");
+    error.SetErrorString("dlopen error: Unable to get TypeSystemClang");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 

@@ -23,6 +23,11 @@ class VESubtarget;
 namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
+
+  Hi,
+  Lo, // Hi/Lo operations, typically on a global address.
+
+  CALL,            // A call instruction.
   RET_FLAG, // Return with a flag operand.
 };
 }
@@ -34,6 +39,9 @@ public:
   VETargetLowering(const TargetMachine &TM, const VESubtarget &STI);
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+  MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
+    return MVT::i32;
+  }
 
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -48,6 +56,9 @@ public:
                                const SDLoc &dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
@@ -56,6 +67,29 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
+
+  /// Custom Lower {
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  /// } Custom Lower
+
+  SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
+  SDValue makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
+                       SelectionDAG &DAG) const;
+  SDValue makeAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
+  /// Returns true if the target allows unaligned memory accesses of the
+  /// specified type.
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, unsigned Align,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast) const override;
+
+  // Block s/udiv lowering for now
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
 };
 } // namespace llvm
 

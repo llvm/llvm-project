@@ -8,6 +8,7 @@ pthread_mutex_t mtx1, mtx2;
 pthread_mutex_t *pmtx;
 lck_mtx_t lck1, lck2;
 lck_grp_t grp1;
+lck_rw_t rw;
 
 #define NULL 0
 
@@ -211,6 +212,34 @@ void ok28(void) {
     pthread_mutex_unlock(&mtx1);           // no-warning
     pthread_mutex_destroy(&mtx1);          // no-warning
   }
+}
+
+void ok29(void) {
+  lck_rw_lock_shared(&rw);
+  lck_rw_unlock_shared(&rw);
+  lck_rw_lock_exclusive(&rw); // no-warning
+  lck_rw_unlock_exclusive(&rw); // no-warning
+}
+
+void escape_mutex(pthread_mutex_t *m);
+void ok30(void) {
+  pthread_mutex_t local_mtx;
+  pthread_mutex_init(&local_mtx, NULL);
+  pthread_mutex_lock(&local_mtx);
+  escape_mutex(&local_mtx);
+  pthread_mutex_lock(&local_mtx); // no-warning
+  pthread_mutex_unlock(&local_mtx);
+  pthread_mutex_destroy(&local_mtx);
+}
+
+void ok31(void) {
+  pthread_mutex_t local_mtx;
+  pthread_mutex_init(&local_mtx, NULL);
+  pthread_mutex_lock(&local_mtx);
+  fake_system_function_that_takes_a_mutex(&local_mtx);
+  pthread_mutex_lock(&local_mtx); // no-warning
+  pthread_mutex_unlock(&local_mtx);
+  pthread_mutex_destroy(&local_mtx);
 }
 
 void
@@ -470,4 +499,17 @@ void bad31(void) {
   pthread_mutex_lock(&mtx1);              // expected-warning{{This lock has already been destroyed}}
   if (ret != 0)
     pthread_mutex_lock(&mtx1);
+}
+
+void bad32(void) {
+  lck_rw_lock_shared(&rw);
+  lck_rw_unlock_exclusive(&rw); // FIXME: warn - should be shared?
+  lck_rw_lock_exclusive(&rw);
+  lck_rw_unlock_shared(&rw); // FIXME: warn - should be exclusive?
+}
+
+void bad33(void) {
+  pthread_mutex_lock(pmtx);
+  fake_system_function();
+  pthread_mutex_lock(pmtx); // expected-warning{{This lock has already been acquired}}
 }

@@ -1,6 +1,6 @@
 //===- SDBM.cpp - MLIR SDBM implementation --------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -512,12 +512,12 @@ void SDBM::print(raw_ostream &os) {
       return "cst";
     matrixPos -= 1;
     if (matrixPos < numDims)
-      return llvm::formatv("d{0}", matrixPos);
+      return std::string(llvm::formatv("d{0}", matrixPos));
     matrixPos -= numDims;
     if (matrixPos < numSymbols)
-      return llvm::formatv("s{0}", matrixPos);
+      return std::string(llvm::formatv("s{0}", matrixPos));
     matrixPos -= numSymbols;
-    return llvm::formatv("t{0}", matrixPos);
+    return std::string(llvm::formatv("t{0}", matrixPos));
   };
 
   // Header row.

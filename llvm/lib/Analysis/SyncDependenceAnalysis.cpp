@@ -244,12 +244,12 @@ struct DivergencePropagator {
     );
 
     auto ItBeginRPO = FuncRPOT.begin();
+    auto ItEndRPO = FuncRPOT.end();
 
     // skip until term (TODO RPOT won't let us start at @term directly)
-    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {}
-
-    auto ItEndRPO = FuncRPOT.end();
-    assert(ItBeginRPO != ItEndRPO);
+    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {
+      assert(ItBeginRPO != ItEndRPO && "Unable to find RootBlock");
+    }
 
     // propagate definitions at the immediate successors of the node in RPO
     auto ItBlockRPO = ItBeginRPO;

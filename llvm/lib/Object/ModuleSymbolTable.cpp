@@ -63,7 +63,8 @@ void ModuleSymbolTable::addModule(Module *M) {
     SymTab.push_back(&GV);
 
   CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-    SymTab.push_back(new (AsmSymbols.Allocate()) AsmSymbol(Name, Flags));
+    SymTab.push_back(new (AsmSymbols.Allocate())
+                         AsmSymbol(std::string(Name), Flags));
   });
 }
 

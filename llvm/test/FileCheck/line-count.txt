@@ -62,12 +62,19 @@
 62 BAD12: [[#@LINE-1]] NOT HERE
 63 ERR12: note: with "@LINE-1" equal to "61"
 64
-65 CHECK: [[#@LINE]] CHECK
-66 CHECK: [[# @LINE]] CHECK
-67 CHECK: [[# @LINE ]] CHECK
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --check-prefix BAD13 --input-file %s %s 2>&1 \
+; RUN:   | FileCheck --check-prefix ERR13 %s
 68
-69 CHECK: [[#@LINE-1]]
-70 CHECK: [[# @LINE-1]] CHECK
-71 CHECK: [[# @LINE -1]] CHECK
-72 CHECK: [[# @LINE - 1]] CHECK
-73 CHECK: [[# @LINE - 1 ]] CHECK
+69 BAD13: [[@LINE-0xA]]
+70 ERR13: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'xA'
+71
+72 CHECK: [[#@LINE]] CHECK
+73 CHECK: [[# @LINE]] CHECK
+74 CHECK: [[# @LINE ]] CHECK
+75
+76 CHECK: [[#@LINE-1]]
+77 CHECK: [[# @LINE-1]] CHECK
+78 CHECK: [[# @LINE -1]] CHECK
+79 CHECK: [[# @LINE - 1]] CHECK
+80 CHECK: [[# @LINE - 1 ]] CHECK

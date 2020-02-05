@@ -1,5 +1,4 @@
-//===-- Testx86AssemblyInspectionEngine.cpp ---------------------------*- C++
-//-*-===//
+//===-- Testx86AssemblyInspectionEngine.cpp -------------------------------===//
 
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

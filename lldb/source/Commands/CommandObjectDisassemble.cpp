@@ -1,4 +1,4 @@
-//===-- CommandObjectDisassemble.cpp ----------------------------*- C++ -*-===//
+//===-- CommandObjectDisassemble.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -83,7 +83,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
   } break;
 
   case 'n':
-    func_name.assign(option_arg);
+    func_name.assign(std::string(option_arg));
     some_location_specified = true;
     break;
 
@@ -101,7 +101,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 'P':
-    plugin_name.assign(option_arg);
+    plugin_name.assign(std::string(option_arg));
     break;
 
   case 'F': {
@@ -111,7 +111,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
                           llvm::Triple::x86 ||
                       target_sp->GetArchitecture().GetTriple().getArch() ==
                           llvm::Triple::x86_64)) {
-      flavor_string.assign(option_arg);
+      flavor_string.assign(std::string(option_arg));
     } else
       error.SetErrorStringWithFormat("Disassembler flavors are currently only "
                                      "supported for x86 and x86_64 targets.");

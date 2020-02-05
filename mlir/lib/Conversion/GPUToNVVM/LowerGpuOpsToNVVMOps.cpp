@@ -1,6 +1,6 @@
 //===- LowerGpuOpsToNVVMOps.cpp - MLIR GPU to NVVM lowering passes --------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -41,8 +41,7 @@ public:
     auto memref = type.dyn_cast<MemRefType>();
     if (memref &&
         memref.getMemorySpace() == gpu::GPUDialect::getPrivateAddressSpace()) {
-      type = MemRefType::get(memref.getShape(), memref.getElementType(),
-                             memref.getAffineMaps());
+      type = MemRefType::Builder(memref).setMemorySpace(0);
     }
 
     return LLVMTypeConverter::convertType(type);
@@ -548,8 +547,8 @@ struct GPUFuncOpLowering : LLVMOpLowering {
       auto elementType =
           lowering.convertType(type.getElementType()).cast<LLVM::LLVMType>();
       auto arrayType = LLVM::LLVMType::getArrayTy(elementType, numElements);
-      std::string name =
-          llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index());
+      std::string name = std::string(
+          llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
       auto globalOp = rewriter.create<LLVM::GlobalOp>(
           gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
           LLVM::Linkage::Internal, name, /*value=*/Attribute(),
@@ -746,6 +745,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                "__nv_cos");
   patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
                                                "__nv_exp");
+  patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
+                                                "__nv_tanh");
 }
 
 std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>

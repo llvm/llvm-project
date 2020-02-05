@@ -1,6 +1,6 @@
 //===- SPIRVBase.td - MLIR SPIR-V Op Definitions Base file -*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -2353,6 +2353,53 @@ def SPV_FunctionControlAttr :
       SPV_FC_None, SPV_FC_Inline, SPV_FC_DontInline, SPV_FC_Pure, SPV_FC_Const
     ]>;
 
+def SPV_GO_Reduce                     : I32EnumAttrCase<"Reduce", 0> {
+  list<Availability> availability = [
+    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformBallot, SPV_C_Kernel]>
+  ];
+}
+def SPV_GO_InclusiveScan              : I32EnumAttrCase<"InclusiveScan", 1> {
+  list<Availability> availability = [
+    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformBallot, SPV_C_Kernel]>
+  ];
+}
+def SPV_GO_ExclusiveScan              : I32EnumAttrCase<"ExclusiveScan", 2> {
+  list<Availability> availability = [
+    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformBallot, SPV_C_Kernel]>
+  ];
+}
+def SPV_GO_ClusteredReduce            : I32EnumAttrCase<"ClusteredReduce", 3> {
+  list<Availability> availability = [
+    MinVersion<SPV_V_1_3>,
+    Capability<[SPV_C_GroupNonUniformClustered]>
+  ];
+}
+def SPV_GO_PartitionedReduceNV        : I32EnumAttrCase<"PartitionedReduceNV", 6> {
+  list<Availability> availability = [
+    Extension<[SPV_NV_shader_subgroup_partitioned]>,
+    Capability<[SPV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+def SPV_GO_PartitionedInclusiveScanNV : I32EnumAttrCase<"PartitionedInclusiveScanNV", 7> {
+  list<Availability> availability = [
+    Extension<[SPV_NV_shader_subgroup_partitioned]>,
+    Capability<[SPV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+def SPV_GO_PartitionedExclusiveScanNV : I32EnumAttrCase<"PartitionedExclusiveScanNV", 8> {
+  list<Availability> availability = [
+    Extension<[SPV_NV_shader_subgroup_partitioned]>,
+    Capability<[SPV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+def SPV_GroupOperationAttr :
+    SPV_I32EnumAttr<"GroupOperation", "valid SPIR-V GroupOperation", [
+      SPV_GO_Reduce, SPV_GO_InclusiveScan, SPV_GO_ExclusiveScan,
+      SPV_GO_ClusteredReduce, SPV_GO_PartitionedReduceNV,
+      SPV_GO_PartitionedInclusiveScanNV, SPV_GO_PartitionedExclusiveScanNV
+    ]>;
+
 def SPV_IF_Unknown      : I32EnumAttrCase<"Unknown", 0>;
 def SPV_IF_Rgba32f      : I32EnumAttrCase<"Rgba32f", 1> {
   list<Availability> availability = [
@@ -2907,7 +2954,7 @@ def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 // for the definition of the following types and type categories.
 
 def SPV_Void : TypeAlias<NoneType, "void type">;
-def SPV_Bool : IntOfWidths<[1]>;
+def SPV_Bool : I<1>;
 def SPV_Integer : IntOfWidths<[8, 16, 32, 64]>;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
@@ -2950,15 +2997,15 @@ def SPV_SelectType : AnyTypeOf<[SPV_Scalar, SPV_Vector, SPV_AnyPtr]>;
 // SPIR-V OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// Check that an op can only be used within the scope of a FuncOp.
+// Check that an op can only be used within the scope of a function-like op.
 def InFunctionScope : PredOpTrait<
-  "op must appear in a 'func' block",
-  CPred<"($_op.getParentOfType<FuncOp>())">>;
+  "op must appear in a function-like op's block",
+  CPred<"isNestedInFunctionLikeOp($_op.getParentOp())">>;
 
-// Check that an op can only be used within the scope of a SPIR-V ModuleOp.
+// Check that an op can only be used within the scope of a module-like op.
 def InModuleScope : PredOpTrait<
-  "op must appear in a 'spv.module' block",
-  CPred<"llvm::isa_and_nonnull<spirv::ModuleOp>($_op.getParentOp())">>;
+  "op must appear in a module-like op's block",
+  CPred<"isDirectInModuleLikeOp($_op.getParentOp())">>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V opcode specification
@@ -3108,7 +3155,18 @@ def SPV_OC_OpReturn                    : I32EnumAttrCase<"OpReturn", 253>;
 def SPV_OC_OpReturnValue               : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPV_OC_OpUnreachable               : I32EnumAttrCase<"OpUnreachable", 255>;
 def SPV_OC_OpModuleProcessed           : I32EnumAttrCase<"OpModuleProcessed", 330>;
+def SPV_OC_OpGroupNonUniformElect      : I32EnumAttrCase<"OpGroupNonUniformElect", 333>;
 def SPV_OC_OpGroupNonUniformBallot     : I32EnumAttrCase<"OpGroupNonUniformBallot", 339>;
+def SPV_OC_OpGroupNonUniformIAdd       : I32EnumAttrCase<"OpGroupNonUniformIAdd", 349>;
+def SPV_OC_OpGroupNonUniformFAdd       : I32EnumAttrCase<"OpGroupNonUniformFAdd", 350>;
+def SPV_OC_OpGroupNonUniformIMul       : I32EnumAttrCase<"OpGroupNonUniformIMul", 351>;
+def SPV_OC_OpGroupNonUniformFMul       : I32EnumAttrCase<"OpGroupNonUniformFMul", 352>;
+def SPV_OC_OpGroupNonUniformSMin       : I32EnumAttrCase<"OpGroupNonUniformSMin", 353>;
+def SPV_OC_OpGroupNonUniformUMin       : I32EnumAttrCase<"OpGroupNonUniformUMin", 354>;
+def SPV_OC_OpGroupNonUniformFMin       : I32EnumAttrCase<"OpGroupNonUniformFMin", 355>;
+def SPV_OC_OpGroupNonUniformSMax       : I32EnumAttrCase<"OpGroupNonUniformSMax", 356>;
+def SPV_OC_OpGroupNonUniformUMax       : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
+def SPV_OC_OpGroupNonUniformFMax       : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
 def SPV_OC_OpSubgroupBallotKHR         : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 
 def SPV_OpcodeAttr :
@@ -3155,7 +3213,13 @@ def SPV_OpcodeAttr :
       SPV_OC_OpPhi, SPV_OC_OpLoopMerge, SPV_OC_OpSelectionMerge, SPV_OC_OpLabel,
       SPV_OC_OpBranch, SPV_OC_OpBranchConditional, SPV_OC_OpReturn,
       SPV_OC_OpReturnValue, SPV_OC_OpUnreachable, SPV_OC_OpModuleProcessed,
-      SPV_OC_OpGroupNonUniformBallot, SPV_OC_OpSubgroupBallotKHR
+      SPV_OC_OpGroupNonUniformElect, SPV_OC_OpGroupNonUniformBallot,
+      SPV_OC_OpGroupNonUniformIAdd, SPV_OC_OpGroupNonUniformFAdd,
+      SPV_OC_OpGroupNonUniformIMul, SPV_OC_OpGroupNonUniformFMul,
+      SPV_OC_OpGroupNonUniformSMin, SPV_OC_OpGroupNonUniformUMin,
+      SPV_OC_OpGroupNonUniformFMin, SPV_OC_OpGroupNonUniformSMax,
+      SPV_OC_OpGroupNonUniformUMax, SPV_OC_OpGroupNonUniformFMax,
+      SPV_OC_OpSubgroupBallotKHR
     ]>;
 
 // End opcode section. Generated from SPIR-V spec; DO NOT MODIFY!

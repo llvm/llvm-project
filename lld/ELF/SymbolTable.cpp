@@ -139,7 +139,7 @@ std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion ver) {
 
 std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver) {
   std::vector<Symbol *> res;
-  StringMatcher m(ver.name);
+  SingleStringMatcher m(ver.name);
 
   if (ver.isExternCpp) {
     for (auto &p : getDemangledSyms())

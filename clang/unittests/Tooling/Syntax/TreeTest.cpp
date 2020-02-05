@@ -862,7 +862,8 @@ void test() {
 
     auto *Root = buildTree(T.first);
     std::string Expected = llvm::StringRef(T.second).trim().str();
-    std::string Actual = llvm::StringRef(Root->dump(*Arena)).trim();
+    std::string Actual =
+        std::string(llvm::StringRef(Root->dump(*Arena)).trim());
     EXPECT_EQ(Expected, Actual) << "the resulting dump is:\n" << Actual;
   }
 }

@@ -1,4 +1,4 @@
-//===-- SBThread.cpp --------------------------------------------*- C++ -*-===//
+//===-- SBThread.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -313,7 +313,7 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
-  LLDB_RECORD_METHOD(size_t, SBThread, GetStopDescription, (char *, size_t),
+  LLDB_RECORD_DUMMY(size_t, SBThread, GetStopDescription, (char *, size_t),
                      dst, dst_len);
 
   std::unique_lock<std::recursive_mutex> lock;

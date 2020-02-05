@@ -238,6 +238,7 @@ entry:
 ; ARM32:      .data{{$}}
 ; ARM32:      .globl __emutls_v.i4
 ; ARM32-LABEL: __emutls_v.i4:
+; ARM32-NEXT:  .L__emutls_v.i4$local:
 ; ARM32-NEXT: .long 4
 ; ARM32-NEXT: .long 4
 ; ARM32-NEXT: .long 0
@@ -245,6 +246,7 @@ entry:
 
 ; ARM32:      .section .rodata,
 ; ARM32-LABEL: __emutls_t.i4:
+; ARM32-NEXT:  .L__emutls_t.i4$local:
 ; ARM32-NEXT: .long 15
 
 ; ARM32-NOT:   __emutls_v.i5:

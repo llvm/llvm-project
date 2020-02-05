@@ -1,4 +1,4 @@
-//===-- RegisterValue.cpp ---------------------------------------*- C++ -*-===//
+//===-- RegisterValue.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -441,7 +441,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     break;
 
   case eEncodingIEEE754: {
-    std::string value_string = value_str;
+    std::string value_string = std::string(value_str);
     if (byte_size == sizeof(float)) {
       if (::sscanf(value_string.c_str(), "%f", &flt_val) != 1) {
         error.SetErrorStringWithFormat("'%s' is not a valid float string value",

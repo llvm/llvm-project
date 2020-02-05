@@ -1708,6 +1708,13 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
                          tok::annot_module_include, Action.ModuleForHeader);
     break;
+  case ImportAction::Failure:
+    assert(TheModuleLoader.HadFatalFailure &&
+           "This should be an early exit only to a fatal error");
+    TheModuleLoader.HadFatalFailure = true;
+    IncludeTok.setKind(tok::eof);
+    CurLexer->cutOffLexing();
+    return;
   }
 }
 
@@ -2165,7 +2172,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (IncludePos.isMacroID())
     IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
   FileID FID = SourceMgr.createFileID(*File, IncludePos, FileCharacter);
-  assert(FID.isValid() && "Expected valid file ID");
+  if (!FID.isValid()) {
+    TheModuleLoader.HadFatalFailure = true;
+    return ImportAction::Failure;
+  }
 
   // If all is good, enter the new file!
   if (EnterSourceFile(FID, CurDir, FilenameTok.getLocation()))

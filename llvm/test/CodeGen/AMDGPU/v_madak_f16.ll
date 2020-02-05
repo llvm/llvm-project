@@ -41,9 +41,9 @@ define amdgpu_kernel void @madak_f16(
 ; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_mov_b32 s4, s6
 ; VI-NEXT:    s_mov_b32 s5, s7
-; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    s_mov_b32 s6, s2
 ; VI-NEXT:    s_mov_b32 s7, s3
+; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
 ; VI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -75,11 +75,11 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s16, s10
 ; SI-NEXT:    s_mov_b32 s17, s11
+; SI-NEXT:    s_mov_b32 s10, s14
+; SI-NEXT:    s_mov_b32 s11, s15
 ; SI-NEXT:    s_mov_b32 s3, s15
 ; SI-NEXT:    s_mov_b32 s18, s14
 ; SI-NEXT:    s_mov_b32 s19, s15
-; SI-NEXT:    s_mov_b32 s10, s14
-; SI-NEXT:    s_mov_b32 s11, s15
 ; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
 ; SI-NEXT:    buffer_load_ushort v1, off, s[16:19], 0
 ; SI-NEXT:    buffer_load_ushort v2, off, s[0:3], 0
@@ -112,11 +112,11 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s16, s10
 ; VI-NEXT:    s_mov_b32 s17, s11
+; VI-NEXT:    s_mov_b32 s10, s2
+; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    s_mov_b32 s15, s3
 ; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_mov_b32 s19, s3
-; VI-NEXT:    s_mov_b32 s10, s2
-; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
 ; VI-NEXT:    buffer_load_ushort v1, off, s[16:19], 0
 ; VI-NEXT:    buffer_load_ushort v3, off, s[12:15], 0

@@ -31,6 +31,9 @@ cmp     %edi, %edx
 # ZNVER1-NEXT:  Total Cycles:      110
 # ZNVER1-NEXT:  Total uOps:        400
 
+# ZNVER2-NEXT:  Total Cycles:      110
+# ZNVER2-NEXT:  Total uOps:        400
+
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    3.52
 # BDWELL-NEXT:  IPC:               2.82
@@ -237,46 +240,46 @@ cmp     %edi, %edx
 # ZNVER1-NEXT:  [9,2]     .    .   DeE-------R   addq	$32, %r8
 # ZNVER1-NEXT:  [9,3]     .    .   D=eE------R   cmpl	%edi, %edx
 
-# ZNVER2:       [0,0]     DeER .    .    .   .   addl   $1, %edx
-# ZNVER2-NEXT:  [0,1]     DeeeeeeeeER    .   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [0,2]     DeE-------R    .   .   addq   $32, %r8
-# ZNVER2-NEXT:  [0,3]     D=eE------R    .   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [1,0]     .DeE------R    .   .   addl   $1, %edx
-# ZNVER2-NEXT:  [1,1]     .DeeeeeeeeER   .   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [1,2]     .DeE-------R   .   .   addq   $32, %r8
-# ZNVER2-NEXT:  [1,3]     .D=eE------R   .   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [2,0]     . DeE------R   .   .   addl   $1, %edx
-# ZNVER2-NEXT:  [2,1]     . DeeeeeeeeER  .   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [2,2]     . DeE-------R  .   .   addq   $32, %r8
-# ZNVER2-NEXT:  [2,3]     . D=eE------R  .   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [3,0]     .  DeE------R  .   .   addl   $1, %edx
-# ZNVER2-NEXT:  [3,1]     .  DeeeeeeeeER .   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [3,2]     .  DeE-------R .   .   addq   $32, %r8
-# ZNVER2-NEXT:  [3,3]     .  D=eE------R .   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [4,0]     .   DeE------R .   .   addl   $1, %edx
-# ZNVER2-NEXT:  [4,1]     .   DeeeeeeeeER.   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [4,2]     .   DeE-------R.   .   addq   $32, %r8
-# ZNVER2-NEXT:  [4,3]     .   D=eE------R.   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [5,0]     .    DeE------R.   .   addl   $1, %edx
-# ZNVER2-NEXT:  [5,1]     .    DeeeeeeeeER   .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [5,2]     .    DeE-------R   .   addq   $32, %r8
-# ZNVER2-NEXT:  [5,3]     .    D=eE------R   .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [6,0]     .    .DeE------R   .   addl   $1, %edx
-# ZNVER2-NEXT:  [6,1]     .    .DeeeeeeeeER  .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [6,2]     .    .DeE-------R  .   addq   $32, %r8
-# ZNVER2-NEXT:  [6,3]     .    .D=eE------R  .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [7,0]     .    . DeE------R  .   addl   $1, %edx
-# ZNVER2-NEXT:  [7,1]     .    . DeeeeeeeeER .   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [7,2]     .    . DeE-------R .   addq   $32, %r8
-# ZNVER2-NEXT:  [7,3]     .    . D=eE------R .   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [8,0]     .    .  DeE------R .   addl   $1, %edx
-# ZNVER2-NEXT:  [8,1]     .    .  DeeeeeeeeER.   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [8,2]     .    .  DeE-------R.   addq   $32, %r8
-# ZNVER2-NEXT:  [8,3]     .    .  D=eE------R.   cmpl   %edi, %edx
-# ZNVER2-NEXT:  [9,0]     .    .   DeE------R.   addl   $1, %edx
-# ZNVER2-NEXT:  [9,1]     .    .   DeeeeeeeeER   vpaddd (%r8), %ymm0, %ymm0
-# ZNVER2-NEXT:  [9,2]     .    .   DeE-------R   addq   $32, %r8
-# ZNVER2-NEXT:  [9,3]     .    .   D=eE------R   cmpl   %edi, %edx
+# ZNVER2:       [0,0]     DeER .    .    .   .   addl	$1, %edx
+# ZNVER2-NEXT:  [0,1]     DeeeeeeeeER    .   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [0,2]     DeE-------R    .   .   addq	$32, %r8
+# ZNVER2-NEXT:  [0,3]     D=eE------R    .   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [1,0]     .DeE------R    .   .   addl	$1, %edx
+# ZNVER2-NEXT:  [1,1]     .DeeeeeeeeER   .   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [1,2]     .DeE-------R   .   .   addq	$32, %r8
+# ZNVER2-NEXT:  [1,3]     .D=eE------R   .   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [2,0]     . DeE------R   .   .   addl	$1, %edx
+# ZNVER2-NEXT:  [2,1]     . DeeeeeeeeER  .   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [2,2]     . DeE-------R  .   .   addq	$32, %r8
+# ZNVER2-NEXT:  [2,3]     . D=eE------R  .   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [3,0]     .  DeE------R  .   .   addl	$1, %edx
+# ZNVER2-NEXT:  [3,1]     .  DeeeeeeeeER .   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [3,2]     .  DeE-------R .   .   addq	$32, %r8
+# ZNVER2-NEXT:  [3,3]     .  D=eE------R .   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [4,0]     .   DeE------R .   .   addl	$1, %edx
+# ZNVER2-NEXT:  [4,1]     .   DeeeeeeeeER.   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [4,2]     .   DeE-------R.   .   addq	$32, %r8
+# ZNVER2-NEXT:  [4,3]     .   D=eE------R.   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [5,0]     .    DeE------R.   .   addl	$1, %edx
+# ZNVER2-NEXT:  [5,1]     .    DeeeeeeeeER   .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [5,2]     .    DeE-------R   .   addq	$32, %r8
+# ZNVER2-NEXT:  [5,3]     .    D=eE------R   .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [6,0]     .    .DeE------R   .   addl	$1, %edx
+# ZNVER2-NEXT:  [6,1]     .    .DeeeeeeeeER  .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [6,2]     .    .DeE-------R  .   addq	$32, %r8
+# ZNVER2-NEXT:  [6,3]     .    .D=eE------R  .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [7,0]     .    . DeE------R  .   addl	$1, %edx
+# ZNVER2-NEXT:  [7,1]     .    . DeeeeeeeeER .   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [7,2]     .    . DeE-------R .   addq	$32, %r8
+# ZNVER2-NEXT:  [7,3]     .    . D=eE------R .   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [8,0]     .    .  DeE------R .   addl	$1, %edx
+# ZNVER2-NEXT:  [8,1]     .    .  DeeeeeeeeER.   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [8,2]     .    .  DeE-------R.   addq	$32, %r8
+# ZNVER2-NEXT:  [8,3]     .    .  D=eE------R.   cmpl	%edi, %edx
+# ZNVER2-NEXT:  [9,0]     .    .   DeE------R.   addl	$1, %edx
+# ZNVER2-NEXT:  [9,1]     .    .   DeeeeeeeeER   vpaddd	(%r8), %ymm0, %ymm0
+# ZNVER2-NEXT:  [9,2]     .    .   DeE-------R   addq	$32, %r8
+# ZNVER2-NEXT:  [9,3]     .    .   D=eE------R   cmpl	%edi, %edx
 
 # ALL:          Average Wait times (based on the timeline view):
 # ALL-NEXT:     [0]: Executions

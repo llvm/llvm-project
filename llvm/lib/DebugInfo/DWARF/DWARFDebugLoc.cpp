@@ -106,16 +106,11 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   }
 }
 
-// When directly dumping the .debug_loc without a compile unit, we have to guess
-// at the DWARF version. This only affects DW_OP_call_ref, which is a rare
-// expression that LLVM doesn't produce. Guessing the wrong version means we
-// won't be able to pretty print expressions in DWARF2 binaries produced by
-// non-LLVM tools.
 static void dumpExpression(raw_ostream &OS, ArrayRef<uint8_t> Data,
                            bool IsLittleEndian, unsigned AddressSize,
                            const MCRegisterInfo *MRI, DWARFUnit *U) {
   DWARFDataExtractor Extractor(toStringRef(Data), IsLittleEndian, AddressSize);
-  DWARFExpression(Extractor, dwarf::DWARF_VERSION, AddressSize).print(OS, MRI, U);
+  DWARFExpression(Extractor, AddressSize).print(OS, MRI, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,

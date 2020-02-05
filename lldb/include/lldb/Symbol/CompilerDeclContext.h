@@ -38,7 +38,7 @@ public:
   /// This constructor should only be called from the respective TypeSystem
   /// implementation.
   ///
-  /// \see lldb_private::ClangASTContext::CreateDeclContext(clang::DeclContext*)
+  /// \see lldb_private::TypeSystemClang::CreateDeclContext(clang::DeclContext*)
   CompilerDeclContext(TypeSystem *type_system, void *decl_ctx)
       : m_type_system(type_system), m_opaque_decl_ctx(decl_ctx) {}
 

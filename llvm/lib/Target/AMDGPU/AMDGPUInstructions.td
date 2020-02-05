@@ -408,7 +408,12 @@ def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
 }
+} // End let AddressSpaces
+} // End foreach as
 
+
+foreach as = [ "global", "flat", "local", "private", "region" ] in {
+let AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
 def store_#as : PatFrag<(ops node:$val, node:$ptr),
                     (unindexedstore node:$val, node:$ptr)> {
   let IsStore = 1;
@@ -444,8 +449,8 @@ def truncstorei16_hi16_#as : StoreHi16<truncstorei16>;
 
 defm atomic_store_#as : binary_atomic_op<atomic_store>;
 
-} // End let AddressSpaces = ...
-} // End foreach AddrSpace
+} // End let AddressSpaces
+} // End foreach as
 
 
 multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {

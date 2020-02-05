@@ -1,4 +1,4 @@
-//===-- ClangExpressionParser.cpp -------------------------------*- C++ -*-===//
+//===-- ClangExpressionParser.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -75,7 +75,7 @@
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
@@ -207,7 +207,8 @@ public:
     if (make_new_diagnostic) {
       // ClangDiagnostic messages are expected to have no whitespace/newlines
       // around them.
-      std::string stripped_output = llvm::StringRef(m_output).trim();
+      std::string stripped_output =
+          std::string(llvm::StringRef(m_output).trim());
 
       auto new_diagnostic = std::make_unique<ClangDiagnostic>(
           stripped_output, severity, Info.getID());
@@ -255,7 +256,7 @@ static void SetupModuleHeaderPaths(CompilerInstance *compiler,
   llvm::SmallString<128> module_cache;
   const auto &props = ModuleList::GetGlobalModuleListProperties();
   props.GetClangModulesCachePath().GetPath(module_cache);
-  search_opts.ModuleCachePath = module_cache.str();
+  search_opts.ModuleCachePath = std::string(module_cache.str());
   LLDB_LOG(log, "Using module cache path: {0}", module_cache.c_str());
 
   search_opts.ResourceDir = GetClangResourceDir().GetPath();
@@ -606,7 +607,8 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 
-  m_ast_context.reset(new ClangASTContext(ast_context));
+  m_ast_context.reset(new TypeSystemClang(
+      "Expression ASTContext for '" + m_filename + "'", ast_context));
 
   std::string module_name("$__lldb_module");
 

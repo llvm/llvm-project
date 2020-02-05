@@ -1,6 +1,6 @@
 //===- ViewOpGraph.cpp - View/write op graphviz graphs --------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -109,7 +109,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
     auto symbolAttr =
         op.getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
     if (symbolAttr)
-      return symbolAttr.getValue();
+      return std::string(symbolAttr.getValue());
     ++unnamedOpCtr;
     return (op.getName().getStringRef() + llvm::utostr(unnamedOpCtr)).str();
   }

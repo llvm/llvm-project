@@ -1791,8 +1791,8 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
   SDValue Ops[] = {Base, NewOffset,
                    CurDAG->getTargetConstant(Pred, SDLoc(N), MVT::i32), PredReg,
                    Chain};
-  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), N->getValueType(0),
-                                       MVT::i32, MVT::Other, Ops);
+  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), MVT::i32,
+                                       N->getValueType(0), MVT::Other, Ops);
   transferMemOperands(N, New);
   ReplaceUses(SDValue(N, 0), SDValue(New, 1));
   ReplaceUses(SDValue(N, 1), SDValue(New, 0));
@@ -2514,7 +2514,16 @@ void ARMDAGToDAGISel::SelectMVE_WB(SDNode *N, const uint16_t *Opcodes,
 
   Ops.push_back(N->getOperand(0)); // chain
 
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+  SmallVector<EVT, 8> VTs;
+  VTs.push_back(N->getValueType(1));
+  VTs.push_back(N->getValueType(0));
+  VTs.push_back(N->getValueType(2));
+
+  SDNode *New = CurDAG->getMachineNode(Opcode, SDLoc(N), VTs, Ops);
+  ReplaceUses(SDValue(N, 0), SDValue(New, 1));
+  ReplaceUses(SDValue(N, 1), SDValue(New, 0));
+  ReplaceUses(SDValue(N, 2), SDValue(New, 2));
+  CurDAG->RemoveDeadNode(N);
 }
 
 void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,

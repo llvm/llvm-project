@@ -1,6 +1,6 @@
 // Support parsing of concepts
 
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 template<typename T> concept C1 = true; // expected-note 2{{previous}}
 
 template<typename T> concept C1 = true; // expected-error{{redefinition}}

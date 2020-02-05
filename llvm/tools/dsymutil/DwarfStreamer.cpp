@@ -784,12 +784,16 @@ void DwarfStreamer::emitPubSectionForUnit(
 
 /// Emit .debug_pubnames for \p Unit.
 void DwarfStreamer::emitPubNamesForUnit(const CompileUnit &Unit) {
+  if (Options.Minimize)
+    return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubNamesSection(),
                         "names", Unit, Unit.getPubnames());
 }
 
 /// Emit .debug_pubtypes for \p Unit.
 void DwarfStreamer::emitPubTypesForUnit(const CompileUnit &Unit) {
+  if (Options.Minimize)
+    return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubTypesSection(),
                         "types", Unit, Unit.getPubtypes());
 }

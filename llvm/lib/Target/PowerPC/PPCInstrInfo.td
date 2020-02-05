@@ -723,6 +723,26 @@ def s17imm  : Operand<i32> {
   let ParserMatchClass = PPCS17ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<16>";
 }
+def PPCS34ImmAsmOperand : AsmOperandClass {
+  let Name = "S34Imm";
+  let PredicateMethod = "isS34Imm";
+  let RenderMethod = "addImmOperands";
+}
+def s34imm : Operand<i64> {
+  let PrintMethod = "printS34ImmOperand";
+  let ParserMatchClass = PPCS34ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<34>";
+}
+def PPCImmZeroAsmOperand : AsmOperandClass {
+  let Name = "ImmZero";
+  let PredicateMethod = "isImmZero";
+  let RenderMethod = "addImmOperands";
+}
+def immZero : Operand<i32> {
+  let PrintMethod = "printImmZeroOperand";
+  let ParserMatchClass = PPCImmZeroAsmOperand;
+  let DecoderMethod = "decodeImmZeroOperand";
+}
 
 def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
@@ -783,6 +803,30 @@ def PPCRegGxRCNoR0Operand : AsmOperandClass {
 def ptr_rc_nor0 : Operand<iPTR>, PointerLikeRegClass<1> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
+
+// New addressing modes with 34 bit immediates.
+def PPCDispRI34Operand : AsmOperandClass {
+  let Name = "DispRI34"; let PredicateMethod = "isS34Imm";
+  let RenderMethod = "addImmOperands";
+}
+def dispRI34 : Operand<iPTR> {
+  let ParserMatchClass = PPCDispRI34Operand;
+}
+def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
+  let PrintMethod = "printMemRegImm34";
+  let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
+  let EncoderMethod = "getMemRI34Encoding";
+  let DecoderMethod = "decodeMemRI34Operands";
+}
+// memri, imm is a 34-bit value for pc-relative instructions where
+// base register is set to zero.
+def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
+  let PrintMethod = "printMemRegImm34PCRel";
+  let MIOperandInfo = (ops dispRI34:$imm, immZero:$reg);
+  let EncoderMethod = "getMemRI34PCRelEncoding";
+  let DecoderMethod = "decodeMemRI34PCRelOperands";
+}
+
 // A version of ptr_rc usable with the asm parser.
 def PPCRegGxRCOperand : AsmOperandClass {
   let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
@@ -3330,6 +3374,10 @@ def crnot : OutPatFrag<(ops node:$in),
                        (CRNOR $in, $in)>;
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
+
+// Prefixed instructions may require access to the above defs at a later
+// time so we include this after the def.
+include "PPCInstrPrefix.td"
 
 // Patterns for arithmetic i1 operations.
 def : Pat<(add i1:$a, i1:$b),

@@ -439,8 +439,8 @@ define amdgpu_kernel void @add_select_negliteralk_negliteralk_f32(i32 %c) #0 {
 ; GCN-LABEL: {{^}}add_select_fneg_negk_negk_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 
-; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -1.0, -2.0, s
-; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[X]], [[SELECT]]
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 1.0, 2.0, s
+; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[X]]
 define amdgpu_kernel void @add_select_fneg_negk_negk_f32(i32 %c) #0 {
   %x = load volatile float, float addrspace(1)* undef
   %cmp = icmp eq i32 %c, 0

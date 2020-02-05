@@ -11,7 +11,8 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: fptrunc_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:vgpr(s32) = G_FPTRUNC [[COPY]](s64)
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:vgpr(s32) = G_FPTRUNC [[COPY1]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_FPTRUNC %0
 ...

@@ -144,8 +144,8 @@ TEST(TBDv4, ReadFile) {
   ExampleSymbolSeq Exports, Reexports, Undefineds;
   ExampleSymbol temp;
   for (const auto *Sym : File->symbols()) {
-    temp = ExampleSymbol{Sym->getKind(), Sym->getName(), Sym->isWeakDefined(),
-                         Sym->isThreadLocalValue()};
+    temp = ExampleSymbol{Sym->getKind(), std::string(Sym->getName()),
+                         Sym->isWeakDefined(), Sym->isThreadLocalValue()};
     EXPECT_FALSE(Sym->isWeakReferenced());
     if (Sym->isUndefined())
       Undefineds.emplace_back(std::move(temp));
@@ -434,14 +434,14 @@ TEST(TBDv4, Swift_1) {
 }
 
 TEST(TBDv4, Swift_2) {
-  static const char tbd_v1_swift_2[] = "--- !tapi-tbd\n"
+  static const char tbd_v4_swift_2[] = "--- !tapi-tbd\n"
                                        "tbd-version: 4\n"
                                        "targets: [  x86_64-macos ]\n"
                                        "install-name: Test.dylib\n"
                                        "swift-abi-version: 2\n"
                                        "...\n";
 
-  auto Result = TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_2, "Test.tbd"));
+  auto Result = TextAPIReader::get(MemoryBufferRef(tbd_v4_swift_2, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
@@ -545,7 +545,7 @@ TEST(TBDv4, MalformedFile2) {
 }
 
 TEST(TBDv4, MalformedFile3) {
-  static const char tbd_v1_swift_1_1[] = "--- !tapi-tbd\n"
+  static const char tbd_v4_swift_1_1[] = "--- !tapi-tbd\n"
                                          "tbd-version: 4\n"
                                          "targets: [  x86_64-macos ]\n"
                                          "install-name: Test.dylib\n"
@@ -553,7 +553,7 @@ TEST(TBDv4, MalformedFile3) {
                                          "...\n";
 
   auto Result =
-      TextAPIReader::get(MemoryBufferRef(tbd_v1_swift_1_1, "Test.tbd"));
+      TextAPIReader::get(MemoryBufferRef(tbd_v4_swift_1_1, "Test.tbd"));
   EXPECT_FALSE(!!Result);
   auto errorMessage = toString(Result.takeError());
   EXPECT_EQ("malformed file\nTest.tbd:5:20: error: invalid Swift ABI "

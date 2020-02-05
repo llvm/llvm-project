@@ -1,4 +1,4 @@
-//===-- TCPSocket.cpp -------------------------------------------*- C++ -*-===//
+//===-- TCPSocket.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -120,8 +120,8 @@ std::string TCPSocket::GetRemoteIPAddress() const {
 
 std::string TCPSocket::GetRemoteConnectionURI() const {
   if (m_socket != kInvalidSocketValue) {
-    return llvm::formatv("connect://[{0}]:{1}", GetRemoteIPAddress(),
-                         GetRemotePortNumber());
+    return std::string(llvm::formatv(
+        "connect://[{0}]:{1}", GetRemoteIPAddress(), GetRemotePortNumber()));
   }
   return "";
 }

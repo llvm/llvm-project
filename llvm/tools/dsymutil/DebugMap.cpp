@@ -41,7 +41,7 @@ using namespace llvm::object;
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
                                sys::TimePoint<std::chrono::seconds> Timestamp,
                                uint8_t Type)
-    : Filename(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
+    : Filename(std::string(ObjectFilename)), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name, Optional<uint64_t> ObjectAddress,
                                uint64_t LinkedAddress, uint32_t Size) {
@@ -228,7 +228,8 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
   Timestamp = sys::toTimeT(Obj.getTimestamp());
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
-    Entries.push_back(std::make_pair(Entry.getKey(), Entry.getValue()));
+    Entries.push_back(
+        std::make_pair(std::string(Entry.getKey()), Entry.getValue()));
 }
 
 dsymutil::DebugMapObject

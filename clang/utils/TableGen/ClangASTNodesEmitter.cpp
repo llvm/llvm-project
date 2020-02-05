@@ -51,7 +51,7 @@ class ClangASTNodesEmitter {
   const std::string &macroHierarchyName() {
     assert(Root && "root node not yet derived!");
     if (MacroHierarchyName.empty())
-      MacroHierarchyName = macroName(Root.getName());
+      MacroHierarchyName = macroName(std::string(Root.getName()));
     return MacroHierarchyName;
   }
 
@@ -86,7 +86,7 @@ public:
 // Called recursively to ensure that nodes remain contiguous
 std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
                                                            ASTNode Base) {
-  std::string BaseName = macroName(Base.getName());
+  std::string BaseName = macroName(std::string(Base.getName()));
 
   ChildIterator i = Tree.lower_bound(Base), e = Tree.upper_bound(Base);
   bool HasChildren = (i != e);
@@ -98,7 +98,7 @@ std::pair<ASTNode, ASTNode> ClangASTNodesEmitter::EmitNode(raw_ostream &OS,
   for (; i != e; ++i) {
     ASTNode Child = i->second;
     bool Abstract = Child.isAbstract();
-    std::string NodeName = macroName(Child.getName());
+    std::string NodeName = macroName(std::string(Child.getName()));
 
     OS << "#ifndef " << NodeName << "\n";
     OS << "#  define " << NodeName << "(Type, Base) "

@@ -91,6 +91,9 @@ public:
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 
+  const ValueMapping *getValueMappingForPtr(const MachineRegisterInfo &MRI,
+                                            Register Ptr) const;
+
   const RegisterBankInfo::InstructionMapping &
   getInstrMappingForLoad(const MachineInstr &MI) const;
 

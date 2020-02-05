@@ -217,6 +217,13 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   }
 
   assert(getBackendPtr() && "Expected assembler backend");
+  bool IsTarget = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
+                  MCFixupKindInfo::FKF_IsTarget;
+
+  if (IsTarget)
+    return getBackend().evaluateTargetFixup(*this, Layout, Fixup, DF, Target,
+                                            Value, WasForced);
+
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
                  MCFixupKindInfo::FKF_IsPCRel;
 

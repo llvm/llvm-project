@@ -1,4 +1,4 @@
-//===-- SBLaunchInfo.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBLaunchInfo.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,6 +41,20 @@ SBLaunchInfo::SBLaunchInfo(const char **argv)
   m_opaque_sp->GetFlags().Reset(eLaunchFlagDebug | eLaunchFlagDisableASLR);
   if (argv && argv[0])
     m_opaque_sp->GetArguments().SetArguments(argv);
+}
+
+SBLaunchInfo::SBLaunchInfo(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
+SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_METHOD(SBLaunchInfo &,
+                     SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBLaunchInfo::~SBLaunchInfo() {}
@@ -322,6 +336,9 @@ namespace repro {
 template <>
 void RegisterMethods<SBLaunchInfo>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const char **));
+  LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &));
+  LLDB_REGISTER_METHOD(SBLaunchInfo &,
+                       SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &));
   LLDB_REGISTER_METHOD(lldb::pid_t, SBLaunchInfo, GetProcessID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetUserID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetGroupID, ());

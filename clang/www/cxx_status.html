@@ -8,7 +8,7 @@
   <style type="text/css">
     .none { background-color: #FFCCCC }
     .partial { background-color: #FFE0B0 }
-    .svn  { background-color: #FFFF99 }
+    .unreleased { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
     .na { background-color: #DDDDDD }
     :target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
@@ -26,13 +26,13 @@
 <!--*************************************************************************-->
 <h1>C++ Support in Clang</h1>
 <!--*************************************************************************-->
-<p>Last updated: $Date$</p>
 
-<p>Clang fully implements all published ISO C++ standards (<a
-href="#cxx98">C++98 / C++03</a>, <a
-href="#cxx11">C++11</a>, and <a
-href="#cxx14">C++14</a>), and most of the upcoming <a
-href="#cxx17">C++17</a> standard.
+<p>Clang fully implements all published ISO C++ standards
+(<a href="#cxx98">C++98 / C++03</a>,
+<a href="#cxx11">C++11</a>,
+<a href="#cxx14">C++14</a>, and
+<a href="#cxx17">C++17</a>), and some of the upcoming <a
+href="#cxx20">C++20</a> standard.
 
 <p>The Clang community is continually striving to improve C++ standards
 compliance between releases by submitting and tracking <a
@@ -580,16 +580,6 @@ version 3.7.
       <td><a href="https://wg21.link/n4086">N4086</a></td>
       <td class="full" align="center">Clang 3.5</td>
     </tr>
-    <!--
-    <tr>
-      <td rowspan="2">Terse range-based for loops (removed from C++17)</td>
-      <td rowspan="2"><a href="https://wg21.link/n3994">N3994</a></td>
-      <td class="none" align="center">Clang 3.5: Yes</td>
-    </tr>
-    <tr>
-      <td class="svn" align="center">SVN: No</td>
-    </tr>
-    -->
     <tr>
       <td><tt>typename</tt> in a template template parameter</td>
       <td><a href="https://wg21.link/n4051">N4051</a></td>
@@ -871,7 +861,7 @@ as the draft C++2a standard evolves.
     <tr>
       <td>Designated initializers</td>
       <td><a href="https://wg21.link/p0329r4">P0329R4</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="unreleased" align="center">Clang 10</td>
     </tr>
     <tr>
       <td><i>template-parameter-list</i> for generic lambdas</td>
@@ -881,7 +871,7 @@ as the draft C++2a standard evolves.
     <tr id="p0734">
       <td rowspan="9">Concepts</td>
       <td><a href="https://wg21.link/p0734r0">P0734R0</a></td>
-      <td rowspan="9" class="none" align="center">No</td>
+      <td rowspan="4" class="unreleased" align="center">Clang 10</td>
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
@@ -894,15 +884,18 @@ as the draft C++2a standard evolves.
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
+        <td rowspan="1" class="none" align="center">No</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
+        <td rowspan="2" class="unreleased" align="center">Clang 10</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1452r2">P1452R2</a></td>
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1972r0">P1972R0</a></td>
+        <td rowspan="2" class="none" align="center">No</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1980r0">P1980R0</a></td>
@@ -926,7 +919,7 @@ as the draft C++2a standard evolves.
     <tr>
       <td rowspan="8">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
       <td><a href="https://wg21.link/p0515r3">P0515R3</a></td>
-      <td rowspan="8" class="svn" align="center">SVN</td>
+      <td rowspan="8" class="unreleased" align="center">Clang 10</td>
     </tr>
       <tr> <!-- from Jacksonville -->
         <td><a href="https://wg21.link/p0905r1">P0905R1</a></td>
@@ -1017,7 +1010,7 @@ as the draft C++2a standard evolves.
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p1331r2">P1331R2</a></td>
-        <td rowspan="3" class="svn" align="center">SVN</td>
+        <td rowspan="3" class="unreleased" align="center">Clang 10</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1668r1">P1668R1</a></td>
@@ -1128,7 +1121,7 @@ as the draft C++2a standard evolves.
     <tr>
       <td>Deprecate some problematic uses of <tt>volatile</tt></td>
       <td><a href="https://wg21.link/p1152r4">P1152R4</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="unreleased" align="center">Clang 10</td>
     </tr>
     <tr>
       <td><tt>[[nodiscard("with reason")]]</tt></td>
@@ -1158,7 +1151,7 @@ as the draft C++2a standard evolves.
     <tr>
       <td><tt>constinit</tt></td>
       <td><a href="https://wg21.link/p1143r2">P1143R2</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="unreleased" align="center">Clang 10</td>
     </tr>
 </table>
 
@@ -1232,8 +1225,8 @@ and library features that are not part of standard C++.</p>
       </td>
     </tr>
     <tr>
-      <td class="svn" align="center">
-        SVN (<a href="https://wg21.link/p1902r1">P1902R1</a>)</a>
+      <td class="unreleased" align="center">
+        Clang 10 (<a href="https://wg21.link/p1902r1">P1902R1</a>)</a>
       </td>
     </tr>
     <!-- No compiler support is known to be needed for:

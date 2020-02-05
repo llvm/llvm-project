@@ -49,7 +49,7 @@ private:
   bool tryMergeLessLess();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
-  bool tryMergeCSharpVerbatimStringLiteral();
+  bool tryMergeCSharpStringLiteral();
   bool tryMergeCSharpKeywordVariables();
   bool tryMergeCSharpNullConditionals();
   bool tryMergeCSharpDoubleQuestion();
@@ -78,6 +78,8 @@ private:
   // an opening ${. It also maintains a stack of lexing contexts to handle
   // nested template parts by balancing curly braces.
   void handleTemplateStrings();
+
+  void handleCSharpVerbatimAndInterpolatedStrings();
 
   void tryParsePythonComment();
 

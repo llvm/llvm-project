@@ -952,7 +952,7 @@ static std::string printTemplateArgs(const PrintingPolicy &PrintingPolicy,
     Arg.getArgument().print(PrintingPolicy, OS);
     First = false;
   }
-  return OS.str();
+  return std::string(OS.str());
 }
 
 static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
@@ -7373,7 +7373,14 @@ private:
     ///   resolution [...]
     CandidateSet.exclude(FD);
 
-    S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
+    if (Args[0]->getType()->isOverloadableType())
+      S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
+    else {
+      // FIXME: We determine whether this is a valid expression by checking to
+      // see if there's a viable builtin operator candidate for it. That isn't
+      // really what the rules ask us to do, but should give the right results.
+      S.AddBuiltinOperatorCandidates(OO, FD->getLocation(), Args, CandidateSet);
+    }
 
     Result R;
 
@@ -7826,10 +7833,14 @@ private:
       return StmtError();
 
     OverloadedOperatorKind OO = FD->getOverloadedOperator();
-    ExprResult Op = S.CreateOverloadedBinOp(
-        Loc, BinaryOperator::getOverloadedOpcode(OO), Fns,
-        Obj.first.get(), Obj.second.get(), /*PerformADL=*/true,
-        /*AllowRewrittenCandidates=*/true, FD);
+    BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(OO);
+    ExprResult Op;
+    if (Type->isOverloadableType())
+      Op = S.CreateOverloadedBinOp(Loc, Opc, Fns, Obj.first.get(),
+                                   Obj.second.get(), /*PerformADL=*/true,
+                                   /*AllowRewrittenCandidates=*/true, FD);
+    else
+      Op = S.CreateBuiltinBinOp(Loc, Opc, Obj.first.get(), Obj.second.get());
     if (Op.isInvalid())
       return StmtError();
 
@@ -7869,8 +7880,12 @@ private:
       llvm::APInt ZeroVal(S.Context.getIntWidth(S.Context.IntTy), 0);
       Expr *Zero =
           IntegerLiteral::Create(S.Context, ZeroVal, S.Context.IntTy, Loc);
-      ExprResult Comp = S.CreateOverloadedBinOp(Loc, BO_NE, Fns, VDRef.get(),
-                                                Zero, true, true, FD);
+      ExprResult Comp;
+      if (VDRef.get()->getType()->isOverloadableType())
+        Comp = S.CreateOverloadedBinOp(Loc, BO_NE, Fns, VDRef.get(), Zero, true,
+                                       true, FD);
+      else
+        Comp = S.CreateBuiltinBinOp(Loc, BO_NE, VDRef.get(), Zero);
       if (Comp.isInvalid())
         return StmtError();
       Sema::ConditionResult Cond = S.ActOnCondition(
@@ -17385,4 +17400,51 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
     Record->addDecl(NewPD);
 
   return NewPD;
+}
+
+void Sema::ActOnStartFunctionDeclarationDeclarator(
+    Declarator &Declarator, unsigned TemplateParameterDepth) {
+  auto &Info = InventedParameterInfos.emplace_back();
+  TemplateParameterList *ExplicitParams = nullptr;
+  ArrayRef<TemplateParameterList *> ExplicitLists =
+      Declarator.getTemplateParameterLists();
+  if (!ExplicitLists.empty()) {
+    bool IsMemberSpecialization, IsInvalid;
+    ExplicitParams = MatchTemplateParametersToScopeSpecifier(
+        Declarator.getBeginLoc(), Declarator.getIdentifierLoc(),
+        Declarator.getCXXScopeSpec(), /*TemplateId=*/nullptr,
+        ExplicitLists, /*IsFriend=*/false, IsMemberSpecialization, IsInvalid,
+        /*SuppressDiagnostic=*/true);
+  }
+  if (ExplicitParams) {
+    Info.AutoTemplateParameterDepth = ExplicitParams->getDepth();
+    for (NamedDecl *Param : *ExplicitParams)
+      Info.TemplateParams.push_back(Param);
+    Info.NumExplicitTemplateParams = ExplicitParams->size();
+  } else {
+    Info.AutoTemplateParameterDepth = TemplateParameterDepth;
+    Info.NumExplicitTemplateParams = 0;
+  }
+}
+
+void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
+  auto &FSI = InventedParameterInfos.back();
+  if (FSI.TemplateParams.size() > FSI.NumExplicitTemplateParams) {
+    if (FSI.NumExplicitTemplateParams != 0) {
+      TemplateParameterList *ExplicitParams =
+          Declarator.getTemplateParameterLists().back();
+      Declarator.setInventedTemplateParameterList(
+          TemplateParameterList::Create(
+              Context, ExplicitParams->getTemplateLoc(),
+              ExplicitParams->getLAngleLoc(), FSI.TemplateParams,
+              ExplicitParams->getRAngleLoc(),
+              ExplicitParams->getRequiresClause()));
+    } else {
+      Declarator.setInventedTemplateParameterList(
+          TemplateParameterList::Create(
+              Context, SourceLocation(), SourceLocation(), FSI.TemplateParams,
+              SourceLocation(), /*RequiresClause=*/nullptr));
+    }
+  }
+  InventedParameterInfos.pop_back();
 }

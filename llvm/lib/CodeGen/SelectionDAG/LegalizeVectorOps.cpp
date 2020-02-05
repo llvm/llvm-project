@@ -339,7 +339,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Expand;
     break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
     ValVT = Node->getValueType(0);
@@ -970,7 +970,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UDIVFIX:
     Results.push_back(ExpandFixedPointDiv(Node));
     return;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
     ExpandStrictFPOp(Node, Results);

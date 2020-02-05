@@ -1,4 +1,4 @@
-//===-- ClangExpressionDeclMap.cpp -----------------------------*- C++ -*-===//
+//===-- ClangExpressionDeclMap.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/Materializer.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -109,7 +109,7 @@ bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
     m_parser_vars->m_persistent_vars = llvm::cast<ClangPersistentVariables>(
         target->GetPersistentExpressionStateForLanguage(eLanguageTypeC));
 
-    if (!ClangASTContext::GetScratch(*target))
+    if (!TypeSystemClang::GetScratch(*target))
       return false;
   }
 
@@ -174,10 +174,10 @@ ClangExpressionDeclMap::TargetInfo ClangExpressionDeclMap::GetTargetInfo() {
   return ret;
 }
 
-TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
-                                                ClangASTContext &source,
+TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
+                                                TypeSystemClang &source,
                                                 TypeFromParser parser_type) {
-  assert(&target == ClangASTContext::GetScratch(*m_target));
+  assert(&target == TypeSystemClang::GetScratch(*m_target));
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(&source.getASTContext() == m_ast_context);
 
@@ -196,8 +196,8 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
                                                    bool is_lvalue) {
   assert(m_parser_vars.get());
 
-  ClangASTContext *ast =
-      llvm::dyn_cast_or_null<ClangASTContext>(parser_type.GetTypeSystem());
+  TypeSystemClang *ast =
+      llvm::dyn_cast_or_null<TypeSystemClang>(parser_type.GetTypeSystem());
   if (ast == nullptr)
     return false;
 
@@ -209,7 +209,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     if (target == nullptr)
       return false;
 
-    auto *clang_ast_context = ClangASTContext::GetScratch(*target);
+    auto *clang_ast_context = TypeSystemClang::GetScratch(*target);
     if (!clang_ast_context)
       return false;
 
@@ -248,7 +248,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   if (target == nullptr)
     return false;
 
-  ClangASTContext *context = ClangASTContext::GetScratch(*target);
+  TypeSystemClang *context = TypeSystemClang::GetScratch(*target);
   if (!context)
     return false;
 
@@ -613,7 +613,7 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   return vars.GetVariableAtIndex(0);
 }
 
-ClangASTContext *ClangExpressionDeclMap::GetClangASTContext() {
+TypeSystemClang *ClangExpressionDeclMap::GetTypeSystemClang() {
   StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
   if (frame == nullptr)
     return nullptr;
@@ -627,7 +627,7 @@ ClangASTContext *ClangExpressionDeclMap::GetClangASTContext() {
   if (!frame_decl_context)
     return nullptr;
 
-  return llvm::dyn_cast_or_null<ClangASTContext>(
+  return llvm::dyn_cast_or_null<TypeSystemClang>(
       frame_decl_context.GetTypeSystem());
 }
 
@@ -734,7 +734,7 @@ clang::NamedDecl *ClangExpressionDeclMap::GetPersistentDecl(ConstString name) {
   if (!target)
     return nullptr;
 
-  ClangASTContext::GetScratch(*target);
+  TypeSystemClang::GetScratch(*target);
 
   if (!m_parser_vars->m_persistent_vars)
     return nullptr;
@@ -814,7 +814,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context,
     return;
 
   clang::CXXMethodDecl *method_decl =
-      ClangASTContext::DeclContextGetAsCXXMethodDecl(function_decl_ctx);
+      TypeSystemClang::DeclContextGetAsCXXMethodDecl(function_decl_ctx);
 
   if (method_decl) {
     clang::CXXRecordDecl *class_decl = method_decl->getParent();
@@ -915,7 +915,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
     return;
 
   clang::ObjCMethodDecl *method_decl =
-      ClangASTContext::DeclContextGetAsObjCMethodDecl(function_decl_ctx);
+      TypeSystemClang::DeclContextGetAsObjCMethodDecl(function_decl_ctx);
 
   if (method_decl) {
     ObjCInterfaceDecl *self_interface = method_decl->getClassInterface();
@@ -984,10 +984,10 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
 
   CompilerType self_clang_type = self_type->GetFullCompilerType();
 
-  if (ClangASTContext::IsObjCClassType(self_clang_type)) {
+  if (TypeSystemClang::IsObjCClassType(self_clang_type)) {
     return;
   }
-  if (!ClangASTContext::IsObjCObjectPointerType(self_clang_type))
+  if (!TypeSystemClang::IsObjCObjectPointerType(self_clang_type))
     return;
   self_clang_type = self_clang_type.GetPointeeType();
 
@@ -1015,7 +1015,7 @@ void ClangExpressionDeclMap::LookupLocalVarNamespace(
   if (!frame_decl_context)
     return;
 
-  ClangASTContext *frame_ast = llvm::dyn_cast_or_null<ClangASTContext>(
+  TypeSystemClang *frame_ast = llvm::dyn_cast_or_null<TypeSystemClang>(
       frame_decl_context.GetTypeSystem());
   if (!frame_ast)
     return;
@@ -1148,7 +1148,7 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   decl_infos.reserve(num_indices);
   clang::DeclContext *frame_decl_ctx =
       (clang::DeclContext *)frame_decl_context.GetOpaqueDeclContext();
-  ClangASTContext *ast = llvm::dyn_cast_or_null<ClangASTContext>(
+  TypeSystemClang *ast = llvm::dyn_cast_or_null<TypeSystemClang>(
       frame_decl_context.GetTypeSystem());
 
   for (uint32_t index = 0; index < num_indices; ++index) {
@@ -1499,7 +1499,7 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     return false;
   }
 
-  ClangASTContext *clang_ast = llvm::dyn_cast_or_null<ClangASTContext>(
+  TypeSystemClang *clang_ast = llvm::dyn_cast_or_null<TypeSystemClang>(
       var_type->GetForwardCompilerType().GetTypeSystem());
 
   if (!clang_ast) {
@@ -1671,7 +1671,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   if (target == nullptr)
     return;
 
-  ClangASTContext *scratch_ast_context = ClangASTContext::GetScratch(*target);
+  TypeSystemClang *scratch_ast_context = TypeSystemClang::GetScratch(*target);
   if (!scratch_ast_context)
     return;
 
@@ -1780,7 +1780,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();
-      if (llvm::isa<ClangASTContext>(type_system)) {
+      if (llvm::isa<TypeSystemClang>(type_system)) {
         clang::DeclContext *src_decl_context =
             (clang::DeclContext *)function->GetDeclContext()
                 .GetOpaqueDeclContext();

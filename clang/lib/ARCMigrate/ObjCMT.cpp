@@ -114,21 +114,15 @@ public:
     return *Summaries;
   }
 
-  ObjCMigrateASTConsumer(StringRef migrateDir,
-                         unsigned astMigrateActions,
-                         FileRemapper &remapper,
-                         FileManager &fileMgr,
+  ObjCMigrateASTConsumer(StringRef migrateDir, unsigned astMigrateActions,
+                         FileRemapper &remapper, FileManager &fileMgr,
                          const PPConditionalDirectiveRecord *PPRec,
-                         Preprocessor &PP,
-                         bool isOutputFile,
+                         Preprocessor &PP, bool isOutputFile,
                          ArrayRef<std::string> WhiteList)
-  : MigrateDir(migrateDir),
-    ASTMigrateActions(astMigrateActions),
-    NSIntegerTypedefed(nullptr), NSUIntegerTypedefed(nullptr),
-    Remapper(remapper), FileMgr(fileMgr), PPRec(PPRec), PP(PP),
-    IsOutputFile(isOutputFile),
-    FoundationIncluded(false){
-
+      : MigrateDir(migrateDir), ASTMigrateActions(astMigrateActions),
+        NSIntegerTypedefed(nullptr), NSUIntegerTypedefed(nullptr),
+        Remapper(remapper), FileMgr(fileMgr), PPRec(PPRec), PP(PP),
+        IsOutputFile(isOutputFile), FoundationIncluded(false) {
     // FIXME: StringSet should have insert(iter, iter) to use here.
     for (const std::string &Val : WhiteList)
       WhiteListFilenames.insert(Val);
@@ -191,12 +185,10 @@ protected:
 } // end anonymous namespace
 
 ObjCMigrateAction::ObjCMigrateAction(
-                                  std::unique_ptr<FrontendAction> WrappedAction,
-                                     StringRef migrateDir,
-                                     unsigned migrateAction)
-  : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
-    ObjCMigAction(migrateAction),
-    CompInst(nullptr) {
+    std::unique_ptr<FrontendAction> WrappedAction, StringRef migrateDir,
+    unsigned migrateAction)
+    : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
+      ObjCMigAction(migrateAction), CompInst(nullptr) {
   if (MigrateDir.empty())
     MigrateDir = "."; // user current directory if none is given.
 }
@@ -533,7 +525,7 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
     // after that; e.g. isContinuous will become continuous.
     StringRef PropertyNameStringRef(PropertyNameString);
     PropertyNameStringRef = PropertyNameStringRef.drop_front(LengthOfPrefix);
-    PropertyNameString = PropertyNameStringRef;
+    PropertyNameString = std::string(PropertyNameStringRef);
     bool NoLowering = (isUppercase(PropertyNameString[0]) &&
                        PropertyNameString.size() > 1 &&
                        isUppercase(PropertyNameString[1]));
@@ -994,7 +986,7 @@ static void ReplaceWithClasstype(const ObjCMigrateASTConsumer &ASTC,
   if (TypeSourceInfo *TSInfo = OM->getReturnTypeSourceInfo()) {
     TypeLoc TL = TSInfo->getTypeLoc();
     R = SourceRange(TL.getBeginLoc(), TL.getEndLoc()); {
-      ClassString  = IDecl->getName();
+      ClassString = std::string(IDecl->getName());
       ClassString += "*";
     }
   }
@@ -1320,7 +1312,7 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   if (!IDecl)
     return;
 
-  std::string StringClassName = IDecl->getName();
+  std::string StringClassName = std::string(IDecl->getName());
   StringRef LoweredClassName(StringClassName);
   std::string StringLoweredClassName = LoweredClassName.lower();
   LoweredClassName = StringLoweredClassName;
@@ -1330,7 +1322,7 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   if (!MethodIdName)
     return;
 
-  std::string MethodName = MethodIdName->getName();
+  std::string MethodName = std::string(MethodIdName->getName());
   if (OIT_Family == OIT_Singleton || OIT_Family == OIT_ReturnsSelf) {
     StringRef STRefMethodName(MethodName);
     size_t len = 0;
@@ -1342,7 +1334,7 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
       len = strlen("default");
     else
       return;
-    MethodName = STRefMethodName.substr(len);
+    MethodName = std::string(STRefMethodName.substr(len));
   }
   std::string MethodNameSubStr = MethodName.substr(0, 3);
   StringRef MethodNamePrefix(MethodNameSubStr);
@@ -1351,7 +1343,7 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   size_t Ix = LoweredClassName.rfind(MethodNamePrefix);
   if (Ix == StringRef::npos)
     return;
-  std::string ClassNamePostfix = LoweredClassName.substr(Ix);
+  std::string ClassNamePostfix = std::string(LoweredClassName.substr(Ix));
   StringRef LoweredMethodName(MethodName);
   std::string StringLoweredMethodName = LoweredMethodName.lower();
   LoweredMethodName = StringLoweredMethodName;
@@ -2010,7 +2002,7 @@ static std::vector<std::string> getWhiteListFilenames(StringRef DirPath) {
   directory_iterator DE;
   for (; !EC && DI != DE; DI = DI.increment(EC)) {
     if (is_regular_file(DI->path()))
-      Filenames.push_back(filename(DI->path()));
+      Filenames.push_back(std::string(filename(DI->path())));
   }
 
   return Filenames;
@@ -2153,7 +2145,7 @@ private:
         if (Val.getAsInteger(10, Entry.RemoveLen))
           Ignore = true;
       } else if (Key == "text") {
-        Entry.Text = Val;
+        Entry.Text = std::string(Val);
       }
     }
 
@@ -2224,7 +2216,7 @@ static std::string applyEditsToTemp(const FileEntry *FE,
   TmpOut.write(NewText.data(), NewText.size());
   TmpOut.close();
 
-  return TempPath.str();
+  return std::string(TempPath.str());
 }
 
 bool arcmt::getFileRemappingsFromFileList(
@@ -2277,7 +2269,7 @@ bool arcmt::getFileRemappingsFromFileList(
       continue;
     }
 
-    remap.emplace_back(I->first->getName(), TempFile);
+    remap.emplace_back(std::string(I->first->getName()), TempFile);
   }
 
   return hasErrorOccurred;

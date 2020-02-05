@@ -140,7 +140,8 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
 static bool isSubclass(const Decl *D,
                        StringRef ClassName) {
   using namespace ast_matchers;
-  DeclarationMatcher SubclassM = cxxRecordDecl(isSameOrDerivedFrom(ClassName));
+  DeclarationMatcher SubclassM =
+      cxxRecordDecl(isSameOrDerivedFrom(std::string(ClassName)));
   return !(match(SubclassM, *D, D->getASTContext()).empty());
 }
 

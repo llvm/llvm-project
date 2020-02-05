@@ -62,8 +62,11 @@ void lld::exitLld(int val) {
   // avoid intermittent crashes on Windows when exiting.
   llvm_shutdown();
 
-  lld::outs().flush();
-  lld::errs().flush();
+  {
+    std::lock_guard<std::mutex> lock(mu);
+    lld::outs().flush();
+    lld::errs().flush();
+  }
   _exit(val);
 }
 
@@ -114,7 +117,7 @@ void lld::checkError(Error e) {
 // extracted from an error message using regexps.
 std::string ErrorHandler::getLocation(const Twine &msg) {
   if (!vsDiagnostics)
-    return logName;
+    return std::string(logName);
 
   static std::regex regexes[] = {
       std::regex(
@@ -146,7 +149,7 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
     return m.str(1) + "(" + m.str(2) + ")";
   }
 
-  return logName;
+  return std::string(logName);
 }
 
 void ErrorHandler::log(const Twine &msg) {
@@ -191,20 +194,26 @@ void ErrorHandler::error(const Twine &msg) {
     }
   }
 
-  std::lock_guard<std::mutex> lock(mu);
+  bool exit = false;
+  {
+    std::lock_guard<std::mutex> lock(mu);
 
-  if (errorLimit == 0 || errorCount < errorLimit) {
-    lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                << "error: " << Colors::RESET << msg << "\n";
-  } else if (errorCount == errorLimit) {
-    lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
-                << "error: " << Colors::RESET << errorLimitExceededMsg << "\n";
-    if (exitEarly)
-      exitLld(1);
+    if (errorLimit == 0 || errorCount < errorLimit) {
+      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
+                  << "error: " << Colors::RESET << msg << "\n";
+    } else if (errorCount == errorLimit) {
+      lld::errs() << sep << getLocation(msg) << ": " << Colors::RED
+                  << "error: " << Colors::RESET << errorLimitExceededMsg
+                  << "\n";
+      exit = exitEarly;
+    }
+
+    sep = getSeparator(msg);
+    ++errorCount;
   }
 
-  sep = getSeparator(msg);
-  ++errorCount;
+  if (exit)
+    exitLld(1);
 }
 
 void ErrorHandler::fatal(const Twine &msg) {

@@ -400,6 +400,10 @@ def OpWithInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface>]> { ... }
 ```
 
+A verification method can also be specified on the `OpInterface` by setting
+`verify`. Setting `verify` results in the generated trait having a `verifyTrait`
+method that is applied to all operations implementing the trait.
+
 ### Builder methods
 
 For each operation, there are a few builders automatically generated based on

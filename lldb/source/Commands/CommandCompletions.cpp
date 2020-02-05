@@ -1,4 +1,4 @@
-//===-- CommandCompletions.cpp ----------------------------------*- C++ -*-===//
+//===-- CommandCompletions.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -295,7 +295,7 @@ void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
     if (properties_sp) {
       StreamString strm;
       properties_sp->DumpValue(nullptr, strm, OptionValue::eDumpOptionName);
-      const std::string &str = strm.GetString();
+      const std::string &str = std::string(strm.GetString());
       g_property_names.SplitIntoLines(str.c_str(), str.size());
     }
   }
@@ -414,7 +414,7 @@ CommandCompletions::SymbolCompleter::SymbolCompleter(
   std::string regex_str;
   if (!m_request.GetCursorArgumentPrefix().empty()) {
     regex_str.append("^");
-    regex_str.append(m_request.GetCursorArgumentPrefix());
+    regex_str.append(std::string(m_request.GetCursorArgumentPrefix()));
   } else {
     // Match anything since the completion string is empty
     regex_str.append(".");

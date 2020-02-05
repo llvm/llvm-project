@@ -99,6 +99,7 @@ createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
 ---
 ...
 name: func
+tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -106,6 +107,8 @@ registers:
   - { id: 3, class: _ }
 body: |
   bb.1:
+    liveins: $x0, $x1, $x2, $x4
+
     %0(s64) = COPY $x0
     %1(s64) = COPY $x1
     %2(s64) = COPY $x2

@@ -33,26 +33,26 @@ namespace lldb_private {
 class ClangASTImporter {
 public:
   struct LayoutInfo {
-    LayoutInfo()
-        : bit_size(0), alignment(0), field_offsets(), base_offsets(),
-          vbase_offsets() {}
-    uint64_t bit_size;
-    uint64_t alignment;
+    LayoutInfo() = default;
+    typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        OffsetMap;
+
+    uint64_t bit_size = 0;
+    uint64_t alignment = 0;
     llvm::DenseMap<const clang::FieldDecl *, uint64_t> field_offsets;
-    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> base_offsets;
-    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
-        vbase_offsets;
+    OffsetMap base_offsets;
+    OffsetMap vbase_offsets;
   };
 
   ClangASTImporter()
       : m_file_manager(clang::FileSystemOptions(),
                        FileSystem::Instance().GetVirtualFileSystem()) {}
 
-  CompilerType CopyType(ClangASTContext &dst, const CompilerType &src_type);
+  CompilerType CopyType(TypeSystemClang &dst, const CompilerType &src_type);
 
   clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
-  CompilerType DeportType(ClangASTContext &dst, const CompilerType &src_type);
+  CompilerType DeportType(TypeSystemClang &dst, const CompilerType &src_type);
 
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
@@ -79,8 +79,6 @@ public:
   bool Import(const CompilerType &type);
 
   bool CompleteType(const CompilerType &compiler_type);
-
-  void CompleteDecl(clang::Decl *decl);
 
   bool CompleteTagDecl(clang::TagDecl *decl);
 

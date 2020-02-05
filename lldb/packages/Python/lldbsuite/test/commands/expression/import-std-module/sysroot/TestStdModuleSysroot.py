@@ -16,6 +16,7 @@ class ImportStdModule(TestBase):
     # test configurations where libc++ is actually supposed to be tested.
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIfRemote # This test messes with the platform, can't be run remotely.
     def test(self):
         self.build()
 

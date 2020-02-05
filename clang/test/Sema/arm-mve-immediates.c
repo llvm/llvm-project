@@ -203,3 +203,73 @@ void test_immediate_shifts(uint8x16_t vb, uint16x8_t vh, uint32x4_t vw)
   vsriq(vw, vw, 0); // expected-error {{argument value 0 is outside the valid range [1, 32]}}
   vsriq(vw, vw, 33); // expected-error {{argument value 33 is outside the valid range [1, 32]}}
 }
+
+void test_simd_bic_orr(int16x8_t h, int32x4_t w)
+{
+    h = vbicq(h, 0x0000);
+    h = vbicq(h, 0x0001);
+    h = vbicq(h, 0x00FF);
+    h = vbicq(h, 0x0100);
+    h = vbicq(h, 0x0101); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    h = vbicq(h, 0x01FF); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    h = vbicq(h, 0xFF00);
+
+    w = vbicq(w, 0x00000000);
+    w = vbicq(w, 0x00000001);
+    w = vbicq(w, 0x000000FF);
+    w = vbicq(w, 0x00000100);
+    w = vbicq(w, 0x0000FF00);
+    w = vbicq(w, 0x00010000);
+    w = vbicq(w, 0x00FF0000);
+    w = vbicq(w, 0x01000000);
+    w = vbicq(w, 0xFF000000);
+    w = vbicq(w, 0x01000001); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    w = vbicq(w, 0x01FFFFFF); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+
+    h = vorrq(h, 0x0000);
+    h = vorrq(h, 0x0001);
+    h = vorrq(h, 0x00FF);
+    h = vorrq(h, 0x0100);
+    h = vorrq(h, 0x0101); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    h = vorrq(h, 0x01FF); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    h = vorrq(h, 0xFF00);
+
+    w = vorrq(w, 0x00000000);
+    w = vorrq(w, 0x00000001);
+    w = vorrq(w, 0x000000FF);
+    w = vorrq(w, 0x00000100);
+    w = vorrq(w, 0x0000FF00);
+    w = vorrq(w, 0x00010000);
+    w = vorrq(w, 0x00FF0000);
+    w = vorrq(w, 0x01000000);
+    w = vorrq(w, 0xFF000000);
+    w = vorrq(w, 0x01000001); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+    w = vorrq(w, 0x01FFFFFF); // expected-error-re {{argument should be an 8-bit value shifted by a multiple of 8 bits{{$}}}}
+}
+
+void test_simd_vmvn(void)
+{
+    uint16x8_t h;
+    h = vmvnq_n_u16(0x0000);
+    h = vmvnq_n_u16(0x0001);
+    h = vmvnq_n_u16(0x00FF);
+    h = vmvnq_n_u16(0x0100);
+    h = vmvnq_n_u16(0x0101); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
+    h = vmvnq_n_u16(0x01FF);
+    h = vmvnq_n_u16(0xFF00);
+
+    uint32x4_t w;
+    w = vmvnq_n_u32(0x00000000);
+    w = vmvnq_n_u32(0x00000001);
+    w = vmvnq_n_u32(0x000000FF);
+    w = vmvnq_n_u32(0x00000100);
+    w = vmvnq_n_u32(0x0000FF00);
+    w = vmvnq_n_u32(0x00010000);
+    w = vmvnq_n_u32(0x00FF0000);
+    w = vmvnq_n_u32(0x01000000);
+    w = vmvnq_n_u32(0xFF000000);
+    w = vmvnq_n_u32(0x01000001); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
+    w = vmvnq_n_u32(0x01FFFFFF); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
+    w = vmvnq_n_u32(0x0001FFFF); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
+    w = vmvnq_n_u32(0x000001FF);
+}

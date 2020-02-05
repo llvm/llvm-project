@@ -184,6 +184,13 @@ TEST(EnumConstant, Matches) {
   EXPECT_TRUE(notMatches("enum X {};", Matcher));
 }
 
+TEST(TagDecl, MatchesTagDecls) {
+  EXPECT_TRUE(matches("struct X {};", tagDecl(hasName("X"))));
+  EXPECT_TRUE(matches("class C {};", tagDecl(hasName("C"))));
+  EXPECT_TRUE(matches("union U {};", tagDecl(hasName("U"))));
+  EXPECT_TRUE(matches("enum E {};", tagDecl(hasName("E"))));
+}
+
 TEST(Matcher, UnresolvedLookupExpr) {
   // FIXME: The test is known to be broken on Windows with delayed template
   // parsing.
@@ -677,6 +684,16 @@ TEST(Matcher, NewExpression) {
 TEST(Matcher, DeleteExpression) {
   EXPECT_TRUE(matches("struct A {}; void f(A* a) { delete a; }",
                       cxxDeleteExpr()));
+}
+
+TEST(Matcher, NoexceptExpression) {
+  StatementMatcher NoExcept = cxxNoexceptExpr();
+  EXPECT_TRUE(matches("void foo(); bool bar = noexcept(foo());", NoExcept));
+  EXPECT_TRUE(
+      matches("void foo() noexcept; bool bar = noexcept(foo());", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept;", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept(1+1);", NoExcept));
+  EXPECT_TRUE(matches("void foo() noexcept(noexcept(1+1));", NoExcept));
 }
 
 TEST(Matcher, DefaultArgument) {

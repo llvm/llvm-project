@@ -28,6 +28,9 @@ namespace gwp_asan {
 // otherwise).
 class GuardedPoolAllocator {
 public:
+  // Name of the GWP-ASan mapping that for `Metadata`.
+  static constexpr const char *kGwpAsanMetadataName = "GWP-ASan Metadata";
+
   static constexpr uint64_t kInvalidThreadID = UINT64_MAX;
 
   enum class Error {
@@ -98,14 +101,28 @@ public:
   // pool using the provided options. See options.inc for runtime configuration
   // options.
   void init(const options::Options &Opts);
+  void uninitTestOnly();
+
+  void disable();
+  void enable();
+
+  typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
+  // Execute the callback Cb for every allocation the lies in [Base, Base + Size).
+  // Must be called while the allocator is disabled. The callback can not
+  // allocate.
+  void iterate(void *Base, size_t Size, iterate_callback Cb, void *Arg);
 
   // Return whether the allocation should be randomly chosen for sampling.
   GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
     //                   == 1 means we "should sample this allocation".
+    // AdjustedSampleRatePlusOne is designed to intentionally underflow. This
+    // class must be valid when zero-initialised, and we wish to sample as
+    // infrequently as possible when this is the case, hence we underflow to
+    // UINT32_MAX.
     if (GWP_ASAN_UNLIKELY(ThreadLocals.NextSampleCounter == 0))
       ThreadLocals.NextSampleCounter =
-          (getRandomUnsigned32() % AdjustedSampleRate) + 1;
+          (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
 
     return GWP_ASAN_UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
   }
@@ -114,7 +131,7 @@ public:
   // is owned by this pool.
   GWP_ASAN_ALWAYS_INLINE bool pointerIsMine(const void *Ptr) const {
     uintptr_t P = reinterpret_cast<uintptr_t>(Ptr);
-    return GuardedPagePool <= P && P < GuardedPagePoolEnd;
+    return P < GuardedPagePoolEnd && GuardedPagePool <= P;
   }
 
   // Allocate memory in a guarded slot, and return a pointer to the new
@@ -146,6 +163,14 @@ public:
   static uint64_t getThreadID();
 
 private:
+  // Name of actively-occupied slot mappings.
+  static constexpr const char *kGwpAsanAliveSlotName = "GWP-ASan Alive Slot";
+  // Name of the guard pages. This includes all slots that are not actively in
+  // use (i.e. were never used, or have been free()'d).)
+  static constexpr const char *kGwpAsanGuardPageName = "GWP-ASan Guard Page";
+  // Name of the mapping for `FreeSlots`.
+  static constexpr const char *kGwpAsanFreeSlotsName = "GWP-ASan Metadata";
+
   static constexpr size_t kInvalidSlotID = SIZE_MAX;
 
   // These functions anonymously map memory or change the permissions of mapped
@@ -154,10 +179,13 @@ private:
   // return on error, instead electing to kill the calling process on failure.
   // Note that memory is initially mapped inaccessible. In order for RW
   // mappings, call mapMemory() followed by markReadWrite() on the returned
-  // pointer.
-  void *mapMemory(size_t Size) const;
-  void markReadWrite(void *Ptr, size_t Size) const;
-  void markInaccessible(void *Ptr, size_t Size) const;
+  // pointer. Each mapping is named on platforms that support it, primarily
+  // Android. This name must be a statically allocated string, as the Android
+  // kernel uses the string pointer directly.
+  void *mapMemory(size_t Size, const char *Name) const;
+  void unmapMemory(void *Ptr, size_t Size, const char *Name) const;
+  void markReadWrite(void *Ptr, size_t Size, const char *Name) const;
+  void markInaccessible(void *Ptr, size_t Size, const char *Name) const;
 
   // Get the page size from the platform-specific implementation. Only needs to
   // be called once, and the result should be cached in PageSize in this class.
@@ -169,6 +197,7 @@ private:
   // signal(), we have to use platform-specific signal handlers to obtain the
   // address that caused the SIGSEGV exception.
   static void installSignalHandlers();
+  static void uninstallSignalHandlers();
 
   // Returns the index of the slot that this pointer resides in. If the pointer
   // is not owned by this pool, the result is undefined.
@@ -210,6 +239,11 @@ private:
 
   void reportErrorInternal(uintptr_t AccessPtr, Error E);
 
+  static GuardedPoolAllocator *getSingleton();
+
+  // Install a pthread_atfork handler.
+  void installAtFork();
+
   // Cached page size for this system in bytes.
   size_t PageSize = 0;
 
@@ -223,7 +257,7 @@ private:
   size_t NumSampledAllocations = 0;
   // Pointer to the pool of guarded slots. Note that this points to the start of
   // the pool (which is a guard page), not a pointer to the first guarded page.
-  uintptr_t GuardedPagePool = UINTPTR_MAX;
+  uintptr_t GuardedPagePool = 0;
   uintptr_t GuardedPagePoolEnd = 0;
   // Pointer to the allocation metadata (allocation/deallocation stack traces),
   // if any.
@@ -250,7 +284,7 @@ private:
   // where we would calculate modulo zero. This value is set UINT32_MAX, as when
   // GWP-ASan is disabled, we wish to never spend wasted cycles recalculating
   // the sample rate.
-  uint32_t AdjustedSampleRate = UINT32_MAX;
+  uint32_t AdjustedSampleRatePlusOne = 0;
 
   // Pack the thread local variables into a struct to ensure that they're in
   // the same cache line for performance reasons. These are the most touched

@@ -1,4 +1,4 @@
-//===-- StackFrameRecognizer.cpp --------------------------------*- C++ -*-===//
+//===-- StackFrameRecognizer.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,8 +70,9 @@ public:
                          std::string symbol, bool regexp)> const &callback) {
     for (auto entry : m_recognizers) {
       if (entry.is_regexp) {
-        callback(entry.recognizer_id, entry.recognizer->GetName(), entry.module_regexp->GetText(),
-                 entry.symbol_regexp->GetText(), true);
+        callback(entry.recognizer_id, entry.recognizer->GetName(),
+                 std::string(entry.module_regexp->GetText()),
+                 std::string(entry.symbol_regexp->GetText()), true);
       } else {
         callback(entry.recognizer_id, entry.recognizer->GetName(), entry.module.GetCString(),
                  entry.symbol.GetCString(), false);

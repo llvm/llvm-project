@@ -79,7 +79,7 @@ void AArch64CompressJumpTables::scanFunction() {
   for (MachineBasicBlock &MBB : *MF) {
     const Align Alignment = MBB.getAlignment();
     unsigned AlignedOffset;
-    if (Alignment == Align::None())
+    if (Alignment == Align(1))
       AlignedOffset = Offset;
     else
       AlignedOffset = alignTo(Offset, Alignment);

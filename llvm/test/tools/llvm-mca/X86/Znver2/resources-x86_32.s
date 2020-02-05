@@ -64,7 +64,7 @@ salc
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 0.33  0.33   0.33   0.50   0.50   0.50   0.50     -      -      -      -      -      -
+# CHECK-NEXT: 0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -79,5 +79,5 @@ salc
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     daa
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     das
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     into
-# CHECK-NEXT: 0.33  0.33   0.33   0.25   0.25   0.25   0.25     -      -      -      -      -      -     leave
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -     leave
 # CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     salc

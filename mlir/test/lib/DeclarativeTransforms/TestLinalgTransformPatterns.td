@@ -1,6 +1,6 @@
 //===- TestLinalgTransformPatterns.td - Test patterns --*- tablegen ----*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -105,12 +105,19 @@ def : Pattern<(MatmulOp:$op $_, $_, $_),
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
+def : Pattern<(FillOp:$op $_, $_),
+              [(VectorizeLinalgOp)],
+              [(Constraint<And<[
+                HasLinalgTransformMarker<"VECTORIZE">,
+                PreconditionVectorizeLinalgOp
+               ]>>)]>;
 def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
               [(VectorizeLinalgOp)],
               [(Constraint<And<[
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
+
 
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.

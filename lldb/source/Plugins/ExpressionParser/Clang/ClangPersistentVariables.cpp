@@ -1,4 +1,4 @@
-//===-- ClangPersistentVariables.cpp ----------------------------*- C++ -*-===//
+//===-- ClangPersistentVariables.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,8 @@
 #include "ClangPersistentVariables.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -82,7 +83,7 @@ ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
 
 void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
                                                       clang::NamedDecl *decl,
-                                                      ClangASTContext *ctx) {
+                                                      TypeSystemClang *ctx) {
   PersistentDecl p = {decl, ctx};
   m_persistent_decls.insert(std::make_pair(name.GetCString(), p));
 
@@ -98,4 +99,11 @@ void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
 clang::NamedDecl *
 ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
+}
+
+lldb::ClangASTImporterSP ClangPersistentVariables::GetClangASTImporter() {
+  if (!m_ast_importer_sp) {
+    m_ast_importer_sp = std::make_shared<ClangASTImporter>();
+  }
+  return m_ast_importer_sp;
 }

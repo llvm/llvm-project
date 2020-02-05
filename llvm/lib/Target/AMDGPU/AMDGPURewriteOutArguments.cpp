@@ -453,9 +453,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     PointerType *ArgType = cast<PointerType>(Arg.getType());
 
     auto *EltTy = ArgType->getElementType();
-    unsigned Align = Arg.getParamAlignment();
-    if (Align == 0)
-      Align = DL->getABITypeAlignment(EltTy);
+    const auto Align =
+        DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 
     Value *Val = B.CreateExtractValue(StubCall, RetIdx++);
     Type *PtrTy = Val->getType()->getPointerTo(ArgType->getAddressSpace());

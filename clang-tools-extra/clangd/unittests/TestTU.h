@@ -32,13 +32,13 @@ namespace clangd {
 struct TestTU {
   static TestTU withCode(llvm::StringRef Code) {
     TestTU TU;
-    TU.Code = Code;
+    TU.Code = std::string(Code);
     return TU;
   }
 
   static TestTU withHeaderCode(llvm::StringRef HeaderCode) {
     TestTU TU;
-    TU.HeaderCode = HeaderCode;
+    TU.HeaderCode = std::string(HeaderCode);
     return TU;
   }
 
@@ -64,6 +64,8 @@ struct TestTU {
   // Simulate a header guard of the header (using an #import directive).
   bool ImplicitHeaderGuard = true;
 
+  // By default, build() will report Error diagnostics as GTest errors.
+  // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;

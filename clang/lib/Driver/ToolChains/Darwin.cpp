@@ -1270,17 +1270,17 @@ static std::string getSystemOrSDKMacOSVersion(StringRef MacOSSDKVersion) {
   unsigned Major, Minor, Micro;
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   if (!SystemTriple.isMacOSX())
-    return MacOSSDKVersion;
+    return std::string(MacOSSDKVersion);
   SystemTriple.getMacOSXVersion(Major, Minor, Micro);
   VersionTuple SystemVersion(Major, Minor, Micro);
   bool HadExtra;
   if (!Driver::GetReleaseVersion(MacOSSDKVersion, Major, Minor, Micro,
                                  HadExtra))
-    return MacOSSDKVersion;
+    return std::string(MacOSSDKVersion);
   VersionTuple SDKVersion(Major, Minor, Micro);
   if (SDKVersion > SystemVersion)
     return SystemVersion.getAsString();
-  return MacOSSDKVersion;
+  return std::string(MacOSSDKVersion);
 }
 
 namespace {
@@ -1320,7 +1320,7 @@ struct DarwinPlatform {
 
   void setOSVersion(StringRef S) {
     assert(Kind == TargetArg && "Unexpected kind!");
-    OSVersion = S;
+    OSVersion = std::string(S);
   }
 
   bool hasOSVersion() const { return HasOSVersion; }
@@ -1577,7 +1577,7 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
     size_t StartVer = SDK.find_first_of("0123456789");
     size_t EndVer = SDK.find_last_of("0123456789");
     if (StartVer != StringRef::npos && EndVer > StartVer)
-      Version = SDK.slice(StartVer, EndVer + 1);
+      Version = std::string(SDK.slice(StartVer, EndVer + 1));
   }
   if (Version.empty())
     return None;
@@ -1870,7 +1870,10 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
 
   bool NoStdInc = DriverArgs.hasArg(options::OPT_nostdinc);
   bool NoStdlibInc = DriverArgs.hasArg(options::OPT_nostdlibinc);
-  bool NoBuiltinInc = DriverArgs.hasArg(options::OPT_nobuiltininc);
+  bool NoBuiltinInc = DriverArgs.hasFlag(
+      options::OPT_nobuiltininc, options::OPT_ibuiltininc, /*Default=*/false);
+  bool ForceBuiltinInc = DriverArgs.hasFlag(
+      options::OPT_ibuiltininc, options::OPT_nobuiltininc, /*Default=*/false);
 
   // Add <sysroot>/usr/local/include
   if (!NoStdInc && !NoStdlibInc) {
@@ -1880,7 +1883,7 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
   }
 
   // Add the Clang builtin headers (<resource>/include)
-  if (!NoStdInc && !NoBuiltinInc) {
+  if (!(NoStdInc && !ForceBuiltinInc) && !NoBuiltinInc) {
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include");
     addSystemInclude(DriverArgs, CC1Args, P);

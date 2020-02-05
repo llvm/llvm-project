@@ -278,9 +278,18 @@ Language Selection and Mode Options
  Make all string literals default to writable.  This disables uniquing of
  strings and other optimizations.
 
-.. option:: -flax-vector-conversions
+.. option:: -flax-vector-conversions, -flax-vector-conversions=<kind>, -fno-lax-vector-conversions
 
  Allow loose type checking rules for implicit vector conversions.
+ Possible values of <kind>:
+
+ - ``none``: allow no implicit conversions between vectors
+ - ``integer``: allow implicit bitcasts between integer vectors of the same
+   overall bit-width
+ - ``all``: allow implicit bitcasts between any vectors of the same
+   overall bit-width
+
+ <kind> defaults to ``integer`` if unspecified.
 
 .. option:: -fblocks
 

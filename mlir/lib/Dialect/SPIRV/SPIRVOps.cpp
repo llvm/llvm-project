@@ -1,6 +1,6 @@
 //===- SPIRVOps.cpp - MLIR SPIR-V operations ------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -32,10 +32,12 @@ using namespace mlir;
 static constexpr const char kAlignmentAttrName[] = "alignment";
 static constexpr const char kBranchWeightAttrName[] = "branch_weights";
 static constexpr const char kCallee[] = "callee";
+static constexpr const char kClusterSize[] = "cluster_size";
 static constexpr const char kDefaultValueAttrName[] = "default_value";
 static constexpr const char kExecutionScopeAttrName[] = "execution_scope";
 static constexpr const char kEqualSemanticsAttrName[] = "equal_semantics";
 static constexpr const char kFnNameAttrName[] = "fn";
+static constexpr const char kGroupOperationAttrName[] = "group_operation";
 static constexpr const char kIndicesAttrName[] = "indices";
 static constexpr const char kInitializerAttrName[] = "initializer";
 static constexpr const char kInterfaceAttrName[] = "interface";
@@ -53,9 +55,26 @@ static constexpr const char kVariableAttrName[] = "variable";
 // Common utility functions
 //===----------------------------------------------------------------------===//
 
-static LogicalResult extractValueFromConstOp(Operation *op,
-                                             int32_t &indexValue) {
-  auto constOp = dyn_cast<spirv::ConstantOp>(op);
+/// Returns true if the given op is a function-like op or nested in a
+/// function-like op without a module-like op in the middle.
+static bool isNestedInFunctionLikeOp(Operation *op) {
+  if (!op)
+    return false;
+  if (op->hasTrait<OpTrait::SymbolTable>())
+    return false;
+  if (op->hasTrait<OpTrait::FunctionLike>())
+    return true;
+  return isNestedInFunctionLikeOp(op->getParentOp());
+}
+
+/// Returns true if the given op is an module-like op that maintains a symbol
+/// table.
+static bool isDirectInModuleLikeOp(Operation *op) {
+  return op && op->hasTrait<OpTrait::SymbolTable>();
+}
+
+static LogicalResult extractValueFromConstOp(Operation *op, int32_t &value) {
+  auto constOp = dyn_cast_or_null<spirv::ConstantOp>(op);
   if (!constOp) {
     return failure();
   }
@@ -64,7 +83,7 @@ static LogicalResult extractValueFromConstOp(Operation *op,
   if (!integerValueAttr) {
     return failure();
   }
-  indexValue = integerValueAttr.getInt();
+  value = integerValueAttr.getInt();
   return success();
 }
 
@@ -569,6 +588,88 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   return success();
 }
 
+static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
+                                                    OperationState &state) {
+  spirv::Scope executionScope;
+  spirv::GroupOperation groupOperation;
+  OpAsmParser::OperandType valueInfo;
+  if (parseEnumAttribute(executionScope, parser, state,
+                         kExecutionScopeAttrName) ||
+      parseEnumAttribute(groupOperation, parser, state,
+                         kGroupOperationAttrName) ||
+      parser.parseOperand(valueInfo))
+    return failure();
+
+  Optional<OpAsmParser::OperandType> clusterSizeInfo;
+  if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
+    clusterSizeInfo = OpAsmParser::OperandType();
+    if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  Type resultType;
+  if (parser.parseColonType(resultType))
+    return failure();
+
+  if (parser.resolveOperand(valueInfo, resultType, state.operands))
+    return failure();
+
+  if (clusterSizeInfo.hasValue()) {
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
+      return failure();
+  }
+
+  return parser.addTypeToList(resultType, state.types);
+}
+
+static void printGroupNonUniformArithmeticOp(Operation *groupOp,
+                                             OpAsmPrinter &printer) {
+  printer << groupOp->getName() << " \""
+          << stringifyScope(static_cast<spirv::Scope>(
+                 groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName)
+                     .getInt()))
+          << "\" \""
+          << stringifyGroupOperation(static_cast<spirv::GroupOperation>(
+                 groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName)
+                     .getInt()))
+          << "\" " << groupOp->getOperand(0);
+
+  if (groupOp->getNumOperands() > 1)
+    printer << " " << kClusterSize << '(' << groupOp->getOperand(1) << ')';
+  printer << " : " << groupOp->getResult(0).getType();
+}
+
+static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
+  spirv::Scope scope = static_cast<spirv::Scope>(
+      groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName).getInt());
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return groupOp->emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  spirv::GroupOperation operation = static_cast<spirv::GroupOperation>(
+      groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName).getInt());
+  if (operation == spirv::GroupOperation::ClusteredReduce &&
+      groupOp->getNumOperands() == 1)
+    return groupOp->emitOpError("cluster size operand must be provided for "
+                                "'ClusteredReduce' group operation");
+  if (groupOp->getNumOperands() > 1) {
+    Operation *sizeOp = groupOp->getOperand(1).getDefiningOp();
+    int32_t clusterSize = 0;
+
+    // TODO(antiagainst): support specialization constant here.
+    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
+      return groupOp->emitOpError(
+          "cluster size operand must come from a constant op");
+
+    if (!llvm::isPowerOf2_32(clusterSize))
+      return groupOp->emitOpError(
+          "cluster size operand must be a power of two");
+  }
+  return success();
+}
+
 // Parses an op that has no inputs and no outputs.
 static ParseResult parseNoIOOp(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDict(state.attributes))
@@ -840,40 +941,10 @@ void spirv::AddressOfOp::build(Builder *builder, OperationState &state,
   build(builder, state, var.type(), builder->getSymbolRefAttr(var));
 }
 
-static ParseResult parseAddressOfOp(OpAsmParser &parser,
-                                    OperationState &state) {
-  FlatSymbolRefAttr varRefAttr;
-  Type type;
-  if (parser.parseAttribute(varRefAttr, Type(), kVariableAttrName,
-                            state.attributes) ||
-      parser.parseColonType(type)) {
-    return failure();
-  }
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
-  if (!ptrType) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected spv.ptr type");
-  }
-  state.addTypes(ptrType);
-  return success();
-}
-
-static void print(spirv::AddressOfOp addressOfOp, OpAsmPrinter &printer) {
-  SmallVector<StringRef, 4> elidedAttrs;
-  printer << spirv::AddressOfOp::getOperationName();
-
-  // Print symbol name.
-  printer << ' ';
-  printer.printSymbolName(addressOfOp.variable());
-
-  // Print the type.
-  printer << " : " << addressOfOp.pointer().getType();
-}
-
 static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
-  auto moduleOp = addressOfOp.getParentOfType<spirv::ModuleOp>();
-  auto varOp =
-      moduleOp.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
+  auto varOp = dyn_cast_or_null<spirv::GlobalVariableOp>(
+      SymbolTable::lookupNearestSymbolFrom(addressOfOp.getParentOp(),
+                                           addressOfOp.variable()));
   if (!varOp) {
     return addressOfOp.emitOpError("expected spv.globalVariable symbol");
   }
@@ -1635,59 +1706,14 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
 // spv.FunctionCall
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseFunctionCallOp(OpAsmParser &parser,
-                                       OperationState &state) {
-  FlatSymbolRefAttr calleeAttr;
-  FunctionType type;
-  SmallVector<OpAsmParser::OperandType, 4> operands;
-  auto loc = parser.getNameLoc();
-  if (parser.parseAttribute(calleeAttr, kCallee, state.attributes) ||
-      parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseColonType(type)) {
-    return failure();
-  }
-
-  auto funcType = type.dyn_cast<FunctionType>();
-  if (!funcType) {
-    return parser.emitError(loc, "expected function type, but provided ")
-           << type;
-  }
-
-  if (funcType.getNumResults() > 1) {
-    return parser.emitError(loc, "expected callee function to have 0 or 1 "
-                                 "result, but provided ")
-           << funcType.getNumResults();
-  }
-
-  return failure(parser.addTypesToList(funcType.getResults(), state.types) ||
-                 parser.resolveOperands(operands, funcType.getInputs(), loc,
-                                        state.operands));
-}
-
-static void print(spirv::FunctionCallOp functionCallOp, OpAsmPrinter &printer) {
-  SmallVector<Type, 4> argTypes(functionCallOp.getOperandTypes());
-  SmallVector<Type, 1> resultTypes(functionCallOp.getResultTypes());
-  Type functionType =
-      FunctionType::get(argTypes, resultTypes, functionCallOp.getContext());
-
-  printer << spirv::FunctionCallOp::getOperationName() << ' '
-          << functionCallOp.getAttr(kCallee) << '('
-          << functionCallOp.arguments() << ") : " << functionType;
-}
-
 static LogicalResult verify(spirv::FunctionCallOp functionCallOp) {
   auto fnName = functionCallOp.callee();
 
-  auto moduleOp = functionCallOp.getParentOfType<spirv::ModuleOp>();
-  if (!moduleOp) {
-    return functionCallOp.emitOpError(
-        "must appear in a function inside 'spv.module'");
-  }
-
-  auto funcOp = moduleOp.lookupSymbol<FuncOp>(fnName);
+  auto funcOp = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
+      functionCallOp.getParentOp(), fnName));
   if (!funcOp) {
     return functionCallOp.emitOpError("callee function '")
-           << fnName << "' not found in 'spv.module'";
+           << fnName << "' not found in nearest symbol table";
   }
 
   auto functionType = funcOp.getType();
@@ -1836,8 +1862,8 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
 
   if (auto init =
           varOp.getAttrOfType<FlatSymbolRefAttr>(kInitializerAttrName)) {
-    auto moduleOp = varOp.getParentOfType<spirv::ModuleOp>();
-    auto *initOp = moduleOp.lookupSymbol(init.getValue());
+    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
+        varOp.getParentOp(), init.getValue());
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
@@ -1887,6 +1913,46 @@ static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformElectOp
+//===----------------------------------------------------------------------===//
+
+void spirv::GroupNonUniformElectOp::build(Builder *builder,
+                                          OperationState &state,
+                                          spirv::Scope scope) {
+  build(builder, state, builder->getI1Type(), scope);
+}
+
+static ParseResult parseGroupNonUniformElectOp(OpAsmParser &parser,
+                                               OperationState &state) {
+  spirv::Scope executionScope;
+  Type resultType;
+  if (parseEnumAttribute(executionScope, parser, state,
+                         kExecutionScopeAttrName) ||
+      parser.parseColonType(resultType))
+    return failure();
+
+  return parser.addTypeToList(resultType, state.types);
+}
+
+static void print(spirv::GroupNonUniformElectOp groupOp,
+                  OpAsmPrinter &printer) {
+  printer << spirv::GroupNonUniformElectOp::getOperationName() << " \""
+          << stringifyScope(groupOp.execution_scope())
+          << "\" : " << groupOp.getType();
+}
+
+static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
+  spirv::Scope scope = groupOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return groupOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // spv.IAdd
@@ -2398,28 +2464,10 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
 // spv._reference_of
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseReferenceOfOp(OpAsmParser &parser,
-                                      OperationState &state) {
-  FlatSymbolRefAttr constRefAttr;
-  Type type;
-  if (parser.parseAttribute(constRefAttr, Type(), kSpecConstAttrName,
-                            state.attributes) ||
-      parser.parseColonType(type)) {
-    return failure();
-  }
-  return parser.addTypeToList(type, state.types);
-}
-
-static void print(spirv::ReferenceOfOp referenceOfOp, OpAsmPrinter &printer) {
-  printer << spirv::ReferenceOfOp::getOperationName() << ' ';
-  printer.printSymbolName(referenceOfOp.spec_const());
-  printer << " : " << referenceOfOp.reference().getType();
-}
-
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
-  auto moduleOp = referenceOfOp.getParentOfType<spirv::ModuleOp>();
-  auto specConstOp =
-      moduleOp.lookupSymbol<spirv::SpecConstantOp>(referenceOfOp.spec_const());
+  auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(
+      SymbolTable::lookupNearestSymbolFrom(referenceOfOp.getParentOp(),
+                                           referenceOfOp.spec_const()));
   if (!specConstOp) {
     return referenceOfOp.emitOpError("expected spv.specConstant symbol");
   }
@@ -2448,20 +2496,6 @@ static LogicalResult verify(spirv::ReturnOp returnOp) {
 //===----------------------------------------------------------------------===//
 // spv.ReturnValue
 //===----------------------------------------------------------------------===//
-
-static ParseResult parseReturnValueOp(OpAsmParser &parser,
-                                      OperationState &state) {
-  OpAsmParser::OperandType retValInfo;
-  Type retValType;
-  return failure(parser.parseOperand(retValInfo) ||
-                 parser.parseColonType(retValType) ||
-                 parser.resolveOperand(retValInfo, retValType, state.operands));
-}
-
-static void print(spirv::ReturnValueOp retValOp, OpAsmPrinter &printer) {
-  printer << spirv::ReturnValueOp::getOperationName() << ' ' << retValOp.value()
-          << " : " << retValOp.value().getType();
-}
 
 static LogicalResult verify(spirv::ReturnValueOp retValOp) {
   auto funcOp = retValOp.getParentOfType<FuncOp>();
@@ -2895,44 +2929,6 @@ static LogicalResult verify(spirv::StoreOp storeOp) {
     return failure();
   }
   return verifyMemoryAccessAttribute(storeOp);
-}
-
-//===----------------------------------------------------------------------===//
-// spv.SubgroupBallotKHROp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseSubgroupBallotKHROp(OpAsmParser &parser,
-                                            OperationState &state) {
-  OpAsmParser::OperandType operandInfo;
-  Type resultType;
-  IntegerType i1Type = parser.getBuilder().getI1Type();
-  if (parser.parseOperand(operandInfo) || parser.parseColonType(resultType) ||
-      parser.resolveOperand(operandInfo, i1Type, state.operands))
-    return failure();
-
-  return parser.addTypeToList(resultType, state.types);
-}
-
-static void print(spirv::SubgroupBallotKHROp ballotOp, OpAsmPrinter &printer) {
-  printer << spirv::SubgroupBallotKHROp::getOperationName() << ' '
-          << ballotOp.predicate() << " : " << ballotOp.getType();
-}
-
-//===----------------------------------------------------------------------===//
-// spv.Undef
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseUndefOp(OpAsmParser &parser, OperationState &state) {
-  Type type;
-  if (parser.parseColonType(type)) {
-    return failure();
-  }
-  state.addTypes(type);
-  return success();
-}
-
-static void print(spirv::UndefOp undefOp, OpAsmPrinter &printer) {
-  printer << spirv::UndefOp::getOperationName() << " : " << undefOp.getType();
 }
 
 //===----------------------------------------------------------------------===//

@@ -85,13 +85,15 @@ cl::opt<unsigned> X86AlignBranchBoundary(
 
 cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
     "x86-align-branch",
-    cl::desc("Specify types of branches to align (plus separated list of "
-             "types). The branches's types are combination of jcc, fused, "
-             "jmp, call, ret, indirect."),
-    cl::value_desc("jcc indicates conditional jumps, fused indicates fused "
-                   "conditional jumps, jmp indicates unconditional jumps, call "
-                   "indicates direct and indirect calls, ret indicates rets, "
-                   "indirect indicates indirect jumps."),
+    cl::desc(
+        "Specify types of branches to align (plus separated list of types):"
+             "\njcc      indicates conditional jumps"
+             "\nfused    indicates fused conditional jumps"
+             "\njmp      indicates direct unconditional jumps"
+             "\ncall     indicates direct and indirect calls"
+             "\nret      indicates rets"
+             "\nindirect indicates indirect unconditional jumps"),
+    cl::value_desc("jcc, fused, jmp, call, ret, indirect"),
     cl::location(X86AlignBranchKindLoc));
 
 cl::opt<bool> X86AlignBranchWithin32BBoundaries(
@@ -355,8 +357,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
 }
 
 bool X86AsmBackend::allowAutoPadding() const {
-  return (AlignBoundary != Align::None() &&
-          AlignBranchType != X86::AlignBranchNone);
+  return (AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone);
 }
 
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {

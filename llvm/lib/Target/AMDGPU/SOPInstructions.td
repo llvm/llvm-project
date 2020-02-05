@@ -412,8 +412,14 @@ class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
 class UniformBinFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0, node:$src1),
   (Op $src0, $src1),
-  [{ return !N->isDivergent(); }]
->;
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
 
 let Defs = [SCC] in { // Carry out goes to SCC
 let isCommutable = 1 in {
@@ -609,8 +615,12 @@ let SubtargetPredicate = isGFX9Plus in {
     def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32">;
   } // End Defs = [SCC]
 
-  def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32">;
-  def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32">;
+  let isCommutable = 1 in {
+    def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32",
+      [(set i32:$sdst, (UniformBinFrag<mulhu> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+    def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32",
+      [(set i32:$sdst, (UniformBinFrag<mulhs> SSrc_b32:$src0, SSrc_b32:$src1))]>;
+  }
 } // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//

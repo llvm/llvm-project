@@ -1,4 +1,4 @@
-//===-- DWARFDebugInfo.cpp --------------------------------------*- C++ -*-===//
+//===-- DWARFDebugInfo.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -191,7 +191,7 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu)
-    return cu->GetDIE(die_ref.die_offset());
+    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
 }
 

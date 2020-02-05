@@ -82,7 +82,11 @@ public:
   virtual bool inBranchRange(RelType type, uint64_t src,
                              uint64_t dst) const;
 
-  virtual void relocateOne(uint8_t *loc, RelType type, uint64_t val) const = 0;
+  virtual void relocate(uint8_t *loc, const Relocation &rel,
+                        uint64_t val) const = 0;
+  void relocateNoSym(uint8_t *loc, RelType type, uint64_t val) const {
+    relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
+  }
 
   virtual ~TargetInfo();
 
@@ -129,11 +133,16 @@ public:
 
   virtual RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                                   RelExpr expr) const;
-  virtual void relaxGot(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const;
+  virtual void relaxGot(uint8_t *loc, const Relocation &rel,
+                        uint64_t val) const;
+  virtual void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
 
 protected:
   // On FreeBSD x86_64 the first page cannot be mmaped.
@@ -171,8 +180,7 @@ static inline std::string getErrorLocation(const uint8_t *loc) {
 
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
-bool tryRelaxPPC64TocIndirection(RelType type, const Relocation &rel,
-                                 uint8_t *bufLoc);
+bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc);
 unsigned getPPCDFormOp(unsigned secondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first
@@ -196,44 +204,36 @@ TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
-static inline void reportRangeError(uint8_t *loc, RelType type, const Twine &v,
-                                    int64_t min, uint64_t max) {
-  ErrorPlace errPlace = getErrorPlace(loc);
-  StringRef hint;
-  if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
-    hint = "; consider recompiling with -fdebug-types-section to reduce size "
-           "of debug sections";
-
-  errorOrWarn(errPlace.loc + "relocation " + lld::toString(type) +
-              " out of range: " + v.str() + " is not in [" + Twine(min).str() +
-              ", " + Twine(max).str() + "]" + hint);
-}
+void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
+                      int64_t min, uint64_t max);
 
 // Make sure that V can be represented as an N bit signed integer.
-inline void checkInt(uint8_t *loc, int64_t v, int n, RelType type) {
+inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
-    reportRangeError(loc, type, Twine(v), llvm::minIntN(n), llvm::maxIntN(n));
+    reportRangeError(loc, rel, Twine(v), llvm::minIntN(n), llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
-inline void checkUInt(uint8_t *loc, uint64_t v, int n, RelType type) {
+inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
   if ((v >> n) != 0)
-    reportRangeError(loc, type, Twine(v), 0, llvm::maxUIntN(n));
+    reportRangeError(loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
-inline void checkIntUInt(uint8_t *loc, uint64_t v, int n, RelType type) {
+inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
+                         const Relocation &rel) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
   if (v != (uint64_t)llvm::SignExtend64(v, n) && (v >> n) != 0)
-    reportRangeError(loc, type, Twine((int64_t)v), llvm::minIntN(n),
+    reportRangeError(loc, rel, Twine((int64_t)v), llvm::minIntN(n),
                      llvm::maxUIntN(n));
 }
 
-inline void checkAlignment(uint8_t *loc, uint64_t v, int n, RelType type) {
+inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
+                           const Relocation &rel) {
   if ((v & (n - 1)) != 0)
     error(getErrorLocation(loc) + "improper alignment for relocation " +
-          lld::toString(type) + ": 0x" + llvm::utohexstr(v) +
+          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
           " is not aligned to " + Twine(n) + " bytes");
 }
 

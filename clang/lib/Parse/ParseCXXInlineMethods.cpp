@@ -133,7 +133,9 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
 
   LexedMethod* LM = new LexedMethod(this, FnD);
   getCurrentClass().LateParsedDeclarations.push_back(LM);
-  LM->TemplateScope = getCurScope()->isTemplateParamScope();
+  LM->TemplateScope = getCurScope()->isTemplateParamScope() ||
+      (FnD && isa<FunctionTemplateDecl>(FnD) &&
+       cast<FunctionTemplateDecl>(FnD)->isAbbreviated());
   CachedTokens &Toks = LM->Toks;
 
   tok::TokenKind kind = Tok.getKind();

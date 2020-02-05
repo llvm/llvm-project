@@ -262,6 +262,18 @@ struct PragmaAttributeHandler : public PragmaHandler {
   ParsedAttributes AttributesForPragmaAttribute;
 };
 
+struct PragmaMaxTokensHereHandler : public PragmaHandler {
+  PragmaMaxTokensHereHandler() : PragmaHandler("max_tokens_here") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaMaxTokensTotalHandler : public PragmaHandler {
+  PragmaMaxTokensTotalHandler() : PragmaHandler("max_tokens_total") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
@@ -382,6 +394,12 @@ void Parser::initializePragmaHandlers() {
   AttributePragmaHandler =
       std::make_unique<PragmaAttributeHandler>(AttrFactory);
   PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
+
+  MaxTokensHerePragmaHandler = std::make_unique<PragmaMaxTokensHereHandler>();
+  PP.AddPragmaHandler("clang", MaxTokensHerePragmaHandler.get());
+
+  MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
+  PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 }
 
 void Parser::resetPragmaHandlers() {
@@ -487,6 +505,12 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", AttributePragmaHandler.get());
   AttributePragmaHandler.reset();
+
+  PP.RemovePragmaHandler("clang", MaxTokensHerePragmaHandler.get());
+  MaxTokensHerePragmaHandler.reset();
+
+  PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
+  MaxTokensTotalPragmaHandler.reset();
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -1008,11 +1032,11 @@ struct PragmaLoopHintInfo {
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   StringRef Str = PragmaName.getIdentifierInfo()->getName();
   std::string ClangLoopStr = (llvm::Twine("clang loop ") + Str).str();
-  return llvm::StringSwitch<StringRef>(Str)
-      .Case("loop", ClangLoopStr)
-      .Case("unroll_and_jam", Str)
-      .Case("unroll", Str)
-      .Default("");
+  return std::string(llvm::StringSwitch<StringRef>(Str)
+                         .Case("loop", ClangLoopStr)
+                         .Case("unroll_and_jam", Str)
+                         .Case("unroll", Str)
+                         .Default(""));
 }
 
 bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
@@ -3278,4 +3302,65 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
   PP.EnterTokenStream(std::move(TokenArray), 1,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+// Handle '#pragma clang max_tokens 12345'.
+void PragmaMaxTokensHereHandler::HandlePragma(Preprocessor &PP,
+                                              PragmaIntroducer Introducer,
+                                              Token &Tok) {
+  PP.Lex(Tok);
+  if (Tok.is(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_missing_argument)
+        << "clang max_tokens_here" << /*Expected=*/true << "integer";
+    return;
+  }
+
+  SourceLocation Loc = Tok.getLocation();
+  uint64_t MaxTokens;
+  if (Tok.isNot(tok::numeric_constant) ||
+      !PP.parseSimpleIntegerLiteral(Tok, MaxTokens)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_expected_integer)
+        << "clang max_tokens_here";
+    return;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "clang max_tokens_here";
+    return;
+  }
+
+  if (PP.getTokenCount() > MaxTokens) {
+    PP.Diag(Loc, diag::warn_max_tokens)
+        << PP.getTokenCount() << (unsigned)MaxTokens;
+  }
+}
+
+// Handle '#pragma clang max_file_tokens 12345'.
+void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
+                                               PragmaIntroducer Introducer,
+                                               Token &Tok) {
+  PP.Lex(Tok);
+  if (Tok.is(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_missing_argument)
+        << "clang max_tokens_total" << /*Expected=*/true << "integer";
+    return;
+  }
+
+  SourceLocation Loc = Tok.getLocation();
+  uint64_t MaxTokens;
+  if (Tok.isNot(tok::numeric_constant) ||
+      !PP.parseSimpleIntegerLiteral(Tok, MaxTokens)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_expected_integer)
+        << "clang max_tokens_total";
+    return;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "clang max_tokens_total";
+    return;
+  }
+
+  PP.overrideMaxTokens(MaxTokens, Loc);
 }

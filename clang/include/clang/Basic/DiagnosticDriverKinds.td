@@ -60,6 +60,9 @@ def err_drv_cuda_version_unsupported : Error<
   "but installation at %3 is %4.  Use --cuda-path to specify a different CUDA "
   "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
+def warn_drv_unknown_cuda_version: Warning<
+  "Unknown CUDA version %0. Assuming the latest supported version %1">,
+  InGroup<CudaUnknownVersion>;
 def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
 def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
 def err_drv_invalid_thread_model_for_target : Error<
@@ -408,7 +411,7 @@ def err_drv_unsupported_indirect_jump_opt : Error<
 def err_drv_unknown_indirect_jump_opt : Error<
   "unknown '-mindirect-jump=' option '%0'">;
 def err_drv_unsupported_fpatchable_function_entry_argument : Error<
-  "the second argument of '-fpatchable-function-entry' must be 0 or omitted">;
+  "the second argument of '-fpatchable-function-entry' must be smaller than the first argument">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,

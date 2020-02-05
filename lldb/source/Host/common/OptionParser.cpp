@@ -1,4 +1,4 @@
-//===-- source/Host/common/OptionParser.cpp ---------------------*- C++ -*-===//
+//===-- source/Host/common/OptionParser.cpp -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@ int OptionParser::Parse(llvm::MutableArrayRef<char *> argv,
     ++longopts;
   }
   opts.push_back(option());
-  std::string opt_cstr = optstring;
+  std::string opt_cstr = std::string(optstring);
   return getopt_long_only(argv.size() - 1, argv.data(), opt_cstr.c_str(),
                           &opts[0], longindex);
 }

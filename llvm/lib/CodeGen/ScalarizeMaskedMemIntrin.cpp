@@ -130,7 +130,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
   Value *Mask = CI->getArgOperand(2);
   Value *Src0 = CI->getArgOperand(3);
 
-  unsigned AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
+  const Align AlignVal = cast<ConstantInt>(Alignment)->getAlignValue();
   VectorType *VecType = cast<VectorType>(CI->getType());
 
   Type *EltTy = VecType->getElementType();
@@ -151,7 +151,8 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
   }
 
   // Adjust alignment for the scalar instruction.
-  AlignVal = MinAlign(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
+  const Align AdjustedAlignVal =
+      commonAlignment(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
   // Bitcast %addr from i8* to EltTy*
   Type *NewPtrType =
       EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
@@ -166,7 +167,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
+      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
@@ -210,7 +211,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
     Builder.SetInsertPoint(InsertPt);
 
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Create "else" block, fill it in the next iteration
@@ -268,7 +269,7 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
   Value *Alignment = CI->getArgOperand(2);
   Value *Mask = CI->getArgOperand(3);
 
-  unsigned AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
+  const Align AlignVal = cast<ConstantInt>(Alignment)->getAlignValue();
   VectorType *VecType = cast<VectorType>(Src->getType());
 
   Type *EltTy = VecType->getElementType();
@@ -287,7 +288,8 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
   }
 
   // Adjust alignment for the scalar instruction.
-  AlignVal = MinAlign(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
+  const Align AdjustedAlignVal =
+      commonAlignment(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
   // Bitcast %addr from i8* to EltTy*
   Type *NewPtrType =
       EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
@@ -300,7 +302,7 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-      Builder.CreateAlignedStore(OneElt, Gep, AlignVal);
+      Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
     }
     CI->eraseFromParent();
     return;
@@ -342,7 +344,7 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
 
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-    Builder.CreateAlignedStore(OneElt, Gep, AlignVal);
+    Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock =
@@ -414,8 +416,8 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-      LoadInst *Load =
-          Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+      LoadInst *Load = Builder.CreateAlignedLoad(
+          EltTy, Ptr, MaybeAlign(AlignVal), "Load" + Twine(Idx));
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
@@ -459,8 +461,8 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     Builder.SetInsertPoint(InsertPt);
 
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-    LoadInst *Load =
-        Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, MaybeAlign(AlignVal),
+                                               "Load" + Twine(Idx));
     Value *NewVResult =
         Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
 
@@ -529,7 +531,7 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
   Builder.SetInsertPoint(InsertPt);
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-  unsigned AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
+  MaybeAlign AlignVal(cast<ConstantInt>(Alignment)->getZExtValue());
   unsigned VectorWidth = Src->getType()->getVectorNumElements();
 
   // Shorten the way if the mask is a vector of constants.
@@ -624,8 +626,8 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      LoadInst *Load =
-          Builder.CreateAlignedLoad(EltTy, NewPtr, 1, "Load" + Twine(Idx));
+      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+                                                 "Load" + Twine(Idx));
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
       ++MemIndex;
@@ -670,7 +672,7 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
                                                      "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, 1);
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
@@ -736,7 +738,7 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      Builder.CreateAlignedStore(OneElt, NewPtr, 1);
+      Builder.CreateAlignedStore(OneElt, NewPtr, Align(1));
       ++MemIndex;
     }
     CI->eraseFromParent();
@@ -777,7 +779,7 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
     Builder.SetInsertPoint(InsertPt);
 
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Builder.CreateAlignedStore(OneElt, Ptr, 1);
+    Builder.CreateAlignedStore(OneElt, Ptr, Align(1));
 
     // Move the pointer if there are more blocks to come.
     Value *NewPtr;
@@ -849,39 +851,41 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
                                                 bool &ModifiedDT) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
-    unsigned Alignment;
     switch (II->getIntrinsicID()) {
     default:
       break;
-    case Intrinsic::masked_load: {
+    case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
-      Alignment = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      if (TTI->isLegalMaskedLoad(CI->getType(), MaybeAlign(Alignment)))
+      if (TTI->isLegalMaskedLoad(
+              CI->getType(),
+              cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue()))
         return false;
       scalarizeMaskedLoad(CI, ModifiedDT);
       return true;
-    }
-    case Intrinsic::masked_store: {
-      Alignment = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      if (TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType(),
-                                  MaybeAlign(Alignment)))
+    case Intrinsic::masked_store:
+      if (TTI->isLegalMaskedStore(
+              CI->getArgOperand(0)->getType(),
+              cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue()))
         return false;
       scalarizeMaskedStore(CI, ModifiedDT);
       return true;
-    }
-    case Intrinsic::masked_gather:
-      Alignment = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    case Intrinsic::masked_gather: {
+      unsigned Alignment =
+          cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       if (TTI->isLegalMaskedGather(CI->getType(), MaybeAlign(Alignment)))
         return false;
       scalarizeMaskedGather(CI, ModifiedDT);
       return true;
-    case Intrinsic::masked_scatter:
-      Alignment = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+    }
+    case Intrinsic::masked_scatter: {
+      unsigned Alignment =
+          cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       if (TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType(),
                                     MaybeAlign(Alignment)))
         return false;
       scalarizeMaskedScatter(CI, ModifiedDT);
       return true;
+    }
     case Intrinsic::masked_expandload:
       if (TTI->isLegalMaskedExpandLoad(CI->getType()))
         return false;

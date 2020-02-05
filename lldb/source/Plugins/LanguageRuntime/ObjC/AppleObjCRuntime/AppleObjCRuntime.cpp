@@ -1,5 +1,4 @@
-//===-- AppleObjCRuntime.cpp -------------------------------------*- C++
-//-*-===//
+//===-- AppleObjCRuntime.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
+#include "AppleObjCRuntimeV1.h"
+#include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
-
-#include "clang/AST/Type.h"
-
+#include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -22,7 +23,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -35,10 +36,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "Plugins/Process/Utility/HistoryThread.h"
-#include "Plugins/Language/ObjC/NSString.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "clang/AST/Type.h"
 
 #include <vector>
 
@@ -53,6 +51,16 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
       m_objc_trampoline_handler_up(), m_Foundation_major() {
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
+}
+
+void AppleObjCRuntime::Initialize() {
+  AppleObjCRuntimeV2::Initialize();
+  AppleObjCRuntimeV1::Initialize();
+}
+
+void AppleObjCRuntime::Terminate() {
+  AppleObjCRuntimeV2::Terminate();
+  AppleObjCRuntimeV1::Terminate();
 }
 
 bool AppleObjCRuntime::GetObjectDescription(Stream &str, ValueObject &valobj) {
@@ -105,13 +113,13 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   Target *target = exe_ctx.GetTargetPtr();
   CompilerType compiler_type = value.GetCompilerType();
   if (compiler_type) {
-    if (!ClangASTContext::IsObjCObjectPointerType(compiler_type)) {
+    if (!TypeSystemClang::IsObjCObjectPointerType(compiler_type)) {
       strm.Printf("Value doesn't point to an ObjC object.\n");
       return false;
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    ClangASTContext *ast_context = ClangASTContext::GetScratch(*target);
+    TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
     if (!ast_context)
       return false;
 
@@ -126,7 +134,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  ClangASTContext *ast_context = ClangASTContext::GetScratch(*target);
+  TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
   if (!ast_context)
     return false;
 
@@ -479,7 +487,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 
   auto descriptor = GetClassDescriptor(*cpp_exception);
   if (!descriptor || !descriptor->IsValid()) return ValueObjectSP();
-  
+
   while (descriptor) {
     ConstString class_name(descriptor->GetClassName());
     if (class_name == "NSException")
@@ -499,8 +507,8 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   reserved_dict = reserved_dict->GetSyntheticValue();
   if (!reserved_dict) return ThreadSP();
 
-  ClangASTContext *clang_ast_context =
-      ClangASTContext::GetScratch(*exception_sp->GetTargetSP());
+  TypeSystemClang *clang_ast_context =
+      TypeSystemClang::GetScratch(*exception_sp->GetTargetSP());
   if (!clang_ast_context)
     return ThreadSP();
   CompilerType objc_id =

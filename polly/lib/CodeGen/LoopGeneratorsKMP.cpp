@@ -176,7 +176,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
                           Map);
 
-  const int Alignment = (is64BitArch()) ? 8 : 4;
+  const auto Alignment = llvm::Align(is64BitArch() ? 8 : 4);
   Value *ID =
       Builder.CreateAlignedLoad(IDPtr, Alignment, "polly.par.global_tid");
 
@@ -468,7 +468,7 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
     // Global Variable Definitions
     GlobalVariable *StrVar = new GlobalVariable(
         *M, ArrayType, true, GlobalValue::PrivateLinkage, 0, ".str.ident");
-    StrVar->setAlignment(llvm::Align::None());
+    StrVar->setAlignment(llvm::Align(1));
 
     SourceLocDummy = new GlobalVariable(
         *M, IdentTy, true, GlobalValue::PrivateLinkage, nullptr, LocName);

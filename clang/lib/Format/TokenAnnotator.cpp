@@ -1801,14 +1801,16 @@ private:
       return TT_BinaryOperator;
 
     // "&&(" is quite unlikely to be two successive unary "&".
-    if (Tok.is(tok::ampamp) && NextToken && NextToken->is(tok::l_paren))
+    if (Tok.is(tok::ampamp) && NextToken->is(tok::l_paren))
       return TT_BinaryOperator;
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
-    const FormatToken *NextNextToken = NextToken->getNextNonComment();
-    if (NextNextToken && NextNextToken->is(tok::arrow))
-      return TT_BinaryOperator;
+    if (NextToken->Tok.isAnyIdentifier()) {
+      const FormatToken *NextNextToken = NextToken->getNextNonComment();
+      if (NextNextToken && NextNextToken->is(tok::arrow))
+        return TT_BinaryOperator;
+    }
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.
@@ -2869,7 +2871,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
       if (Left.is(tok::kw_using))
-        return spaceRequiredBeforeParens(Left);
+        return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
+               spaceRequiredBeforeParens(Right);
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
@@ -3141,6 +3144,25 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       // JavaScript top-level enum key/value pairs are put on separate lines
       // instead of bin-packing.
       return true;
+    if (Right.is(tok::r_brace) && Left.is(tok::l_brace) && Left.Previous &&
+        Left.Previous->is(TT_JsFatArrow)) {
+      // JS arrow function (=> {...}).
+      switch (Style.AllowShortLambdasOnASingleLine) {
+      case FormatStyle::SLS_All:
+        return false;
+      case FormatStyle::SLS_None:
+        return true;
+      case FormatStyle::SLS_Empty:
+        return !Left.Children.empty();
+      case FormatStyle::SLS_Inline:
+        // allow one-lining inline (e.g. in function call args) and empty arrow
+        // functions.
+        return (Left.NestingLevel == 0 && Line.Level == 0) &&
+               !Left.Children.empty();
+      }
+      llvm_unreachable("Unknown FormatStyle::ShortLambdaStyle enum");
+    }
+
     if (Right.is(tok::r_brace) && Left.is(tok::l_brace) &&
         !Left.Children.empty())
       // Support AllowShortFunctionsOnASingleLine for JavaScript.

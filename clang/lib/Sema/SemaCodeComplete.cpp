@@ -13,6 +13,8 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/QualTypeNames.h"
@@ -23,11 +25,14 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Sema/Designator.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -36,6 +41,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
@@ -2749,7 +2755,7 @@ FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
     std::string Result;
 
     if (Param->getIdentifier() && !ObjCMethodParam && !SuppressName)
-      Result = Param->getIdentifier()->getName();
+      Result = std::string(Param->getIdentifier()->getName());
 
     QualType Type = Param->getType();
     if (ObjCSubsts)
@@ -2788,7 +2794,7 @@ FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
     // for the block; just use the parameter type as a placeholder.
     std::string Result;
     if (!ObjCMethodParam && Param->getIdentifier())
-      Result = Param->getIdentifier()->getName();
+      Result = std::string(Param->getIdentifier()->getName());
 
     QualType Type = Param->getType().getUnqualifiedType();
 
@@ -3003,7 +3009,7 @@ static void AddTemplateParameterChunks(
     } else if (NonTypeTemplateParmDecl *NTTP =
                    dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       if (NTTP->getIdentifier())
-        PlaceholderStr = NTTP->getIdentifier()->getName();
+        PlaceholderStr = std::string(NTTP->getIdentifier()->getName());
       NTTP->getType().getAsStringInternal(PlaceholderStr, Policy);
       HasDefaultArg = NTTP->hasDefaultArgument();
     } else {
@@ -4333,7 +4339,7 @@ static void AddLambdaCompletion(ResultBuilder &Results,
         First = false;
 
       constexpr llvm::StringLiteral NamePlaceholder = "!#!NAME_GOES_HERE!#!";
-      std::string Type = NamePlaceholder;
+      std::string Type = std::string(NamePlaceholder);
       Parameter.getAsStringInternal(Type, PrintingPolicy(LangOpts));
       llvm::StringRef Prefix, Suffix;
       std::tie(Prefix, Suffix) = llvm::StringRef(Type).split(NamePlaceholder);
@@ -4723,6 +4729,23 @@ static void AddRecordMembersCompletionResults(
   }
 }
 
+// Returns the RecordDecl inside the BaseType, falling back to primary template
+// in case of specializations. Since we might not have a decl for the
+// instantiation/specialization yet, e.g. dependent code.
+static RecordDecl *getAsRecordDecl(const QualType BaseType) {
+  if (auto *RD = BaseType->getAsRecordDecl())
+    return RD;
+
+  if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
+    if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
+            TST->getTemplateName().getAsTemplateDecl())) {
+      return TD->getTemplatedDecl();
+    }
+  }
+
+  return nullptr;
+}
+
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
                                            Expr *OtherOpBase,
                                            SourceLocation OpLoc, bool IsArrow,
@@ -4771,6 +4794,8 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
     Base = ConvertedBase.get();
 
     QualType BaseType = Base->getType();
+    if (BaseType.isNull())
+      return false;
     ExprValueKind BaseKind = Base->getValueKind();
 
     if (IsArrow) {
@@ -4783,23 +4808,9 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
         return false;
     }
 
-    if (const RecordType *Record = BaseType->getAs<RecordType>()) {
+    if (RecordDecl *RD = getAsRecordDecl(BaseType)) {
       AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
-                                        Record->getDecl(),
-                                        std::move(AccessOpFixIt));
-    } else if (const auto *TST =
-                   BaseType->getAs<TemplateSpecializationType>()) {
-      TemplateName TN = TST->getTemplateName();
-      if (const auto *TD =
-              dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl())) {
-        CXXRecordDecl *RD = TD->getTemplatedDecl();
-        AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
-                                          RD, std::move(AccessOpFixIt));
-      }
-    } else if (const auto *ICNT = BaseType->getAs<InjectedClassNameType>()) {
-      if (auto *RD = ICNT->getDecl())
-        AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
-                                          RD, std::move(AccessOpFixIt));
+                                        RD, std::move(AccessOpFixIt));
     } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
       // Objective-C property reference.
       AddedPropertiesSet AddedProperties;
@@ -5284,6 +5295,44 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
                                            MemberDecl->getLocation(), ArgExprs,
                                            OpenParLoc);
   return QualType();
+}
+
+void Sema::CodeCompleteDesignator(const QualType BaseType,
+                                  llvm::ArrayRef<Expr *> InitExprs,
+                                  const Designation &D) {
+  if (BaseType.isNull())
+    return;
+  // FIXME: Handle nested designations, e.g. : .x.^
+  if (!D.empty())
+    return;
+
+  const auto *RD = getAsRecordDecl(BaseType);
+  if (!RD)
+    return;
+  if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    // Template might not be instantiated yet, fall back to primary template in
+    // such cases.
+    if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
+      RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  }
+  if (RD->fields().empty())
+    return;
+
+  CodeCompletionContext CCC(CodeCompletionContext::CCC_DotMemberAccess,
+                            BaseType);
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(), CCC);
+
+  Results.EnterNewScope();
+  for (const auto *FD : RD->fields()) {
+    // FIXME: Make use of previous designators to mark any fields before those
+    // inaccessible, and also compute the next initializer priority.
+    ResultBuilder::Result Result(FD, Results.getBasePriority(FD));
+    Results.AddResult(Result, CurContext, /*Hiding=*/nullptr);
+  }
+  Results.ExitScope();
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {
@@ -7606,7 +7655,7 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   } Key(Allocator, PropName->getName());
 
   // The uppercased name of the property name.
-  std::string UpperKey = PropName->getName();
+  std::string UpperKey = std::string(PropName->getName());
   if (!UpperKey.empty())
     UpperKey[0] = toUppercase(UpperKey[0]);
 

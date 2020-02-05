@@ -453,8 +453,13 @@ void DWARFContext::dump(
     uint64_t offset = 0;
     DataExtractor arangesData(DObj->getArangesSection(), isLittleEndian(), 0);
     DWARFDebugArangeSet set;
-    while (set.extract(arangesData, &offset))
+    while (arangesData.isValidOffset(offset)) {
+      if (Error E = set.extract(arangesData, &offset)) {
+        WithColor::error() << toString(std::move(E)) << '\n';
+        break;
+      }
       set.dump(OS);
+    }
   }
 
   auto DumpLineSection = [&](DWARFDebugLine::SectionParser Parser,
@@ -462,7 +467,7 @@ void DWARFContext::dump(
                              Optional<uint64_t> DumpOffset) {
     while (!Parser.done()) {
       if (DumpOffset && Parser.getOffset() != *DumpOffset) {
-        Parser.skip(dumpWarning);
+        Parser.skip(dumpWarning, dumpWarning);
         continue;
       }
       OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())

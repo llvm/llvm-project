@@ -627,11 +627,11 @@ entry:
 define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, <4 x i64> * %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
-; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld1_hi0_hi1_4i64:
@@ -672,12 +672,11 @@ entry:
 define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, <8 x i32> * %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4]
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX1-NEXT:    vpaddd 16(%rdi), %xmm1, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld1_hi0_hi1_8i32:

@@ -390,8 +390,8 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     yaml::MachineStackObject YamlObject;
     YamlObject.ID = ID;
     if (const auto *Alloca = MFI.getObjectAllocation(I))
-      YamlObject.Name.Value =
-          Alloca->hasName() ? Alloca->getName() : "<unnamed alloca>";
+      YamlObject.Name.Value = std::string(
+          Alloca->hasName() ? Alloca->getName() : "<unnamed alloca>");
     YamlObject.Type = MFI.isSpillSlotObjectIndex(I)
                           ? yaml::MachineStackObject::SpillSlot
                           : MFI.isVariableSizedObjectIndex(I)
@@ -629,7 +629,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "landing-pad";
     HasAttributes = true;
   }
-  if (MBB.getAlignment() != Align::None()) {
+  if (MBB.getAlignment() != Align(1)) {
     OS << (HasAttributes ? ", " : " (");
     OS << "align " << MBB.getAlignment().value();
     HasAttributes = true;

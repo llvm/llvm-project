@@ -1,4 +1,4 @@
-//===-- BreakpointResolverName.cpp ------------------------------*- C++ -*-===//
+//===-- BreakpointResolverName.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -173,7 +173,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
         error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
-      names.push_back(name);
+      names.push_back(std::string(name));
       name_masks.push_back(static_cast<FunctionNameType>(fnt));
     }
 

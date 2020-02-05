@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -std=c++2a -fconcepts-ts -verify
+// RUN: %clang_cc1 %s -I%S -std=c++2a -verify
 
 namespace std { struct type_info; }
 

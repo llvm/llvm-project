@@ -57,7 +57,7 @@ protected:
                           llvm::StringRef Contents, WantDiagnostics WD,
                           llvm::unique_function<void()> CB) {
     WithContextValue Ctx(llvm::make_scope_exit(std::move(CB)));
-    S.update(File, getInputs(File, Contents), WD);
+    S.update(File, getInputs(File, std::string(Contents)), WD);
   }
 
   static Key<llvm::unique_function<void(PathRef File, std::vector<Diag>)>>
@@ -112,7 +112,7 @@ protected:
   void updateWithDiags(TUScheduler &S, PathRef File, llvm::StringRef Contents,
                        WantDiagnostics WD,
                        llvm::unique_function<void(std::vector<Diag>)> CB) {
-    return updateWithDiags(S, File, getInputs(File, Contents), WD,
+    return updateWithDiags(S, File, getInputs(File, std::string(Contents)), WD,
                            std::move(CB));
   }
 
@@ -700,7 +700,7 @@ TEST_F(TUSchedulerTests, Run) {
 }
 
 TEST_F(TUSchedulerTests, TUStatus) {
-  class CaptureTUStatus : public DiagnosticsConsumer {
+  class CaptureTUStatus : public ClangdServer::Callbacks {
   public:
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {}
@@ -721,7 +721,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
   } CaptureTUStatus;
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &CaptureTUStatus);
   Annotations Code("int m^ain () {}");
 
   // We schedule the following tasks in the queue:

@@ -99,30 +99,6 @@ ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
   return std::make_unique<UopsBenchmarkRunner>(State);
 }
 
-void ExegesisTarget::randomizeMCOperand(const Instruction &Instr,
-                                        const Variable &Var,
-                                        MCOperand &AssignedValue,
-                                        const BitVector &ForbiddenRegs) const {
-  const Operand &Op = Instr.getPrimaryOperand(Var);
-  switch (Op.getExplicitOperandInfo().OperandType) {
-  case MCOI::OperandType::OPERAND_IMMEDIATE:
-    // FIXME: explore immediate values too.
-    AssignedValue = MCOperand::createImm(1);
-    break;
-  case MCOI::OperandType::OPERAND_REGISTER: {
-    assert(Op.isReg());
-    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
-    assert(AllowedRegs.size() == ForbiddenRegs.size());
-    for (auto I : ForbiddenRegs.set_bits())
-      AllowedRegs.reset(I);
-    AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
-    break;
-  }
-  default:
-    break;
-  }
-}
-
 static_assert(std::is_pod<PfmCountersInfo>::value,
               "We shouldn't have dynamic initialization here");
 const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,

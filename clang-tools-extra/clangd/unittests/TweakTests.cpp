@@ -76,26 +76,23 @@ TEST(FileEdits, AbsolutePath) {
 TWEAK_TEST(SwapIfBranches);
 TEST_F(SwapIfBranchesTest, Test) {
   Context = Function;
-  EXPECT_EQ(apply("^if (true) {return 100;} else {continue;}"),
-            "if (true) {continue;} else {return 100;}");
-  EXPECT_EQ(apply("^if () {return 100;} else {continue;}"),
-            "if () {continue;} else {return 100;}")
+  EXPECT_EQ(apply("^if (true) {return;} else {(void)0;}"),
+            "if (true) {(void)0;} else {return;}");
+  EXPECT_EQ(apply("^if (/*error-ok*/) {return;} else {(void)0;}"),
+            "if (/*error-ok*/) {(void)0;} else {return;}")
       << "broken condition";
-  EXPECT_AVAILABLE("^i^f^^(^t^r^u^e^) { return 100; } ^e^l^s^e^ { continue; }");
-  EXPECT_UNAVAILABLE("if (true) {^return ^100;^ } else { ^continue^;^ }");
+  EXPECT_AVAILABLE("^i^f^^(^t^r^u^e^) { return; } ^e^l^s^e^ { return; }");
+  EXPECT_UNAVAILABLE("if (true) {^return ^;^ } else { ^return^;^ }");
   // Available in subexpressions of the condition;
-  EXPECT_THAT("if(2 + [[2]] + 2) { return 2 + 2 + 2; } else {continue;}",
-              isAvailable());
+  EXPECT_THAT("if(2 + [[2]] + 2) { return; } else {return;}", isAvailable());
   // But not as part of the branches.
-  EXPECT_THAT("if(2 + 2 + 2) { return 2 + [[2]] + 2; } else { continue; }",
+  EXPECT_THAT("if(2 + 2 + 2) { [[return]]; } else { return; }",
               Not(isAvailable()));
   // Range covers the "else" token, so available.
-  EXPECT_THAT("if(2 + 2 + 2) { return 2 + [[2 + 2; } else {continue;]]}",
-              isAvailable());
+  EXPECT_THAT("if(2 + 2 + 2) { return[[; } else {return;]]}", isAvailable());
   // Not available in compound statements in condition.
-  EXPECT_THAT(
-      "if([]{return [[true]];}()) { return 2 + 2 + 2; } else { continue; }",
-      Not(isAvailable()));
+  EXPECT_THAT("if([]{return [[true]];}()) { return; } else { return; }",
+              Not(isAvailable()));
   // Not available if both sides aren't braced.
   EXPECT_THAT("^if (1) return; else { return; }", Not(isAvailable()));
   // Only one if statement is supported!
@@ -144,7 +141,7 @@ TEST_F(ObjCLocalizeStringLiteralTest, Test) {
 TWEAK_TEST(DumpAST);
 TEST_F(DumpASTTest, Test) {
   EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");
-  EXPECT_UNAVAILABLE("/*c^omment*/ int foo() return 2 ^ + 2; }");
+  EXPECT_UNAVAILABLE("/*c^omment*/ int foo() { return 2 ^ + 2; }");
   EXPECT_THAT(apply("int x = 2 ^+ 2;"),
               AllOf(StartsWith("message:"), HasSubstr("BinaryOperator"),
                     HasSubstr("'+'"), HasSubstr("|-IntegerLiteral"),
@@ -164,7 +161,7 @@ TEST_F(DumpSymbolTest, Test) {
 TWEAK_TEST(ShowSelectionTree);
 TEST_F(ShowSelectionTreeTest, Test) {
   EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");
-  EXPECT_AVAILABLE("/*c^omment*/ int foo() return 2 ^ + 2; }");
+  EXPECT_AVAILABLE("/*c^omment*/ int foo() { return 2 ^ + 2; }");
 
   const char *Output = R"(message:
  TranslationUnitDecl 
@@ -186,7 +183,7 @@ TEST_F(DumpRecordLayoutTest, Test) {
   EXPECT_THAT("template <typename T> struct ^X { T t; };", Not(isAvailable()));
   EXPECT_THAT("enum ^X {};", Not(isAvailable()));
 
-  EXPECT_THAT(apply("struct ^X { int x; int y; }"),
+  EXPECT_THAT(apply("struct ^X { int x; int y; };"),
               AllOf(StartsWith("message:"), HasSubstr("0 |   int x")));
 }
 
@@ -234,6 +231,7 @@ TEST_F(ExtractVariableTest, Test) {
   EXPECT_AVAILABLE(AvailableCases);
 
   const char *NoCrashCases = R"cpp(
+    // error-ok: broken code, but shouldn't crash
     template<typename T, typename ...Args>
     struct Test<T, Args...> {
     Test(const T &v) :val[[(^]]) {}
@@ -269,7 +267,7 @@ TEST_F(ExtractVariableTest, Test) {
       for(int a = 1, b = 2, c = 3; a > [[b + c]]; [[a++]])
         a = [[a + 1]];
       // lambda
-      auto lamb = [&[[a]], &[[b]]](int r = [[1]]) {return 1;}
+      auto lamb = [&[[a]], &[[b]]](int r = [[1]]) {return 1;};
       // assignment
       xyz([[a = 5]]);
       xyz([[a *= 5]]);
@@ -477,6 +475,7 @@ TEST_F(AnnotateHighlightingsTest, Test) {
 TWEAK_TEST(ExpandMacro);
 TEST_F(ExpandMacroTest, Test) {
   Header = R"cpp(
+    // error-ok: not real c++, just token manipulation
     #define FOO 1 2 3
     #define FUNC(X) X+X+X
     #define EMPTY
@@ -513,7 +512,7 @@ TEST_F(ExpandAutoTypeTest, Test) {
     namespace ns {
       struct Class {
         struct Nested {};
-      }
+      };
       void Func();
     }
     inline namespace inl_ns {
@@ -536,7 +535,7 @@ TEST_F(ExpandAutoTypeTest, Test) {
   EXPECT_EQ(apply("namespace ns { void f() { ^auto C = Class(); } }"),
             "namespace ns { void f() { Class C = Class(); } }");
   // undefined functions should not be replaced
-  EXPECT_THAT(apply("au^to x = doesnt_exist();"),
+  EXPECT_THAT(apply("au^to x = doesnt_exist(); // error-ok"),
               StartsWith("fail: Could not deduce type for 'auto' type"));
   // function pointers should not be replaced
   EXPECT_THAT(apply("au^to x = &ns::Func;"),
@@ -551,8 +550,8 @@ TEST_F(ExpandAutoTypeTest, Test) {
   EXPECT_EQ(apply("namespace x { void y() { struct S{}; ^auto z = S(); } }"),
             "namespace x { void y() { struct S{}; S z = S(); } }");
   // replace array types
-  EXPECT_EQ(apply(R"cpp(au^to x = "test")cpp"),
-            R"cpp(const char * x = "test")cpp");
+  EXPECT_EQ(apply(R"cpp(au^to x = "test";)cpp"),
+            R"cpp(const char * x = "test";)cpp");
 
   EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
 
@@ -977,7 +976,7 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
   }]]
 
   // Definition with no body.
-  class Bar { Bar() = def^ault; }
+  class Bar { Bar() = def^ault; };
   )cpp");
 }
 
@@ -1213,9 +1212,7 @@ TEST_F(DefineInlineTest, TransformDecls) {
       public:
         void foo();
         int x;
-        static int y;
       };
-      Foo::y = 0;
 
       enum En { Zero, One };
       En x = Zero;
@@ -1229,9 +1226,7 @@ TEST_F(DefineInlineTest, TransformDecls) {
       public:
         void foo();
         int x;
-        static int y;
       };
-      Foo::y = 0;
 
       enum En { Zero, One };
       En x = Zero;
@@ -1682,11 +1677,11 @@ TEST_F(DefineInlineTest, HandleMacros) {
           namespace a { class Foo{}; }
           void foo();
           using namespace a;
-          void f^oo(){BODY})cpp",
+          void f^oo(){BODY();})cpp",
        R"cpp(
           #define BODY Foo
           namespace a { class Foo{}; }
-          void foo(){BODY}
+          void foo(){BODY();}
           using namespace a;
           )cpp"},
 
@@ -1899,13 +1894,13 @@ TEST_F(DefineInlineTest, AddInline) {
                                testPath("a.h"), "constexpr void foo(){}")));
 
   // Class members don't need "inline".
-  ExtraFiles["a.h"] = "struct Foo { void foo(); }";
+  ExtraFiles["a.h"] = "struct Foo { void foo(); };";
   apply(R"cpp(#include "a.h"
               void Foo::fo^o() {})cpp",
         &EditedFiles);
   EXPECT_THAT(EditedFiles,
               testing::ElementsAre(FileWithContents(
-                  testPath("a.h"), "struct Foo { void foo(){} }")));
+                  testPath("a.h"), "struct Foo { void foo(){} };")));
 
   // Function template doesn't need to be "inline"d.
   ExtraFiles["a.h"] = "template <typename T> void foo();";
@@ -1990,7 +1985,7 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   // out-of-line in such cases.
   EXPECT_UNAVAILABLE(R"cpp(
     template <typename> struct Foo { void fo^o(){} };
-    })cpp");
+    )cpp");
 }
 
 TEST_F(DefineOutlineTest, FailsWithoutSource) {
@@ -2134,14 +2129,14 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
     llvm::StringRef ExpectedSource;
   } Cases[] = {
       {R"cpp(
-        namespace a { class Foo; }
+        namespace a { class Foo{}; }
         using namespace a;
-        Foo fo^o() { return; })cpp",
+        Foo fo^o() { return {}; })cpp",
        R"cpp(
-        namespace a { class Foo; }
+        namespace a { class Foo{}; }
         using namespace a;
         Foo foo() ;)cpp",
-       "a::Foo foo() { return; }"},
+       "a::Foo foo() { return {}; }"},
       {R"cpp(
         namespace a {
           class Foo {
@@ -2158,12 +2153,12 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
         })cpp",
        "a::Foo::Bar a::Foo::foo() { return {}; }\n"},
       {R"cpp(
-        class Foo;
-        Foo fo^o() { return; })cpp",
+        class Foo {};
+        Foo fo^o() { return {}; })cpp",
        R"cpp(
-        class Foo;
+        class Foo {};
         Foo foo() ;)cpp",
-       "Foo foo() { return; }"},
+       "Foo foo() { return {}; }"},
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
@@ -2219,7 +2214,7 @@ TEST_F(DefineOutlineTest, QualifyFunctionName) {
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
-    ExtraFiles["Test.cpp"] = Case.TestSource;
+    ExtraFiles["Test.cpp"] = std::string(Case.TestSource);
     EXPECT_EQ(apply(Case.TestHeader, &EditedFiles), Case.ExpectedHeader);
     EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                  testPath("Test.cpp"), Case.ExpectedSource)))

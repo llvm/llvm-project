@@ -1,6 +1,6 @@
 //===- DeserializationTest.cpp - SPIR-V Deserialization Tests -------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -51,7 +51,7 @@ protected:
     ASSERT_NE(nullptr, diagnostic.get());
 
     // TODO(antiagainst): check error location too.
-    EXPECT_THAT(diagnostic->str(), StrEq(errorMessage));
+    EXPECT_THAT(diagnostic->str(), StrEq(std::string(errorMessage)));
   }
 
   //===--------------------------------------------------------------------===//

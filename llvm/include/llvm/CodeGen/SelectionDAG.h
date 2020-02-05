@@ -914,6 +914,13 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
+  /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
+  SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm) {
+    assert(MulImm.getMinSignedBits() <= VT.getSizeInBits() &&
+           "Immediate does not fit VT");
+    return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
+  }
+
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
     return getNode(ISD::GLOBAL_OFFSET_TABLE, SDLoc(), VT);
@@ -1469,7 +1476,7 @@ public:
                            const SDNode *N2);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                 SDNode *N1, SDNode *N2);
+                                 ArrayRef<SDValue> Ops);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
                                  const ConstantSDNode *C1,

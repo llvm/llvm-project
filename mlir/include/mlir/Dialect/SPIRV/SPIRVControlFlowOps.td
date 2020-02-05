@@ -1,6 +1,6 @@
 //===-- SPIRVControlFlowOps.td - SPIR-V Control Flow Ops ---*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -245,6 +245,11 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
   );
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = [{
+    $callee `(` $arguments `)` attr-dict `:`
+    functional-type($arguments, results)
+  }];
 }
 
 // -----
@@ -412,6 +417,8 @@ def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, Terminator]> {
   );
 
   let results = (outs);
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
 def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {

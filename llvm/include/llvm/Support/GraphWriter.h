@@ -126,7 +126,7 @@ public:
   }
 
   void writeHeader(const std::string &Title) {
-    std::string GraphName = DTraits.getGraphName(G);
+    std::string GraphName(DTraits.getGraphName(G));
 
     if (!Title.empty())
       O << "digraph \"" << DOT::EscapeString(Title) << "\" {\n";

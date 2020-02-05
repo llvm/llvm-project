@@ -1993,7 +1993,7 @@ void ModuleAddressSanitizer::SetComdatForGlobalMetadata(
     }
 
     if (!InternalSuffix.empty() && G->hasLocalLinkage()) {
-      std::string Name = G->getName();
+      std::string Name = std::string(G->getName());
       Name += InternalSuffix;
       C = M.getOrInsertComdat(Name);
     } else {
@@ -2362,7 +2362,7 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
       // Set meaningful attributes for indicator symbol.
       ODRIndicatorSym->setVisibility(NewGlobal->getVisibility());
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
-      ODRIndicatorSym->setAlignment(Align::None());
+      ODRIndicatorSym->setAlignment(Align(1));
       ODRIndicator = ODRIndicatorSym;
     }
 
@@ -2836,7 +2836,8 @@ void FunctionStackPoisoner::copyToShadowInline(ArrayRef<uint8_t> ShadowMask,
     Value *Ptr = IRB.CreateAdd(ShadowBase, ConstantInt::get(IntptrTy, i));
     Value *Poison = IRB.getIntN(StoreSizeInBytes * 8, Val);
     IRB.CreateAlignedStore(
-        Poison, IRB.CreateIntToPtr(Ptr, Poison->getType()->getPointerTo()), 1);
+        Poison, IRB.CreateIntToPtr(Ptr, Poison->getType()->getPointerTo()),
+        Align(1));
 
     i += StoreSizeInBytes;
   }

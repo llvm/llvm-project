@@ -142,8 +142,9 @@ StringRef CIndexer::getClangToolchainPath() {
   if (!ToolchainPath.empty())
     return ToolchainPath;
   StringRef ResourcePath = getClangResourcesPath();
-  ToolchainPath = llvm::sys::path::parent_path(
-      llvm::sys::path::parent_path(llvm::sys::path::parent_path(ResourcePath)));
+  ToolchainPath =
+      std::string(llvm::sys::path::parent_path(llvm::sys::path::parent_path(
+          llvm::sys::path::parent_path(ResourcePath))));
   return ToolchainPath;
 }
 

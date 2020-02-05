@@ -10,13 +10,13 @@ define i16 @test_shl_i4(i16 %v, i16 %a, i16 %b) {
 ; %b: 72 (0000 0000  0100 1000)
 ; X64-LABEL: test_shl_i4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-NEXT:    leal (%rdx,%rsi), %ecx
 ; X64-NEXT:    andb $15, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shlb %cl, %al
+; X64-NEXT:    shlb %cl, %dil
+; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    andw $15, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq

@@ -1,6 +1,6 @@
 //===- Diagnostics.cpp - MLIR Diagnostics ---------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -352,7 +352,8 @@ struct SourceMgrDiagnosticHandlerImpl {
     // Otherwise, try to load the source file.
     const llvm::MemoryBuffer *newBuf = nullptr;
     std::string ignored;
-    if (auto newBufID = mgr.AddIncludeFile(filename, llvm::SMLoc(), ignored))
+    if (auto newBufID =
+            mgr.AddIncludeFile(std::string(filename), llvm::SMLoc(), ignored))
       newBuf = mgr.getMemoryBuffer(newBufID);
     return filenameToBuf[filename] = newBuf;
   }

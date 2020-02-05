@@ -587,7 +587,7 @@ void BreakableBlockComment::insertBreak(unsigned LineIndex, unsigned TailOffset,
       Text.data() - tokenAt(LineIndex).TokenText.data() + Split.first;
   unsigned CharsToRemove = Split.second;
   assert(LocalIndentAtLineBreak >= Prefix.size());
-  std::string PrefixWithTrailingIndent = Prefix;
+  std::string PrefixWithTrailingIndent = std::string(Prefix);
   for (unsigned I = 0; I < ContentIndent; ++I)
     PrefixWithTrailingIndent += " ";
   Whitespaces.replaceWhitespaceInToken(

@@ -1157,9 +1157,13 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 
 #if !defined(_WIN32)
 TEST(AddressSanitizer, MlockTest) {
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
+#endif
   EXPECT_EQ(0, mlock((void*)0x12345, 0x5678));
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
   EXPECT_EQ(0, munlockall());
+#endif
   EXPECT_EQ(0, munlock((void*)0x987, 0x654));
 }
 #endif

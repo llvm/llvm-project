@@ -1,6 +1,6 @@
 //===- LoopsToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -306,9 +306,9 @@ createLaunchBody(OpBuilder &builder, OpTy rootForOp, gpu::LaunchOp launchOp,
                  unsigned numBlockDims, unsigned numThreadDims) {
   OpBuilder::InsertionGuard bodyInsertionGuard(builder);
   builder.setInsertionPointToEnd(&launchOp.body().front());
-  auto returnOp = builder.create<gpu::ReturnOp>(launchOp.getLoc());
+  auto terminatorOp = builder.create<gpu::TerminatorOp>(launchOp.getLoc());
 
-  rootForOp.getOperation()->moveBefore(returnOp);
+  rootForOp.getOperation()->moveBefore(terminatorOp);
   SmallVector<Value, 3> workgroupID, numWorkGroups;
   packIdAndNumId(launchOp.getBlockIds(), launchOp.getGridSize(), numBlockDims,
                  workgroupID, numWorkGroups);
@@ -403,10 +403,10 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
   Value constOne = (numBlockDims < 3 || numThreadDims < 3)
                        ? builder.create<ConstantIndexOp>(rootForOp.getLoc(), 1)
                        : nullptr;
-  Value gridSizeX = dims[0];
+  Value gridSizeX = numBlockDims > 0 ? dims[0] : constOne;
   Value gridSizeY = numBlockDims > 1 ? dims[1] : constOne;
   Value gridSizeZ = numBlockDims > 2 ? dims[2] : constOne;
-  Value blockSizeX = dims[numBlockDims];
+  Value blockSizeX = numThreadDims > 0 ? dims[numBlockDims] : constOne;
   Value blockSizeY = numThreadDims > 1 ? dims[numBlockDims + 1] : constOne;
   Value blockSizeZ = numThreadDims > 2 ? dims[numBlockDims + 2] : constOne;
 
@@ -435,7 +435,7 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
   Location terminatorLoc = terminator.getLoc();
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
-  builder.create<gpu::ReturnOp>(terminatorLoc);
+  builder.create<gpu::TerminatorOp>(terminatorLoc, llvm::None);
   launchOp.body().front().getOperations().splice(
       launchOp.body().front().begin(),
       innermostForOp.getBody()->getOperations());

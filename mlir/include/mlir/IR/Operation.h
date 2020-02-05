@@ -1,6 +1,6 @@
 //===- Operation.h - MLIR Operation Class -----------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -260,10 +260,10 @@ public:
 
   /// Support result type iteration.
   using result_type_iterator = result_range::type_iterator;
-  using result_type_range = iterator_range<result_type_iterator>;
-  result_type_iterator result_type_begin() { return result_begin(); }
-  result_type_iterator result_type_end() { return result_end(); }
-  result_type_range getResultTypes() { return getResults().getTypes(); }
+  using result_type_range = ArrayRef<Type>;
+  result_type_iterator result_type_begin() { return getResultTypes().begin(); }
+  result_type_iterator result_type_end() { return getResultTypes().end(); }
+  result_type_range getResultTypes();
 
   //===--------------------------------------------------------------------===//
   // Attributes

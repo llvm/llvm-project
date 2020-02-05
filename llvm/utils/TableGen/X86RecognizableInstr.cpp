@@ -65,7 +65,7 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   UID = uid;
 
   Rec = insn.TheDef;
-  Name = Rec->getName();
+  Name = std::string(Rec->getName());
   Spec = &tables.specForUID(UID);
 
   if (!Rec->isSubClassOf("X86Inst")) {
@@ -94,7 +94,7 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   ForceDisassemble   = Rec->getValueAsBit("ForceDisassemble");
   CD8_Scale          = byteFromRec(Rec, "CD8_Scale");
 
-  Name      = Rec->getName();
+  Name = std::string(Rec->getName());
 
   Operands = &insn.Operands.OperandList;
 
@@ -383,12 +383,12 @@ void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
 
   StringRef typeName = (*Operands)[operandIndex].Rec->getName();
 
-  OperandEncoding encoding = encodingFromString(typeName, OpSize);
+  OperandEncoding encoding = encodingFromString(std::string(typeName), OpSize);
   // Adjust the encoding type for an operand based on the instruction.
   adjustOperandEncoding(encoding);
   Spec->operands[operandIndex].encoding = encoding;
-  Spec->operands[operandIndex].type = typeFromString(typeName,
-                                                     HasREX_WPrefix, OpSize);
+  Spec->operands[operandIndex].type =
+      typeFromString(std::string(typeName), HasREX_WPrefix, OpSize);
 
   ++operandIndex;
   ++physicalOperandIndex;

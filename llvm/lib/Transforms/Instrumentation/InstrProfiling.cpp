@@ -247,9 +247,14 @@ public:
       : LoopToCandidates(LoopToCands), ExitBlocks(), InsertPts(), L(CurLoop),
         LI(LI), BFI(BFI) {
 
+    // Skip collection of ExitBlocks and InsertPts for loops that will not be
+    // able to have counters promoted.
     SmallVector<BasicBlock *, 8> LoopExitBlocks;
     SmallPtrSet<BasicBlock *, 8> BlockSet;
+
     L.getExitBlocks(LoopExitBlocks);
+    if (!isPromotionPossible(&L, LoopExitBlocks))
+      return;
 
     for (BasicBlock *ExitBlock : LoopExitBlocks) {
       if (BlockSet.insert(ExitBlock).second) {
@@ -318,21 +323,31 @@ private:
     return true;
   }
 
-  // Returns the max number of Counter Promotions for LP.
-  unsigned getMaxNumOfPromotionsInLoop(Loop *LP) {
+  // Check whether the loop satisfies the basic conditions needed to perform
+  // Counter Promotions.
+  bool isPromotionPossible(Loop *LP,
+                           const SmallVectorImpl<BasicBlock *> &LoopExitBlocks) {
     // We can't insert into a catchswitch.
-    SmallVector<BasicBlock *, 8> LoopExitBlocks;
-    LP->getExitBlocks(LoopExitBlocks);
     if (llvm::any_of(LoopExitBlocks, [](BasicBlock *Exit) {
           return isa<CatchSwitchInst>(Exit->getTerminator());
         }))
-      return 0;
+      return false;
 
     if (!LP->hasDedicatedExits())
-      return 0;
+      return false;
 
     BasicBlock *PH = LP->getLoopPreheader();
     if (!PH)
+      return false;
+
+    return true;
+  }
+
+  // Returns the max number of Counter Promotions for LP.
+  unsigned getMaxNumOfPromotionsInLoop(Loop *LP) {
+    SmallVector<BasicBlock *, 8> LoopExitBlocks;
+    LP->getExitBlocks(LoopExitBlocks);
+    if (!isPromotionPossible(LP, LoopExitBlocks))
       return 0;
 
     SmallVector<BasicBlock *, 8> ExitingBlocks;
@@ -623,11 +638,19 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                   llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
+
+  // To support value profiling calls within Windows exception handlers, funclet
+  // information contained within operand bundles needs to be copied over to
+  // the library call. This is required for the IR to be processed by the
+  // WinEHPrepare pass.
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsRange) {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
                       Builder.getInt32(Index)};
-    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args);
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
+                              OpBundles);
   } else {
     Value *Args[6] = {
         Ind->getTargetValue(),
@@ -636,8 +659,8 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
         Builder.getInt64(MemOPSizeRangeStart),
         Builder.getInt64(MemOPSizeRangeLast),
         Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
-    Call =
-        Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true), Args);
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true),
+                              Args, OpBundles);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
     Call->addParamAttr(2, AK);
@@ -663,10 +686,12 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
       IRBuilder<> Builder(&I);
       Type *Int64Ty = Type::getInt64Ty(M->getContext());
       GlobalVariable *Bias = M->getGlobalVariable(getInstrProfCounterBiasVarName());
-      if (!Bias)
+      if (!Bias) {
         Bias = new GlobalVariable(*M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
                                   Constant::getNullValue(Int64Ty),
                                   getInstrProfCounterBiasVarName());
+        Bias->setVisibility(GlobalVariable::HiddenVisibility);
+      }
       LI = Builder.CreateLoad(Int64Ty, Bias);
     }
     auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), LI);
@@ -964,7 +989,7 @@ void InstrProfiling::emitNameData() {
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.
-  NamesVar->setAlignment(Align::None());
+  NamesVar->setAlignment(Align(1));
   UsedVars.push_back(NamesVar);
 
   for (auto *NamePtr : ReferencedNames)

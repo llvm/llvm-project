@@ -150,6 +150,7 @@ INTERFACE WEAK void SCUDO_PREFIX(malloc_disable)() {
 }
 
 void SCUDO_PREFIX(malloc_postinit)() {
+  SCUDO_ALLOCATOR.initGwpAsan();
   pthread_atfork(SCUDO_PREFIX(malloc_disable), SCUDO_PREFIX(malloc_enable),
                  SCUDO_PREFIX(malloc_enable));
 }

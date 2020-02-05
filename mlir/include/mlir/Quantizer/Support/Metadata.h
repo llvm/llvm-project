@@ -1,6 +1,6 @@
 //===- Metadata.h - Top level types and metadata ----------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -35,7 +35,7 @@ public:
 
   // Optional path to write a debug DOT file for the CAG.
   StringRef getDebugCAGDotPath() const { return debugCAGDotPath; }
-  void setDebugCAGDotPath(StringRef p) { debugCAGDotPath = p; }
+  void setDebugCAGDotPath(StringRef p) { debugCAGDotPath = std::string(p); }
 
 private:
   MLIRContext &mlirContext;

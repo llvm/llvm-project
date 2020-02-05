@@ -279,6 +279,7 @@ multiclass FLAT_Atomic_Pseudo<
     AtomicNoRet <opName, 0> {
     let PseudoInstr = NAME;
     let FPAtomic = isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
   }
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
@@ -290,6 +291,7 @@ multiclass FLAT_Atomic_Pseudo<
        GlobalSaddrTable<0, opName#"_rtn">,
        AtomicNoRet <opName, 1>{
     let FPAtomic = isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
   }
 }
 

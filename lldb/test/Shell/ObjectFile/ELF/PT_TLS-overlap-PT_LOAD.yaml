@@ -2,7 +2,7 @@
 
 # RUN: yaml2obj %s > %t
 # RUN: lldb-test object-file %t | FileCheck %s
-# RUN: lldb %t -o "image lookup -a 0x1000" -b | FileCheck --check-prefix=LOOKUP %s
+# RUN: %lldb %t -o "image lookup -a 0x1000" -b | FileCheck --check-prefix=LOOKUP %s
 
 # CHECK:        Index: 0
 # CHECK-NEXT:   ID: 0xffffffffffffffff

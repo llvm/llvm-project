@@ -89,7 +89,10 @@ __attribute__((objc_direct_members))
 }
 - (void)otherRootDirect {
 }
++ (void)someRootDirectMethod { // expected-note {{direct method 'someRootDirectMethod' declared here}}
+}
 + (void)otherClassRootDirect {
+  [self someRootDirectMethod]; // expected-error {{messaging a Class with a method that is possibly direct}}
 }
 - (void)rootExtensionDirect {
 }

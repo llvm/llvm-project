@@ -70,6 +70,8 @@ private:
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 20);
 
+  using InstSet = SmallPtrSetImpl<MachineInstr*>;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -93,51 +95,83 @@ public:
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// PhysReg that reaches MI, relative to the begining of MI's basic block.
-  int getReachingDef(MachineInstr *MI, int PhysReg);
+  int getReachingDef(MachineInstr *MI, int PhysReg) const;
 
   /// Provides the instruction of the closest reaching def instruction of
   /// PhysReg that reaches MI, relative to the begining of MI's basic block.
-  MachineInstr *getReachingMIDef(MachineInstr *MI, int PhysReg);
+  MachineInstr *getReachingMIDef(MachineInstr *MI, int PhysReg) const;
 
   /// Provides the MI, from the given block, corresponding to the Id or a
   /// nullptr if the id does not refer to the block.
-  MachineInstr *getInstFromId(MachineBasicBlock *MBB, int InstId);
+  MachineInstr *getInstFromId(MachineBasicBlock *MBB, int InstId) const;
 
   /// Return whether A and B use the same def of PhysReg.
-  bool hasSameReachingDef(MachineInstr *A, MachineInstr *B, int PhysReg);
+  bool hasSameReachingDef(MachineInstr *A, MachineInstr *B, int PhysReg) const;
 
   /// Return whether the reaching def for MI also is live out of its parent
   /// block.
-  bool isReachingDefLiveOut(MachineInstr *MI, int PhysReg);
+  bool isReachingDefLiveOut(MachineInstr *MI, int PhysReg) const;
 
   /// Return the local MI that produces the live out value for PhysReg, or
   /// nullptr for a non-live out or non-local def.
   MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB,
-                                     int PhysReg);
+                                     int PhysReg) const;
+
+  /// Provide whether the register has been defined in the same basic block as,
+  /// and before, MI.
+  bool hasLocalDefBefore(MachineInstr *MI, int PhysReg) const;
 
   /// Return whether the given register is used after MI, whether it's a local
   /// use or a live out.
-  bool isRegUsedAfter(MachineInstr *MI, int PhysReg);
+  bool isRegUsedAfter(MachineInstr *MI, int PhysReg) const;
+
+  /// Return whether the given register is defined after MI.
+  bool isRegDefinedAfter(MachineInstr *MI, int PhysReg) const;
 
   /// Provides the clearance - the number of instructions since the closest
   /// reaching def instuction of PhysReg that reaches MI.
-  int getClearance(MachineInstr *MI, MCPhysReg PhysReg);
+  int getClearance(MachineInstr *MI, MCPhysReg PhysReg) const;
 
   /// Provides the uses, in the same block as MI, of register that MI defines.
   /// This does not consider live-outs.
   void getReachingLocalUses(MachineInstr *MI, int PhysReg,
-                            SmallPtrSetImpl<MachineInstr*> &Uses);
+                            InstSet &Uses) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still
   /// live on exit.
   bool getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
-                     SmallPtrSetImpl<MachineInstr*> &Uses);
+                     InstSet &Uses) const;
 
   /// Collect the users of the value stored in PhysReg, which is defined
   /// by MI.
   void getGlobalUses(MachineInstr *MI, int PhysReg,
-                     SmallPtrSetImpl<MachineInstr*> &Uses);
+                     InstSet &Uses) const;
+
+  /// Return whether From can be moved forwards to just before To.
+  bool isSafeToMoveForwards(MachineInstr *From, MachineInstr *To) const;
+
+  /// Return whether From can be moved backwards to just after To.
+  bool isSafeToMoveBackwards(MachineInstr *From, MachineInstr *To) const;
+
+  /// Return whether removing this instruction will have no effect on the
+  /// program, returning the redundant use-def chain.
+  bool isSafeToRemove(MachineInstr *MI, InstSet &ToRemove) const;
+
+  /// Return whether removing this instruction will have no effect on the
+  /// program, ignoring the possible effects on some instructions, returning
+  /// the redundant use-def chain.
+  bool isSafeToRemove(MachineInstr *MI, InstSet &ToRemove,
+                      InstSet &Ignore) const;
+
+  /// Return whether a MachineInstr could be inserted at MI and safely define
+  /// the given register without affecting the program.
+  bool isSafeToDefRegAt(MachineInstr *MI, int PhysReg) const;
+
+  /// Return whether a MachineInstr could be inserted at MI and safely define
+  /// the given register without affecting the program, ignoring any effects
+  /// on the provided instructions.
+  bool isSafeToDefRegAt(MachineInstr *MI, int PhysReg, InstSet &Ignore) const;
 
 private:
   /// Set up LiveRegs by merging predecessor live-out values.
@@ -152,6 +186,16 @@ private:
   /// Update def-ages for registers defined by MI.
   /// Also break dependencies on partial defs and undef uses.
   void processDefs(MachineInstr *);
+
+  /// Utility function for isSafeToMoveForwards/Backwards.
+  template<typename Iterator>
+  bool isSafeToMove(MachineInstr *From, MachineInstr *To) const;
+
+  /// Return whether removing this instruction will have no effect on the
+  /// program, ignoring the possible effects on some instructions, returning
+  /// the redundant use-def chain.
+  bool isSafeToRemove(MachineInstr *MI, InstSet &Visited,
+                      InstSet &ToRemove, InstSet &Ignore) const;
 };
 
 } // namespace llvm

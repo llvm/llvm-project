@@ -28,7 +28,7 @@ std::vector<Path> DraftStore::getActiveFiles() const {
   std::vector<Path> ResultVector;
 
   for (auto DraftIt = Drafts.begin(); DraftIt != Drafts.end(); DraftIt++)
-    ResultVector.push_back(DraftIt->getKey());
+    ResultVector.push_back(std::string(DraftIt->getKey()));
 
   return ResultVector;
 }
@@ -36,7 +36,7 @@ std::vector<Path> DraftStore::getActiveFiles() const {
 void DraftStore::addDraft(PathRef File, llvm::StringRef Contents) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
-  Drafts[File] = Contents;
+  Drafts[File] = std::string(Contents);
 }
 
 llvm::Expected<std::string> DraftStore::updateDraft(

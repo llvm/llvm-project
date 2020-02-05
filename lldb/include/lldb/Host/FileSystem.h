@@ -187,6 +187,7 @@ public:
   }
 
 private:
+  void AddFile(const llvm::Twine &file);
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::shared_ptr<llvm::FileCollector> m_collector;

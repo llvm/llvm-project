@@ -140,7 +140,7 @@ Examples:
       return new clang::ASTConsumer();
   }
 
-(Experimental) Using Ninja Build System
+Using Ninja Build System
 =======================================
 
 Optionally you can use the `Ninja <https://github.com/martine/ninja>`_
@@ -197,4 +197,3 @@ Now you are ready to build and test LLVM using Ninja:
   $ ninja check-all
 
 Other target names can be used in the same way as with make.
-

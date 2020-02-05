@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
 template<typename T> requires (sizeof(T) >= 4)
 // expected-note@-1{{similar constraint expressions not considered equivalen}}

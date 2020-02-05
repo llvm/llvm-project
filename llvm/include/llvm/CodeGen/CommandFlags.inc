@@ -331,8 +331,7 @@ LLVM_ATTRIBUTE_UNUSED static std::string getCPUStr() {
   // If user asked for the 'native' CPU, autodetect here. If autodection fails,
   // this will set the CPU to an empty string which tells the target to
   // pick a basic default.
-  if (MCPU == "native")
-    return sys::getHostCPUName();
+  if (MCPU == "native") return std::string(sys::getHostCPUName());
 
   return MCPU;
 }

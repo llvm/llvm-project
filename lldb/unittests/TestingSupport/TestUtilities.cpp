@@ -1,4 +1,4 @@
-//===- TestUtilities.cpp ----------------------------------------*- C++ -*-===//
+//===-- TestUtilities.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ std::string lldb_private::GetInputFilePath(const llvm::Twine &name) {
   llvm::SmallString<128> result = llvm::sys::path::parent_path(TestMainArgv0);
   llvm::sys::fs::make_absolute(result);
   llvm::sys::path::append(result, "Inputs", name);
-  return result.str();
+  return std::string(result.str());
 }
 
 llvm::Expected<TestFile> TestFile::fromYaml(llvm::StringRef Yaml) {

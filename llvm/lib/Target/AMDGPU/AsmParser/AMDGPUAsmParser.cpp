@@ -6499,7 +6499,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   std::string Token;
   if (getLexer().is(AsmToken::Integer)) {
     SMLoc Loc = getLexer().getTok().getEndLoc();
-    Token = getLexer().getTok().getString();
+    Token = std::string(getLexer().getTok().getString());
     Parser.Lex();
     if (getLexer().getTok().getLoc() != Loc)
       return MatchOperand_ParseFail;

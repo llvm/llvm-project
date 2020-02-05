@@ -86,11 +86,14 @@ public:
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
 
   /// Returns a default constructed Align which corresponds to no alignment.
-  /// This is useful to test for unalignment as it conveys clear semantic.
-  /// `if (A != Align::None())`
-  /// would be better than
-  /// `if (A > Align(1))`
-  constexpr static const Align None() { return Align(); }
+  /// It was decided to deprecate Align::None because it's too close to
+  /// llvm::None which can be used to initialize `MaybeAlign`.
+  /// MaybeAlign = llvm::None means unspecified alignment,
+  /// Align = Align::None() means alignment of one byte.
+  LLVM_ATTRIBUTE_DEPRECATED(constexpr static const Align None(),
+                            "Use Align() or Align(1) instead") {
+    return Align();
+  }
 
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static LogValue Constant() {
@@ -184,7 +187,8 @@ inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
 inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
   uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);
   assert(static_cast<uintptr_t>(ArithAddr + Alignment.value() - 1) >=
-             ArithAddr && "Overflow");
+             ArithAddr &&
+         "Overflow");
   return alignTo(ArithAddr, Alignment);
 }
 

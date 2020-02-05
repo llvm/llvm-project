@@ -1,6 +1,6 @@
 //===- ROCDLDialect.cpp - ROCDL IR Ops and Dialect registration -----------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -29,24 +29,6 @@
 
 using namespace mlir;
 using namespace ROCDL;
-
-//===----------------------------------------------------------------------===//
-// Printing/parsing for ROCDL ops
-//===----------------------------------------------------------------------===//
-
-static void printROCDLOp(OpAsmPrinter &p, Operation *op) {
-  p << op->getName() << " " << op->getOperands();
-  if (op->getNumResults() > 0)
-    p << " : " << op->getResultTypes();
-}
-
-// <operation> ::= `rocdl.XYZ` : type
-static ParseResult parseROCDLOp(OpAsmParser &parser, OperationState &result) {
-  Type type;
-  return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.addTypeToList(type, result.types));
-}
 
 //===----------------------------------------------------------------------===//
 // ROCDLDialect initialization, type parsing, and registration.

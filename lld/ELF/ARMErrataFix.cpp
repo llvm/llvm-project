@@ -189,7 +189,7 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   // been altered to point to us!
   uint64_t s = getThumbDestAddr(getBranchAddr(), instr);
   uint64_t p = getVA(4);
-  target->relocateOne(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
+  target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
 }
 
 // Given a branch instruction spanning two 4KiB regions, at offset off from the

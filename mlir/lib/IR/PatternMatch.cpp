@@ -1,6 +1,6 @@
 //===- PatternMatch.cpp - Base classes for pattern match ------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,6 +10,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+
 using namespace mlir;
 
 PatternBenefit::PatternBenefit(unsigned benefit) : representation(benefit) {
@@ -72,12 +73,8 @@ PatternRewriter::~PatternRewriter() {
 
 /// This method performs the final replacement for a pattern, where the
 /// results of the operation are updated to use the specified list of SSA
-/// values.  In addition to replacing and removing the specified operation,
-/// clients can specify a list of other nodes that this replacement may make
-/// (perhaps transitively) dead.  If any of those ops are dead, this will
-/// remove them as well.
-void PatternRewriter::replaceOp(Operation *op, ValueRange newValues,
-                                ValueRange valuesToRemoveIfDead) {
+/// values.
+void PatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
   // Notify the rewriter subclass that we're about to replace this root.
   notifyRootReplaced(op);
 
@@ -87,9 +84,6 @@ void PatternRewriter::replaceOp(Operation *op, ValueRange newValues,
 
   notifyOperationRemoved(op);
   op->erase();
-
-  // TODO: Process the valuesToRemoveIfDead list, removing things and calling
-  // the notifyOperationRemoved hook in the process.
 }
 
 /// This method erases an operation that is known to have no uses. The uses of
@@ -129,15 +123,15 @@ Block *PatternRewriter::splitBlock(Block *block, Block::iterator before) {
   return block->splitBlock(before);
 }
 
-/// op and newOp are known to have the same number of results, replace the
+/// 'op' and 'newOp' are known to have the same number of results, replace the
 /// uses of op with uses of newOp
-void PatternRewriter::replaceOpWithResultsOfAnotherOp(
-    Operation *op, Operation *newOp, ValueRange valuesToRemoveIfDead) {
+void PatternRewriter::replaceOpWithResultsOfAnotherOp(Operation *op,
+                                                      Operation *newOp) {
   assert(op->getNumResults() == newOp->getNumResults() &&
          "replacement op doesn't match results of original op");
   if (op->getNumResults() == 1)
-    return replaceOp(op, newOp->getResult(0), valuesToRemoveIfDead);
-  return replaceOp(op, newOp->getResults(), valuesToRemoveIfDead);
+    return replaceOp(op, newOp->getResult(0));
+  return replaceOp(op, newOp->getResults());
 }
 
 /// Move the blocks that belong to "region" before the given position in

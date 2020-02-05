@@ -11,6 +11,8 @@ typedef unsigned long size_t;
 extern "C" {
 #endif
 
+extern int sprintf(char *str, const char *format, ...);
+
 #if defined(USE_PASS_OBJECT_SIZE)
 void *memcpy(void *dst, const void *src, size_t c);
 static void *memcpy(void *dst __attribute__((pass_object_size(1))), const void *src, size_t c) __attribute__((overloadable)) __asm__("merp");
@@ -94,6 +96,91 @@ void call_vsnprintf() {
   __builtin_va_list list;
   __builtin_vsnprintf(buf, 10, "merp", list);
   __builtin_vsnprintf(buf, 11, "merp", list); // expected-warning {{'vsnprintf' size argument is too large; destination buffer has size 10, but size argument is 11}}
+}
+
+void call_sprintf_chk(char *buf) {
+  __builtin___sprintf_chk(buf, 1, 6, "hell\n");
+  __builtin___sprintf_chk(buf, 1, 5, "hell\n");     // expected-warning {{'sprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
+  __builtin___sprintf_chk(buf, 1, 6, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}}
+  __builtin___sprintf_chk(buf, 1, 2, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}}
+  // expected-warning@-1 {{'sprintf' will always overflow; destination buffer has size 2, but format string expands to at least 5}}
+  __builtin___sprintf_chk(buf, 1, 6, "hello");
+  __builtin___sprintf_chk(buf, 1, 5, "hello"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
+  __builtin___sprintf_chk(buf, 1, 2, "%c", '9');
+  __builtin___sprintf_chk(buf, 1, 1, "%c", '9'); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%d", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%i", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%i", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%o", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%o", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%u", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%u", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%x", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%x", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%X", 9);
+  __builtin___sprintf_chk(buf, 1, 1, "%X", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%hhd", (char)9);
+  __builtin___sprintf_chk(buf, 1, 1, "%hhd", (char)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%hd", (short)9);
+  __builtin___sprintf_chk(buf, 1, 1, "%hd", (short)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%ld", 9l);
+  __builtin___sprintf_chk(buf, 1, 1, "%ld", 9l); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%lld", 9ll);
+  __builtin___sprintf_chk(buf, 1, 1, "%lld", 9ll); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 2, "%%");
+  __builtin___sprintf_chk(buf, 1, 1, "%%"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___sprintf_chk(buf, 1, 4, "%#x", 9);
+  __builtin___sprintf_chk(buf, 1, 3, "%#x", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 3, but format string expands to at least 4}}
+  __builtin___sprintf_chk(buf, 1, 4, "%p", (void *)9);
+  __builtin___sprintf_chk(buf, 1, 3, "%p", (void *)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 3, but format string expands to at least 4}}
+  __builtin___sprintf_chk(buf, 1, 3, "%+d", 9);
+  __builtin___sprintf_chk(buf, 1, 2, "%+d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 2, but format string expands to at least 3}}
+  __builtin___sprintf_chk(buf, 1, 3, "% i", 9);
+  __builtin___sprintf_chk(buf, 1, 2, "% i", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 2, but format string expands to at least 3}}
+  __builtin___sprintf_chk(buf, 1, 6, "%5d", 9);
+  __builtin___sprintf_chk(buf, 1, 5, "%5d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
+  __builtin___sprintf_chk(buf, 1, 9, "%f", 9.f);
+  __builtin___sprintf_chk(buf, 1, 8, "%f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 8, but format string expands to at least 9}}
+  __builtin___sprintf_chk(buf, 1, 9, "%Lf", (long double)9.);
+  __builtin___sprintf_chk(buf, 1, 8, "%Lf", (long double)9.); // expected-warning {{'sprintf' will always overflow; destination buffer has size 8, but format string expands to at least 9}}
+  __builtin___sprintf_chk(buf, 1, 10, "%+f", 9.f);
+  __builtin___sprintf_chk(buf, 1, 9, "%+f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 9, but format string expands to at least 10}}
+  __builtin___sprintf_chk(buf, 1, 12, "%e", 9.f);
+  __builtin___sprintf_chk(buf, 1, 11, "%e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 11, but format string expands to at least 12}}
+}
+
+void call_sprintf() {
+  char buf[6];
+  sprintf(buf, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}}
+  sprintf(buf, "hello b\0y"); // expected-warning {{format string contains '\0' within the string body}}
+  // expected-warning@-1 {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+  sprintf(buf, "hello");
+  sprintf(buf, "hello!"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "1234%%");
+  sprintf(buf, "12345%%"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "1234%c", '9');
+  sprintf(buf, "12345%c", '9'); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "1234%d", 9);
+  sprintf(buf, "12345%d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "1234%lld", 9ll);
+  sprintf(buf, "12345%lld", 9ll); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "12%#x", 9);
+  sprintf(buf, "123%#x", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "12%p", (void *)9);
+  sprintf(buf, "123%p", (void *)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "123%+d", 9);
+  sprintf(buf, "1234%+d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "123% i", 9);
+  sprintf(buf, "1234% i", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%5d", 9);
+  sprintf(buf, "1%5d", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%.3f", 9.f);
+  sprintf(buf, "5%.3f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%+.2f", 9.f);
+  sprintf(buf, "%+.3f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%.0e", 9.f);
+  sprintf(buf, "5%.1e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
 }
 
 #ifdef __cplusplus

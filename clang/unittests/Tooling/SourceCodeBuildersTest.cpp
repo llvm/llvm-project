@@ -133,7 +133,7 @@ static void testBuilder(
   ASSERT_TRUE(StmtMatch);
   EXPECT_THAT(Builder(*StmtMatch->Result.Nodes.getNodeAs<Expr>("expr"),
                       *StmtMatch->Result.Context),
-              ValueIs(Expected));
+              ValueIs(std::string(Expected)));
 }
 
 TEST(SourceCodeBuildersTest, BuildParensUnaryOp) {

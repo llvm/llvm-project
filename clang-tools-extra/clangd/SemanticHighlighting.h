@@ -41,6 +41,7 @@ enum class HighlightingKind {
   DependentName,
   Namespace,
   TemplateParameter,
+  Concept,
   Primitive,
   Macro,
 

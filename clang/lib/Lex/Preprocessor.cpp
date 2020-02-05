@@ -166,6 +166,8 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
       this->PPOpts->ExcludedConditionalDirectiveSkipMappings;
   if (ExcludedConditionalDirectiveSkipMappings)
     ExcludedConditionalDirectiveSkipMappings->clear();
+
+  MaxTokens = LangOpts.MaxTokens;
 }
 
 Preprocessor::~Preprocessor() {
@@ -906,6 +908,9 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
+  if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
+    return;
+
   if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
     // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
@@ -959,8 +964,12 @@ void Preprocessor::Lex(Token &Result) {
 
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
-  if (OnToken && LexLevel == 0 && !Result.getFlag(Token::IsReinjected))
-    OnToken(Result);
+
+  if (LexLevel == 0 && !Result.getFlag(Token::IsReinjected)) {
+    ++TokenCount;
+    if (OnToken)
+      OnToken(Result);
+  }
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
@@ -1200,6 +1209,13 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       Suffix[0].setAnnotationValue(Action.ModuleForHeader);
       // FIXME: Call the moduleImport callback?
       break;
+    case ImportAction::Failure:
+      assert(TheModuleLoader.HadFatalFailure &&
+             "This should be an early exit only to a fatal error");
+      Result.setKind(tok::eof);
+      CurLexer->cutOffLexing();
+      EnterTokens(Suffix);
+      return true;
     }
 
     EnterTokens(Suffix);
@@ -1339,7 +1355,7 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
     return false;
   }
 
-  String = Literal.GetString();
+  String = std::string(Literal.GetString());
   return true;
 }
 

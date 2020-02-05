@@ -89,7 +89,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   tooling::Replacement R(Context.getSourceManager(),
                          CharSourceRange::getTokenRange(Old), NewText,
                          Context.getLangOpts());
-  consumeError(Replacements[R.getFilePath()].add(R));
+  consumeError(Replacements[std::string(R.getFilePath())].add(R));
 }
 
 /// Find all member fields used in the given init-list initializer expr

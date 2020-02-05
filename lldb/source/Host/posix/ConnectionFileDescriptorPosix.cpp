@@ -1,4 +1,4 @@
-//===-- ConnectionFileDescriptorPosix.cpp -----------------------*- C++ -*-===//
+//===-- ConnectionFileDescriptorPosix.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -223,7 +223,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
             m_write_sp =
                 std::make_shared<NativeFile>(fd, File::eOpenOptionWrite, false);
           }
-          m_uri = *addr;
+          m_uri = std::string(*addr);
           return eConnectionStatusSuccess;
         }
       }
@@ -652,7 +652,7 @@ ConnectionFileDescriptor::NamedSocketAccept(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(socket_name);
+  m_uri.assign(std::string(socket_name));
   return eConnectionStatusSuccess;
 }
 
@@ -669,7 +669,7 @@ ConnectionFileDescriptor::NamedSocketConnect(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(socket_name);
+  m_uri.assign(std::string(socket_name));
   return eConnectionStatusSuccess;
 }
 
@@ -686,7 +686,7 @@ ConnectionFileDescriptor::UnixAbstractSocketConnect(llvm::StringRef socket_name,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(socket_name);
+  m_uri.assign(std::string(socket_name));
   return eConnectionStatusSuccess;
 }
 
@@ -730,7 +730,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectTCP(llvm::StringRef s,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(s);
+  m_uri.assign(std::string(s));
   return eConnectionStatusSuccess;
 }
 
@@ -745,7 +745,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
   if (error.Fail()) {
     return eConnectionStatusError;
   }
-  m_uri.assign(s);
+  m_uri.assign(std::string(s));
   return eConnectionStatusSuccess;
 }
 

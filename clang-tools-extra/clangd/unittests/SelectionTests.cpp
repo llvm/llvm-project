@@ -259,7 +259,7 @@ TEST(SelectionTest, CommonAncestor) {
       // Tricky case: CXXConstructExpr wants to claim the whole init range.
       {
           R"cpp(
-            class X { X(int); };
+            struct X { X(int); };
             class Y {
               X x;
               Y() : [[^x(4)]] {}
@@ -308,7 +308,7 @@ TEST(SelectionTest, CommonAncestor) {
             };
             Str makeStr(const char*);
             void loop() {
-              for (const char* C : [[mak^eStr("foo"^)]])
+              for (const char C : [[mak^eStr("foo"^)]])
                 ;
             }
           )cpp",
@@ -323,22 +323,63 @@ TEST(SelectionTest, CommonAncestor) {
             Foo x = [[^12_ud]];
           )cpp",
           "UserDefinedLiteral"},
+
       {
           R"cpp(
         int a;
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
+
+      // Objective-C OpaqueValueExpr/PseudoObjectExpr has weird ASTs.
+      // Need to traverse the contents of the OpaqueValueExpr to the POE,
+      // and ensure we traverse only the syntactic form of the PseudoObjectExpr.
+      {
+          R"cpp(
+            @interface I{}
+            @property(retain) I*x;
+            @property(retain) I*y;
+            @end
+            void test(I *f) { [[^f]].x.y = 0; }
+          )cpp",
+          "DeclRefExpr"},
+      {
+          R"cpp(
+            @interface I{}
+            @property(retain) I*x;
+            @property(retain) I*y;
+            @end
+            void test(I *f) { [[f.^x]].y = 0; }
+          )cpp",
+          "ObjCPropertyRefExpr"},
+      // Examples with implicit properties.
+      {
+          R"cpp(
+            @interface I{}
+            -(int)foo;
+            @end
+            int test(I *f) { return 42 + [[^f]].foo; }
+          )cpp",
+          "DeclRefExpr"},
+      {
+          R"cpp(
+            @interface I{}
+            -(int)foo;
+            @end
+            int test(I *f) { return 42 + [[f.^foo]]; }
+          )cpp",
+          "ObjCPropertyRefExpr"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
 
     TestTU TU;
-    TU.Code = Test.code();
+    TU.Code = std::string(Test.code());
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
     auto T = makeSelectionTree(C.Code, AST);
@@ -484,7 +525,7 @@ TEST(SelectionTest, MacroArgExpansion) {
   // (This is because we don't associate the stringified token with the arg).
   Case = R"cpp(
     void die(const char*);
-    #define assert(x) (x ? (void)0 : die(#x)
+    #define assert(x) (x ? (void)0 : die(#x))
     void foo() { assert(^42); }
   )cpp";
   Test = Annotations(Case);

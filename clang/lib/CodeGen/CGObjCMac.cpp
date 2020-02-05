@@ -2035,7 +2035,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  GV->setAlignment(llvm::Align::None());
+  GV->setAlignment(llvm::Align(1));
   Fields.addBitCast(GV, CGM.Int8PtrTy);
 
   // String length.
@@ -3047,9 +3047,10 @@ llvm::Value *CGObjCCommonMac::EmitClassRefViaRuntime(
                ObjCCommonTypesHelper &ObjCTypes) {
   llvm::FunctionCallee lookUpClassFn = ObjCTypes.getLookUpClassFn();
 
-  llvm::Value *className =
-      CGF.CGM.GetAddrOfConstantCString(ID->getObjCRuntimeNameAsString())
-        .getPointer();
+  llvm::Value *className = CGF.CGM
+                               .GetAddrOfConstantCString(std::string(
+                                   ID->getObjCRuntimeNameAsString()))
+                               .getPointer();
   ASTContext &ctx = CGF.CGM.getContext();
   className =
       CGF.Builder.CreateBitCast(className,
@@ -3291,6 +3292,8 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
       for (auto *PD : ClassExt->properties()) {
         if (IsClassProperty != PD->isClassProperty())
           continue;
+        if (PD->isDirectProperty())
+          continue;
         PropertySet.insert(PD->getIdentifier());
         Properties.push_back(PD);
       }
@@ -3301,6 +3304,8 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
     // Don't emit duplicate metadata for properties that were already in a
     // class extension.
     if (!PropertySet.insert(PD->getIdentifier()).second)
+      continue;
+    if (PD->isDirectProperty())
       continue;
     Properties.push_back(PD);
   }
@@ -3327,8 +3332,6 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
   values.addInt(ObjCTypes.IntTy, Properties.size());
   auto propertiesArray = values.beginArray(ObjCTypes.PropertyTy);
   for (auto PD : Properties) {
-    if (PD->isDirectProperty())
-      continue;
     auto property = propertiesArray.beginStruct(ObjCTypes.PropertyTy);
     property.add(GetPropertyName(PD->getIdentifier()));
     property.add(GetPropertyTypeString(PD, Container));
@@ -4029,22 +4032,49 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
 llvm::Function *
 CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
-  auto I = DirectMethodDefinitions.find(OMD->getCanonicalDecl());
-  if (I != DirectMethodDefinitions.end())
-    return I->second;
+  auto *COMD = OMD->getCanonicalDecl();
+  auto I = DirectMethodDefinitions.find(COMD);
+  llvm::Function *OldFn = nullptr, *Fn = nullptr;
 
-  SmallString<256> Name;
-  GetNameForMethod(OMD, CD, Name, /*ignoreCategoryNamespace*/true);
+  if (I != DirectMethodDefinitions.end()) {
+    // Objective-C allows for the declaration and implementation types
+    // to differ slightly.
+    //
+    // If we're being asked for the Function associated for a method
+    // implementation, a previous value might have been cached
+    // based on the type of the canonical declaration.
+    //
+    // If these do not match, then we'll replace this function with
+    // a new one that has the proper type below.
+    if (!OMD->getBody() || COMD->getReturnType() == OMD->getReturnType())
+      return I->second;
+    OldFn = I->second;
+  }
 
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
     Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
-  llvm::Function *Method =
-      llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
-                             Name.str(), &CGM.getModule());
-  DirectMethodDefinitions.insert(std::make_pair(OMD->getCanonicalDecl(), Method));
 
-  return Method;
+  if (OldFn) {
+    Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
+                                "", &CGM.getModule());
+    Fn->takeName(OldFn);
+    OldFn->replaceAllUsesWith(
+        llvm::ConstantExpr::getBitCast(Fn, OldFn->getType()));
+    OldFn->eraseFromParent();
+
+    // Replace the cached function in the map.
+    I->second = Fn;
+  } else {
+    SmallString<256> Name;
+    GetNameForMethod(OMD, CD, Name, /*ignoreCategoryNamespace*/ true);
+
+    Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
+                                Name.str(), &CGM.getModule());
+    DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
+  }
+
+  return Fn;
 }
 
 void CGObjCCommonMac::GenerateDirectMethodPrologue(
@@ -6350,7 +6380,7 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   unsigned InstanceStart,
   unsigned InstanceSize,
   const ObjCImplementationDecl *ID) {
-  std::string ClassName = ID->getObjCRuntimeNameAsString();
+  std::string ClassName = std::string(ID->getObjCRuntimeNameAsString());
 
   CharUnits beginInstance = CharUnits::fromQuantity(InstanceStart);
   CharUnits endInstance = CharUnits::fromQuantity(InstanceSize);

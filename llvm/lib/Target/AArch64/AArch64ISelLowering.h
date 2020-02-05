@@ -215,6 +215,11 @@ enum NodeType : unsigned {
   PTEST,
   PTRUE,
 
+  LDNF1,
+  LDNF1S,
+  LDFF1,
+  LDFF1S,
+
   // Unsigned gather loads.
   GLD1,
   GLD1_SCALED,
@@ -240,6 +245,10 @@ enum NodeType : unsigned {
   SST1_UXTW_SCALED,
   SST1_SXTW_SCALED,
   SST1_IMM,
+
+  // Strict (exception-raising) floating point comparison
+  STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCMPE,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -748,6 +757,7 @@ private:
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;

@@ -1,4 +1,4 @@
-//===-- Socket.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Socket.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -309,7 +309,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
   host_str.clear();
   port_str.clear();
   if (to_integer(host_and_port, port, 10) && port < UINT16_MAX) {
-    port_str = host_and_port;
+    port_str = std::string(host_and_port);
     if (error_ptr)
       error_ptr->Clear();
     return true;

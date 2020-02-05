@@ -17,6 +17,7 @@ add_llvm_library(MLIRTransforms
   PipelineDataTransfer.cpp
   SimplifyAffineStructures.cpp
   StripDebugInfo.cpp
+  SymbolDCE.cpp
   Vectorize.cpp
   ViewOpGraph.cpp
   ViewRegionGraph.cpp

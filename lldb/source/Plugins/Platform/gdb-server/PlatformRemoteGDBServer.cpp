@@ -1,4 +1,4 @@
-//===-- PlatformRemoteGDBServer.cpp -----------------------------*- C++ -*-===//
+//===-- PlatformRemoteGDBServer.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -298,9 +298,9 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
       llvm::StringRef scheme, hostname, pathname;
       if (!UriParser::Parse(url, scheme, hostname, port, pathname))
         return Status("Invalid URL: %s", url);
-      m_platform_scheme = scheme;
-      m_platform_hostname = hostname;
-      path = pathname;
+      m_platform_scheme = std::string(scheme);
+      m_platform_hostname = std::string(hostname);
+      path = std::string(pathname);
 
       const ConnectionStatus status = m_gdb_client.Connect(url, &error);
       if (status == eConnectionStatusSuccess) {
@@ -725,7 +725,8 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
       response.GetResponseType() != response.eResponse)
     return m_remote_signals_sp;
 
-  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
+  auto object_sp =
+      StructuredData::ParseJSON(std::string(response.GetStringRef()));
   if (!object_sp || !object_sp->IsValid())
     return m_remote_signals_sp;
 
@@ -772,7 +773,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
         std::string description{""};
         object_sp = dict->GetValueForKey("description");
         if (object_sp && object_sp->IsValid())
-          description = object_sp->GetStringValue();
+          description = std::string(object_sp->GetStringValue());
 
         remote_signals_sp->AddSignal(signo, name.str().c_str(), suppress, stop,
                                      notify, description.c_str());
@@ -811,7 +812,7 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
     result.Printf(":%u", port);
   if (path)
     result.Write(path, strlen(path));
-  return result.GetString();
+  return std::string(result.GetString());
 }
 
 lldb::ProcessSP PlatformRemoteGDBServer::ConnectProcess(

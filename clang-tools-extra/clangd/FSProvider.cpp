@@ -19,7 +19,10 @@ namespace clangd {
 
 namespace {
 /// Always opens files in the underlying filesystem as "volatile", meaning they
-/// won't be memory-mapped. This avoid locking the files on Windows.
+/// won't be memory-mapped. Memory-mapping isn't desirable for clangd:
+///   - edits to the underlying files change contents MemoryBuffers owned by
+//      SourceManager, breaking its invariants and leading to crashes
+///   - it locks files on windows, preventing edits
 class VolatileFileSystem : public llvm::vfs::ProxyFileSystem {
 public:
   explicit VolatileFileSystem(llvm::IntrusiveRefCntPtr<FileSystem> FS)
@@ -34,7 +37,7 @@ public:
     if (!File)
       return File;
     // Try to guess preamble files, they can be memory-mapped even on Windows as
-    // clangd has exclusive access to those.
+    // clangd has exclusive access to those and nothing else should touch them.
     llvm::StringRef FileName = llvm::sys::path::filename(Path);
     if (FileName.startswith("preamble-") && FileName.endswith(".pch"))
       return File;
@@ -70,15 +73,11 @@ private:
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::clangd::RealFileSystemProvider::getFileSystem() const {
-// Avoid using memory-mapped files on Windows, they cause file locking issues.
-// FIXME: Try to use a similar approach in Sema instead of relying on
-//        propagation of the 'isVolatile' flag through all layers.
-#ifdef _WIN32
+  // Avoid using memory-mapped files.
+  // FIXME: Try to use a similar approach in Sema instead of relying on
+  //        propagation of the 'isVolatile' flag through all layers.
   return new VolatileFileSystem(
       llvm::vfs::createPhysicalFileSystem().release());
-#else
-  return llvm::vfs::createPhysicalFileSystem().release();
-#endif
 }
 } // namespace clangd
 } // namespace clang
