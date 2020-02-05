@@ -194,10 +194,9 @@ public:
       ParamTypes.push_back(T.getAsString(Policy));
       ParamNames.push_back(P->getNameAsString());
 
-      // Currently we don't support functions that have void pointers or
-      // function pointers as an argument, in which case we insert a dummy
-      // macro.
-      ShouldInsertDummy |= T->isFunctionPointerType() || T->isVoidPointerType();
+      // Currently we don't support functions that have function pointers as an
+      // argument, in which case we insert a dummy macro.
+      ShouldInsertDummy |= T->isFunctionPointerType();
     }
 
     // Convert the two lists to string for the macros.
