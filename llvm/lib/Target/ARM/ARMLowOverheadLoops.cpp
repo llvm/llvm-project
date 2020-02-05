@@ -616,7 +616,8 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     return false;
   }
 
-  return true;
+  // Ensure that all memory operations are predicated.
+  return !IsUse && MI->mayLoadOrStore() ? false : true;
 }
 
 bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
