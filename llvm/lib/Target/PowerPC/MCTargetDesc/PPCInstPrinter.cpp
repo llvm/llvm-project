@@ -469,7 +469,7 @@ void PPCInstPrinter::printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O) {
   printS34ImmOperand(MI, OpNo, O);
   O << '(';
-  printImmZeroOperand(MI, OpNo+1, O);
+  printImmZeroOperand(MI, OpNo + 1, O);
   O << ')';
 }
 
@@ -477,7 +477,7 @@ void PPCInstPrinter::printMemRegImm34(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) {
   printS34ImmOperand(MI, OpNo, O);
   O << '(';
-  printOperand(MI, OpNo+1, O);
+  printOperand(MI, OpNo + 1, O);
   O << ')';
 }
 
