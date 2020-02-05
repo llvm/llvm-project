@@ -241,6 +241,13 @@ TEST_F(TargetDeclTest, Types) {
   )cpp";
   EXPECT_DECLS("TypedefTypeLoc", {"typedef S X", Rel::Alias},
                {"struct S", Rel::Underlying});
+  Code = R"cpp(
+    namespace ns { struct S{}; }
+    typedef ns::S X;
+    [[X]] x;
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc", {"typedef ns::S X", Rel::Alias},
+               {"struct S", Rel::Underlying});
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
