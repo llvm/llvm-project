@@ -323,20 +323,6 @@ def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "",
 } // isCodeGenOnly
 
 
-def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i64 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C64r)>;
-
-def : Pat<(i16 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i64 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C64r)>;
-
 // Patterns to give priority when both inputs are zero so that we don't use
 // an immediate for the RHS.
 // TODO: Should we use a 32-bit sbb for 8/16 to push the extract_subreg out?
@@ -1899,15 +1885,6 @@ multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
 defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
-
-
-// (anyext (setcc_carry)) -> (setcc_carry)
-def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i32 (anyext (i16 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns
