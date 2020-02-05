@@ -620,6 +620,8 @@ def: InstRW<[SKXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
                                             "KOR(B|D|Q|W)rr",
                                             "KXNOR(B|D|Q|W)rr",
                                             "KXOR(B|D|Q|W)rr",
+                                            "KSET0(B|D|Q|W)", // Same as KXOR
+                                            "KSET1(B|D|Q|W)", // Same as KXNOR
                                             "MMX_PADDS(B|W)irr",
                                             "MMX_PADDUS(B|W)irr",
                                             "MMX_PAVG(B|W)irr",
