@@ -105,6 +105,7 @@ class MyResponder(MockGDBServerResponder):
             file.close()
         return result
 
+
 class TestWasm(GDBRemoteTestBase):
 
     def setUp(self):
@@ -115,7 +116,6 @@ class TestWasm(GDBRemoteTestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(TestWasm, self).tearDown()
 
-    @expectedFailureAll
     def test_load_module_with_embedded_symbols_from_remote(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module with embedded DWARF symbols"""
 
@@ -158,7 +158,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEquals(load_address | debug_line_section.GetFileOffset(), debug_line_section.GetLoadAddress(target))
 
 
-    @expectedFailureAll
     def test_load_module_with_stripped_symbols_from_remote(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module with symbols stripped into a separate Wasm file"""
 
@@ -185,7 +184,7 @@ class TestWasm(GDBRemoteTestBase):
         target = self.dbg.CreateTarget("")
         process = self.connect(target)
         lldbutil.expect_state_changes(self, self.dbg.GetListener(), process, [lldb.eStateStopped])
-
+    
         num_modules = target.GetNumModules()
         self.assertEquals(1, num_modules)
 
@@ -214,7 +213,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEquals(LLDB_INVALID_ADDRESS, debug_line_section.GetLoadAddress(target))
 
 
-    @expectedFailureAll
     def test_load_module_from_file(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module from a file"""
 
@@ -245,7 +243,7 @@ class TestWasm(GDBRemoteTestBase):
         target = self.dbg.CreateTarget("")
         process = self.connect(target)
         lldbutil.expect_state_changes(self, self.dbg.GetListener(), process, [lldb.eStateStopped])
-
+    
         num_modules = target.GetNumModules()
         self.assertEquals(1, num_modules)
 
