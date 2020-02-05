@@ -1040,6 +1040,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       break;
     }
     case TargetOpcode::G_ASHR:
+    case TargetOpcode::G_LSHR:
     case TargetOpcode::G_SHL: {
       TestReg = MI->getOperand(1).getReg();
       auto VRegAndVal =
@@ -1081,6 +1082,13 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       Bit = Bit + *C;
       if (Bit >= TestRegSize)
         Bit = TestRegSize - 1;
+      break;
+    case TargetOpcode::G_LSHR:
+      // (tbz (lshr x, c), b) -> (tbz x, b+c) when b + c is < # bits in x
+      if ((Bit + *C) < TestRegSize) {
+        NextReg = TestReg;
+        Bit = Bit + *C;
+      }
       break;
     case TargetOpcode::G_XOR:
       // We can walk through a G_XOR by inverting whether we use tbz/tbnz when
