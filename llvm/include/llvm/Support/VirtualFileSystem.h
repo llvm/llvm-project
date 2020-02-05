@@ -705,16 +705,6 @@ private:
   bool IsFallthrough = true;
   /// @}
 
-  /// Virtual file paths and external files could be canonicalized without "..",
-  /// "." and "./" in their paths. FIXME: some unittests currently fail on
-  /// win32 when using remove_dots and remove_leading_dotslash on paths.
-  bool UseCanonicalizedPaths =
-#ifdef _WIN32
-      false;
-#else
-      true;
-#endif
-
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
   /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly
