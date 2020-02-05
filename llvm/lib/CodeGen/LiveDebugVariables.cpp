@@ -650,8 +650,8 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   }
 
   // Get or create the UserValue for (variable,offset) here.
-  assert((!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() == 0) &&
-         "DBG_VALUE with nonzero offset");
+  assert(!MI.getOperand(1).isImm() && "DBG_VALUE with indirect flag before "
+                                      "LiveDebugVariables");
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
   UserValue *UV =
