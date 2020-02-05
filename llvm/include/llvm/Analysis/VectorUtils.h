@@ -301,6 +301,11 @@ Value *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
 /// from the vector.
 Value *findScalarElement(Value *V, unsigned EltNo);
 
+/// If all non-negative \p Mask elements are the same value, return that value.
+/// If all elements are negative (undefined) or \p Mask contains different
+/// non-negative values, return -1.
+int getSplatIndex(ArrayRef<int> Mask);
+
 /// Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
