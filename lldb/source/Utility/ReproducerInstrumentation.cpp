@@ -27,6 +27,14 @@ template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>() {
   return Deserialize<uint8_t *>();
 }
 
+template <> void *Deserializer::Deserialize<void *>() {
+  return const_cast<void *>(Deserialize<const void *>());
+}
+
+template <> const void *Deserializer::Deserialize<const void *>() {
+  return nullptr;
+}
+
 template <> char *Deserializer::Deserialize<char *>() {
   return const_cast<char *>(Deserialize<const char *>());
 }
