@@ -273,13 +273,11 @@ public:
     // 2. Inline region, currently only works for a single basic block.
     BlockAndValueMapping map;
     auto &block = genericOp.region().front();
-    for (auto it : llvm::zip(block.getArguments(), indexedValues))
-      map.map(std::get<0>(it), std::get<1>(it));
+    map.map(block.getArguments(), indexedValues);
     for (auto &op : block.without_terminator()) {
       assert(op.getNumRegions() == 0);
       auto *newOp = b.clone(op, map);
-      for (auto it : llvm::zip(op.getResults(), newOp->getResults()))
-        map.map(std::get<0>(it), std::get<1>(it));
+      map.map(op.getResults(), newOp->getResults());
     }
 
     // 3. Emit std_store.
@@ -377,13 +375,11 @@ public:
     // 2. Inline region, currently only works for a single basic block.
     BlockAndValueMapping map;
     auto &block = indexedGenericOp.region().front();
-    for (auto it : llvm::zip(block.getArguments(), indexedValues))
-      map.map(std::get<0>(it), std::get<1>(it));
+    map.map(block.getArguments(), indexedValues);
     for (auto &op : block.without_terminator()) {
       assert(op.getNumRegions() == 0);
       auto *newOp = b.clone(op, map);
-      for (auto it : llvm::zip(op.getResults(), newOp->getResults()))
-        map.map(std::get<0>(it), std::get<1>(it));
+      map.map(op.getResults(), newOp->getResults());
     }
 
     // 3. Emit std_store.
