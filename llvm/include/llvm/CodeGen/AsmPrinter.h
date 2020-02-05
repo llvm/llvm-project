@@ -79,7 +79,7 @@ class GlobalPtrAuthInfo;
 
 namespace remarks {
 class RemarkStreamer;
-};
+}
 
 /// This class is intended to be used as a driving class for all asm writers.
 class AsmPrinter : public MachineFunctionPass {
