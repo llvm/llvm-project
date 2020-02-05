@@ -100,27 +100,28 @@ enum : unsigned { UndefLocNo = ~0U };
 /// usage of the location.
 class DbgValueLocation {
 public:
-  DbgValueLocation(unsigned LocNo)
-      : LocNo(LocNo) {
+  DbgValueLocation(unsigned LocNo, bool WasIndirect)
+      : LocNo(LocNo), WasIndirect(WasIndirect) {
     static_assert(sizeof(*this) == sizeof(unsigned), "bad bitfield packing");
     assert(locNo() == LocNo && "location truncation");
   }
 
-  DbgValueLocation() : LocNo(0) {}
+  DbgValueLocation() : LocNo(0), WasIndirect(0) {}
 
   unsigned locNo() const {
     // Fix up the undef location number, which gets truncated.
     return LocNo == INT_MAX ? UndefLocNo : LocNo;
   }
+  bool wasIndirect() const { return WasIndirect; }
   bool isUndef() const { return locNo() == UndefLocNo; }
 
   DbgValueLocation changeLocNo(unsigned NewLocNo) const {
-    return DbgValueLocation(NewLocNo);
+    return DbgValueLocation(NewLocNo, WasIndirect);
   }
 
   friend inline bool operator==(const DbgValueLocation &LHS,
                                 const DbgValueLocation &RHS) {
-    return LHS.LocNo == RHS.LocNo;
+    return LHS.LocNo == RHS.LocNo && LHS.WasIndirect == RHS.WasIndirect;
   }
 
   friend inline bool operator!=(const DbgValueLocation &LHS,
@@ -129,7 +130,8 @@ public:
   }
 
 private:
-  unsigned LocNo;
+  unsigned LocNo : 31;
+  unsigned WasIndirect : 1;
 };
 
 /// Map of where a user value is live, and its location.
@@ -283,8 +285,8 @@ public:
   void mapVirtRegs(LDVImpl *LDV);
 
   /// Add a definition point to this value.
-  void addDef(SlotIndex Idx, const MachineOperand &LocMO) {
-    DbgValueLocation Loc(getLocationNo(LocMO));
+  void addDef(SlotIndex Idx, const MachineOperand &LocMO, bool IsIndirect) {
+    DbgValueLocation Loc(getLocationNo(LocMO), IsIndirect);
     // Add a singular (Idx,Idx) -> Loc mapping.
     LocMap::iterator I = locInts.find(Idx);
     if (!I.valid() || I.start() != Idx)
@@ -319,10 +321,11 @@ public:
   ///
   /// \param LI Scan for copies of the value in LI->reg.
   /// \param LocNo Location number of LI->reg.
+  /// \param WasIndirect Indicates if the original use of LI->reg was indirect
   /// \param Kills Points where the range of LocNo could be extended.
   /// \param [in,out] NewDefs Append (Idx, LocNo) of inserted defs here.
   void addDefsFromCopies(
-      LiveInterval *LI, unsigned LocNo,
+      LiveInterval *LI, unsigned LocNo, bool WasIndirect,
       const SmallVectorImpl<SlotIndex> &Kills,
       SmallVectorImpl<std::pair<SlotIndex, DbgValueLocation>> &NewDefs,
       MachineRegisterInfo &MRI, LiveIntervals &LIS);
@@ -542,6 +545,8 @@ void UserValue::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
       OS << "undef";
     else {
       OS << I.value().locNo();
+      if (I.value().wasIndirect())
+        OS << " ind";
     }
   }
   for (unsigned i = 0, e = locations.size(); i != e; ++i) {
@@ -650,18 +655,19 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   }
 
   // Get or create the UserValue for (variable,offset) here.
-  assert(!MI.getOperand(1).isImm() && "DBG_VALUE with indirect flag before "
-                                      "LiveDebugVariables");
+  bool IsIndirect = MI.getOperand(1).isImm();
+  if (IsIndirect)
+    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
   UserValue *UV =
       getUserValue(Var, Expr, MI.getDebugLoc());
   if (!Discard)
-    UV->addDef(Idx, MI.getOperand(0));
+    UV->addDef(Idx, MI.getOperand(0), IsIndirect);
   else {
     MachineOperand MO = MachineOperand::CreateReg(0U, false);
     MO.setIsDebug();
-    UV->addDef(Idx, MO);
+    UV->addDef(Idx, MO, false);
   }
   return true;
 }
@@ -769,7 +775,7 @@ void UserValue::extendDef(SlotIndex Idx, DbgValueLocation Loc, LiveRange *LR,
 }
 
 void UserValue::addDefsFromCopies(
-    LiveInterval *LI, unsigned LocNo,
+    LiveInterval *LI, unsigned LocNo, bool WasIndirect,
     const SmallVectorImpl<SlotIndex> &Kills,
     SmallVectorImpl<std::pair<SlotIndex, DbgValueLocation>> &NewDefs,
     MachineRegisterInfo &MRI, LiveIntervals &LIS) {
@@ -833,7 +839,7 @@ void UserValue::addDefsFromCopies(
       MachineInstr *CopyMI = LIS.getInstructionFromIndex(DstVNI->def);
       assert(CopyMI && CopyMI->isCopy() && "Bad copy value");
       unsigned LocNo = getLocationNo(CopyMI->getOperand(0));
-      DbgValueLocation NewLoc(LocNo);
+      DbgValueLocation NewLoc(LocNo, WasIndirect);
       I.insert(Idx, Idx.getNextSlot(), NewLoc);
       NewDefs.push_back(std::make_pair(Idx, NewLoc));
       break;
@@ -881,7 +887,8 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
       // sub-register in that regclass). For now, simply skip handling copies if
       // a sub-register is involved.
       if (LI && !LocMO.getSubReg())
-        addDefsFromCopies(LI, Loc.locNo(), Kills, Defs, MRI, LIS);
+        addDefsFromCopies(LI, Loc.locNo(), Loc.wasIndirect(), Kills, Defs, MRI,
+                          LIS);
       continue;
     }
 
@@ -1323,14 +1330,21 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   // that the original virtual register was a pointer. Also, add the stack slot
   // offset for the spilled register to the expression.
   const DIExpression *Expr = Expression;
-  if (Spilled)
-    Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, SpillOffset);
+  uint8_t DIExprFlags = DIExpression::ApplyOffset;
+  bool IsIndirect = Loc.wasIndirect();
+  if (Spilled) {
+    if (IsIndirect)
+      DIExprFlags |= DIExpression::DerefAfter;
+    Expr =
+        DIExpression::prepend(Expr, DIExprFlags, SpillOffset);
+    IsIndirect = true;
+  }
 
   assert((!Spilled || MO.isFI()) && "a spilled location must be a frame index");
 
   do {
     BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE),
-            Spilled, MO, Variable, Expr);
+            IsIndirect, MO, Variable, Expr);
 
     // Continue and insert DBG_VALUES after every redefinition of register
     // associated with the debug value within the range

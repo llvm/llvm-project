@@ -20,7 +20,7 @@
 ; }
 
 ; CHECK-LABEL: _Z3foo10NonTrivial:
-; CHECK: #DEBUG_VALUE: foo:nt <- [DW_OP_deref] $rdi
+; CHECK: #DEBUG_VALUE: foo:nt <- [$rdi+0]
 ; CHECK: movq    %rdi, -8(%rsp)          # 8-byte Spill
 ; CHECK: #DEBUG_VALUE: foo:nt <- [DW_OP_constu 8, DW_OP_minus, DW_OP_deref] [$rsp+0]
 ; CHECK: #APP
