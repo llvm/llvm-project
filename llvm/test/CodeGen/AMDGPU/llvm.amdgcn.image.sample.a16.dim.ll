@@ -19,6 +19,8 @@ define amdgpu_ps <4 x float> @sample_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -33,9 +35,10 @@ define amdgpu_ps <4 x float> @sample_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -48,9 +51,10 @@ define amdgpu_ps <4 x float> @sample_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16 da
+; GCN-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf a16 da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -63,6 +67,8 @@ define amdgpu_ps <4 x float> @sample_1darray(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16 da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -77,9 +83,10 @@ define amdgpu_ps <4 x float> @sample_2darray(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16 da
+; GCN-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf a16 da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -106,6 +113,8 @@ define amdgpu_ps <4 x float> @sample_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_c v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -120,6 +129,8 @@ define amdgpu_ps <4 x float> @sample_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_cl v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -134,9 +145,10 @@ define amdgpu_ps <4 x float> @sample_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample_cl v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    image_sample_cl v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -149,6 +161,8 @@ define amdgpu_ps <4 x float> @sample_c_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_c_cl v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -163,9 +177,12 @@ define amdgpu_ps <4 x float> @sample_c_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    v_mov_b32_e32 v5, v3
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v4, v2, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample_c_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    image_sample_c_cl v[0:3], v[3:5], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -192,6 +209,8 @@ define amdgpu_ps <4 x float> @sample_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_b v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -220,6 +239,8 @@ define amdgpu_ps <4 x float> @sample_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_c_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -234,6 +255,8 @@ define amdgpu_ps <4 x float> @sample_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_b_cl v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -248,9 +271,12 @@ define amdgpu_ps <4 x float> @sample_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    v_mov_b32_e32 v5, v3
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v4, v2, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample_b_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    image_sample_b_cl v[0:3], v[3:5], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -263,6 +289,8 @@ define amdgpu_ps <4 x float> @sample_c_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    image_sample_c_b_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -277,9 +305,13 @@ define amdgpu_ps <4 x float> @sample_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_mov_b64 s[12:13], exec
 ; GCN-NEXT:    s_wqm_b64 exec, exec
-; GCN-NEXT:    v_mov_b32_e32 v3, v4
+; GCN-NEXT:    v_mov_b32_e32 v7, v4
+; GCN-NEXT:    v_mov_b32_e32 v4, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GCN-NEXT:    v_mov_b32_e32 v5, v1
+; GCN-NEXT:    v_lshl_or_b32 v6, v3, 16, v0
 ; GCN-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GCN-NEXT:    image_sample_c_b_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    image_sample_c_b_cl v[0:3], v[4:7], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -301,9 +333,14 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; GCN-LABEL: sample_d_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v3, v4
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    image_sample_d v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v6, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v4, v6, v4
+; GCN-NEXT:    v_and_b32_e32 v2, v6, v2
+; GCN-NEXT:    v_and_b32_e32 v0, v6, v0
+; GCN-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
+; GCN-NEXT:    v_lshl_or_b32 v2, v1, 16, v0
+; GCN-NEXT:    image_sample_d v[0:3], v[2:4], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -314,11 +351,17 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r) {
 ; GCN-LABEL: sample_d_3d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
-; GCN-NEXT:    v_mov_b32_e32 v7, v8
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_d v[0:3], v[2:9], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v12, v8
+; GCN-NEXT:    v_mov_b32_e32 v8, v2
+; GCN-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v10, v5
+; GCN-NEXT:    v_and_b32_e32 v5, v2, v6
+; GCN-NEXT:    v_and_b32_e32 v3, v2, v3
+; GCN-NEXT:    v_and_b32_e32 v0, v2, v0
+; GCN-NEXT:    v_lshl_or_b32 v11, v7, 16, v5
+; GCN-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
+; GCN-NEXT:    v_lshl_or_b32 v7, v1, 16, v0
+; GCN-NEXT:    image_sample_d v[0:3], v[7:14], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -340,10 +383,16 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; GCN-LABEL: sample_c_d_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_mov_b32_e32 v4, v5
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    image_sample_c_d v[0:3], v[1:4], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v9, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v8, v2
+; GCN-NEXT:    v_mov_b32_e32 v7, v3
+; GCN-NEXT:    v_and_b32_e32 v2, v9, v5
+; GCN-NEXT:    v_and_b32_e32 v1, v9, v1
+; GCN-NEXT:    v_lshl_or_b32 v3, v6, 16, v2
+; GCN-NEXT:    v_and_b32_e32 v2, v9, v7
+; GCN-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v1, v8, 16, v1
+; GCN-NEXT:    image_sample_c_d v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -354,6 +403,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; GCN-LABEL: sample_d_cl_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GCN-NEXT:    image_sample_d_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -365,10 +416,14 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; GCN-LABEL: sample_d_cl_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
-; GCN-NEXT:    v_mov_b32_e32 v5, v6
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_d_cl v[0:3], v[2:5], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v7, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v4, v7, v4
+; GCN-NEXT:    v_and_b32_e32 v2, v7, v2
+; GCN-NEXT:    v_and_b32_e32 v0, v7, v0
+; GCN-NEXT:    v_lshl_or_b32 v5, v5, 16, v4
+; GCN-NEXT:    v_lshl_or_b32 v4, v3, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
+; GCN-NEXT:    image_sample_d_cl v[0:3], v[3:6], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -379,6 +434,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; GCN-LABEL: sample_c_d_cl_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GCN-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GCN-NEXT:    image_sample_c_d_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -390,11 +447,16 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; GCN-LABEL: sample_c_d_cl_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
-; GCN-NEXT:    v_mov_b32_e32 v6, v7
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_c_d_cl v[0:3], v[2:9], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v11, v7
+; GCN-NEXT:    v_mov_b32_e32 v7, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v5, v0, v5
+; GCN-NEXT:    v_and_b32_e32 v3, v0, v3
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_lshl_or_b32 v10, v6, 16, v5
+; GCN-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
+; GCN-NEXT:    v_lshl_or_b32 v8, v2, 16, v0
+; GCN-NEXT:    image_sample_c_d_cl v[0:3], v[7:14], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -416,9 +478,14 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; GCN-LABEL: sample_cd_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v3, v4
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    image_sample_cd v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v6, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v4, v6, v4
+; GCN-NEXT:    v_and_b32_e32 v2, v6, v2
+; GCN-NEXT:    v_and_b32_e32 v0, v6, v0
+; GCN-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
+; GCN-NEXT:    v_lshl_or_b32 v2, v1, 16, v0
+; GCN-NEXT:    image_sample_cd v[0:3], v[2:4], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -440,10 +507,16 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; GCN-LABEL: sample_c_cd_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_mov_b32_e32 v4, v5
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    image_sample_c_cd v[0:3], v[1:4], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v9, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v8, v2
+; GCN-NEXT:    v_mov_b32_e32 v7, v3
+; GCN-NEXT:    v_and_b32_e32 v2, v9, v5
+; GCN-NEXT:    v_and_b32_e32 v1, v9, v1
+; GCN-NEXT:    v_lshl_or_b32 v3, v6, 16, v2
+; GCN-NEXT:    v_and_b32_e32 v2, v9, v7
+; GCN-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v1, v8, 16, v1
+; GCN-NEXT:    image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -454,6 +527,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; GCN-LABEL: sample_cd_cl_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
 ; GCN-NEXT:    image_sample_cd_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -465,10 +540,14 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; GCN-LABEL: sample_cd_cl_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
-; GCN-NEXT:    v_mov_b32_e32 v5, v6
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_cd_cl v[0:3], v[2:5], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v7, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v4, v7, v4
+; GCN-NEXT:    v_and_b32_e32 v2, v7, v2
+; GCN-NEXT:    v_and_b32_e32 v0, v7, v0
+; GCN-NEXT:    v_lshl_or_b32 v5, v5, 16, v4
+; GCN-NEXT:    v_lshl_or_b32 v4, v3, 16, v2
+; GCN-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
+; GCN-NEXT:    image_sample_cd_cl v[0:3], v[3:6], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -479,6 +558,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; GCN-LABEL: sample_c_cd_cl_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GCN-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GCN-NEXT:    image_sample_c_cd_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -490,11 +571,16 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; GCN-LABEL: sample_c_cd_cl_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
-; GCN-NEXT:    v_mov_b32_e32 v6, v7
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_c_cd_cl v[0:3], v[2:9], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v11, v7
+; GCN-NEXT:    v_mov_b32_e32 v7, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GCN-NEXT:    v_and_b32_e32 v5, v0, v5
+; GCN-NEXT:    v_and_b32_e32 v3, v0, v3
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_lshl_or_b32 v10, v6, 16, v5
+; GCN-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
+; GCN-NEXT:    v_lshl_or_b32 v8, v2, 16, v0
+; GCN-NEXT:    image_sample_c_cd_cl v[0:3], v[7:14], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -505,6 +591,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %lod) {
 ; GCN-LABEL: sample_l_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GCN-NEXT:    image_sample_l v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -516,8 +604,9 @@ main_body:
 define amdgpu_ps <4 x float> @sample_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %lod) {
 ; GCN-LABEL: sample_l_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
-; GCN-NEXT:    image_sample_l v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
+; GCN-NEXT:    image_sample_l v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -528,6 +617,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %lod) {
 ; GCN-LABEL: sample_c_l_1d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    image_sample_c_l v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -539,8 +630,11 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %lod) {
 ; GCN-LABEL: sample_c_l_2d:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
-; GCN-NEXT:    image_sample_c_l v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf a16
+; GCN-NEXT:    v_mov_b32_e32 v5, v3
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v4, v2, 16, v0
+; GCN-NEXT:    image_sample_c_l v[0:3], v[3:5], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -562,6 +656,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; GCN-LABEL: sample_lz_2d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GCN-NEXT:    image_sample_lz v[0:3], v0, s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -584,6 +680,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t) {
 ; GCN-LABEL: sample_c_lz_2d:
 ; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GCN-NEXT:    image_sample_c_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -595,12 +693,17 @@ main_body:
 define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
 ; GCN-LABEL: sample_c_d_o_2darray_V1:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v5, v4
-; GCN-NEXT:    v_mov_b32_e32 v4, v2
-; GCN-NEXT:    v_mov_b32_e32 v7, v8
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_c_d_o v0, v[2:9], s[0:7], s[8:11] dmask:0x4 a16 da
+; GCN-NEXT:    v_mov_b32_e32 v13, v8
+; GCN-NEXT:    v_mov_b32_e32 v8, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v9, v1
+; GCN-NEXT:    v_and_b32_e32 v1, v0, v6
+; GCN-NEXT:    v_lshl_or_b32 v12, v7, 16, v1
+; GCN-NEXT:    v_and_b32_e32 v1, v0, v4
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v2
+; GCN-NEXT:    v_lshl_or_b32 v11, v5, 16, v1
+; GCN-NEXT:    v_lshl_or_b32 v10, v3, 16, v0
+; GCN-NEXT:    image_sample_c_d_o v0, v[8:15], s[0:7], s[8:11] dmask:0x4 a16 da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -611,12 +714,17 @@ main_body:
 define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
 ; GCN-LABEL: sample_c_d_o_2darray_V2:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v5, v4
-; GCN-NEXT:    v_mov_b32_e32 v4, v2
-; GCN-NEXT:    v_mov_b32_e32 v7, v8
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    image_sample_c_d_o v[0:1], v[2:9], s[0:7], s[8:11] dmask:0x6 a16 da
+; GCN-NEXT:    v_mov_b32_e32 v13, v8
+; GCN-NEXT:    v_mov_b32_e32 v8, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GCN-NEXT:    v_mov_b32_e32 v9, v1
+; GCN-NEXT:    v_and_b32_e32 v1, v0, v6
+; GCN-NEXT:    v_lshl_or_b32 v12, v7, 16, v1
+; GCN-NEXT:    v_and_b32_e32 v1, v0, v4
+; GCN-NEXT:    v_and_b32_e32 v0, v0, v2
+; GCN-NEXT:    v_lshl_or_b32 v11, v5, 16, v1
+; GCN-NEXT:    v_lshl_or_b32 v10, v3, 16, v0
+; GCN-NEXT:    image_sample_c_d_o v[0:1], v[8:15], s[0:7], s[8:11] dmask:0x6 a16 da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
