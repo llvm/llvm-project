@@ -2914,26 +2914,50 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
+// FIXME: Just vector trunc should be sufficent, but legalization currently
+// broken.
+static void repackUnpackedD16Load(MachineIRBuilder &B, Register DstReg,
+                                  Register WideDstReg) {
+  const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
+
+  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
+
+  int NumOps = Unmerge->getNumOperands() - 1;
+  SmallVector<Register, 4> RemergeParts(NumOps);
+  for (int I = 0; I != NumOps; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+}
+
 bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B,
     GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const {
+  bool IsTFE = MI.getNumExplicitDefs() == 2;
+
   // We are only processing the operands of d16 image operations on subtargets
-  // that use the unpacked register layout.
-  if (!ST.hasUnpackedD16VMem())
+  // that use the unpacked register layout, or need to repack the TFE result.
+
+  // TODO: Need to handle a16 images too
+  // TODO: Do we need to guard against already legalized intrinsics?
+  if (!IsTFE && !ST.hasUnpackedD16VMem())
     return true;
 
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
     AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
 
-  if (BaseOpcode->Atomic) // No d16 atomics
+  if (BaseOpcode->Atomic) // No d16 atomics, or TFE.
     return true;
+
+  B.setInstr(MI);
 
   MachineRegisterInfo *MRI = B.getMRI();
   const LLT S32 = LLT::scalar(32);
   const LLT S16 = LLT::scalar(16);
 
-  if (BaseOpcode->Store) {
+  if (BaseOpcode->Store) { // No TFE for stores?
     Register VData = MI.getOperand(1).getReg();
     LLT Ty = MRI->getType(VData);
     if (!Ty.isVector() || Ty.getElementType() != S16)
@@ -2947,9 +2971,66 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return true;
   }
 
-  // Must be an image load.
   Register DstReg = MI.getOperand(0).getReg();
   LLT Ty = MRI->getType(DstReg);
+  const bool IsD16 = Ty.getScalarType() == S16;
+  const unsigned NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
+
+  if (IsTFE) {
+    // In the IR, TFE is supposed to be used with a 2 element struct return
+    // type. The intruction really returns these two values in one contiguous
+    // register, with one additional dword beyond the loaded data. Rewrite the
+    // return type to use a single register result.
+    Register Dst1Reg = MI.getOperand(1).getReg();
+    if (MRI->getType(Dst1Reg) != S32)
+      return false;
+
+    // TODO: Make sure the TFE operand bit is set.
+
+    // The raw dword aligned data component of the load. The only legal cases
+    // where this matters should be when using the packed D16 format, for
+    // s16 -> <2 x s16>, and <3 x s16> -> <4 x s16>,
+    LLT RoundedTy;
+    LLT TFETy;
+
+    if (IsD16 && ST.hasUnpackedD16VMem()) {
+      RoundedTy = LLT::scalarOrVector(NumElts, 32);
+      TFETy = LLT::vector(NumElts + 1, 32);
+    } else {
+      unsigned EltSize = Ty.getScalarSizeInBits();
+      unsigned RoundedElts = (Ty.getSizeInBits() + 31) / 32;
+      unsigned RoundedSize = 32 * RoundedElts;
+      RoundedTy = LLT::scalarOrVector(RoundedSize / EltSize, EltSize);
+      TFETy = LLT::vector(RoundedSize / 32 + 1, S32);
+    }
+
+    Register TFEReg = MRI->createGenericVirtualRegister(TFETy);
+    Observer.changingInstr(MI);
+
+    MI.getOperand(0).setReg(TFEReg);
+    MI.RemoveOperand(1);
+
+    Observer.changedInstr(MI);
+
+    // Insert after the instruction.
+    B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+    // TODO: Should probably unmerge to s32 pieces and repack instead of using
+    // extracts.
+    if (RoundedTy == Ty) {
+      B.buildExtract(DstReg, TFEReg, 0);
+    } else {
+      // If we had to round the data type (i.e. this was a <3 x s16>), do the
+      // weird extract separately.
+      auto DataPart = B.buildExtract(RoundedTy, TFEReg, 0);
+      B.buildExtract(DstReg, DataPart, 0);
+    }
+
+    B.buildExtract(Dst1Reg, TFEReg, RoundedTy.getSizeInBits());
+    return true;
+  }
+
+  // Must be an image load.
   if (!Ty.isVector() || Ty.getElementType() != S16)
     return true;
 
@@ -2962,16 +3043,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   MI.getOperand(0).setReg(WideDstReg);
   Observer.changedInstr(MI);
 
-  // FIXME: Just vector trunc should be sufficent, but legalization currently
-  // broken.
-  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
-
-  int NumOps = Unmerge->getNumOperands() - 1;
-  SmallVector<Register, 4> RemergeParts(NumOps);
-  for (int I = 0; I != NumOps; ++I)
-    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
-
-  B.buildBuildVector(DstReg, RemergeParts);
+  repackUnpackedD16Load(B, DstReg, WideDstReg);
   return true;
 }
 

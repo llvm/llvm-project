@@ -218,9 +218,234 @@ define amdgpu_ps <4 x half> @image_load_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32
   ret <4 x half> %tex
 }
 
+define amdgpu_ps half @image_load_tfe_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+  ; UNPACKED-LABEL: name: image_load_tfe_f16
+  ; UNPACKED: bb.1 (%ir-block.0):
+  ; UNPACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; UNPACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; UNPACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; UNPACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; UNPACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; UNPACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; UNPACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; UNPACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INT:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 1, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<2 x s32>), 0
+  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<2 x s32>), 32
+  ; UNPACKED:   G_STORE [[EXTRACT1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[EXTRACT]](s32)
+  ; UNPACKED:   $vgpr0 = COPY [[COPY10]](s32)
+  ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; PACKED-LABEL: name: image_load_tfe_f16
+  ; PACKED: bb.1 (%ir-block.0):
+  ; PACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; PACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; PACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; PACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; PACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; PACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; PACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; PACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; PACKED:   [[INT:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 1, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INT]](<2 x s32>), 0
+  ; PACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[EXTRACT]](<2 x s16>)
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<2 x s32>), 32
+  ; PACKED:   G_STORE [[EXTRACT1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; PACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+  ; PACKED:   $vgpr0 = COPY [[COPY10]](s32)
+  ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %res = call { half, i32 } @llvm.amdgcn.image.load.2d.sl_f16i32s.i32(i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
+  %tex = extractvalue { half, i32 } %res, 0
+  %tfe = extractvalue { half, i32 } %res, 1
+  store i32 %tfe, i32 addrspace(1)* undef
+  ret half %tex
+}
+
+define amdgpu_ps <2 x half> @image_load_tfe_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+  ; UNPACKED-LABEL: name: image_load_tfe_v2f16
+  ; UNPACKED: bb.1 (%ir-block.0):
+  ; UNPACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; UNPACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; UNPACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; UNPACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; UNPACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; UNPACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; UNPACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; UNPACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INT:%[0-9]+]]:_(<3 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT [[INT]](<3 x s32>), 0
+  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<2 x s32>), 0
+  ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<3 x s32>), 64
+  ; UNPACKED:   G_STORE [[EXTRACT2]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; UNPACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
+  ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; PACKED-LABEL: name: image_load_tfe_v2f16
+  ; PACKED: bb.1 (%ir-block.0):
+  ; PACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; PACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; PACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; PACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; PACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; PACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; PACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; PACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; PACKED:   [[INT:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INT]](<2 x s32>), 0
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<2 x s32>), 32
+  ; PACKED:   G_STORE [[EXTRACT1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; PACKED:   $vgpr0 = COPY [[EXTRACT]](<2 x s16>)
+  ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %res = call { <2 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v2f16i32s.i32(i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
+  %tex = extractvalue { <2 x half>, i32 } %res, 0
+  %tfe = extractvalue { <2 x half>, i32 } %res, 1
+  store i32 %tfe, i32 addrspace(1)* undef
+  ret <2 x half> %tex
+}
+
+define amdgpu_ps <3 x half> @image_load_tfe_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+  ; UNPACKED-LABEL: name: image_load_tfe_v3f16
+  ; UNPACKED: bb.1 (%ir-block.0):
+  ; UNPACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; UNPACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; UNPACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; UNPACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; UNPACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; UNPACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; UNPACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; UNPACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INT:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s32>) = G_EXTRACT [[INT]](<4 x s32>), 0
+  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[EXTRACT]](<3 x s32>), 0
+  ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<4 x s32>), 96
+  ; UNPACKED:   G_STORE [[EXTRACT2]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+  ; UNPACKED:   [[EXTRACT3:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+  ; UNPACKED:   [[EXTRACT4:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
+  ; UNPACKED:   $vgpr0 = COPY [[EXTRACT3]](<2 x s16>)
+  ; UNPACKED:   $vgpr1 = COPY [[EXTRACT4]](<2 x s16>)
+  ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  ; PACKED-LABEL: name: image_load_tfe_v3f16
+  ; PACKED: bb.1 (%ir-block.0):
+  ; PACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; PACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; PACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; PACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; PACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; PACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; PACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; PACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; PACKED:   [[INT:%[0-9]+]]:_(<3 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[INT]](<3 x s32>), 0
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[EXTRACT]](<4 x s16>), 0
+  ; PACKED:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<3 x s32>), 64
+  ; PACKED:   G_STORE [[EXTRACT2]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; PACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; PACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+  ; PACKED:   [[EXTRACT3:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+  ; PACKED:   [[EXTRACT4:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
+  ; PACKED:   $vgpr0 = COPY [[EXTRACT3]](<2 x s16>)
+  ; PACKED:   $vgpr1 = COPY [[EXTRACT4]](<2 x s16>)
+  ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  %res = call { <3 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f16i32s.i32(i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
+  %tex = extractvalue { <3 x half>, i32 } %res, 0
+  %tfe = extractvalue { <3 x half>, i32 } %res, 1
+  store i32 %tfe, i32 addrspace(1)* undef
+  ret <3 x half> %tex
+}
+
+define amdgpu_ps <4 x half> @image_load_tfe_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+  ; UNPACKED-LABEL: name: image_load_tfe_v4f16
+  ; UNPACKED: bb.1 (%ir-block.0):
+  ; UNPACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; UNPACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; UNPACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; UNPACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; UNPACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; UNPACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; UNPACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; UNPACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INT:%[0-9]+]]:_(<5 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<4 x s32>) = G_EXTRACT [[INT]](<5 x s32>), 0
+  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[EXTRACT]](<4 x s32>), 0
+  ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<5 x s32>), 128
+  ; UNPACKED:   G_STORE [[EXTRACT2]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; UNPACKED:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[EXTRACT1]](<4 x s16>)
+  ; UNPACKED:   $vgpr0 = COPY [[UV]](<2 x s16>)
+  ; UNPACKED:   $vgpr1 = COPY [[UV1]](<2 x s16>)
+  ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  ; PACKED-LABEL: name: image_load_tfe_v4f16
+  ; PACKED: bb.1 (%ir-block.0):
+  ; PACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1
+  ; PACKED:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; PACKED:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; PACKED:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; PACKED:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; PACKED:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; PACKED:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; PACKED:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; PACKED:   [[INT:%[0-9]+]]:_(<3 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.2d), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[INT]](<3 x s32>), 0
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[INT]](<3 x s32>), 64
+  ; PACKED:   G_STORE [[EXTRACT1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; PACKED:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[EXTRACT]](<4 x s16>)
+  ; PACKED:   $vgpr0 = COPY [[UV]](<2 x s16>)
+  ; PACKED:   $vgpr1 = COPY [[UV1]](<2 x s16>)
+  ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  %res = call { <4 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f16i32s.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
+  %tex = extractvalue { <4 x half>, i32 } %res, 0
+  %tfe = extractvalue { <4 x half>, i32 } %res, 1
+  store i32 %tfe, i32 addrspace(1)* undef
+  ret <4 x half> %tex
+}
+
 declare half @llvm.amdgcn.image.load.2d.f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 declare <2 x half> @llvm.amdgcn.image.load.2d.v2f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 declare <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 declare <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
+declare { half, i32 } @llvm.amdgcn.image.load.2d.sl_f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
+declare { <2 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v2f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
+declare { <3 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
+declare { <4 x half>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f16i32s.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 
 attributes #0 = { nounwind readonly }
