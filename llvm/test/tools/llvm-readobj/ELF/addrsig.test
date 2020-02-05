@@ -20,9 +20,7 @@ FileHeader:
 Sections:
   - Name: .llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
-    Symbols:
-      - Name: foo
-      - Name: bar
+    Symbols: [ foo, bar ]
 Symbols:
   - Name: foo
   - Name: bar
@@ -74,10 +72,7 @@ FileHeader:
 Sections:
   - Name: .llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
-    Symbols:
-      - Index: 1
-      - Index: 255
-      - Index: 2
+    Symbols: [ 1, 255, 2 ]
 Symbols:
   - Name: foo
   - Name: bar

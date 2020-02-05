@@ -7224,8 +7224,8 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   bool AteExtraComma = false;
   // GEP returns a vector of pointers if at least one of parameters is a vector.
   // All vector parameters should have the same vector width.
-  unsigned GEPWidth = BaseType->isVectorTy() ?
-    BaseType->getVectorNumElements() : 0;
+  ElementCount GEPWidth = BaseType->isVectorTy() ?
+    BaseType->getVectorElementCount() : ElementCount(0, false);
 
   while (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::MetadataVar) {
@@ -7237,8 +7237,8 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
       return Error(EltLoc, "getelementptr index must be an integer");
 
     if (Val->getType()->isVectorTy()) {
-      unsigned ValNumEl = Val->getType()->getVectorNumElements();
-      if (GEPWidth && GEPWidth != ValNumEl)
+      ElementCount ValNumEl = Val->getType()->getVectorElementCount();
+      if (GEPWidth != ElementCount(0, false) && GEPWidth != ValNumEl)
         return Error(EltLoc,
           "getelementptr vector index has a wrong number of elements");
       GEPWidth = ValNumEl;
@@ -7660,6 +7660,9 @@ bool LLParser::ParseTypeTestResolution(TypeTestResolution &TTRes) {
     return true;
 
   switch (Lex.getKind()) {
+  case lltok::kw_unknown:
+    TTRes.TheKind = TypeTestResolution::Unknown;
+    break;
   case lltok::kw_unsat:
     TTRes.TheKind = TypeTestResolution::Unsat;
     break;

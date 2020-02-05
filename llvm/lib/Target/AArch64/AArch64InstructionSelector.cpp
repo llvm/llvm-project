@@ -996,6 +996,11 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
   assert(Reg.isValid() && "Expected valid register!");
   while (MachineInstr *MI = getDefIgnoringCopies(Reg, MRI)) {
     unsigned Opc = MI->getOpcode();
+
+    if (!MI->getOperand(0).isReg() ||
+        !MRI.hasOneUse(MI->getOperand(0).getReg()))
+      break;
+
     // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
     //
     // (tbz (trunc x), b) -> (tbz x, b) is always safe, because the bit number
@@ -1034,6 +1039,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         C = VRegAndVal->Value;
       break;
     }
+    case TargetOpcode::G_ASHR:
     case TargetOpcode::G_SHL: {
       TestReg = MI->getOperand(1).getReg();
       auto VRegAndVal =
@@ -1044,13 +1050,14 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     }
     }
 
-    // Didn't find a constant. Bail out of the loop.
-    if (!C)
+    // Didn't find a constant or viable register. Bail out of the loop.
+    if (!C || !TestReg.isValid())
       break;
 
     // We found a suitable instruction with a constant. Check to see if we can
     // walk through the instruction.
     Register NextReg;
+    unsigned TestRegSize = MRI.getType(TestReg).getSizeInBits();
     switch (Opc) {
     default:
       break;
@@ -1062,10 +1069,18 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     case TargetOpcode::G_SHL:
       // (tbz (shl x, c), b) -> (tbz x, b-c) when b-c is positive and fits in
       // the type of the register.
-      if (*C <= Bit && (Bit - *C) < MRI.getType(TestReg).getSizeInBits()) {
+      if (*C <= Bit && (Bit - *C) < TestRegSize) {
         NextReg = TestReg;
         Bit = Bit - *C;
       }
+      break;
+    case TargetOpcode::G_ASHR:
+      // (tbz (ashr x, c), b) -> (tbz x, b+c) or (tbz x, msb) if b+c is > # bits
+      // in x
+      NextReg = TestReg;
+      Bit = Bit + *C;
+      if (Bit >= TestRegSize)
+        Bit = TestRegSize - 1;
       break;
     case TargetOpcode::G_XOR:
       // We can walk through a G_XOR by inverting whether we use tbz/tbnz when
@@ -1083,8 +1098,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     }
 
     // Check if we found anything worth folding.
-    if (!NextReg.isValid() || !MRI.hasOneUse(NextReg))
-      break;
+    if (!NextReg.isValid())
+      return Reg;
     Reg = NextReg;
   }
 
@@ -1575,10 +1590,9 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // G_STORE %x:gpr(s32)
   //
   // And then continue the selection process normally.
-  MachineInstr *Def = getDefIgnoringCopies(I.getOperand(0).getReg(), MRI);
-  if (!Def)
+  Register DefDstReg = getSrcRegIgnoringCopies(I.getOperand(0).getReg(), MRI);
+  if (!DefDstReg.isValid())
     return false;
-  Register DefDstReg = Def->getOperand(0).getReg();
   LLT DefDstTy = MRI.getType(DefDstReg);
   Register StoreSrcReg = I.getOperand(0).getReg();
   LLT StoreSrcTy = MRI.getType(StoreSrcReg);

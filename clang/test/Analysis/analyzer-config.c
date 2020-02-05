@@ -7,6 +7,7 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:IgnoredFilesPattern = ""
 // CHECK-NEXT: alpha.clone.CloneChecker:MinimumCloneComplexity = 50
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
+// CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
@@ -99,4 +100,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 96
+// CHECK-NEXT: num-entries = 97

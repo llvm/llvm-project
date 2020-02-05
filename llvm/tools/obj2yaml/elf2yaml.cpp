@@ -40,6 +40,8 @@ class ELFDumper {
   DenseMap<StringRef, uint32_t> UsedSymbolNames;
   std::vector<std::string> SymbolNames;
 
+  BumpPtrAllocator StringAllocator;
+
   Expected<StringRef> getUniquedSectionName(const Elf_Shdr *Sec);
   Expected<StringRef> getUniquedSymbolName(const Elf_Sym *Sym,
                                            StringRef StrTable,
@@ -603,7 +605,7 @@ ELFDumper<ELFT>::dumpAddrsigSection(const Elf_Shdr *Shdr) {
   ArrayRef<uint8_t> Content = *ContentOrErr;
   DataExtractor::Cursor Cur(0);
   DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
-  std::vector<ELFYAML::AddrsigSymbol> Symbols;
+  std::vector<ELFYAML::YAMLFlowString> Symbols;
   while (Cur && Cur.tell() < Content.size()) {
     uint64_t SymNdx = Data.getULEB128(Cur);
     if (!Cur)
@@ -612,7 +614,8 @@ ELFDumper<ELFT>::dumpAddrsigSection(const Elf_Shdr *Shdr) {
     Expected<StringRef> SymbolName = getSymbolName(Shdr->sh_link, SymNdx);
     if (!SymbolName || SymbolName->empty()) {
       consumeError(SymbolName.takeError());
-      Symbols.emplace_back(SymNdx);
+      Symbols.emplace_back(
+          StringRef(std::to_string(SymNdx)).copy(StringAllocator));
       continue;
     }
 

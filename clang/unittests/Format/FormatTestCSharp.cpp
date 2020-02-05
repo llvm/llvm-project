@@ -70,6 +70,30 @@ TEST_F(FormatTestCSharp, CSharpClass) {
                "            f();\n"
                "    }\n"
                "}");
+
+  // Ensure that small and empty classes are handled correctly with condensed
+  // (Google C++-like) brace-breaking style.
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+
+  verifyFormat("public class SomeEmptyClass {}", Style);
+
+  verifyFormat("public class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("private class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("protected class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("internal class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, AccessModifiers) {
@@ -233,6 +257,15 @@ TEST_F(FormatTestCSharp, Attributes) {
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
       "// The const char* returned by hello_world must not be deleted.\n"
       "private static extern IntPtr HelloFromCpp();)");
+
+  //  Unwrappable lines go on a line of their own.
+  // 'target:' is not treated as a label.
+  // Modify Style to enforce a column limit.
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.ColumnLimit = 10;
+  verifyFormat(R"([assembly:InternalsVisibleTo(
+    "SomeAssembly, PublicKey=SomePublicKeyThatExceedsTheColumnLimit")])",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpUsing) {

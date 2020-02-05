@@ -960,6 +960,10 @@ def G_INTRINSIC : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;
+
+  // Conservatively assume this is convergent. If there turnes out to
+  // be a need, there should be separate convergent intrinsic opcode.s
+  let isConvergent = 1;
 }
 
 // Intrinsic with side effects.
@@ -969,6 +973,10 @@ def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
+
+  // Conservatively assume this is convergent. If there turnes out to
+  // be a need, there should be separate convergent intrinsic opcode.s
+  let isConvergent = 1;
 }
 
 //------------------------------------------------------------------------------

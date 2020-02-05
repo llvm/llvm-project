@@ -114,6 +114,9 @@ if config.dsymutil:
 if config.filecheck:
   dotest_cmd += ['--filecheck', config.filecheck]
 
+if config.lldb_libs_dir:
+  dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
+
 # We don't want to force users passing arguments to lit to use `;` as a
 # separator. We use Python's simple lexical analyzer to turn the args into a
 # list. Pass there arguments last so they can override anything that was

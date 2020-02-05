@@ -28,6 +28,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -12725,7 +12726,6 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
 
   // With MOVDDUP (v2f64) we can broadcast from a register or a load, otherwise
   // we can only broadcast from a register with AVX2.
-  unsigned NumElts = Mask.size();
   unsigned NumEltBits = VT.getScalarSizeInBits();
   unsigned Opcode = (VT == MVT::v2f64 && !Subtarget.hasAVX2())
                         ? X86ISD::MOVDDUP
@@ -12733,15 +12733,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
   bool BroadcastFromReg = (Opcode == X86ISD::MOVDDUP) || Subtarget.hasAVX2();
 
   // Check that the mask is a broadcast.
-  int BroadcastIdx = -1;
-  for (int i = 0; i != (int)NumElts; ++i) {
-    SmallVector<int, 8> BroadcastMask(NumElts, i);
-    if (isShuffleEquivalent(V1, V2, Mask, BroadcastMask)) {
-      BroadcastIdx = i;
-      break;
-    }
-  }
-
+  int BroadcastIdx = getSplatIndex(Mask);
   if (BroadcastIdx < 0)
     return SDValue();
   assert(BroadcastIdx < (int)Mask.size() && "We only expect to be called with "
@@ -43806,6 +43798,23 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
   EVT InVT = N0.getValueType();
   SDLoc DL(N);
 
+  // (i32 (sext (i8 (x86isd::setcc_carry)))) -> (i32 (x86isd::setcc_carry))
+  if (!DCI.isBeforeLegalizeOps() &&
+      N0.getOpcode() == X86ISD::SETCC_CARRY) {
+    SDValue Setcc = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT, N0->getOperand(0),
+                                 N0->getOperand(1));
+    bool ReplaceOtherUses = !N0.hasOneUse();
+    DCI.CombineTo(N, Setcc);
+    // Replace other uses with a truncate of the widened setcc_carry.
+    if (ReplaceOtherUses) {
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
+                                  N0.getValueType(), Setcc);
+      DCI.CombineTo(N0.getNode(), Trunc);
+    }
+
+    return SDValue(N, 0);
+  }
+
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;
 
@@ -43935,6 +43944,24 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  // (i32 (aext (i8 (x86isd::setcc_carry)))) -> (i32 (x86isd::setcc_carry))
+  // FIXME: Is this needed? We don't seem to have any tests for it.
+  if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ANY_EXTEND &&
+      N0.getOpcode() == X86ISD::SETCC_CARRY) {
+    SDValue Setcc = DAG.getNode(X86ISD::SETCC_CARRY, dl, VT, N0->getOperand(0),
+                                 N0->getOperand(1));
+    bool ReplaceOtherUses = !N0.hasOneUse();
+    DCI.CombineTo(N, Setcc);
+    // Replace other uses with a truncate of the widened setcc_carry.
+    if (ReplaceOtherUses) {
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
+                                  N0.getValueType(), Setcc);
+      DCI.CombineTo(N0.getNode(), Trunc);
+    }
+
+    return SDValue(N, 0);
+  }
 
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;

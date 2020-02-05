@@ -990,6 +990,28 @@ std::error_code InMemoryFileSystem::isLocal(const Twine &Path, bool &Result) {
 // RedirectingFileSystem implementation
 //===-----------------------------------------------------------------------===/
 
+namespace {
+
+/// Removes leading "./" as well as path components like ".." and ".".
+static llvm::SmallString<256> canonicalize(llvm::StringRef Path) {
+  // First detect the path style in use by checking the first separator.
+  llvm::sys::path::Style style = llvm::sys::path::Style::native;
+  const size_t n = Path.find_first_of("/\\");
+  if (n != static_cast<size_t>(-1))
+    style = (Path[n] == '/') ? llvm::sys::path::Style::posix
+                             : llvm::sys::path::Style::windows;
+
+  // Now remove the dots.  Explicitly specifying the path style prevents the
+  // direction of the slashes from changing.
+  llvm::SmallString<256> result =
+      llvm::sys::path::remove_leading_dotslash(Path, style);
+  llvm::sys::path::remove_dots(result, /*remove_dot_dot=*/true, style);
+  return result;
+}
+
+} // anonymous namespace
+
+
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
   if (ExternalFS)
@@ -1083,7 +1105,23 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  // We can't use sys::fs::make_absolute because that assumes the path style
+  // is native and there is no way to override that.  Since we know WorkingDir
+  // is absolute, we can use it to determine which style we actually have and
+  // append Path ourselves.
+  sys::path::Style style = sys::path::Style::windows;
+  if (sys::path::is_absolute(WorkingDir.get(), sys::path::Style::posix)) {
+    style = sys::path::Style::posix;
+  }
+
+  std::string Result = WorkingDir.get();
+  StringRef Dir(Result);
+  if (!Dir.endswith(sys::path::get_separator(style))) {
+    Result += sys::path::get_separator(style);
+  }
+  Result.append(Path.data(), Path.size());
+  Path.assign(Result.begin(), Result.end());
+
   return {};
 }
 
@@ -1318,8 +1356,8 @@ class llvm::vfs::RedirectingFileSystemParser {
     bool HasContents = false; // external or otherwise
     std::vector<std::unique_ptr<RedirectingFileSystem::Entry>>
         EntryArrayContents;
-    std::string ExternalContentsPath;
-    std::string Name;
+    SmallString<256> ExternalContentsPath;
+    SmallString<256> Name;
     yaml::Node *NameValueNode = nullptr;
     auto UseExternalName =
         RedirectingFileSystem::RedirectingFileEntry::NK_NotSet;
@@ -1342,16 +1380,9 @@ class llvm::vfs::RedirectingFileSystemParser {
           return nullptr;
 
         NameValueNode = I.getValue();
-        if (FS->UseCanonicalizedPaths) {
-          SmallString<256> Path(Value);
-          // Guarantee that old YAML files containing paths with ".." and "."
-          // are properly canonicalized before read into the VFS.
-          Path = sys::path::remove_leading_dotslash(Path);
-          sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-          Name = std::string(Path.str());
-        } else {
-          Name = std::string(Value);
-        }
+        // Guarantee that old YAML files containing paths with ".." and "."
+        // are properly canonicalized before read into the VFS.
+        Name = canonicalize(Value).str();
       } else if (Key == "type") {
         if (!parseScalarString(I.getValue(), Value, Buffer))
           return nullptr;
@@ -1404,13 +1435,10 @@ class llvm::vfs::RedirectingFileSystemParser {
           FullPath = Value;
         }
 
-        if (FS->UseCanonicalizedPaths) {
-          // Guarantee that old YAML files containing paths with ".." and "."
-          // are properly canonicalized before read into the VFS.
-          FullPath = sys::path::remove_leading_dotslash(FullPath);
-          sys::path::remove_dots(FullPath, /*remove_dot_dot=*/true);
-        }
-        ExternalContentsPath = std::string(FullPath.str());
+        // Guarantee that old YAML files containing paths with ".." and "."
+        // are properly canonicalized before read into the VFS.
+        FullPath = canonicalize(FullPath);
+        ExternalContentsPath = FullPath.str();
       } else if (Key == "use-external-name") {
         bool Val;
         if (!parseScalarBool(I.getValue(), Val))
@@ -1654,14 +1682,10 @@ RedirectingFileSystem::lookupPath(const Twine &Path_) const {
   if (std::error_code EC = makeAbsolute(Path))
     return EC;
 
-  // Canonicalize path by removing ".", "..", "./", etc components. This is
-  // a VFS request, do bot bother about symlinks in the path components
+  // Canonicalize path by removing ".", "..", "./", components. This is
+  // a VFS request, do not bother about symlinks in the path components
   // but canonicalize in order to perform the correct entry search.
-  if (UseCanonicalizedPaths) {
-    Path = sys::path::remove_leading_dotslash(Path);
-    sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-  }
-
+  Path = canonicalize(Path);
   if (Path.empty())
     return make_error_code(llvm::errc::invalid_argument);
 
@@ -1680,16 +1704,9 @@ ErrorOr<RedirectingFileSystem::Entry *>
 RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
                                   sys::path::const_iterator End,
                                   RedirectingFileSystem::Entry *From) const {
-#ifndef _WIN32
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
          "Paths should not contain traversal components");
-#else
-  // FIXME: this is here to support windows, remove it once canonicalized
-  // paths become globally default.
-  if (Start->equals("."))
-    ++Start;
-#endif
 
   StringRef FromName = From->getName();
 

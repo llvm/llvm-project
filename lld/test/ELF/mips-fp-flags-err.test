@@ -3,13 +3,13 @@
 # Check warning and errors in case of input
 # files with incompatible floating point ABI flags.
 
-# RUN: yaml2obj -docnum 1 %s -o %t-dbl.o
-# RUN: yaml2obj -docnum 2 %s -o %t-sgl.o
-# RUN: yaml2obj -docnum 3 %s -o %t-soft.o
-# RUN: yaml2obj -docnum 4 %s -o %t-fp64.o
-# RUN: yaml2obj -docnum 5 %s -o %t-fp64old.o
-# RUN: yaml2obj -docnum 6 %s -o %t-fp64a.o
-# RUN: yaml2obj -docnum 7 %s -o %t-fpxx.o
+# RUN: yaml2obj --docnum=1 %s -o %t-dbl.o
+# RUN: yaml2obj --docnum=2 %s -o %t-sgl.o
+# RUN: yaml2obj --docnum=3 %s -o %t-soft.o
+# RUN: yaml2obj --docnum=4 %s -o %t-fp64.o
+# RUN: yaml2obj --docnum=5 %s -o %t-fp64old.o
+# RUN: yaml2obj --docnum=6 %s -o %t-fp64a.o
+# RUN: yaml2obj --docnum=7 %s -o %t-fpxx.o
 
 # RUN: not ld.lld %t-dbl.o %t-fp64.o -shared -o /dev/null 2>&1 \
 # RUN:   | FileCheck -check-prefixes=DBLFP64 %s

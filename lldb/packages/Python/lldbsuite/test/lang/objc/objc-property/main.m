@@ -87,10 +87,13 @@ static int _class_int = 123;
 }
 @end
 
+typedef BaseClass TypedefBaseClass;
+
 int
 main ()
 {
   BaseClass *mine = [BaseClass baseClassWithBackedInt: 10 andUnbackedInt: 20];
+  TypedefBaseClass *typedefd = mine;
   
   // Set a breakpoint here.
   int nonexistant = mine.nonexistantInt;

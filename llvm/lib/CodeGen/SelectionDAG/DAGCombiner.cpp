@@ -16900,11 +16900,11 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
   EVT VT = InVec.getValueType();
   unsigned NumElts = VT.getVectorNumElements();
+  auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
 
   // Insert into out-of-bounds element is undefined.
-  if (auto *IndexC = dyn_cast<ConstantSDNode>(EltNo))
-    if (IndexC->getZExtValue() >= VT.getVectorNumElements())
-      return DAG.getUNDEF(VT);
+  if (IndexC && IndexC->getZExtValue() >= VT.getVectorNumElements())
+    return DAG.getUNDEF(VT);
 
   // Remove redundant insertions:
   // (insert_vector_elt x (extract_vector_elt x idx) idx) -> x
@@ -16912,7 +16912,6 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
 
-  auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
   if (!IndexC) {
     // If this is variable insert to undef vector, it might be better to splat:
     // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >

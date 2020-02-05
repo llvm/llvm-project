@@ -95,7 +95,6 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
-private:
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by extending the operand's type to \p WideTy using the specified \p
   /// ExtOpcode for the extension instruction, and replacing the vreg of the
@@ -129,6 +128,7 @@ private:
   /// original vector type, and replacing the vreg of the operand in place.
   void moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
 
+private:
   LegalizeResult
   widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult

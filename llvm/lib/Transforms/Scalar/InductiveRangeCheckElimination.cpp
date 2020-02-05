@@ -242,20 +242,25 @@ public:
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
 };
 
-class IRCELegacyPass : public LoopPass {
+class IRCELegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  IRCELegacyPass() : LoopPass(ID) {
+  IRCELegacyPass() : FunctionPass(ID) {
     initializeIRCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    getLoopAnalysisUsage(AU);
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addPreserved<ScalarEvolutionWrapperPass>();
   }
 
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
+  bool runOnFunction(Function &F) override;
 };
 
 } // end anonymous namespace
@@ -265,7 +270,9 @@ char IRCELegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(IRCELegacyPass, "irce",
                       "Inductive range check elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(IRCELegacyPass, "irce", "Inductive range check elimination",
                     false, false)
 
@@ -1747,27 +1754,42 @@ IntersectUnsignedRange(ScalarEvolution &SE,
   return Ret;
 }
 
-PreservedAnalyses IRCEPass::run(Loop &L, LoopAnalysisManager &AM,
-                                LoopStandardAnalysisResults &AR,
-                                LPMUpdater &U) {
-  Function *F = L.getHeader()->getParent();
-  const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
-  auto *BPI = FAM.getCachedResult<BranchProbabilityAnalysis>(*F);
-  InductiveRangeCheckElimination IRCE(AR.SE, BPI, AR.DT, AR.LI);
-  auto LPMAddNewLoop = [&U](Loop *NL, bool IsSubloop) {
+PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+
+  BranchProbabilityInfo BPI;
+  BPI.calculate(F, LI);
+  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
+
+  bool Changed = false;
+
+  for (const auto &L : LI) {
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
+                            /*PreserveLCSSA=*/false);
+    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+  }
+
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+  appendLoopsToWorklist(LI, Worklist);
+  auto LPMAddNewLoop = [&Worklist](Loop *NL, bool IsSubloop) {
     if (!IsSubloop)
-      U.addSiblingLoops(NL);
+      appendLoopsToWorklist(*NL, Worklist);
   };
-  bool Changed = IRCE.run(&L, LPMAddNewLoop);
+
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+    Changed |= IRCE.run(L, LPMAddNewLoop);
+  }
+
   if (!Changed)
     return PreservedAnalyses::all();
-
   return getLoopPassPreservedAnalyses();
 }
 
-bool IRCELegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
+bool IRCELegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
     return false;
 
   ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
@@ -1776,10 +1798,27 @@ bool IRCELegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
-  auto LPMAddNewLoop = [&LPM](Loop *NL, bool /* IsSubLoop */) {
-    LPM.addLoop(*NL);
+
+  bool Changed = false;
+
+  for (const auto &L : LI) {
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
+                            /*PreserveLCSSA=*/false);
+    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+  }
+
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+  appendLoopsToWorklist(LI, Worklist);
+  auto LPMAddNewLoop = [&](Loop *NL, bool IsSubloop) {
+    if (!IsSubloop)
+      appendLoopsToWorklist(*NL, Worklist);
   };
-  return IRCE.run(L, LPMAddNewLoop);
+
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+    Changed |= IRCE.run(L, LPMAddNewLoop);
+  }
+  return Changed;
 }
 
 bool InductiveRangeCheckElimination::run(

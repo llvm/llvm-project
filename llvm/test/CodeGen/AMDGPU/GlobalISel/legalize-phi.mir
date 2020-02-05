@@ -72,15 +72,20 @@ body: |
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD1]](s32)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C2]]
+  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY7]], [[C2]]
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(<2 x s16>) = G_PHI [[COPY]](<2 x s16>), %bb.0, [[BUILD_VECTOR]](<2 x s16>), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<2 x s16>) = G_PHI [[COPY]](<2 x s16>), %bb.0, [[BITCAST2]](<2 x s16>), %bb.1
   ; CHECK:   $vgpr0 = COPY [[PHI]](<2 x s16>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -144,28 +149,36 @@ body: |
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR2]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD1]](s32)
   ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
   ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[BITCAST3]](s32)
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY6]], [[COPY7]]
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ADD2]](s32)
-  ; CHECK:   [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF3]](s16)
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY8]], [[C2]]
+  ; CHECK:   [[COPY9:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY9]], [[C2]]
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK:   [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C2]]
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C3]], [[C1]](s32)
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
+  ; CHECK:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
   ; CHECK:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; CHECK:   [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT1]](<3 x s16>), 0
+  ; CHECK:   [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT1]](<3 x s16>), 0
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT3]](<4 x s16>), %bb.1
   ; CHECK:   [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[PHI]](<4 x s16>), 0
-  ; CHECK:   [[DEF5:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF5]], [[EXTRACT2]](<3 x s16>), 0
+  ; CHECK:   [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT2]](<3 x s16>), 0
   ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -226,22 +239,31 @@ body: |
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR2]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD1]](s32)
   ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
   ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[BITCAST3]](s32)
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY6]], [[COPY7]]
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ADD2]](s32)
   ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
   ; CHECK:   [[COPY9:%[0-9]+]]:_(s32) = COPY [[LSHR3]](s32)
   ; CHECK:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[COPY8]], [[COPY9]]
-  ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[ADD3]](s32)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C2]]
+  ; CHECK:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY11]], [[C2]]
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK:   [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; CHECK:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY12]], [[C2]]
+  ; CHECK:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[ADD3]](s32)
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY13]], [[C2]]
+  ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C1]](s32)
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
+  ; CHECK:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[COPY]](<4 x s16>), %bb.0, [[CONCAT_VECTORS]](<4 x s16>), %bb.1
@@ -943,10 +965,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(p3) = G_PHI [[COPY]](p3), %bb.0, [[GEP]](p3), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(p3) = G_PHI [[COPY]](p3), %bb.0, [[PTR_ADD]](p3), %bb.1
   ; CHECK:   $vgpr0 = COPY [[PHI]](p3)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -991,10 +1013,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(p5) = G_PHI [[COPY]](p5), %bb.0, [[GEP]](p5), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(p5) = G_PHI [[COPY]](p5), %bb.0, [[PTR_ADD]](p5), %bb.1
   ; CHECK:   $vgpr0 = COPY [[PHI]](p5)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -1039,10 +1061,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[GEP]](p0), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[PTR_ADD]](p0), %bb.1
   ; CHECK:   $vgpr0_vgpr1 = COPY [[PHI]](p0)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -1087,10 +1109,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(p1) = G_PHI [[COPY]](p1), %bb.0, [[GEP]](p1), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(p1) = G_PHI [[COPY]](p1), %bb.0, [[PTR_ADD]](p1), %bb.1
   ; CHECK:   $vgpr0_vgpr1 = COPY [[PHI]](p1)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -1135,10 +1157,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(p4) = G_PHI [[COPY]](p4), %bb.0, [[GEP]](p4), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(p4) = G_PHI [[COPY]](p4), %bb.0, [[PTR_ADD]](p4), %bb.1
   ; CHECK:   $vgpr0_vgpr1 = COPY [[PHI]](p4)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
