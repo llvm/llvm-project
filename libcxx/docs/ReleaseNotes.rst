@@ -35,6 +35,11 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 10.0.0?
 ============================
 
+Fixes
+-----
+
+- Fixed use of non-default locales on Windows
+
 New Features
 ------------
 
