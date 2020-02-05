@@ -905,7 +905,6 @@ define <4 x i32> @bitselect_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
 ; ==============================================================================
 ; CHECK-LABEL: add_v2i64:
 ; NO-SIMD128-NOT: i64x2
-; SIMD128-VM-NOT: i64x2
 ; SIMD128-NEXT: .functype add_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.add $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -916,7 +915,6 @@ define <2 x i64> @add_v2i64(<2 x i64> %x, <2 x i64> %y) {
 
 ; CHECK-LABEL: sub_v2i64:
 ; NO-SIMD128-NOT: i64x2
-; SIMD128-VM-NOT: i64x2
 ; SIMD128-NEXT: .functype sub_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.sub $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -928,7 +926,6 @@ define <2 x i64> @sub_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; v2i64.mul is not in spec
 ; CHECK-LABEL: mul_v2i64:
 ; NO-SIMD128-NOT: i64x2
-; SIMD128-VM-NOT: i64x2
 ; SIMD128-NOT: i64x2.mul
 ; SIMD128: i64x2.extract_lane
 ; SIMD128: i64.mul
@@ -1150,7 +1147,6 @@ define <2 x i64> @shr_u_vec_v2i64(<2 x i64> %v, <2 x i64> %x) {
 
 ; CHECK-LABEL: and_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128
 ; SIMD128-NEXT: .functype and_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: v128.and $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1161,7 +1157,6 @@ define <2 x i64> @and_v2i64(<2 x i64> %x, <2 x i64> %y) {
 
 ; CHECK-LABEL: or_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128
 ; SIMD128-NEXT: .functype or_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: v128.or $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1172,7 +1167,6 @@ define <2 x i64> @or_v2i64(<2 x i64> %x, <2 x i64> %y) {
 
 ; CHECK-LABEL: xor_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128
 ; SIMD128-NEXT: .functype xor_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: v128.xor $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1183,7 +1177,6 @@ define <2 x i64> @xor_v2i64(<2 x i64> %x, <2 x i64> %y) {
 
 ; CHECK-LABEL: not_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128
 ; SIMD128-NEXT: .functype not_v2i64 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: v128.not $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1209,7 +1202,6 @@ define <2 x i64> @andnot_v2i64(<2 x i64> %x, <2 x i64> %y) {
 
 ; CHECK-LABEL: bitselect_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128
 ; SIMD128-NEXT: .functype bitselect_v2i64 (v128, v128, v128) -> (v128){{$}}
 ; SIMD128-SLOW-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
 ; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
@@ -1401,7 +1393,6 @@ define <4 x float> @sub_v4f32(<4 x float> %x, <4 x float> %y) {
 
 ; CHECK-LABEL: div_v4f32:
 ; NO-SIMD128-NOT: f32x4
-; SIMD128-VM-NOT: f32x4.div
 ; SIMD128-NEXT: .functype div_v4f32 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: f32x4.div $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1422,7 +1413,6 @@ define <4 x float> @mul_v4f32(<4 x float> %x, <4 x float> %y) {
 
 ; CHECK-LABEL: sqrt_v4f32:
 ; NO-SIMD128-NOT: f32x4
-; SIMD128-VM-NOT: f32x4.sqrt
 ; SIMD128-NEXT: .functype sqrt_v4f32 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: f32x4.sqrt $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1565,7 +1555,6 @@ define <2 x double> @max_const_intrinsic_v2f64() {
 
 ; CHECK-LABEL: add_v2f64:
 ; NO-SIMD128-NOT: f64x2
-; SIMD128-VM-NOT: f62x2
 ; SIMD128-NEXT: .functype add_v2f64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: f64x2.add $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1576,7 +1565,6 @@ define <2 x double> @add_v2f64(<2 x double> %x, <2 x double> %y) {
 
 ; CHECK-LABEL: sub_v2f64:
 ; NO-SIMD128-NOT: f64x2
-; SIMD128-VM-NOT: f62x2
 ; SIMD128-NEXT: .functype sub_v2f64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: f64x2.sub $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1587,7 +1575,6 @@ define <2 x double> @sub_v2f64(<2 x double> %x, <2 x double> %y) {
 
 ; CHECK-LABEL: div_v2f64:
 ; NO-SIMD128-NOT: f64x2
-; SIMD128-VM-NOT: f62x2
 ; SIMD128-NEXT: .functype div_v2f64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: f64x2.div $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1598,7 +1585,6 @@ define <2 x double> @div_v2f64(<2 x double> %x, <2 x double> %y) {
 
 ; CHECK-LABEL: mul_v2f64:
 ; NO-SIMD128-NOT: f64x2
-; SIMD128-VM-NOT: f62x2
 ; SIMD128-NEXT: .functype mul_v2f64 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: f64x2.mul $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
