@@ -2914,6 +2914,52 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
+// Produce a vector of s16 elements from s32 pieces.
+static void truncToS16Vector(MachineIRBuilder &B, Register DstReg,
+                             ArrayRef<Register> UnmergeParts) {
+  const LLT S16 = LLT::scalar(16);
+
+  SmallVector<Register, 4> RemergeParts(UnmergeParts.size());
+  for (int I = 0, E = UnmergeParts.size(); I != E; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, UnmergeParts[I]).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+}
+
+/// Convert a set of s32 registers to a result vector with s16 elements.
+static void bitcastToS16Vector(MachineIRBuilder &B, Register DstReg,
+                               ArrayRef<Register> UnmergeParts) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const LLT V2S16 = LLT::vector(2, 16);
+  LLT TargetTy = MRI.getType(DstReg);
+  int NumElts = UnmergeParts.size();
+
+  if (NumElts == 1) {
+    assert(TargetTy == V2S16);
+    B.buildBitcast(DstReg, UnmergeParts[0]);
+    return;
+  }
+
+  SmallVector<Register, 4> RemergeParts(NumElts);
+  for (int I = 0; I != NumElts; ++I)
+    RemergeParts[I] = B.buildBitcast(V2S16, UnmergeParts[I]).getReg(0);
+
+  if (TargetTy.getSizeInBits() == 32u * NumElts) {
+    B.buildConcatVectors(DstReg, RemergeParts);
+    return;
+  }
+
+  const LLT V3S16 = LLT::vector(3, 16);
+  const LLT V6S16 = LLT::vector(6, 16);
+
+  // Widen to v6s16 and unpack v3 parts.
+  assert(TargetTy == V3S16);
+
+  RemergeParts.push_back(B.buildUndef(V2S16).getReg(0));
+  auto Concat = B.buildConcatVectors(V6S16, RemergeParts);
+  B.buildUnmerge({DstReg, MRI.createGenericVirtualRegister(V3S16)}, Concat);
+}
+
 // FIXME: Just vector trunc should be sufficent, but legalization currently
 // broken.
 static void repackUnpackedD16Load(MachineIRBuilder &B, Register DstReg,
@@ -2973,6 +3019,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   Register DstReg = MI.getOperand(0).getReg();
   LLT Ty = MRI->getType(DstReg);
+  const LLT EltTy = Ty.getScalarType();
   const bool IsD16 = Ty.getScalarType() == S16;
   const unsigned NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
 
@@ -3015,18 +3062,38 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // Insert after the instruction.
     B.setInsertPt(*MI.getParent(), ++MI.getIterator());
 
-    // TODO: Should probably unmerge to s32 pieces and repack instead of using
-    // extracts.
-    if (RoundedTy == Ty) {
-      B.buildExtract(DstReg, TFEReg, 0);
-    } else {
-      // If we had to round the data type (i.e. this was a <3 x s16>), do the
-      // weird extract separately.
-      auto DataPart = B.buildExtract(RoundedTy, TFEReg, 0);
-      B.buildExtract(DstReg, DataPart, 0);
+    // Now figure out how to copy the new result register back into the old
+    // result.
+
+    SmallVector<Register, 5> UnmergeResults(TFETy.getNumElements(), Dst1Reg);
+    int NumDataElts = TFETy.getNumElements() - 1;
+
+    if (!Ty.isVector()) {
+      // Simplest case is a trivial unmerge (plus a truncate for d16).
+      UnmergeResults[0] = Ty == S32 ?
+        DstReg : MRI->createGenericVirtualRegister(S32);
+
+      B.buildUnmerge(UnmergeResults, TFEReg);
+      if (Ty != S32)
+        B.buildTrunc(DstReg, UnmergeResults[0]);
+      return true;
     }
 
-    B.buildExtract(Dst1Reg, TFEReg, RoundedTy.getSizeInBits());
+    // We have to repack into a new vector of some kind.
+    for (int I = 0; I != NumDataElts; ++I)
+      UnmergeResults[I] = MRI->createGenericVirtualRegister(S32);
+    B.buildUnmerge(UnmergeResults, TFEReg);
+
+    // Drop the final TFE element.
+    ArrayRef<Register> DataPart(UnmergeResults.data(), NumDataElts);
+
+    if (EltTy == S32)
+      B.buildBuildVector(DstReg, DataPart);
+    else if (ST.hasUnpackedD16VMem())
+      truncToS16Vector(B, DstReg, DataPart);
+    else
+      bitcastToS16Vector(B, DstReg, DataPart);
+
     return true;
   }
 
