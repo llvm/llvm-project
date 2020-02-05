@@ -27,6 +27,12 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
 endif()
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
+  # TODO: libunwind and libcxxabi don't currently build on Windows so filter them out.
+  if(MSVC AND ("${proj}" MATCHES "libunwind|libcxxabi"))
+    message(WARNING "Skipping ${proj} which is not supported in MSVC yet")
+    continue()
+  endif()
+
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
     list(APPEND runtimes ${proj_dir})
