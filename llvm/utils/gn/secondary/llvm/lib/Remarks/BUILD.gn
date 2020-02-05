@@ -13,6 +13,7 @@ static_library("Remarks") {
     "RemarkLinker.cpp",
     "RemarkParser.cpp",
     "RemarkSerializer.cpp",
+    "RemarkStreamer.cpp",
     "RemarkStringTable.cpp",
     "YAMLRemarkParser.cpp",
     "YAMLRemarkSerializer.cpp",
