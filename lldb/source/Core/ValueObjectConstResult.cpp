@@ -110,7 +110,6 @@ ValueObjectConstResult::ValueObjectConstResult(
   m_data.SetData(data_sp);
   m_value.GetScalar() = (uintptr_t)data_sp->GetBytes();
   m_value.SetValueType(Value::eValueTypeHostAddress);
-  // m_value.SetContext(Value::eContextTypeClangType, compiler_type);
   m_value.SetCompilerType(compiler_type);
   m_name = name;
   SetIsConstant();
@@ -153,7 +152,6 @@ ValueObjectConstResult::ValueObjectConstResult(
     m_value.SetValueType(Value::eValueTypeHostAddress);
     break;
   }
-  //    m_value.SetContext(Value::eContextTypeClangType, compiler_type);
   m_value.SetCompilerType(compiler_type);
   m_name = name;
   SetIsConstant();
