@@ -452,6 +452,9 @@ def parseOptionsAndInitTestdirs():
 
     os.environ['CLANG_MODULE_CACHE_DIR'] = configuration.clang_module_cache_dir
 
+    if args.lldb_libs_dir:
+        configuration.lldb_libs_dir = args.lldb_libs_dir
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
@@ -559,10 +562,7 @@ def setupSysPath():
     # confusingly, this is the "bin" directory
     lldbLibDir = os.path.dirname(lldbtest_config.lldbExec)
     os.environ["LLDB_LIB_DIR"] = lldbLibDir
-    lldbImpLibDir = os.path.join(
-        lldbLibDir,
-        '..',
-        'lib') if sys.platform.startswith('win32') else lldbLibDir
+    lldbImpLibDir = configuration.lldb_libs_dir
     os.environ["LLDB_IMPLIB_DIR"] = lldbImpLibDir
     print("LLDB library dir:", os.environ["LLDB_LIB_DIR"])
     print("LLDB import library dir:", os.environ["LLDB_IMPLIB_DIR"])
