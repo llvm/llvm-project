@@ -31273,25 +31273,12 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr &MI,
   BB->addSuccessor(RestoreMBB);
   MI.getOperand(0).setMBB(RestoreMBB);
 
-  auto RestoreMBBI = RestoreMBB->begin();
-  BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::EH_RESTORE));
-  BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
-  return BB;
-}
+  // Marking this as an EH pad but not a funclet entry block causes PEI to
+  // restore stack pointers in the block.
+  RestoreMBB->setIsEHPad(true);
 
-MachineBasicBlock *
-X86TargetLowering::EmitLoweredCatchPad(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  const Constant *PerFn = MF->getFunction().getPersonalityFn();
-  bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(PerFn));
-  // Only 32-bit SEH requires special handling for catchpad.
-  if (IsSEH && Subtarget.is32Bit()) {
-    const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-    DebugLoc DL = MI.getDebugLoc();
-    BuildMI(*BB, MI, DL, TII.get(X86::EH_RESTORE));
-  }
-  MI.eraseFromParent();
+  auto RestoreMBBI = RestoreMBB->begin();
+  BuildMI(*RestoreMBB, RestoreMBBI, DL, TII.get(X86::JMP_4)).addMBB(TargetMBB);
   return BB;
 }
 
@@ -32283,8 +32270,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitLoweredRetpoline(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
-  case X86::CATCHPAD:
-    return EmitLoweredCatchPad(MI, BB);
   case X86::SEG_ALLOCA_32:
   case X86::SEG_ALLOCA_64:
     return EmitLoweredSegAlloca(MI, BB);
