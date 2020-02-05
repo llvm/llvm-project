@@ -21,10 +21,10 @@
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -1375,11 +1375,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   return BackendProc->wait();
 }
 
-Expected<std::unique_ptr<ToolOutputFile>>
-lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                              StringRef RemarksPasses, StringRef RemarksFormat,
-                              bool RemarksWithHotness, int Count) {
-  std::string Filename = RemarksFilename;
+Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
+    LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
+    StringRef RemarksFormat, bool RemarksWithHotness, int Count) {
+  std::string Filename = std::string(RemarksFilename);
   // For ThinLTO, file.opt.<format> becomes
   // file.opt.<format>.thin.<num>.<format>.
   if (!Filename.empty() && Count != -1)
@@ -1387,7 +1386,7 @@ lto::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
         (Twine(Filename) + ".thin." + llvm::utostr(Count) + "." + RemarksFormat)
             .str();
 
-  auto ResultOrErr = llvm::setupOptimizationRemarks(
+  auto ResultOrErr = llvm::setupLLVMOptimizationRemarks(
       Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);
   if (Error E = ResultOrErr.takeError())
     return std::move(E);
