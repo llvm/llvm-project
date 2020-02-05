@@ -307,6 +307,24 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   return nullptr;
 }
 
+int llvm::getSplatIndex(ArrayRef<int> Mask) {
+  int SplatIndex = -1;
+  for (int M : Mask) {
+    // Ignore invalid (undefined) mask elements.
+    if (M < 0)
+      continue;
+
+    // There can be only 1 non-negative mask element value if this is a splat.
+    if (SplatIndex != -1 && SplatIndex != M)
+      return -1;
+
+    // Initialize the splat index to the 1st non-negative mask element.
+    SplatIndex = M;
+  }
+  assert((SplatIndex == -1 || SplatIndex >= 0) && "Negative index?");
+  return SplatIndex;
+}
+
 /// Get splat value if the input is a splat vector or return nullptr.
 /// This function is not fully general. It checks only 2 cases:
 /// the input value is (1) a splat constant vector or (2) a sequence
