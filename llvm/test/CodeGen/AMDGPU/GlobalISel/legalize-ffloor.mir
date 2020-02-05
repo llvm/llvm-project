@@ -34,8 +34,14 @@ body: |
 
     ; SI-LABEL: name: test_ffloor_s64
     ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; SI: [[FFLOOR:%[0-9]+]]:_(s64) = G_FFLOOR [[COPY]]
-    ; SI: $vgpr0_vgpr1 = COPY [[FFLOOR]](s64)
+    ; SI: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
+    ; SI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT]], [[C]]
+    ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[COPY]](s64), [[COPY]]
+    ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT]]
+    ; SI: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY]], [[FNEG]]
+    ; SI: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     ; VI-LABEL: name: test_ffloor_s64
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI: [[FFLOOR:%[0-9]+]]:_(s64) = G_FFLOOR [[COPY]]
@@ -49,6 +55,65 @@ body: |
     $vgpr0_vgpr1 = COPY %1
 
 ...
+
+---
+name: test_ffloor_s64_nnan
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_ffloor_s64_nnan
+    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: [[INT:%[0-9]+]]:_(s64) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
+    ; SI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nnan G_FMINNUM_IEEE [[INT]], [[C]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = nnan G_FNEG [[FMINNUM_IEEE]]
+    ; SI: [[FADD:%[0-9]+]]:_(s64) = nnan G_FADD [[COPY]], [[FNEG]]
+    ; SI: $vgpr0_vgpr1 = COPY [[FADD]](s64)
+    ; VI-LABEL: name: test_ffloor_s64_nnan
+    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: [[FFLOOR:%[0-9]+]]:_(s64) = nnan G_FFLOOR [[COPY]]
+    ; VI: $vgpr0_vgpr1 = COPY [[FFLOOR]](s64)
+    ; GFX9-LABEL: name: test_ffloor_s64_nnan
+    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: [[FFLOOR:%[0-9]+]]:_(s64) = nnan G_FFLOOR [[COPY]]
+    ; GFX9: $vgpr0_vgpr1 = COPY [[FFLOOR]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = nnan G_FFLOOR %0
+    $vgpr0_vgpr1 = COPY %1
+
+...
+
+---
+name: test_ffloor_s64_nssaz
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_ffloor_s64_nssaz
+    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: [[INT:%[0-9]+]]:_(s64) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](s64)
+    ; SI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nsz G_FMINNUM_IEEE [[INT]], [[C]]
+    ; SI: [[FCMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(ord), [[COPY]](s64), [[COPY]]
+    ; SI: [[SELECT:%[0-9]+]]:_(s64) = nsz G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = nsz G_FNEG [[SELECT]]
+    ; SI: [[FADD:%[0-9]+]]:_(s64) = nsz G_FADD [[COPY]], [[FNEG]]
+    ; SI: $vgpr0_vgpr1 = COPY [[FADD]](s64)
+    ; VI-LABEL: name: test_ffloor_s64_nssaz
+    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: [[FFLOOR:%[0-9]+]]:_(s64) = nsz G_FFLOOR [[COPY]]
+    ; VI: $vgpr0_vgpr1 = COPY [[FFLOOR]](s64)
+    ; GFX9-LABEL: name: test_ffloor_s64_nssaz
+    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: [[FFLOOR:%[0-9]+]]:_(s64) = nsz G_FFLOOR [[COPY]]
+    ; GFX9: $vgpr0_vgpr1 = COPY [[FFLOOR]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = nsz G_FFLOOR %0
+    $vgpr0_vgpr1 = COPY %1
+
+...
+
 ---
 name: test_ffloor_s16
 body: |
@@ -158,9 +223,20 @@ body: |
     ; SI-LABEL: name: test_ffloor_v2s64
     ; SI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; SI: [[FFLOOR:%[0-9]+]]:_(s64) = G_FFLOOR [[UV]]
-    ; SI: [[FFLOOR1:%[0-9]+]]:_(s64) = G_FFLOOR [[UV1]]
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FFLOOR]](s64), [[FFLOOR1]](s64)
+    ; SI: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[UV]](s64)
+    ; SI: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT]], [[C]]
+    ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[UV]](s64), [[UV]]
+    ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[UV]], [[FMINNUM_IEEE]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT]]
+    ; SI: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[UV]], [[FNEG]]
+    ; SI: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[UV1]](s64)
+    ; SI: [[FMINNUM_IEEE1:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT1]], [[C]]
+    ; SI: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[UV1]](s64), [[UV1]]
+    ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[UV1]], [[FMINNUM_IEEE1]]
+    ; SI: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[SELECT1]]
+    ; SI: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[UV1]], [[FNEG1]]
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD]](s64), [[FADD1]](s64)
     ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; VI-LABEL: name: test_ffloor_v2s64
     ; VI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3

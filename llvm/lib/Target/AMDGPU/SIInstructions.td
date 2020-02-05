@@ -1990,6 +1990,11 @@ let SubtargetPredicate = isGFX6 in {
 //    fract(x) = isnan(x) ? x : min(V_FRACT(x), 0.99999999999999999)
 
 // Convert floor(x) to (x - fract(x))
+
+// Don't bother handling this for GlobalISel, it's handled during
+// lowering.
+//
+// FIXME: DAG should also custom lower this.
 def : GCNPat <
   (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))),
   (V_ADD_F64
