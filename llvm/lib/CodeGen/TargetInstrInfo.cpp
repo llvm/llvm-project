@@ -1178,8 +1178,14 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
       return None;
 
-    assert(MI.getNumExplicitDefs() == 1 &&
-           "Can currently only handle mem instructions with a single define");
+    // TODO: Can currently only handle mem instructions with a single define.
+    // An example from the x86 target:
+    //    ...
+    //    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax, implicit-def $rdx
+    //    ...
+    //
+    if (MI.getNumExplicitDefs() != 1)
+      return None;
 
     // TODO: In what way do we need to take Reg into consideration here?
 
