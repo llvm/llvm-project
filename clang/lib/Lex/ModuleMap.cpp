@@ -1094,9 +1094,6 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   if (!Result->isSubFramework()) {
     inferFrameworkLink(Result, FrameworkDir, FileMgr);
   }
-  
-  Result->dump();
-  llvm::errs() << Result->Directory->getName() << "\n";
 
   return Result;
 }
