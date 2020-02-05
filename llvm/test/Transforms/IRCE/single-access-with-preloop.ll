@@ -1,5 +1,5 @@
 ; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
-; RUN: opt -verify-loop-info -passes='require<branch-prob>,loop(irce)' -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -S < %s | FileCheck %s
 
 define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
  entry:

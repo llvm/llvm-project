@@ -1488,6 +1488,10 @@ void llvm::appendLoopsToWorklist(RangeT &&Loops,
 template void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
+template void
+llvm::appendLoopsToWorklist<Loop &>(Loop &L,
+                                    SmallPriorityWorklist<Loop *, 4> &Worklist);
+
 void llvm::appendLoopsToWorklist(LoopInfo &LI,
                                  SmallPriorityWorklist<Loop *, 4> &Worklist) {
   appendReversedLoopsToWorklist(LI, Worklist);
