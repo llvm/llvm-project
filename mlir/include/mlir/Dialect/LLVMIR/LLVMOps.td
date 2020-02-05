@@ -344,7 +344,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
 }
 
 def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
-                        Arguments<(ins UnitAttr:$cleanup, 
+                        Arguments<(ins UnitAttr:$cleanup,
                                        Variadic<LLVM_Type>)> {
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return parseLandingpadOp(parser, result); }];
@@ -354,9 +354,18 @@ def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
 def LLVM_CallOp : LLVM_Op<"call">,
                   Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                              Variadic<LLVM_Type>)>,
-                  Results<(outs Variadic<LLVM_Type>)>,
-                  LLVM_TwoBuilders<LLVM_OneResultOpBuilder,
-                                   LLVM_ZeroResultOpBuilder> {
+                  Results<(outs Variadic<LLVM_Type>)> {
+  let builders = [OpBuilder<
+    "Builder *builder, OperationState &result, LLVMFuncOp func,"
+    "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
+    [{
+      LLVMType resultType = func.getType().getFunctionResultType();
+      if (!resultType.isVoidTy())
+        result.addTypes(resultType);
+      result.addAttribute("callee", builder->getSymbolRefAttr(func));
+      result.addAttributes(attributes);
+      result.addOperands(operands);
+    }]>];
   let verifier = [{
     if (getNumResults() > 1)
       return emitOpError("must have 0 or 1 result");
@@ -435,7 +444,8 @@ def LLVM_ShuffleVectorOp
 
 // Misc operations.
 def LLVM_SelectOp
-    : LLVM_OneResultOp<"select", [NoSideEffect]>,
+    : LLVM_OneResultOp<"select",
+          [NoSideEffect, AllTypesMatch<["trueValue", "falseValue", "res"]>]>,
       Arguments<(ins LLVM_Type:$condition, LLVM_Type:$trueValue,
                  LLVM_Type:$falseValue)>,
       LLVM_Builder<
@@ -445,8 +455,7 @@ def LLVM_SelectOp
     "Value rhs", [{
       build(b, result, lhs.getType(), condition, lhs, rhs);
     }]>];
-  let parser = [{ return parseSelectOp(parser, result); }];
-  let printer = [{ printSelectOp(p, *this); }];
+  let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
 }
 
 // Terminators.

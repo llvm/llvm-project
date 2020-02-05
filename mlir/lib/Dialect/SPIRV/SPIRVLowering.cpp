@@ -362,19 +362,15 @@ spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetEnv,
 
 spirv::SPIRVConversionTarget::SPIRVConversionTarget(
     spirv::TargetEnvAttr targetEnv, MLIRContext *context)
-    : ConversionTarget(*context),
-      givenVersion(static_cast<spirv::Version>(targetEnv.version().getInt())) {
-  for (Attribute extAttr : targetEnv.extensions())
-    givenExtensions.insert(
-        *spirv::symbolizeExtension(extAttr.cast<StringAttr>().getValue()));
+    : ConversionTarget(*context), givenVersion(targetEnv.getVersion()) {
+  for (spirv::Extension ext : targetEnv.getExtensions())
+    givenExtensions.insert(ext);
 
   // Add extensions implied by the current version.
   for (spirv::Extension ext : spirv::getImpliedExtensions(givenVersion))
     givenExtensions.insert(ext);
 
-  for (Attribute capAttr : targetEnv.capabilities()) {
-    auto cap =
-        static_cast<spirv::Capability>(capAttr.cast<IntegerAttr>().getInt());
+  for (spirv::Capability cap : targetEnv.getCapabilities()) {
     givenCapabilities.insert(cap);
 
     // Add capabilities implied by the current capability.

@@ -3876,11 +3876,16 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
                                 SourceLocation Loc) {
-  if (!CGF.HaveInsertPoint())
-    return;
-  // Build call void __kmpc_flush(ident_t *loc)
-  CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_flush),
-                      emitUpdateLocation(CGF, Loc));
+  llvm::OpenMPIRBuilder *OMPBuilder = CGF.CGM.getOpenMPIRBuilder();
+  if (OMPBuilder) {
+    OMPBuilder->CreateFlush(CGF.Builder);
+  } else {
+    if (!CGF.HaveInsertPoint())
+      return;
+    // Build call void __kmpc_flush(ident_t *loc)
+    CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_flush),
+                        emitUpdateLocation(CGF, Loc));
+  }
 }
 
 namespace {

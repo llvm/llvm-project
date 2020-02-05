@@ -13,19 +13,22 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MachineValueType.h"
@@ -38,6 +41,12 @@
 #define DEBUG_TYPE "target-reg-info"
 
 using namespace llvm;
+
+static cl::opt<unsigned>
+    HugeSizeForSplit("huge-size-for-split", cl::Hidden,
+                     cl::desc("A threshold of live range size which may cause "
+                              "high compile time cost in global splitting."),
+                     cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
                              regclass_iterator RCB, regclass_iterator RCE,
@@ -54,6 +63,17 @@ TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
 }
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
+
+bool TargetRegisterInfo::shouldRegionSplitForVirtReg(
+    const MachineFunction &MF, const LiveInterval &VirtReg) const {
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineInstr *MI = MRI.getUniqueVRegDef(VirtReg.reg);
+  if (MI && TII->isTriviallyReMaterializable(*MI) &&
+      VirtReg.size() > HugeSizeForSplit)
+    return false;
+  return true;
+}
 
 void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet, unsigned Reg)
     const {

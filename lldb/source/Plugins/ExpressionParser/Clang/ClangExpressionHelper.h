@@ -13,14 +13,17 @@
 #include <string>
 #include <vector>
 
-
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
+namespace clang {
+class ASTConsumer;
+}
+
 namespace lldb_private {
 
+class ClangExpressionDeclMap;
 class RecordingMemoryManager;
 
 // ClangExpressionHelper

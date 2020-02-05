@@ -4678,11 +4678,11 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     break;
   case ISD::VECREDUCE_FMAX:
     NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::infinity(), dl, ElemVT);
+        -std::numeric_limits<double>::infinity(), dl, ElemVT);
     break;
   case ISD::VECREDUCE_FMIN:
     NeutralElem = DAG.getConstantFP(
-        -std::numeric_limits<double>::infinity(), dl, ElemVT);
+        std::numeric_limits<double>::infinity(), dl, ElemVT);
     break;
   }
 

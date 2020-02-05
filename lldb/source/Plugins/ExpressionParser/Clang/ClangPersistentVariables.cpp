@@ -101,7 +101,8 @@ ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
 }
 
-lldb::ClangASTImporterSP ClangPersistentVariables::GetClangASTImporter() {
+std::shared_ptr<ClangASTImporter>
+ClangPersistentVariables::GetClangASTImporter() {
   if (!m_ast_importer_sp) {
     m_ast_importer_sp = std::make_shared<ClangASTImporter>();
   }

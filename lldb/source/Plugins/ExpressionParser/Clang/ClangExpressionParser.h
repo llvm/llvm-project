@@ -9,7 +9,6 @@
 #ifndef liblldb_ClangExpressionParser_h_
 #define liblldb_ClangExpressionParser_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -19,13 +18,20 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-class CodeCompleteConsumer;
+namespace llvm {
+class LLVMContext;
 }
+
+namespace clang {
+class CodeGenerator;
+class CodeCompleteConsumer;
+class CompilerInstance;
+} // namespace clang
 
 namespace lldb_private {
 
 class IRExecutionUnit;
+class TypeSystemClang;
 
 /// \class ClangExpressionParser ClangExpressionParser.h
 /// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of

@@ -3219,3 +3219,24 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
                     UnwindHelpFI)
       .addImm(-2);
 }
+
+void X86FrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  if (STI.is32Bit() && MF.hasEHFunclets())
+    restoreWinEHStackPointersInParent(MF);
+}
+
+void X86FrameLowering::restoreWinEHStackPointersInParent(
+    MachineFunction &MF) const {
+  // 32-bit functions have to restore stack pointers when control is transferred
+  // back to the parent function. These blocks are identified as eh pads that
+  // are not funclet entries.
+  bool IsSEH = isAsynchronousEHPersonality(
+      classifyEHPersonality(MF.getFunction().getPersonalityFn()));
+  for (MachineBasicBlock &MBB : MF) {
+    bool NeedsRestore = MBB.isEHPad() && !MBB.isEHFuncletEntry();
+    if (NeedsRestore)
+      restoreWin32EHStackPointers(MBB, MBB.begin(), DebugLoc(),
+                                  /*RestoreSP=*/IsSEH);
+  }
+}

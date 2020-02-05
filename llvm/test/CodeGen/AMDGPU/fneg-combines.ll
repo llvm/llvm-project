@@ -1399,6 +1399,28 @@ define amdgpu_kernel void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrs
   ret void
 }
 
+; GCN-LABEL: {{^}}v_fneg_fmad_v4f32:
+
+; GCN-NSZ: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-NSZ: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-NSZ: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-NSZ: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+define amdgpu_kernel void @v_fneg_fmad_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %a.ptr, <4 x float> addrspace(1)* %b.ptr, <4 x float> addrspace(1)* %c.ptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %a.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %a.ptr, i64 %tid.ext
+  %b.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %b.ptr, i64 %tid.ext
+  %c.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %c.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i64 %tid.ext
+  %a = load volatile <4 x float>, <4 x float> addrspace(1)* %a.gep
+  %b = load volatile <4 x float>, <4 x float> addrspace(1)* %b.gep
+  %c = load volatile <4 x float>, <4 x float> addrspace(1)* %c.gep
+  %fma = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
+  %fneg = fneg <4 x float> %fma
+  store <4 x float> %fneg, <4 x float> addrspace(1)* %out.gep
+  ret void
+}
+
 ; GCN-LABEL: {{^}}v_fneg_fmad_multi_use_fmad_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
@@ -2520,6 +2542,7 @@ define amdgpu_kernel void @multi_use_cost_to_fold_into_src(float addrspace(1)* %
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fma.f32(float, float, float) #1
 declare float @llvm.fmuladd.f32(float, float, float) #1
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
 declare float @llvm.sin.f32(float) #1
 declare float @llvm.trunc.f32(float) #1
 declare float @llvm.round.f32(float) #1

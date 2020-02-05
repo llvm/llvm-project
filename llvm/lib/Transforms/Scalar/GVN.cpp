@@ -99,6 +99,8 @@ STATISTIC(NumPRELoad,   "Number of loads PRE'd");
 
 static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
+static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
+                                            cl::init(true));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 
 // Maximum allowed recursion depth.
@@ -616,6 +618,11 @@ bool GVN::isPREEnabled() const {
 bool GVN::isLoadPREEnabled() const {
   return Options.AllowLoadPRE.getValueOr(GVNEnableLoadPRE);
 }
+
+bool GVN::isLoadInLoopPREEnabled() const {
+  return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
+}
+
 bool GVN::isMemDepEnabled() const {
   return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
 }
@@ -1395,6 +1402,9 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
 
   // Step 4: Eliminate partial redundancy.
   if (!isPREEnabled() || !isLoadPREEnabled())
+    return false;
+  if (!isLoadInLoopPREEnabled() && this->LI &&
+      this->LI->getLoopFor(LI->getParent()))
     return false;
 
   return PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);

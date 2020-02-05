@@ -6605,9 +6605,9 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
   if (LegalOperations && !TLI.isOperationLegal(ISD::STORE, VT))
     return SDValue();
 
-  // Check if all the bytes of the combined value we are looking at are stored 
-  // to the same base address. Collect bytes offsets from Base address into 
-  // ByteOffsets. 
+  // Check if all the bytes of the combined value we are looking at are stored
+  // to the same base address. Collect bytes offsets from Base address into
+  // ByteOffsets.
   SDValue CombinedValue;
   SmallVector<int64_t, 8> ByteOffsets(Width, INT64_MAX);
   int64_t FirstOffset = INT64_MAX;
@@ -6627,15 +6627,15 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
         Value.getOpcode() == ISD::SRA) {
       ConstantSDNode *ShiftOffset =
         dyn_cast<ConstantSDNode>(Value.getOperand(1));
-      // Trying to match the following pattern. The shift offset must be 
+      // Trying to match the following pattern. The shift offset must be
       // a constant and a multiple of 8. It is the byte offset in "y".
-      // 
+      //
       // x = srl y, offset
-      // i8 z = trunc x 
+      // i8 z = trunc x
       // store z, ...
       if (!ShiftOffset || (ShiftOffset->getSExtValue() % 8))
         return SDValue();
-  
+
      Offset = ShiftOffset->getSExtValue()/8;
      Value = Value.getOperand(0);
     }
@@ -6680,7 +6680,7 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
   assert(FirstStore && "First store must be set");
 
-  // Check if the bytes of the combined value we are looking at match with 
+  // Check if the bytes of the combined value we are looking at match with
   // either big or little endian value store.
   Optional<bool> IsBigEndian = isBigEndian(ByteOffsets, FirstOffset);
   if (!IsBigEndian.hasValue())
@@ -8619,7 +8619,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
         // Create the actual or node if we can generate good code for it.
         if (!normalizeToSequence) {
           SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N2_0);
-          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Or, N1, 
+          return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Or, N1,
                              N2_2, Flags);
         }
         // Otherwise see if we can optimize to a better pattern.
@@ -10490,7 +10490,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
   // Reducing the width of a volatile load is illegal.  For atomics, we may be
-  // able to reduce the width provided we never widen again. (see D66309)  
+  // able to reduce the width provided we never widen again. (see D66309)
   if (!LN0->isSimple() ||
       !isLegalNarrowLdSt(LN0, ExtType, ExtVT, ShAmt))
     return SDValue();
@@ -20820,7 +20820,10 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
         EVT CCVT = getSetCCResultType(VT);
         ISD::NodeType SelOpcode = VT.isVector() ? ISD::VSELECT : ISD::SELECT;
         DenormalMode DenormMode = DAG.getDenormalMode(VT);
-        if (DenormMode == DenormalMode::IEEE) {
+        if (DenormMode.Input == DenormalMode::IEEE) {
+          // This is specifically a check for the handling of denormal inputs,
+          // not the result.
+
           // fabs(X) < SmallestNormal ? 0.0 : Est
           const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
           APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);

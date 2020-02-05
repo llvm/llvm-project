@@ -30,6 +30,7 @@ add_llvm_component_library(LLVMCore
   IntrinsicInst.cpp
   LLVMContext.cpp
   LLVMContextImpl.cpp
+  LLVMRemarkStreamer.cpp
   LegacyPassManager.cpp
   MDBuilder.cpp
   Mangler.cpp
@@ -43,7 +44,6 @@ add_llvm_component_library(LLVMCore
   PassManager.cpp
   PassRegistry.cpp
   PassTimingInfo.cpp
-  RemarkStreamer.cpp
   SafepointIRVerifier.cpp
   ProfileSummary.cpp
   Statepoint.cpp

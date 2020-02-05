@@ -1065,6 +1065,27 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
                                 Field(&CodeCompletion::Scope, "ns::"))));
 }
 
+TEST_F(ClangdVFSTest, TestStackOverflow) {
+  MockFSProvider FS;
+  ErrorCheckingCallbacks DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
+
+  const char *SourceContents = R"cpp(
+    constexpr int foo() { return foo(); }
+    static_assert(foo());
+  )cpp";
+
+  auto FooCpp = testPath("foo.cpp");
+  FS.Files[FooCpp] = SourceContents;
+
+  Server.addDocument(FooCpp, SourceContents);
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  // check that we got a constexpr depth error, and not crashed by stack
+  // overflow
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -108,10 +108,13 @@ namespace Sched {
 
 // MemOp models a memory operation, either memset or memcpy/memmove.
 struct MemOp {
+private:
   // Shared
   uint64_t Size;
-  uint64_t DstAlign; // Specified alignment of the memory operation or zero if
-                     // destination alignment can satisfy any constraint.
+  bool DstAlignCanChange; // true if destination alignment can satisfy any
+                          // constraint.
+  Align DstAlign;         // Specified alignment of the memory operation.
+
   bool AllowOverlap;
   // memset only
   bool IsMemset;   // If setthis memory operation is a memset.
@@ -119,34 +122,47 @@ struct MemOp {
   // memcpy only
   bool MemcpyStrSrc; // Indicates whether the memcpy source is an in-register
                      // constant so it does not need to be loaded.
-  uint64_t SrcAlign; // Inferred alignment of the source or zero if the memory
-                     // operation does not need to load the value.
-
+  Align SrcAlign;    // Inferred alignment of the source or default value if the
+                     // memory operation does not need to load the value.
+public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                     Align SrcAlign, bool IsVolatile,
                     bool MemcpyStrSrc = false) {
-    return {
-        /*.Size =*/Size,
-        /*.DstAlign =*/DstAlignCanChange ? 0 : DstAlign.value(),
-        /*.AllowOverlap =*/!IsVolatile,
-        /*.IsMemset =*/false,
-        /*.ZeroMemset =*/false,
-        /*.MemcpyStrSrc =*/MemcpyStrSrc,
-        /*.SrcAlign =*/SrcAlign.value(),
-    };
+    MemOp Op;
+    Op.Size = Size;
+    Op.DstAlignCanChange = DstAlignCanChange;
+    Op.DstAlign = DstAlign;
+    Op.AllowOverlap = !IsVolatile;
+    Op.IsMemset = false;
+    Op.ZeroMemset = false;
+    Op.MemcpyStrSrc = MemcpyStrSrc;
+    Op.SrcAlign = SrcAlign;
+    return Op;
   }
+
   static MemOp Set(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                    bool IsZeroMemset, bool IsVolatile) {
-    return {
-        /*.Size =*/Size,
-        /*.DstAlign =*/DstAlignCanChange ? 0 : DstAlign.value(),
-        /*.AllowOverlap =*/!IsVolatile,
-        /*.IsMemset =*/true,
-        /*.ZeroMemset =*/IsZeroMemset,
-        /*.MemcpyStrSrc =*/false,
-        /*.SrcAlign =*/0,
-    };
+    MemOp Op;
+    Op.Size = Size;
+    Op.DstAlignCanChange = DstAlignCanChange;
+    Op.DstAlign = DstAlign;
+    Op.AllowOverlap = !IsVolatile;
+    Op.IsMemset = true;
+    Op.ZeroMemset = IsZeroMemset;
+    Op.MemcpyStrSrc = false;
+    return Op;
   }
+
+  uint64_t size() const { return Size; }
+  uint64_t getDstAlign() const {
+    return DstAlignCanChange ? 0 : DstAlign.value();
+  }
+  bool allowOverlap() const { return AllowOverlap; }
+  bool isMemset() const { return IsMemset; }
+  bool isMemcpy() const { return !IsMemset; }
+  bool isZeroMemset() const { return ZeroMemset; }
+  bool isMemcpyStrSrc() const { return MemcpyStrSrc; }
+  uint64_t getSrcAlign() const { return isMemset() ? 0 : SrcAlign.value(); }
 };
 
 /// This base class for TargetLowering contains the SelectionDAG-independent

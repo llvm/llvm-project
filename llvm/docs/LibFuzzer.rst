@@ -250,7 +250,7 @@ still work.
 The most important command line options are:
 
 ``-help``
-  Print help message.
+  Print help message (``-help=1``).
 ``-seed``
   Random seed. If 0 (the default), the seed is generated.
 ``-runs``
@@ -258,7 +258,7 @@ The most important command line options are:
 ``-max_len``
   Maximum length of a test input. If 0 (the default), libFuzzer tries to guess
   a good value based on the corpus (and reports it).
-``len_control``
+``-len_control``
   Try generating small inputs first, then try larger inputs over time.
   Specifies the rate at which the length limit is increased (smaller == faster).
   Default is 100. If 0, immediately try inputs with size up to max_len.

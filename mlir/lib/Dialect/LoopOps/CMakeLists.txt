@@ -6,4 +6,4 @@ add_llvm_library(MLIRLoopOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/LoopOps
   )
 add_dependencies(MLIRLoopOps MLIRLoopLikeInterfaceIncGen MLIRLoopOpsIncGen MLIRStandardOps LLVMSupport)
-target_link_libraries(MLIRLoopOps LLVMSupport)
+target_link_libraries(MLIRLoopOps MLIRStandardOps LLVMSupport MLIRIR)

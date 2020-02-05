@@ -15,7 +15,8 @@ define void @f0() "patchable-function-entry"="0" "branch-target-enforcement" {
 define void @f1() "patchable-function-entry"="1" "branch-target-enforcement" {
 ; CHECK-LABEL: f1:
 ; CHECK-NEXT: .Lfunc_begin1:
-; CHECK:      // %bb.0:
+; CHECK-NEXT: .cfi_startproc
+; CHECK-NEXT: // %bb.0:
 ; CHECK-NEXT:  hint #34
 ; CHECK-NEXT: .Lpatch0:
 ; CHECK-NEXT:  nop
@@ -33,7 +34,8 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT: f2_1:
 ; CHECK-NEXT: .Lfunc_begin2:
-; CHECK:      // %bb.0:
+; CHECK-NEXT: .cfi_startproc
+; CHECK-NEXT: // %bb.0:
 ; CHECK-NEXT:  hint #34
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret

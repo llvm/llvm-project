@@ -341,7 +341,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
 
   // Unpack constant aggregates to create dense elements attribute whenever
   // possible. Return nullptr (failure) otherwise.
-  if (auto *ca = dyn_cast<llvm::ConstantAggregate>(value)) {
+  if (isa<llvm::ConstantAggregate>(value)) {
     auto outerType = getStdTypeForAttr(processType(value->getType()))
                          .dyn_cast_or_null<ShapedType>();
     if (!outerType)

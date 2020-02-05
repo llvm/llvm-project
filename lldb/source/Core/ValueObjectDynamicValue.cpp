@@ -237,7 +237,6 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_dynamic_type_info =
         runtime->FixUpDynamicType(m_dynamic_type_info, *m_parent);
 
-  // m_value.SetContext (Value::eContextTypeClangType, corrected_type);
   m_value.SetCompilerType(m_dynamic_type_info.GetCompilerType());
 
   m_value.SetValueType(value_type);

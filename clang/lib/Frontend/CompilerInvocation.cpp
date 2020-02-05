@@ -1287,14 +1287,14 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     Opts.FPDenormalMode = llvm::parseDenormalFPAttribute(Val);
-    if (Opts.FPDenormalMode == llvm::DenormalMode::Invalid)
+    if (!Opts.FPDenormalMode.isValid())
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_f32_EQ)) {
     StringRef Val = A->getValue();
     Opts.FP32DenormalMode = llvm::parseDenormalFPAttribute(Val);
-    if (Opts.FP32DenormalMode == llvm::DenormalMode::Invalid)
+    if (!Opts.FP32DenormalMode.isValid())
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
@@ -1932,6 +1932,10 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.OverrideRecordLayoutsFile =
       std::string(Args.getLastArgValue(OPT_foverride_record_layout_EQ));
   Opts.AuxTriple = std::string(Args.getLastArgValue(OPT_aux_triple));
+  if (Args.hasArg(OPT_aux_target_cpu))
+    Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
+  if (Args.hasArg(OPT_aux_target_feature))
+    Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
   Opts.StatsFile = std::string(Args.getLastArgValue(OPT_stats_file));
 
   if (const Arg *A = Args.getLastArg(OPT_arcmt_check,
@@ -3315,7 +3319,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
 
-  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens, 0, Diags);
+  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {

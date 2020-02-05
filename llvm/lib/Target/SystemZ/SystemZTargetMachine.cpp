@@ -40,6 +40,7 @@ static bool UsesVectorABI(StringRef CPU, StringRef FS) {
   // This is the case by default if CPU is z13 or later, and can be
   // overridden via "[+-]vector" feature string elements.
   bool VectorABI = true;
+  bool SoftFloat = false;
   if (CPU.empty() || CPU == "generic" ||
       CPU == "z10" || CPU == "z196" || CPU == "zEC12")
     VectorABI = false;
@@ -51,9 +52,13 @@ static bool UsesVectorABI(StringRef CPU, StringRef FS) {
       VectorABI = true;
     if (Feature == "-vector")
       VectorABI = false;
+    if (Feature == "soft-float" || Feature == "+soft-float")
+      SoftFloat = true;
+    if (Feature == "-soft-float")
+      SoftFloat = false;
   }
 
-  return VectorABI;
+  return VectorABI && !SoftFloat;
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -193,7 +198,8 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None) {
-    addPass(createSystemZTDCPass());
+    if (!getTM<SystemZTargetMachine>().getSubtargetImpl()->hasSoftFloat())
+      addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
 

@@ -3872,10 +3872,10 @@ static PPC::Predicate getPredicateForSetCC(ISD::CondCode CC, const EVT &VT,
     return UseSPE ? PPC::PRED_GT : PPC::PRED_LT;
   case ISD::SETULE:
   case ISD::SETLE:
-    return UseSPE ? PPC::PRED_LE : PPC::PRED_LE;
+    return PPC::PRED_LE;
   case ISD::SETOGT:
   case ISD::SETGT:
-    return UseSPE ? PPC::PRED_GT : PPC::PRED_GT;
+    return PPC::PRED_GT;
   case ISD::SETUGE:
   case ISD::SETGE:
     return UseSPE ? PPC::PRED_LE : PPC::PRED_GE;

@@ -56,7 +56,7 @@ public:
       return;
     }
 
-    lldb::ClangASTImporterSP clang_ast_importer;
+    std::shared_ptr<ClangASTImporter> clang_ast_importer;
     auto *state = target_sp->GetPersistentExpressionStateForLanguage(
         lldb::eLanguageTypeC_plus_plus);
     if (state) {

@@ -191,7 +191,7 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
     return ArchKind::INVALID;
 
   StringRef Syn = ARM::getArchSynonym(Arch);
-  for (const auto A : AArch64ARCHNames) {
+  for (const auto &A : AArch64ARCHNames) {
     if (A.getName().endswith(Syn))
       return A.ID;
   }
@@ -199,7 +199,7 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
 }
 
 AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
-  for (const auto A : AArch64ARCHExtNames) {
+  for (const auto &A : AArch64ARCHExtNames) {
     if (ArchExt == A.getName())
       return static_cast<ArchExtKind>(A.ID);
   }
@@ -207,7 +207,7 @@ AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
 }
 
 AArch64::ArchKind AArch64::parseCPUArch(StringRef CPU) {
-  for (const auto C : AArch64CPUNames) {
+  for (const auto &C : AArch64CPUNames) {
     if (CPU == C.getName())
       return C.ArchID;
   }

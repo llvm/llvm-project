@@ -151,7 +151,8 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
 
 static LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT Type) {
   return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx].getElementType() == Type;
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && QueryTy.getElementType() == Type;
   };
 }
 
@@ -173,7 +174,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const LLT S1 = LLT::scalar(1);
-  const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
@@ -247,7 +247,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  const LLT MinLegalScalarShiftTy = ST.has16BitInsts() ? S16 : S32;
+  const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   setAction({G_BRCOND, S1}, Legal); // VCC branches
   setAction({G_BRCOND, S32}, Legal); // SCC branches
@@ -437,11 +437,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
-               {S32, S1}, {S64, S1}, {S16, S1},
-               {S96, S32},
-               // FIXME: Hack
-               {S64, LLT::scalar(33)},
-               {S32, S8}, {S32, LLT::scalar(24)}})
+               {S32, S1}, {S64, S1}, {S16, S1}})
     .scalarize(0)
     .clampScalar(0, S32, S64);
 
@@ -526,16 +522,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .scalarize(0);
 
-  // FIXME: fexp, flog2, flog10 needs to be custom lowered.
-  getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
-                               G_FLOG2})
-    .legalFor({S32})
-    .scalarize(0);
+  // FIXME: fpow has a selection pattern that should move to custom lowering.
+  auto &Exp2Ops = getActionDefinitionsBuilder({G_FEXP2, G_FLOG2, G_FPOW});
+  if (ST.has16BitInsts())
+    Exp2Ops.legalFor({S32, S16});
+  else
+    Exp2Ops.legalFor({S32});
+  Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
+  Exp2Ops.scalarize(0);
 
-  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
-    .customFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10});
+  if (ST.has16BitInsts())
+    ExpOps.customFor({{S32}, {S16}});
+  else
+    ExpOps.customFor({S32});
+  ExpOps.clampScalar(0, MinScalarFPTy, S32)
+        .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF,
@@ -1126,9 +1128,28 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(1);
   }
 
-  // TODO: Make legal for s32, s64. s64 case needs break down in regbankselect.
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-    .clampScalar(0, MinLegalScalarShiftTy, S64)
+  // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
+  // RegBankSelect.
+  auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
+    .legalFor({{S32}, {S64}});
+
+  if (ST.hasVOP3PInsts()) {
+    SextInReg.lowerFor({{V2S16}})
+      // Prefer to reduce vector widths for 16-bit vectors before lowering, to
+      // get more vector shift opportunities, since we'll get those when
+      // expanded.
+      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16));
+  } else if (ST.has16BitInsts()) {
+    SextInReg.lowerFor({{S32}, {S64}, {S16}});
+  } else {
+    // Prefer to promote to s32 before lowering if we don't have 16-bit
+    // shifts. This avoid a lot of intermediate truncate and extend operations.
+    SextInReg.lowerFor({{S32}, {S64}});
+  }
+
+  SextInReg
+    .scalarize(0)
+    .clampScalar(0, S32, S64)
     .lower();
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
@@ -1206,6 +1227,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
   case TargetOpcode::G_FLOG10:
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
+  case TargetOpcode::G_FEXP:
+    return legalizeFExp(MI, B);
   default:
     return false;
   }
@@ -1857,11 +1880,11 @@ bool AMDGPULegalizerInfo::legalizeFMad(
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // TODO: Always legal with future ftz flag.
-  if (Ty == LLT::scalar(32) && !MFI->getMode().FP32Denormals)
+  // FIXME: Do we need just output?
+  if (Ty == LLT::scalar(32) && !MFI->getMode().allFP32Denormals())
     return true;
-  if (Ty == LLT::scalar(16) && !MFI->getMode().FP64FP16Denormals)
+  if (Ty == LLT::scalar(16) && !MFI->getMode().allFP64FP16Denormals())
     return true;
-
 
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -1909,6 +1932,22 @@ bool AMDGPULegalizerInfo::legalizeFlog(
   auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
 
   B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = B.getMRI()->getType(Dst);
+  B.setInstr(MI);
+
+  auto K = B.buildFConstant(Ty, numbers::log2e);
+  auto Mul = B.buildFMul(Ty, Src, K, Flags);
+  B.buildFExp2(Dst, Mul, Flags);
+
   MI.eraseFromParent();
   return true;
 }
@@ -2064,7 +2103,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     return false;
 
   if (!Unsafe && ResTy == S32 &&
-      MF.getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals)
+      MF.getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals())
     return false;
 
   if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
@@ -2145,15 +2184,13 @@ static void toggleSPDenormMode(bool Enable,
                                AMDGPU::SIModeRegisterDefaults Mode) {
   // Set SP denorm mode to this value.
   unsigned SPDenormMode =
-    Enable ? FP_DENORM_FLUSH_NONE : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    Enable ? FP_DENORM_FLUSH_NONE : Mode.fpDenormModeSPValue();
 
   if (ST.hasDenormModeInst()) {
     // Preserve default FP64FP16 denorm mode while updating FP32 mode.
-    unsigned DPDenormModeDefault = Mode.FP64FP16Denormals
-                                   ? FP_DENORM_FLUSH_NONE
-                                   : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    uint32_t DPDenormModeDefault = Mode.fpDenormModeDPValue();
 
-    unsigned NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
+    uint32_t NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
     B.buildInstr(AMDGPU::S_DENORM_MODE)
       .addImm(NewDenormModeValue);
 
@@ -2206,7 +2243,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
   // aren't modeled as reading it.
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(true, B, ST, Mode);
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
@@ -2216,7 +2253,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
   auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
 
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(false, B, ST, Mode);
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32}, false)

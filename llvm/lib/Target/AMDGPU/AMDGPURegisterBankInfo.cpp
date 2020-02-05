@@ -1798,6 +1798,44 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_SEXT_INREG: {
+    SmallVector<Register, 2> SrcRegs(OpdMapper.getVRegs(1));
+    if (SrcRegs.empty())
+      break; // Nothing to repair
+
+    const LLT S32 = LLT::scalar(32);
+    MachineIRBuilder B(MI);
+    ApplyRegBankMapping O(*this, MRI, &AMDGPU::VGPRRegBank);
+    GISelObserverWrapper Observer(&O);
+    B.setChangeObserver(Observer);
+
+    // Don't use LegalizerHelper's narrowScalar. It produces unwanted G_SEXTs
+    // we would need to further expand, and doesn't let us directly set the
+    // result registers.
+    SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
+
+    int Amt = MI.getOperand(2).getImm();
+    if (Amt <= 32) {
+      if (Amt == 32) {
+        // The low bits are unchanged.
+        B.buildCopy(DstRegs[0], SrcRegs[0]);
+      } else {
+        // Extend in the low bits and propagate the sign bit to the high half.
+        B.buildSExtInReg(DstRegs[0], SrcRegs[0], Amt);
+      }
+
+      B.buildAShr(DstRegs[1], DstRegs[0], B.buildConstant(S32, 31));
+    } else {
+      // The low bits are unchanged, and extend in the high bits.
+      B.buildCopy(DstRegs[0], SrcRegs[0]);
+      B.buildSExtInReg(DstRegs[1], DstRegs[0], Amt - 32);
+    }
+
+    Register DstReg = MI.getOperand(0).getReg();
+    MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
+    MI.eraseFromParent();
+    return;
+  }
   case AMDGPU::G_SEXT:
   case AMDGPU::G_ZEXT: {
     Register SrcReg = MI.getOperand(1).getReg();
@@ -2913,7 +2951,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_ZEXT:
   case AMDGPU::G_SEXT:
-  case AMDGPU::G_ANYEXT: {
+  case AMDGPU::G_ANYEXT:
+  case AMDGPU::G_SEXT_INREG: {
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
     unsigned DstSize = getSizeInBits(Dst, MRI, *TRI);

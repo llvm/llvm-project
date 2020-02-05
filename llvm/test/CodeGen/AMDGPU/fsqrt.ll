@@ -27,8 +27,8 @@ define amdgpu_kernel void @v_unsafe_fsqrt_f32(float addrspace(1)* %out, float ad
 ; FUNC-LABEL: {{^}}s_sqrt_f32:
 ; GCN: v_sqrt_f32_e32
 
-; R600: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[2].Z
-; R600: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[2].Z, PS
+; R600: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[2].Z
+; R600: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, PS
 define amdgpu_kernel void @s_sqrt_f32(float addrspace(1)* %out, float %in) #1 {
 entry:
   %fdiv = call float @llvm.sqrt.f32(float %in)
@@ -40,10 +40,10 @@ entry:
 ; GCN: v_sqrt_f32_e32
 ; GCN: v_sqrt_f32_e32
 
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[2].W
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[2].W, PS
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].X
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].X, PS
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[2].W
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, PS
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[3].X
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}}
 define amdgpu_kernel void @s_sqrt_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) #1 {
 entry:
   %fdiv = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
@@ -57,14 +57,14 @@ entry:
 ; GCN: v_sqrt_f32_e32
 ; GCN: v_sqrt_f32_e32
 
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].Y, PS
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].Z
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].Z, PS
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].W
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].W, PS
-; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[4].X
-; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[4].X, PS
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[3].Y
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, PS
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[3].Z
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}}
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[3].W
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}}
+; R600-DAG: RECIPSQRT_IEEE * T{{[0-9]\.[XYZW]}}, KC0[4].X
+; R600-DAG: RECIP_IEEE * T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}}
 define amdgpu_kernel void @s_sqrt_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) #1 {
 entry:
   %fdiv = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %in)
@@ -131,6 +131,16 @@ entry:
   %cmp = fcmp ult <2 x float> %in, <float -0.000000e+00, float -0.000000e+00>
   %res = select <2 x i1> %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> %sqrt
   store <2 x float> %res, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}recip_sqrt:
+; R600: RECIPSQRT_IEEE
+; R600-NOT: RECIP_IEEE
+define amdgpu_kernel void @recip_sqrt(float addrspace(1)* %out, float %src) nounwind {
+  %sqrt = call float @llvm.sqrt.f32(float %src)
+  %recipsqrt = fdiv fast float 1.0, %sqrt
+  store float %recipsqrt, float addrspace(1)* %out, align 4
   ret void
 }
 

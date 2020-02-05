@@ -61,8 +61,8 @@ __global__ void kernel() { lib_fn(); }
 
 // FTZ-NOT: "denormal-fp-math"
 
-// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign"
-// NOFTZ-SAME: "denormal-fp-math-f32"="ieee"
+// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
 
 // CHECK-SAME: "no-trapping-math"="true"
 

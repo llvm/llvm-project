@@ -137,7 +137,7 @@ public:
   bool ResolveValue(Scalar &scalar) override;
 
   void
-  GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
+  GetExpressionPath(Stream &s,
                     GetExpressionPathFormat epformat =
                         eGetExpressionPathFormatDereferencePointers) override;
 

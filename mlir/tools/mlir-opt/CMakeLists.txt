@@ -5,6 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
 set(LIB_LIBS
   MLIRAnalysis
   MLIRLLVMIR
+  MLIROptMain
   MLIRParser
   MLIRPass
   MLIRTransforms
@@ -13,12 +14,15 @@ set(LIB_LIBS
 add_llvm_library(MLIRMlirOptLib
   mlir-opt.cpp
 )
-target_link_libraries(MLIRMlirOptLib ${LIB_LIBS})
+target_link_libraries(MLIRMlirOptLib
+  ${LIB_LIBS}
+)
 
 set(LIBS
   MLIRAnalysis
   MLIRAffineOps
   MLIRAffineToStandard
+  MLIRDialect
   MLIRLoopsToGPU
   MLIRLinalgToLLVM
 
@@ -30,6 +34,10 @@ set(LIBS
   MLIRGPUtoROCDLTransforms
   MLIRGPUtoSPIRVTransforms
   MLIRLinalgOps
+  MLIRLinalgAnalysis
+  MLIRLinalgEDSC
+  MLIRLinalgTransforms
+  MLIRLinalgUtils
   MLIRLLVMIR
   MLIRLoopOps
   MLIRNVVMIR
@@ -37,6 +45,8 @@ set(LIBS
   MLIROptMain
   MLIRParser
   MLIRPass
+  MLIRQuantizerFxpMathConfig
+  MLIRQuantizerSupport
   MLIRQuantizerTransforms
   MLIRQuantOps
   MLIRROCDLIR
@@ -48,6 +58,7 @@ set(LIBS
   MLIRStandardOps
   MLIRStandardToLLVM
   MLIRTransforms
+  MLIRTransformUtils
   MLIRTestDialect
   MLIRTestIR
   MLIRTestPass
@@ -66,5 +77,8 @@ add_llvm_tool(mlir-opt
  mlir-opt.cpp
 )
 llvm_update_compile_flags(mlir-opt)
+# It is necessary to use whole_archive_link to ensure that all static
+# initializers are called.  However, whole_archive_link libraries cannot
+# also be target_link_libraries
 whole_archive_link(mlir-opt ${LIBS})
-target_link_libraries(mlir-opt PRIVATE MLIRIR MLIRMlirOptLib ${LIBS} LLVMSupport)
+target_link_libraries(mlir-opt PRIVATE MLIRIR MLIROptMain LLVMSupport LLVMCore LLVMAsmParser)

@@ -48,12 +48,15 @@ def SPV_ExtensionArrayAttr : TypedArrayAttrBase<
 def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
     SPV_CapabilityAttr, "SPIR-V capability array attribute">;
 
-// For the generated SPIR-V module, this attribute specifies the target version,
-// allowed extensions and capabilities.
-def SPV_TargetEnvAttr : StructAttr<"TargetEnvAttr", SPV_Dialect, [
-    StructFieldAttr<"version", SPV_VersionAttr>,
-    StructFieldAttr<"extensions", SPV_ExtensionArrayAttr>,
-    StructFieldAttr<"capabilities", SPV_CapabilityArrayAttr>
+// This attribute specifies the limits for various resources on the target
+// architecture.
+//
+// See https://renderdoc.org/vkspec_chunked/chap36.html#limits for the complete
+// list of limits and their explanation for the Vulkan API. The following ones
+// are those affecting SPIR-V CodeGen.
+def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPV_Dialect, [
+    StructFieldAttr<"max_compute_workgroup_invocations", I32Attr>,
+    StructFieldAttr<"max_compute_workgroup_size", I32ElementsAttr>
 ]>;
 
 #endif // SPIRV_TARGET_AND_ABI

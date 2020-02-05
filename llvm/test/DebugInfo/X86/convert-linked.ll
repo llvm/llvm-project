@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: [[CU0BT0:0x[0-9a-f]+]]: DW_TAG_base_type
@@ -15,11 +15,6 @@
 ; CHECK-NEXT: DW_ATE_signed_16
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_OP_convert ([[CU1BT0]]) "DW_ATE_signed_8", DW_OP_convert ([[CU1BT1]]) "DW_ATE_signed_16"
-
-; ModuleID = 'llvm-link'
-source_filename = "llvm-link"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local signext i8 @foo(i8 signext %x) !dbg !9 {
 entry:

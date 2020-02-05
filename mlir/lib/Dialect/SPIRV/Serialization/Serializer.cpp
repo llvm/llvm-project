@@ -112,8 +112,10 @@ public:
   /// Collects the final SPIR-V `binary`.
   void collect(SmallVectorImpl<uint32_t> &binary);
 
+#ifndef NDEBUG
   /// (For debugging) prints each value and its corresponding result <id>.
   void printValueIDMap(raw_ostream &os);
+#endif
 
 private:
   // Note that there are two main categories of methods in this class:
@@ -501,6 +503,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(functions.begin(), functions.end());
 }
 
+#ifndef NDEBUG
 void Serializer::printValueIDMap(raw_ostream &os) {
   os << "\n= Value <id> Map =\n\n";
   for (auto valueIDPair : valueIDMap) {
@@ -517,6 +520,7 @@ void Serializer::printValueIDMap(raw_ostream &os) {
     os << '\n';
   }
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Module structure

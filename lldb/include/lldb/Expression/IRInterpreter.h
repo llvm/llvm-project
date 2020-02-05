@@ -22,7 +22,6 @@ class Module;
 
 namespace lldb_private {
 
-class ClangExpressionDeclMap;
 class IRMemoryMap;
 }
 

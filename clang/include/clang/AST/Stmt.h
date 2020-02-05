@@ -347,6 +347,9 @@ protected:
     /// When ResultKind == RSK_APValue. Wether the ASTContext will cleanup the
     /// destructor on the trail-allocated APValue.
     unsigned HasCleanup : 1;
+
+    /// Whether this ConstantExpr was created for immediate invocation.
+    unsigned IsImmediateInvocation : 1;
   };
 
   class PredefinedExprBitfields {

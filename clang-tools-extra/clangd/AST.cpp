@@ -473,5 +473,12 @@ std::string getQualification(ASTContext &Context,
       });
 }
 
+bool hasUnstableLinkage(const Decl *D) {
+  // Linkage of a ValueDecl depends on the type.
+  // If that's not deduced yet, deducing it may change the linkage.
+  auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
+  return VD && !VD->getType().isNull() && VD->getType()->isUndeducedType();
+}
+
 } // namespace clangd
 } // namespace clang

@@ -99,7 +99,8 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
 
 // -----
 
-def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
+def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
+    [NoSideEffect, AllTypesMatch<["base", "insert", "result"]>]> {
   let summary = [{
     Make a copy of an object, with a modified bit field that comes from
     another object.
@@ -163,6 +164,12 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
   let results = (outs
     SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
+
+  let verifier = [{ return success(); }];
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
+  }];
 }
 
 // -----

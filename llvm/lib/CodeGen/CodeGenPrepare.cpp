@@ -1937,8 +1937,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   // cold block.  This interacts with our handling for loads and stores to
   // ensure that we can fold all uses of a potential addressing computation
   // into their uses.  TODO: generalize this to work over profiling data
-  bool OptForSize = OptSize || llvm::shouldOptimizeForSize(BB, PSI, BFI.get());
-  if (!OptForSize && CI->hasFnAttr(Attribute::Cold))
+  if (CI->hasFnAttr(Attribute::Cold) &&
+      !OptSize && !llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
     for (auto &Arg : CI->arg_operands()) {
       if (!Arg->getType()->isPointerTy())
         continue;
@@ -4587,12 +4587,14 @@ static bool FindAllMemoryUses(
     }
 
     if (CallInst *CI = dyn_cast<CallInst>(UserI)) {
-      // If this is a cold call, we can sink the addressing calculation into
-      // the cold path.  See optimizeCallInst
-      bool OptForSize = OptSize ||
+      if (CI->hasFnAttr(Attribute::Cold)) {
+        // If this is a cold call, we can sink the addressing calculation into
+        // the cold path.  See optimizeCallInst
+        bool OptForSize = OptSize ||
           llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
-      if (!OptForSize && CI->hasFnAttr(Attribute::Cold))
-        continue;
+        if (!OptForSize)
+          continue;
+      }
 
       InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue());
       if (!IA) return true;

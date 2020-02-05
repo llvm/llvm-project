@@ -101,12 +101,25 @@ private:
 
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
-    return Op.Size >= 8 ? MVT::i64 : MVT::i32;
+    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
   }
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {
     return true;
+  }
+
+  // Prevent reducing load width during SelectionDag phase.
+  // Otherwise, we may transform the following
+  //   ctx = ctx + reloc_offset
+  //   ... (*(u32 *)ctx) & 0x8000...
+  // to
+  //   ctx = ctx + reloc_offset
+  //   ... (*(u8 *)(ctx + 1)) & 0x80 ...
+  // which will be rejected by the verifier.
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
+                             EVT NewVT) const override {
+    return false;
   }
 
   unsigned EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB, unsigned Reg,

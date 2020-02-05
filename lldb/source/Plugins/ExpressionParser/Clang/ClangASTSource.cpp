@@ -49,8 +49,9 @@ private:
 };
 }
 
-ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
-                               const lldb::ClangASTImporterSP &importer)
+ClangASTSource::ClangASTSource(
+    const lldb::TargetSP &target,
+    const std::shared_ptr<ClangASTImporter> &importer)
     : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
       m_ast_context(nullptr), m_ast_importer_sp(importer),
       m_active_lexical_decls(), m_active_lookups() {
@@ -487,7 +488,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 
   // Indicates whether we skipped any Decls of the original DeclContext.
   bool SkippedDecls = false;
-  for (TagDecl::decl_iterator iter = original_decl_context->decls_begin();
+  for (DeclContext::decl_iterator iter = original_decl_context->decls_begin();
        iter != original_decl_context->decls_end(); ++iter) {
     Decl *decl = *iter;
 

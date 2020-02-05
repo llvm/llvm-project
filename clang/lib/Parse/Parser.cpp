@@ -650,7 +650,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     return false;
 
   case tok::eof:
-    // Check whether -fmax-tokens was reached.
+    // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
           << PP.getTokenCount() << PP.getMaxTokens();

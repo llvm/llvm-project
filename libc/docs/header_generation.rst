@@ -13,7 +13,7 @@ Header Configuration Language
 -----------------------------
 
 Header configuration language consists of few special *commands*. The header
-generation mechanism takes a an input file, which has an extension of
+generation mechanism takes an input file, which has an extension of
 ``.h.def``, and produces a header file with ``.h`` extension. The header
 configuration language commands are listed in the input ``.h.def`` file. While
 reading a ``.h.def`` file, the header generation tool does two things:

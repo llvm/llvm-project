@@ -4522,6 +4522,20 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V) {
   if (isa<ConstantInt>(V) || isa<GlobalVariable>(V))
     return true;
 
+  if (auto PN = dyn_cast<PHINode>(V)) {
+    if (llvm::all_of(PN->incoming_values(), [](const Use &U) {
+          return isa<ConstantInt>(U.get());
+        }))
+      return true;
+  }
+
+  if (auto II = dyn_cast<ICmpInst>(V)) {
+    if (llvm::all_of(II->operands(), [](const Value *V) {
+          return isGuaranteedNotToBeUndefOrPoison(V);
+        }))
+      return true;
+  }
+
   return false;
 }
 

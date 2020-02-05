@@ -711,11 +711,11 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
         DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
                            options::OPT_fno_cuda_flush_denormals_to_zero,
                            false))
-      return llvm::DenormalMode::PreserveSign;
+      return llvm::DenormalMode::getPreserveSign();
   }
 
   assert(DeviceOffloadKind != Action::OFK_Host);
-  return llvm::DenormalMode::IEEE;
+  return llvm::DenormalMode::getIEEE();
 }
 
 bool CudaToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {

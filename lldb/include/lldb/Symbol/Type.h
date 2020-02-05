@@ -219,7 +219,7 @@ protected:
 
   Type *GetEncodingType();
 
-  bool ResolveClangType(ResolveState compiler_type_resolve_state);
+  bool ResolveCompilerType(ResolveState compiler_type_resolve_state);
 };
 
 // the two classes here are used by the public API as a backend to the SBType

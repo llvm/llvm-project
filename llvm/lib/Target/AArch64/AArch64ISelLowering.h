@@ -386,9 +386,6 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
-  MachineBasicBlock *EmitLoweredCatchPad(MachineInstr &MI,
-                                         MachineBasicBlock *BB) const;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

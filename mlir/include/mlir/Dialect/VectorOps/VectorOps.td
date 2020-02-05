@@ -83,13 +83,13 @@ def Vector_ContractionOp :
 
       // 2D vector contraction with one contracting dimension (matmul).
       #contraction_accesses = [
-        (i, j, k) -> (i, k),
-        (i, j, k) -> (k, j),
-        (i, j, k) -> (i, j)
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
       ]
       #contraction_trait = {
         indexing_maps = #contraction_accesses,
-        iterator_types = [parallel, parallel, reduction]
+        iterator_types = ["parallel", "parallel", "reduction"]
       }
 
       %3 = vector.contract #contraction_trait %0, %1, %2
@@ -98,13 +98,14 @@ def Vector_ContractionOp :
       // 4D to 3D vector contraction with two contracting dimensions and
       // one batch dimension.
       #contraction_accesses = [
-        (b0, f0, f1, c0, c1) -> (c0, b0, c1, f0),
-        (b0, f0, f1, c0, c1) -> (b0, c1, c0, f1),
-        (b0, f0, f1, c0, c1) -> (b0, f0, f1)
+        affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
+        affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
+        affine_map<(b0, f0, f1, c0, c1) -> (b0, f0, f1)>
       ]
       #contraction_trait = {
         indexing_maps = #contraction_accesses,
-        iterator_types = [parallel, parallel, parallel reduction, reduction]
+        iterator_types = ["parallel", "parallel", "parallel",
+	                  "reduction", "reduction"]
       }
 
       %4 = vector.contract #contraction_trait %0, %1, %2
@@ -407,10 +408,9 @@ def Vector_InsertOp :
   Vector_Op<"insert", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     PredOpTrait<"dest operand and result have same type",
-                 TCresIsSameAsOpBase<0, 1>>]>,
+     AllTypesMatch<["dest", "res"]>]>,
      Arguments<(ins AnyType:$source, AnyVector:$dest, I64ArrayAttr:$position)>,
-     Results<(outs AnyVector)> {
+     Results<(outs AnyVector:$res)> {
   let summary = "insert operation";
   let description = [{
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
@@ -425,6 +425,10 @@ def Vector_InsertOp :
         f32 into vector<4x8x16xf32>
     ```
   }];
+  let assemblyFormat = [{
+    $source `,` $dest $position attr-dict `:` type($source) `into` type($dest)
+  }];
+
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value source, " #
     "Value dest, ArrayRef<int64_t>">];
@@ -497,11 +501,10 @@ def Vector_InsertStridedSliceOp :
   Vector_Op<"insert_strided_slice", [NoSideEffect,
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-    PredOpTrait<"dest operand and result have same type",
-                 TCresIsSameAsOpBase<0, 1>>]>,
+    AllTypesMatch<["dest", "res"]>]>,
     Arguments<(ins AnyVector:$source, AnyVector:$dest, I64ArrayAttr:$offsets,
                I64ArrayAttr:$strides)>,
-    Results<(outs AnyVector)> {
+    Results<(outs AnyVector:$res)> {
   let summary = "strided_slice operation";
   let description = [{
     Takes a k-D source vector, an n-D destination vector (n >= k), n-sized
@@ -522,6 +525,11 @@ def Vector_InsertStridedSliceOp :
         vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
+
+  let assemblyFormat = [{
+    $source `,` $dest attr-dict `:` type($source) `into` type($dest)
+  }];
+
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value source, Value dest, " #
     "ArrayRef<int64_t> offsets, ArrayRef<int64_t> strides">];

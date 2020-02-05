@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -42,6 +41,8 @@ class PDBASTParser;
 
 namespace lldb_private {
 
+class ClangASTMetadata;
+class ClangASTSource;
 class Declaration;
 
 class TypeSystemClang : public TypeSystem {

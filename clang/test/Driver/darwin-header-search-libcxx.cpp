@@ -73,8 +73,8 @@
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Make sure that using -nostdinc or -nostdlibinc will drop the non-toolchain
-// C++ library include paths (so all except <toolchain>/usr/bin/../include/c++/v1).
+// Make sure that using -nostdinc will drop the sysroot C++ library include
+// path, but not the toolchain one.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-apple-darwin16 \
@@ -89,6 +89,9 @@
 // CHECK-LIBCXX-NOSTDINC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-LIBCXX-NOSTDINC: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+
+// Make sure that using -nostdinc++ or -nostdlib will drop both the toolchain
+// C++ include path and the sysroot one.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-apple-darwin16 \
@@ -96,10 +99,24 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr \
 // RUN:     -stdlib=platform \
-// RUN:     -nostdinc \
+// RUN:     -nostdinc++ \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
+// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
+// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDINCXX %s
+// CHECK-LIBCXX-NOSTDINCXX: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-LIBCXX-NOSTDINCXX-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-NOSTDINCXX-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin16 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr \
+// RUN:     -stdlib=platform \
+// RUN:     -nostdlibinc \
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
 // RUN:               --check-prefix=CHECK-LIBCXX-NOSTDLIBINC %s
 // CHECK-LIBCXX-NOSTDLIBINC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
-// CHECK-LIBCXX-NOSTDLIBINC: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-NOSTDLIBINC-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"

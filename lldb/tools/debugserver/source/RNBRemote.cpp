@@ -13,8 +13,10 @@
 #include "RNBRemote.h"
 
 #include <errno.h>
+#include <libproc.h>
 #include <mach-o/loader.h>
 #include <mach/exception_types.h>
+#include <mach/task_info.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -48,6 +50,9 @@
 #include <memory>
 #include <sstream>
 #include <unordered_set>
+
+#include <CoreFoundation/CoreFoundation.h>
+#include <Security/Security.h>
 
 // constants
 
@@ -3644,6 +3649,132 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   return SendPacket(buf);
 }
 
+static bool process_does_not_exist (nub_process_t pid) {
+  std::vector<struct kinfo_proc> proc_infos;
+  DNBGetAllInfos (proc_infos);
+  const size_t infos_size = proc_infos.size();
+  for (size_t i = 0; i < infos_size; i++)
+    if (proc_infos[i].kp_proc.p_pid == pid)
+      return false;
+
+  return true; // process does not exist
+}
+
+static bool attach_failed_due_to_sip (nub_process_t pid) {
+  bool retval = false;
+#if defined(__APPLE__) &&                                                      \
+  (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000)
+
+  // csr_check(CSR_ALLOW_TASK_FOR_PID) will be nonzero if System Integrity
+  // Protection is in effect.
+  if (csr_check(CSR_ALLOW_TASK_FOR_PID) == 0) 
+    return false;
+
+  if (rootless_allows_task_for_pid(pid) == 0)
+    retval = true;
+
+  int csops_flags = 0;
+  int csops_ret = ::csops(pid, CS_OPS_STATUS, &csops_flags,
+                       sizeof(csops_flags));
+  if (csops_ret != -1 && (csops_flags & CS_RESTRICT)) {
+    retval = true;
+  }
+#endif
+
+  return retval;
+}
+
+static bool process_is_already_being_debugged (nub_process_t pid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0) {
+    return false; // pid doesn't exist? well, it's not being debugged...
+  }
+  if (kinfo.kp_proc.p_flag & P_TRACED)
+    return true; // is being debugged already
+  else
+    return false;
+}
+
+// Checking for 
+//
+//  {
+//    'class' : 'rule',
+//    'comment' : 'For use by Apple.  WARNING: administrators are advised
+//              not to modify this right.',
+//    'k-of-n' : '1',
+//    'rule' : [
+//      'is-admin',
+//      'is-developer',
+//      'authenticate-developer'
+//    ]
+//  }
+//
+// $ security authorizationdb read system.privilege.taskport.debug
+
+static bool developer_mode_enabled () {
+ CFDictionaryRef currentRightDict = NULL;
+ const char *debug_right = "system.privilege.taskport.debug";
+ // caller must free dictionary initialized by the following
+ OSStatus status = AuthorizationRightGet(debug_right, &currentRightDict);
+ if (status != errAuthorizationSuccess) {
+   // could not check authorization
+   return true;
+ }
+
+ bool devmode_enabled = true;
+
+ if (!CFDictionaryContainsKey(currentRightDict, CFSTR("k-of-n"))) {
+   devmode_enabled = false;
+ } else {
+   CFNumberRef item = (CFNumberRef) CFDictionaryGetValue(currentRightDict, CFSTR("k-of-n"));
+   if (item && CFGetTypeID(item) == CFNumberGetTypeID()) {
+      int64_t num = 0;
+      ::CFNumberGetValue(item, kCFNumberSInt64Type, &num);
+      if (num != 1) {
+        devmode_enabled = false;
+      }
+   } else {
+     devmode_enabled = false;
+   }
+ }
+
+ if (!CFDictionaryContainsKey(currentRightDict, CFSTR("class"))) {
+   devmode_enabled = false;
+ } else {
+   CFStringRef item = (CFStringRef) CFDictionaryGetValue(currentRightDict, CFSTR("class"));
+   if (item && CFGetTypeID(item) == CFStringGetTypeID()) {
+     if (strcmp (CFStringGetCStringPtr (item, ::CFStringGetSystemEncoding()), "rule") != 0) {
+       devmode_enabled = false;
+     }
+   } else {
+     devmode_enabled = false;
+   }
+ }
+
+ if (!CFDictionaryContainsKey(currentRightDict, CFSTR("rule"))) {
+   devmode_enabled = false;
+ } else {
+   CFArrayRef item = (CFArrayRef) CFDictionaryGetValue(currentRightDict, CFSTR("rule"));
+   if (item && CFGetTypeID(item) == CFArrayGetTypeID()) {
+     int count = ::CFArrayGetCount(item);
+      CFRange range = CFRangeMake (0, count);
+     if (!::CFArrayContainsValue (item, range, CFSTR("is-admin")))
+       devmode_enabled = false;
+     if (!::CFArrayContainsValue (item, range, CFSTR("is-developer")))
+       devmode_enabled = false;
+     if (!::CFArrayContainsValue (item, range, CFSTR("authenticate-developer")))
+       devmode_enabled = false;
+   } else {
+     devmode_enabled = false;
+   }
+ }
+ ::CFRelease(currentRightDict);
+
+ return devmode_enabled;
+}
+
 /*
  vAttach;pid
 
@@ -3802,47 +3933,45 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       else
         m_ctx.LaunchStatus().SetErrorString("attach failed");
 
-#if defined(__APPLE__) &&                                                      \
-    (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000)
       if (pid_attaching_to == INVALID_NUB_PROCESS && !attach_name.empty()) {
         pid_attaching_to = DNBProcessGetPIDByName(attach_name.c_str());
       }
-      if (pid_attaching_to != INVALID_NUB_PROCESS &&
-          strcmp(err_str, "No such process") != 0) {
-        // csr_check(CSR_ALLOW_TASK_FOR_PID) will be nonzero if System Integrity
-        // Protection is in effect.
-        if (csr_check(CSR_ALLOW_TASK_FOR_PID) != 0) {
-          bool attach_failed_due_to_sip = false;
 
-          if (rootless_allows_task_for_pid(pid_attaching_to) == 0) {
-            attach_failed_due_to_sip = true;
-          }
+      // attach_pid is INVALID_NUB_PROCESS - we did not succeed in attaching
+      // if the original request, pid_attaching_to, is available, see if we
+      // can figure out why we couldn't attach.  Return an informative error
+      // string to lldb.
 
-          if (!attach_failed_due_to_sip) {
-            int csops_flags = 0;
-            int retval = ::csops(pid_attaching_to, CS_OPS_STATUS, &csops_flags,
-                                 sizeof(csops_flags));
-            if (retval != -1 && (csops_flags & CS_RESTRICT)) {
-              attach_failed_due_to_sip = true;
-            }
-          }
-          if (attach_failed_due_to_sip) {
-            std::string return_message = "E96;";
-            return_message += cstring_to_asciihex_string(
-                "Process attach denied, possibly because "
-                "System Integrity Protection is enabled and "
-                "process does not allow attaching.");
-
-            SendPacket(return_message.c_str());
-            DNBLogError("Attach failed because process does not allow "
-                        "attaching: \"%s\".",
-                        err_str);
-            return rnb_err;
-          }
+      if (pid_attaching_to != INVALID_NUB_PROCESS) {
+        if (process_does_not_exist (pid_attaching_to)) {
+          DNBLogError("Tried to attach to pid that doesn't exist");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("no such process.");
+          return SendPacket(return_message.c_str());
+        }
+        if (process_is_already_being_debugged (pid_attaching_to)) {
+          DNBLogError("Tried to attach to process already being debugged");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("tried to attach to "
+                                           "process already being debugged");
+          return SendPacket(return_message.c_str());
+        }
+        if (!developer_mode_enabled()) {
+          DNBLogError("Developer mode is not enabled");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("developer mode is not "
+                                           "enabled on this machine.  "
+                                           "sudo DevToolsSecurity --enable");
+          return SendPacket(return_message.c_str());
+        }
+        if (attach_failed_due_to_sip (pid_attaching_to)) {
+          DNBLogError("Attach failed because of SIP protection.");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("cannot attach "
+                            "to process due to System Integrity Protection");
+          return SendPacket(return_message.c_str());
         }
       }
-
-#endif
 
       SendPacket("E01"); // E01 is our magic error value for attach failed.
       DNBLogError("Attach failed: \"%s\".", err_str);

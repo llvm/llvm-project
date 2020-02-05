@@ -9588,17 +9588,15 @@ bool clang::isBetterOverloadCandidate(
       if (RC1 && RC2) {
         bool AtLeastAsConstrained1, AtLeastAsConstrained2;
         if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function,
-                                     {RC2}, AtLeastAsConstrained1))
-          return false;
-        if (!AtLeastAsConstrained1)
-          return false;
-        if (S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
+                                     {RC2}, AtLeastAsConstrained1) ||
+            S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
                                      {RC1}, AtLeastAsConstrained2))
           return false;
-        if (!AtLeastAsConstrained2)
-          return true;
-      } else if (RC1 || RC2)
+        if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
+          return AtLeastAsConstrained1;
+      } else if (RC1 || RC2) {
         return RC1 != nullptr;
+      }
     }
   }
 
@@ -13005,8 +13003,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       if (CheckFunctionCall(FnDecl, TheCall,
                             FnDecl->getType()->castAs<FunctionProtoType>()))
         return ExprError();
-
-      return MaybeBindToTemporary(TheCall);
+      return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FnDecl);
     } else {
       // We matched a built-in operator. Convert the arguments, then
       // break out so that we will build the appropriate built-in
@@ -13397,7 +13394,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (Best->RewriteKind != CRK_None)
           R = new (Context) CXXRewrittenBinaryOperator(R.get(), IsReversed);
 
-        return R;
+        return CheckForImmediateInvocation(R, FnDecl);
       } else {
         // We matched a built-in operator. Convert the arguments, then
         // break out so that we will build the appropriate built-in
@@ -14060,7 +14057,8 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                          MemExpr->getMemberLoc());
   }
 
-  return MaybeBindToTemporary(TheCall);
+  return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall),
+                                     TheCall->getMethodDecl());
 }
 
 /// BuildCallToObjectOfClassType - Build a call to an object of class
@@ -14341,7 +14339,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   if (CheckFunctionCall(Method, TheCall, Proto))
     return true;
 
-  return MaybeBindToTemporary(TheCall);
+  return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
 /// BuildOverloadedArrowExpr - Build a call to an overloaded @c operator->
@@ -14536,7 +14534,7 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
   if (CheckFunctionCall(FD, UDL, nullptr))
     return ExprError();
 
-  return MaybeBindToTemporary(UDL);
+  return CheckForImmediateInvocation(MaybeBindToTemporary(UDL), FD);
 }
 
 /// Build a call to 'begin' or 'end' for a C++11 for-range statement. If the
