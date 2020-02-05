@@ -47,11 +47,15 @@ define amdgpu_ps <2 x half> @raw_tbuffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sg
   ; UNPACKED:   [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 78, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "TargetCustom7", align 1, addrspace 4)
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN]].sub0
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XY_gfx80_OFFEN]].sub1
-  ; UNPACKED:   [[V_BFE_U32_:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY6]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_BFE_U32_1:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY7]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
-  ; UNPACKED:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[V_MOV_B32_e32_]], [[V_BFE_U32_1]], implicit $exec
-  ; UNPACKED:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_BFE_U32_]], [[V_LSHLREV_B32_e64_]], implicit $exec
+  ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY6]], [[COPY8]], implicit $exec
+  ; UNPACKED:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY7]], [[COPY9]], implicit $exec
+  ; UNPACKED:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+  ; UNPACKED:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY10]], [[V_AND_B32_e64_1]], implicit $exec
+  ; UNPACKED:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_AND_B32_e64_]], [[V_LSHLREV_B32_e64_]], implicit $exec
   ; UNPACKED:   $vgpr0 = COPY [[V_OR_B32_e64_]]
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; PACKED-LABEL: name: raw_tbuffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -93,16 +97,22 @@ define amdgpu_ps <4 x half> @raw_tbuffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sg
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub1
   ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub2
   ; UNPACKED:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub3
-  ; UNPACKED:   [[V_BFE_U32_:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY6]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_BFE_U32_1:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY7]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
-  ; UNPACKED:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[V_MOV_B32_e32_]], [[V_BFE_U32_1]], implicit $exec
-  ; UNPACKED:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_BFE_U32_]], [[V_LSHLREV_B32_e64_]], implicit $exec
-  ; UNPACKED:   [[V_BFE_U32_2:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY8]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_BFE_U32_3:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[COPY9]], 0, 16, implicit $exec
-  ; UNPACKED:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
-  ; UNPACKED:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[V_MOV_B32_e32_1]], [[V_BFE_U32_3]], implicit $exec
-  ; UNPACKED:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_BFE_U32_2]], [[V_LSHLREV_B32_e64_1]], implicit $exec
+  ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY6]], [[COPY10]], implicit $exec
+  ; UNPACKED:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY7]], [[COPY11]], implicit $exec
+  ; UNPACKED:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; UNPACKED:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+  ; UNPACKED:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY12]], [[V_AND_B32_e64_1]], implicit $exec
+  ; UNPACKED:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_AND_B32_e64_]], [[V_LSHLREV_B32_e64_]], implicit $exec
+  ; UNPACKED:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_2:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY8]], [[COPY13]], implicit $exec
+  ; UNPACKED:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; UNPACKED:   [[V_AND_B32_e64_3:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY9]], [[COPY14]], implicit $exec
+  ; UNPACKED:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+  ; UNPACKED:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY15]], [[V_AND_B32_e64_3]], implicit $exec
+  ; UNPACKED:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_AND_B32_e64_2]], [[V_LSHLREV_B32_e64_1]], implicit $exec
   ; UNPACKED:   $vgpr0 = COPY [[V_OR_B32_e64_]]
   ; UNPACKED:   $vgpr1 = COPY [[V_OR_B32_e64_1]]
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
