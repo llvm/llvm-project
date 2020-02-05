@@ -21,6 +21,8 @@ extern llvm::cl::opt<bool> EnablePGSO;
 extern llvm::cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
 extern llvm::cl::opt<bool> PGSOIRPassOrTestOnly;
 extern llvm::cl::opt<bool> PGSOColdCodeOnly;
+extern llvm::cl::opt<bool> PGSOColdCodeOnlyForInstrPGO;
+extern llvm::cl::opt<bool> PGSOColdCodeOnlyForSamplePGO;
 extern llvm::cl::opt<bool> ForcePGSO;
 extern llvm::cl::opt<int> PgsoCutoffInstrProf;
 extern llvm::cl::opt<int> PgsoCutoffSampleProf;
@@ -54,6 +56,8 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
                                 QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
+      (PSI->hasInstrumentationProfile() && PGSOColdCodeOnlyForInstrPGO) ||
+      (PSI->hasSampleProfile() && PGSOColdCodeOnlyForSamplePGO) ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
     return AdapterT::isFunctionColdInCallGraph(F, PSI, *BFI);
@@ -78,6 +82,8 @@ bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq, ProfileSummaryIn
                                 QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
+      (PSI->hasInstrumentationProfile() && PGSOColdCodeOnlyForInstrPGO) ||
+      (PSI->hasSampleProfile() && PGSOColdCodeOnlyForSamplePGO) ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
     return AdapterT::isColdBlock(BBOrBlockFreq, PSI, BFI);

@@ -28,6 +28,16 @@ cl::opt<bool> PGSOColdCodeOnly(
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code."));
 
+cl::opt<bool> PGSOColdCodeOnlyForInstrPGO(
+    "pgso-cold-code-only-for-instr-pgo", cl::Hidden, cl::init(true),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code under instrumentation PGO."));
+
+cl::opt<bool> PGSOColdCodeOnlyForSamplePGO(
+    "pgso-cold-code-only-for-sample-pgo", cl::Hidden, cl::init(true),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code under sample PGO."));
+
 cl::opt<bool> PGSOIRPassOrTestOnly(
     "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only"
@@ -38,7 +48,7 @@ cl::opt<bool> ForcePGSO(
     cl::desc("Force the (profiled-guided) size optimizations. "));
 
 cl::opt<int> PgsoCutoffInstrProf(
-    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(250000), cl::ZeroOrMore,
+    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(950000), cl::ZeroOrMore,
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for instrumentation profile."));
 
