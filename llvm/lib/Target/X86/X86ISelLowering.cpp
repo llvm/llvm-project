@@ -33256,10 +33256,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
 
-    // Output known-0 bits are only known if clear in both the LHS & RHS.
-    Known.Zero &= Known2.Zero;
-    // Output known-1 are known to be set if set in either the LHS | RHS.
-    Known.One |= Known2.One;
+    Known |= Known2;
     break;
   }
   case X86ISD::PSADBW: {
