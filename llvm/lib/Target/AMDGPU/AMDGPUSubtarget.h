@@ -506,6 +506,10 @@ public:
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
 
+  bool hasFractBug() const {
+    return getGeneration() == SOUTHERN_ISLANDS;
+  }
+
   bool hasBFE() const {
     return true;
   }

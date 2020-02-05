@@ -1285,6 +1285,30 @@ public:
     return buildInstr(TargetOpcode::G_FMUL, {Dst}, {Src0, Src1}, Flags);
   }
 
+  MachineInstrBuilder buildFMinNum(const DstOp &Dst, const SrcOp &Src0,
+                                   const SrcOp &Src1,
+                                   Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMINNUM, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildFMaxNum(const DstOp &Dst, const SrcOp &Src0,
+                                   const SrcOp &Src1,
+                                   Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMAXNUM, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildFMinNumIEEE(const DstOp &Dst, const SrcOp &Src0,
+                                       const SrcOp &Src1,
+                                       Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMINNUM_IEEE, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildFMaxNumIEEE(const DstOp &Dst, const SrcOp &Src0,
+                                       const SrcOp &Src1,
+                                       Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMAXNUM_IEEE, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
                                Optional<unsigned> Flags = None) {
