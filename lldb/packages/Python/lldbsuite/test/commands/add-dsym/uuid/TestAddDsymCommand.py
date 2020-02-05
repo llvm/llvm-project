@@ -22,7 +22,6 @@ class AddDsymCommandCase(TestBase):
         self.teardown_hook_added = False
 
     @no_debug_info_test
-    @expectedFailureDarwin('until AdrianM or I find a fix for his 2020-02-03 CommandObjectTarget change')
     def test_add_dsym_command_with_error(self):
         """Test that the 'add-dsym' command informs the user about failures."""
 
