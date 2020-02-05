@@ -54,6 +54,7 @@ class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 
 namespace lldb_private {
+  class ClangASTImporter;
   class SwiftASTContext;
 }
 
