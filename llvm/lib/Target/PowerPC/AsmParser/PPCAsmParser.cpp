@@ -356,9 +356,10 @@ public:
   bool isS16ImmX16() const { return Kind == Expression ||
                                     (Kind == Immediate && isInt<16>(getImm()) &&
                                      (getImm() & 15) == 0); }
-  bool isS34ImmX16() const { return Kind == Expression ||
-                                    (Kind == Immediate && isInt<34>(getImm()) &&
-                                    (getImm() & 15) == 0); }
+  bool isS34ImmX16() const {
+    return Kind == Expression ||
+           (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
+  }
   bool isS34Imm() const {
     // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
     // ContextImmediate is needed.
