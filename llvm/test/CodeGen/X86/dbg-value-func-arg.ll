@@ -34,8 +34,8 @@ define dso_local %struct.bar* @func1(%struct.bar* readnone returned %0, i32 %1, 
 ; CHECK-DAG: DBG_VALUE %fixed-stack.0, $noreg, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32),
 ; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref),
 ; CHECK-DAG: DBG_VALUE %fixed-stack.2, $noreg, {{.*}}, !DIExpression(DW_OP_deref),
-; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref_size, 4, DW_OP_plus_uconst, 144, DW_OP_stack_value),
-; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref_size, 4, DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32),
+; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_plus_uconst, 144, DW_OP_deref, DW_OP_stack_value),
+; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_plus_uconst, 144, DW_OP_deref, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32),
 
   call void @llvm.dbg.value(metadata i32 %2, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !26
   call void @llvm.dbg.value(metadata i32* %3, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !26

@@ -5583,6 +5583,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
 
+  bool IsIndirect = false;
   Optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.
   int FI = FuncInfo.getArgumentFrameIndex(Arg);
@@ -5604,6 +5605,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
     if (Reg) {
       Op = MachineOperand::CreateReg(Reg, false);
+      IsIndirect = IsDbgDeclare;
     }
   }
 
@@ -5670,6 +5672,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       }
 
       Op = MachineOperand::CreateReg(VMI->second, false);
+      IsIndirect = IsDbgDeclare;
     } else if (ArgRegsAndSizes.size() > 1) {
       // This was split due to the calling convention, and no virtual register
       // mapping exists for the value.
@@ -5683,26 +5686,9 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-
-  // If the argument arrives in a stack slot, then what the IR thought was a
-  // normal Value is actually in memory, and we must add a deref to load it.
-  if (Op->isFI()) {
-    int FI = Op->getIndex();
-    unsigned Size = DAG.getMachineFunction().getFrameInfo().getObjectSize(FI);
-    if (Expr->isImplicit()) {
-      SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
-      Expr = DIExpression::prependOpcodes(Expr, Ops);
-    } else {
-      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
-    }
-  }
-
-  // If this location was specified with a dbg.declare, then it and its
-  // expression calculate the address of the variable. Append a deref to
-  // force it to be a memory location.
-  if (IsDbgDeclare)
+  IsIndirect = (Op->isReg()) ? IsIndirect : true;
+  if (IsIndirect)
     Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
-
   FuncInfo.ArgDbgValues.push_back(
       BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
               *Op, Variable, Expr));
