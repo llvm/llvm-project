@@ -320,7 +320,7 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
 }
 
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
-  assert(getStorageKind(Value) <= ConstantExprBits.ResultKind &&
+  assert((unsigned)getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
   ConstantExprBits.APValueKind = Value.getKind();
   switch (ConstantExprBits.ResultKind) {
