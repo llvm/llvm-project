@@ -12,6 +12,7 @@
 
 #include "RNBServices.h"
 
+#include "DNB.h"
 #include "CFString.h"
 #include "DNBLog.h"
 #include "MacOSX/CFUtils.h"
@@ -28,16 +29,13 @@
 #include <SpringBoardServices/SpringBoardServices.h>
 #endif
 
-// From DNB.cpp
-size_t GetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
-
 int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
   if (plistMutableArray == NULL)
     return -1;
 
   // Running as root, get all processes
   std::vector<struct kinfo_proc> proc_infos;
-  const size_t num_proc_infos = GetAllInfos(proc_infos);
+  const size_t num_proc_infos = DNBGetAllInfos(proc_infos);
   if (num_proc_infos > 0) {
     const pid_t our_pid = getpid();
     const uid_t our_uid = getuid();
