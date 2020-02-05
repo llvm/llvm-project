@@ -1959,135 +1959,133 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
   ClangASTImporter::LayoutInfo layout_info;
 
-  {
-    if (die.HasChildren()) {
-      LanguageType class_language = eLanguageTypeUnknown;
-      if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
-        class_language = eLanguageTypeObjC;
-        // For objective C we don't start the definition when the class is
-        // created.
-        TypeSystemClang::StartTagDeclarationDefinition(clang_type);
-      }
+  if (die.HasChildren()) {
+    LanguageType class_language = eLanguageTypeUnknown;
+    if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
+      class_language = eLanguageTypeObjC;
+      // For objective C we don't start the definition when the class is
+      // created.
+      TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+    }
 
-      int tag_decl_kind = -1;
-      AccessType default_accessibility = eAccessNone;
-      if (tag == DW_TAG_structure_type) {
-        tag_decl_kind = clang::TTK_Struct;
-        default_accessibility = eAccessPublic;
-      } else if (tag == DW_TAG_union_type) {
-        tag_decl_kind = clang::TTK_Union;
-        default_accessibility = eAccessPublic;
-      } else if (tag == DW_TAG_class_type) {
-        tag_decl_kind = clang::TTK_Class;
-        default_accessibility = eAccessPrivate;
-      }
+    int tag_decl_kind = -1;
+    AccessType default_accessibility = eAccessNone;
+    if (tag == DW_TAG_structure_type) {
+      tag_decl_kind = clang::TTK_Struct;
+      default_accessibility = eAccessPublic;
+    } else if (tag == DW_TAG_union_type) {
+      tag_decl_kind = clang::TTK_Union;
+      default_accessibility = eAccessPublic;
+    } else if (tag == DW_TAG_class_type) {
+      tag_decl_kind = clang::TTK_Class;
+      default_accessibility = eAccessPrivate;
+    }
 
-      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
-      std::vector<int> member_accessibilities;
-      bool is_a_class = false;
-      // Parse members and base classes first
-      std::vector<DWARFDIE> member_function_dies;
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
+    std::vector<int> member_accessibilities;
+    bool is_a_class = false;
+    // Parse members and base classes first
+    std::vector<DWARFDIE> member_function_dies;
 
-      DelayedPropertyList delayed_properties;
-      ParseChildMembers(die, clang_type, class_language, bases,
-                        member_accessibilities, member_function_dies,
-                        delayed_properties, default_accessibility, is_a_class,
-                        layout_info);
+    DelayedPropertyList delayed_properties;
+    ParseChildMembers(die, clang_type, class_language, bases,
+                      member_accessibilities, member_function_dies,
+                      delayed_properties, default_accessibility, is_a_class,
+                      layout_info);
 
-      // Now parse any methods if there were any...
-      for (const DWARFDIE &die : member_function_dies)
-        dwarf->ResolveType(die);
+    // Now parse any methods if there were any...
+    for (const DWARFDIE &die : member_function_dies)
+      dwarf->ResolveType(die);
 
-      if (class_language == eLanguageTypeObjC) {
-        ConstString class_name(clang_type.GetTypeName());
-        if (class_name) {
-          DIEArray method_die_offsets;
-          dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
+    if (class_language == eLanguageTypeObjC) {
+      ConstString class_name(clang_type.GetTypeName());
+      if (class_name) {
+        DIEArray method_die_offsets;
+        dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
 
-          if (!method_die_offsets.empty()) {
-            DWARFDebugInfo *debug_info = dwarf->DebugInfo();
+        if (!method_die_offsets.empty()) {
+          DWARFDebugInfo *debug_info = dwarf->DebugInfo();
 
-            const size_t num_matches = method_die_offsets.size();
-            for (size_t i = 0; i < num_matches; ++i) {
-              const DIERef &die_ref = method_die_offsets[i];
-              DWARFDIE method_die = debug_info->GetDIE(die_ref);
+          const size_t num_matches = method_die_offsets.size();
+          for (size_t i = 0; i < num_matches; ++i) {
+            const DIERef &die_ref = method_die_offsets[i];
+            DWARFDIE method_die = debug_info->GetDIE(die_ref);
 
-              if (method_die)
-                method_die.ResolveType();
-            }
-          }
-
-          for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
-                                             pe = delayed_properties.end();
-               pi != pe; ++pi)
-            pi->Finalize();
-        }
-      }
-
-      // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
-      // need to tell the clang type it is actually a class.
-      if (class_language != eLanguageTypeObjC) {
-        if (is_a_class && tag_decl_kind != clang::TTK_Class)
-          m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
-                               clang::TTK_Class);
-      }
-
-      // Since DW_TAG_structure_type gets used for both classes and
-      // structures, we may need to set any DW_TAG_member fields to have a
-      // "private" access if none was specified. When we parsed the child
-      // members we tracked that actual accessibility value for each
-      // DW_TAG_member in the "member_accessibilities" array. If the value
-      // for the member is zero, then it was set to the
-      // "default_accessibility" which for structs was "public". Below we
-      // correct this by setting any fields to "private" that weren't
-      // correctly set.
-      if (is_a_class && !member_accessibilities.empty()) {
-        // This is a class and all members that didn't have their access
-        // specified are private.
-        m_ast.SetDefaultAccessForRecordFields(
-            m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
-            &member_accessibilities.front(), member_accessibilities.size());
-      }
-
-      if (!bases.empty()) {
-        // Make sure all base classes refer to complete types and not forward
-        // declarations. If we don't do this, clang will crash with an
-        // assertion in the call to clang_type.TransferBaseClasses()
-        for (const auto &base_class : bases) {
-          clang::TypeSourceInfo *type_source_info =
-              base_class->getTypeSourceInfo();
-          if (type_source_info) {
-            CompilerType base_class_type =
-                m_ast.GetType(type_source_info->getType());
-            if (!base_class_type.GetCompleteType()) {
-              auto module = dwarf->GetObjectFile()->GetModule();
-              module->ReportError(":: Class '%s' has a base class '%s' which "
-                                  "does not have a complete definition.",
-                                  die.GetName(),
-                                  base_class_type.GetTypeName().GetCString());
-              if (die.GetCU()->GetProducer() == eProducerClang)
-                module->ReportError(":: Try compiling the source file with "
-                                    "-fstandalone-debug.");
-
-              // We have no choice other than to pretend that the base class
-              // is complete. If we don't do this, clang will crash when we
-              // call setBases() inside of
-              // "clang_type.TransferBaseClasses()" below. Since we
-              // provide layout assistance, all ivars in this class and other
-              // classes will be fine, this is the best we can do short of
-              // crashing.
-              if (TypeSystemClang::StartTagDeclarationDefinition(
-                      base_class_type)) {
-                TypeSystemClang::CompleteTagDeclarationDefinition(
-                    base_class_type);
-              }
-            }
+            if (method_die)
+              method_die.ResolveType();
           }
         }
 
-        m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
-                                  std::move(bases));
+        for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
+                                           pe = delayed_properties.end();
+             pi != pe; ++pi)
+          pi->Finalize();
       }
+    }
+
+    // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
+    // need to tell the clang type it is actually a class.
+    if (class_language != eLanguageTypeObjC) {
+      if (is_a_class && tag_decl_kind != clang::TTK_Class)
+        m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
+                             clang::TTK_Class);
+    }
+
+    // Since DW_TAG_structure_type gets used for both classes and
+    // structures, we may need to set any DW_TAG_member fields to have a
+    // "private" access if none was specified. When we parsed the child
+    // members we tracked that actual accessibility value for each
+    // DW_TAG_member in the "member_accessibilities" array. If the value
+    // for the member is zero, then it was set to the
+    // "default_accessibility" which for structs was "public". Below we
+    // correct this by setting any fields to "private" that weren't
+    // correctly set.
+    if (is_a_class && !member_accessibilities.empty()) {
+      // This is a class and all members that didn't have their access
+      // specified are private.
+      m_ast.SetDefaultAccessForRecordFields(
+          m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
+          &member_accessibilities.front(), member_accessibilities.size());
+    }
+
+    if (!bases.empty()) {
+      // Make sure all base classes refer to complete types and not forward
+      // declarations. If we don't do this, clang will crash with an
+      // assertion in the call to clang_type.TransferBaseClasses()
+      for (const auto &base_class : bases) {
+        clang::TypeSourceInfo *type_source_info =
+            base_class->getTypeSourceInfo();
+        if (type_source_info) {
+          CompilerType base_class_type =
+              m_ast.GetType(type_source_info->getType());
+          if (!base_class_type.GetCompleteType()) {
+            auto module = dwarf->GetObjectFile()->GetModule();
+            module->ReportError(":: Class '%s' has a base class '%s' which "
+                                "does not have a complete definition.",
+                                die.GetName(),
+                                base_class_type.GetTypeName().GetCString());
+            if (die.GetCU()->GetProducer() == eProducerClang)
+              module->ReportError(":: Try compiling the source file with "
+                                  "-fstandalone-debug.");
+
+            // We have no choice other than to pretend that the base class
+            // is complete. If we don't do this, clang will crash when we
+            // call setBases() inside of
+            // "clang_type.TransferBaseClasses()" below. Since we
+            // provide layout assistance, all ivars in this class and other
+            // classes will be fine, this is the best we can do short of
+            // crashing.
+            if (TypeSystemClang::StartTagDeclarationDefinition(
+                    base_class_type)) {
+              TypeSystemClang::CompleteTagDeclarationDefinition(
+                  base_class_type);
+            }
+          }
+        }
+      }
+
+      m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
+                                std::move(bases));
     }
   }
 
