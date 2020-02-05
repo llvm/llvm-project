@@ -5119,6 +5119,9 @@ static SDValue getBuildDwordsVector(SelectionDAG &DAG, SDLoc DL,
   } else if (Elts.size() == 2) {
     Type = MVT::v2f32;
     NumElts = 2;
+  } else if (Elts.size() == 3) {
+    Type = MVT::v3f32;
+    NumElts = 3;
   } else if (Elts.size() <= 4) {
     Type = MVT::v4f32;
     NumElts = 4;

@@ -15,7 +15,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}sample_3d:
 ; NONSA: v_mov_b32_e32 v3, v0
-; NONSA: image_sample v[0:3], v[1:4],
+; NONSA: image_sample v[0:3], v[1:3],
 ; NSA: image_sample v[0:3], [v1, v2, v0],
 define amdgpu_ps <4 x float> @sample_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %r, float %s, float %t) {
 main_body:
@@ -70,7 +70,7 @@ main_body:
 ; GCN-LABEL: {{^}}sample_contig_contig:
 ; GCN: image_sample_c_l v0, v[0:7],
 ; NSA: image_sample v1, v[5:7],
-; NONSA: image_sample v1, v[5:8],
+; NONSA: image_sample v1, v[5:7],
 define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
