@@ -399,7 +399,24 @@ clang-format
 libclang
 --------
 
-- ...
+- Various changes to reduce discrepancies in destructor calls between the
+  generated ``CFG`` and the actual ``codegen``.
+
+  In particular:
+
+  - Respect C++17 copy elision; previously it would generate destructor calls
+    for elided temporaries, including in initialization and return statements.
+
+  - Don't generate duplicate destructor calls for statement expressions.
+
+  - Fix initialization lists.
+
+  - Fix comma operator.
+
+  - Change printing of implicit destructors to print the type instead of the
+    class name directly, matching the code for temporary object destructors.
+    The class name was blank for lambdas.
+
 
 Static Analyzer
 ---------------
