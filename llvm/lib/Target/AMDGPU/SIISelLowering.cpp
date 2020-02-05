@@ -5263,8 +5263,11 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   if (IsD16)
     Data = adjustLoadValueTypeImpl(Data, ReqRetVT, DL, DAG, Unpacked);
 
-  if (!ReqRetVT.isVector())
+  if (!ReqRetVT.isVector()) {
+    if (!Data.getValueType().isInteger())
+      Data = DAG.getNode(ISD::BITCAST, DL, Data.getValueType().changeTypeToInteger(), Data);
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
+  }
 
   Data = DAG.getNode(ISD::BITCAST, DL, ReqRetVT, Data);
 
