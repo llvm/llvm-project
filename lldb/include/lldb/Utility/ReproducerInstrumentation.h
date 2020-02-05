@@ -371,7 +371,9 @@ private:
 template <> const char *Deserializer::Deserialize<const char *>();
 template <> const char **Deserializer::Deserialize<const char **>();
 template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>();
+template <> const void *Deserializer::Deserialize<const void *>();
 template <> char *Deserializer::Deserialize<char *>();
+template <> void *Deserializer::Deserialize<void *>();
 
 /// Helpers to auto-synthesize function replay code. It deserializes the replay
 /// function's arguments one by one and finally calls the corresponding
@@ -598,9 +600,12 @@ private:
     }
   }
 
+  void Serialize(const void *v) {
+    // FIXME: Support void*
+  }
+
   void Serialize(void *v) {
     // FIXME: Support void*
-    llvm_unreachable("void* is currently unsupported.");
   }
 
   void Serialize(const char *t) {
