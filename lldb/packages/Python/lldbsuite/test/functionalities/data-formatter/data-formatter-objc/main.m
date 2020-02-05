@@ -502,7 +502,7 @@ int main (int argc, const char * argv[])
 	    NSURL *nsurl3 = [NSURL URLWithString:@"?whatever" relativeToURL:nsurl2];
     
 		NSDate *date1 = [NSDate dateWithTimeIntervalSince1970:133890*60*60]; // 6pm April 10, 1985 GMT
-		NSDate *date2 = [NSDate dateWithTimeIntervalSince1970:14975*24*60*60]; // 12am January 1, 2011 GMT
+		NSDate *date2 = [NSDate dateWithNaturalLanguageString:@"12am January 1, 2011"];
 		NSDate *date3 = [NSDate date];
 		NSDate *date4 = [NSDate dateWithTimeIntervalSince1970:24*60*60];
     NSDate *date5 = [NSDate dateWithTimeIntervalSinceReferenceDate: floor([[NSDate date] timeIntervalSinceReferenceDate])];
