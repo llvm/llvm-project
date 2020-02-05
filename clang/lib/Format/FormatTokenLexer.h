@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
 #include <stack>
@@ -54,6 +55,7 @@ private:
   bool tryMergeCSharpNullConditionals();
   bool tryMergeCSharpDoubleQuestion();
   bool tryTransformCSharpForEach();
+  bool tryMergeCSharpAttributeAndTarget();
 
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
 
@@ -114,6 +116,9 @@ private:
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;
+
+  // Targets that may appear inside a C# attribute.
+  static const llvm::StringSet<> CSharpAttributeTargets;
 
   void readRawToken(FormatToken &Tok);
 
