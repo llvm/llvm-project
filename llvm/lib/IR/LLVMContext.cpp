@@ -155,14 +155,14 @@ void LLVMContext::setMainRemarkStreamer(
 }
 
 LLVMRemarkStreamer *LLVMContext::getLLVMRemarkStreamer() {
-  return pImpl->LLVMRemarkStreamer.get();
+  return pImpl->LLVMRS.get();
 }
 const LLVMRemarkStreamer *LLVMContext::getLLVMRemarkStreamer() const {
   return const_cast<LLVMContext *>(this)->getLLVMRemarkStreamer();
 }
 void LLVMContext::setLLVMRemarkStreamer(
     std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer) {
-  pImpl->LLVMRemarkStreamer = std::move(RemarkStreamer);
+  pImpl->LLVMRS = std::move(RemarkStreamer);
 }
 
 DiagnosticHandler::DiagnosticHandlerTy

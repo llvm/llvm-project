@@ -232,7 +232,7 @@ public:
   remarks::RemarkStreamer *getMainRemarkStreamer();
   const remarks::RemarkStreamer *getMainRemarkStreamer() const;
   void setMainRemarkStreamer(
-      std::unique_ptr<remarks::RemarkStreamer> LLVMRemarkStreamer);
+      std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer);
 
   /// The "LLVM remark streamer" used by LLVM to serialize remark diagnostics
   /// comming from IR and MIR passes.
@@ -242,7 +242,7 @@ public:
   LLVMRemarkStreamer *getLLVMRemarkStreamer();
   const LLVMRemarkStreamer *getLLVMRemarkStreamer() const;
   void
-  setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> LLVMRemarkStreamer);
+  setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer);
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity

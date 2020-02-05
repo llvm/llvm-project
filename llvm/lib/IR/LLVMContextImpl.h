@@ -1255,7 +1255,7 @@ public:
   bool DiagnosticsHotnessRequested = false;
   uint64_t DiagnosticsHotnessThreshold = 0;
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
-  std::unique_ptr<LLVMRemarkStreamer> LLVMRemarkStreamer;
+  std::unique_ptr<LLVMRemarkStreamer> LLVMRS;
 
   LLVMContext::YieldCallbackTy YieldCallback = nullptr;
   void *YieldOpaqueHandle = nullptr;
