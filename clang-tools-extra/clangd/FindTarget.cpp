@@ -379,6 +379,10 @@ public:
         Outer.add(TT->getAsTagDecl(), Flags);
       }
 
+      void VisitElaboratedType(const ElaboratedType *ET) {
+        Outer.add(ET->desugar(), Flags);
+      }
+
       void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
         Outer.add(ICNT->getDecl(), Flags);
       }
