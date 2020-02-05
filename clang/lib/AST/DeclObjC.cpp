@@ -1980,6 +1980,7 @@ void ObjCProtocolDecl::allocateDefinitionData() {
   assert(!Data.getPointer() && "Protocol already has a definition!");
   Data.setPointer(new (getASTContext()) DefinitionData);
   Data.getPointer()->Definition = this;
+  Data.getPointer()->HasODRHash = false;
 }
 
 void ObjCProtocolDecl::startDefinition() {
@@ -2032,6 +2033,33 @@ ObjCProtocolDecl::getObjCRuntimeNameAsString() const {
     return ObjCRTName->getMetadataName();
 
   return getName();
+}
+
+unsigned ObjCProtocolDecl::getODRHash() {
+  assert(hasDefinition() && "ODRHash only for records with definitions");
+
+  // Previously calculated hash is stored in DefinitionData.
+  if (hasODRHash())
+    return data().ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  class ODRHash Hash;
+  Hash.AddObjCProtocolDecl(getDefinition());
+  setHasODRHash();
+  data().ODRHash = Hash.CalculateHash();
+
+  return data().ODRHash;
+}
+
+bool ObjCProtocolDecl::hasODRHash() const {
+  if (!hasDefinition())
+    return false;
+  return data().HasODRHash;
+}
+
+void ObjCProtocolDecl::setHasODRHash(bool Hash) {
+  assert(hasDefinition() && "Cannot set ODRHash without definition");
+  data().HasODRHash = Hash;
 }
 
 //===----------------------------------------------------------------------===//
