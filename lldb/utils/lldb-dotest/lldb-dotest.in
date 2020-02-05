@@ -10,6 +10,8 @@ executable = '@LLDB_TEST_EXECUTABLE@'
 compiler = '@LLDB_TEST_COMPILER@'
 dsymutil = '@LLDB_TEST_DSYMUTIL@'
 filecheck = '@LLDB_TEST_FILECHECK@'
+lldb_libs_dir = "@LLDB_LIBS_DIR@"
+
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -23,6 +25,7 @@ if __name__ == '__main__':
     cmd.extend(['--compiler', compiler])
     cmd.extend(['--dsymutil', dsymutil])
     cmd.extend(['--filecheck', filecheck])
+    cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))
