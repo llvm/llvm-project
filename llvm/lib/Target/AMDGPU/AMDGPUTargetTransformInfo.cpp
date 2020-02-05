@@ -706,6 +706,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_icmp:
     case Intrinsic::amdgcn_fcmp:
+    case Intrinsic::amdgcn_if_break:
       return true;
     }
   }
@@ -720,13 +721,27 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (!ExtValue)
     return false;
 
-  if (const CallInst *CI = dyn_cast<CallInst>(ExtValue->getOperand(0))) {
-    // If we have inline asm returning mixed SGPR and VGPR results, we inferred
-    // divergent for the overall struct return. We need to override it in the
-    // case we're extracting an SGPR component here.
-    if (isa<InlineAsm>(CI->getCalledValue()))
-      return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
+  const CallInst *CI = dyn_cast<CallInst>(ExtValue->getOperand(0));
+  if (!CI)
+    return false;
+
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(CI)) {
+    switch (Intrinsic->getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::amdgcn_if:
+    case Intrinsic::amdgcn_else: {
+      ArrayRef<unsigned> Indices = ExtValue->getIndices();
+      return Indices.size() == 1 && Indices[0] == 1;
+    }
+    }
   }
+
+  // If we have inline asm returning mixed SGPR and VGPR results, we inferred
+  // divergent for the overall struct return. We need to override it in the
+  // case we're extracting an SGPR component here.
+  if (isa<InlineAsm>(CI->getCalledValue()))
+    return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
 
   return false;
 }
