@@ -346,12 +346,6 @@ public:
   /// \param[in] decl
   ///     The Decl whose origin is to be found.
   ///
-  /// \param[out] original_decl
-  ///     A pointer whose target is filled in with the original Decl.
-  ///
-  /// \param[in] original_ctx
-  ///     A pointer whose target is filled in with the original's ASTContext.
-  ///
   /// \return
   ///     True if lookup succeeded; false otherwise.
   ClangASTImporter::DeclOrigin GetDeclOrigin(const clang::Decl *decl);
