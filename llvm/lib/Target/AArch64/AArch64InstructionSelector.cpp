@@ -996,6 +996,11 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
   assert(Reg.isValid() && "Expected valid register!");
   while (MachineInstr *MI = getDefIgnoringCopies(Reg, MRI)) {
     unsigned Opc = MI->getOpcode();
+
+    if (!MI->getOperand(0).isReg() ||
+        !MRI.hasOneUse(MI->getOperand(0).getReg()))
+      break;
+
     // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
     //
     // (tbz (trunc x), b) -> (tbz x, b) is always safe, because the bit number
@@ -1044,8 +1049,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     }
     }
 
-    // Didn't find a constant. Bail out of the loop.
-    if (!C)
+    // Didn't find a constant or viable register. Bail out of the loop.
+    if (!C || !TestReg.isValid())
       break;
 
     // We found a suitable instruction with a constant. Check to see if we can
@@ -1083,8 +1088,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     }
 
     // Check if we found anything worth folding.
-    if (!NextReg.isValid() || !MRI.hasOneUse(NextReg))
-      break;
+    if (!NextReg.isValid())
+      return Reg;
     Reg = NextReg;
   }
 

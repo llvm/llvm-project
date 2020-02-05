@@ -112,3 +112,45 @@ body:             |
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
+
+...
+---
+name:            dont_fold_shl_3
+alignment:       4
+legalized:       true
+regBankSelected: true
+body:             |
+  ; CHECK-LABEL: name: dont_fold_shl_3
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK:   %copy:gpr64 = COPY $x0
+  ; CHECK:   %shl:gpr64 = UBFMXri %copy, 62, 61
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64all = COPY %shl
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
+  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
+  ; CHECK:   TBNZW [[COPY2]], 3, %bb.1
+  ; CHECK:   B %bb.0
+  ; CHECK: bb.1:
+  ; CHECK:   %second_use:gpr64sp = ORRXri %shl, 8000
+  ; CHECK:   $x0 = COPY %second_use
+  ; CHECK:   RET_ReallyLR implicit $x0
+  bb.0:
+    successors: %bb.0, %bb.1
+    liveins: $x0
+    %copy:gpr(s64) = COPY $x0
+    %bit:gpr(s64) = G_CONSTANT i64 8
+    %zero:gpr(s64) = G_CONSTANT i64 0
+    %fold_cst:gpr(s64) = G_CONSTANT i64 2
+
+    ; Don't walk past the G_SHL when it's used more than once.
+    %shl:gpr(s64) = G_SHL %copy, %fold_cst
+    %and:gpr(s64) = G_AND %shl, %bit
+    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
+    G_BRCOND %cmp_trunc(s1), %bb.1
+    G_BR %bb.0
+
+  bb.1:
+    %second_use:gpr(s64) = G_OR %shl, %bit
+    $x0 = COPY %second_use
+    RET_ReallyLR implicit $x0
