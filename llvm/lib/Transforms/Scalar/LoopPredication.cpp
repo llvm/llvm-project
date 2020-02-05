@@ -342,7 +342,7 @@ public:
 };
 
 char LoopPredicationLegacyPass::ID = 0;
-} // end namespace llvm
+} // end namespace
 
 INITIALIZE_PASS_BEGIN(LoopPredicationLegacyPass, "loop-predication",
                       "Loop predication", false, false)
