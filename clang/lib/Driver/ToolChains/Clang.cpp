@@ -326,7 +326,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    arm::getARMTargetFeatures(TC, Triple, Args, CmdArgs, Features, ForAS);
+    arm::getARMTargetFeatures(D, Triple, Args, CmdArgs, Features, ForAS);
     break;
 
   case llvm::Triple::ppc:
