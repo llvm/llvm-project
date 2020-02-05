@@ -1,7 +1,24 @@
 ; RUN: %llc_dwarf -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
 ; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck --check-prefix=SPLIT --check-prefix=CHECK %s
+; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=asm < %s \
+; RUN:   | FileCheck --check-prefix=ASM %s
+
+; A bit of a brittle test - this is testing the specific DWO_id. The
+; alternative would be to test two files with different DW_OP_convert values &
+; ensuring the DWO IDs differ when the DW_OP_convert parameter differs.
+
+; So if this test ends up being a brittle pain to maintain, updating the DWO ID
+; often - add another IR file with a different DW_OP_convert that's otherwise
+; identical and demonstrate that they have different DWO IDs.
+
+; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xafd73565c68bc661
+
+; Regression testing a fairly quirky bug where instead of hashing (see above),
+; extra bytes would be emitted into the output assembly in no
+; particular/intentional section - so let's check they don't show up at all:
+; ASM-NOT: .asciz  "\200\200\200"
 
 ; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
 ; CHECK-NEXT:                   DW_AT_name ("DW_ATE_unsigned_32")
