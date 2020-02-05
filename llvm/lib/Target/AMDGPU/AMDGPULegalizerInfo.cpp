@@ -1981,6 +1981,8 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
   LLT DstTy = MRI.getType(Dst);
   const LLT S32 = LLT::scalar(32);
   const LLT V2S16 = LLT::vector(2, 16);
+  (void)DstTy;
+  (void)V2S16;
   assert(DstTy == V2S16);
 
   Register Src0 = MI.getOperand(1).getReg();
