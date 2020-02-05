@@ -371,6 +371,7 @@ private:
 /// instead of treating it as pointer.
 template <> const char *Deserializer::Deserialize<const char *>();
 template <> const char **Deserializer::Deserialize<const char **>();
+template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>();
 template <> char *Deserializer::Deserialize<char *>();
 
 /// Helpers to auto-synthesize function replay code. It deserializes the replay
