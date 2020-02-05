@@ -1,4 +1,4 @@
-//===- MemRefBoundCheck.cpp - MLIR Affine Structures Class ----------------===//
+//===- TestMemRefBoundCheck.cpp - Test out of bound access checks ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,17 +29,17 @@ using namespace mlir;
 namespace {
 
 /// Checks for out of bound memef access subscripts..
-struct MemRefBoundCheck : public FunctionPass<MemRefBoundCheck> {
+struct TestMemRefBoundCheck : public FunctionPass<TestMemRefBoundCheck> {
   void runOnFunction() override;
 };
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createMemRefBoundCheckPass() {
-  return std::make_unique<MemRefBoundCheck>();
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createTestMemRefBoundCheckPass() {
+  return std::make_unique<TestMemRefBoundCheck>();
 }
 
-void MemRefBoundCheck::runOnFunction() {
+void TestMemRefBoundCheck::runOnFunction() {
   getFunction().walk([](Operation *opInst) {
     TypeSwitch<Operation *>(opInst).Case<AffineLoadOp, AffineStoreOp>(
         [](auto op) { boundCheckLoadOrStoreOp(op); });
@@ -48,6 +48,6 @@ void MemRefBoundCheck::runOnFunction() {
   });
 }
 
-static PassRegistration<MemRefBoundCheck>
-    memRefBoundCheck("memref-bound-check",
+static PassRegistration<TestMemRefBoundCheck>
+    memRefBoundCheck("test-memref-bound-check",
                      "Check memref access bounds in a Function");
