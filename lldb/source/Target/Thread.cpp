@@ -573,63 +573,8 @@ void Thread::SetState(StateType state) {
   m_state = state;
 }
 
-std::string Thread::GetStopDescription() {
-  StackFrameSP frame_sp = GetStackFrameAtIndex(0);
-
-  if (!frame_sp)
-    return GetStopDescriptionRaw();
-
-  auto recognized_frame_sp = frame_sp->GetRecognizedFrame();
-
-  if (!recognized_frame_sp)
-    return GetStopDescriptionRaw();
-
-  std::string recognized_stop_description =
-      recognized_frame_sp->GetStopDescription();
-
-  if (!recognized_stop_description.empty())
-    return recognized_stop_description;
-
-  return GetStopDescriptionRaw();
-}
-
-std::string Thread::GetStopDescriptionRaw() {
-  StopInfoSP stop_info_sp = GetStopInfo();
-  std::string raw_stop_description;
-  if (stop_info_sp && stop_info_sp->IsValid())
-    raw_stop_description = stop_info_sp->GetDescription();
-  return raw_stop_description;
-}
-
-void Thread::SelectMostRelevantFrame() {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD);
-
-  auto frames_list_sp = GetStackFrameList();
-
-  // Only the top frame should be recognized.
-  auto frame_sp = frames_list_sp->GetFrameAtIndex(0);
-
-  auto recognized_frame_sp = frame_sp->GetRecognizedFrame();
-
-  if (!recognized_frame_sp) {
-    LLDB_LOG(log, "Frame #0 not recognized");
-    return;
-  }
-
-  if (StackFrameSP most_relevant_frame_sp =
-          recognized_frame_sp->GetMostRelevantFrame()) {
-    LLDB_LOG(log, "Found most relevant frame at index {0}",
-             most_relevant_frame_sp->GetFrameIndex());
-    SetSelectedFrame(most_relevant_frame_sp.get());
-  } else {
-    LLDB_LOG(log, "No relevant frame!");
-  }
-}
-
 void Thread::WillStop() {
   ThreadPlan *current_plan = GetCurrentPlan();
-
-  SelectMostRelevantFrame();
 
   // FIXME: I may decide to disallow threads with no plans.  In which
   // case this should go to an assert.

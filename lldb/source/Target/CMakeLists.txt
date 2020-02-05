@@ -8,7 +8,6 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
 
 add_lldb_library(lldbTarget
   ABI.cpp
-  AssertFrameRecognizer.cpp
   ExecutionContext.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp
