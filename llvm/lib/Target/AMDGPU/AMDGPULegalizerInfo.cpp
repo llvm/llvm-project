@@ -1011,23 +1011,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampNumElements(0, V2S64, V16S64)
     .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16));
 
-  if (ST.hasScalarPackInsts())
-    BuildVector.legalFor({V2S16, S32});
-
-  BuildVector
-    .minScalarSameAs(1, 0)
-    .legalIf(isRegisterType(0))
-    .minScalarOrElt(0, S32);
-
   if (ST.hasScalarPackInsts()) {
+    BuildVector
+      // FIXME: Should probably widen s1 vectors straight to s32
+      .minScalarOrElt(0, S16)
+      // Widen source elements and produce a G_BUILD_VECTOR_TRUNC
+      .minScalar(1, S32);
+
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
       .legalFor({V2S16, S32})
       .lower();
+    BuildVector.minScalarOrElt(0, S32);
   } else {
+    BuildVector.customFor({V2S16, S16});
+    BuildVector.minScalarOrElt(0, S32);
+
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
+      .customFor({V2S16, S32})
       .lower();
   }
 
+  BuildVector.legalIf(isRegisterType(0));
+
+  // FIXME: Clamp maximum size
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
     .legalIf(isRegisterType(0));
 
@@ -1229,6 +1235,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
+  case TargetOpcode::G_BUILD_VECTOR:
+    return legalizeBuildVector(MI, MRI, B);
   default:
     return false;
   }
@@ -1947,6 +1955,27 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   auto K = B.buildFConstant(Ty, numbers::log2e);
   auto Mul = B.buildFMul(Ty, Src, K, Flags);
   B.buildFExp2(Dst, Mul, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+// Turn an illegal packed v2s16 build vector into bit operations.
+// TODO: This should probably be a bitcast action in LegalizerHelper.
+bool AMDGPULegalizerInfo::legalizeBuildVector(
+  MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S16 = LLT::vector(2, 16);
+  assert(DstTy == V2S16);
+
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  assert(MRI.getType(Src0) == LLT::scalar(16));
+
+  B.setInstr(MI);
+  auto Merge = B.buildMerge(S32, {Src0, Src1});
+  B.buildBitcast(Dst, Merge);
 
   MI.eraseFromParent();
   return true;
