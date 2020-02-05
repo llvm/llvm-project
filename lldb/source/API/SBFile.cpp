@@ -144,6 +144,10 @@ template <> void RegisterMethods<SBFile>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBFile, (int, const char *, bool));
   LLDB_REGISTER_METHOD(SBFile&, SBFile, operator=,(const SBFile&));
   LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Flush, ());
+  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Read,
+                       (uint8_t *, size_t, size_t *));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Write,
+                       (const uint8_t *, size_t, size_t *));
   LLDB_REGISTER_METHOD_CONST(bool, SBFile, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBFile, operator bool,());
   LLDB_REGISTER_METHOD_CONST(bool, SBFile, operator!,());
