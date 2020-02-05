@@ -1590,10 +1590,9 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // G_STORE %x:gpr(s32)
   //
   // And then continue the selection process normally.
-  MachineInstr *Def = getDefIgnoringCopies(I.getOperand(0).getReg(), MRI);
-  if (!Def)
+  Register DefDstReg = getSrcRegIgnoringCopies(I.getOperand(0).getReg(), MRI);
+  if (!DefDstReg.isValid())
     return false;
-  Register DefDstReg = Def->getOperand(0).getReg();
   LLT DefDstTy = MRI.getType(DefDstReg);
   Register StoreSrcReg = I.getOperand(0).getReg();
   LLT StoreSrcTy = MRI.getType(StoreSrcReg);

@@ -144,6 +144,13 @@ MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
 
+/// Find the source register for \p Reg, folding away any trivial copies. It
+/// will be an output register of the instruction that getDefIgnoringCopies
+/// returns. May return an invalid register if \p Reg is not a generic virtual
+/// register.
+Register getSrcRegIgnoringCopies(Register Reg,
+                                 const MachineRegisterInfo &MRI);
+
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);
 
