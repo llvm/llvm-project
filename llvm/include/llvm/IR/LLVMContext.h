@@ -39,7 +39,7 @@ class raw_ostream;
 
 namespace remarks {
 class RemarkStreamer;
-};
+}
 
 namespace SyncScope {
 
