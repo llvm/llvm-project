@@ -2,7 +2,7 @@
 
 int incomplete[];
 
-void test() {
+void test(int *p) {
   int a;
 #pragma omp parallel reduction( // expected-error {{expected identifier}} expected-error {{expected ')'}} expected-warning {{missing ':' after reduction identifier - ignoring}} expected-note {{to match this '('}}
   ;
@@ -16,7 +16,7 @@ void test() {
   ;
 #pragma omp parallel reduction(inscan, + : a) // expected-error {{'inscan' modifier can be used only in 'omp for', 'omp simd', 'omp for simd', 'omp parallel for', or 'omp parallel for simd' directive}}
   ;
-#pragma omp parallel reduction(+ : incomplete) // expected-error {{a reduction list item with incomplete type 'int []'}}
+#pragma omp parallel reduction(+ : incomplete, ([10])p) // expected-error {{a reduction list item with incomplete type 'int []'}} expected-error {{expected variable name, array element or array section}}
   ;
 }
 

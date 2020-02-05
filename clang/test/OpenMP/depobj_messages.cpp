@@ -158,7 +158,7 @@ label1 : {
 #pragma omp depend(out:x) depobj(x) // expected-error {{expected an OpenMP directive}}
 #pragma omp destroy depobj(x) // expected-error {{expected an OpenMP directive}}
 #pragma omp update(out) depobj(x) // expected-error {{expected an OpenMP directive}}
-#pragma omp depobj depend(in:x) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}} expected-error {{expected addressable lvalue expression, array element or array section of non 'omp_depend_t' type}}
+#pragma omp depobj depend(in:x) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}} expected-error {{expected addressable lvalue expression, array element, array section or array shaping expression of non 'omp_depend_t' type}}
 #pragma omp depobj destroy (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
 #pragma omp depobj update(in) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
   return tmain(argc); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}

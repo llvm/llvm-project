@@ -87,6 +87,7 @@ class ParenListExpr;
 class PseudoObjectExpr;
 class AtomicExpr;
 class OMPArraySectionExpr;
+class OMPArrayShapingExpr;
 class ObjCArrayLiteral;
 class ObjCDictionaryLiteral;
 class ObjCBoxedExpr;
@@ -172,6 +173,7 @@ ExprDependence computeDependence(PseudoObjectExpr *E);
 ExprDependence computeDependence(AtomicExpr *E);
 
 ExprDependence computeDependence(OMPArraySectionExpr *E);
+ExprDependence computeDependence(OMPArrayShapingExpr *E);
 
 ExprDependence computeDependence(ObjCArrayLiteral *E);
 ExprDependence computeDependence(ObjCDictionaryLiteral *E);

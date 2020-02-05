@@ -9685,7 +9685,7 @@ def err_omp_expected_var_name_member_expr : Error<
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<
-  "expected addressable lvalue expression, array element or array section%select{| of non 'omp_depend_t' type}0">;
+  "expected addressable lvalue expression, array element%select{ or array section|, array section or array shaping expression}0%select{| of non 'omp_depend_t' type}1">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
 def err_omp_bit_fields_forbidden_in_clause : Error<
@@ -9952,10 +9952,15 @@ def err_omp_declare_mapper_redefinition : Error<
 def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
 def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
+def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
 def err_omp_typecheck_section_value : Error<
   "subscripted value is not an array or pointer">;
 def err_omp_typecheck_section_not_integer : Error<
   "array section %select{lower bound|length}0 is not an integer">;
+def err_omp_typecheck_shaping_not_integer : Error<
+  "array shaping operation dimension is not an integer">;
+def err_omp_shaping_dimension_not_positive : Error<
+  "array shaping dimension is evaluated to a non-positive value %0">;
 def err_omp_section_function_type : Error<
   "section of pointer to function type %0">;
 def warn_omp_section_is_char : Warning<"array section %select{lower bound|length}0 is of type 'char'">,
@@ -10190,14 +10195,15 @@ def err_omp_flush_order_clause_and_list : Error<
 def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
-  "expected addressable lvalue in '%0' clause"
-  >;
+  "expected addressable lvalue in '%0' clause">;
 def err_omp_event_var_expected : Error<
   "expected variable of the 'omp_event_handle_t' type%select{|, not %1}0">;
 def warn_nested_declare_variant
     : Warning<"nesting `omp begin/end declare variant` is not supported yet; "
               "nested context ignored">,
       InGroup<SourceUsesOpenMP>;
+def err_omp_non_pointer_type_array_shaping_base : Error<
+  "expected pointer type expression as a base of an array shaping operation">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

@@ -3010,6 +3010,10 @@ private:
                                              DeclarationName &Name,
                                              AccessSpecifier AS = AS_none);
 
+  /// Tries to parse cast part of OpenMP array shaping operation:
+  /// '[' expression ']' { '[' expression ']' } ')'.
+  bool tryParseOpenMPArrayShapingCastPart();
+
   /// Parses simple list of variables.
   ///
   /// \param Kind Kind of the directive.
