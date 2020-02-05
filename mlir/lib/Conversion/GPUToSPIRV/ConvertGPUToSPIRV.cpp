@@ -82,16 +82,9 @@ public:
 };
 
 /// Pattern to convert a kernel function in GPU dialect within a spv.module.
-class KernelFnConversion final : public SPIRVOpLowering<gpu::GPUFuncOp> {
+class GPUFuncOpConversion final : public SPIRVOpLowering<gpu::GPUFuncOp> {
 public:
-  KernelFnConversion(MLIRContext *context, SPIRVTypeConverter &converter,
-                     ArrayRef<int64_t> workGroupSize,
-                     PatternBenefit benefit = 1)
-      : SPIRVOpLowering<gpu::GPUFuncOp>(context, converter, benefit) {
-    auto config = workGroupSize.take_front(3);
-    workGroupSizeAsInt32.assign(config.begin(), config.end());
-    workGroupSizeAsInt32.resize(3, 1);
-  }
+  using SPIRVOpLowering<gpu::GPUFuncOp>::SPIRVOpLowering;
 
   PatternMatchResult
   matchAndRewrite(gpu::GPUFuncOp funcOp, ArrayRef<Value> operands,
@@ -352,13 +345,11 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
   return newFuncOp;
 }
 
-PatternMatchResult
-KernelFnConversion::matchAndRewrite(gpu::GPUFuncOp funcOp,
-                                    ArrayRef<Value> operands,
-                                    ConversionPatternRewriter &rewriter) const {
-  if (!gpu::GPUDialect::isKernel(funcOp)) {
+PatternMatchResult GPUFuncOpConversion::matchAndRewrite(
+    gpu::GPUFuncOp funcOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  if (!gpu::GPUDialect::isKernel(funcOp))
     return matchFailure();
-  }
 
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
   for (auto argNum : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
@@ -366,14 +357,15 @@ KernelFnConversion::matchAndRewrite(gpu::GPUFuncOp funcOp,
         0, argNum, spirv::StorageClass::StorageBuffer, rewriter.getContext()));
   }
 
-  auto context = rewriter.getContext();
-  auto entryPointAttr =
-      spirv::getEntryPointABIAttr(workGroupSizeAsInt32, context);
-  FuncOp newFuncOp = lowerAsEntryFunction(funcOp, typeConverter, rewriter,
-                                          entryPointAttr, argABI);
-  if (!newFuncOp) {
+  auto entryPointAttr = spirv::lookupEntryPointABI(funcOp);
+  if (!entryPointAttr) {
+    funcOp.emitRemark("match failure: missing 'spv.entry_point_abi' attribute");
     return matchFailure();
   }
+  FuncOp newFuncOp = lowerAsEntryFunction(funcOp, typeConverter, rewriter,
+                                          entryPointAttr, argABI);
+  if (!newFuncOp)
+    return matchFailure();
   newFuncOp.removeAttr(Identifier::get(gpu::GPUDialect::getKernelFuncAttrName(),
                                        rewriter.getContext()));
   return matchSuccess();
@@ -429,13 +421,11 @@ namespace {
 
 void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
                                       SPIRVTypeConverter &typeConverter,
-                                      OwningRewritePatternList &patterns,
-                                      ArrayRef<int64_t> workGroupSize) {
+                                      OwningRewritePatternList &patterns) {
   populateWithGenerated(context, &patterns);
-  patterns.insert<KernelFnConversion>(context, typeConverter, workGroupSize);
   patterns.insert<
-      ForOpConversion, GPUModuleConversion, GPUReturnOpConversion,
-      IfOpConversion,
+      ForOpConversion, GPUFuncOpConversion, GPUModuleConversion,
+      GPUReturnOpConversion, IfOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
