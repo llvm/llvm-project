@@ -23,8 +23,11 @@
 #include <errno.h>
 #include <libkern/OSAtomic.h>
 #include <objc/objc-sync.h>
-#include <os/lock.h>
 #include <sys/ucontext.h>
+
+#if defined(__has_include) && __has_include(<os/lock.h>)
+#include <os/lock.h>
+#endif
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #include <xpc/xpc.h>
@@ -247,6 +250,8 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
   REAL(os_lock_unlock)(lock);
 }
 
+#if defined(__has_include) && __has_include(<os/lock.h>)
+
 TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   if (!cur_thread()->is_inited || cur_thread()->is_dead) {
     return REAL(os_unfair_lock_lock)(lock);
@@ -285,6 +290,8 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_unlock, os_unfair_lock_t lock) {
   Release(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_unlock)(lock);
 }
+
+#endif  // #if defined(__has_include) && __has_include(<os/lock.h>)
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
