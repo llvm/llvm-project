@@ -98,6 +98,17 @@ TEST_F(BasicTest, isSplat) {
   EXPECT_FALSE(isSplatValue(SplatWithUndefC));
 }
 
+TEST_F(BasicTest, getSplatIndex) {
+  EXPECT_EQ(getSplatIndex({0,0,0}), 0);
+  EXPECT_EQ(getSplatIndex({1,0,0}), -1);     // no splat
+  EXPECT_EQ(getSplatIndex({0,1,1}), -1);     // no splat
+  EXPECT_EQ(getSplatIndex({42,42,42}), 42);  // array size is independent of splat index
+  EXPECT_EQ(getSplatIndex({42,42,-1}), 42);  // ignore negative
+  EXPECT_EQ(getSplatIndex({-1,42,-1}), 42);  // ignore negatives
+  EXPECT_EQ(getSplatIndex({-4,42,-42}), 42); // ignore all negatives
+  EXPECT_EQ(getSplatIndex({-4,-1,-42}), -1); // all negative values map to -1
+}
+
 TEST_F(VectorUtilsTest, isSplatValue_00) {
   parseAssembly(
       "define <2 x i8> @test(<2 x i8> %x) {\n"
