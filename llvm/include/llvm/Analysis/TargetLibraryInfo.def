@@ -434,6 +434,9 @@ TLI_DEFINE_STRING_INTERNAL("__strlcat_chk")
 ///                      size_t dstsize);
 TLI_DEFINE_ENUM_INTERNAL(strlcpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__strlcpy_chk")
+/// char *__strlen_chk(const char *s1, size_t s1size);
+TLI_DEFINE_ENUM_INTERNAL(strlen_chk)
+TLI_DEFINE_STRING_INTERNAL("__strlen_chk")
 /// char *strncat_chk(char *s1, const char *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(strncat_chk)
 TLI_DEFINE_STRING_INTERNAL("__strncat_chk")

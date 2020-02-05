@@ -474,6 +474,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i32 @__sprintf_chk(i8*, i32, i64, i8*, ...)\n"
       "declare i8* @__strcat_chk(i8*, i8*, i64)\n"
       "declare i64 @__strlcat_chk(i8*, i8*, i64, i64)\n"
+      "declare i64 @__strlen_chk(i8*, i64)\n"
       "declare i8* @__strncat_chk(i8*, i8*, i64, i64)\n"
       "declare i64 @__strlcpy_chk(i8*, i8*, i64, i64)\n"
       "declare i32 @__vsnprintf_chk(i8*, i64, i32, i64, i8*, %struct*)\n"
