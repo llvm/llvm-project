@@ -1,6 +1,10 @@
-; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-loclists - | FileCheck %s
+; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s \
+; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
 
-; CHECK: DW_LLE_offset_pair ({{.*}}): DW_OP_consts +7, DW_OP_convert 0x27, DW_OP_stack_value
+; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
+; CHECK-NEXT:                   DW_AT_name ("DW_ATE_unsigned_32")
+
+; CHECK: DW_LLE_offset_pair ({{.*}}): DW_OP_consts +7, DW_OP_convert 0x[[TYPE]], DW_OP_stack_value
 
 ; Function Attrs: uwtable
 define dso_local void @_Z2f2v() local_unnamed_addr #0 !dbg !11 {
