@@ -1399,7 +1399,7 @@ class Base(unittest2.TestCase):
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
+        lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {'CXX_SOURCES': sources,
                  'EXE': exe_name,
@@ -1426,7 +1426,7 @@ class Base(unittest2.TestCase):
                                                  os.path.join(
                                                      os.environ["LLDB_SRC"],
                                                      "include")),
-                'LD_EXTRAS': "-L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
+                'LD_EXTRAS': "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir)}
         if self.TraceOn():
             print(
                 "Building LLDB Driver (%s) from sources %s" %
@@ -1439,7 +1439,7 @@ class Base(unittest2.TestCase):
 
         stdflag = self.getstdFlag()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
+        lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {'DYLIB_CXX_SOURCES': sources,
                  'DYLIB_NAME': lib_name,
@@ -1464,7 +1464,7 @@ class Base(unittest2.TestCase):
                                                     os.path.join(
                                                         os.environ["LLDB_SRC"],
                                                         "include")),
-                'LD_EXTRAS': "-shared -L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
+                'LD_EXTRAS': "-shared -L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir)}
         if self.TraceOn():
             print(
                 "Building LLDB Library (%s) from sources %s" %

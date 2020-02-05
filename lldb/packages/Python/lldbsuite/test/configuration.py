@@ -141,6 +141,10 @@ rerun_all_issues = False
 # same base name.
 all_tests = set()
 
+# LLDB library directory.
+lldb_libs_dir = None
+
+
 def shouldSkipBecauseOfCategories(test_categories):
     if use_categories:
         if len(test_categories) == 0 or len(
