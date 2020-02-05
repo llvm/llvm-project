@@ -1230,11 +1230,21 @@ void ASTDeclReader::ReadObjCDefinitionData(
       ProtoLocs.push_back(readSourceLocation());
     Data.ReferencedProtocols.set(ProtoRefs.data(), NumProtoRefs,
                                  ProtoLocs.data(), Reader.getContext());
+    Data.ODRHash = Record.readInt();
+    Data.HasODRHash = true;
 }
 
 void ASTDeclReader::MergeDefinitionData(ObjCProtocolDecl *D,
          struct ObjCProtocolDecl::DefinitionData &&NewDD) {
-  // FIXME: odr checking?
+  bool DetectedOdrViolation = false;
+  auto &DD = D->data();
+
+  if (D->getODRHash() != NewDD.ODRHash)
+    DetectedOdrViolation = true;
+
+  if (DetectedOdrViolation)
+    Reader.PendingObjCProtocolOdrMergeFailures[DD.Definition].push_back(
+        {NewDD.Definition, &NewDD});
 }
 
 void ASTDeclReader::VisitObjCProtocolDecl(ObjCProtocolDecl *PD) {

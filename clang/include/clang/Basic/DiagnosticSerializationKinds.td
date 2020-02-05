@@ -153,7 +153,7 @@ def note_module_odr_violation_definition_data : Note <
   "%ordinal2 base class %3 with "
   "%select{public|protected|private|no}4 access specifier}1">;
 
-def err_module_odr_violation_obj_interface_definition_data : Error <
+def err_module_odr_violation_objc_container_definition_data : Error <
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{"
@@ -161,7 +161,7 @@ def err_module_odr_violation_obj_interface_definition_data : Error <
   "%4 referenced %plural{1:protocol|:protocols}4|"
   "}3">;
 
-def note_module_odr_violation_obj_interface_definition_data : Note <
+def note_module_odr_violation_objc_container_definition_data : Note <
   "but in '%0' found "
   "%select{"
   "%select{no super class|super class with type %3}2|"
@@ -283,6 +283,7 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
     "retain|copy|nonatomic|setter|atomic|weak|strong|"
     "unsafe_unretained|nullability|null_resettable|class|}4'"
     " property attribute|"
+  "with %ordinal4 protocol named %5|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -364,6 +365,7 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "property name %2|"
   "property %2 with type %3|"
   "no written or default attribute for property|"
+  "with %ordinal2 protocol named %3|"
   "}1">;
 
 def err_module_odr_violation_function : Error<

@@ -64,6 +64,10 @@ public:
   // method compares more information than the AddDecl class.
   void AddObjCInterfaceDecl(const ObjCInterfaceDecl *Record);
 
+  // Use this for ODR checking ObjC protocols. This
+  // method compares more information than the AddDecl class.
+  void AddObjCProtocolDecl(const ObjCProtocolDecl *P);
+
   // Use this for ODR checking ObjC interfaces. This
   // method compares more information than the AddDecl class.
   void AddObjCMethodDecl(const ObjCMethodDecl *Method);
