@@ -3,7 +3,6 @@
 ; RUN: %llc_dwarf -dwarf-version=4 -filetype=obj -O0 < %s | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s --check-prefix=DW4 "--implicit-check-not={{DW_TAG|NULL}}"
 
-; DW5: narf
 ; DW5: .debug_info contents:
 ; DW5: DW_TAG_compile_unit
 ; DW5:[[SIG8:.*]]:   DW_TAG_base_type
