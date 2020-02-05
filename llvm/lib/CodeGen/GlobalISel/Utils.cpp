@@ -292,28 +292,51 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   return ValueAndVReg{Val.getSExtValue(), VReg};
 }
 
-const llvm::ConstantFP* llvm::getConstantFPVRegVal(Register VReg,
-                                       const MachineRegisterInfo &MRI) {
+const llvm::ConstantFP *
+llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   MachineInstr *MI = MRI.getVRegDef(VReg);
   if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
     return nullptr;
   return MI->getOperand(1).getFPImm();
 }
 
-llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
-                                               const MachineRegisterInfo &MRI) {
+namespace {
+struct DefinitionAndSourceRegister {
+  llvm::MachineInstr *MI;
+  Register Reg;
+};
+} // namespace
+
+static llvm::Optional<DefinitionAndSourceRegister>
+getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
+  Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
   if (!DstTy.isValid())
-    return nullptr;
+    return None;
   while (DefMI->getOpcode() == TargetOpcode::COPY) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid() || SrcTy != DstTy)
       break;
     DefMI = MRI.getVRegDef(SrcReg);
+    DefSrcReg = SrcReg;
   }
-  return DefMI;
+  return DefinitionAndSourceRegister{DefMI, DefSrcReg};
+}
+
+llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
+                                               const MachineRegisterInfo &MRI) {
+  Optional<DefinitionAndSourceRegister> DefSrcReg =
+      getDefSrcRegIgnoringCopies(Reg, MRI);
+  return DefSrcReg ? DefSrcReg->MI : nullptr;
+}
+
+Register llvm::getSrcRegIgnoringCopies(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  Optional<DefinitionAndSourceRegister> DefSrcReg =
+      getDefSrcRegIgnoringCopies(Reg, MRI);
+  return DefSrcReg ? DefSrcReg->Reg : Register();
 }
 
 llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
