@@ -60,10 +60,11 @@ def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32
 def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
 def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
+def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 
 // Multiple extensions
-def FuncExtKhrMipmapAndWrite3d           : FunctionExtension<"cl_khr_mipmap_image cl_khr_3d_image_writes">;
+def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
 
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _Name, bit _IsAbstract=0> {
@@ -1271,6 +1272,16 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
+  // Added to section 6.13.14.5
+  foreach aQual = ["RO", "WO", "RW"] in {
+    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
+      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
+    }
+  }
+}
+
+// Write functions are enabled using a separate extension.
+let Extension = FuncExtKhrMipmapImageWrites in {
   // Added to section 6.13.14.4.
   foreach aQual = ["WO"] in {
     foreach imgTy = [Image2d] in {
@@ -1295,7 +1306,7 @@ let Extension = FuncExtKhrMipmapImage in {
       def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
     }
     def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Int, Float]>;
-    let Extension = FuncExtKhrMipmapAndWrite3d in {
+    let Extension = FuncExtKhrMipmapWritesAndWrite3d in {
       foreach imgTy = [Image3d] in {
         def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
         def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
@@ -1303,14 +1314,7 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
-  // Added to section 6.13.14.5
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
-      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
-    }
-  }
 }
-
 
 //--------------------------------------------------------------------
 // OpenCL Extension v2.0 s18.3 - Creating OpenCL Memory Objects from OpenGL MSAA Textures
