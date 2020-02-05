@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -memref-bound-check -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -test-memref-bound-check -split-input-file -verify-diagnostics | FileCheck %s
 
 // -----
 
