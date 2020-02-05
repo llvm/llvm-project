@@ -113,7 +113,8 @@ enum {
   lldb_bndstatus_i386,
   k_last_mpxc_i386 = lldb_bndstatus_i386,
 
-  lldb_dr0_i386,
+  k_first_dbr_i386,
+  lldb_dr0_i386 = k_first_dbr_i386,
   lldb_dr1_i386,
   lldb_dr2_i386,
   lldb_dr3_i386,
@@ -121,6 +122,7 @@ enum {
   lldb_dr5_i386,
   lldb_dr6_i386,
   lldb_dr7_i386,
+  k_last_dbr_i386 = lldb_dr7_i386,
 
   k_num_registers_i386,
   k_num_gpr_registers_i386 = k_last_gpr_i386 - k_first_gpr_i386 + 1,
@@ -131,6 +133,7 @@ enum {
                               k_num_fpr_registers_i386 +
                               k_num_avx_registers_i386 +
                               k_num_mpx_registers_i386,
+  k_num_dbr_registers_i386 = k_last_dbr_i386 - k_first_dbr_i386 + 1,
 };
 
 // Internal codes for all x86_64 registers.
