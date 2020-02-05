@@ -7947,6 +7947,40 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
+  case ARM::UMAAL:
+  case ARM::UMLAL:
+  case ARM::UMULL:
+  case ARM::t2UMAAL:
+  case ARM::t2UMLAL:
+  case ARM::t2UMULL:
+  case ARM::SMLAL:
+  case ARM::SMLALBB:
+  case ARM::SMLALBT:
+  case ARM::SMLALD:
+  case ARM::SMLALDX:
+  case ARM::SMLALTB:
+  case ARM::SMLALTT:
+  case ARM::SMLSLD:
+  case ARM::SMLSLDX:
+  case ARM::SMULL:
+  case ARM::t2SMLAL:
+  case ARM::t2SMLALBB:
+  case ARM::t2SMLALBT:
+  case ARM::t2SMLALD:
+  case ARM::t2SMLALDX:
+  case ARM::t2SMLALTB:
+  case ARM::t2SMLALTT:
+  case ARM::t2SMLSLD:
+  case ARM::t2SMLSLDX:
+  case ARM::t2SMULL: {
+    unsigned RdHi = Inst.getOperand(0).getReg();
+    unsigned RdLo = Inst.getOperand(1).getReg();
+    if(RdHi == RdLo) {
+      return Error(Loc,
+                   "unpredictable instruction, RdHi and RdLo must be different");
+    }
+    break;
+  }
   }
 
   return false;
