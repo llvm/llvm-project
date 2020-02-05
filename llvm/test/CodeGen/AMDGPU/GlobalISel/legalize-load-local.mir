@@ -5355,8 +5355,14 @@ body: |
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
     ; SI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; SI: [[EXTRACT:%[0-9]+]]:_(<2 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; SI: [[BITCAST:%[0-9]+]]:_(s16) = G_BITCAST [[EXTRACT]](<2 x s8>)
-    ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s16)
+    ; SI: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[EXTRACT]](<2 x s8>)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; SI: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s8)
+    ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C3]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
+    ; SI: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[TRUNC1]]
+    ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; SI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; CI-LABEL: name: test_load_local_v2s8_align2
     ; CI: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -5377,8 +5383,14 @@ body: |
     ; CI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
     ; CI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; CI: [[EXTRACT:%[0-9]+]]:_(<2 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; CI: [[BITCAST:%[0-9]+]]:_(s16) = G_BITCAST [[EXTRACT]](<2 x s8>)
-    ; CI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s16)
+    ; CI: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[EXTRACT]](<2 x s8>)
+    ; CI: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; CI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CI: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s8)
+    ; CI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C3]](s32)
+    ; CI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
+    ; CI: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[TRUNC1]]
+    ; CI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; CI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; CI-DS128-LABEL: name: test_load_local_v2s8_align2
     ; CI-DS128: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -5399,8 +5411,14 @@ body: |
     ; CI-DS128: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
     ; CI-DS128: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; CI-DS128: [[EXTRACT:%[0-9]+]]:_(<2 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; CI-DS128: [[BITCAST:%[0-9]+]]:_(s16) = G_BITCAST [[EXTRACT]](<2 x s8>)
-    ; CI-DS128: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s16)
+    ; CI-DS128: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[EXTRACT]](<2 x s8>)
+    ; CI-DS128: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; CI-DS128: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CI-DS128: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s8)
+    ; CI-DS128: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C3]](s32)
+    ; CI-DS128: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
+    ; CI-DS128: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[TRUNC1]]
+    ; CI-DS128: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; CI-DS128: $vgpr0 = COPY [[ANYEXT]](s32)
     ; VI-LABEL: name: test_load_local_v2s8_align2
     ; VI: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -5421,8 +5439,13 @@ body: |
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
     ; VI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; VI: [[EXTRACT:%[0-9]+]]:_(<2 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; VI: [[BITCAST:%[0-9]+]]:_(s16) = G_BITCAST [[EXTRACT]](<2 x s8>)
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s16)
+    ; VI: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[EXTRACT]](<2 x s8>)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; VI: [[ZEXT1:%[0-9]+]]:_(s16) = G_ZEXT [[UV1]](s8)
+    ; VI: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; VI: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[ZEXT1]], [[C3]](s16)
+    ; VI: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[SHL]]
+    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; VI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_load_local_v2s8_align2
     ; GFX9: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -5445,8 +5468,13 @@ body: |
     ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
     ; GFX9: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<2 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; GFX9: [[BITCAST:%[0-9]+]]:_(s16) = G_BITCAST [[EXTRACT]](<2 x s8>)
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](s16)
+    ; GFX9: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[EXTRACT]](<2 x s8>)
+    ; GFX9: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; GFX9: [[ZEXT1:%[0-9]+]]:_(s16) = G_ZEXT [[UV1]](s8)
+    ; GFX9: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX9: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[ZEXT1]], [[C3]](s16)
+    ; GFX9: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX9: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(p3) = COPY $vgpr0
     %1:_(<2 x s8>) = G_LOAD %0 :: (load 2, align 2, addrspace 3)

@@ -445,3 +445,51 @@ body: |
     %3:_(s64) = G_ANYEXT %2
     $vgpr0_vgpr1 = COPY %3
 ...
+
+---
+name: test_bitcast_s16_to_v2s8
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_bitcast_s16_to_v2s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR]](s16)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(<2 x s8>) = G_BITCAST %1
+    %3:_(<2 x s32>) = G_ANYEXT %2
+    $vgpr0_vgpr1 = COPY %3
+...
+
+---
+name: test_bitcast_v2s8_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_bitcast_v2s8_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s8>) = G_TRUNC [[COPY]](<2 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<2 x s8>)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[UV]](s8)
+    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s16) = G_ZEXT [[UV1]](s8)
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; CHECK: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[ZEXT1]], [[C]](s16)
+    ; CHECK: [[OR:%[0-9]+]]:_(s16) = G_OR [[ZEXT]], [[SHL]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s8>) = G_TRUNC %0
+    %2:_(s16) = G_BITCAST %1
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+...
