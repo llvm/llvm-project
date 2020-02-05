@@ -146,13 +146,12 @@ bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
 
 
 static Align findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()),
+  return DL.getValueOrABITypeAlignment(SI->getAlign(),
                                        SI->getOperand(0)->getType());
 }
 
 static Align findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(LI->getAlignment()),
-                                       LI->getType());
+  return DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
 }
 
 static Align findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
