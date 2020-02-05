@@ -989,4 +989,24 @@ entry:
   ret <2 x i16> %build1
 }
 
+; FIXME: This test should work without copying of v0.
+;        ds_read_u16_d16_hi preserves low 16 bits of the destination
+;        and ds_write_b16 only reads low 16 bits.
+; GCN: s_waitcnt
+; GFX900:      v_mov_b32_e32 [[COPY:v[0-9]+]], v0
+; GFX900-NEXT: ds_read_u16_d16_hi [[COPY]], v1
+; GFX900-NEXT: ds_write_b16 v1, v0
+; GFX900-NEXT: s_waitcnt
+; GFX900-NEXT: v_mov_b32_e32 v0, [[COPY]]
+; GFX900-NEXT: s_waitcnt
+; GFX900-NEXT: s_setpc_b64
+define <2 x i16> @load_local_hi_v2i16_store_local_lo(i16 %reg, i16 addrspace(3)* %in) #0 {
+entry:
+  %load = load i16, i16 addrspace(3)* %in
+  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
+  store volatile i16 %reg, i16 addrspace(3)* %in
+  ret <2 x i16> %build1
+}
+
 attributes #0 = { nounwind }
