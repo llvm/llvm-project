@@ -99,6 +99,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   SmartPtrModeling.cpp
   StackAddrEscapeChecker.cpp
   StdLibraryFunctionsChecker.cpp
+  STLAlgorithmModeling.cpp
   StreamChecker.cpp
   Taint.cpp
   TaintTesterChecker.cpp

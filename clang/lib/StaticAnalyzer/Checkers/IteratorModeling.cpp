@@ -487,12 +487,9 @@ void IteratorModeling::assignToContainer(CheckerContext &C, const Expr *CE,
   Cont = Cont->getMostDerivedObjectRegion();
 
   auto State = C.getState();
-  auto &SymMgr = C.getSymbolManager();
-  auto Sym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
-                                  C.getASTContext().LongTy, C.blockCount());
-  State = assumeNoOverflow(State, Sym, 4);
-  State = setIteratorPosition(State, RetVal,
-                              IteratorPosition::getPosition(Cont, Sym));
+  const auto *LCtx = C.getLocationContext();
+  State = createIteratorPosition(State, RetVal, Cont, CE, LCtx, C.blockCount());
+
   C.addTransition(State);
 }
 
