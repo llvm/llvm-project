@@ -144,6 +144,24 @@ bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
   return TheStores.size() > NumPointerStores+NumByteStores;
 }
 
+
+static Align findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
+  return DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()),
+                                       SI->getOperand(0)->getType());
+}
+
+static Align findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
+  return DL.getValueOrABITypeAlignment(MaybeAlign(LI->getAlignment()),
+                                       LI->getType());
+}
+
+static Align findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
+                                 const LoadInst *LI) {
+  Align StoreAlign = findStoreAlignment(DL, SI);
+  Align LoadAlign = findLoadAlignment(DL, LI);
+  return commonAlignment(StoreAlign, LoadAlign);
+}
+
 namespace {
 
 class MemsetRanges {
@@ -173,8 +191,8 @@ public:
   void addStore(int64_t OffsetFromFirst, StoreInst *SI) {
     int64_t StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
 
-    addRange(OffsetFromFirst, StoreSize,
-             SI->getPointerOperand(), SI->getAlignment(), SI);
+    addRange(OffsetFromFirst, StoreSize, SI->getPointerOperand(),
+             findStoreAlignment(DL, SI).value(), SI);
   }
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
@@ -387,13 +405,8 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     // Get the starting pointer of the block.
     StartPtr = Range.StartPtr;
 
-    // Determine alignment
-    const Align Alignment = DL.getValueOrABITypeAlignment(
-        MaybeAlign(Range.Alignment),
-        cast<PointerType>(StartPtr->getType())->getElementType());
-
     AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
-                                   Alignment);
+                                   MaybeAlign(Range.Alignment));
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
                                                    : Range.TheStores) dbgs()
                                               << *SI << '\n';
@@ -411,23 +424,6 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   }
 
   return AMemSet;
-}
-
-static Align findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()),
-                                       SI->getOperand(0)->getType());
-}
-
-static Align findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(LI->getAlignment()),
-                                       LI->getType());
-}
-
-static Align findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
-                                 const LoadInst *LI) {
-  Align StoreAlign = findStoreAlignment(DL, SI);
-  Align LoadAlign = findLoadAlignment(DL, LI);
-  return commonAlignment(StoreAlign, LoadAlign);
 }
 
 // This method try to lift a store instruction before position P.
