@@ -233,6 +233,15 @@ TEST_F(FormatTestCSharp, Attributes) {
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
       "// The const char* returned by hello_world must not be deleted.\n"
       "private static extern IntPtr HelloFromCpp();)");
+
+  //  Unwrappable lines go on a line of their own.
+  // 'target:' is not treated as a label.
+  // Modify Style to enforce a column limit.
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.ColumnLimit = 10;
+  verifyFormat(R"([assembly:InternalsVisibleTo(
+    "SomeAssembly, PublicKey=SomePublicKeyThatExceedsTheColumnLimit")])",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpUsing) {
