@@ -2270,3 +2270,14 @@ def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
   let mayLoad = 1;
   let mayStore = 1;
 }
+
+// Wrapper around llvm.amdgcn.s.buffer.load. This is mostly needed as
+// a workaround for the intrinsic being defined as readnone, but
+// really needs a memory operand.
+def G_AMDGPU_S_BUFFER_LOAD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$offset, untyped_imm_0:$cachepolicy);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
