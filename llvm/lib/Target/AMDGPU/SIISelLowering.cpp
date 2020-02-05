@@ -5407,26 +5407,27 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     IsA16 = true;
     const MVT VectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
     for (unsigned i = AddrIdx; i < (AddrIdx + NumMIVAddrs); ++i) {
-      SDValue AddrLo, AddrHi;
+      SDValue AddrLo;
       // Push back extra arguments.
       if (i < DimIdx) {
         AddrLo = Op.getOperand(i);
       } else {
-        AddrLo = Op.getOperand(i);
         // Dz/dh, dz/dv and the last odd coord are packed with undef. Also,
         // in 1D, derivatives dx/dh and dx/dv are packed with undef.
         if (((i + 1) >= (AddrIdx + NumMIVAddrs)) ||
             ((NumGradients / 2) % 2 == 1 &&
             (i == DimIdx + (NumGradients / 2) - 1 ||
              i == DimIdx + NumGradients - 1))) {
-          AddrHi = DAG.getUNDEF(MVT::f16);
+          AddrLo = Op.getOperand(i);
+          if (AddrLo.getValueType() != MVT::i16)
+            AddrLo = DAG.getBitcast(MVT::i16, Op.getOperand(i));
+          AddrLo = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, AddrLo);
         } else {
-          AddrHi = Op.getOperand(i + 1);
+          AddrLo = DAG.getBuildVector(VectorVT, DL,
+                                      {Op.getOperand(i), Op.getOperand(i + 1)});
           i++;
         }
-        AddrLo = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VectorVT,
-                             {AddrLo, AddrHi});
-        AddrLo = DAG.getBitcast(MVT::i32, AddrLo);
+        AddrLo = DAG.getBitcast(MVT::f32, AddrLo);
       }
       VAddrs.push_back(AddrLo);
     }
