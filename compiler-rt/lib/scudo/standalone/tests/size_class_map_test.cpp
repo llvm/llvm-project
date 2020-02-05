@@ -12,8 +12,8 @@
 
 template <class SizeClassMap> void testSizeClassMap() {
   typedef SizeClassMap SCMap;
-  SCMap::print();
-  SCMap::validate();
+  scudo::printMap<SCMap>();
+  scudo::validateMap<SCMap>();
 }
 
 TEST(ScudoSizeClassMapTest, DefaultSizeClassMap) {
@@ -28,12 +28,31 @@ TEST(ScudoSizeClassMapTest, AndroidSizeClassMap) {
   testSizeClassMap<scudo::AndroidSizeClassMap>();
 }
 
+
+struct OneClassSizeClassConfig {
+  static const scudo::uptr NumBits = 1;
+  static const scudo::uptr MinSizeLog = 5;
+  static const scudo::uptr MidSizeLog = 5;
+  static const scudo::uptr MaxSizeLog = 5;
+  static const scudo::u32 MaxNumCachedHint = 0;
+  static const scudo::uptr MaxBytesCachedLog = 0;
+};
+
 TEST(ScudoSizeClassMapTest, OneClassSizeClassMap) {
-  testSizeClassMap<scudo::SizeClassMap<1, 5, 5, 5, 0, 0>>();
+  testSizeClassMap<scudo::FixedSizeClassMap<OneClassSizeClassConfig>>();
 }
 
 #if SCUDO_CAN_USE_PRIMARY64
+struct LargeMaxSizeClassConfig {
+  static const scudo::uptr NumBits = 3;
+  static const scudo::uptr MinSizeLog = 4;
+  static const scudo::uptr MidSizeLog = 8;
+  static const scudo::uptr MaxSizeLog = 63;
+  static const scudo::u32 MaxNumCachedHint = 128;
+  static const scudo::uptr MaxBytesCachedLog = 16;
+};
+
 TEST(ScudoSizeClassMapTest, LargeMaxSizeClassMap) {
-  testSizeClassMap<scudo::SizeClassMap<3, 4, 8, 63, 128, 16>>();
+  testSizeClassMap<scudo::FixedSizeClassMap<LargeMaxSizeClassConfig>>();
 }
 #endif
