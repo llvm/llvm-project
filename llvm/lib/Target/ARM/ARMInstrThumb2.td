@@ -5207,7 +5207,7 @@ class V8_1MI<dag oops, dag iops, AddrMode am, InstrItinClass itin, string asm,
 
 def t2CLRM : V8_1MI<(outs),
                     (ins pred:$p, reglist_with_apsr:$regs, variable_ops),
-                    AddrModeNone, NoItinerary, "clrm", "${p}\t$regs", "", []> {
+                    AddrModeNone, NoItinerary, "clrm${p}", "$regs", "", []> {
   bits<16> regs;
 
   let Inst{31-16} = 0b1110100010011111;
