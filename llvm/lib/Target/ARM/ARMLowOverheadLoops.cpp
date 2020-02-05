@@ -306,6 +306,7 @@ namespace {
 
     void Expand(LowOverheadLoop &LoLoop);
 
+    void IterationCountDCE(LowOverheadLoop &LoLoop);
   };
 }
 
@@ -818,38 +819,100 @@ void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI, bool SkipCmp) const {
   MI->eraseFromParent();
 }
 
+// Perform dead code elimation on the loop iteration count setup expression.
+// If we are tail-predicating, the number of elements to be processed is the
+// operand of the VCTP instruction in the vector body, see getCount(), which is
+// register $r3 in this example:
+//
+//   $lr = big-itercount-expression
+//   ..
+//   t2DoLoopStart renamable $lr
+//   vector.body:
+//     ..
+//     $vpr = MVE_VCTP32 renamable $r3
+//     renamable $lr = t2LoopDec killed renamable $lr, 1
+//     t2LoopEnd renamable $lr, %vector.body
+//     tB %end
+//
+// What we would like achieve here is to replace the do-loop start pseudo
+// instruction t2DoLoopStart with:
+//
+//    $lr = MVE_DLSTP_32 killed renamable $r3
+//
+// Thus, $r3 which defines the number of elements, is written to $lr,
+// and then we want to delete the whole chain that used to define $lr,
+// see the comment below how this chain could look like.
+//
+void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
+  if (!LoLoop.IsTailPredicationLegal())
+    return;
+
+  if (auto *Def = RDA->getReachingMIDef(LoLoop.Start,
+                                        LoLoop.Start->getOperand(0).getReg())) {
+    SmallPtrSet<MachineInstr*, 4> Remove;
+    SmallPtrSet<MachineInstr*, 4> Ignore = { LoLoop.Start, LoLoop.Dec,
+                                             LoLoop.End, LoLoop.InsertPt };
+    SmallVector<MachineInstr*, 4> Chain = { Def };
+    while (!Chain.empty()) {
+      MachineInstr *MI = Chain.back();
+      Chain.pop_back();
+
+      // If an instruction is conditionally executed, we assume here that this
+      // an IT-block with just this single instruction in it, otherwise we
+      // continue and can't perform dead-code elimination on it. This will
+      // capture most cases, because the loop iteration count expression
+      // that performs a round-up to next multiple of the vector length will
+      // look like this:
+      //
+      //   %mull = ..
+      //   %0 = add i32 %mul, 3
+      //   %1 = icmp slt i32 %mul, 4
+      //   %smin = select i1 %1, i32 %mul, i32 4
+      //   %2 = sub i32 %0, %smin
+      //   %3 = lshr i32 %2, 2
+      //   %4 = add nuw nsw i32 %3, 1
+      //
+      // There can be a select instruction, checking if we need to execute only
+      // 1 vector iteration (in this examples that means 4 elements). Thus,
+      // we conditionally execute one instructions to materialise the iteration
+      // count.
+      MachineInstr *IT = nullptr;
+      if (TII->getPredicate(*MI) != ARMCC::AL) {
+        auto PrevMI = std::prev(MI->getIterator());
+        auto NextMI = std::next(MI->getIterator());
+
+        if (PrevMI->getOpcode() == ARM::t2IT &&
+            TII->getPredicate(*NextMI) == ARMCC::AL)
+          IT = &*PrevMI;
+        else
+          // We can't analyse IT-blocks with multiple statements. Be
+          // conservative here: clear the list, and don't remove any statements
+          // at all.
+          return;
+      }
+
+      if (RDA->isSafeToRemove(MI, Remove, Ignore)) {
+        for (auto &MO : MI->operands()) {
+          if (!MO.isReg() || !MO.isUse() || MO.getReg() == 0)
+            continue;
+          if (auto *Op = RDA->getReachingMIDef(MI, MO.getReg()))
+            Chain.push_back(Op);
+        }
+        Ignore.insert(MI);
+
+        if (IT)
+          Remove.insert(IT);
+      }
+    }
+    LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
+  }
+}
+
 MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
   LLVM_DEBUG(dbgs() << "ARM Loops: Expanding LoopStart.\n");
   // When using tail-predication, try to delete the dead code that was used to
   // calculate the number of loop iterations.
-  if (LoLoop.IsTailPredicationLegal()) {
-    SmallVector<MachineInstr*, 4> Killed;
-    SmallVector<MachineInstr*, 4> Dead;
-    if (auto *Def = RDA->getReachingMIDef(LoLoop.Start,
-                                      LoLoop.Start->getOperand(0).getReg())) {
-      SmallPtrSet<MachineInstr*, 4> Remove;
-      SmallPtrSet<MachineInstr*, 4> Ignore = { LoLoop.Start, LoLoop.Dec,
-                                               LoLoop.End, LoLoop.InsertPt };
-      SmallVector<MachineInstr*, 4> Chain = { Def };
-      while (!Chain.empty()) {
-        MachineInstr *MI = Chain.back();
-        Chain.pop_back();
-        if (TII->getPredicate(*MI) != ARMCC::AL)
-          continue;
-
-        if (RDA->isSafeToRemove(MI, Remove, Ignore)) {
-          for (auto &MO : MI->operands()) {
-            if (!MO.isReg() || !MO.isUse() || MO.getReg() == 0)
-              continue;
-            if (auto *Op = RDA->getReachingMIDef(MI, MO.getReg()))
-              Chain.push_back(Op);
-          }
-          Ignore.insert(MI);
-        }
-      }
-      LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
-    }
-  }
+  IterationCountDCE(LoLoop);
 
   MachineInstr *InsertPt = LoLoop.InsertPt;
   MachineInstr *Start = LoLoop.Start;
