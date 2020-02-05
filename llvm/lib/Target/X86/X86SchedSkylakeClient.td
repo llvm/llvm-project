@@ -1593,33 +1593,31 @@ def SKLWriteResGroup196 : SchedWriteRes<[SKLPort0,SKLPort23]> {
 }
 def: InstRW<[SKLWriteResGroup196], (instregex "DIV_F(32|64)m")>;
 
-def SKLWriteResGroup196_1 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
-  let Latency = 22;
-  let NumMicroOps = 5;
+def SKLWriteResGroupVEX2 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
+  let Latency = 18;
+  let NumMicroOps = 5; // 2 uops perform multiple loads
   let ResourceCycles = [1,2,1,1];
 }
-def: InstRW<[SKLWriteResGroup196_1], (instrs VGATHERDPSrm,
-                                             VGATHERDPDrm,
-                                             VGATHERQPDrm,
-                                             VGATHERQPSrm,
-                                             VPGATHERDDrm,
-                                             VPGATHERDQrm,
-                                             VPGATHERQDrm,
-                                             VPGATHERQQrm)>;
+def: InstRW<[SKLWriteResGroupVEX2], (instrs VGATHERDPDrm, VPGATHERDQrm,
+                                            VGATHERQPDrm, VPGATHERQQrm,
+                                            VGATHERQPSrm, VPGATHERQDrm)>;
 
-def SKLWriteResGroup196_2 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
-  let Latency = 25;
-  let NumMicroOps = 5;
-  let ResourceCycles = [1,2,1,1];
+def SKLWriteResGroupVEX4 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
+  let Latency = 20;
+  let NumMicroOps = 5; // 2 uops peform multiple loads
+  let ResourceCycles = [1,4,1,1];
 }
-def: InstRW<[SKLWriteResGroup196_2], (instrs VGATHERDPSYrm,
-                                             VGATHERQPDYrm,
-                                             VGATHERQPSYrm,
-                                             VPGATHERDDYrm,
-                                             VPGATHERDQYrm,
-                                             VPGATHERQDYrm,
-                                             VPGATHERQQYrm,
-                                             VGATHERDPDYrm)>;
+def: InstRW<[SKLWriteResGroupVEX4], (instrs VGATHERDPDYrm, VPGATHERDQYrm,
+                                            VGATHERDPSrm,  VPGATHERDDrm,
+                                            VGATHERQPDYrm, VPGATHERQQYrm,
+                                            VGATHERQPSYrm,  VPGATHERQDYrm)>;
+
+def SKLWriteResGroupVEX8 : SchedWriteRes<[SKLPort0, SKLPort23, SKLPort5, SKLPort015]> {
+  let Latency = 22;
+  let NumMicroOps = 5; // 2 uops perform multiple loads
+  let ResourceCycles = [1,8,1,1];
+}
+def: InstRW<[SKLWriteResGroupVEX8], (instrs VGATHERDPSYrm,  VPGATHERDDYrm)>;
 
 def SKLWriteResGroup198 : SchedWriteRes<[SKLPort0,SKLPort4,SKLPort5,SKLPort23,SKLPort237,SKLPort06,SKLPort0156]> {
   let Latency = 23;
