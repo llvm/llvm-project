@@ -91,7 +91,7 @@ static cl::opt<unsigned> PragmaUnrollAndJamThreshold(
 // Returns the loop hint metadata node with the given name (for example,
 // "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
 // returned.
-static MDNode *GetUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
   if (MDNode *LoopID = L->getLoopID())
     return GetUnrollMetadata(LoopID, Name);
   return nullptr;
@@ -99,14 +99,14 @@ static MDNode *GetUnrollMetadataForLoop(const Loop *L, StringRef Name) {
 
 // Returns true if the loop has any metadata starting with Prefix. For example a
 // Prefix of "llvm.loop.unroll." returns true if we have any unroll metadata.
-static bool HasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
+static bool hasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
   if (MDNode *LoopID = L->getLoopID()) {
     // First operand should refer to the loop id itself.
     assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
     assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-    for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+    for (unsigned I = 1, E = LoopID->getNumOperands(); I < E; ++I) {
+      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
       if (!MD)
         continue;
 
@@ -122,14 +122,14 @@ static bool HasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
 }
 
 // Returns true if the loop has an unroll_and_jam(enable) pragma.
-static bool HasUnrollAndJamEnablePragma(const Loop *L) {
-  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.enable");
+static bool hasUnrollAndJamEnablePragma(const Loop *L) {
+  return getUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.enable");
 }
 
 // If loop has an unroll_and_jam_count pragma return the (necessarily
 // positive) value from the pragma.  Otherwise return 0.
-static unsigned UnrollAndJamCountPragmaValue(const Loop *L) {
-  MDNode *MD = GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.count");
+static unsigned unrollAndJamCountPragmaValue(const Loop *L) {
+  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.count");
   if (MD) {
     assert(MD->getNumOperands() == 2 &&
            "Unroll count hint metadata should have two operands.");
@@ -190,7 +190,7 @@ static bool computeUnrollAndJamCount(
   }
 
   // Check for unroll_and_jam pragmas
-  unsigned PragmaCount = UnrollAndJamCountPragmaValue(L);
+  unsigned PragmaCount = unrollAndJamCountPragmaValue(L);
   if (PragmaCount > 0) {
     UP.Count = PragmaCount;
     UP.Runtime = true;
@@ -202,7 +202,7 @@ static bool computeUnrollAndJamCount(
       return true;
   }
 
-  bool PragmaEnableUnroll = HasUnrollAndJamEnablePragma(L);
+  bool PragmaEnableUnroll = hasUnrollAndJamEnablePragma(L);
   bool ExplicitUnrollAndJamCount = PragmaCount > 0 || UserUnrollCount;
   bool ExplicitUnrollAndJam = PragmaEnableUnroll || ExplicitUnrollAndJamCount;
 
@@ -317,8 +317,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // the unroller, so long as it does not explicitly have unroll_and_jam
   // metadata. This means #pragma nounroll will disable unroll and jam as well
   // as unrolling
-  if (HasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
-      !HasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam.")) {
+  if (hasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
+      !hasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam.")) {
     LLVM_DEBUG(dbgs() << "  Disabled due to pragma.\n");
     return LoopUnrollResult::Unmodified;
   }
