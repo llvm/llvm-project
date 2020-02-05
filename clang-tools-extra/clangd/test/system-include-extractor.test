@@ -5,8 +5,12 @@
 
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
-# RUN: echo '#!/bin/bash' >> %t.dir/my_driver.sh
+# RUN: echo '#!/bin/sh' >> %t.dir/my_driver.sh
 # RUN: echo '[ "$0" = "%t.dir/my_driver.sh" ] || exit' >> %t.dir/my_driver.sh
+# RUN: echo 'args="$*"' >> %t.dir/my_driver.sh
+# RUN: echo '[ -z "${args##*"-nostdinc"*}" ] || exit' >> %t.dir/my_driver.sh
+# RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/my_driver.sh
+# RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo -e "#include <...> search starts here:\r" >&2' >> %t.dir/my_driver.sh
 # RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/my_driver.sh
@@ -22,7 +26,7 @@
 
 # Generate a compile_commands.json that will query the mock driver we've
 # created. Which should add a.h and b.h into include search path.
-# RUN: echo '[{"directory": "%/t.dir", "command": "%/t.dir/my_driver.sh the-file.cpp", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "%/t.dir/my_driver.sh the-file.cpp -nostdinc --sysroot /my/sysroot/path -isysroot=/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # RUN: sed -e "s|INPUT_DIR|%/t.dir|g" %s > %t.test.1
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
