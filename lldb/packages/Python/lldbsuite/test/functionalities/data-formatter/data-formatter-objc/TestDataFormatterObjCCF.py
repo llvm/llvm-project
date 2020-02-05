@@ -31,7 +31,7 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
         # check formatters for common Objective-C types
         expect_strings = [
             '(CFGregorianUnits) cf_greg_units = 1 years, 3 months, 5 days, 12 hours, 5 minutes 7 seconds',
-            '(CFGregorianDate) cf_greg_date = @"4/11/1985 2:0:0"',
+            '(CFGregorianDate) cf_greg_date = @"4/10/1985 18:0:0"',
             '(CFRange) cf_range = location=4 length=4',
             '(NSPoint) ns_point = (x = 4, y = 4)',
             '(NSRange) ns_range = location=4, length=4',
