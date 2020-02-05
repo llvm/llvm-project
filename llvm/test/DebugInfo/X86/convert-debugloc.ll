@@ -1,126 +1,47 @@
-; RUN: llc -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s --match-full-lines --check-prefix=DW5-CHECK
-; RUN: llc -dwarf-version=4 -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s --match-full-lines --check-prefix=DW4-CHECK
+; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump - \
+; RUN:   | FileCheck %s --check-prefix=DW5 "--implicit-check-not={{DW_TAG|NULL}}"
+; RUN: %llc_dwarf -dwarf-version=4 -filetype=obj -O0 < %s | llvm-dwarfdump - \
+; RUN:   | FileCheck %s --check-prefix=DW4 "--implicit-check-not={{DW_TAG|NULL}}"
 
-; DW5-CHECK: .debug_info contents:
-; DW5-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000064 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000068)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x0000000c: DW_TAG_compile_unit
-; DW5-CHECK-NEXT:               DW_AT_producer	("clang version 9.0.0 (trunk 353791) (llvm/trunk 353801)")
-; DW5-CHECK-NEXT:               DW_AT_language	(DW_LANG_C99)
-; DW5-CHECK-NEXT:               DW_AT_name	("dbg.c")
-; DW5-CHECK-NEXT:               DW_AT_str_offsets_base	(0x00000008)
-; DW5-CHECK-NEXT:               DW_AT_stmt_list	(0x00000000)
-; DW5-CHECK-NEXT:               DW_AT_comp_dir {{.*}}
-; DW5-CHECK-NEXT:               DW_AT_low_pc	(0x0000000000000000)
-; DW5-CHECK-NEXT:               DW_AT_high_pc	(0x0000000000000005)
-; DW5-CHECK-NEXT:               DW_AT_addr_base	(0x00000008)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x00000023:   DW_TAG_base_type
-; DW5-CHECK-NEXT:                 DW_AT_name	("DW_ATE_signed_8")
-; DW5-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed)
-; DW5-CHECK-NEXT:                 DW_AT_byte_size	(0x01)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x00000027:   DW_TAG_base_type
-; DW5-CHECK-NEXT:                 DW_AT_name	("DW_ATE_signed_32")
-; DW5-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed)
-; DW5-CHECK-NEXT:                 DW_AT_byte_size	(0x04)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x0000002b:   DW_TAG_subprogram
-; DW5-CHECK-NEXT:                 DW_AT_low_pc	(0x0000000000000000)
-; DW5-CHECK-NEXT:                 DW_AT_high_pc	(0x0000000000000005)
-; DW5-CHECK-NEXT:                 DW_AT_frame_base	(DW_OP_reg7 RSP)
-; DW5-CHECK-NEXT:                 DW_AT_name	("foo")
-; DW5-CHECK-NEXT:                 DW_AT_decl_file {{.*}}
-; DW5-CHECK-NEXT:                 DW_AT_decl_line	(1)
-; DW5-CHECK-NEXT:                 DW_AT_prototyped	(true)
-; DW5-CHECK-NEXT:                 DW_AT_type	(0x0000005f "signed char")
-; DW5-CHECK-NEXT:                 DW_AT_external	(true)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x0000003a:     DW_TAG_formal_parameter
-; DW5-CHECK-NEXT:                   DW_AT_location	(DW_OP_reg5 RDI)
-; DW5-CHECK-NEXT:                   DW_AT_name	("x")
-; DW5-CHECK-NEXT:                   DW_AT_decl_file {{.*}}
-; DW5-CHECK-NEXT:                   DW_AT_decl_line	(1)
-; DW5-CHECK-NEXT:                   DW_AT_type	(0x0000005f "signed char")
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x00000044:     DW_TAG_variable
-; DW5-CHECK-NEXT:                   DW_AT_location	(DW_OP_breg5 RDI+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_convert (0x00000023) "DW_ATE_signed_8", DW_OP_convert (0x00000027) "DW_ATE_signed_32", DW_OP_stack_value)
-; DW5-CHECK-NEXT:                   DW_AT_name	("y")
-; DW5-CHECK-NEXT:                   DW_AT_decl_file {{.*}}
-; DW5-CHECK-NEXT:                   DW_AT_decl_line	(3)
-; DW5-CHECK-NEXT:                   DW_AT_type	(0x00000063 "int")
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x0000005e:     NULL
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x0000005f:   DW_TAG_base_type
-; DW5-CHECK-NEXT:                 DW_AT_name	("signed char")
-; DW5-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed_char)
-; DW5-CHECK-NEXT:                 DW_AT_byte_size	(0x01)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x00000063:   DW_TAG_base_type
-; DW5-CHECK-NEXT:                 DW_AT_name	("int")
-; DW5-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed)
-; DW5-CHECK-NEXT:                 DW_AT_byte_size	(0x04)
-; DW5-CHECK-EMPTY:
-; DW5-CHECK-NEXT: 0x00000067:   NULL
+; DW5: narf
+; DW5: .debug_info contents:
+; DW5: DW_TAG_compile_unit
+; DW5:[[SIG8:.*]]:   DW_TAG_base_type
+; DW5-NEXT:DW_AT_name ("DW_ATE_signed_8")
+; DW5-NEXT:DW_AT_encoding (DW_ATE_signed)
+; DW5-NEXT:DW_AT_byte_size (0x01)
+; DW5-NOT: DW_AT
+; DW5:[[SIG32:.*]]:   DW_TAG_base_type
+; DW5-NEXT:DW_AT_name ("DW_ATE_signed_32")
+; DW5-NEXT:DW_AT_encoding (DW_ATE_signed)
+; DW5-NEXT:DW_AT_byte_size (0x04)
+; DW5-NOT: DW_AT
+; DW5:   DW_TAG_subprogram
+; DW5:     DW_TAG_formal_parameter
+; DW5:     DW_TAG_variable
+; DW5:       DW_AT_location ({{.*}}, DW_OP_convert ([[SIG8]]) "DW_ATE_signed_8", DW_OP_convert ([[SIG32]]) "DW_ATE_signed_32", DW_OP_stack_value)
+; DW5:       DW_AT_name ("y")
+; DW5:     NULL
+; DW5:   DW_TAG_base_type
+; DW5:     DW_AT_name ("signed char")
+; DW5:   DW_TAG_base_type
+; DW5:     DW_AT_name ("int")
+; DW5:   NULL
 
+; DW4: .debug_info contents:
+; DW4: DW_TAG_compile_unit
+; DW4:   DW_TAG_subprogram
+; DW4:     DW_TAG_formal_parameter
+; DW4:     DW_TAG_variable
+; DW4:       DW_AT_location ({{.*}}, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
+; DW4:       DW_AT_name ("y")
+; DW4:     NULL
+; DW4:   DW_TAG_base_type
+; DW4:     DW_AT_name ("signed char")
+; DW4:   DW_TAG_base_type
+; DW4:     DW_AT_name ("int")
+; DW4:   NULL
 
-; DW4-CHECK: .debug_info contents:
-; DW4-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000007a version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000007e)
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x0000000b: DW_TAG_compile_unit
-; DW4-CHECK-NEXT:               DW_AT_producer	("clang version 9.0.0 (trunk 353791) (llvm/trunk 353801)")
-; DW4-CHECK-NEXT:               DW_AT_language	(DW_LANG_C99)
-; DW4-CHECK-NEXT:               DW_AT_name	("dbg.c")
-; DW4-CHECK-NEXT:               DW_AT_stmt_list	(0x00000000)
-; DW4-CHECK-NEXT:               DW_AT_comp_dir {{.*}}
-; DW4-CHECK-NEXT:               DW_AT_low_pc	(0x0000000000000000)
-; DW4-CHECK-NEXT:               DW_AT_high_pc	(0x0000000000000005)
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x0000002a:   DW_TAG_subprogram
-; DW4-CHECK-NEXT:                 DW_AT_low_pc	(0x0000000000000000)
-; DW4-CHECK-NEXT:                 DW_AT_high_pc	(0x0000000000000005)
-; DW4-CHECK-NEXT:                 DW_AT_frame_base	(DW_OP_reg7 RSP)
-; DW4-CHECK-NEXT:                 DW_AT_name	("foo")
-; DW4-CHECK-NEXT:                 DW_AT_decl_file {{.*}}
-; DW4-CHECK-NEXT:                 DW_AT_decl_line	(1)
-; DW4-CHECK-NEXT:                 DW_AT_prototyped	(true)
-; DW4-CHECK-NEXT:                 DW_AT_type	(0x0000006f "signed char")
-; DW4-CHECK-NEXT:                 DW_AT_external	(true)
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x00000043:     DW_TAG_formal_parameter
-; DW4-CHECK-NEXT:                   DW_AT_location	(DW_OP_reg5 RDI)
-; DW4-CHECK-NEXT:                   DW_AT_name	("x")
-; DW4-CHECK-NEXT:                   DW_AT_decl_file {{.*}}
-; DW4-CHECK-NEXT:                   DW_AT_decl_line	(1)
-; DW4-CHECK-NEXT:                   DW_AT_type	(0x0000006f "signed char")
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x00000050:     DW_TAG_variable
-; DW4-CHECK-NEXT:                   DW_AT_location	(DW_OP_breg5 RDI+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
-; DW4-CHECK-NEXT:                   DW_AT_name	("y")
-; DW4-CHECK-NEXT:                   DW_AT_decl_file {{.*}}
-; DW4-CHECK-NEXT:                   DW_AT_decl_line	(3)
-; DW4-CHECK-NEXT:                   DW_AT_type	(0x00000076 "int")
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x0000006e:     NULL
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x0000006f:   DW_TAG_base_type
-; DW4-CHECK-NEXT:                 DW_AT_name	("signed char")
-; DW4-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed_char)
-; DW4-CHECK-NEXT:                 DW_AT_byte_size	(0x01)
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x00000076:   DW_TAG_base_type
-; DW4-CHECK-NEXT:                 DW_AT_name	("int")
-; DW4-CHECK-NEXT:                 DW_AT_encoding	(DW_ATE_signed)
-; DW4-CHECK-NEXT:                 DW_AT_byte_size	(0x04)
-; DW4-CHECK-EMPTY:
-; DW4-CHECK-NEXT: 0x0000007d:   NULL
-
-
-; ModuleID = 'dbg.ll'
-source_filename = "dbg.c"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local signext i8 @foo(i8 signext %x) !dbg !7 {
