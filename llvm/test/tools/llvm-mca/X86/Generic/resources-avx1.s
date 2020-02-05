@@ -1061,7 +1061,7 @@ vzeroupper
 # CHECK-NEXT:  2      12    2.00                        vaesimc	%xmm0, %xmm2
 # CHECK-NEXT:  3      18    2.00    *                   vaesimc	(%rax), %xmm2
 # CHECK-NEXT:  1      8     3.67                        vaeskeygenassist	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      8     3.33    *                   vaeskeygenassist	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      14    3.33    *                   vaeskeygenassist	$22, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        vandnpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     1.00    *                   vandnpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vandnpd	%ymm0, %ymm1, %ymm2
@@ -1404,7 +1404,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.50                        vpblendw	$11, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpblendw	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      14    6.00                        vpclmulqdq	$11, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      14    5.67    *                   vpclmulqdq	$11, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      20    5.67    *                   vpclmulqdq	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpeqb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpcmpeqb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpeqd	%xmm0, %xmm1, %xmm2
@@ -1414,9 +1414,9 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.50                        vpcmpeqw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpcmpeqw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      4     2.67                        vpcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      4     2.33    *                   vpcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      10    2.33    *                   vpcmpestri	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      11    2.67                        vpcmpestrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      11    2.33    *                   vpcmpestrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      17    2.33    *                   vpcmpestrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpgtb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpcmpgtb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpcmpgtd	%xmm0, %xmm1, %xmm2
