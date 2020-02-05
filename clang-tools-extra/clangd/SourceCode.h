@@ -298,6 +298,9 @@ llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
 bool isHeaderFile(llvm::StringRef FileName,
                   llvm::Optional<LangOptions> LangOpts = llvm::None);
 
+/// Returns true if the given location is in a generated protobuf file.
+bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
+
 } // namespace clangd
 } // namespace clang
 #endif
