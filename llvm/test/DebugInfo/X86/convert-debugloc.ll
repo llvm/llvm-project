@@ -18,7 +18,8 @@
 ; DW5:   DW_TAG_subprogram
 ; DW5:     DW_TAG_formal_parameter
 ; DW5:     DW_TAG_variable
-; DW5:       DW_AT_location ({{.*}}, DW_OP_convert ([[SIG8]]) "DW_ATE_signed_8", DW_OP_convert ([[SIG32]]) "DW_ATE_signed_32", DW_OP_stack_value)
+; DW5:       DW_AT_location (
+; DW5:         {{.*}}, DW_OP_convert ([[SIG8]]) "DW_ATE_signed_8", DW_OP_convert ([[SIG32]]) "DW_ATE_signed_32", DW_OP_stack_value)
 ; DW5:       DW_AT_name ("y")
 ; DW5:     NULL
 ; DW5:   DW_TAG_base_type
@@ -32,7 +33,8 @@
 ; DW4:   DW_TAG_subprogram
 ; DW4:     DW_TAG_formal_parameter
 ; DW4:     DW_TAG_variable
-; DW4:       DW_AT_location ({{.*}}, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
+; DW4:       DW_AT_location (
+; DW4:         {{.*}}, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
 ; DW4:       DW_AT_name ("y")
 ; DW4:     NULL
 ; DW4:   DW_TAG_base_type
