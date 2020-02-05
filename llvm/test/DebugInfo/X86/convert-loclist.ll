@@ -1,4 +1,6 @@
-; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s \
+; RUN: %llc_dwarf -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
+; RUN: %llc_dwarf -split-dwarf-file=foo.dwo -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
 
 ; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
