@@ -168,7 +168,13 @@ public:
                  Value *IfCondition, Value *NumThreads,
                  omp::ProcBindKind ProcBind, bool IsCancellable);
 
+  /// Generator for '#omp flush'
+  ///
+  /// \param Loc The location where the flush directive was encountered
+  void CreateFlush(const LocationDescription &Loc);
+
   ///}
+
 
 private:
   /// Update the internal location to \p Loc.
@@ -213,6 +219,11 @@ private:
   InsertPointTy emitBarrierImpl(const LocationDescription &Loc,
                                 omp::Directive DK, bool ForceSimpleCall,
                                 bool CheckCancelFlag);
+
+  /// Generate a flush runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitFlush(const LocationDescription &Loc);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization

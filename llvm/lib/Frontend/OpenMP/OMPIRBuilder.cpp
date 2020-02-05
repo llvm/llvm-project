@@ -630,3 +630,19 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
 
   return AfterIP;
 }
+
+void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc)
+{
+  // Build call void __kmpc_flush(ident_t *loc)
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Args[] = {getOrCreateIdent(SrcLocStr)};
+
+  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_flush), Args);
+}
+
+void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc)
+{
+  if (!updateToLocation(Loc))
+   return;
+  emitFlush(Loc);
+}
