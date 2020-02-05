@@ -10,7 +10,10 @@ add_llvm_library(MLIRTestTransforms
   TestLoopMapping.cpp
   TestLoopParametricTiling.cpp
   TestOpaqueLoc.cpp
+  MemRefBoundCheck.cpp
+  TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
+  TestParallelismDetection.cpp
   TestVectorToLoopsConversion.cpp
   TestVectorTransforms.cpp
   TestVectorizationUtils.cpp
