@@ -233,11 +233,8 @@ private:
   /// \param[in] s
   ///     The stream to use for pretty-printing.
   ///
-  /// \param[in] offset
-  ///     The offset into the data buffer of the opcodes to be printed.
-  ///
-  /// \param[in] length
-  ///     The length in bytes of the opcodes to be printed.
+  /// \param[in] data
+  ///     The data extractor.
   ///
   /// \param[in] level
   ///     The level of detail to use in pretty-printing.
