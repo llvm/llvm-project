@@ -155,7 +155,7 @@ static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
 static bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
                                              Loop *CurLoop,
                                              SinkAndHoistLICMFlags &Flags);
-static Instruction *CloneInstructionInExitBlock(
+static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater *MSSAU);
 
@@ -1364,7 +1364,7 @@ static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
   return true;
 }
 
-static Instruction *CloneInstructionInExitBlock(
+static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater *MSSAU) {
   Instruction *New;
@@ -1477,7 +1477,7 @@ static Instruction *sinkThroughTriviallyReplaceablePHI(
   if (It != SunkCopies.end())
     New = It->second;
   else
-    New = SunkCopies[ExitBlock] = CloneInstructionInExitBlock(
+    New = SunkCopies[ExitBlock] = cloneInstructionInExitBlock(
         *I, *ExitBlock, *TPN, LI, SafetyInfo, MSSAU);
   return New;
 }
