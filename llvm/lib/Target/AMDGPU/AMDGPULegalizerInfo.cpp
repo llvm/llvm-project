@@ -42,6 +42,20 @@ using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
 
+// Round the number of elements to the next power of two elements
+static LLT getPow2VectorType(LLT Ty) {
+  unsigned NElts = Ty.getNumElements();
+  unsigned Pow2NElts = 1 <<  Log2_32_Ceil(NElts);
+  return Ty.changeNumElements(Pow2NElts);
+}
+
+// Round the number of bits to the next power of two bits
+static LLT getPow2ScalarType(LLT Ty) {
+  unsigned Bits = Ty.getSizeInBits();
+  unsigned Pow2Bits = 1 <<  Log2_32_Ceil(Bits);
+  return LLT::scalar(Pow2Bits);
+}
+
 static LegalityPredicate isMultiple32(unsigned TypeIdx,
                                       unsigned MaxSize = 1024) {
   return [=](const LegalityQuery &Query) {
@@ -2959,6 +2973,33 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeSBufferLoad(
+  MachineInstr &MI, MachineIRBuilder &B,
+  GISelChangeObserver &Observer) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = B.getMRI()->getType(Dst);
+  unsigned Size = Ty.getSizeInBits();
+
+  // There are no 96-bit result scalar loads, but widening to 128-bit should
+  // always be legal. We may need to restore this to a 96-bit result if it turns
+  // out this needs to be converted to a vector load during RegBankSelect.
+  if (isPowerOf2_32(Size))
+    return true;
+
+  LegalizerHelper Helper(B.getMF(), *this, Observer, B);
+  B.setInstr(MI);
+
+  Observer.changingInstr(MI);
+
+  if (Ty.isVector())
+    Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
+  else
+    Helper.widenScalarDst(MI, getPow2ScalarType(Ty), 0);
+
+  Observer.changedInstr(MI);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineIRBuilder &B,
                                             GISelChangeObserver &Observer) const {
@@ -3075,6 +3116,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_s_buffer_load:
+    return legalizeSBufferLoad(MI, B, Observer);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_struct_buffer_store:
     return legalizeBufferStore(MI, MRI, B, false, false);

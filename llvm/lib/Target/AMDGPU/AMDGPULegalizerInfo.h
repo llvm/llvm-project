@@ -138,6 +138,10 @@ public:
       GISelChangeObserver &Observer,
       const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
 
+  bool legalizeSBufferLoad(
+    MachineInstr &MI, MachineIRBuilder &B,
+    GISelChangeObserver &Observer) const;
+
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
 
