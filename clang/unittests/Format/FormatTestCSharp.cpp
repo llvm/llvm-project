@@ -70,6 +70,30 @@ TEST_F(FormatTestCSharp, CSharpClass) {
                "            f();\n"
                "    }\n"
                "}");
+
+  // Ensure that small and empty classes are handled correctly with condensed
+  // (Google C++-like) brace-breaking style.
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+
+  verifyFormat("public class SomeEmptyClass {}", Style);
+
+  verifyFormat("public class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("private class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("protected class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
+  verifyFormat("internal class SomeTinyClass {\n"
+               "  int X;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, AccessModifiers) {
