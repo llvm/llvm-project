@@ -498,10 +498,13 @@ bool ARM::appendArchExtFeatures(
     return false;
 
   for (const auto AE : ARCHExtNames) {
-    if (Negated && (AE.ID & ID) == ID && AE.NegFeature)
-      Features.push_back(AE.NegFeature);
-    else if (AE.ID == ID && AE.Feature)
-      Features.push_back(AE.Feature);
+    if (Negated) {
+      if ((AE.ID & ID) == ID && AE.NegFeature)
+        Features.push_back(AE.NegFeature);
+    } else {
+      if ((AE.ID & ID) == AE.ID && AE.Feature)
+        Features.push_back(AE.Feature);
+    }
   }
 
   if (CPU == "")

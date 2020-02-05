@@ -480,10 +480,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+dotprod") {
       DotProd = true;
     } else if (Feature == "+mve") {
-      DSP = 1;
       MVE |= MVE_INT;
     } else if (Feature == "+mve.fp") {
-      DSP = 1;
       HasLegalHalfType = true;
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
