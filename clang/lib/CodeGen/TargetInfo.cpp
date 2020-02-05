@@ -726,11 +726,19 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
 //===----------------------------------------------------------------------===//
 
 class WebAssemblyABIInfo final : public SwiftABIInfo {
+public:
+  enum ABIKind {
+    MVP = 0,
+    ExperimentalMV = 1,
+  };
+
+private:
   DefaultABIInfo defaultInfo;
+  ABIKind Kind;
 
 public:
-  explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT)
-      : SwiftABIInfo(CGT), defaultInfo(CGT) {}
+  explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind)
+      : SwiftABIInfo(CGT), defaultInfo(CGT), Kind(Kind) {}
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -761,8 +769,9 @@ private:
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
-  explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : TargetCodeGenInfo(new WebAssemblyABIInfo(CGT)) {}
+  explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
+                                        WebAssemblyABIInfo::ABIKind K)
+      : TargetCodeGenInfo(new WebAssemblyABIInfo(CGT, K)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
@@ -813,6 +822,20 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     // though watch out for things like bitfields.
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+    // For the experimental multivalue ABI, fully expand all other aggregates
+    if (Kind == ABIKind::ExperimentalMV) {
+      const RecordType *RT = Ty->getAs<RecordType>();
+      assert(RT);
+      bool HasBitField = false;
+      for (auto *Field : RT->getDecl()->fields()) {
+        if (Field->isBitField()) {
+          HasBitField = true;
+          break;
+        }
+      }
+      if (!HasBitField)
+        return ABIArgInfo::getExpand();
+    }
   }
 
   // Otherwise just do the default thing.
@@ -832,6 +855,9 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
       // ABIArgInfo::getDirect().
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+      // For the experimental multivalue ABI, return all other aggregates
+      if (Kind == ABIKind::ExperimentalMV)
+        return ABIArgInfo::getDirect();
     }
   }
 
@@ -9828,8 +9854,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   }
 
   case llvm::Triple::wasm32:
-  case llvm::Triple::wasm64:
-    return SetCGInfo(new WebAssemblyTargetCodeGenInfo(Types));
+  case llvm::Triple::wasm64: {
+    WebAssemblyABIInfo::ABIKind Kind = WebAssemblyABIInfo::MVP;
+    if (getTarget().getABI() == "experimental-mv")
+      Kind = WebAssemblyABIInfo::ExperimentalMV;
+    return SetCGInfo(new WebAssemblyTargetCodeGenInfo(Types, Kind));
+  }
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
