@@ -4074,9 +4074,9 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Ops.slice(1));
   Type *GEPTy = PointerType::get(LastType, AS);
   if (VectorType *VT = dyn_cast<VectorType>(Ops[0]->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
   else if (VectorType *VT = dyn_cast<VectorType>(Ops[1]->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
 
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);
@@ -4445,52 +4445,66 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
     return UndefValue::get(RetTy);
 
   Type *InVecTy = Op0->getType();
-  unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
-  unsigned InVecNumElts = InVecTy->getVectorNumElements();
+  ElementCount MaskEltCount = Mask->getType()->getVectorElementCount();
+  ElementCount InVecEltCount = InVecTy->getVectorElementCount();
+
+  assert(MaskEltCount.Scalable == InVecEltCount.Scalable &&
+         "vscale mismatch between input vector and mask");
+
+  bool Scalable = MaskEltCount.Scalable;
 
   SmallVector<int, 32> Indices;
-  ShuffleVectorInst::getShuffleMask(Mask, Indices);
-  assert(MaskNumElts == Indices.size() &&
-         "Size of Indices not same as number of mask elements?");
-
-  // Canonicalization: If mask does not select elements from an input vector,
-  // replace that input vector with undef.
-  bool MaskSelects0 = false, MaskSelects1 = false;
-  for (unsigned i = 0; i != MaskNumElts; ++i) {
-    if (Indices[i] == -1)
-      continue;
-    if ((unsigned)Indices[i] < InVecNumElts)
-      MaskSelects0 = true;
-    else
-      MaskSelects1 = true;
+  if (!Scalable) {
+    ShuffleVectorInst::getShuffleMask(Mask, Indices);
+    assert(MaskEltCount.Min == Indices.size() &&
+           "Size of Indices not same as number of mask elements?");
   }
-  if (!MaskSelects0)
-    Op0 = UndefValue::get(InVecTy);
-  if (!MaskSelects1)
-    Op1 = UndefValue::get(InVecTy);
+
+  if (!Scalable) {
+    // Canonicalization: If mask does not select elements from an input vector,
+    // replace that input vector with undef.
+    bool MaskSelects0 = false, MaskSelects1 = false;
+    for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
+      if (Indices[i] == -1)
+        continue;
+      if ((unsigned)Indices[i] < InVecEltCount.Min)
+        MaskSelects0 = true;
+      else
+        MaskSelects1 = true;
+    }
+    if (!MaskSelects0)
+      Op0 = UndefValue::get(InVecTy);
+    if (!MaskSelects1)
+      Op1 = UndefValue::get(InVecTy);
+  }
 
   auto *Op0Const = dyn_cast<Constant>(Op0);
   auto *Op1Const = dyn_cast<Constant>(Op1);
 
-  // If all operands are constant, constant fold the shuffle.
-  if (Op0Const && Op1Const)
+  // If all operands are constant, constant fold the shuffle. This
+  // transformation depends on the value of the mask which is not known at
+  // compile time for scalable vectors
+  if (!Scalable && Op0Const && Op1Const)
     return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
 
   // Canonicalization: if only one input vector is constant, it shall be the
-  // second one.
-  if (Op0Const && !Op1Const) {
+  // second one. This transformation depends on the value of the mask which
+  // is not known at compile time for scalable vectors
+  if (!Scalable && Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
-    ShuffleVectorInst::commuteShuffleMask(Indices, InVecNumElts);
+    ShuffleVectorInst::commuteShuffleMask(Indices, InVecEltCount.Min);
   }
 
   // A splat of an inserted scalar constant becomes a vector constant:
   // shuf (inselt ?, C, IndexC), undef, <IndexC, IndexC...> --> <C, C...>
   // NOTE: We may have commuted above, so analyze the updated Indices, not the
   //       original mask constant.
+  // NOTE: This transformation depends on the value of the mask which is not
+  // known at compile time for scalable vectors
   Constant *C;
   ConstantInt *IndexC;
-  if (match(Op0, m_InsertElement(m_Value(), m_Constant(C),
-                                 m_ConstantInt(IndexC)))) {
+  if (!Scalable && match(Op0, m_InsertElement(m_Value(), m_Constant(C),
+                                              m_ConstantInt(IndexC)))) {
     // Match a splat shuffle mask of the insert index allowing undef elements.
     int InsertIndex = IndexC->getZExtValue();
     if (all_of(Indices, [InsertIndex](int MaskElt) {
@@ -4499,8 +4513,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
       assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
 
       // Shuffle mask undefs become undefined constant result elements.
-      SmallVector<Constant *, 16> VecC(MaskNumElts, C);
-      for (unsigned i = 0; i != MaskNumElts; ++i)
+      SmallVector<Constant *, 16> VecC(MaskEltCount.Min, C);
+      for (unsigned i = 0; i != MaskEltCount.Min; ++i)
         if (Indices[i] == -1)
           VecC[i] = UndefValue::get(C->getType());
       return ConstantVector::get(VecC);
@@ -4514,6 +4528,11 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
         OpShuf->getMask()->getSplatValue())
       return Op0;
 
+  // All remaining transformation depend on the value of the mask, which is
+  // not known at compile time for scalable vectors.
+  if (Scalable)
+    return nullptr;
+
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.
   // TODO: Should we allow this?
@@ -4525,7 +4544,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // shuffle. This handles simple identity shuffles as well as chains of
   // shuffles that may widen/narrow and/or move elements across lanes and back.
   Value *RootVec = nullptr;
-  for (unsigned i = 0; i != MaskNumElts; ++i) {
+  for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
     // Note that recursion is limited for each vector element, so if any element
     // exceeds the limit, this will fail to simplify.
     RootVec =

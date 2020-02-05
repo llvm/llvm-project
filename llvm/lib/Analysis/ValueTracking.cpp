@@ -166,6 +166,11 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
+  // The length of scalable vectors is unknown at compile time, thus we
+  // cannot check their values
+  if (Shuf->getMask()->getType()->getVectorElementCount().Scalable)
+    return false;
+
   int NumElts = Shuf->getOperand(0)->getType()->getVectorNumElements();
   int NumMaskElts = Shuf->getMask()->getType()->getVectorNumElements();
   DemandedLHS = DemandedRHS = APInt::getNullValue(NumElts);
