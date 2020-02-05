@@ -1,10 +1,5 @@
 ## Basic test checking that update_cc_test_checks.py works as expected for
 ## functions with mangled names
-
-# %update_cc_test_checks is only set if python3 is on the path.
-# FIXME: Is this the best approach? See discussion on D70660.
-# REQUIRES: python3
-
 # RUN: cp -f %S/Inputs/mangled_names.c %t.c && %update_cc_test_checks -v %t.c
 # RUN: diff -u %t.c %S/Inputs/mangled_names.c.expected
 ## Check that running the script again does not change the result:
