@@ -184,6 +184,11 @@ Changes to the WebAssembly Target
 
  During this release ...
 
+Changes to the Windows Target
+-----------------------------
+
+* Fixed section relative relocations in .debug_frame in DWARF debug info
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -209,6 +214,10 @@ Changes to the DAG infrastructure
 
 Changes to LLDB
 ===============
+
+* Improved support for building with MinGW
+
+* Initial support for debugging Windows ARM and ARM64 binaries
 
 External Open Source Projects Using LLVM 10
 ===========================================
