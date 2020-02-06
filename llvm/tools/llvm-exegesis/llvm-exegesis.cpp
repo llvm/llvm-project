@@ -263,8 +263,8 @@ void benchmarkMain() {
 
   const LLVMState State(CpuName);
 
-  const std::unique_ptr<BenchmarkRunner> Runner =
-      State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
+  const std::unique_ptr<BenchmarkRunner> Runner = ExitOnErr(
+      State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
