@@ -36,6 +36,9 @@ class TestSwiftExpressionObjCContext(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        # Register shlib so it can run on-device.
+        self.registerSharedLibrariesWithTarget(target, ['Foo'])
+
         # Set the breakpoints
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('main.m'))
