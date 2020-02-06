@@ -1098,3 +1098,29 @@ let params = T.All in {
   def vsetq_lane: Intrinsic<Vector, (args unpromoted<Scalar>:$e, Vector:$v, imm_lane:$lane),
                             (ielt_var $v, $e, $lane)>;
 }
+
+foreach desttype = !listconcat(T.Int16, T.Int32, T.Float) in {
+  defvar is_dest_float = !eq(desttype.kind, "f");
+  defvar is_dest_unsigned = !eq(desttype.kind, "u");
+  // First immediate operand of the LLVM intrinsic
+  defvar unsigned_flag = !if(is_dest_float, (unsignedflag Scalar),
+                             !if(is_dest_unsigned, V.True, V.False));
+  // For float->int conversions _n and _x_n intrinsics are not polymorphic
+  // because the signedness of the destination type cannot be inferred.
+  defvar pnt_nx = !if(is_dest_float, PNT_2Type, PNT_None);
+
+  let params = !if(is_dest_float,
+                   !if(!eq(desttype.size, 16), T.Int16, T.Int32),
+                   !if(!eq(desttype.size, 16), [f16], [f32])) in {
+    let pnt = pnt_nx in
+      def "vcvtq_n_"#desttype : Intrinsic<VecOf<desttype>,
+        (args Vector:$a, imm_1toN:$b),
+        (IRInt<"vcvt_fix", [VecOf<desttype>, Vector]> unsigned_flag, $a, $b)>;
+
+    defm "vcvtq" : IntrinsicMX<VecOf<desttype>,
+      (args Vector:$a, imm_1toN:$b, Predicate:$p),
+      (IRInt<"vcvt_fix_predicated", [VecOf<desttype>, Vector, Predicate]>
+             unsigned_flag, $inactive, $a, $b, $p),
+      1, "_n_"#desttype, PNT_2Type, pnt_nx>;
+  }
+}
