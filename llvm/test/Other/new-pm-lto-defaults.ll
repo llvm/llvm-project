@@ -92,7 +92,6 @@
 ; CHECK-O2-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O2-NEXT: Running pass: CrossDSOCFIPass
 ; CHECK-O2-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}SimplifyCFGPass>
 ; CHECK-O2-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O2-NEXT: Running pass: GlobalDCEPass
