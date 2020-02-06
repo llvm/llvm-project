@@ -21134,7 +21134,7 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
   // Divide by pow2.
   SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i64));
+      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i8));
 
   // If we're dividing by a positive value, we're done.  Otherwise, we must
   // negate the result.
