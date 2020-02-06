@@ -3035,6 +3035,11 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   if (!CurCodeDecl)
     return;
 
+  // If the return block isn't reachable, neither is this check, so don't emit
+  // it.
+  if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty())
+    return;
+
   ReturnsNonNullAttr *RetNNAttr = nullptr;
   if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
     RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>();
