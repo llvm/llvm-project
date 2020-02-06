@@ -4987,6 +4987,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_update:
       case OMPC_capture:
       case OMPC_seq_cst:
+      case OMPC_acq_rel:
       case OMPC_depend:
       case OMPC_threads:
       case OMPC_simd:
@@ -8562,7 +8563,21 @@ StmtResult Sema::ActOnOpenMPTaskgroupDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc) {
-  assert(Clauses.size() <= 1 && "Extra clauses in flush directive");
+  OMPFlushClause *FC = nullptr;
+  OMPClause *OrderClause = nullptr;
+  for (OMPClause *C : Clauses) {
+    if (C->getClauseKind() == OMPC_flush)
+      FC = cast<OMPFlushClause>(C);
+    else
+      OrderClause = C;
+  }
+  if (FC && OrderClause) {
+    Diag(FC->getLParenLoc(), diag::err_omp_flush_order_clause_and_list)
+        << getOpenMPClauseName(OrderClause->getClauseKind());
+    Diag(OrderClause->getBeginLoc(), diag::note_omp_flush_order_clause_here)
+        << getOpenMPClauseName(OrderClause->getClauseKind());
+    return StmtError();
+  }
   return OMPFlushDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 
@@ -8901,6 +8916,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
   // longjmp() and throw() must not violate the entry/exit criteria.
   OpenMPClauseKind AtomicKind = OMPC_unknown;
   SourceLocation AtomicKindLoc;
+  OpenMPClauseKind MemOrderKind = OMPC_unknown;
+  SourceLocation MemOrderLoc;
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_read || C->getClauseKind() == OMPC_write ||
         C->getClauseKind() == OMPC_update ||
@@ -8913,6 +8930,18 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       } else {
         AtomicKind = C->getClauseKind();
         AtomicKindLoc = C->getBeginLoc();
+      }
+    }
+    if (C->getClauseKind() == OMPC_seq_cst ||
+        C->getClauseKind() == OMPC_acq_rel) {
+      if (MemOrderKind != OMPC_unknown) {
+        Diag(C->getBeginLoc(), diag::err_omp_atomic_several_mem_order_clauses)
+            << SourceRange(C->getBeginLoc(), C->getEndLoc());
+        Diag(MemOrderLoc, diag::note_omp_atomic_previous_clause)
+            << getOpenMPClauseName(MemOrderKind);
+      } else {
+        MemOrderKind = C->getClauseKind();
+        MemOrderLoc = C->getBeginLoc();
       }
     }
   }
@@ -10841,6 +10870,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -11553,6 +11583,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -11975,6 +12006,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -12175,6 +12207,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -12348,6 +12381,9 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_seq_cst:
     Res = ActOnOpenMPSeqCstClause(StartLoc, EndLoc);
     break;
+  case OMPC_acq_rel:
+    Res = ActOnOpenMPAcqRelClause(StartLoc, EndLoc);
+    break;
   case OMPC_threads:
     Res = ActOnOpenMPThreadsClause(StartLoc, EndLoc);
     break;
@@ -12459,6 +12495,11 @@ OMPClause *Sema::ActOnOpenMPCaptureClause(SourceLocation StartLoc,
 OMPClause *Sema::ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                          SourceLocation EndLoc) {
   return new (Context) OMPSeqCstClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPAcqRelClause(SourceLocation StartLoc,
+                                         SourceLocation EndLoc) {
+  return new (Context) OMPAcqRelClause(StartLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPThreadsClause(SourceLocation StartLoc,
@@ -12617,6 +12658,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
   case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:

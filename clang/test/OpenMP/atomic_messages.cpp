@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
 
 int foo() {
 L1:
@@ -721,6 +723,48 @@ int seq_cst() {
   ;
 
  return seq_cst<int>();
+}
+
+template <class T>
+T acq_rel() {
+  T a = 0, b = 0;
+// omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic acq_rel
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause}} omp50-note@+1 2 {{'acq_rel' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic acq_rel seq_cst
+  a += b;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic update acq_rel
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+
+  return T();
+}
+
+int acq_rel() {
+  int a = 0, b = 0;
+// Test for atomic acq_rel
+// omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic acq_rel
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause}} omp50-note@+1 {{'seq_cst' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic seq_cst acq_rel
+  a += b;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+#pragma omp atomic update acq_rel
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+
+ return acq_rel<int>(); // omp50-note {{in instantiation of function template specialization 'acq_rel<int>' requested here}}
 }
 
 template <class T>

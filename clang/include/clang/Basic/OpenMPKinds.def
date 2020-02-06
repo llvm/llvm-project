@@ -215,6 +215,9 @@
 #ifndef OPENMP_ORDER_KIND
 #define OPENMP_ORDER_KIND(Name)
 #endif
+#ifndef OPENMP_FLUSH_CLAUSE
+#define OPENMP_FLUSH_CLAUSE(Name)
+#endif
 
 // OpenMP context selector sets.
 OPENMP_CONTEXT_SELECTOR_SET(implementation)
@@ -254,6 +257,7 @@ OPENMP_CLAUSE(write, OMPWriteClause)
 OPENMP_CLAUSE(update, OMPUpdateClause)
 OPENMP_CLAUSE(capture, OMPCaptureClause)
 OPENMP_CLAUSE(seq_cst, OMPSeqCstClause)
+OPENMP_CLAUSE(acq_rel, OMPAcqRelClause)
 OPENMP_CLAUSE(depend, OMPDependClause)
 OPENMP_CLAUSE(device, OMPDeviceClause)
 OPENMP_CLAUSE(threads, OMPThreadsClause)
@@ -486,6 +490,7 @@ OPENMP_ATOMIC_CLAUSE(write)
 OPENMP_ATOMIC_CLAUSE(update)
 OPENMP_ATOMIC_CLAUSE(capture)
 OPENMP_ATOMIC_CLAUSE(seq_cst)
+OPENMP_ATOMIC_CLAUSE(acq_rel)
 
 // Clauses allowed for OpenMP directive 'target'.
 OPENMP_TARGET_CLAUSE(if)
@@ -1082,6 +1087,10 @@ OPENMP_LASTPRIVATE_KIND(conditional)
 // Type of the 'order' clause.
 OPENMP_ORDER_KIND(concurrent)
 
+// Clauses allowed for OpenMP directive 'flush'.
+OPENMP_FLUSH_CLAUSE(acq_rel)
+
+#undef OPENMP_FLUSH_CLAUSE
 #undef OPENMP_ORDER_KIND
 #undef OPENMP_LASTPRIVATE_KIND
 #undef OPENMP_CONTEXT_SELECTOR
