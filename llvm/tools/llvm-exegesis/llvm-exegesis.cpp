@@ -373,7 +373,7 @@ int main(int Argc, char **Argv) {
   cl::ParseCommandLineOptions(Argc, Argv, "");
 
   exegesis::ExitOnErr.setExitCodeMapper([](const Error &Err) {
-    if (Err.isA<StringError>())
+    if (Err.isA<exegesis::ClusteringError>())
       return EXIT_SUCCESS;
     return EXIT_FAILURE;
   });
