@@ -72,7 +72,6 @@ struct ScopedEndOfReportDecorator {
 
 // Prints the provided error and metadata information.
 void printHeader(Error E, uintptr_t AccessPtr,
-                 const gwp_asan::AllocatorState *State,
                  const gwp_asan::AllocationMetadata *Metadata,
                  Printf_t Printf) {
   // Print using intermediate strings. Platforms like Android don't like when
@@ -81,9 +80,8 @@ void printHeader(Error E, uintptr_t AccessPtr,
   constexpr size_t kDescriptionBufferLen = 128;
   char DescriptionBuffer[kDescriptionBufferLen] = "";
   if (E != Error::UNKNOWN && Metadata != nullptr) {
-    uintptr_t Address =
-        __gwp_asan_get_allocation_address(State, Metadata);
-    size_t Size = __gwp_asan_get_allocation_size(State, Metadata);
+    uintptr_t Address = __gwp_asan_get_allocation_address(Metadata);
+    size_t Size = __gwp_asan_get_allocation_size(Metadata);
     if (E == Error::USE_AFTER_FREE) {
       snprintf(DescriptionBuffer, kDescriptionBufferLen,
                "(%zu byte%s into a %zu-byte allocation at 0x%zx) ",
@@ -191,7 +189,7 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
       __gwp_asan_get_metadata(State, Metadata, ErrorPtr);
 
   // Print the error header.
-  printHeader(E, ErrorPtr, State, AllocMeta, Printf);
+  printHeader(E, ErrorPtr, AllocMeta, Printf);
 
   // Print the fault backtrace.
   static constexpr unsigned kMaximumStackFramesForCrashTrace = 512;
@@ -204,27 +202,25 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
     return;
 
   // Maybe print the deallocation trace.
-  if (__gwp_asan_is_deallocated(State, AllocMeta)) {
-    uint64_t ThreadID =
-        __gwp_asan_get_deallocation_thread_id(State, AllocMeta);
+  if (__gwp_asan_is_deallocated(AllocMeta)) {
+    uint64_t ThreadID = __gwp_asan_get_deallocation_thread_id(AllocMeta);
     if (ThreadID == kInvalidThreadID)
       Printf("0x%zx was deallocated by thread <unknown> here:\n", ErrorPtr);
     else
       Printf("0x%zx was deallocated by thread %zu here:\n", ErrorPtr, ThreadID);
     TraceLength = __gwp_asan_get_deallocation_trace(
-        State, AllocMeta, Trace, kMaximumStackFramesForCrashTrace);
+        AllocMeta, Trace, kMaximumStackFramesForCrashTrace);
     PrintBacktrace(Trace, TraceLength, Printf);
   }
 
   // Print the allocation trace.
-  uint64_t ThreadID =
-      __gwp_asan_get_allocation_thread_id(State, AllocMeta);
+  uint64_t ThreadID = __gwp_asan_get_allocation_thread_id(AllocMeta);
   if (ThreadID == kInvalidThreadID)
     Printf("0x%zx was allocated by thread <unknown> here:\n", ErrorPtr);
   else
     Printf("0x%zx was allocated by thread %zu here:\n", ErrorPtr, ThreadID);
   TraceLength = __gwp_asan_get_allocation_trace(
-      State, AllocMeta, Trace, kMaximumStackFramesForCrashTrace);
+      AllocMeta, Trace, kMaximumStackFramesForCrashTrace);
   PrintBacktrace(Trace, TraceLength, Printf);
 }
 } // namespace crash_handler

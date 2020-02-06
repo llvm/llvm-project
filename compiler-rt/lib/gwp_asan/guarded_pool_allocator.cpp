@@ -194,7 +194,7 @@ void GuardedPoolAllocator::trapOnAddress(uintptr_t Address, Error E) {
   State.FailureAddress = Address;
 
   // Raise a SEGV by touching first guard page.
-  volatile char *p = reinterpret_cast<char*>(State.GuardedPagePool);
+  volatile char *p = reinterpret_cast<char *>(State.GuardedPagePool);
   *p = 0;
   __builtin_unreachable();
 }
