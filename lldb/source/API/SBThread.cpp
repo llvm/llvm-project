@@ -292,14 +292,13 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
                      GetStopReasonExtendedBacktraces,
                      (lldb::InstrumentationRuntimeType), type);
 
-  ThreadCollectionSP threads;
-  threads = std::make_shared<ThreadCollection>();
+  SBThreadCollection threads;
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope())
-    return LLDB_RECORD_RESULT(threads);
+    return LLDB_RECORD_RESULT(SBThreadCollection());
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
 
@@ -308,8 +307,9 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   if (!info)
     return LLDB_RECORD_RESULT(threads);
 
-  return LLDB_RECORD_RESULT(process_sp->GetInstrumentationRuntime(type)
-                                ->GetBacktracesFromExtendedStopInfo(info));
+  threads = process_sp->GetInstrumentationRuntime(type)
+                ->GetBacktracesFromExtendedStopInfo(info);
+  return LLDB_RECORD_RESULT(threads);
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
