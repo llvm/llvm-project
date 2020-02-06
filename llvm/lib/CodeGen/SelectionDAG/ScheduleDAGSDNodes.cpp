@@ -863,7 +863,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    if (MI->isCall() && DAG->getTarget().Options.EnableDebugEntryValues)
+    if (MI->isCandidateForCallSiteEntry() &&
+        DAG->getTarget().Options.EnableDebugEntryValues)
       MF.addCallArgsForwardingRegs(MI, DAG->getSDCallSiteInfo(Node));
 
     return MI;
