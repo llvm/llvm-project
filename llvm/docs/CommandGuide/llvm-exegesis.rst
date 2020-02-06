@@ -184,16 +184,25 @@ OPTIONS
  a comma-separated list. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
- .. option:: -snippets-file=<filename>
+.. option:: -snippets-file=<filename>
 
-  Specify the custom code snippet to measure. See example 2 for details.
-  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
+ Specify the custom code snippet to measure. See example 2 for details.
+ Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
 .. option:: -mode=[latency|uops|inverse_throughput|analysis]
 
  Specify the run mode. Note that if you pick `analysis` mode, you also need
  to specify at least one of the `-analysis-clusters-output-file=` and
  `-analysis-inconsistencies-output-file=`.
+
+.. option:: -repetition-mode=[duplicate|loop]
+
+ Specify the repetition mode. `duplicate` will create a large, straight line
+ basic block with `num-repetitions` copies of the snippet. `loop` will wrap
+ the snippet in a loop which will be run `num-repetitions` times. The `loop`
+ mode tends to better hide the effects of the CPU frontend on architectures
+ that cache decoded instructions, but consumes a register for counting
+ iterations.
 
 .. option:: -num-repetitions=<Number of repetitions>
 
