@@ -1,7 +1,3 @@
-
-# All test suites added here should be excuded from check-all
-set(EXCLUDE_FROM_ALL On)
-
 if (CMAKE_CFG_INTDIR STREQUAL ".")
   set(LLVM_BUILD_MODE ".")
 else ()
@@ -22,6 +18,7 @@ if(LLVM_BUILD_INSTRUMENTED)
 
   add_lit_testsuite(generate-profraw "Generating clang PGO data"
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/
+    EXCLUDE_FROM_CHECK_ALL
     DEPENDS clang clear-profraw
     )
 
@@ -52,6 +49,7 @@ if(APPLE AND DTRACE)
 
   add_lit_testsuite(generate-dtrace-logs "Generating clang dtrace data"
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/
+    EXCLUDE_FROM_CHECK_ALL
     ARGS -j 1
     DEPENDS clang clear-dtrace-logs
     )

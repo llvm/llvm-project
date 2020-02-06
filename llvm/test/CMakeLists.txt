@@ -30,11 +30,6 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
   )
 
-# Don't include check-llvm into check-all without LLVM_BUILD_TOOLS.
-if(NOT LLVM_BUILD_TOOLS)
-  set(EXCLUDE_FROM_ALL ON)
-endif()
-
 # Set the depends list as a variable so that it can grow conditionally.
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
 set(LLVM_TEST_DEPENDS
@@ -173,13 +168,21 @@ endif()
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
 
+if(LLVM_BUILD_TOOLS)
+  set(exclude_from_check_all "EXCLUDE_FROM_CHECK_ALL")
+else()
+  set(exclude_from_check_all "")
+endif()
+
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
+  ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 
