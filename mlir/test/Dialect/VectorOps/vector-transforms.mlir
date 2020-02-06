@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -test-vector-to-vector-conversion | FileCheck %s
 
 // CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[MAP1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
 
 // CHECK-LABEL: func @add4x2
 //      CHECK: %[[ES1:.*]] = vector.extract_slices %{{.*}}, [2, 2], [1, 1] : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
@@ -310,4 +311,38 @@ func @tuple_get(%arg0: vector<4xf32>, %arg1: vector<8xf32>) -> vector<8xf32> {
   %0 = vector.tuple %arg0, %arg1 : vector<4xf32>, vector<8xf32>
   %1 = vector.tuple_get %0, 1 : tuple<vector<4xf32>, vector<8xf32>>
   return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @vector_transfers_vector_element_type
+//      CHECK: %[[C0:.*]] = constant 0 : index
+//      CHECK: %[[C1:.*]] = constant 1 : index
+//      CHECK: %[[VTR0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP1]]} : memref<6x2x1xvector<2x4xf32>>, vector<1x1x2x4xf32>
+// CHECK-NEXT: %[[VTR1:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C1]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP1]]} : memref<6x2x1xvector<2x4xf32>>, vector<1x1x2x4xf32>
+// CHECK-NEXT: vector.transfer_write %[[VTR0]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {permutation_map = #[[MAP1]]} : vector<1x1x2x4xf32>, memref<6x2x1xvector<2x4xf32>>
+// CHECK-NEXT: vector.transfer_write %[[VTR1]], %{{.*}}[%[[C0]], %[[C1]], %[[C0]]] {permutation_map = #[[MAP1]]} : vector<1x1x2x4xf32>, memref<6x2x1xvector<2x4xf32>>
+
+func @vector_transfers_vector_element_type() {
+  %c0 = constant 0 : index
+  %cf0 = constant 0.000000e+00 : f32
+  %vf0 = splat %cf0 : vector<2x4xf32>
+
+  %0 = alloc() : memref<6x2x1xvector<2x4xf32>>
+
+  %1 = vector.transfer_read %0[%c0, %c0, %c0], %vf0
+      {permutation_map = affine_map<(d0, d1, d2) -> (d1, d2)>}
+        : memref<6x2x1xvector<2x4xf32>>, vector<2x1x2x4xf32>
+
+  %2 = vector.extract_slices %1, [1, 1, 2, 4], [1, 1, 1, 1]
+    : vector<2x1x2x4xf32> into tuple<vector<1x1x2x4xf32>, vector<1x1x2x4xf32>>
+  %3 = vector.tuple_get %2, 0 : tuple<vector<1x1x2x4xf32>, vector<1x1x2x4xf32>>
+  %4 = vector.tuple_get %2, 1 : tuple<vector<1x1x2x4xf32>, vector<1x1x2x4xf32>>
+  %5 = vector.tuple %3, %4 : vector<1x1x2x4xf32>, vector<1x1x2x4xf32>
+  %6 = vector.insert_slices %5, [1, 1, 2, 4], [1, 1, 1, 1]
+    : tuple<vector<1x1x2x4xf32>, vector<1x1x2x4xf32>> into vector<2x1x2x4xf32>
+
+  vector.transfer_write %6, %0[%c0, %c0, %c0]
+    {permutation_map = affine_map<(d0, d1, d2) -> (d1, d2)>}
+      : vector<2x1x2x4xf32>, memref<6x2x1xvector<2x4xf32>>
+
+  return
 }

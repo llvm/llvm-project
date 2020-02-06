@@ -460,12 +460,13 @@ SmallVector<Value, 1> mlir::vector::unrollSingleResultOpMatchingType(
       op, iterationBounds, vectors, resultIndex, targetShape, builder)};
 }
 
-// Generates slices of 'vectorType' according to 'sizes' and 'strides, and
-// calls 'fn' with linear index and indices for each slice.
+/// Generates slices of 'vectorType' according to 'sizes' and 'strides, and
+/// calls 'fn' with linear index and indices for each slice.
 static void
-generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
-                         ArrayRef<int64_t> sizes, ArrayRef<int64_t> strides,
-                         ArrayRef<Value> indices, PatternRewriter &rewriter,
+generateTransferOpSlices(Type memrefElementType, VectorType vectorType,
+                         TupleType tupleType, ArrayRef<int64_t> sizes,
+                         ArrayRef<int64_t> strides, ArrayRef<Value> indices,
+                         PatternRewriter &rewriter,
                          function_ref<void(unsigned, ArrayRef<Value>)> fn) {
   // Compute strides w.r.t. to slice counts in each dimension.
   auto maybeDimSliceCounts = shapeRatio(vectorType.getShape(), sizes);
@@ -475,6 +476,25 @@ generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
 
   int64_t numSlices = tupleType.size();
   unsigned numSliceIndices = indices.size();
+  // Compute 'indexOffset' at which to update 'indices', which is equal
+  // to the memref rank (indices.size) minus the effective 'vectorRank'.
+  // The effective 'vectorRank', is equal to the rank of the vector type
+  // minus the rank of the memref vector element type (if it has one).
+  //
+  // For example:
+  //
+  //   Given memref type 'memref<6x2x1xvector<2x4xf32>>' and vector
+  //   transfer_read/write ops which read/write vectors of type
+  //   'vector<2x1x2x4xf32>'. The memref rank is 3, and the effective
+  //   vector rank is 4 - 2 = 2, and so 'indexOffset' = 3 - 2 = 1.
+  //
+  unsigned vectorRank = vectorType.getRank();
+  if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
+    assert(vectorRank >= memrefVectorElementType.getRank());
+    vectorRank -= memrefVectorElementType.getRank();
+  }
+  unsigned indexOffset = numSliceIndices - vectorRank;
+
   auto *ctx = rewriter.getContext();
   for (unsigned i = 0; i < numSlices; ++i) {
     auto vectorOffsets = delinearize(sliceStrides, i);
@@ -482,16 +502,39 @@ generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
         computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
     // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
     SmallVector<Value, 4> sliceIndices(numSliceIndices);
-    for (auto it : llvm::enumerate(indices)) {
-      auto expr = getAffineDimExpr(0, ctx) +
-                  getAffineConstantExpr(elementOffsets[it.index()], ctx);
-      auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
-      sliceIndices[it.index()] = rewriter.create<AffineApplyOp>(
-          it.value().getLoc(), map, ArrayRef<Value>(it.value()));
+    for (unsigned j = 0; j < numSliceIndices; ++j) {
+      if (j < indexOffset) {
+        sliceIndices[j] = indices[j];
+      } else {
+        auto expr = getAffineDimExpr(0, ctx) +
+                    getAffineConstantExpr(elementOffsets[j - indexOffset], ctx);
+        auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
+        sliceIndices[j] = rewriter.create<AffineApplyOp>(
+            indices[j].getLoc(), map, ArrayRef<Value>(indices[j]));
+      }
     }
     // Call 'fn' to generate slice 'i' at 'sliceIndices'.
     fn(i, sliceIndices);
   }
+}
+
+/// Returns true if 'map' is a suffix of an identity affine map, false
+/// otherwise. Example: affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+static bool isIdentitySuffix(AffineMap map) {
+  if (map.getNumDims() < map.getNumResults())
+    return false;
+  ArrayRef<AffineExpr> results = map.getResults();
+  Optional<int> lastPos;
+  for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
+    auto expr = results[i].dyn_cast<AffineDimExpr>();
+    if (!expr)
+      return false;
+    int currPos = static_cast<int>(expr.getPosition());
+    if (lastPos.hasValue() && currPos != lastPos.getValue() + 1)
+      return false;
+    lastPos = currPos;
+  }
+  return true;
 }
 
 namespace {
@@ -504,7 +547,7 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
                                      PatternRewriter &rewriter) const override {
     // TODO(andydavis, ntv) Support splitting TransferReadOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
-    if (!xferReadOp.permutation_map().isIdentity())
+    if (!isIdentitySuffix(xferReadOp.permutation_map()))
       return matchFailure();
     // Return unless the unique 'xferReadOp' user is an ExtractSlicesOp.
     Value xferReadResult = xferReadOp.getResult();
@@ -523,6 +566,8 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
     assert(llvm::all_of(strides, [](int64_t s) { return s == 1; }));
 
     Location loc = xferReadOp.getLoc();
+    auto memrefElementType =
+        xferReadOp.memref().getType().cast<MemRefType>().getElementType();
     int64_t numSlices = resultTupleType.size();
     SmallVector<Value, 4> vectorTupleValues(numSlices);
     SmallVector<Value, 4> indices(xferReadOp.indices().begin(),
@@ -535,8 +580,9 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
           loc, sliceVectorType, xferReadOp.memref(), sliceIndices,
           xferReadOp.permutation_map(), xferReadOp.padding());
     };
-    generateTransferOpSlices(sourceVectorType, resultTupleType, sizes, strides,
-                             indices, rewriter, createSlice);
+    generateTransferOpSlices(memrefElementType, sourceVectorType,
+                             resultTupleType, sizes, strides, indices, rewriter,
+                             createSlice);
 
     // Create tuple of splice xfer read operations.
     Value tupleOp = rewriter.create<vector::TupleOp>(loc, resultTupleType,
@@ -557,7 +603,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
                                      PatternRewriter &rewriter) const override {
     // TODO(andydavis, ntv) Support splitting TransferWriteOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
-    if (!xferWriteOp.permutation_map().isIdentity())
+    if (!isIdentitySuffix(xferWriteOp.permutation_map()))
       return matchFailure();
     // Return unless the 'xferWriteOp' 'vector' operand is an 'InsertSlicesOp'.
     auto *vectorDefOp = xferWriteOp.vector().getDefiningOp();
@@ -580,6 +626,8 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
     insertSlicesOp.getStrides(strides);
 
     Location loc = xferWriteOp.getLoc();
+    auto memrefElementType =
+        xferWriteOp.memref().getType().cast<MemRefType>().getElementType();
     SmallVector<Value, 4> indices(xferWriteOp.indices().begin(),
                                   xferWriteOp.indices().end());
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
@@ -588,8 +636,9 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
           loc, tupleOp.getOperand(index), xferWriteOp.memref(), sliceIndices,
           xferWriteOp.permutation_map());
     };
-    generateTransferOpSlices(resultVectorType, sourceTupleType, sizes, strides,
-                             indices, rewriter, createSlice);
+    generateTransferOpSlices(memrefElementType, resultVectorType,
+                             sourceTupleType, sizes, strides, indices, rewriter,
+                             createSlice);
 
     // Erase old 'xferWriteOp'.
     rewriter.eraseOp(xferWriteOp);
