@@ -3180,7 +3180,7 @@ static bool isNonTrivialObjCLifetimeConversion(Qualifiers FromQuals,
 /// FromType and \p ToType is permissible, given knowledge about whether every
 /// outer layer is const-qualified.
 static bool isQualificationConversionStep(QualType FromType, QualType ToType,
-                                          bool CStyle,
+                                          bool CStyle, bool IsTopLevel,
                                           bool &PreviousToQualsIncludeConst,
                                           bool &ObjCLifetimeConversion) {
   Qualifiers FromQuals = FromType.getQualifiers();
@@ -3217,11 +3217,15 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
   if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
     return false;
 
-  // For a C-style cast, just require the address spaces to overlap.
-  // FIXME: Does "superset" also imply the representation of a pointer is the
-  // same? We're assuming that it does here and in compatiblyIncludes.
-  if (CStyle && !ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
-      !FromQuals.isAddressSpaceSupersetOf(ToQuals))
+  // If address spaces mismatch:
+  //  - in top level it is only valid to convert to addr space that is a
+  //    superset in all cases apart from C-style casts where we allow
+  //    conversions between overlapping address spaces.
+  //  - in non-top levels it is not a valid conversion.
+  if (ToQuals.getAddressSpace() != FromQuals.getAddressSpace() &&
+      (!IsTopLevel ||
+       !(ToQuals.isAddressSpaceSupersetOf(FromQuals) ||
+         (CStyle && FromQuals.isAddressSpaceSupersetOf(ToQuals)))))
     return false;
 
   //   -- if the cv 1,j and cv 2,j are different, then const is in
@@ -3262,9 +3266,9 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
   bool PreviousToQualsIncludeConst = true;
   bool UnwrappedAnyPointer = false;
   while (Context.UnwrapSimilarTypes(FromType, ToType)) {
-    if (!isQualificationConversionStep(FromType, ToType, CStyle,
-                                       PreviousToQualsIncludeConst,
-                                       ObjCLifetimeConversion))
+    if (!isQualificationConversionStep(
+            FromType, ToType, CStyle, !UnwrappedAnyPointer,
+            PreviousToQualsIncludeConst, ObjCLifetimeConversion))
       return false;
     UnwrappedAnyPointer = true;
   }
@@ -4508,7 +4512,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
     // If we find a qualifier mismatch, the types are not reference-compatible,
     // but are still be reference-related if they're similar.
     bool ObjCLifetimeConversion = false;
-    if (!isQualificationConversionStep(T2, T1, /*CStyle=*/false,
+    if (!isQualificationConversionStep(T2, T1, /*CStyle=*/false, TopLevel,
                                        PreviousToQualsIncludeConst,
                                        ObjCLifetimeConversion))
       return (ConvertedReferent || Context.hasSimilarType(T1, T2))
