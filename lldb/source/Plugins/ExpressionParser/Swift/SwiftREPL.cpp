@@ -572,6 +572,10 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       swift::SourceFile *repl_source_file = new (*ast)
           swift::SourceFile(*repl_module, swift::SourceFileKind::REPL, bufferID,
                             implicit_import_kind, /*Keep tokens*/false);
+
+      // Given this file is empty and only exists to import the standard
+      // library, we can go ahead and just mark it as having been type checked.
+      repl_source_file->ASTStage = swift::SourceFile::TypeChecked;
       repl_module->addFile(*repl_source_file);
       m_completion_module_initialized = true;
     }
