@@ -861,7 +861,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
       {
           // variables.
           R"cpp(
-      static const int [[VA^R]] = 123;
+        static const int [[VA^R]] = 123;
       )cpp",
           R"cpp(
         #include "foo.h"
