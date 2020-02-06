@@ -79,6 +79,19 @@ func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
   return
 }
 
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // CHECK: affine.max #[[MAP0]](%arg0)[%arg1]
+  %0 = affine.max affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
+  // CHECK: affine.max #[[MAP1]](%arg0, %arg1)[%arg2]
+  %1 = affine.max affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)> (%arg0, %arg1)[%arg2]
+  // CHECK: affine.max #[[MAP2]]()[%arg1, %arg2]
+  %2 = affine.max affine_map<()[s0, s1] -> (s0 - s1, 11)> ()[%arg1, %arg2]
+  // CHECK: affine.max #[[MAP3]]()
+  %3 = affine.max affine_map<()[] -> (77, 78, 79)> ()[]
+  return
+}
+
 // -----
 
 func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
