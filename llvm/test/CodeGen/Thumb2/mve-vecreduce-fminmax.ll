@@ -14,7 +14,7 @@ define arm_aapcs_vfpcc float @fmin_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 2139095040 @ float +Inf
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float> %x)
   ret float %z
@@ -83,7 +83,7 @@ define arm_aapcs_vfpcc half @fmin_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .short 31744 @ half +Inf
+; CHECK-NEXT:    .short 0x7c00 @ half +Inf
 entry:
   %z = call fast half @llvm.experimental.vector.reduce.fmin.v4f16(<4 x half> %x)
   ret half %z
@@ -522,7 +522,7 @@ define arm_aapcs_vfpcc float @fmin_v2f32_acc(<2 x float> %x, float %y) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI18_0:
-; CHECK-NEXT:    .long 2139095040 @ float +Inf
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float> %x)
   %c = fcmp fast olt float %y, %z
@@ -601,7 +601,7 @@ define arm_aapcs_vfpcc void @fmin_v4f16_acc(<4 x half> %x, half* %yy) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI21_0:
-; CHECK-NEXT:    .short 31744 @ half +Inf
+; CHECK-NEXT:    .short 0x7c00 @ half +Inf
 entry:
   %y = load half, half* %yy
   %z = call fast half @llvm.experimental.vector.reduce.fmin.v4f16(<4 x half> %x)
@@ -1136,7 +1136,7 @@ define arm_aapcs_vfpcc float @fmax_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI36_0:
-; CHECK-NEXT:    .long 4286578688 @ float -Inf
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float> %x)
   ret float %z
@@ -1204,7 +1204,7 @@ define arm_aapcs_vfpcc half @fmax_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI39_0:
-; CHECK-NEXT:    .short 64512 @ half -Inf
+; CHECK-NEXT:    .short 0xfc00 @ half -Inf
 entry:
   %z = call fast half @llvm.experimental.vector.reduce.fmax.v4f16(<4 x half> %x)
   ret half %z
@@ -1641,7 +1641,7 @@ define arm_aapcs_vfpcc float @fmax_v2f32_acc(<2 x float> %x, float %y) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI54_0:
-; CHECK-NEXT:    .long 4286578688 @ float -Inf
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float> %x)
   %c = fcmp fast ogt float %y, %z
@@ -1720,7 +1720,7 @@ define arm_aapcs_vfpcc void @fmax_v4f16_acc(<4 x half> %x, half* %yy) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI57_0:
-; CHECK-NEXT:    .short 64512 @ half -Inf
+; CHECK-NEXT:    .short 0xfc00 @ half -Inf
 entry:
   %y = load half, half* %yy
   %z = call fast half @llvm.experimental.vector.reduce.fmax.v4f16(<4 x half> %x)

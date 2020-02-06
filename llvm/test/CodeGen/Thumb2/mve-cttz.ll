@@ -35,7 +35,7 @@ define arm_aapcs_vfpcc <2 x i64> @cttz_2i64_0_t(<2 x i64> %src){
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %0 = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %src, i1 0)
   ret <2 x i64> %0
@@ -111,7 +111,7 @@ define arm_aapcs_vfpcc <2 x i64> @cttz_2i64_1_t(<2 x i64> %src){
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %0 = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %src, i1 1)
   ret <2 x i64> %0

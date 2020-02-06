@@ -23,7 +23,7 @@ entry:
 ; CHECK-DAG-NEXT:   ret
 
 ; CHECK-NOFP16:        .[[LBL1:LCPI1_[0-9]]]:
-; CHECK-NOFP16-NEXT:   .hword  15360 // half 1
+; CHECK-NOFP16-NEXT:   .hword  0x3c00 // half 1
 ; CHECK-NOFP16-LABEL:  Const1:
 ; CHECK-NOFP16:        adrp x[[NUM:[0-9]+]], .[[LBL1]]
 ; CHECK-NOFP16-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL1]]]
@@ -37,7 +37,7 @@ entry:
 ; CHECK-DAG-NEXT:   ret
 
 ; CHECK-NOFP16:        .[[LBL2:LCPI2_[0-9]]]:
-; CHECK-NOFP16-NEXT:   .hword  12288 // half 0.125
+; CHECK-NOFP16-NEXT:   .hword  0x3000 // half 0.125
 ; CHECK-NOFP16-LABEL:  Const2:
 ; CHECK-NOFP16:        adrp x[[NUM:[0-9]+]], .[[LBL2]]
 ; CHECK-NOFP16-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL2]]]
@@ -51,7 +51,7 @@ entry:
 ; CHECK-DAG-NEXT:   ret
 
 ; CHECK-NOFP16:        .[[LBL3:LCPI3_[0-9]]]:
-; CHECK-NOFP16-NEXT:   .hword  20352 // half 30
+; CHECK-NOFP16-NEXT:   .hword  0x4f80 // half 30
 ; CHECK-NOFP16-LABEL:  Const3:
 ; CHECK-NOFP16:        adrp x[[NUM:[0-9]+]], .[[LBL3]]
 ; CHECK-NOFP16-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL3]]]
@@ -66,7 +66,7 @@ entry:
 ; CHECK-DAG-NEXT:  ret
 
 ; CHECK-NOFP16:        .[[LBL4:LCPI4_[0-9]]]:
-; CHECK-NOFP16-NEXT:   .hword  20416                    // half 31
+; CHECK-NOFP16-NEXT:   .hword  0x4fc0                    // half 31
 ; CHECK-NOFP16-LABEL:  Const4:
 ; CHECK-NOFP16:        adrp x[[NUM:[0-9]+]], .[[LBL4]]
 ; CHECK-NOFP16-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL4]]]
@@ -76,7 +76,7 @@ entry:
   ret half 0xH2FF0
 }
 ; CHECK-ILLEGAL:        .[[LBL5:LCPI5_[0-9]]]:
-; CHECK-ILLEGAL-NEXT:   .hword  12272                   // half 0.12402
+; CHECK-ILLEGAL-NEXT:   .hword  0x2ff0                  // half 0.12402
 ; CHECK-ILLEGAL-LABEL:  Const5:
 ; CHECK-ILLEGAL:        adrp x[[NUM:[0-9]+]], .[[LBL5]]
 ; CHECK-ILLEGAL-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL5]]]
@@ -86,7 +86,7 @@ entry:
   ret half 0xH4FC1
 }
 ; CHECK-ILLEGAL:        .[[LBL6:LCPI6_[0-9]]]:
-; CHECK-ILLEGAL-NEXT:   .hword  20417                   // half 31.016
+; CHECK-ILLEGAL-NEXT:   .hword  0x4fc1                 // half 31.016
 ; CHECK-ILLEGAL-LABEL:  Const6:
 ; CHECK-ILLEGAL:        adrp x[[NUM:[0-9]+]], .[[LBL6]]
 ; CHECK-ILLEGAL-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL6]]]
@@ -97,7 +97,7 @@ entry:
   ret half 0xH5000
 }
 ; CHECK-ILLEGAL:        .[[LBL7:LCPI7_[0-9]]]:
-; CHECK-ILLEGAL-NEXT:   .hword  20480                   // half 32
+; CHECK-ILLEGAL-NEXT:   .hword  0x5000                 // half 32
 ; CHECK-ILLEGAL-LABEL:  Const7:
 ; CHECK-ILLEGAL:        adrp x[[NUM:[0-9]+]], .[[LBL7]]
 ; CHECK-ILLEGAL-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL7]]]
