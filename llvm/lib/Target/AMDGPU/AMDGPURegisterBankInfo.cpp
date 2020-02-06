@@ -747,6 +747,10 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   SmallVector<Register, 4> InitResultRegs;
   SmallVector<Register, 4> PhiRegs;
 
+  // Track use registers which have already been expanded with a readfirstlane
+  // sequence. This may have multiple uses if moving a sequence.
+  DenseMap<Register, Register> WaterfalledRegMap;
+
   MachineBasicBlock &MBB = B.getMBB();
   MachineFunction *MF = &B.getMF();
 
@@ -853,8 +857,17 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
       if (!Op.isReg() || Op.isDef())
         continue;
 
-      if (!SGPROperandRegs.count(Op.getReg()))
+      Register OldReg = Op.getReg();
+      if (!SGPROperandRegs.count(OldReg))
         continue;
+
+      // See if we already processed this register in another instruction in the
+      // sequence.
+      auto OldVal = WaterfalledRegMap.find(OldReg);
+      if (OldVal != WaterfalledRegMap.end()) {
+        Op.setReg(OldVal->second);
+        continue;
+      }
 
       LLT OpTy = MRI.getType(Op.getReg());
       unsigned OpSize = OpTy.getSizeInBits();
@@ -1001,6 +1014,9 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
 
         MRI.setRegBank(Op.getReg(), AMDGPU::SGPRRegBank);
       }
+
+      // Make sure we don't re-process this register again.
+      WaterfalledRegMap.insert(std::make_pair(OldReg, Op.getReg()));
     }
   }
 
