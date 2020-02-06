@@ -61,15 +61,14 @@ protected:
   void checkBacktrace(const AllocationMetadata *Meta, bool IsDeallocated) {
     uintptr_t Buffer[kNumBacktraceConstants];
     size_t NumBacktraceConstants = kNumBacktraceConstants;
-    EXPECT_EQ(NumBacktraceConstants,
-              __gwp_asan_get_allocation_trace(&State, Meta, Buffer,
-                                              kNumBacktraceConstants));
+    EXPECT_EQ(NumBacktraceConstants, __gwp_asan_get_allocation_trace(
+                                         Meta, Buffer, kNumBacktraceConstants));
     for (size_t i = 0; i < kNumBacktraceConstants; ++i)
       EXPECT_EQ(Buffer[i], BacktraceConstants[i]);
 
     if (IsDeallocated) {
       EXPECT_EQ(NumBacktraceConstants,
-                __gwp_asan_get_deallocation_trace(&State, Meta, Buffer,
+                __gwp_asan_get_deallocation_trace(Meta, Buffer,
                                                   kNumBacktraceConstants));
       for (size_t i = 0; i < kNumBacktraceConstants; ++i)
         EXPECT_EQ(Buffer[i], BacktraceConstants[i]);
@@ -80,14 +79,12 @@ protected:
     const AllocationMetadata *Meta =
         __gwp_asan_get_metadata(&State, Metadata, ErrorPtr);
     EXPECT_NE(nullptr, Meta);
-    EXPECT_EQ(Metadata[Index].Addr,
-              __gwp_asan_get_allocation_address(&State, Meta));
-    EXPECT_EQ(Metadata[Index].Size,
-              __gwp_asan_get_allocation_size(&State, Meta));
+    EXPECT_EQ(Metadata[Index].Addr, __gwp_asan_get_allocation_address(Meta));
+    EXPECT_EQ(Metadata[Index].Size, __gwp_asan_get_allocation_size(Meta));
     EXPECT_EQ(Metadata[Index].AllocationTrace.ThreadID,
-              __gwp_asan_get_allocation_thread_id(&State, Meta));
+              __gwp_asan_get_allocation_thread_id(Meta));
 
-    bool IsDeallocated = __gwp_asan_is_deallocated(&State, Meta);
+    bool IsDeallocated = __gwp_asan_is_deallocated(Meta);
     EXPECT_EQ(Metadata[Index].IsDeallocated, IsDeallocated);
     checkBacktrace(Meta, IsDeallocated);
 
@@ -95,7 +92,7 @@ protected:
       return;
 
     EXPECT_EQ(Metadata[Index].DeallocationTrace.ThreadID,
-              __gwp_asan_get_deallocation_thread_id(&State, Meta));
+              __gwp_asan_get_deallocation_thread_id(Meta));
   }
 
   static constexpr size_t kNumBacktraceConstants = 4;
