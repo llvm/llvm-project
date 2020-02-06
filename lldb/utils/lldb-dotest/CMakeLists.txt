@@ -4,6 +4,7 @@ add_dependencies(lldb-dotest lldb-test-deps)
 set_target_properties(lldb-dotest PROPERTIES FOLDER "lldb utils")
 
 get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
+set(LLDB_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
 
 # Generate lldb-dotest Python driver script for each build mode.
 if(LLDB_BUILT_STANDALONE)
