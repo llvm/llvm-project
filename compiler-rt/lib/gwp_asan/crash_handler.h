@@ -73,19 +73,16 @@ __gwp_asan_get_metadata(const gwp_asan::AllocatorState *State,
 
 // Returns the start of the allocation whose metadata is in `AllocationMeta`.
 uintptr_t __gwp_asan_get_allocation_address(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta);
 
 // Returns the size of the allocation whose metadata is in `AllocationMeta`
 size_t __gwp_asan_get_allocation_size(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta);
 
 // Returns the Thread ID that allocated the memory that caused the error at
 // `ErrorPtr`. This function may not be called if __gwp_asan_has_metadata()
 // returns false.
 uint64_t __gwp_asan_get_allocation_thread_id(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta);
 
 // Retrieve the allocation trace for the allocation whose metadata is in
@@ -95,7 +92,6 @@ uint64_t __gwp_asan_get_allocation_thread_id(
 // frames were stored by GWP-ASan). A return value greater than `BufferLen`
 // indicates that the trace was truncated when storing to `Buffer`.
 size_t __gwp_asan_get_allocation_trace(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta, uintptr_t *Buffer,
     size_t BufferLen);
 
@@ -103,14 +99,12 @@ size_t __gwp_asan_get_allocation_trace(
 // deallocated. This function may not be called if __gwp_asan_has_metadata()
 // returns false.
 bool __gwp_asan_is_deallocated(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta);
 
 // Returns the Thread ID that deallocated the memory whose metadata is in
 // `AllocationMeta`. This function may not be called if
 // __gwp_asan_is_deallocated() returns false.
 uint64_t __gwp_asan_get_deallocation_thread_id(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta);
 
 // Retrieve the deallocation trace for the allocation whose metadata is in
@@ -121,7 +115,6 @@ uint64_t __gwp_asan_get_deallocation_thread_id(
 // indicates that the trace was truncated when storing to `Buffer`. This
 // function may not be called if __gwp_asan_is_deallocated() returns false.
 size_t __gwp_asan_get_deallocation_trace(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta, uintptr_t *Buffer,
     size_t BufferLen);
 

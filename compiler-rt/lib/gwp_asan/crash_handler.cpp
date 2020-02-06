@@ -95,25 +95,21 @@ __gwp_asan_get_metadata(const gwp_asan::AllocatorState *State,
 }
 
 uintptr_t __gwp_asan_get_allocation_address(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta) {
   return AllocationMeta->Addr;
 }
 
 size_t __gwp_asan_get_allocation_size(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta) {
   return AllocationMeta->Size;
 }
 
 uint64_t __gwp_asan_get_allocation_thread_id(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta) {
   return AllocationMeta->AllocationTrace.ThreadID;
 }
 
 size_t __gwp_asan_get_allocation_trace(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta, uintptr_t *Buffer,
     size_t BufferLen) {
   return gwp_asan::compression::unpack(
@@ -122,19 +118,16 @@ size_t __gwp_asan_get_allocation_trace(
 }
 
 bool __gwp_asan_is_deallocated(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta) {
   return AllocationMeta->IsDeallocated;
 }
 
 uint64_t __gwp_asan_get_deallocation_thread_id(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta) {
   return AllocationMeta->DeallocationTrace.ThreadID;
 }
 
 size_t __gwp_asan_get_deallocation_trace(
-    const gwp_asan::AllocatorState *State,
     const gwp_asan::AllocationMetadata *AllocationMeta, uintptr_t *Buffer,
     size_t BufferLen) {
   return gwp_asan::compression::unpack(

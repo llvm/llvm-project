@@ -15,8 +15,8 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/optional/backtrace.h"
-#include "gwp_asan/options.h"
 #include "gwp_asan/optional/segv_handler.h"
+#include "gwp_asan/options.h"
 
 namespace gwp_asan {
 namespace test {
