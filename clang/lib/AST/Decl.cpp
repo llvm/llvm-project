@@ -4360,8 +4360,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setHasNonTrivialToPrimitiveCopyCUnion(false);
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(APK_CanPassInRegs);
-  setHasODRHash(false);
-  ODRHash = 0;
+  RecordDeclBits.ODRHash = 0;
 }
 
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
@@ -4511,15 +4510,15 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
 
 unsigned RecordDecl::getODRHash() {
   if (hasODRHash())
-    return ODRHash;
+    return RecordDeclBits.ODRHash;
 
   // Only calculate hash on first call of getODRHash per record.
   class ODRHash Hash;
   Hash.AddRecordDecl(this);
-  setHasODRHash();
-  ODRHash = Hash.CalculateHash();
-
-  return ODRHash;
+  // For RecordDecl the ODRHash is stored in the remaining 28
+  // bit of RecordDeclBits, adjust the hash to accomodate.
+  setODRHash(Hash.CalculateHash() >> 4);
+  return RecordDeclBits.ODRHash;
 }
 
 //===----------------------------------------------------------------------===//

@@ -2058,7 +2058,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
   // ODRHash
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 28));
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset

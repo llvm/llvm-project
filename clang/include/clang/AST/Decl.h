@@ -3969,11 +3969,8 @@ private:
   void LoadFieldsFromExternalStorage() const;
 
   /// True if a valid hash is stored in ODRHash.
-  bool hasODRHash() const { return RecordDeclBits.HasODRHash; }
-  void setHasODRHash(bool Hash = true) { RecordDeclBits.HasODRHash = Hash; }
-
-  /// Store the ODR hash for this decl.
-  unsigned ODRHash;
+  bool hasODRHash() const { return RecordDeclBits.ODRHash; }
+  void setODRHash(unsigned Hash) { RecordDeclBits.ODRHash = Hash; }
 };
 
 class FileScopeAsmDecl : public Decl {
