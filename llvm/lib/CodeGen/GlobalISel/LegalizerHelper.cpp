@@ -115,6 +115,25 @@ static LLT getLCMType(LLT Ty0, LLT Ty1) {
   llvm_unreachable("not yet handled");
 }
 
+static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
+
+  if (!Ty.isScalar())
+    return nullptr;
+
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return Type::getHalfTy(Ctx);
+  case 32:
+    return Type::getFloatTy(Ctx);
+  case 64:
+    return Type::getDoubleTy(Ctx);
+  case 128:
+    return Type::getFP128Ty(Ctx);
+  default:
+    return nullptr;
+  }
+}
+
 LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &Builder)
@@ -702,36 +721,23 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FEXP2:
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FFLOOR: {
-    if (Size > 64) {
-      LLVM_DEBUG(dbgs() << "Size " << Size << " too large to legalize.\n");
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    if (!HLTy || (Size != 32 && Size != 64)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for size " << Size << ".\n");
       return UnableToLegalize;
     }
-    Type *HLTy = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
     if (Status != Legalized)
       return Status;
     break;
   }
-  case TargetOpcode::G_FPEXT: {
-    // FIXME: Support other floating point types (half, fp128 etc)
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
-    unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if (ToSize != 64 || FromSize != 32)
-      return UnableToLegalize;
-    LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder, Type::getDoubleTy(Ctx), Type::getFloatTy(Ctx));
-    if (Status != Legalized)
-      return Status;
-    break;
-  }
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
-    // FIXME: Support other floating point types (half, fp128 etc)
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
-    unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if (ToSize != 32 || FromSize != 64)
+    Type *FromTy = getFloatTypeForLLT(Ctx,  MRI.getType(MI.getOperand(1).getReg()));
+    Type *ToTy = getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(0).getReg()));
+    if (!FromTy || !ToTy)
       return UnableToLegalize;
-    LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder, Type::getFloatTy(Ctx), Type::getDoubleTy(Ctx));
+    LegalizeResult Status = conversionLibcall(MI, MIRBuilder, ToTy, FromTy );
     if (Status != Legalized)
       return Status;
     break;
@@ -2222,24 +2228,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     if (Ty.isVector())
       return UnableToLegalize;
     Register Res = MI.getOperand(0).getReg();
-    Type *ZeroTy;
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    switch (Ty.getSizeInBits()) {
-    case 16:
-      ZeroTy = Type::getHalfTy(Ctx);
-      break;
-    case 32:
-      ZeroTy = Type::getFloatTy(Ctx);
-      break;
-    case 64:
-      ZeroTy = Type::getDoubleTy(Ctx);
-      break;
-    case 128:
-      ZeroTy = Type::getFP128Ty(Ctx);
-      break;
-    default:
-      llvm_unreachable("unexpected floating-point type");
-    }
+    Type *ZeroTy = getFloatTypeForLLT(Ctx, Ty);
+    if (!ZeroTy)
+      return UnableToLegalize;
     ConstantFP &ZeroForNegation =
         *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
     auto Zero = MIRBuilder.buildFConstant(Ty, ZeroForNegation);
