@@ -873,7 +873,14 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
   const SCEV *IndVarStart = SE.getAddExpr(StartNext, Addend);
   const SCEV *Step = SE.getSCEV(StepCI);
 
-  ConstantInt *One = ConstantInt::get(IndVarTy, 1);
+  const SCEV *FixedRightSCEV = nullptr;
+
+  // If RightValue resides within loop (but still being loop invariant),
+  // regenerate it as preheader.
+  if (auto *I = dyn_cast<Instruction>(RightValue))
+    if (L.contains(I->getParent()))
+      FixedRightSCEV = RightSCEV;
+
   if (IsIncreasing) {
     bool DecreasedRightValueByOne = false;
     if (StepCI->isOne()) {
@@ -935,10 +942,9 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
     if (LatchBrExitIdx == 0) {
       // We need to increase the right value unless we have already decreased
       // it virtually when we replaced EQ with SGT.
-      if (!DecreasedRightValueByOne) {
-        IRBuilder<> B(Preheader->getTerminator());
-        RightValue = B.CreateAdd(RightValue, One);
-      }
+      if (!DecreasedRightValueByOne)
+        FixedRightSCEV =
+            SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
     } else {
       assert(!DecreasedRightValueByOne &&
              "Right value can be decreased only for LatchBrExitIdx == 0!");
@@ -1002,10 +1008,9 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
     if (LatchBrExitIdx == 0) {
       // We need to decrease the right value unless we have already increased
       // it virtually when we replaced EQ with SLT.
-      if (!IncreasedRightValueByOne) {
-        IRBuilder<> B(Preheader->getTerminator());
-        RightValue = B.CreateSub(RightValue, One);
-      }
+      if (!IncreasedRightValueByOne)
+        FixedRightSCEV =
+            SE.getMinusSCEV(RightSCEV, SE.getOne(RightSCEV->getType()));
     } else {
       assert(!IncreasedRightValueByOne &&
              "Right value can be increased only for LatchBrExitIdx == 0!");
@@ -1019,9 +1024,14 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
   const DataLayout &DL = Preheader->getModule()->getDataLayout();
-  Value *IndVarStartV =
-      SCEVExpander(SE, DL, "irce")
-          .expandCodeFor(IndVarStart, IndVarTy, Preheader->getTerminator());
+  SCEVExpander Expander(SE, DL, "irce");
+  Instruction *Ins = Preheader->getTerminator();
+
+  if (FixedRightSCEV)
+    RightValue =
+        Expander.expandCodeFor(FixedRightSCEV, FixedRightSCEV->getType(), Ins);
+
+  Value *IndVarStartV = Expander.expandCodeFor(IndVarStart, IndVarTy, Ins);
   IndVarStartV->setName("indvar.start");
 
   LoopStructure Result;
