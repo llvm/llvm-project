@@ -136,10 +136,11 @@ using Subst = std::pair<StringRef, StringRef>;
 // have children, and perform leaf substitutions inplace.  Note that after
 // substitution, nodes are still pointing to the original TableGen record.
 // All nodes are created within "allocator".
-static PredNode *buildPredicateTree(const tblgen::Pred &root,
-                                    llvm::BumpPtrAllocator &allocator,
-                                    ArrayRef<Subst> substitutions) {
-  auto *rootNode = allocator.Allocate<PredNode>();
+static PredNode *
+buildPredicateTree(const tblgen::Pred &root,
+                   llvm::SpecificBumpPtrAllocator<PredNode> &allocator,
+                   ArrayRef<Subst> substitutions) {
+  auto *rootNode = allocator.Allocate();
   new (rootNode) PredNode;
   rootNode->kind = getPredCombinerKind(root);
   rootNode->predicate = &root;
@@ -339,7 +340,7 @@ static std::string getCombinedCondition(const PredNode &root) {
 }
 
 std::string tblgen::CombinedPred::getConditionImpl() const {
-  llvm::BumpPtrAllocator allocator;
+  llvm::SpecificBumpPtrAllocator<PredNode> allocator;
   auto predicateTree = buildPredicateTree(*this, allocator, {});
   predicateTree = propagateGroundTruth(
       predicateTree,
