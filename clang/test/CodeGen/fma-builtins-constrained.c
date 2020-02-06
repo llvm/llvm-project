@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fma -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fma -ffp-exception-behavior=strict -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fma -O -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fma -O -ffp-exception-behavior=strict -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -ffp-exception-behavior=strict -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -ffp-exception-behavior=strict -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 
 // FIXME: Several of these tests are broken when constrained.
 
