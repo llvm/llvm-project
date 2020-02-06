@@ -1222,38 +1222,52 @@ bool AArch64InstructionSelector::selectCompareBranch(
   Register LHS = CCMI->getOperand(2).getReg();
   Register RHS = CCMI->getOperand(3).getReg();
   auto VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
-  if (!VRegAndVal)
+  if (!VRegAndVal) {
     std::swap(RHS, LHS);
+    VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  }
 
   MachineIRBuilder MIB(I);
-  VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  const auto Pred = (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
+  MachineInstr *LHSMI = getDefIgnoringCopies(LHS, MRI);
+  unsigned LHSOpc = LHSMI->getOpcode();
+
+  // When we have a greater-than comparison, we can just test if the msb is
+  // zero.
+  //
+  // Note that we don't want to do this when we have a G_AND because it can
+  // become a tst. The tst will make the test bit in the TB(N)Z redundant.
+  if (VRegAndVal && VRegAndVal->Value == -1 && Pred == CmpInst::ICMP_SGT &&
+      LHSOpc != TargetOpcode::G_AND) {
+    uint64_t Bit = MRI.getType(LHS).getSizeInBits() - 1;
+    emitTestBit(LHS, Bit, /*IsNegative = */ false, DestMBB, MIB);
+    I.eraseFromParent();
+    return true;
+  }
+
   if (!VRegAndVal || VRegAndVal->Value != 0) {
     // If we can't select a CBZ then emit a cmp + Bcc.
     if (!emitIntegerCompare(CCMI->getOperand(2), CCMI->getOperand(3),
                             CCMI->getOperand(1), MIB))
       return false;
-    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
-        (CmpInst::Predicate)CCMI->getOperand(1).getPredicate());
+    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(Pred);
     MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
     I.eraseFromParent();
     return true;
   }
 
-  // Try to fold things into the branch.
-  const auto Pred = (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
-  MachineInstr *LHSMI = getDefIgnoringCopies(LHS, MRI);
   if (tryOptAndIntoCompareBranch(LHSMI, VRegAndVal->Value, Pred, DestMBB,
                                  MIB)) {
     I.eraseFromParent();
     return true;
   }
 
-  // When we have a less than comparison, we can just test if the last bit
-  // is not zero.
+  // When we have a less than comparison, we can just test if the msb is not
+  // zero.
   //
   // Note that we don't want to do this when we have a G_AND because it can
   // become a tst. The tst will make the test bit in the TB(N)Z redundant.
-  if (Pred == CmpInst::ICMP_SLT && LHSMI->getOpcode() != TargetOpcode::G_AND) {
+  if (Pred == CmpInst::ICMP_SLT && LHSOpc != TargetOpcode::G_AND) {
     uint64_t Bit = MRI.getType(LHS).getSizeInBits() - 1;
     emitTestBit(LHS, Bit, /*IsNegative = */ true, DestMBB, MIB);
     I.eraseFromParent();
