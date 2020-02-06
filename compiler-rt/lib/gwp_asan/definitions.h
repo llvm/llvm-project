@@ -15,4 +15,6 @@
 #define GWP_ASAN_UNLIKELY(X) __builtin_expect(!!(X), 0)
 #define GWP_ASAN_ALWAYS_INLINE inline __attribute__((always_inline))
 
+#define GWP_ASAN_WEAK __attribute__((weak))
+
 #endif // GWP_ASAN_DEFINITIONS_H_
