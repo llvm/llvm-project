@@ -275,9 +275,8 @@ body: |
     ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UV]], 1
     ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UV1]], 1
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x s32>), [[SEXT]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR]](<2 x s32>), 0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[EXTRACT]](s32)
     ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
     %1:_(s1) = G_CONSTANT i1 false
@@ -675,4 +674,23 @@ body: |
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(s64) = G_EXTRACT_VECTOR_ELT %0, %1
     $vgpr0_vgpr1 = COPY %2
+...
+
+# Make sure we look through casts looking for a constant index.
+---
+name: extract_vector_elt_look_through_trunc_0_v4i32
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-LABEL: name: extract_vector_elt_look_through_trunc_0_v4i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](<4 x s32>), 0
+    ; CHECK: $vgpr0 = COPY [[EXTRACT]](s32)
+    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s64) = G_CONSTANT i64 0
+    %2:_(s32) = G_TRUNC %1
+    %3:_(s32) = G_EXTRACT_VECTOR_ELT %0, %2
+    $vgpr0 = COPY %3
 ...
