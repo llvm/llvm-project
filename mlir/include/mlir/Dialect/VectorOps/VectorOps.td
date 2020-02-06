@@ -963,6 +963,49 @@ def Vector_TransferWriteOp :
   }];
 }
 
+def Vector_ShapeCastOp :
+  Vector_Op<"shape_cast", [NoSideEffect]>,
+    Arguments<(ins AnyTypeOf<[AnyVector, TupleOf<[AnyVector]>]>:$source)>,
+    Results<(outs AnyTypeOf<[AnyVector, TupleOf<[AnyVector]>]>:$result)> {
+  let summary = "shape_cast casts between vector shapes";
+  let description = [{
+    The shape_cast operation casts between an n-D source vector shape and
+    a k-D result vector shape (the element type remains the same).
+
+    If reducing rank (n > k), result dimension sizes must be a product
+    of contiguous source dimension sizes.
+    If expanding rank (n < k), source dimensions must factor into a
+    contiguous sequence of destination dimension sizes.
+    Each source dim is expanded (or contiguous sequence of source dims combined)
+    in source dimension list order (i.e. 0 <= i < n), to produce a contiguous
+    sequence of result dims (or a single result dim), in result dimension list
+    order (i.e. 0 <= j < k). The product of all source dimension sizes and all
+    result dimension sizes must match.
+
+    If the source/result types are a tuple of vectors, the casting operation
+    described above is applied to each source/result tuple element pair.
+
+    It is currently assumed that this operation does not require moving data,
+    and that it will be canonicalized away before lowering vector operations.
+
+    Examples:
+
+    ```mlir
+    // Example casting to a lower vector rank.
+    %1 = vector.shape_cast %0 : vector<5x1x4x3xf32> to vector<20x3xf32>
+
+    // Example casting to a higher vector rank.
+    %3 = vector.shape_cast %2 : vector<10x12x8xf32> to vector<5x2x3x4x8xf32>
+
+    // Example casting a tuple of vectors of same rank, where tuple elements
+    // may have different shapes.
+    %5 = vector.shape_cast %4 : tuple<vector<3x4x2xf32>, vector<3x3x2xf32>> to
+                                tuple<vector<12x2xf32>, vector<9x2xf32>>
+    ```
+  }];
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
+}
+
 def Vector_TypeCastOp :
   Vector_Op<"type_cast", [NoSideEffect]>,
     Arguments<(ins StaticShapeMemRefOf<[AnyType]>:$memref)>,

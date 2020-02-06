@@ -26,6 +26,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -1387,6 +1388,90 @@ static LogicalResult verify(TransferWriteOp op) {
 
   return verifyPermutationMap(permutationMap,
                               [&op](Twine t) { return op.emitOpError(t); });
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeCastOp
+//===----------------------------------------------------------------------===//
+
+/// Returns true if each element of 'a' is equal to the product of a contiguous
+/// sequence of the elements of 'b'. Returns false otherwise.
+static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
+  unsigned rankA = a.size();
+  unsigned rankB = b.size();
+  assert(rankA < rankB);
+
+  unsigned i = 0;
+  unsigned j = 0;
+  while (i < rankA && j < rankB) {
+    int64_t dimA = a[i];
+    int64_t dimB = 1;
+    while (dimB < dimA && j < rankB)
+      dimB *= b[j++];
+    if (dimA != dimB)
+      break;
+    ++i;
+  }
+
+  return i == rankA && j == rankB;
+}
+
+static LogicalResult verifyVectorShapeCast(Operation *op,
+                                           VectorType sourceVectorType,
+                                           VectorType resultVectorType) {
+  // Check that element type is the same.
+  if (sourceVectorType.getElementType() != resultVectorType.getElementType())
+    return op->emitOpError("source/result vectors must have same element type");
+  auto sourceShape = sourceVectorType.getShape();
+  auto resultShape = resultVectorType.getShape();
+
+  // Check that product of source dim sizes matches product of result dim sizes.
+  int64_t sourceDimProduct = std::accumulate(
+      sourceShape.begin(), sourceShape.end(), 1LL, std::multiplies<int64_t>{});
+  int64_t resultDimProduct = std::accumulate(
+      resultShape.begin(), resultShape.end(), 1LL, std::multiplies<int64_t>{});
+  if (sourceDimProduct != resultDimProduct)
+    return op->emitOpError("source/result number of elements must match");
+
+  // Check that expanding/contracting rank cases.
+  unsigned sourceRank = sourceVectorType.getRank();
+  unsigned resultRank = resultVectorType.getRank();
+  if (sourceRank < resultRank) {
+    if (!isValidShapeCast(sourceShape, resultShape))
+      return op->emitOpError("invalid shape cast");
+  } else if (sourceRank > resultRank) {
+    if (!isValidShapeCast(resultShape, sourceShape))
+      return op->emitOpError("invalid shape cast");
+  }
+  return success();
+}
+
+static LogicalResult verify(ShapeCastOp op) {
+  auto sourceVectorType = op.source().getType().dyn_cast_or_null<VectorType>();
+  auto resultVectorType = op.result().getType().dyn_cast_or_null<VectorType>();
+
+  // Check if source/result are of vector type.
+  if (sourceVectorType && resultVectorType)
+    return verifyVectorShapeCast(op, sourceVectorType, resultVectorType);
+
+  // Check if source/result are "tuple of vectors" type.
+  auto sourceTupleType = op.source().getType().dyn_cast_or_null<TupleType>();
+  auto resultTupleType = op.result().getType().dyn_cast_or_null<TupleType>();
+  if (!sourceTupleType || !resultTupleType)
+    return op.emitOpError("source/result must be of same type");
+
+  // Check that source/result tuple sizes are the same.
+  if (sourceTupleType.size() != resultTupleType.size())
+    return op.emitOpError("source/result tuples must be the same size");
+
+  // Check each source/result tuple element pair.
+  for (unsigned i = 0, e = sourceTupleType.size(); i < e; ++i)
+    if (failed(verifyVectorShapeCast(
+            op, sourceTupleType.getType(i).cast<VectorType>(),
+            resultTupleType.getType(i).cast<VectorType>())))
+      return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
