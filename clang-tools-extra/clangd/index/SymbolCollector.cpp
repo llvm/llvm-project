@@ -28,6 +28,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -167,8 +168,17 @@ bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
          isa<TagDecl>(&ND) && !isInsideMainFile(ND.getLocation(), SM);
 }
 
-RefKind toRefKind(index::SymbolRoleSet Roles) {
-  return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
+RefKind toRefKind(index::SymbolRoleSet Roles, bool Spelled = false) {
+  RefKind Result = RefKind::Unknown;
+  if (Roles & static_cast<unsigned>(index::SymbolRole::Declaration))
+    Result |= RefKind::Declaration;
+  if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
+    Result |= RefKind::Definition;
+  if (Roles & static_cast<unsigned>(index::SymbolRole::Reference))
+    Result |= RefKind::Reference;
+  if (Spelled)
+    Result |= RefKind::Spelled;
+  return Result;
 }
 
 bool shouldIndexRelation(const index::SymbolRelation &R) {
@@ -279,7 +289,7 @@ bool SymbolCollector::handleDeclOccurrence(
   // occurrence inside the base-specifier.
   processRelations(*ND, *ID, Relations);
 
-  bool CollectRef = static_cast<unsigned>(Opts.RefFilter) & Roles;
+  bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
   bool IsOnlyRef =
       !(Roles & (static_cast<unsigned>(index::SymbolRole::Declaration) |
                  static_cast<unsigned>(index::SymbolRole::Definition)));
@@ -544,7 +554,8 @@ void SymbolCollector::finish() {
   };
   auto CollectRef =
       [&](SymbolID ID,
-          const std::pair<SourceLocation, index::SymbolRoleSet> &LocAndRole) {
+          const std::pair<SourceLocation, index::SymbolRoleSet> &LocAndRole,
+          bool Spelled = false) {
         auto FileID = SM.getFileID(LocAndRole.first);
         // FIXME: use the result to filter out references.
         shouldIndexFile(FileID);
@@ -555,21 +566,35 @@ void SymbolCollector::finish() {
           R.Location.Start = Range.first;
           R.Location.End = Range.second;
           R.Location.FileURI = FileURI->c_str();
-          R.Kind = toRefKind(LocAndRole.second);
+          R.Kind = toRefKind(LocAndRole.second, Spelled);
           Refs.insert(ID, R);
         }
       };
   // Populate Refs slab from MacroRefs.
-  for (const auto &IDAndRefs : MacroRefs) {
+  // FIXME: All MacroRefs are marked as Spelled now, but this should be checked.
+  for (const auto &IDAndRefs : MacroRefs)
     for (const auto &LocAndRole : IDAndRefs.second)
       CollectRef(IDAndRefs.first, LocAndRole);
-  }
   // Populate Refs slab from DeclRefs.
-  if (auto MainFileURI = GetURI(SM.getMainFileID())) {
-    for (const auto &It : DeclRefs) {
-      if (auto ID = getSymbolID(It.first)) {
-        for (const auto &LocAndRole : It.second)
-          CollectRef(*ID, LocAndRole);
+  llvm::DenseMap<FileID, std::vector<syntax::Token>> FilesToTokensCache;
+  for (auto &DeclAndRef : DeclRefs) {
+    if (auto ID = getSymbolID(DeclAndRef.first)) {
+      for (auto &LocAndRole : DeclAndRef.second) {
+        const auto FileID = SM.getFileID(LocAndRole.first);
+        // FIXME: It's better to use TokenBuffer by passing spelled tokens from
+        // the caller of SymbolCollector.
+        if (!FilesToTokensCache.count(FileID))
+          FilesToTokensCache[FileID] =
+              syntax::tokenize(FileID, SM, ASTCtx->getLangOpts());
+        llvm::ArrayRef<syntax::Token> Tokens = FilesToTokensCache[FileID];
+        // Check if the referenced symbol is spelled exactly the same way the
+        // corresponding NamedDecl is. If it is, mark this reference as spelled.
+        const auto *IdentifierToken =
+            spelledIdentifierTouching(LocAndRole.first, Tokens);
+        DeclarationName Name = DeclAndRef.first->getDeclName();
+        bool Spelled = IdentifierToken && Name.isIdentifier() &&
+                       Name.getAsString() == IdentifierToken->text(SM);
+        CollectRef(*ID, LocAndRole, Spelled);
       }
     }
   }
