@@ -308,18 +308,13 @@ def mov64imm32 : ComplexPattern<i64, 1, "selectMOV64Imm32", [imm, X86Wrapper]>;
 def : Pat<(i64 mov64imm32:$src), (MOV32ri64 mov64imm32:$src)>;
 
 // Use sbb to materialize carry bit.
-let Uses = [EFLAGS], Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteALU] in {
+let Uses = [EFLAGS], Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteADC],
+    hasSideEffects = 0 in {
 // FIXME: These are pseudo ops that should be replaced with Pat<> patterns.
 // However, Pat<> can't replicate the destination reg into the inputs of the
 // result.
-def SETB_C8r : I<0, Pseudo, (outs GR8:$dst), (ins), "",
-                 [(set GR8:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C16r : I<0, Pseudo, (outs GR16:$dst), (ins), "",
-                 [(set GR16:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C32r : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                 [(set GR32:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "",
-                 [(set GR64:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
+def SETB_C32r : I<0, Pseudo, (outs GR32:$dst), (ins), "", []>;
+def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "", []>;
 } // isCodeGenOnly
 
 
