@@ -6838,10 +6838,10 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     assert(IsPPC64 && "PPC32 should have split i64 values.");
     LLVM_FALLTHROUGH;
   case MVT::i1:
-  case MVT::i32:
-    State.AllocateStack(PtrByteSize, PtrByteSize);
+  case MVT::i32: {
+    const unsigned Offset = State.AllocateStack(PtrByteSize, PtrByteSize);
+    const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
     if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
-      MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
       // Promote integers if needed.
       if (ValVT.getSizeInBits() < RegVT.getSizeInBits())
         LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
@@ -6849,38 +6849,46 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
     }
     else
-      report_fatal_error("Handling of placing parameters on the stack is "
-                         "unimplemented!");
-    return false;
+      State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, RegVT, LocInfo));
 
+    return false;
+  }
   case MVT::f32:
   case MVT::f64: {
     // Parameter save area (PSA) is reserved even if the float passes in fpr.
     const unsigned StoreSize = LocVT.getStoreSize();
     // Floats are always 4-byte aligned in the PSA on AIX.
     // This includes f64 in 64-bit mode for ABI compatibility.
-    State.AllocateStack(IsPPC64 ? 8 : StoreSize, 4);
-    if (unsigned Reg = State.AllocateReg(FPR))
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    else
-      report_fatal_error("Handling of placing parameters on the stack is "
-                         "unimplemented!");
+    const unsigned Offset = State.AllocateStack(IsPPC64 ? 8 : StoreSize, 4);
+    unsigned FReg = State.AllocateReg(FPR);
+    if (FReg)
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, FReg, LocVT, LocInfo));
 
-    // AIX requires that GPRs are reserved for float arguments.
-    // Successfully reserved GPRs are only initialized for vararg calls.
-    MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+    // Reserve and initialize GPRs or initialize the PSA as required.
+    const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
     for (unsigned I = 0; I < StoreSize; I += PtrByteSize) {
       if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
+        assert(FReg && "An FPR should be available when a GPR is reserved.");
         if (State.isVarArg()) {
+          // Successfully reserved GPRs are only initialized for vararg calls.
           // Custom handling is required for:
           //   f64 in PPC32 needs to be split into 2 GPRs.
           //   f32 in PPC64 needs to occupy only lower 32 bits of 64-bit GPR.
           State.addLoc(
               CCValAssign::getCustomReg(ValNo, ValVT, Reg, RegVT, LocInfo));
         }
-      } else if (State.isVarArg()) {
-        report_fatal_error("Handling of placing parameters on the stack is "
-                           "unimplemented!");
+      } else {
+        // If there are insufficient GPRs, the PSA needs to be initialized.
+        // Initialization occurs even if an FPR was initialized for
+        // compatibility with the AIX XL compiler. The full memory for the
+        // argument will be initialized even if a prior word is saved in GPR.
+        // A custom memLoc is used when the argument also passes in FPR so
+        // that the callee handling can skip over it easily.
+        State.addLoc(
+            FReg ? CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT,
+                                             LocInfo)
+                 : CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+        break;
       }
     }
 
@@ -6963,27 +6971,36 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   CCInfo.AllocateStack(LinkageSize + MinParameterSaveArea, PtrByteSize);
   CCInfo.AnalyzeFormalArguments(Ins, CC_AIX);
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
-    SDValue ArgValue;
-    ISD::ArgFlagsTy Flags = Ins[i].Flags;
-    if (VA.isRegLoc()) {
-      EVT ValVT = VA.getValVT();
-      MVT LocVT = VA.getLocVT();
-      MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
-      unsigned VReg =
-          MF.addLiveIn(VA.getLocReg(), getRegClassForSVT(SVT, IsPPC64));
-      ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
-      if (ValVT.isScalarInteger() &&
-          (ValVT.getSizeInBits() < LocVT.getSizeInBits())) {
-        ArgValue =
-            truncateScalarIntegerArg(Flags, ValVT, DAG, ArgValue, LocVT, dl);
-      }
-      InVals.push_back(ArgValue);
-    } else {
-      report_fatal_error("Handling of formal arguments on the stack is "
-                         "unimplemented!");
+  for (CCValAssign &VA : ArgLocs) {
+
+    if (VA.isMemLoc()) {
+      // For compatibility with the AIX XL compiler, the float args in the
+      // parameter save area are initialized even if the argument is available
+      // in register.  The caller is required to initialize both the register
+      // and memory, however, the callee can choose to expect it in either.  The
+      // memloc is dismissed here because the argument is retrieved from the
+      // register.
+      if (VA.needsCustom())
+        continue;
+      report_fatal_error(
+          "Handling of formal arguments on the stack is unimplemented!");
     }
+
+    assert(VA.isRegLoc() && "Unexpected argument location.");
+
+    EVT ValVT = VA.getValVT();
+    MVT LocVT = VA.getLocVT();
+    MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
+    unsigned VReg =
+        MF.addLiveIn(VA.getLocReg(), getRegClassForSVT(SVT, IsPPC64));
+    SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
+    if (ValVT.isScalarInteger() &&
+        (ValVT.getSizeInBits() < LocVT.getSizeInBits())) {
+      ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+      ArgValue =
+          truncateScalarIntegerArg(Flags, ValVT, DAG, ArgValue, LocVT, dl);
+    }
+    InVals.push_back(ArgValue);
   }
 
   // Area that is at least reserved in the caller of this function.
@@ -7035,6 +7052,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // The LSA is 24 bytes (6x4) in PPC32 and 48 bytes (6x8) in PPC64.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   const bool IsPPC64 = Subtarget.isPPC64();
+  const EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
   CCInfo.AllocateStack(LinkageSize, PtrByteSize);
   CCInfo.AnalyzeCallOperands(Outs, CC_AIX);
@@ -7046,7 +7064,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // conservatively assume that it is needed.  As such, make sure we have at
   // least enough stack space for the caller to store the 8 GPRs.
   const unsigned MinParameterSaveAreaSize = 8 * PtrByteSize;
-  const unsigned NumBytes = LinkageSize + MinParameterSaveAreaSize;
+  const unsigned NumBytes = std::max(LinkageSize + MinParameterSaveAreaSize,
+                                     CCInfo.getNextStackOffset());
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass.
@@ -7054,20 +7073,23 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   SDValue CallSeqStart = Chain;
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+  SmallVector<SDValue, 8> MemOpChains;
+
+  // Set up a copy of the stack pointer for loading and storing any
+  // arguments that may not fit in the registers available for argument
+  // passing.
+  const SDValue StackPtr = IsPPC64 ? DAG.getRegister(PPC::X1, MVT::i64)
+                                   : DAG.getRegister(PPC::R1, MVT::i32);
 
   for (unsigned I = 0, E = ArgLocs.size(); I != E;) {
     CCValAssign &VA = ArgLocs[I++];
 
-    if (VA.isMemLoc())
-      report_fatal_error("Handling of placing parameters on the stack is "
-                         "unimplemented!");
-    if (!VA.isRegLoc())
-      report_fatal_error(
-          "Unexpected non-register location for function call argument.");
-
     SDValue Arg = OutVals[VA.getValNo()];
 
-    if (!VA.needsCustom()) {
+    if (!VA.isRegLoc() && !VA.isMemLoc())
+      report_fatal_error("Unexpected location for function call argument.");
+
+    if (VA.isRegLoc() && !VA.needsCustom()) {
       switch (VA.getLocInfo()) {
       default:
         report_fatal_error("Unexpected argument extension type.");
@@ -7085,11 +7107,21 @@ SDValue PPCTargetLowering::LowerCall_AIX(
       continue;
     }
 
+    if (VA.isMemLoc()) {
+      SDValue PtrOff =
+          DAG.getConstant(VA.getLocMemOffset(), dl, StackPtr.getValueType());
+      PtrOff = DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, PtrOff);
+      MemOpChains.push_back(
+          DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
+
+      continue;
+    }
+
     // Custom handling is used for GPR initializations for vararg float
     // arguments.
-    assert(CFlags.IsVarArg && VA.getValVT().isFloatingPoint() &&
-           VA.getLocVT().isInteger() &&
-           "Unexpected custom register handling for calling convention.");
+    assert(VA.isRegLoc() && VA.needsCustom() && CFlags.IsVarArg &&
+           VA.getValVT().isFloatingPoint() && VA.getLocVT().isInteger() &&
+           "Unexpected register handling for calling convention.");
 
     SDValue ArgAsInt =
         DAG.getBitcast(MVT::getIntegerVT(VA.getValVT().getSizeInBits()), Arg);
@@ -7112,14 +7144,23 @@ SDValue PPCTargetLowering::LowerCall_AIX(
                                      DAG.getConstant(32, dl, MVT::i8));
       RegsToPass.push_back(std::make_pair(
           GPR1.getLocReg(), DAG.getZExtOrTrunc(MSWAsI64, dl, MVT::i32)));
-      assert(I != E && "A second custom GPR is expected!");
-      CCValAssign &GPR2 = ArgLocs[I++];
-      assert(GPR2.isRegLoc() && GPR2.getValNo() == GPR1.getValNo() &&
-             GPR2.needsCustom() && "A second custom GPR is expected!");
-      RegsToPass.push_back(std::make_pair(
-          GPR2.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, MVT::i32)));
+
+      if (I != E) {
+        // If only 1 GPR was available, there will only be one custom GPR and
+        // the argument will also pass in memory.
+        CCValAssign &PeekArg = ArgLocs[I];
+        if (PeekArg.isRegLoc() && PeekArg.getValNo() == PeekArg.getValNo()) {
+          assert(PeekArg.needsCustom() && "A second custom GPR is expected.");
+          CCValAssign &GPR2 = ArgLocs[I++];
+          RegsToPass.push_back(std::make_pair(
+              GPR2.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, MVT::i32)));
+        }
+      }
     }
   }
+
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
 
   // For indirect calls, we need to save the TOC base to the stack for
   // restoration after the call.
