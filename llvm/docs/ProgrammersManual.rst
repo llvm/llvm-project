@@ -847,7 +847,7 @@ this, use the named constructor idiom and return an ``Expected<T>``:
   public:
 
     static Expected<Foo> Create(Resource R1, Resource R2) {
-      Error Err;
+      Error Err = Error::success();
       Foo F(R1, R2, Err);
       if (Err)
         return std::move(Err);
@@ -946,7 +946,7 @@ following natural iteration idiom for fallible containers like Archive:
 
 .. code-block:: c++
 
-  Error Err;
+  Error Err = Error::success();
   for (auto &Child : Ar->children(Err)) {
     // Use Child - only enter the loop when it's valid
 
