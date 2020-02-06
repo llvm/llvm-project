@@ -737,7 +737,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   // Deal with weird cases where the class only partially supports the subreg
   // index.
   Src0RC = TRI.getSubClassWithSubReg(Src0RC, SubReg);
-  if (!Src0RC)
+  if (!Src0RC || !Src1RC)
     return false;
 
   if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
