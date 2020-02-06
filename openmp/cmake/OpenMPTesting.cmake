@@ -163,9 +163,9 @@ function(add_openmp_testsuite target comment)
     return()
   endif()
 
-  cmake_parse_arguments(ARG "" "" "DEPENDS;ARGS" ${ARGN})
-  # EXCLUDE_FROM_ALL excludes the test ${target} out of check-openmp.
-  if (NOT EXCLUDE_FROM_ALL)
+  cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "DEPENDS;ARGS" ${ARGN})
+  # EXCLUDE_FROM_CHECK_ALL excludes the test ${target} out of check-openmp.
+  if (NOT ARG_EXCLUDE_FROM_CHECK_ALL)
     # Register the testsuites and depends for the check-openmp rule.
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
@@ -183,6 +183,7 @@ function(add_openmp_testsuite target comment)
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
+      ${ARG_EXCLUDE_FROM_CHECK_ALL}
       DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
@@ -194,6 +195,5 @@ function(construct_check_openmp_target)
   get_property(OPENMP_LIT_DEPENDS GLOBAL PROPERTY OPENMP_LIT_DEPENDS)
 
   # We already added the testsuites themselves, no need to do that again.
-  set(EXCLUDE_FROM_ALL True)
-  add_openmp_testsuite(check-openmp "Running OpenMP tests" ${OPENMP_LIT_TESTSUITES} DEPENDS ${OPENMP_LIT_DEPENDS})
+  add_openmp_testsuite(check-openmp "Running OpenMP tests" ${OPENMP_LIT_TESTSUITES} EXCLUDE_FROM_CHECK_ALL DEPENDS ${OPENMP_LIT_DEPENDS})
 endfunction()
