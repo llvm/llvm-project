@@ -48,11 +48,8 @@ static llvm::Intrinsic::ID getShflBflyIntrinsicId(llvm::Type *resultType,
 
 namespace {
 class ModuleTranslation : public LLVM::ModuleTranslation {
-
 public:
-  explicit ModuleTranslation(Operation *module)
-      : LLVM::ModuleTranslation(module) {}
-  ~ModuleTranslation() override {}
+  using LLVM::ModuleTranslation::ModuleTranslation;
 
 protected:
   LogicalResult convertOperation(Operation &opInst,
@@ -66,7 +63,6 @@ protected:
 } // namespace
 
 std::unique_ptr<llvm::Module> mlir::translateModuleToNVVMIR(Operation *m) {
-  ModuleTranslation translation(m);
   auto llvmModule =
       LLVM::ModuleTranslation::translateModule<ModuleTranslation>(m);
   if (!llvmModule)

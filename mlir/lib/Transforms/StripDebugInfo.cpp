@@ -14,24 +14,21 @@
 using namespace mlir;
 
 namespace {
-struct StripDebugInfo : public FunctionPass<StripDebugInfo> {
-  void runOnFunction() override;
+struct StripDebugInfo : public OperationPass<StripDebugInfo> {
+  void runOnOperation() override;
 };
 } // end anonymous namespace
 
-void StripDebugInfo::runOnFunction() {
-  FuncOp func = getFunction();
+void StripDebugInfo::runOnOperation() {
+  // Strip the debug info from all operations.
   auto unknownLoc = UnknownLoc::get(&getContext());
-
-  // Strip the debug info from the function and its operations.
-  func.setLoc(unknownLoc);
-  func.walk([&](Operation *op) { op->setLoc(unknownLoc); });
+  getOperation()->walk([&](Operation *op) { op->setLoc(unknownLoc); });
 }
 
 /// Creates a pass to strip debug information from a function.
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createStripDebugInfoPass() {
+std::unique_ptr<Pass> mlir::createStripDebugInfoPass() {
   return std::make_unique<StripDebugInfo>();
 }
 
 static PassRegistration<StripDebugInfo>
-    pass("strip-debuginfo", "Strip debug info from functions and operations");
+    pass("strip-debuginfo", "Strip debug info from all operations");

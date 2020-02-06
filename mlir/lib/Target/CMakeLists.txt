@@ -1,4 +1,5 @@
 add_llvm_library(MLIRTargetLLVMIRModuleTranslation
+  LLVMIR/DebugTranslation.cpp
   LLVMIR/ModuleTranslation.cpp
 
   ADDITIONAL_HEADER_DIRS

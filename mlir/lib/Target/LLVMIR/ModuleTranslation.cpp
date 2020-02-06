@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
@@ -30,6 +31,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
@@ -265,6 +267,16 @@ static llvm::AtomicOrdering getLLVMAtomicOrdering(AtomicOrdering ordering) {
   llvm_unreachable("incorrect atomic ordering");
 }
 
+ModuleTranslation::ModuleTranslation(Operation *module,
+                                     std::unique_ptr<llvm::Module> llvmModule)
+    : mlirModule(module), llvmModule(std::move(llvmModule)),
+      debugTranslation(
+          std::make_unique<DebugTranslation>(module, *this->llvmModule)) {
+  assert(satisfiesLLVMModule(mlirModule) &&
+         "mlirModule should honor LLVM's module semantics.");
+}
+ModuleTranslation::~ModuleTranslation() {}
+
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.  LLVM IR Builder does not have a generic interface so
 /// this has to be a long chain of `if`s calling different functions with a
@@ -371,6 +383,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
 /// are not connected to the source basic blocks, which may not exist yet.
 LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
   llvm::IRBuilder<> builder(blockMapping[&bb]);
+  auto *subprogram = builder.GetInsertBlock()->getParent()->getSubprogram();
 
   // Before traversing operations, make block arguments available through
   // value remapping and PHI nodes, but do not add incoming edges for the PHI
@@ -395,6 +408,10 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
 
   // Traverse operations.
   for (auto &op : bb) {
+    // Set the current debug location within the builder.
+    builder.SetCurrentDebugLocation(
+        debugTranslation->translateLoc(op.getLoc(), subprogram));
+
     if (failed(convertOperation(op, builder)))
       return failure();
   }
@@ -520,6 +537,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   blockMapping.clear();
   valueMapping.clear();
   llvm::Function *llvmFunc = functionMapping.lookup(func.getName());
+
+  // Translate the debug information for this function.
+  debugTranslation->translate(func, *llvmFunc);
+
   // Add function arguments to the value remapping table.
   // If there was noalias info then we decorate each argument accordingly.
   unsigned int argIdx = 0;

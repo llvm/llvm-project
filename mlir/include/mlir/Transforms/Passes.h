@@ -118,7 +118,7 @@ std::unique_ptr<OpPassBase<FuncOp>> createAffineDataCopyGenerationPass(
 std::unique_ptr<OpPassBase<FuncOp>> createMemRefDataFlowOptPass();
 
 /// Creates a pass to strip debug information from a function.
-std::unique_ptr<OpPassBase<FuncOp>> createStripDebugInfoPass();
+std::unique_ptr<Pass> createStripDebugInfoPass();
 
 /// Creates a pass which tests loop fusion utilities.
 std::unique_ptr<OpPassBase<FuncOp>> createTestLoopFusionPass();
