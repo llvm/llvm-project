@@ -83,8 +83,6 @@ void initOptions() {
         "GWP-ASan ERROR: SampleRate must be > 0 when GWP-ASan is enabled.\n");
     exit(EXIT_FAILURE);
   }
-
-  o->Printf = __sanitizer::Printf;
 }
 
 Options &getOptions() { return *getOptionsInternal(); }
