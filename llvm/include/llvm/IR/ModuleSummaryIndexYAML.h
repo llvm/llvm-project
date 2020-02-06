@@ -17,7 +17,6 @@ namespace yaml {
 
 template <> struct ScalarEnumerationTraits<TypeTestResolution::Kind> {
   static void enumeration(IO &io, TypeTestResolution::Kind &value) {
-    io.enumCase(value, "Unknown", TypeTestResolution::Unknown);
     io.enumCase(value, "Unsat", TypeTestResolution::Unsat);
     io.enumCase(value, "ByteArray", TypeTestResolution::ByteArray);
     io.enumCase(value, "Inline", TypeTestResolution::Inline);
