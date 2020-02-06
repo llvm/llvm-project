@@ -59,6 +59,9 @@ protected:
 
     return LLVM::ModuleTranslation::convertOperation(opInst, builder);
   }
+
+  /// Allow access to the constructor.
+  friend LLVM::ModuleTranslation;
 };
 } // namespace
 
