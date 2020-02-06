@@ -51,11 +51,6 @@ FusionResult canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                           unsigned dstLoopDepth,
                           ComputationSliceState *srcSlice);
 
-/// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
-/// and source slice loop bounds specified in 'srcSlice'.
-void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-               ComputationSliceState *srcSlice);
-
 /// LoopNestStats aggregates various per-loop statistics (eg. loop trip count
 /// and operation count) for a loop nest up until (and including) the innermost
 /// loop body.
