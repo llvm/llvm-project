@@ -528,7 +528,7 @@ static bool
 inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 std::function<AssumptionCache &(Function &)> GetAssumptionCache,
                 ProfileSummaryInfo *PSI,
-                std::function<TargetLibraryInfo &(Function &)> GetTLI,
+                std::function<const TargetLibraryInfo &(Function &)> GetTLI,
                 bool InsertLifetime,
                 function_ref<InlineCost(CallSite CS)> GetInlineCost,
                 function_ref<AAResults &(Function &)> AARGetter,
@@ -761,7 +761,7 @@ bool LegacyInlinerBase::inlineCalls(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   ACT = &getAnalysis<AssumptionCacheTracker>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
+  GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
     return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   };
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
@@ -1008,6 +1008,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
       return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
+    auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+      return FAM.getResult<TargetLibraryAnalysis>(F);
+    };
 
     auto GetInlineCost = [&](CallSite CS) {
       Function &Callee = *CS.getCalledFunction();
@@ -1016,7 +1019,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
               DEBUG_TYPE);
       return getInlineCost(cast<CallBase>(*CS.getInstruction()), Params,
-                           CalleeTTI, GetAssumptionCache, {GetBFI}, PSI,
+                           CalleeTTI, GetAssumptionCache, {GetBFI}, GetTLI, PSI,
                            RemarksEnabled ? &ORE : nullptr);
     };
 
