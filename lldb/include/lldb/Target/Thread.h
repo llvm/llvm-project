@@ -216,6 +216,12 @@ public:
 
   virtual void RefreshStateAfterStop() = 0;
 
+  void SelectMostRelevantFrame();
+
+  std::string GetStopDescription();
+
+  std::string GetStopDescriptionRaw();
+
   void WillStop();
 
   bool ShouldStop(Event *event_ptr);

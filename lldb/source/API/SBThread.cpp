@@ -325,8 +325,11 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 
       StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
       if (stop_info_sp) {
-        const char *stop_desc = stop_info_sp->GetDescription();
-        if (stop_desc) {
+        std::string thread_stop_desc =
+            exe_ctx.GetThreadPtr()->GetStopDescription();
+        const char *stop_desc = thread_stop_desc.c_str();
+
+        if (stop_desc[0] != '\0') {
           if (dst)
             return ::snprintf(dst, dst_len, "%s", stop_desc);
           else {
