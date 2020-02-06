@@ -215,9 +215,11 @@ MachineInstr *ReachingDefAnalysis::getInstFromId(MachineBasicBlock *MBB,
     return nullptr;
 
   for (auto &MI : *MBB) {
-    if (InstIds.count(&MI) && InstIds.lookup(&MI) == InstId)
+    auto F = InstIds.find(&MI);
+    if (F != InstIds.end() && F->second == InstId)
       return &MI;
   }
+
   return nullptr;
 }
 
