@@ -700,39 +700,70 @@ TEST_F(SymbolCollectorTest, MacrosWithRefFilter) {
   EXPECT_THAT(Refs, IsEmpty());
 }
 
-TEST_F(SymbolCollectorTest, SpelledReference) {
-  Annotations Header(R"cpp(
-  struct Foo;
-  #define MACRO Foo
-  )cpp");
-  Annotations Main(R"cpp(
-  struct $spelled[[Foo]] {
-    $spelled[[Foo]]();
-    ~$spelled[[Foo]]();
+TEST_F(SymbolCollectorTest, SpelledReferences) {
+  struct {
+    llvm::StringRef Header;
+    llvm::StringRef Main;
+    llvm::StringRef TargetSymbolName;
+  } TestCases[] = {
+    {
+      R"cpp(
+        struct Foo;
+        #define MACRO Foo
+      )cpp",
+      R"cpp(
+        struct $spelled[[Foo]] {
+          $spelled[[Foo]]();
+          ~$spelled[[Foo]]();
+        };
+        $spelled[[Foo]] Variable1;
+        $implicit[[MACRO]] Variable2;
+      )cpp",
+      "Foo",
+    },
+    {
+      R"cpp(
+        class Foo {
+        public:
+          Foo() = default;
+        };
+      )cpp",
+      R"cpp(
+        void f() { Foo $implicit[[f]]; f = $spelled[[Foo]]();}
+      )cpp",
+      "Foo::Foo" /// constructor.
+    },
   };
-  $spelled[[Foo]] Variable1;
-  $implicit[[MACRO]] Variable2;
-  )cpp");
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.RefsInHeaders = false;
-  runSymbolCollector(Header.code(), Main.code());
-  const auto SpelledRanges = Main.ranges("spelled");
-  const auto ImplicitRanges = Main.ranges("implicit");
-  RefSlab::Builder SpelledSlabBuilder, ImplicitSlabBuilder;
-  for (const auto &SymbolAndRefs : Refs) {
-    const auto Symbol = SymbolAndRefs.first;
-    for (const auto &Ref : SymbolAndRefs.second)
-      if ((Ref.Kind & RefKind::Spelled) != RefKind::Unknown)
-        SpelledSlabBuilder.insert(Symbol, Ref);
-      else
-        ImplicitSlabBuilder.insert(Symbol, Ref);
+  for (const auto& T : TestCases) {
+    Annotations Header(T.Header);
+    Annotations Main(T.Main);
+    // Reset the file system.
+    InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+    runSymbolCollector(Header.code(), Main.code());
+
+    const auto SpelledRanges = Main.ranges("spelled");
+    const auto ImplicitRanges = Main.ranges("implicit");
+    RefSlab::Builder SpelledSlabBuilder, ImplicitSlabBuilder;
+    const auto TargetID = findSymbol(Symbols, T.TargetSymbolName).ID;
+    for (const auto &SymbolAndRefs : Refs) {
+      const auto ID = SymbolAndRefs.first;
+      if (ID != TargetID)
+        continue;
+      for (const auto &Ref : SymbolAndRefs.second)
+        if ((Ref.Kind & RefKind::Spelled) != RefKind::Unknown)
+          SpelledSlabBuilder.insert(ID, Ref);
+        else
+          ImplicitSlabBuilder.insert(ID, Ref);
+    }
+    const auto SpelledRefs = std::move(SpelledSlabBuilder).build(),
+               ImplicitRefs = std::move(ImplicitSlabBuilder).build();
+    EXPECT_THAT(SpelledRefs,
+                Contains(Pair(TargetID, HaveRanges(SpelledRanges))));
+    EXPECT_THAT(ImplicitRefs,
+                Contains(Pair(TargetID, HaveRanges(ImplicitRanges))));
   }
-  const auto SpelledRefs = std::move(SpelledSlabBuilder).build(),
-             ImplicitRefs = std::move(ImplicitSlabBuilder).build();
-  EXPECT_THAT(SpelledRefs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
-                                         HaveRanges(SpelledRanges))));
-  EXPECT_THAT(ImplicitRefs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
-                                          HaveRanges(ImplicitRanges))));
 }
 
 TEST_F(SymbolCollectorTest, NameReferences) {
