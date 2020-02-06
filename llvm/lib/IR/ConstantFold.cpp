@@ -47,6 +47,11 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
   if (CV->isAllOnesValue()) return Constant::getAllOnesValue(DstTy);
   if (CV->isNullValue()) return Constant::getNullValue(DstTy);
 
+  // Do not iterate on scalable vector. The num of elements is unknown at
+  // compile-time.
+  if (DstTy->isScalable())
+    return nullptr;
+
   // If this cast changes element count then we can't handle it here:
   // doing so requires endianness information.  This should be handled by
   // Analysis/ConstantFolding.cpp
