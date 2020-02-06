@@ -406,14 +406,6 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 
 #endif // !_MSC_VER
 
-void CrashRecoveryContext::HandleCrash() {
-  CrashRecoveryContextImpl *CRCI = (CrashRecoveryContextImpl *) Impl;
-  assert(CRCI && "Crash recovery context never initialized!");
-  // As per convention, -2 indicates a crash or timeout as opposed to failure to
-  // execute (see llvm/include/llvm/Support/Program.h)
-  CRCI->HandleCrash(-2, 0);
-}
-
 // FIXME: Portability.
 static void setThreadBackgroundPriority() {
 #ifdef __APPLE__
