@@ -92,8 +92,8 @@ public:
   }
 
   StackFrameRecognizerSP GetRecognizerForFrame(StackFrameSP frame) {
-    const SymbolContext &symctx = frame->GetSymbolContext(
-        eSymbolContextModule | eSymbolContextFunction | eSymbolContextSymbol);
+    const SymbolContext &symctx =
+        frame->GetSymbolContext(eSymbolContextModule | eSymbolContextFunction);
     ConstString function_name = symctx.GetFunctionName();
     ModuleSP module_sp = symctx.module_sp;
     if (!module_sp) return StackFrameRecognizerSP();

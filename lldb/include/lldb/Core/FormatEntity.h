@@ -61,7 +61,6 @@ public:
       ThreadName,
       ThreadQueue,
       ThreadStopReason,
-      ThreadStopReasonRaw,
       ThreadReturnValue,
       ThreadCompletedExpression,
       ScriptThread,
