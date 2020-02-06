@@ -105,7 +105,7 @@ protected:
 };
 
 uintptr_t CrashHandlerAPITest::BacktraceConstants[kNumBacktraceConstants] = {
-    0xdeadbeef, 0xdeadc0de, 0xbadc0ffee, 0xcafef00d};
+    0xdeadbeef, 0xdeadc0de, 0xbadc0ffe, 0xcafef00d};
 
 TEST_F(CrashHandlerAPITest, PointerNotMine) {
   uintptr_t UnknownPtr = reinterpret_cast<uintptr_t>(&State);
