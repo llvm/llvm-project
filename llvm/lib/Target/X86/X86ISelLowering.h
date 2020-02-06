@@ -541,12 +541,6 @@ namespace llvm {
       MEMBARRIER,
       MFENCE,
 
-      // Store FP status word into i16 register.
-      FNSTSW16r,
-
-      // Store contents of %ah into %eflags.
-      SAHF,
-
       // Get a random integer and indicate whether it is valid in CF.
       RDRAND,
 
@@ -1493,9 +1487,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
-
-    /// Convert a comparison if required by the subtarget.
-    SDValue ConvertCmpIfNecessary(SDValue Cmp, SelectionDAG &DAG) const;
 
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.
