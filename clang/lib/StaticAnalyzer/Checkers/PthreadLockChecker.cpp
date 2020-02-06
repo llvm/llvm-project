@@ -256,7 +256,9 @@ void PthreadLockChecker::checkPostCall(const CallEvent &Call,
   // are global C functions.
   // TODO: Maybe make this the default behavior of CallDescription
   // with exactly one identifier?
-  if (!Call.isGlobalCFunction())
+  // FIXME: Try to handle cases when the implementation was inlined rather
+  // than just giving up.
+  if (!Call.isGlobalCFunction() || C.wasInlined)
     return;
 
   if (const FnCheck *Callback = PThreadCallbacks.lookup(Call))
