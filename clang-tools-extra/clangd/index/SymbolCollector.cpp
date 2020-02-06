@@ -574,7 +574,7 @@ void SymbolCollector::finish() {
   // FIXME: All MacroRefs are marked as Spelled now, but this should be checked.
   for (const auto &IDAndRefs : MacroRefs)
     for (const auto &LocAndRole : IDAndRefs.second)
-      CollectRef(IDAndRefs.first, LocAndRole);
+      CollectRef(IDAndRefs.first, LocAndRole, /*Spelled=*/true);
   // Populate Refs slab from DeclRefs.
   llvm::DenseMap<FileID, std::vector<syntax::Token>> FilesToTokensCache;
   for (auto &DeclAndRef : DeclRefs) {
@@ -592,7 +592,10 @@ void SymbolCollector::finish() {
         const auto *IdentifierToken =
             spelledIdentifierTouching(LocAndRole.first, Tokens);
         DeclarationName Name = DeclAndRef.first->getDeclName();
-        bool Spelled = IdentifierToken && Name.isIdentifier() &&
+        const auto NameKind = Name.getNameKind();
+        bool IsTargetKind = NameKind == DeclarationName::Identifier ||
+                            NameKind == DeclarationName::CXXConstructorName;
+        bool Spelled = IdentifierToken && IsTargetKind &&
                        Name.getAsString() == IdentifierToken->text(SM);
         CollectRef(*ID, LocAndRole, Spelled);
       }
