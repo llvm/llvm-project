@@ -96,7 +96,13 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   return Result;
 }
 
+// By default, we blacklist C++ standard symbols and protobuf symbols as rename
+// these symbols would change system/generated files which are unlikely to be
+// modified.
 bool isBlacklisted(const NamedDecl &RenameDecl) {
+  if (isProtoFile(RenameDecl.getLocation(),
+                  RenameDecl.getASTContext().getSourceManager()))
+    return true;
   static const auto *StdSymbols = new llvm::DenseSet<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name},
 #include "StdSymbolMap.inc"
