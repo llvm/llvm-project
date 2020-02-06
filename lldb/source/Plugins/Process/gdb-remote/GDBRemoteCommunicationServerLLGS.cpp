@@ -1072,7 +1072,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
     return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
 
   options.setTraceParams(
-      static_pointer_cast<StructuredData::Dictionary>(custom_params_sp));
+      std::static_pointer_cast<StructuredData::Dictionary>(custom_params_sp));
 
   if (buffersize == std::numeric_limits<uint64_t>::max() ||
       type != lldb::TraceType::eTraceTypeProcessorTrace) {
