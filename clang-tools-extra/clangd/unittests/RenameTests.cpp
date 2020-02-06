@@ -440,23 +440,6 @@ TEST(RenameTest, WithinFileRename) {
         template <template<typename> class Z> struct Bar { };
         template <> struct Bar<[[Foo]]> {};
       )cpp",
-
-      {
-          // Implicit references in macro expansions.
-          R"cpp(
-        class [[Fo^o]] {};
-        #define FooFoo Foo
-        #define FOO Foo
-      )cpp",
-          R"cpp(
-        #include "foo.h"
-        void bar() {
-          [[Foo]] x;
-          FOO y;
-          FooFoo z;
-        }
-      )cpp",
-      },
   };
   for (llvm::StringRef T : Tests) {
     SCOPED_TRACE(T);
@@ -906,6 +889,22 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
         #include "foo.h"
         Kind ff() {
           return Kind::[[ABC]];
+        }
+      )cpp",
+      },
+      {
+          // Implicit references in macro expansions.
+          R"cpp(
+        class [[Fo^o]] {};
+        #define FooFoo Foo
+        #define FOO Foo
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        void bar() {
+          [[Foo]] x;
+          FOO y;
+          FooFoo z;
         }
       )cpp",
       },
