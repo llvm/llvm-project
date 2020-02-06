@@ -498,6 +498,66 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
   }
 }
 
+// Only a small portion of Attr's are considered right now.
+bool ODRHash::isWhitelistedAttr(const Attr *A) {
+  // FIXME: This should be auto-generated as part of Attr.td
+  switch (A->getKind()) {
+  default:
+    return false;
+  case attr::ObjCBridge:
+  case attr::ObjCBridgeMutable:
+    return true;
+  }
+}
+
+void ODRHash::AddAttrs(const NamedDecl *D) {
+  if (!D->hasAttrs())
+    return;
+
+  // Go over attributes
+  llvm::SmallVector<const Attr *, 2> Attrs;
+  for (const Attr *A : D->getAttrs()) {
+    if (isWhitelistedAttr(A))
+      Attrs.push_back(A);
+  }
+
+  // Sort attributes by name + other per subject kind. This allows
+  // for extra flexibility when redeclarations use different order.
+  // FIXME: In case the order matters for a group of attributes we
+  // decide to hash, then we might need to change this.
+  // FIXME: This should be auto-generated as part of Attr.td
+  llvm::sort(Attrs,
+             [](const Attr *A, const Attr *B) { return Attr::compare(A, B); });
+
+  for (const Attr *A : Attrs)
+    AddAttr(A);
+}
+
+void ODRHash::AddAttr(const Attr *A) {
+  assert(A && "Expecting non-null pointer.");
+  ID.AddInteger(A->getKind());
+
+  // FIXME: This should be auto-generated as part of Attr.td
+  switch (A->getKind()) {
+  case attr::ObjCBridge: {
+    auto *M = cast<ObjCBridgeAttr>(A);
+    AddBoolean(M->getBridgedType());
+    if (M->getBridgedType())
+      ID.AddString(M->getBridgedType()->getName());
+    break;
+  }
+  case attr::ObjCBridgeMutable: {
+    auto *M = cast<ObjCBridgeMutableAttr>(A);
+    AddBoolean(M->getBridgedType());
+    if (M->getBridgedType())
+      ID.AddString(M->getBridgedType()->getName());
+    break;
+  }
+  default:
+    llvm_unreachable("Not expecting other attribute kinds");
+  }
+}
+
 void ODRHash::AddSubDecl(const Decl *D) {
   assert(D && "Expecting non-null pointer.");
 
@@ -655,6 +715,9 @@ void ODRHash::AddRecordDecl(const RecordDecl *Record) {
   ID.AddInteger(Decls.size());
   for (auto SubDecl : Decls)
     AddSubDecl(SubDecl);
+
+  if (Record->getASTContext().getLangOpts().ODRCheckAttributes)
+    AddAttrs(Record);
 }
 
 void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {

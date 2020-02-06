@@ -9486,6 +9486,12 @@ void ASTReader::diagnoseOdrViolations() {
         return Hash.CalculateHash();
       };
 
+  auto ComputeAttrODRHash = [&Hash](const Attr *A) {
+    Hash.clear();
+    Hash.AddAttr(A);
+    return Hash.CalculateHash();
+  };
+
   // Used with err_module_odr_violation_mismatch_decl and
   // note_module_odr_violation_mismatch_decl
   // This list should be the same Decl's as in ODRHash::isWhiteListedDecl
@@ -9566,7 +9572,8 @@ void ASTReader::diagnoseOdrViolations() {
     ObjCPropertyType,
     ObjCPropertyAttributes,
     ObjCImplementationControl,
-    ObjCReferencedProtocolName
+    ObjCReferencedProtocolName,
+    AttributeKind
   };
 
   // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9920,6 +9927,55 @@ void ASTReader::diagnoseOdrViolations() {
       ODRDiagDeclNote(SecondModule, SecondVD->getLocation(),
                       SecondVD->getSourceRange(), VarConstexpr)
           << SecondName << SecondIsConstexpr;
+      return true;
+    }
+    return false;
+  };
+
+  auto ODRDiagAttrs = [&ODRDiagDeclError, &ODRDiagDeclNote,
+                       &ComputeAttrODRHash, this](
+                          NamedDecl *FirstContainer, NamedDecl *SecondContainer,
+                          StringRef FirstModule, StringRef SecondModule,
+                          llvm::SmallVectorImpl<const Attr *> &FirstAttrs,
+                          llvm::SmallVectorImpl<const Attr *> &SecondAttrs) {
+    unsigned NumFirstAttrs = FirstAttrs.size();
+    unsigned NumSecondAttrs = SecondAttrs.size();
+    if (!NumFirstAttrs && !NumSecondAttrs)
+      return false;
+
+    const Attr *LHS = nullptr;
+    const Attr *RHS = nullptr;
+    auto MaxNumAttrs = std::max(NumFirstAttrs, NumSecondAttrs);
+    for (unsigned I = 0; I < MaxNumAttrs; ++I) {
+      if (I < NumFirstAttrs)
+        LHS = FirstAttrs[I];
+      if (I < NumSecondAttrs)
+        RHS = SecondAttrs[I];
+      if (LHS && RHS && ComputeAttrODRHash(LHS) == ComputeAttrODRHash(RHS))
+        continue;
+
+      std::string LHSName, RHSName;
+      llvm::raw_string_ostream OSL(LHSName), OSR(RHSName);
+      if (LHS)
+        LHS->printPretty(OSL, this->getContext().getPrintingPolicy());
+      if (RHS)
+        RHS->printPretty(OSR, this->getContext().getPrintingPolicy());
+
+      SourceLocation LHSLoc =
+          LHS ? LHS->getLocation() : FirstContainer->getLocation();
+      SourceLocation RHSLoc =
+          RHS ? RHS->getLocation() : SecondContainer->getLocation();
+      SourceRange LHSRange =
+          LHS ? LHS->getRange() : FirstContainer->getSourceRange();
+      SourceRange RHSRange =
+          RHS ? RHS->getRange() : SecondContainer->getSourceRange();
+
+      ODRDiagDeclError(FirstContainer, FirstModule, LHSLoc,
+                       LHSRange, AttributeKind)
+          << (LHS != nullptr) << OSL.str();
+      ODRDiagDeclNote(SecondModule, RHSLoc, RHSRange,
+                      AttributeKind)
+          << (RHS != nullptr) << OSR.str();
       return true;
     }
     return false;
@@ -11224,7 +11280,32 @@ void ASTReader::diagnoseOdrViolations() {
       Decl *FirstDecl = DR.FirstDecl;
       Decl *SecondDecl = DR.SecondDecl;
 
+      auto GetAttrList = [](llvm::SmallVectorImpl<const Attr *> &Attrs,
+                            NamedDecl *D) {
+        if (!D->hasAttrs())
+          return;
+        for (const Attr *A : D->getAttrs()) {
+          if (ODRHash::isWhitelistedAttr(A))
+            Attrs.push_back(A);
+        }
+        llvm::sort(Attrs, [](const Attr *A, const Attr *B) {
+          return Attr::compare(A, B);
+        });
+      };
+
       if (FirstDiffType == Other || SecondDiffType == Other) {
+        // The difference might be in the attributes, check for that.
+        if (FirstRecord->hasAttrs() || SecondRecord->hasAttrs()) {
+          llvm::SmallVector<const Attr *, 2> FirstAttrs;
+          llvm::SmallVector<const Attr *, 2> SecondAttrs;
+          GetAttrList(FirstAttrs, FirstRecord);
+          GetAttrList(SecondAttrs, SecondRecord);
+          Diagnosed = ODRDiagAttrs(FirstRecord, SecondRecord, FirstModule,
+                                   SecondModule, FirstAttrs, SecondAttrs);
+          if (Diagnosed)
+            break;
+        }
+
         DiagnoseODRUnexpected(DR, FirstRecord, FirstModule, SecondRecord,
                               SecondModule);
         Diagnosed = true;
