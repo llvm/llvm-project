@@ -203,7 +203,7 @@ public:
   iplist_impl &operator=(iplist_impl &&X) {
     *static_cast<TraitsT *>(this) = std::move(static_cast<TraitsT &>(X));
     *static_cast<IntrusiveListT *>(this) =
-        std::move(static_cast<IntrusiveListT &>);
+        std::move(static_cast<IntrusiveListT &>(X));
     return *this;
   }
 
