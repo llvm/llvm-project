@@ -3479,7 +3479,7 @@ GDBRemoteCommunicationClient::SendGetTraceConfigPacket(lldb::user_id_t uid,
           return error;
         } else
           options.setTraceParams(
-              static_pointer_cast<StructuredData::Dictionary>(
+              std::static_pointer_cast<StructuredData::Dictionary>(
                   custom_params_sp));
       }
     } else {
