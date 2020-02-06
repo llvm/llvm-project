@@ -2466,7 +2466,7 @@ def err_invalid_consteval_take_address : Error<
   "cannot take address of consteval function %0 outside"
   " of an immediate invocation">;
 def err_invalid_consteval_call : Error<
-  "call to consteval function '%q0' is not a constant expression">;
+  "call to consteval function %q0 is not a constant expression">;
 def err_invalid_consteval_decl_kind : Error<
   "%0 cannot be declared consteval">;
 def err_invalid_constexpr : Error<
