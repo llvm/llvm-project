@@ -2,16 +2,15 @@
 import subprocess
 import sys
 
-dotest_path = '@LLDB_SOURCE_DIR@/test/API/dotest.py'
-build_dir = '@LLDB_TEST_BUILD_DIRECTORY@'
-dotest_args_str = '@LLDB_DOTEST_ARGS@'
+dotest_path = '@LLDB_SOURCE_DIR_CONFIGURED@/test/API/dotest.py'
+build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
+dotest_args_str = '@LLDB_DOTEST_ARGS_CONFIGURED@'
 arch = '@LLDB_TEST_ARCH@'
-executable = '@LLDB_TEST_EXECUTABLE@'
-compiler = '@LLDB_TEST_COMPILER@'
-dsymutil = '@LLDB_TEST_DSYMUTIL@'
-filecheck = '@LLDB_TEST_FILECHECK@'
-lldb_libs_dir = "@LLDB_LIBS_DIR@"
-
+executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
+compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
+dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
+filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
+lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
