@@ -2093,7 +2093,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         // result values together, before truncating back down to the non-pow-2
         // type.
         // E.g. v1 = i24 load =>
-        // v2 = i32 load (2 byte)
+        // v2 = i32 zextload (2 byte)
         // v3 = i32 load (1 byte)
         // v4 = i32 shl v3, 16
         // v5 = i32 or v4, v2
@@ -2114,8 +2114,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         LLT AnyExtTy = LLT::scalar(AnyExtSize);
         Register LargeLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
         Register SmallLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
-        auto LargeLoad =
-            MIRBuilder.buildLoad(LargeLdReg, PtrReg, *LargeMMO);
+        auto LargeLoad = MIRBuilder.buildLoadInstr(
+            TargetOpcode::G_ZEXTLOAD, LargeLdReg, PtrReg, *LargeMMO);
 
         auto OffsetCst =
             MIRBuilder.buildConstant(LLT::scalar(64), LargeSplitSize / 8);
