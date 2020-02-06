@@ -3303,7 +3303,7 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
   if (Offset >= NumElts || Offset < 0)
     return std::make_pair(AMDGPU::sub0, Offset);
 
-  return std::make_pair(AMDGPU::sub0 + Offset, 0);
+  return std::make_pair(AMDGPURegisterInfo::getSubRegFromChannel(Offset), 0);
 }
 
 // Return true if the index is an SGPR and was set.

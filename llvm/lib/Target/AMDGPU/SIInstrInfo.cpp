@@ -798,7 +798,7 @@ void SIInstrInfo::materializeImmediate(MachineBasicBlock &MBB,
     int64_t IdxValue = Idx == 0 ? Value : 0;
 
     MachineInstrBuilder Builder = BuildMI(MBB, MI, DL,
-      get(Opcode), RI.getSubReg(DestReg, Idx));
+      get(Opcode), RI.getSubReg(DestReg, SubIndices[Idx]));
     Builder.addImm(IdxValue);
   }
 }

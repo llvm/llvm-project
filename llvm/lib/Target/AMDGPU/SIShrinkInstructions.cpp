@@ -426,8 +426,7 @@ getSubRegForIndex(unsigned Reg, unsigned Sub, unsigned I,
     if (Register::isPhysicalRegister(Reg)) {
       Reg = TRI.getSubReg(Reg, TRI.getSubRegFromChannel(I));
     } else {
-      LaneBitmask LM = TRI.getSubRegIndexLaneMask(Sub);
-      Sub = TRI.getSubRegFromChannel(I + countTrailingZeros(LM.getAsInteger()));
+      Sub = TRI.getSubRegFromChannel(I + TRI.getChannelFromSubReg(Sub));
     }
   }
   return TargetInstrInfo::RegSubRegPair(Reg, Sub);
