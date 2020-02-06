@@ -19,6 +19,7 @@ target_link_libraries(MLIRMlirOptLib
 )
 
 set(FULL_LINK_LIBS
+  MLIRLoopAnalysis
   MLIRAnalysis
   MLIRAffineOps
   MLIRAffineToStandard
