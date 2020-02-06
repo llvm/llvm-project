@@ -22,7 +22,6 @@ def SDTX86Fst       : SDTypeProfile<0, 2, [SDTCisFP<0>,
                                            SDTCisPtrTy<1>]>;
 def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
-def SDTX86Fnstsw    : SDTypeProfile<1, 1, [SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
@@ -34,7 +33,6 @@ def X86fild         : SDNode<"X86ISD::FILD", SDTX86Fild,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86fist         : SDNode<"X86ISD::FIST", SDTX86Fist,
                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fp_stsw      : SDNode<"X86ISD::FNSTSW16r", SDTX86Fnstsw>;
 def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
@@ -638,19 +636,13 @@ def FLDLN2 : I<0xD9, MRM_ED, (outs), (ins), "fldln2", []>;
 } // SchedRW
 
 // Floating point compares.
-let SchedRW = [WriteFCom], Uses = [FPCW] in {
-def UCOM_Fpr32 : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86any_fcmp RFP32:$lhs, RFP32:$rhs)))]>;
-def UCOM_Fpr64 : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86any_fcmp RFP64:$lhs, RFP64:$rhs)))]>;
-def UCOM_Fpr80 : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86any_fcmp RFP80:$lhs, RFP80:$rhs)))]>;
-def COM_Fpr32  : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86strict_fcmps RFP32:$lhs, RFP32:$rhs)))]>;
-def COM_Fpr64  : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86strict_fcmps RFP64:$lhs, RFP64:$rhs)))]>;
-def COM_Fpr80  : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
-                        [(set FPSW, (trunc (X86strict_fcmps RFP80:$lhs, RFP80:$rhs)))]>;
+let SchedRW = [WriteFCom], Uses = [FPCW], hasSideEffects = 0 in {
+def UCOM_Fpr32 : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP, []>;
+def UCOM_Fpr64 : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP, []>;
+def UCOM_Fpr80 : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP, []>;
+def COM_Fpr32  : FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP, []>;
+def COM_Fpr64  : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP, []>;
+def COM_Fpr80  : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP, []>;
 } // SchedRW
 } // mayRaiseFPException = 1
 
@@ -701,10 +693,9 @@ def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RSTi:$reg),
 
 // Floating point flag ops.
 let SchedRW = [WriteALU] in {
-let Defs = [AX, FPSW], Uses = [FPSW] in
+let Defs = [AX, FPSW], Uses = [FPSW], hasSideEffects = 0 in
 def FNSTSW16r : I<0xDF, MRM_E0,                  // AX = fp flags
-                  (outs), (ins), "fnstsw\t{%ax|ax}",
-                  [(set AX, (X86fp_stsw FPSW))]>;
+                  (outs), (ins), "fnstsw\t{%ax|ax}", []>;
 let Defs = [FPSW], Uses = [FPCW] in
 def FNSTCW16m : I<0xD9, MRM7m,                   // [mem16] = X87 control world
                   (outs), (ins i16mem:$dst), "fnstcw\t$dst",
