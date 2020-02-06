@@ -99,6 +99,7 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   else
     AdjustedSampleRatePlusOne = 2;
 
+  initPRNG();
   ThreadLocals.NextSampleCounter =
       (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
 
