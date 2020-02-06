@@ -621,6 +621,8 @@ private:
     }
   }
 
+  void Serialize(char *t) { Serialize(static_cast<const char *>(t)); }
+
   void Serialize(const char **t) {
     size_t size = 0;
     if (!t) {
