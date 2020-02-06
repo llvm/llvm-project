@@ -306,6 +306,8 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   bool HasMore = Index.refs(RQuest, [&](const Ref &R) {
     if (AffectedFiles.size() > MaxLimitFiles)
       return;
+    if ((R.Kind & RefKind::Spelled) == RefKind::Unknown)
+      return;
     if (auto RefFilePath = filePath(R.Location, /*HintFilePath=*/MainFile)) {
       if (*RefFilePath != MainFile)
         AffectedFiles[*RefFilePath].push_back(toRange(R.Location));
