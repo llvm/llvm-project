@@ -55,11 +55,7 @@ scudo::Allocator<scudo::AndroidSvelteConfig, SCUDO_PREFIX(malloc_postinit)> *
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-// The following is the only function that will end up initializing both
-// allocators, which will result in a slight increase in memory footprint.
-INTERFACE void __scudo_print_stats(void) {
-  Allocator.printStats();
-  SvelteAllocator.printStats();
-}
+// TODO(kostyak): support both allocators.
+INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
 #endif // SCUDO_ANDROID && _BIONIC
