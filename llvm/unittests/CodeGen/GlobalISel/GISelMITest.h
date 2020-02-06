@@ -176,6 +176,8 @@ protected:
       (void)s32;                                                               \
       const LLT s64 = LLT::scalar(64);                                         \
       (void)s64;                                                               \
+      const LLT s128 = LLT::scalar(128);                                       \
+      (void)s128;                                                              \
       do                                                                       \
         SettingUpActionsBlock while (0);                                       \
       computeTables();                                                         \
