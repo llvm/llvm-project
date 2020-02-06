@@ -24,6 +24,8 @@
 
 #ifdef GWP_ASAN_HOOKS
 #include "gwp_asan/guarded_pool_allocator.h"
+#include "gwp_asan/optional/backtrace.h"
+#include "gwp_asan/optional/segv_handler.h"
 #endif // GWP_ASAN_HOOKS
 
 extern "C" inline void EmptyCallback() {}
@@ -169,8 +171,13 @@ public:
     // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
     // handler.
     Opt.InstallForkHandlers = false;
-    Opt.Printf = Printf;
+    Opt.Backtrace = gwp_asan::options::getBacktraceFunction();
     GuardedAlloc.init(Opt);
+
+    if (Opt.InstallSignalHandlers)
+      gwp_asan::crash_handler::installSignalHandlers(
+          &GuardedAlloc, Printf, gwp_asan::options::getPrintBacktraceFunction(),
+          Opt.Backtrace);
 #endif // GWP_ASAN_HOOKS
   }
 
@@ -180,6 +187,8 @@ public:
     TSDRegistry.unmapTestOnly();
     Primary.unmapTestOnly();
 #ifdef GWP_ASAN_HOOKS
+    if (getFlags()->GWP_ASAN_InstallSignalHandlers)
+      gwp_asan::crash_handler::uninstallSignalHandlers();
     GuardedAlloc.uninitTestOnly();
 #endif // GWP_ASAN_HOOKS
   }

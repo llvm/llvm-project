@@ -45,7 +45,7 @@ size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
 }
 
 static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
-                           gwp_asan::options::Printf_t Printf) {
+                           gwp_asan::crash_handler::Printf_t Printf) {
   __sanitizer::StackTrace StackTrace;
   StackTrace.trace = reinterpret_cast<__sanitizer::uptr *>(Trace);
   StackTrace.size = TraceLength;
@@ -73,6 +73,8 @@ Backtrace_t getBacktraceFunction() {
   __sanitizer::InitializeCommonFlags();
   return Backtrace;
 }
-PrintBacktrace_t getPrintBacktraceFunction() { return PrintBacktrace; }
+crash_handler::PrintBacktrace_t getPrintBacktraceFunction() {
+  return PrintBacktrace;
+}
 } // namespace options
 } // namespace gwp_asan
