@@ -224,7 +224,6 @@ class TestWasm(GDBRemoteTestBase):
             def qXferRead(self, obj, annex, offset, length):
                 if obj == "libraries":
                     xml = '<library-list><library name=\"%s\"><section address=\"%d\"/></library></library-list>' % (self._obj_path, load_address)
-                    print xml
                     return xml, False
                 else:
                     return None, False
