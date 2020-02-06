@@ -645,9 +645,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     // We already parsed this compile unit, had out a shared pointer to it
     cu_sp = comp_unit->shared_from_this();
   } else {
-    if (&dwarf_cu.GetSymbolFileDWARF() != this) {
-      return dwarf_cu.GetSymbolFileDWARF().ParseCompileUnit(dwarf_cu);
-    } else if (dwarf_cu.GetOffset() == 0 && GetDebugMapSymfile()) {
+    if (dwarf_cu.GetOffset() == 0 && GetDebugMapSymfile()) {
       // Let the debug map create the compile unit
       cu_sp = m_debug_map_symfile->GetCompileUnit(this);
       dwarf_cu.SetUserData(cu_sp.get());
@@ -1454,13 +1452,17 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
 
 CompileUnit *
 SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
+  DWARFCompileUnit *non_dwo_cu =
+      dwarf_cu.IsDWOUnit()
+          ? static_cast<DWARFCompileUnit *>(dwarf_cu.GetUserData())
+          : &dwarf_cu;
   // Check if the symbol vendor already knows about this compile unit?
-  if (dwarf_cu.GetUserData() == nullptr) {
+  if (non_dwo_cu->GetUserData() == nullptr) {
     // The symbol vendor doesn't know about this compile unit, we need to parse
     // and add it to the symbol vendor object.
-    return ParseCompileUnit(dwarf_cu).get();
+    return ParseCompileUnit(*non_dwo_cu).get();
   }
-  return (CompileUnit *)dwarf_cu.GetUserData();
+  return static_cast<CompileUnit *>(non_dwo_cu->GetUserData());
 }
 
 size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
@@ -1605,7 +1607,8 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (dwo_obj_file == nullptr)
     return nullptr;
 
-  return std::make_unique<SymbolFileDWARFDwo>(dwo_obj_file, *dwarf_cu);
+  return std::make_unique<SymbolFileDWARFDwo>(*this, dwo_obj_file,
+                                              dwarf_cu->GetID());
 }
 
 void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {

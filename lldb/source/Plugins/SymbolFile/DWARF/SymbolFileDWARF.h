@@ -246,8 +246,6 @@ public:
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
 
-  virtual lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
-
   lldb::ModuleSP GetExternalModule(lldb_private::ConstString name);
 
   typedef std::map<lldb_private::ConstString, lldb::ModuleSP>
@@ -275,11 +273,6 @@ public:
   std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
-
-  // For regular SymbolFileDWARF instances the method returns nullptr,
-  // for the instances of the subclass SymbolFileDWARFDwo
-  // the method returns a pointer to the base compile unit.
-  virtual DWARFCompileUnit *GetBaseCompileUnit() { return nullptr; }
 
   virtual llvm::Optional<uint32_t> GetDwoNum() { return llvm::None; }
 
@@ -346,6 +339,8 @@ protected:
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb_private::TypeList &GetTypeList() override;
+
+  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
   virtual DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
