@@ -1313,10 +1313,6 @@ void RegisterMethods<SBProcess>(Registry &R) {
                        (lldb::tid_t, lldb::addr_t));
   LLDB_REGISTER_METHOD_CONST(lldb::SBTarget, SBProcess, GetTarget, ());
   LLDB_REGISTER_METHOD(size_t, SBProcess, PutSTDIN, (const char *, size_t));
-  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetSTDOUT, (char *, size_t));
-  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetSTDERR, (char *, size_t));
-  LLDB_REGISTER_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
-                             (char *, size_t));
   LLDB_REGISTER_METHOD(lldb::SBTrace, SBProcess, StartTrace,
                        (lldb::SBTraceOptions &, lldb::SBError &));
   LLDB_REGISTER_METHOD_CONST(void, SBProcess, ReportEventState,
@@ -1416,6 +1412,10 @@ void RegisterMethods<SBProcess>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBMemoryRegionInfoList, SBProcess,
                        GetMemoryRegions, ());
   LLDB_REGISTER_METHOD(lldb::SBProcessInfo, SBProcess, GetProcessInfo, ());
+
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetSTDOUT);
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetSTDERR);
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetAsyncProfileData);
 }
 
 }
