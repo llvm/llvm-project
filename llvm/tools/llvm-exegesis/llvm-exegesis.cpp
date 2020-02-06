@@ -160,7 +160,27 @@ static cl::opt<bool>
                               "and prints a message to access it"),
                      cl::cat(BenchmarkOptions), cl::init(true));
 
-static ExitOnError ExitOnErr;
+static ExitOnError ExitOnErr("llvm-exegesis error: ");
+
+// Helper function that logs the error(s) and exits.
+template <typename... ArgTs> static void ExitWithError(ArgTs &&... Args) {
+  ExitOnErr(make_error<Failure>(std::forward<ArgTs>(Args)...));
+}
+
+// Check Err. If it's in a failure state log the file error(s) and exit.
+static void ExitOnFileError(const Twine &FileName, Error Err) {
+  if (Err) {
+    ExitOnErr(createFileError(FileName, std::move(Err)));
+  }
+}
+
+// Check E. If it's in a success state then return the contained value.
+// If it's in a failure state log the file error(s) and exit.
+template <typename T>
+T ExitOnFileError(const Twine &FileName, Expected<T> &&E) {
+  ExitOnFileError(FileName, E.takeError());
+  return std::move(*E);
+}
 
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
@@ -169,10 +189,11 @@ static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
   const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
-  if (NumSetFlags != 1)
-    report_fatal_error(
-        "please provide one and only one of 'opcode-index', 'opcode-name' or "
-        "'snippets-file'");
+  if (NumSetFlags != 1) {
+    ExitOnErr.setBanner("llvm-exegesis: ");
+    ExitWithError("please provide one and only one of 'opcode-index', "
+                  "'opcode-name' or 'snippets-file'");
+  }
   if (!SnippetsFile.empty())
     return {};
   if (OpcodeIndex > 0)
@@ -198,7 +219,7 @@ static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
     if (unsigned Opcode = ResolveName(OpcodeName))
       Result.push_back(Opcode);
     else
-      report_fatal_error(Twine("unknown opcode ").concat(OpcodeName));
+      ExitWithError(Twine("unknown opcode ").concat(OpcodeName));
   }
   return Result;
 }
@@ -223,18 +244,17 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
       State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State,
                                                        SnippetOptions);
   if (!Generator)
-    report_fatal_error("cannot create snippet generator");
+    ExitWithError("cannot create snippet generator");
   return Generator->generateConfigurations(Instr, ForbiddenRegs);
 }
 
 void benchmarkMain() {
 #ifndef HAVE_LIBPFM
-  report_fatal_error(
-      "benchmarking unavailable, LLVM was built without libpfm.");
+  ExitWithError("benchmarking unavailable, LLVM was built without libpfm.");
 #endif
 
   if (exegesis::pfm::pfmInitialize())
-    report_fatal_error("cannot initialize libpfm");
+    ExitWithError("cannot initialize libpfm");
 
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
@@ -246,7 +266,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
   if (!Runner) {
-    report_fatal_error("cannot create benchmark runner");
+    ExitWithError("cannot create benchmark runner");
   }
 
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
@@ -279,8 +299,10 @@ void benchmarkMain() {
     Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
   }
 
-  if (NumRepetitions == 0)
-    report_fatal_error("--num-repetitions must be greater than zero");
+  if (NumRepetitions == 0) {
+    ExitOnErr.setBanner("llvm-exegesis: ");
+    ExitWithError("--num-repetitions must be greater than zero");
+  }
 
   // Write to standard output if file is not set.
   if (BenchmarkFile.empty())
@@ -289,7 +311,7 @@ void benchmarkMain() {
   for (const BenchmarkCode &Conf : Configurations) {
     InstructionBenchmark Result = Runner->runConfiguration(
         Conf, NumRepetitions, *Repetitor, DumpObjectToDisk);
-    ExitOnErr(Result.writeYaml(State, BenchmarkFile));
+    ExitOnFileError(BenchmarkFile, Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
 }
@@ -309,29 +331,32 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
   raw_fd_ostream ClustersOS(OutputFilename, ErrorCode,
                             sys::fs::FA_Read | sys::fs::FA_Write);
   if (ErrorCode)
-    report_fatal_error("cannot open out file: " + OutputFilename);
+    ExitOnFileError(OutputFilename, errorCodeToError(ErrorCode));
   if (auto Err = Analyzer.run<Pass>(ClustersOS))
-    report_fatal_error(std::move(Err));
+    ExitOnFileError(OutputFilename, std::move(Err));
 }
 
 static void analysisMain() {
+  ExitOnErr.setBanner("llvm-exegesis: ");
   if (BenchmarkFile.empty())
-    report_fatal_error("--benchmarks-file must be set.");
+    ExitWithError("--benchmarks-file must be set");
 
   if (AnalysisClustersOutputFile.empty() &&
       AnalysisInconsistenciesOutputFile.empty()) {
-    report_fatal_error(
-        "At least one of --analysis-clusters-output-file and "
-        "--analysis-inconsistencies-output-file must be specified.");
+    ExitWithError(
+        "for --mode=analysis: At least one of --analysis-clusters-output-file"
+        "and --analysis-inconsistencies-output-file must be specified");
   }
 
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetDisassembler();
+
   // Read benchmarks.
   const LLVMState State("");
-  const std::vector<InstructionBenchmark> Points =
-      ExitOnErr(InstructionBenchmark::readYamls(State, BenchmarkFile));
+  const std::vector<InstructionBenchmark> Points = ExitOnFileError(
+      BenchmarkFile, InstructionBenchmark::readYamls(State, BenchmarkFile));
+
   outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
     errs() << "no benchmarks to analyze\n";
