@@ -1248,6 +1248,18 @@ bool AArch64InstructionSelector::selectCompareBranch(
     return true;
   }
 
+  // When we have a less than comparison, we can just test if the last bit
+  // is not zero.
+  //
+  // Note that we don't want to do this when we have a G_AND because it can
+  // become a tst. The tst will make the test bit in the TB(N)Z redundant.
+  if (Pred == CmpInst::ICMP_SLT && LHSMI->getOpcode() != TargetOpcode::G_AND) {
+    uint64_t Bit = MRI.getType(LHS).getSizeInBits() - 1;
+    emitTestBit(LHS, Bit, /*IsNegative = */ true, DestMBB, MIB);
+    I.eraseFromParent();
+    return true;
+  }
+
   const RegisterBank &RB = *RBI.getRegBank(LHS, MRI, TRI);
   if (RB.getID() != AArch64::GPRRegBankID)
     return false;
