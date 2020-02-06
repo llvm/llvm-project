@@ -254,29 +254,42 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
                                   ExpandedTokens.data() + M->EndExpanded);
   return E;
 }
-
 llvm::ArrayRef<syntax::Token>
 syntax::spelledTokensTouching(SourceLocation Loc,
-                              const syntax::TokenBuffer &Tokens) {
+                              llvm::ArrayRef<syntax::Token> Tokens) {
   assert(Loc.isFileID());
-  llvm::ArrayRef<syntax::Token> All =
-      Tokens.spelledTokens(Tokens.sourceManager().getFileID(Loc));
+
   auto *Right = llvm::partition_point(
-      All, [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
-  bool AcceptRight = Right != All.end() && Right->location() <= Loc;
-  bool AcceptLeft = Right != All.begin() && (Right - 1)->endLocation() >= Loc;
+      Tokens, [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
+  bool AcceptRight = Right != Tokens.end() && Right->location() <= Loc;
+  bool AcceptLeft =
+      Right != Tokens.begin() && (Right - 1)->endLocation() >= Loc;
   return llvm::makeArrayRef(Right - (AcceptLeft ? 1 : 0),
                             Right + (AcceptRight ? 1 : 0));
 }
 
+llvm::ArrayRef<syntax::Token>
+syntax::spelledTokensTouching(SourceLocation Loc,
+                              const syntax::TokenBuffer &Tokens) {
+  return spelledTokensTouching(
+      Loc, Tokens.spelledTokens(Tokens.sourceManager().getFileID(Loc)));
+}
+
 const syntax::Token *
 syntax::spelledIdentifierTouching(SourceLocation Loc,
-                                  const syntax::TokenBuffer &Tokens) {
+                                  llvm::ArrayRef<syntax::Token> Tokens) {
   for (const syntax::Token &Tok : spelledTokensTouching(Loc, Tokens)) {
     if (Tok.kind() == tok::identifier)
       return &Tok;
   }
   return nullptr;
+}
+
+const syntax::Token *
+syntax::spelledIdentifierTouching(SourceLocation Loc,
+                                  const syntax::TokenBuffer &Tokens) {
+  return spelledIdentifierTouching(
+      Loc, Tokens.spelledTokens(Tokens.sourceManager().getFileID(Loc)));
 }
 
 std::vector<const syntax::Token *>
