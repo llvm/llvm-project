@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gwp_asan/definitions.h"
 #include "gwp_asan/utilities.h"
 
 #ifdef ANDROID
-#include <android/set_abort_message.h>
 #include <stdlib.h>
+extern "C" GWP_ASAN_WEAK void android_set_abort_message(const char *);
 #else // ANDROID
 #include <stdio.h>
 #endif
@@ -21,7 +22,8 @@ namespace gwp_asan {
 void Check(bool Condition, const char *Message) {
   if (Condition)
     return;
-  android_set_abort_message(Message);
+  if (&android_set_abort_message != nullptr)
+    android_set_abort_message(Message);
   abort();
 }
 #else  // ANDROID
