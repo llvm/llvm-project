@@ -984,7 +984,7 @@ struct NormalizedOther {
 
 void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Name", Symbol.Name, StringRef());
-  IO.mapOptional("NameIndex", Symbol.NameIndex);
+  IO.mapOptional("StName", Symbol.StName);
   IO.mapOptional("Type", Symbol.Type, ELFYAML::ELF_STT(0));
   IO.mapOptional("Section", Symbol.Section, StringRef());
   IO.mapOptional("Index", Symbol.Index);
@@ -1006,8 +1006,6 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
                                                    ELFYAML::Symbol &Symbol) {
   if (Symbol.Index && Symbol.Section.data())
     return "Index and Section cannot both be specified for Symbol";
-  if (Symbol.NameIndex && !Symbol.Name.empty())
-    return "Name and NameIndex cannot both be specified for Symbol";
   return StringRef();
 }
 
