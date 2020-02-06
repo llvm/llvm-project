@@ -4346,6 +4346,84 @@ void Sema::handleTagNumbering(const TagDecl *Tag, Scope *TagScope) {
   }
 }
 
+namespace {
+struct NonCLikeKind {
+  enum {
+    None,
+    BaseClass,
+    DefaultMemberInit,
+    Lambda,
+    Friend,
+    OtherMember,
+    Invalid,
+  } Kind = None;
+  SourceRange Range;
+
+  explicit operator bool() { return Kind != None; }
+};
+}
+
+/// Determine whether a class is C-like, according to the rules of C++
+/// [dcl.typedef] for anonymous classes with typedef names for linkage.
+static NonCLikeKind getNonCLikeKindForAnonymousStruct(const CXXRecordDecl *RD) {
+  if (RD->isInvalidDecl())
+    return {NonCLikeKind::Invalid, {}};
+
+  // C++ [dcl.typedef]p9: [P1766R1]
+  //   An unnamed class with a typedef name for linkage purposes shall not
+  //
+  //    -- have any base classes
+  if (RD->getNumBases())
+    return {NonCLikeKind::BaseClass,
+            SourceRange(RD->bases_begin()->getBeginLoc(),
+                        RD->bases_end()[-1].getEndLoc())};
+  bool Invalid = false;
+  for (Decl *D : RD->decls()) {
+    // Don't complain about things we already diagnosed.
+    if (D->isInvalidDecl()) {
+      Invalid = true;
+      continue;
+    }
+
+    //  -- have any [...] default member initializers
+    if (auto *FD = dyn_cast<FieldDecl>(D)) {
+      if (FD->hasInClassInitializer()) {
+        auto *Init = FD->getInClassInitializer();
+        return {NonCLikeKind::DefaultMemberInit,
+                Init ? Init->getSourceRange() : D->getSourceRange()};
+      }
+      continue;
+    }
+
+    // FIXME: We don't allow friend declarations. This violates the wording of
+    // P1766, but not the intent.
+    if (isa<FriendDecl>(D))
+      return {NonCLikeKind::Friend, D->getSourceRange()};
+
+    //  -- declare any members other than non-static data members, member
+    //     enumerations, or member classes,
+    if (isa<StaticAssertDecl>(D) || isa<IndirectFieldDecl>(D) ||
+        isa<EnumDecl>(D))
+      continue;
+    auto *MemberRD = dyn_cast<CXXRecordDecl>(D);
+    if (!MemberRD)
+      return {NonCLikeKind::OtherMember, D->getSourceRange()};
+
+    //  -- contain a lambda-expression,
+    if (MemberRD->isLambda())
+      return {NonCLikeKind::Lambda, MemberRD->getSourceRange()};
+
+    //  and all member classes shall also satisfy these requirements
+    //  (recursively).
+    if (MemberRD->isThisDeclarationADefinition()) {
+      if (auto Kind = getNonCLikeKindForAnonymousStruct(MemberRD))
+        return Kind;
+    }
+  }
+
+  return {Invalid ? NonCLikeKind::Invalid : NonCLikeKind::None, {}};
+}
+
 void Sema::setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
                                         TypedefNameDecl *NewTD) {
   if (TagFromDeclSpec->isInvalidDecl())
@@ -4366,27 +4444,51 @@ void Sema::setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
     return;
   }
 
-  // If we've already computed linkage for the anonymous tag, then
-  // adding a typedef name for the anonymous decl can change that
-  // linkage, which might be a serious problem.  Diagnose this as
-  // unsupported and ignore the typedef name.  TODO: we should
-  // pursue this as a language defect and establish a formal rule
-  // for how to handle it.
-  if (TagFromDeclSpec->hasLinkageBeenComputed()) {
-    Diag(NewTD->getLocation(), diag::err_typedef_changes_linkage);
+  // C++ [dcl.typedef]p9: [P1766R1, applied as DR]
+  //   An unnamed class with a typedef name for linkage purposes shall [be
+  //   C-like].
+  //
+  // FIXME: Also diagnose if we've already computed the linkage. That ideally
+  // shouldn't happen, but there are constructs that the language rule doesn't
+  // disallow for which we can't reasonably avoid computing linkage early.
+  const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(TagFromDeclSpec);
+  NonCLikeKind NonCLike = RD ? getNonCLikeKindForAnonymousStruct(RD)
+                             : NonCLikeKind();
+  bool ChangesLinkage = TagFromDeclSpec->hasLinkageBeenComputed();
+  if (NonCLike || ChangesLinkage) {
+    if (NonCLike.Kind == NonCLikeKind::Invalid)
+      return;
 
-    SourceLocation tagLoc = TagFromDeclSpec->getInnerLocStart();
-    tagLoc = getLocForEndOfToken(tagLoc);
+    unsigned DiagID = diag::ext_non_c_like_anon_struct_in_typedef;
+    if (ChangesLinkage) {
+      // If the linkage changes, we can't accept this as an extension.
+      if (NonCLike.Kind == NonCLikeKind::None)
+        DiagID = diag::err_typedef_changes_linkage;
+      else
+        DiagID = diag::err_non_c_like_anon_struct_in_typedef;
+    }
 
-    llvm::SmallString<40> textToInsert;
-    textToInsert += ' ';
-    textToInsert += NewTD->getIdentifier()->getName();
-    Diag(tagLoc, diag::note_typedef_changes_linkage)
-        << FixItHint::CreateInsertion(tagLoc, textToInsert);
-    return;
+    SourceLocation FixitLoc =
+        getLocForEndOfToken(TagFromDeclSpec->getInnerLocStart());
+    llvm::SmallString<40> TextToInsert;
+    TextToInsert += ' ';
+    TextToInsert += NewTD->getIdentifier()->getName();
+
+    Diag(FixitLoc, DiagID)
+      << isa<TypeAliasDecl>(NewTD)
+      << FixItHint::CreateInsertion(FixitLoc, TextToInsert);
+    if (NonCLike.Kind != NonCLikeKind::None) {
+      Diag(NonCLike.Range.getBegin(), diag::note_non_c_like_anon_struct)
+        << NonCLike.Kind - 1 << NonCLike.Range;
+    }
+    Diag(NewTD->getLocation(), diag::note_typedef_for_linkage_here)
+      << NewTD << isa<TypeAliasDecl>(NewTD);
+
+    if (ChangesLinkage)
+      return;
   }
 
-  // Otherwise, set this is the anon-decl typedef for the tag.
+  // Otherwise, set this as the anon-decl typedef for the tag.
   TagFromDeclSpec->setTypedefNameForAnonDecl(NewTD);
 }
 
@@ -4917,6 +5019,10 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
     //   define non-static data members. [Note: nested types and
     //   functions cannot be declared within an anonymous union. ]
     for (auto *Mem : Record->decls()) {
+      // Ignore invalid declarations; we already diagnosed them.
+      if (Mem->isInvalidDecl())
+        continue;
+
       if (auto *FD = dyn_cast<FieldDecl>(Mem)) {
         // C++ [class.union]p3:
         //   An anonymous union shall not have private or protected
@@ -6757,28 +6863,33 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (SC == SC_Static && CurContext->isRecord()) {
       if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
-        if (RD->isLocalClass())
+        // C++ [class.static.data]p2:
+        //   A static data member shall not be a direct member of an unnamed
+        //   or local class
+        // FIXME: or of a (possibly indirectly) nested class thereof.
+        if (RD->isLocalClass()) {
           Diag(D.getIdentifierLoc(),
                diag::err_static_data_member_not_allowed_in_local_class)
-            << Name << RD->getDeclName();
-
-        // C++98 [class.union]p1: If a union contains a static data member,
-        // the program is ill-formed. C++11 drops this restriction.
-        if (RD->isUnion())
+            << Name << RD->getDeclName() << RD->getTagKind();
+        } else if (!RD->getDeclName()) {
+          Diag(D.getIdentifierLoc(),
+               diag::err_static_data_member_not_allowed_in_anon_struct)
+            << Name << RD->getTagKind();
+          Invalid = true;
+        } else if (RD->isUnion()) {
+          // C++98 [class.union]p1: If a union contains a static data member,
+          // the program is ill-formed. C++11 drops this restriction.
           Diag(D.getIdentifierLoc(),
                getLangOpts().CPlusPlus11
                  ? diag::warn_cxx98_compat_static_data_member_in_union
                  : diag::ext_static_data_member_in_union) << Name;
-        // We conservatively disallow static data members in anonymous structs.
-        else if (!RD->getDeclName())
-          Diag(D.getIdentifierLoc(),
-               diag::err_static_data_member_not_allowed_in_anon_struct)
-            << Name << RD->isUnion();
+        }
       }
     }
 
     // Match up the template parameter lists with the scope specifier, then
     // determine whether we have a template or a template specialization.
+    bool InvalidScope = false;
     TemplateParams = MatchTemplateParametersToScopeSpecifier(
         D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
         D.getCXXScopeSpec(),
@@ -6786,7 +6897,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             ? D.getName().TemplateId
             : nullptr,
         TemplateParamLists,
-        /*never a friend*/ false, IsMemberSpecialization, Invalid);
+        /*never a friend*/ false, IsMemberSpecialization, InvalidScope);
+    Invalid |= InvalidScope;
 
     if (TemplateParams) {
       if (!TemplateParams->size() &&

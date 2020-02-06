@@ -37,12 +37,12 @@ union U3 {
 
 struct S {
   union {
-    static const int n; // expected-error {{static members cannot be declared in an anonymous union}}
+    static const int n; // expected-error {{static data member 'n' not allowed in anonymous union}}
     int a;
     int b;
   };
 };
 static union {
-  static const int k; // expected-error {{static members cannot be declared in an anonymous union}}
+  static const int k; // expected-error {{static data member 'k' not allowed in anonymous union}}
   int n;
 };

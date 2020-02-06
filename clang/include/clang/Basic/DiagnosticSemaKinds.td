@@ -788,10 +788,27 @@ def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
 def ext_typedef_without_a_name : ExtWarn<"typedef requires a name">,
   InGroup<MissingDeclarations>;
 def err_typedef_not_identifier : Error<"typedef name must be an identifier">;
-def err_typedef_changes_linkage : Error<"unsupported: typedef changes linkage"
-  " of anonymous type, but linkage was already computed">;
-def note_typedef_changes_linkage : Note<"use a tag name here to establish "
-  "linkage prior to definition">;
+
+def ext_non_c_like_anon_struct_in_typedef : ExtWarn<
+  "anonymous non-C-compatible type given name for linkage purposes "
+  "by %select{typedef|alias}0 declaration; "
+  "add a tag name here">, InGroup<DiagGroup<"non-c-typedef-for-linkage">>;
+def err_non_c_like_anon_struct_in_typedef : Error<
+  "anonymous non-C-compatible type given name for linkage purposes "
+  "by %select{typedef|alias}0 declaration after its linkage was computed; "
+  "add a tag name here to establish linkage prior to definition">;
+def err_typedef_changes_linkage : Error<
+  "unsupported: anonymous type given name for linkage purposes "
+  "by %select{typedef|alias}0 declaration after its linkage was computed; "
+  "add a tag name here to establish linkage prior to definition">;
+def note_non_c_like_anon_struct : Note<
+  "type is not C-compatible due to this "
+  "%select{base class|default member initializer|lambda expression|"
+  "friend declaration|member declaration}0">;
+def note_typedef_for_linkage_here : Note<
+  "type is given name %0 for linkage purposes by this "
+  "%select{typedef|alias}1 declaration">;
+
 def err_statically_allocated_object : Error<
   "interface type cannot be statically allocated">;
 def err_object_cannot_be_passed_returned_by_value : Error<
@@ -1796,8 +1813,13 @@ def note_nontrivial_objc_ownership : Note<
   "because type %0 has a member with %select{no|no|__strong|__weak|"
   "__autoreleasing}1 ownership">;
 
+/// Selector for a TagTypeKind value.
+def select_tag_type_kind : TextSubstitution<
+  "%select{struct|interface|union|class|enum}0">;
+
 def err_static_data_member_not_allowed_in_anon_struct : Error<
-  "static data member %0 not allowed in anonymous struct">;
+  "static data member %0 not allowed in anonymous "
+  "%sub{select_tag_type_kind}1">;
 def ext_static_data_member_in_union : ExtWarn<
   "static data member %0 in union is a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_static_data_member_in_union : Warning<
@@ -8118,7 +8140,7 @@ def err_reference_to_local_in_enclosing_context : Error<
   "%select{%3|block literal|lambda expression|context}2">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
-  "static data member %0 not allowed in local class %1">;
+  "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
 
 // C++ derived classes
 def err_base_clause_on_union : Error<"unions cannot have base classes">;
