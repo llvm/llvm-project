@@ -127,6 +127,26 @@ func @strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
   return %1: vector<2x2x16xf32>
 }
 
+#contraction_to_scalar_accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> ()>
+]
+#contraction_to_scalar_trait = {
+  indexing_maps = #contraction_to_scalar_accesses,
+  iterator_types = ["reduction"]
+}
+// CHECK-LABEL: contraction_to_scalar
+func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
+  // CHECK:      %[[C0:.*]] = constant 0.000000e+00 : f32
+  %f0 = constant 0.0: f32
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"]} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
+  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %f0
+    : vector<10xf32>, vector<10xf32> into f32
+  // CHECK:      return %[[X]] : f32
+  return %0 : f32
+}
+
 #contraction_accesses0 = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
