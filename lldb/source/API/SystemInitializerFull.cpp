@@ -48,7 +48,6 @@
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/DynamicLoader/wasm-DYLD/DynamicLoaderWasmDYLD.h"
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
@@ -275,7 +274,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   DynamicLoaderMacOSXDYLD::Initialize();
   DynamicLoaderMacOS::Initialize();
   DynamicLoaderPOSIXDYLD::Initialize();
-  wasm::DynamicLoaderWasmDYLD::Initialize(); // before DynamicLoaderStatic.
   DynamicLoaderStatic::Initialize();
   DynamicLoaderWindowsDYLD::Initialize();
 
@@ -364,7 +362,6 @@ void SystemInitializerFull::Terminate() {
   DynamicLoaderMacOSXDYLD::Terminate();
   DynamicLoaderMacOS::Terminate();
   DynamicLoaderPOSIXDYLD::Terminate();
-  wasm::DynamicLoaderWasmDYLD::Terminate();
   DynamicLoaderStatic::Terminate();
   DynamicLoaderWindowsDYLD::Terminate();
 

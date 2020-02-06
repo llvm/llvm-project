@@ -69,7 +69,7 @@ public:
     return m_arch.GetByteOrder();
   }
 
-  bool IsExecutable() const override { return false; }
+  bool IsExecutable() const override { return true; }
 
   uint32_t GetAddressByteSize() const override {
     return m_arch.GetAddressByteSize();
@@ -81,7 +81,7 @@ public:
 
   Symtab *GetSymtab() override;
 
-  bool IsStripped() override { return !!GetExternalDebugInfoFileSpec(); }
+  bool IsStripped() override { return true; }
 
   void CreateSections(SectionList &unified_section_list) override;
 
@@ -93,7 +93,7 @@ public:
 
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 
-  Type CalculateType() override { return eTypeSharedLibrary; }
+  Type CalculateType() override { return eTypeExecutable; }
 
   Strata CalculateStrata() override { return eStrataUser; }
 
@@ -101,7 +101,8 @@ public:
                       bool value_is_offset) override;
 
   lldb_private::Address GetBaseAddress() override {
-    return IsInMemory() ? Address(m_memory_addr) : Address(0);
+    return IsInMemory() ? Address(m_memory_addr + m_code_section_offset)
+                        : Address(m_code_section_offset);
   }
   /// \}
 
@@ -126,7 +127,7 @@ private:
   /// \}
 
   /// Read a range of bytes from the Wasm module.
-  DataExtractor ReadImageData(lldb::offset_t offset, uint32_t size);
+  DataExtractor ReadImageData(uint64_t offset, size_t size);
 
   typedef struct section_info {
     lldb::offset_t offset;
@@ -144,6 +145,7 @@ private:
   std::vector<section_info_t> m_sect_infos;
   ArchSpec m_arch;
   UUID m_uuid;
+  uint32_t m_code_section_offset;
 };
 
 } // namespace wasm

@@ -4,11 +4,11 @@
 # CHECK: Plugin name: wasm
 # CHECK: Architecture: wasm32-unknown-unknown-wasm
 # CHECK: UUID: 
-# CHECK: Executable: false
-# CHECK: Stripped: false
-# CHECK: Type: shared library
+# CHECK: Executable: true
+# CHECK: Stripped: true
+# CHECK: Type: executable
 # CHECK: Strata: user
-# CHECK: Base VM address: 0x0
+# CHECK: Base VM address: 0xa
 
 # CHECK: Name: code
 # CHECK: Type: code
