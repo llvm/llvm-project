@@ -418,12 +418,29 @@ static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
   assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS);
 
+  bool IsIndirect = CallParams.getOperand(0).isReg();
+  unsigned CallOp = IsIndirect ? WebAssembly::CALL_INDIRECT : WebAssembly::CALL;
+
   MachineFunction &MF = *BB->getParent();
-  const MCInstrDesc &MCID = TII.get(WebAssembly::CALL);
+  const MCInstrDesc &MCID = TII.get(CallOp);
   MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
+
+  // Move the function pointer to the end of the arguments for indirect calls
+  if (IsIndirect) {
+    auto FnPtr = CallParams.getOperand(0);
+    CallParams.RemoveOperand(0);
+    CallParams.addOperand(FnPtr);
+  }
 
   for (auto Def : CallResults.defs())
     MIB.add(Def);
+
+  // Add placeholders for the type index and immediate flags
+  if (IsIndirect) {
+    MIB.addImm(0);
+    MIB.addImm(0);
+  }
+
   for (auto Use : CallParams.uses())
     MIB.add(Use);
 
