@@ -39,7 +39,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -1105,10 +1104,6 @@ struct PragmaDebugHandler : public PragmaHandler {
       M->dump();
     } else if (II->isStr("overflow_stack")) {
       DebugOverflowStack();
-    } else if (II->isStr("handle_crash")) {
-      llvm::CrashRecoveryContext *CRC =llvm::CrashRecoveryContext::GetCurrent();
-      if (CRC)
-        CRC->HandleCrash();
     } else if (II->isStr("captured")) {
       HandleCaptured(PP);
     } else {
