@@ -38,58 +38,58 @@ using namespace llvm;
 
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     : AArch64GenRegisterBankInfo() {
-  static llvm::once_flag InitializeRegisterBankFlag;
+  static bool AlreadyInit = false;
+  // We have only one set of register banks, whatever the subtarget
+  // is. Therefore, the initialization of the RegBanks table should be
+  // done only once. Indeed the table of all register banks
+  // (AArch64::RegBanks) is unique in the compiler. At some point, it
+  // will get tablegen'ed and the whole constructor becomes empty.
+  if (AlreadyInit)
+    return;
+  AlreadyInit = true;
 
-  static auto InitializeRegisterBankOnce = [this](const TargetRegisterInfo &TRI) {
-    // We have only one set of register banks, whatever the subtarget
-    // is. Therefore, the initialization of the RegBanks table should be
-    // done only once. Indeed the table of all register banks
-    // (AArch64::RegBanks) is unique in the compiler. At some point, it
-    // will get tablegen'ed and the whole constructor becomes empty.
+  const RegisterBank &RBGPR = getRegBank(AArch64::GPRRegBankID);
+  (void)RBGPR;
+  assert(&AArch64::GPRRegBank == &RBGPR &&
+         "The order in RegBanks is messed up");
 
-    const RegisterBank &RBGPR = getRegBank(AArch64::GPRRegBankID);
-    (void)RBGPR;
-    assert(&AArch64::GPRRegBank == &RBGPR &&
-           "The order in RegBanks is messed up");
+  const RegisterBank &RBFPR = getRegBank(AArch64::FPRRegBankID);
+  (void)RBFPR;
+  assert(&AArch64::FPRRegBank == &RBFPR &&
+         "The order in RegBanks is messed up");
 
-    const RegisterBank &RBFPR = getRegBank(AArch64::FPRRegBankID);
-    (void)RBFPR;
-    assert(&AArch64::FPRRegBank == &RBFPR &&
-           "The order in RegBanks is messed up");
+  const RegisterBank &RBCCR = getRegBank(AArch64::CCRegBankID);
+  (void)RBCCR;
+  assert(&AArch64::CCRegBank == &RBCCR && "The order in RegBanks is messed up");
 
-    const RegisterBank &RBCCR = getRegBank(AArch64::CCRegBankID);
-    (void)RBCCR;
-    assert(&AArch64::CCRegBank == &RBCCR &&
-           "The order in RegBanks is messed up");
+  // The GPR register bank is fully defined by all the registers in
+  // GR64all + its subclasses.
+  assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
+         "Subclass not added?");
+  assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
 
-    // The GPR register bank is fully defined by all the registers in
-    // GR64all + its subclasses.
-    assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
-           "Subclass not added?");
-    assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
+  // The FPR register bank is fully defined by all the registers in
+  // GR64all + its subclasses.
+  assert(RBFPR.covers(*TRI.getRegClass(AArch64::QQRegClassID)) &&
+         "Subclass not added?");
+  assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
+         "Subclass not added?");
+  assert(RBFPR.getSize() == 512 &&
+         "FPRs should hold up to 512-bit via QQQQ sequence");
 
-    // The FPR register bank is fully defined by all the registers in
-    // GR64all + its subclasses.
-    assert(RBFPR.covers(*TRI.getRegClass(AArch64::QQRegClassID)) &&
-           "Subclass not added?");
-    assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
-           "Subclass not added?");
-    assert(RBFPR.getSize() == 512 &&
-           "FPRs should hold up to 512-bit via QQQQ sequence");
+  assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
+         "Class not added?");
+  assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
 
-    assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
-           "Class not added?");
-    assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
-
-    // Check that the TableGen'ed like file is in sync we our expectations.
-    // First, the Idx.
-    assert(checkPartialMappingIdx(PMI_FirstGPR, PMI_LastGPR,
-                                  {PMI_GPR32, PMI_GPR64}) &&
-           "PartialMappingIdx's are incorrectly ordered");
-    assert(checkPartialMappingIdx(PMI_FirstFPR, PMI_LastFPR,
-                                  {PMI_FPR16, PMI_FPR32, PMI_FPR64, PMI_FPR128,
-                                   PMI_FPR256, PMI_FPR512}) &&
-           "PartialMappingIdx's are incorrectly ordered");
+  // Check that the TableGen'ed like file is in sync we our expectations.
+  // First, the Idx.
+  assert(checkPartialMappingIdx(PMI_FirstGPR, PMI_LastGPR,
+                                {PMI_GPR32, PMI_GPR64}) &&
+         "PartialMappingIdx's are incorrectly ordered");
+  assert(checkPartialMappingIdx(PMI_FirstFPR, PMI_LastFPR,
+                                {PMI_FPR16, PMI_FPR32, PMI_FPR64, PMI_FPR128,
+                                 PMI_FPR256, PMI_FPR512}) &&
+         "PartialMappingIdx's are incorrectly ordered");
 // Now, the content.
 // Check partial mapping.
 #define CHECK_PARTIALMAP(Idx, ValStartIdx, ValLength, RB)                      \
@@ -99,14 +99,14 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
         #Idx " is incorrectly initialized");                                   \
   } while (false)
 
-    CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
-    CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
-    CHECK_PARTIALMAP(PMI_FPR16, 0, 16, RBFPR);
-    CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
-    CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
-    CHECK_PARTIALMAP(PMI_FPR128, 0, 128, RBFPR);
-    CHECK_PARTIALMAP(PMI_FPR256, 0, 256, RBFPR);
-    CHECK_PARTIALMAP(PMI_FPR512, 0, 512, RBFPR);
+  CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
+  CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
+  CHECK_PARTIALMAP(PMI_FPR16, 0, 16, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR128, 0, 128, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR256, 0, 256, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR512, 0, 512, RBFPR);
 
 // Check value mapping.
 #define CHECK_VALUEMAP_IMPL(RBName, Size, Offset)                              \
@@ -119,14 +119,14 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
 #define CHECK_VALUEMAP(RBName, Size) CHECK_VALUEMAP_IMPL(RBName, Size, 0)
 
-    CHECK_VALUEMAP(GPR, 32);
-    CHECK_VALUEMAP(GPR, 64);
-    CHECK_VALUEMAP(FPR, 16);
-    CHECK_VALUEMAP(FPR, 32);
-    CHECK_VALUEMAP(FPR, 64);
-    CHECK_VALUEMAP(FPR, 128);
-    CHECK_VALUEMAP(FPR, 256);
-    CHECK_VALUEMAP(FPR, 512);
+  CHECK_VALUEMAP(GPR, 32);
+  CHECK_VALUEMAP(GPR, 64);
+  CHECK_VALUEMAP(FPR, 16);
+  CHECK_VALUEMAP(FPR, 32);
+  CHECK_VALUEMAP(FPR, 64);
+  CHECK_VALUEMAP(FPR, 128);
+  CHECK_VALUEMAP(FPR, 256);
+  CHECK_VALUEMAP(FPR, 512);
 
 // Check the value mapping for 3-operands instructions where all the operands
 // map to the same value mapping.
@@ -137,13 +137,13 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     CHECK_VALUEMAP_IMPL(RBName, Size, 2);                                      \
   } while (false)
 
-    CHECK_VALUEMAP_3OPS(GPR, 32);
-    CHECK_VALUEMAP_3OPS(GPR, 64);
-    CHECK_VALUEMAP_3OPS(FPR, 32);
-    CHECK_VALUEMAP_3OPS(FPR, 64);
-    CHECK_VALUEMAP_3OPS(FPR, 128);
-    CHECK_VALUEMAP_3OPS(FPR, 256);
-    CHECK_VALUEMAP_3OPS(FPR, 512);
+  CHECK_VALUEMAP_3OPS(GPR, 32);
+  CHECK_VALUEMAP_3OPS(GPR, 64);
+  CHECK_VALUEMAP_3OPS(FPR, 32);
+  CHECK_VALUEMAP_3OPS(FPR, 64);
+  CHECK_VALUEMAP_3OPS(FPR, 128);
+  CHECK_VALUEMAP_3OPS(FPR, 256);
+  CHECK_VALUEMAP_3OPS(FPR, 512);
 
 #define CHECK_VALUEMAP_CROSSREGCPY(RBNameDst, RBNameSrc, Size)                 \
   do {                                                                         \
@@ -165,14 +165,14 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
                                                                                \
   } while (false)
 
-    CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 32);
-    CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 32);
-    CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 64);
-    CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 64);
-    CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 32);
-    CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 32);
-    CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 64);
-    CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 32);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 64);
+  CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 64);
 
 #define CHECK_VALUEMAP_FPEXT(DstSize, SrcSize)                                 \
   do {                                                                         \
@@ -193,15 +193,12 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
                                                                                \
   } while (false)
 
-    CHECK_VALUEMAP_FPEXT(32, 16);
-    CHECK_VALUEMAP_FPEXT(64, 16);
-    CHECK_VALUEMAP_FPEXT(64, 32);
-    CHECK_VALUEMAP_FPEXT(128, 64);
+  CHECK_VALUEMAP_FPEXT(32, 16);
+  CHECK_VALUEMAP_FPEXT(64, 16);
+  CHECK_VALUEMAP_FPEXT(64, 32);
+  CHECK_VALUEMAP_FPEXT(128, 64);
 
-    assert(verify(TRI) && "Invalid register bank information");
-  };
-
-  llvm::call_once(InitializeRegisterBankFlag, InitializeRegisterBankOnce, TRI);
+  assert(verify(TRI) && "Invalid register bank information");
 }
 
 unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
