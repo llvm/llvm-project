@@ -132,7 +132,7 @@ public:
                          const LLVMState &State,
                          const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
-  Expected<std::unique_ptr<BenchmarkRunner>>
+  std::unique_ptr<BenchmarkRunner>
   createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
                         const LLVMState &State) const;
 
