@@ -5533,12 +5533,10 @@ body: |
     ; CI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
     ; CI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT]], [[BITCAST]](<2 x s16>), 0
     ; CI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
-    ; CI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; CI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
     ; CI: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[OR3]](s16), 32
     ; CI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
-    ; CI: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CI: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
+    ; CI: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
     ; CI: $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
     ; VI-LABEL: name: test_load_flat_v3s16_align1
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
@@ -5588,12 +5586,10 @@ body: |
     ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
     ; VI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT]], [[BITCAST]](<2 x s16>), 0
     ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
-    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
     ; VI: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[OR3]](s16), 32
     ; VI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
-    ; VI: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
+    ; VI: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
     ; VI: $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
     ; GFX9-LABEL: name: test_load_flat_v3s16_align1
     ; GFX9: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
@@ -5640,12 +5636,10 @@ body: |
     ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
     ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT]], [[BUILD_VECTOR_TRUNC]](<2 x s16>), 0
     ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
-    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX9: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[OR2]](s16), 32
     ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
-    ; GFX9: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
+    ; GFX9: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
     ; GFX9: $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
     ; CI-MESA-LABEL: name: test_load_flat_v3s16_align1
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
@@ -5701,12 +5695,10 @@ body: |
     ; CI-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
     ; CI-MESA: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT]], [[BITCAST]](<2 x s16>), 0
     ; CI-MESA: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
-    ; CI-MESA: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CI-MESA: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; CI-MESA: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
     ; CI-MESA: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[OR3]](s16), 32
     ; CI-MESA: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
-    ; CI-MESA: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CI-MESA: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
+    ; CI-MESA: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
     ; CI-MESA: $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
     ; GFX9-MESA-LABEL: name: test_load_flat_v3s16_align1
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
@@ -5753,12 +5745,10 @@ body: |
     ; GFX9-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
     ; GFX9-MESA: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT]], [[BUILD_VECTOR_TRUNC]](<2 x s16>), 0
     ; GFX9-MESA: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
-    ; GFX9-MESA: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9-MESA: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9-MESA: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX9-MESA: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[OR2]](s16), 32
     ; GFX9-MESA: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
-    ; GFX9-MESA: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9-MESA: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
+    ; GFX9-MESA: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
     ; GFX9-MESA: $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(<3 x s16>) = G_LOAD %0 :: (load 6, align 1, addrspace 0)

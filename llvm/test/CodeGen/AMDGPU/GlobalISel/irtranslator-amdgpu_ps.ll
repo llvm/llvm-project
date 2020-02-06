@@ -23,7 +23,7 @@ define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float }
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
   ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK:   S_ENDPGM 0
 main_body:

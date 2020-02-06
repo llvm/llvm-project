@@ -764,7 +764,6 @@ body: |
     ; CHECK: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[COPY67]], [[C5]](s32)
     ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[COPY66]], [[SHL3]]
     ; CHECK: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR2]](s32), [[OR3]](s32)
-    ; CHECK: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[MV1]](s64)
     ; CHECK: [[LSHR31:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC3]], [[C5]](s32)
     ; CHECK: [[COPY68:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
@@ -897,7 +896,6 @@ body: |
     ; CHECK: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[COPY131]], [[C5]](s32)
     ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[COPY130]], [[SHL5]]
     ; CHECK: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR4]](s32), [[OR5]](s32)
-    ; CHECK: [[DEF2:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[MV2]](s64)
     ; CHECK: [[LSHR62:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC5]], [[C5]](s32)
     ; CHECK: [[COPY132:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
@@ -1030,7 +1028,6 @@ body: |
     ; CHECK: [[SHL7:%[0-9]+]]:_(s32) = G_SHL [[COPY195]], [[C5]](s32)
     ; CHECK: [[OR7:%[0-9]+]]:_(s32) = G_OR [[COPY194]], [[SHL7]]
     ; CHECK: [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR6]](s32), [[OR7]](s32)
-    ; CHECK: [[DEF3:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[MV3]](s64)
     ; CHECK: [[LSHR93:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC7]], [[C5]](s32)
     ; CHECK: [[COPY196:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
