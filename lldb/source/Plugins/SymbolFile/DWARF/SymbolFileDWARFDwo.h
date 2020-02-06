@@ -24,11 +24,10 @@ public:
   static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
   /// \}
 
-  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu);
+  SymbolFileDWARFDwo(SymbolFileDWARF &m_base_symbol_file,
+                     lldb::ObjectFileSP objfile, uint32_t id);
 
   ~SymbolFileDWARFDwo() override = default;
-
-  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu) override;
 
   DWARFCompileUnit *GetCompileUnit();
 
@@ -43,8 +42,6 @@ public:
 
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
-
-  DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
@@ -69,11 +66,11 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF &GetBaseSymbolFile();
+  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
   DWARFCompileUnit *ComputeCompileUnit();
 
-  DWARFCompileUnit &m_base_dwarf_cu;
+  SymbolFileDWARF &m_base_symbol_file;
   DWARFCompileUnit *m_cu = nullptr;
 };
 
