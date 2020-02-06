@@ -126,10 +126,10 @@ bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
 
   if (!m_impl_up)
     return false;
-  
+
   if (GetType() != eStructuredDataTypeDictionary)
     return false;
-  
+
   StructuredData::ObjectSP obj_sp = m_impl_up->GetObjectSP();
   if (!obj_sp)
     return false;
@@ -141,7 +141,7 @@ bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
   StructuredData::ObjectSP array_sp = dict->GetKeys();
   StructuredData::Array *key_arr = array_sp->GetAsArray();
   assert(key_arr);
-  
+
   key_arr->ForEach([&keys] (StructuredData::Object *object) -> bool {
     llvm::StringRef key = object->GetStringValue("");
     keys.AppendString(key.str().c_str());
@@ -197,7 +197,7 @@ bool SBStructuredData::GetBooleanValue(bool fail_value) const {
 
 size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
   LLDB_RECORD_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
-                           (char *, size_t), dst, dst_len);
+                           (char *, size_t), "", dst_len);
 
   return (m_impl_up ? m_impl_up->GetStringValue(dst, dst_len) : 0);
 }
