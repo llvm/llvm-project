@@ -17,6 +17,7 @@
 #include <mach-o/loader.h>
 #include <mach/exception_types.h>
 #include <mach/task_info.h>
+#include <pwd.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -3684,6 +3685,31 @@ static bool attach_failed_due_to_sip (nub_process_t pid) {
   return retval;
 }
 
+// my_uid and process_uid are only initialized if this function
+// returns true -- that there was a uid mismatch -- and those
+// id's may want to be used in the error message.
+static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
+                                               uid_t &my_uid,
+                                               uid_t &process_uid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0) {
+    return false; // pid doesn't exist? can't check uid mismatch - it was fine
+  }
+  my_uid = geteuid();
+  if (my_uid == 0)
+    return false; // if we're root, attach didn't fail because of uid mismatch
+  process_uid = kinfo.kp_eproc.e_ucred.cr_uid;
+
+  // If my uid != the process' uid, then the attach probably failed because
+  // of that.
+  if (my_uid != process_uid)
+    return true;
+  else
+    return false;
+}
+
 static bool process_is_already_being_debugged (nub_process_t pid) {
   struct kinfo_proc kinfo;
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
@@ -3714,6 +3740,9 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
 // $ security authorizationdb read system.privilege.taskport.debug
 
 static bool developer_mode_enabled () {
+#if !defined (TARGET_OS_OSX)
+  return true;
+#else
  CFDictionaryRef currentRightDict = NULL;
  const char *debug_right = "system.privilege.taskport.debug";
  // caller must free dictionary initialized by the following
@@ -3745,7 +3774,13 @@ static bool developer_mode_enabled () {
  } else {
    CFStringRef item = (CFStringRef) CFDictionaryGetValue(currentRightDict, CFSTR("class"));
    if (item && CFGetTypeID(item) == CFStringGetTypeID()) {
-     if (strcmp (CFStringGetCStringPtr (item, ::CFStringGetSystemEncoding()), "rule") != 0) {
+     char tmpbuf[128];
+     if (CFStringGetCString (item, tmpbuf, sizeof(tmpbuf), CFStringGetSystemEncoding())) {
+       tmpbuf[sizeof (tmpbuf) - 1] = '\0';
+       if (strcmp (tmpbuf, "rule") != 0) {
+         devmode_enabled = false;
+       }
+     } else {
        devmode_enabled = false;
      }
    } else {
@@ -3773,6 +3808,7 @@ static bool developer_mode_enabled () {
  ::CFRelease(currentRightDict);
 
  return devmode_enabled;
+#endif // TARGET_OS_OSX
 }
 
 /*
@@ -3954,6 +3990,27 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           std::string return_message = "E96;";
           return_message += cstring_to_asciihex_string("tried to attach to "
                                            "process already being debugged");
+          return SendPacket(return_message.c_str());
+        }
+        uid_t my_uid, process_uid;
+        if (attach_failed_due_to_uid_mismatch (pid_attaching_to, 
+                                               my_uid, process_uid)) {
+          std::string my_username = "uid " + std::to_string (my_uid);
+          std::string process_username = "uid " + std::to_string (process_uid);
+          struct passwd *pw = getpwuid (my_uid);
+          if (pw && pw->pw_name) {
+            my_username = pw->pw_name;
+          }
+          pw = getpwuid (process_uid);
+          if (pw && pw->pw_name) {
+            process_username = pw->pw_name;
+          }
+          DNBLogError("Tried to attach to process with uid mismatch");
+          std::string return_message = "E96;";
+          std::string msg = "tried to attach to process as user '" 
+                            + my_username + "' and process is running "
+                            "as user '" + process_username + "'";
+          return_message += cstring_to_asciihex_string(msg.c_str());
           return SendPacket(return_message.c_str());
         }
         if (!developer_mode_enabled()) {
