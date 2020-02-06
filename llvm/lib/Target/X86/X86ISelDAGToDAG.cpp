@@ -5270,6 +5270,35 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (foldLoadStoreIntoMemOperand(Node))
       return;
     break;
+
+  case X86ISD::SETCC_CARRY: {
+    // We have to do this manually because tblgen will put the eflags copy in
+    // the wrong place if we use an extract_subreg in the pattern.
+    MVT VT = Node->getSimpleValueType(0);
+    SDValue Chain = CurDAG->getEntryNode();
+
+    // Copy flags to the EFLAGS register and glue it to next node.
+    SDValue EFLAGS = CurDAG->getCopyToReg(Chain, dl, X86::EFLAGS,
+                                          Node->getOperand(1), SDValue());
+    Chain = EFLAGS;
+
+    // Create a 64-bit instruction if the result is 64-bits otherwise use the
+    // 32-bit version.
+    unsigned Opc = VT == MVT::i64 ? X86::SETB_C64r : X86::SETB_C32r;
+    MVT SetVT = VT == MVT::i64 ? MVT::i64 : MVT::i32;
+    SDValue Result = SDValue(
+        CurDAG->getMachineNode(Opc, dl, SetVT, EFLAGS, EFLAGS.getValue(1)), 0);
+
+    // For less than 32-bits we need to extract from the 32-bit node.
+    if (VT == MVT::i8 || VT == MVT::i16) {
+      int SubIndex = VT == MVT::i16 ? X86::sub_16bit : X86::sub_8bit;
+      Result = CurDAG->getTargetExtractSubreg(SubIndex, dl, VT, Result);
+    }
+
+    ReplaceUses(SDValue(Node, 0), Result);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   }
 
   SelectCode(Node);
