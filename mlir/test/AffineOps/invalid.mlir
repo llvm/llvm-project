@@ -168,3 +168,33 @@ func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<(d0) -> (d0)> (%arg0, %arg1)
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<()[s0] -> (s0)> (%arg0, %arg1)
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<(d0) -> (d0)> ()
+
+  return
+}
