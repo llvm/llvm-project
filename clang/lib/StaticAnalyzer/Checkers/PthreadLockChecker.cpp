@@ -13,6 +13,8 @@
 //  * FuchsiaLocksChecker, which is also rather similar.
 //  * C11LockChecker which also closely follows Pthread semantics.
 //
+//  TODO: Path notes.
+//
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
