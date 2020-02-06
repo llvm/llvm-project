@@ -96,7 +96,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
       return char_ptr_redirect_static<Result>(Class::Method, s, l);            \
     };                                                                         \
     R.Register<Result(char *, size_t)>(                                        \
-        static_cast<Result (*)(char *, size_t)>(&Class::Method), _redirect);   \
+        static_cast<Result (*)(char *, size_t)>(&Class::Method), _redirect,    \
+        #Result, #Class, #Method, "(char*, size_t");                           \
   }
 #define LLDB_REGISTER_CHAR_PTR_REDIRECT(Result, Class, Method)                 \
   {                                                                            \
