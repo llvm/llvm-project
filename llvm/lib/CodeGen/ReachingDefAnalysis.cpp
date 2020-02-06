@@ -371,6 +371,12 @@ MachineInstr* ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
 }
 
+static bool mayHaveSideEffects(MachineInstr &MI) {
+  return MI.mayLoadOrStore() || MI.mayRaiseFPException() ||
+         MI.hasUnmodeledSideEffects() || MI.isTerminator() ||
+         MI.isCall() || MI.isBarrier() || MI.isBranch() || MI.isReturn();
+}
+
 // Can we safely move 'From' to just before 'To'? To satisfy this, 'From' must
 // not define a register that is used by any instructions, after and including,
 // 'To'. These instructions also must not redefine any of Froms operands.
@@ -392,10 +398,13 @@ bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
   }
 
   // Now walk checking that the rest of the instructions will compute the same
-  // value.
+  // value and that we're not overwriting anything. Don't move the instruction
+  // past any memory, control-flow or other ambigious instructions.
   for (auto I = ++Iterator(From), E = Iterator(To); I != E; ++I) {
+    if (mayHaveSideEffects(*I))
+      return false;
     for (auto &MO : I->operands())
-      if (MO.isReg() && MO.getReg() && MO.isUse() && Defs.count(MO.getReg()))
+      if (MO.isReg() && MO.getReg() && Defs.count(MO.getReg()))
         return false;
   }
   return true;
@@ -430,8 +439,7 @@ ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
                                     InstSet &ToRemove, InstSet &Ignore) const {
   if (Visited.count(MI) || Ignore.count(MI))
     return true;
-  else if (MI->mayLoadOrStore() || MI->hasUnmodeledSideEffects() ||
-           MI->isBranch() || MI->isTerminator() || MI->isReturn()) {
+  else if (mayHaveSideEffects(*MI)) {
     // Unless told to ignore the instruction, don't remove anything which has
     // side effects.
     return false;
