@@ -205,11 +205,9 @@ size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
 namespace lldb_private {
 namespace repro {
 
-template <>
-void RegisterMethods<SBStructuredData>(Registry &R) {
+template <> void RegisterMethods<SBStructuredData>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBStructuredData,
-                            (const lldb::SBStructuredData &));
+  LLDB_REGISTER_CONSTRUCTOR(SBStructuredData, (const lldb::SBStructuredData &));
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData, (const lldb::EventSP &));
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData,
                             (lldb_private::StructuredDataImpl *));
@@ -236,12 +234,11 @@ void RegisterMethods<SBStructuredData>(Registry &R) {
                              GetItemAtIndex, (size_t));
   LLDB_REGISTER_METHOD_CONST(uint64_t, SBStructuredData, GetIntegerValue,
                              (uint64_t));
-  LLDB_REGISTER_METHOD_CONST(double, SBStructuredData, GetFloatValue,
-                             (double));
+  LLDB_REGISTER_METHOD_CONST(double, SBStructuredData, GetFloatValue, (double));
   LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, GetBooleanValue, (bool));
-  LLDB_REGISTER_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
-                             (char *, size_t));
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBStructuredData,
+                                        GetStringValue);
 }
 
-}
-}
+} // namespace repro
+} // namespace lldb_private

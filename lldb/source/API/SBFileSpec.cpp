@@ -213,10 +213,10 @@ void RegisterMethods<SBFileSpec>(Registry &R) {
   LLDB_REGISTER_METHOD_CONST(const char *, SBFileSpec, GetDirectory, ());
   LLDB_REGISTER_METHOD(void, SBFileSpec, SetFilename, (const char *));
   LLDB_REGISTER_METHOD(void, SBFileSpec, SetDirectory, (const char *));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFileSpec, GetPath, (char *, size_t));
   LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, GetDescription,
                              (lldb::SBStream &));
   LLDB_REGISTER_METHOD(void, SBFileSpec, AppendPathComponent, (const char *));
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(uint32_t, SBFileSpec, GetPath);
 }
 
 }

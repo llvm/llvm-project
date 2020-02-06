@@ -1627,14 +1627,6 @@ static SBError SetFileRedirect(SBDebugger *, SBFile file) { return SBError(); }
 
 static SBError SetFileRedirect(SBDebugger *, FileSP file) { return SBError(); }
 
-static bool GetDefaultArchitectureRedirect(char *arch_name,
-                                           size_t arch_name_len) {
-  // The function is writing to its argument. Without the redirect it would
-  // write into the replay buffer.
-  char buffer[1024];
-  return SBDebugger::GetDefaultArchitecture(buffer, arch_name_len);
-}
-
 template <> void RegisterMethods<SBDebugger>(Registry &R) {
   // Custom implementation.
   R.Register(&invoke<void (SBDebugger::*)(
@@ -1643,9 +1635,6 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   R.Register(&invoke<void (SBDebugger::*)(
                  FILE *, bool)>::method<&SBDebugger::SetOutputFileHandle>::doit,
              &SetFileHandleRedirect);
-  R.Register<bool(char *, size_t)>(static_cast<bool (*)(char *, size_t)>(
-                                       &SBDebugger::GetDefaultArchitecture),
-                                   &GetDefaultArchitectureRedirect);
 
   R.Register(&invoke<SBError (SBDebugger::*)(
                  SBFile)>::method<&SBDebugger::SetInputFile>::doit,
@@ -1666,6 +1655,9 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   R.Register(&invoke<SBError (SBDebugger::*)(
                  FileSP)>::method<&SBDebugger::SetErrorFile>::doit,
              &SetFileRedirect);
+
+  LLDB_REGISTER_CHAR_PTR_REDIRECT_STATIC(bool, SBDebugger,
+                                         GetDefaultArchitecture);
 
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, ());
   LLDB_REGISTER_CONSTRUCTOR(SBDebugger, (const lldb::DebuggerSP &));
