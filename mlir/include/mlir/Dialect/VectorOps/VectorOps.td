@@ -38,18 +38,25 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 // TODO(andydavis, ntv) Add an attribute to specify a different algebra
 // with operators other than the current set: {*, +}.
 def Vector_ContractionOp :
-  Vector_Op<"contract", [NoSideEffect]>,
-    Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyVector:$acc,
+  Vector_Op<"contract", [NoSideEffect,
+     PredOpTrait<"first operand lhs and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 0>>,
+     PredOpTrait<"second operand rhs and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 1>>,
+     PredOpTrait<"third operand acc and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 1>>]>,
+    Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                AffineMapArrayAttr:$indexing_maps, ArrayAttr:$iterator_types)>,
-    Results<(outs AnyVector)> {
+    Results<(outs AnyType)> {
   let summary = "vector contraction operation";
   let description = [{
     Computes the sum of products of vector elements along contracting
     dimension pairs from 2 vectors of rank M and N respectively, adds this
     intermediate result to the accumulator argument of rank K, and returns a
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
-    num_batch_dims (see dimension type descriptions below)).
+    num_batch_dims (see dimension type descriptions below)). For K = 0 (no
+    free or batch dimensions), the accumulator and output are a scalar.
 
     Optional vector mask arguments (produced by CreateMaskOp or ConstantMaskOp)
     specify the dynamic dimension sizes of valid data within the lhs/rhs vector
@@ -59,7 +66,7 @@ def Vector_ContractionOp :
     the list represents an iterator with one of the following types:
 
     *) "reduction": reduction dimensions are present in the lhs and rhs
-                    arguments but not in the output (or optional accumulator
+                    arguments but not in the output (and accumulator
                     argument). These are the dimensions along which the vector
                     contraction op computes the sum of products, and
                     contracting dimension pair dimension sizes must match
@@ -81,7 +88,20 @@ def Vector_ContractionOp :
 
     Examples:
 
-      // 2D vector contraction with one contracting dimension (matmul).
+      // Simple dot product (K = 0).
+      #contraction_accesses = [
+       affine_map<(i) -> (i)>,
+       affine_map<(i) -> (i)>,
+       affine_map<(i) -> ()>
+      ]
+      #contraction_trait = {
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["reduction"]
+      }
+      %3 = vector.contract #contraction_trait %0, %1, %2
+        : vector<10xf32>, vector<10xf32> into f32
+
+      // 2D vector contraction with one contracting dimension (matmul, K = 2).
       #contraction_accesses = [
         affine_map<(i, j, k) -> (i, k)>,
         affine_map<(i, j, k) -> (k, j)>,
@@ -96,7 +116,7 @@ def Vector_ContractionOp :
         : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
 
       // 4D to 3D vector contraction with two contracting dimensions and
-      // one batch dimension.
+      // one batch dimension (K = 3).
       #contraction_accesses = [
         affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
         affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
@@ -105,7 +125,7 @@ def Vector_ContractionOp :
       #contraction_trait = {
         indexing_maps = #contraction_accesses,
         iterator_types = ["parallel", "parallel", "parallel",
-	                  "reduction", "reduction"]
+                          "reduction", "reduction"]
       }
 
       %4 = vector.contract #contraction_trait %0, %1, %2
@@ -129,9 +149,7 @@ def Vector_ContractionOp :
     VectorType getRhsType() {
       return rhs().getType().cast<VectorType>();
     }
-    VectorType getAccType() {
-      return acc().getType().cast<VectorType>();
-    }
+    Type getAccType() { return acc().getType(); }
     VectorType getLHSVectorMaskType() {
       if (llvm::size(masks()) != 2) return VectorType();
       return getOperand(3).getType().cast<VectorType>();
@@ -140,9 +158,7 @@ def Vector_ContractionOp :
       if (llvm::size(masks()) != 2) return VectorType();
       return getOperand(4).getType().cast<VectorType>();
     }
-    VectorType getResultType() {
-      return getResult().getType().cast<VectorType>();
-    }
+    Type getResultType() { return getResult().getType(); }
     ArrayRef<StringRef> getTraitAttrNames();
     SmallVector<AffineMap, 4> getIndexingMaps();
     static unsigned getAccOperandIndex() { return 2; }

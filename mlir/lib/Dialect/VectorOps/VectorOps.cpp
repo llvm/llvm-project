@@ -81,7 +81,7 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   OpAsmParser::OperandType accInfo;
   SmallVector<OpAsmParser::OperandType, 2> masksInfo;
   SmallVector<Type, 2> types;
-  Type resultVectorType;
+  Type resultType;
   auto loc = parser.getCurrentLocation();
   DictionaryAttr dictAttr;
   // TODO(andydavis, ntv) Unify linalg op attribute parsing.
@@ -92,11 +92,11 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
       parser.parseTrailingOperandList(masksInfo) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonTypeList(types) ||
-      parser.parseKeywordType("into", resultVectorType) ||
+      parser.parseKeywordType("into", resultType) ||
       parser.resolveOperand(lhsInfo, types[0], result.operands) ||
       parser.resolveOperand(rhsInfo, types[1], result.operands) ||
-      parser.resolveOperand(accInfo, resultVectorType, result.operands) ||
-      parser.addTypeToList(resultVectorType, result.types))
+      parser.resolveOperand(accInfo, resultType, result.operands) ||
+      parser.addTypeToList(resultType, result.types))
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
@@ -149,8 +149,7 @@ static bool verifyDimMap(VectorType lhsType, VectorType rhsType,
 }
 
 static bool verifyOutputShape(
-    VectorType lhsType, VectorType rhsType, VectorType accType,
-    VectorType resType,
+    VectorType lhsType, VectorType rhsType, Type accType, Type resType,
     const std::vector<std::pair<int64_t, int64_t>> &contractingDimMap,
     const std::vector<std::pair<int64_t, int64_t>> &batchDimMap) {
   DenseSet<int64_t> lhsContractingDimSet;
@@ -178,14 +177,28 @@ static bool verifyOutputShape(
     expectedResultDims.push_back(rhsType.getDimSize(i));
   }
 
-  // Verify dimension from 'resType' against 'expectedResultDims'.
-  if (resType.getShape().size() != expectedResultDims.size() ||
-      accType.getShape().size() != expectedResultDims.size())
-    return false;
-  for (int64_t i = 0, e = resType.getRank(); i < e; ++i) {
-    if (resType.getDimSize(i) != expectedResultDims[i] ||
-        accType.getDimSize(i) != expectedResultDims[i])
+  // Verify 'expectedResultDims'.
+  if (expectedResultDims.size() == 0) {
+    // No batch or free dimension implies a scalar result.
+    if (resType.isa<VectorType>() || accType.isa<VectorType>())
       return false;
+
+  } else {
+    // At least one batch or free dimension implies a vector result.
+    auto resVectorType = resType.dyn_cast<VectorType>();
+    auto accVectorType = accType.dyn_cast<VectorType>();
+    if (!resVectorType || !accVectorType)
+      return false;
+
+    // Verify dimension from 'resType' against 'expectedResultDims'.
+    if (resVectorType.getShape().size() != expectedResultDims.size() ||
+        accVectorType.getShape().size() != expectedResultDims.size())
+      return false;
+    for (int64_t i = 0, e = resVectorType.getRank(); i < e; ++i) {
+      if (resVectorType.getDimSize(i) != expectedResultDims[i] ||
+          accVectorType.getDimSize(i) != expectedResultDims[i])
+        return false;
+    }
   }
   return true;
 }
@@ -210,11 +223,18 @@ static LogicalResult verify(ContractionOp op) {
     if (map.getNumSymbols() != 0)
       return op.emitOpError("expected indexing map ")
              << index << " to have no symbols";
+    auto vectorType = op.getOperand(index).getType().dyn_cast<VectorType>();
+    unsigned rank = vectorType ? vectorType.getShape().size() : 0;
+    // Since (...) -> () is parsed into an empty map, we need to add
+    // a special case for this situation: continue the verification
+    // of an empty map if the resulting rank is indeed zero, i.e. this
+    // is a reduction into a scalar.
+    if (map.getNumDims() == 0 && map.getNumResults() == 0 && rank == 0)
+      continue;
+    // Verify that the map has the right number of inputs, outputs, and indices.
     if (map.getNumDims() != numIterators)
       return op.emitOpError("expected indexing map ")
              << index << " to have " << numIterators << " number of inputs";
-    auto operandType = op.getOperand(index).getType().cast<VectorType>();
-    unsigned rank = operandType.getShape().size();
     if (map.getNumResults() != rank)
       return op.emitOpError("expected indexing map ")
              << index << " to have " << rank << " number of outputs";
@@ -292,7 +312,7 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
 void ContractionOp::getIterationBounds(
     SmallVectorImpl<int64_t> &iterationBounds) {
   auto lhsShape = getLhsType().getShape();
-  auto resShape = getResultType().getShape();
+  auto resVectorType = getResultType().dyn_cast<VectorType>();
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
   SmallVector<int64_t, 2> iterationShape;
   for (auto it : llvm::enumerate(iterator_types())) {
@@ -309,7 +329,8 @@ void ContractionOp::getIterationBounds(
     // Get parallel dimension size from result shape.
     int64_t resDimIndex = getResultIndex(indexingMaps[2], targetExpr);
     assert(resDimIndex >= 0);
-    iterationBounds.push_back(resShape[resDimIndex]);
+    assert(resVectorType != nullptr);
+    iterationBounds.push_back(resVectorType.getShape()[resDimIndex]);
   }
 }
 
