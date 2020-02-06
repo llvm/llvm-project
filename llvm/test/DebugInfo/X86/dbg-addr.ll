@@ -7,7 +7,7 @@
 ; is control-dependent.
 
 ; CHECK-LABEL: use_dbg_addr:
-; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [DW_OP_deref] $rsp
+; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [$rsp+0]
 
 ; DWARF: DW_TAG_variable
 ; DWARF-NEXT:              DW_AT_location (DW_OP_fbreg +0)
