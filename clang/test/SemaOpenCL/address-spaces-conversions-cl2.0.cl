@@ -513,17 +513,37 @@ void test_pointer_chains() {
 #endif
 
   // Case 3: Corresponded inner pointees has overlapping but not equivalent address spaces.
-  // FIXME: Should this really be allowed in C++ mode?
   var_as_as_int = var_asc_asc_int;
-#if !__OPENCL_CPP_VERSION__
 #ifdef GENERIC
+#if !__OPENCL_CPP_VERSION__
 // expected-error@-3 {{assigning '__local int *__local *__private' to '__generic int *__generic *__private' changes address space of nested pointer}}
+#else
+// expected-error@-5 {{assigning to '__generic int *__generic *' from incompatible type '__local int *__local *__private'}}
 #endif
 #endif
-  var_as_as_int = 0 ? var_as_as_int : var_asc_asc_int;
-#if !__OPENCL_CPP_VERSION__
+
+  var_as_as_int = (AS int *AS *)var_asc_asc_int;
 #ifdef GENERIC
+#if !__OPENCL_CPP_VERSION__
+// expected-warning@-3 {{casting '__local int *__local *' to type '__generic int *__generic *' discards qualifiers in nested pointer types}}
+#else
+// expected-warning@-5 {{C-style cast from '__local int *__local *' to '__generic int *__generic *' changes address space of nested pointers}}
+#endif
+#endif
+
+  var_as_as_int = (AS int *AS *)var_asc_asn_int;
+#if !__OPENCL_CPP_VERSION__
+// expected-warning-re@-2 {{casting '__{{global|local|constant}} int *__{{local|constant|global}} *' to type '__{{global|constant|generic}} int *__{{global|constant|generic}} *' discards qualifiers in nested pointer types}}
+#else
+// expected-warning-re@-4 {{C-style cast from '__{{global|local|constant}} int *__{{local|constant|global}} *' to '__{{global|constant|generic}} int *__{{global|constant|generic}} *' changes address space of nested pointers}}
+#endif
+
+  var_as_as_int = 0 ? var_as_as_int : var_asc_asc_int;
+#ifdef GENERIC
+#if !__OPENCL_CPP_VERSION__
 // expected-warning@-3{{pointer type mismatch ('__generic int *__generic *' and '__local int *__local *')}}
+#else
+// expected-error@-5 {{incompatible operand types ('__generic int *__generic *' and '__local int *__local *')}}
 #endif
 #endif
 }
