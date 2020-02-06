@@ -1721,6 +1721,12 @@ computeIndirectRegIndex(MachineRegisterInfo &MRI,
 
   std::tie(IdxBaseReg, Offset, Unused)
     = AMDGPU::getBaseWithConstantOffset(MRI, IdxReg);
+  if (IdxBaseReg == AMDGPU::NoRegister) {
+    // This will happen if the index is a known constant. This should ordinarily
+    // be legalized out, but handle it as a register just in case.
+    assert(Offset == 0);
+    IdxBaseReg = IdxReg;
+  }
 
   ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SuperRC, EltSize);
 
