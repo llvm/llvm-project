@@ -24,7 +24,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -245,34 +244,6 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
   }
 
   return FusionResult::Success;
-}
-
-/// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
-/// and source slice loop bounds specified in 'srcSlice'.
-void mlir::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-                     ComputationSliceState *srcSlice) {
-  // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
-  OpBuilder b(srcSlice->insertPoint->getBlock(), srcSlice->insertPoint);
-  BlockAndValueMapping mapper;
-  b.clone(*srcForOp, mapper);
-
-  // Update 'sliceLoopNest' upper and lower bounds from computed 'srcSlice'.
-  SmallVector<AffineForOp, 4> sliceLoops;
-  for (unsigned i = 0, e = srcSlice->ivs.size(); i < e; ++i) {
-    auto loopIV = mapper.lookupOrNull(srcSlice->ivs[i]);
-    if (!loopIV)
-      continue;
-    auto forOp = getForInductionVarOwner(loopIV);
-    sliceLoops.push_back(forOp);
-    if (AffineMap lbMap = srcSlice->lbs[i])
-      forOp.setLowerBound(srcSlice->lbOperands[i], lbMap);
-    if (AffineMap ubMap = srcSlice->ubs[i])
-      forOp.setUpperBound(srcSlice->ubOperands[i], ubMap);
-  }
-
-  // Promote any single iteration slice loops.
-  for (auto forOp : sliceLoops)
-    promoteIfSingleIteration(forOp);
 }
 
 /// Collect loop nest statistics (eg. loop trip count and operation count)
