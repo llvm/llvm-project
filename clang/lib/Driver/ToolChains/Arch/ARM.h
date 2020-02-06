@@ -48,13 +48,15 @@ enum class FloatABI {
 };
 
 FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
-ReadTPMode getReadTPMode(const ToolChain &TC, const llvm::opt::ArgList &Args);
+FloatABI getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
+                        const llvm::opt::ArgList &Args);
+ReadTPMode getReadTPMode(const Driver &D, const llvm::opt::ArgList &Args);
 
 bool useAAPCSForMachO(const llvm::Triple &T);
 void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,
                            llvm::StringRef &Arch, llvm::StringRef &CPU,
                            bool FromAs = false);
-void getARMTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
+void getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                           const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs,
                           std::vector<llvm::StringRef> &Features, bool ForAS);
