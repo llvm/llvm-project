@@ -182,7 +182,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   }
 
   return RecognizedStackFrameSP();
-};
+}
 
 AssertRecognizedStackFrame::AssertRecognizedStackFrame(
     StackFrameSP most_relevant_frame_sp)
