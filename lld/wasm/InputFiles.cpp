@@ -526,7 +526,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   if (objSym.isUndefined() || excludedByComdat) {
     flags |= WASM_SYMBOL_UNDEFINED;
     if (objSym.isExecutable())
-      return symtab->addUndefinedFunction(name, "", "", flags, &f, nullptr,
+      return symtab->addUndefinedFunction(name, None, None, flags, &f, nullptr,
                                           true);
     return symtab->addUndefinedData(name, flags, &f);
   }
