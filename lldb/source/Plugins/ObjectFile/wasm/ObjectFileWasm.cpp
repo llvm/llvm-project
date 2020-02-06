@@ -233,7 +233,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP &data_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
-      m_arch("wasm32-unknown-unknown-wasm"), m_code_section_offset(0) {
+      m_arch("wasm32-unknown-unknown-wasm") {
   m_data.SetAddressByteSize(4);
 }
 
@@ -242,7 +242,7 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                const lldb::ProcessSP &process_sp,
                                lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_arch("wasm32-unknown-unknown-wasm"), m_code_section_offset(0) {}
+      m_arch("wasm32-unknown-unknown-wasm") {}
 
 bool ObjectFileWasm::ParseHeader() {
   // We already parsed the header during initialization.
@@ -264,15 +264,19 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
   for (const section_info &sect_info : m_sect_infos) {
     SectionType section_type = eSectionTypeOther;
     ConstString section_name;
-    offset_t file_offset = 0;
-    addr_t vm_addr = 0;
-    size_t vm_size = 0;
+    offset_t file_offset = sect_info.offset & 0xffffffff;
+    addr_t vm_addr = file_offset;
+    size_t vm_size = sect_info.size;
 
     if (llvm::wasm::WASM_SEC_CODE == sect_info.id) {
       section_type = eSectionTypeCode;
       section_name = ConstString("code");
-      m_code_section_offset = sect_info.offset & 0xffffffff;
-      vm_size = sect_info.size;
+
+      // A code address in DWARF for WebAssembly is the offset of an
+      // instruction relative within the Code section of the WebAssembly file.
+      // For this reason Section::GetFileAddress() must return zero for the
+      // Code section.
+      vm_addr = 0;
     } else {
       section_type =
           llvm::StringSwitch<SectionType>(sect_info.name.GetStringRef())
@@ -300,10 +304,9 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
       if (section_type == eSectionTypeOther)
         continue;
       section_name = sect_info.name;
-      file_offset = sect_info.offset & 0xffffffff;
-      if (IsInMemory()) {
-        vm_addr = sect_info.offset & 0xffffffff;
-        vm_size = sect_info.size;
+      if (!IsInMemory()) {
+        vm_size = 0;
+        vm_addr = 0;
       }
     }
 
@@ -343,6 +346,10 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   /// 0x0000000400000000 for module_id == 4.
   /// These 64-bit addresses will be used to request code ranges for a specific
   /// module from the WebAssembly engine.
+
+  assert(m_memory_addr == LLDB_INVALID_ADDRESS ||
+         m_memory_addr == load_address);
+
   ModuleSP module_sp = GetModule();
   if (!module_sp)
     return false;
@@ -355,12 +362,10 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
     return false;
 
   const size_t num_sections = section_list->GetSize();
-  size_t sect_idx = 0;
-
-  for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
+  for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-    if (target.GetSectionLoadList().SetSectionLoadAddress(
-            section_sp, load_address | section_sp->GetFileAddress())) {
+    if (target.SetSectionLoadAddress(
+            section_sp, load_address | section_sp->GetFileOffset())) {
       ++num_loaded_sections;
     }
   }
@@ -368,11 +373,11 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   return num_loaded_sections > 0;
 }
 
-DataExtractor ObjectFileWasm::ReadImageData(uint64_t offset, size_t size) {
+DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
   DataExtractor data;
   if (m_file) {
     if (offset < GetByteSize()) {
-      size = std::min(size, (size_t) (GetByteSize() - offset));
+      size = std::min(static_cast<uint64_t>(size), GetByteSize() - offset);
       auto buffer_sp = MapFileData(m_file, size, offset);
       return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
     }
