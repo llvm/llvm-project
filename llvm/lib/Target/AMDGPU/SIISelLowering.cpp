@@ -10868,7 +10868,15 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   return RC;
 }
 
-static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited) {
+static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
+                      unsigned WaveSize) {
+  // FIXME: We asssume we never cast the mask results of a control flow
+  // intrinsic.
+  // Early exit if the type won't be consistent as a compile time hack.
+  IntegerType *IT = dyn_cast<IntegerType>(V->getType());
+  if (!IT || IT->getBitWidth() != WaveSize)
+    return false;
+
   if (!isa<Instruction>(V))
     return false;
   if (!Visited.insert(V).second)
@@ -10900,7 +10908,7 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited) {
         }
       }
     } else {
-      Result = hasCFUser(U, Visited);
+      Result = hasCFUser(U, Visited, WaveSize);
     }
     if (Result)
       break;
@@ -10959,5 +10967,5 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
     }
   }
   SmallPtrSet<const Value *, 16> Visited;
-  return hasCFUser(V, Visited);
+  return hasCFUser(V, Visited, Subtarget->getWavefrontSize());
 }
