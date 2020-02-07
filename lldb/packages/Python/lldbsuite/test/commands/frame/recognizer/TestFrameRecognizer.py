@@ -22,6 +22,9 @@ class FrameRecognizerTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
+        # Clear internal & plugins recognizers that get initialized at launch
+        self.runCmd("frame recognizer clear")
+
         self.runCmd("command script import " + os.path.join(self.getSourceDir(), "recognizer.py"))
 
         self.expect("frame recognizer list",
