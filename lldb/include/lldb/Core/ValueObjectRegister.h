@@ -28,43 +28,6 @@ class ExecutionContextScope;
 class Scalar;
 class Stream;
 
-// A ValueObject that contains a root variable that may or may not
-// have children.
-class ValueObjectRegisterContext : public ValueObject {
-public:
-  ~ValueObjectRegisterContext() override;
-
-  uint64_t GetByteSize() override;
-
-  lldb::ValueType GetValueType() const override {
-    return lldb::eValueTypeRegisterSet;
-  }
-
-  ConstString GetTypeName() override;
-
-  ConstString GetQualifiedTypeName() override;
-
-  ConstString GetDisplayTypeName() override;
-
-  size_t CalculateNumChildren(uint32_t max) override;
-
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index) override;
-
-protected:
-  bool UpdateValue() override;
-
-  CompilerType GetCompilerTypeImpl() override;
-
-  lldb::RegisterContextSP m_reg_ctx_sp;
-
-private:
-  ValueObjectRegisterContext(ValueObject &parent,
-                             lldb::RegisterContextSP &reg_ctx_sp);
-  // For ValueObject only
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectRegisterContext);
-};
-
 class ValueObjectRegisterSet : public ValueObject {
 public:
   ~ValueObjectRegisterSet() override;
