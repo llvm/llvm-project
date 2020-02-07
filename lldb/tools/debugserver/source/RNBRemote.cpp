@@ -3766,7 +3766,7 @@ static bool login_session_has_gui_access () {
 // $ security authorizationdb read system.privilege.taskport.debug
 
 static bool developer_mode_enabled () {
-#if TARGET_OS_OSX == 1
+#if TARGET_OS_OSX == 0
   return true;
 #else
  CFDictionaryRef currentRightDict = NULL;
