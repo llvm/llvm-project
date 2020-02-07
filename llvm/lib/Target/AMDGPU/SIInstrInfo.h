@@ -831,7 +831,7 @@ public:
                                    MI.getParent()->getParent()->getRegInfo().
                                      getRegClass(MO.getReg()), SubReg)) >= 32 &&
                "Sub-dword subregs are not supported");
-        return RI.getSubRegIndexLaneMask(SubReg).getNumLanes() * 4;
+        return RI.getNumChannelsFromSubReg(SubReg) * 4;
       }
     }
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
