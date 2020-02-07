@@ -1,5 +1,6 @@
-add_lldb_library(lldbPluginABISysV_arc PLUGIN
-  ABISysV_arc.cpp
+add_lldb_library(lldbPluginABIARM PLUGIN
+  ABIMacOSX_arm.cpp
+  ABISysV_arm.cpp
 
   LINK_LIBS
     lldbCore
