@@ -15,7 +15,7 @@
 #include <mutex>
 #include <setjmp.h>
 #ifdef _WIN32
-#include <excpt.h> // for GetExceptionInformation
+#include <windows.h> // for GetExceptionInformation
 #endif
 #if LLVM_ON_UNIX
 #include <sysexits.h> // EX_IOERR
@@ -41,11 +41,11 @@ struct CrashRecoveryContextImpl {
   ::jmp_buf JumpBuffer;
   volatile unsigned Failed : 1;
   unsigned SwitchedThread : 1;
+  unsigned ValidJumpBuffer : 1;
 
 public:
-  CrashRecoveryContextImpl(CrashRecoveryContext *CRC) : CRC(CRC),
-                                                        Failed(false),
-                                                        SwitchedThread(false) {
+  CrashRecoveryContextImpl(CrashRecoveryContext *CRC)
+      : CRC(CRC), Failed(false), SwitchedThread(false), ValidJumpBuffer(false) {
     Next = CurrentContext->get();
     CurrentContext->set(this);
   }
@@ -80,10 +80,13 @@ public:
     CRC->RetCode = RetCode;
 
     // Jump back to the RunSafely we were called under.
-    longjmp(JumpBuffer, 1);
+    if (ValidJumpBuffer)
+      longjmp(JumpBuffer, 1);
+
+    // Otherwise let the caller decide of the outcome of the crash. Currently
+    // this occurs when using SEH on Windows with MSVC or clang-cl.
   }
 };
-
 }
 
 static ManagedStatic<std::mutex> gCrashRecoveryContextMutex;
@@ -188,37 +191,43 @@ static void uninstallExceptionOrSignalHandlers() {}
 
 // We need this function because the call to GetExceptionInformation() can only
 // occur inside the __except evaluation block
-static int ExceptionFilter(bool DumpStackAndCleanup,
-                           _EXCEPTION_POINTERS *Except) {
-  if (DumpStackAndCleanup)
-    sys::CleanupOnSignal((uintptr_t)Except);
+static int ExceptionFilter(_EXCEPTION_POINTERS *Except) {
+  // Lookup the current thread local recovery object.
+  const CrashRecoveryContextImpl *CRCI = CurrentContext->get();
+
+  if (!CRCI) {
+    // Something has gone horribly wrong, so let's just tell everyone
+    // to keep searching
+    CrashRecoveryContext::Disable();
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  int RetCode = (int)Except->ExceptionRecord->ExceptionCode;
+
+  // Handle the crash
+  const_cast<CrashRecoveryContextImpl *>(CRCI)->HandleCrash(
+      RetCode, reinterpret_cast<uintptr_t>(Except));
+
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
 #if defined(__clang__) && defined(_M_IX86)
 // Work around PR44697.
 __attribute__((optnone))
-static bool InvokeFunctionCall(function_ref<void()> Fn,
-                               bool DumpStackAndCleanup, int &RetCode) {
-#else
-static bool InvokeFunctionCall(function_ref<void()> Fn,
-                               bool DumpStackAndCleanup, int &RetCode) {
 #endif
-  __try {
-    Fn();
-  } __except (ExceptionFilter(DumpStackAndCleanup, GetExceptionInformation())) {
-    RetCode = GetExceptionCode();
-    return false;
-  }
-  return true;
-}
-
 bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
   if (!gCrashRecoveryEnabled) {
     Fn();
     return true;
   }
-  return InvokeFunctionCall(Fn, DumpStackAndCleanupOnFailure, RetCode);
+  assert(!Impl && "Crash recovery context already initialized!");
+  Impl = new CrashRecoveryContextImpl(this);
+  __try {
+    Fn();
+  } __except (ExceptionFilter(GetExceptionInformation())) {
+    return false;
+  }
+  return true;
 }
 
 #else // !_MSC_VER
@@ -395,6 +404,7 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
     CrashRecoveryContextImpl *CRCI = new CrashRecoveryContextImpl(this);
     Impl = CRCI;
 
+    CRCI->ValidJumpBuffer = true;
     if (setjmp(CRCI->JumpBuffer) != 0) {
       return false;
     }
