@@ -96,7 +96,7 @@ public:
   virtual ~DwarfEmitter();
 
   /// Emit DIE containing warnings.
-  virtual void emitPaperTrailWarningsDie(const Triple &Triple, DIE &Die) = 0;
+  virtual void emitPaperTrailWarningsDie(DIE &Die) = 0;
 
   /// Emit section named SecName with content equals to
   /// corresponding section in Obj.
@@ -243,10 +243,9 @@ typedef std::map<std::string, std::string> swiftInterfacesMap;
 /// processing a object file.
 class DWARFLinker {
 public:
-  DWARFLinker(const Triple &Triple, DwarfEmitter *Emitter,
+  DWARFLinker(DwarfEmitter *Emitter,
               DwarfLinkerClient ClientID = DwarfLinkerClient::General)
-      : TheTriple(Triple), TheDwarfEmitter(Emitter),
-        DwarfLinkerClientID(ClientID) {}
+      : TheDwarfEmitter(Emitter), DwarfLinkerClientID(ClientID) {}
 
   /// Add object file to be linked.
   void addObjectFile(DwarfLinkerObjFile &ObjFile);
@@ -717,8 +716,6 @@ private:
   /// Allocator used for all the DIEValue objects.
   BumpPtrAllocator DIEAlloc;
   /// @}
-
-  Triple TheTriple;
 
   DwarfEmitter *TheDwarfEmitter;
   std::vector<LinkContext> ObjectContexts;
