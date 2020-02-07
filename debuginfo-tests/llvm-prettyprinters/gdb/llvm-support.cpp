@@ -47,4 +47,8 @@ auto SimpleIlist = []() {
   return Result;
 }();
 
+// Check expected instances to avoid compile errors.
+auto CheckExpectedValue = static_cast<bool>(ExpectedValue);
+auto CheckExpectedError = static_cast<bool>(ExpectedError);
+
 int main() { return 0; }
