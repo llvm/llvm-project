@@ -30,4 +30,4 @@ class StaticInitializers(TestBase):
 
         # FIXME: This error message is not even remotely helpful.
         self.expect("expr -p -- struct Foo2 { Foo2() { do_abort(); } }; Foo2 f;", error=True,
-                    substrs=["error: couldn't run static initializers: couldn't run static initializer:"])
+                    substrs=["error: couldn't run static initializer:"])
