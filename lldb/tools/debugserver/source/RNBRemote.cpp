@@ -12,6 +12,8 @@
 
 #include "RNBRemote.h"
 
+#include <bsm/audit.h>
+#include <bsm/audit_session.h>
 #include <errno.h>
 #include <libproc.h>
 #include <mach-o/loader.h>
@@ -3723,6 +3725,19 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
     return false;
 }
 
+// Test if this current login session has a connection to the
+// window server (if it does not have that access, it cannot ask
+// for debug permission by popping up a dialog box and attach
+// may fail outright).
+static bool login_session_has_gui_access () {
+  auditinfo_addr_t info;
+  getaudit_addr(&info, sizeof(info));
+  if (info.ai_flags & AU_SESSION_FLAG_HAS_GRAPHIC_ACCESS)
+    return true;
+  else
+    return false;
+}
+
 // Checking for 
 //
 //  {
@@ -4013,12 +4028,23 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           return_message += cstring_to_asciihex_string(msg.c_str());
           return SendPacket(return_message.c_str());
         }
-        if (!developer_mode_enabled()) {
-          DNBLogError("Developer mode is not enabled");
+        if (!login_session_has_gui_access() && !developer_mode_enabled()) {
+          DNBLogError("Developer mode is not enabled and this is a "
+                      "non-interactive session");
           std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("developer mode is not "
-                                           "enabled on this machine.  "
-                                           "sudo DevToolsSecurity --enable");
+          return_message += cstring_to_asciihex_string("developer mode is "
+                                           "not enabled on this machine "
+                                           "and this is a non-interactive "
+                                           "debug session.");
+          return SendPacket(return_message.c_str());
+        }
+        if (!login_session_has_gui_access()) {
+          DNBLogError("This is a non-interactive session");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("this is a "
+                                           "non-interactive debug session, "
+                                           "cannot get permission to debug "
+                                           "processes.");
           return SendPacket(return_message.c_str());
         }
         if (attach_failed_due_to_sip (pid_attaching_to)) {
