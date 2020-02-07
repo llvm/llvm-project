@@ -7418,19 +7418,12 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool FastUnsafeRcpLegal = DAG.getTarget().Options.UnsafeFPMath ||
-         (Flags.hasAllowReciprocal() &&
-          ((VT == MVT::f32 && hasFP32Denormals(DAG.getMachineFunction())) ||
-            VT == MVT::f16 ||
-            Flags.hasApproximateFuncs()));
+  bool AllowInaccurateRcp = DAG.getTarget().Options.UnsafeFPMath ||
+                            Flags.hasApproximateFuncs();
 
-  // Do rcp optimization only when fast unsafe rcp is legal here.
-  // NOTE: We already performed RCP optimization to insert intrinsics in
-  // AMDGPUCodeGenPrepare. Ideally there should have no opportunity here to
-  // rcp optimization.
-  //   However, there are cases like FREM, which is expended into a sequence
-  // of instructions including FDIV, which may expose new opportunities.
-  if (!FastUnsafeRcpLegal)
+  // Without !fpmath accuracy information, we can't do more because we don't
+  // know exactly whether rcp is accurate enough to meet !fpmath requirement.
+  if (!AllowInaccurateRcp)
     return SDValue();
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
