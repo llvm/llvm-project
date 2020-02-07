@@ -1411,6 +1411,12 @@ void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
     return;
   }
 
+  // Horrible hack for two different registers having the same encoding.
+  if (Val == AArch64SysReg::TRCEXTINSELR) {
+    O << "TRCEXTINSELR";
+    return;
+  }
+
   const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
   if (Reg && Reg->Readable && Reg->haveFeatures(STI.getFeatureBits()))
     O << Reg->Name;
@@ -1428,6 +1434,12 @@ void AArch64InstPrinter::printMSRSystemRegister(const MCInst *MI, unsigned OpNo,
   // going to get the wrong entry
   if (Val == AArch64SysReg::DBGDTRTX_EL0) {
     O << "DBGDTRTX_EL0";
+    return;
+  }
+
+  // Horrible hack for two different registers having the same encoding.
+  if (Val == AArch64SysReg::TRCEXTINSELR) {
+    O << "TRCEXTINSELR";
     return;
   }
 
