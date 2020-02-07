@@ -11,26 +11,26 @@
 
 // RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
 // RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
-// RUN:  not %clang %s @%t.rsp -DPARSER 2>&1 | FileCheck %s
+// RUN:  not %clang %s @%t.rsp -DASSERT 2>&1 | FileCheck %s
 // RUN: cat %t/crash-report-*.c | FileCheck --check-prefix=CHECKSRC %s
 // RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
 
 // RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
 // RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
-// RUN:  not %clang %s @%t.rsp -DCRASH 2>&1 | FileCheck %s
-// RUN: cat %t/crash-report-*.c | FileCheck --check-prefix=CHECKSRC %s
-// RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
+// RUN:  not %clang %s @%t.rsp -DUNREACHABLE 2>&1 | FileCheck %s
+// RUN: cat %t/crash-report-with-asserts-*.c | FileCheck --check-prefix=CHECKSRC %s
+// RUN: cat %t/crash-report-with-asserts-*.sh | FileCheck --check-prefix=CHECKSH %s
 
-// REQUIRES: crash-recovery
+// REQUIRES: crash-recovery, asserts
 
-#ifdef PARSER
-#pragma clang __debug parser_crash
-#elif CRASH
-#pragma clang __debug crash
+#ifdef ASSERT
+#pragma clang __debug assert
+#elif UNREACHABLE
+#pragma clang __debug llvm_unreachable
 #endif
 
 // CHECK: Preprocessed source(s) and associated run script(s) are located at:
-// CHECK-NEXT: note: diagnostic msg: {{.*}}crash-report-{{.*}}.c
+// CHECK-NEXT: note: diagnostic msg: {{.*}}crash-report-with-asserts-{{.*}}.c
 FOO
 // CHECKSRC: FOO
 // CHECKSH: # Crash reproducer
@@ -39,7 +39,7 @@ FOO
 // CHECKSH-SAME: "-D" "BAR=BAZ QUX"
 // CHECKSH-NEXT: # Original command: {{.*$}}
 // CHECKSH-NEXT: "-cc1"
-// CHECKSH: "-main-file-name" "crash-report.c"
+// CHECKSH: "-main-file-name" "crash-report-with-asserts.c"
 // CHECKSH-NOT: "-header-include-file"
 // CHECKSH-NOT: "-diagnostic-log-file"
 // CHECKSH: "-D" "FOO=BAR"
@@ -55,4 +55,4 @@ FOO
 // CHECKSH-NOT: "-internal-isystem" "/tmp/"
 // CHECKSH-NOT: "-internal-externc-isystem" "/tmp/"
 // CHECKSH-NOT: "-dwarf-debug-flags"
-// CHECKSH: "crash-report-{{[^ ]*}}.c"
+// CHECKSH: "crash-report-with-asserts-{{[^ ]*}}.c"
