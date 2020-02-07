@@ -6557,169 +6557,169 @@ it ge
 mlage r0, lr, r0, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r0, r0
+smullge r0, r1, r0, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r1, r0
+smullge r0, r1, r1, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r2, r0
+smullge r0, r1, r2, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r3, r0
+smullge r0, r1, r3, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r4, r0
+smullge r0, r1, r4, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r5, r0
+smullge r0, r1, r5, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r6, r0
+smullge r0, r1, r6, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r7, r0
+smullge r0, r1, r7, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r8, r0
+smullge r0, r1, r8, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r9, r0
+smullge r0, r1, r9, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r10, r0
+smullge r0, r1, r10, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r11, r0
+smullge r0, r1, r11, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, r12, r0
+smullge r0, r1, r12, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smullge r0, r0, lr, r0
+smullge r0, r1, lr, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r0, r0
+umullge r0, r1, r0, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r1, r0
+umullge r0, r1, r1, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r2, r0
+umullge r0, r1, r2, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r3, r0
+umullge r0, r1, r3, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r4, r0
+umullge r0, r1, r4, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r5, r0
+umullge r0, r1, r5, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r6, r0
+umullge r0, r1, r6, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r7, r0
+umullge r0, r1, r7, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r8, r0
+umullge r0, r1, r8, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r9, r0
+umullge r0, r1, r9, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r10, r0
+umullge r0, r1, r10, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r11, r0
+umullge r0, r1, r11, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, r12, r0
+umullge r0, r1, r12, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umullge r0, r0, lr, r0
+umullge r0, r1, lr, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r0, r0
+smlalge r0, r1, r0, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r1, r0
+smlalge r0, r1, r1, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r2, r0
+smlalge r0, r1, r2, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r3, r0
+smlalge r0, r1, r3, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r4, r0
+smlalge r0, r1, r4, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r5, r0
+smlalge r0, r1, r5, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r6, r0
+smlalge r0, r1, r6, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r7, r0
+smlalge r0, r1, r7, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r8, r0
+smlalge r0, r1, r8, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r9, r0
+smlalge r0, r1, r9, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r10, r0
+smlalge r0, r1, r10, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r11, r0
+smlalge r0, r1, r11, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, r12, r0
+smlalge r0, r1, r12, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-smlalge r0, r0, lr, r0
+smlalge r0, r1, lr, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r0, r0
+umlalge r0, r1, r0, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r1, r0
+umlalge r0, r1, r1, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r2, r0
+umlalge r0, r1, r2, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r3, r0
+umlalge r0, r1, r3, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r4, r0
+umlalge r0, r1, r4, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r5, r0
+umlalge r0, r1, r5, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r6, r0
+umlalge r0, r1, r6, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r7, r0
+umlalge r0, r1, r7, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r8, r0
+umlalge r0, r1, r8, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r9, r0
+umlalge r0, r1, r9, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r10, r0
+umlalge r0, r1, r10, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r11, r0
+umlalge r0, r1, r11, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, r12, r0
+umlalge r0, r1, r12, r0
 @ CHECK: :[[@LINE+2]]:1: warning: deprecated instruction in IT block
 it ge
-umlalge r0, r0, lr, r0
+umlalge r0, r1, lr, r0
