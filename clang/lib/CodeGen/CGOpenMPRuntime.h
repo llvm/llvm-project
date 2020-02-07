@@ -1246,7 +1246,7 @@ public:
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
   virtual void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                         SourceLocation Loc);
+                         SourceLocation Loc, llvm::AtomicOrdering AO);
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:
@@ -2034,7 +2034,7 @@ public:
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
   void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                 SourceLocation Loc) override;
+                 SourceLocation Loc, llvm::AtomicOrdering AO) override;
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:
