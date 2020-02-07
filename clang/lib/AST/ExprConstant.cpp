@@ -5609,9 +5609,14 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   }
 
   // Reserve space for the struct members.
-  if (!RD->isUnion() && !Result.hasValue())
-    Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
-                     std::distance(RD->field_begin(), RD->field_end()));
+  if (!Result.hasValue()) {
+    if (!RD->isUnion())
+      Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
+                       std::distance(RD->field_begin(), RD->field_end()));
+    else
+      // A union starts with no active member.
+      Result = APValue((const FieldDecl*)nullptr);
+  }
 
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
@@ -13909,18 +13914,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
     LValue LVal;
     LVal.set(VD);
 
-    // C++11 [basic.start.init]p2:
-    //  Variables with static storage duration or thread storage duration shall
-    //  be zero-initialized before any other initialization takes place.
-    // This behavior is not present in C.
-    if (Ctx.getLangOpts().CPlusPlus && !VD->hasLocalStorage() &&
-        !DeclTy->isReferenceType()) {
-      ImplicitValueInitExpr VIE(DeclTy);
-      if (!EvaluateInPlace(Value, Info, LVal, &VIE,
-                           /*AllowNonLiteralTypes=*/true))
-        return false;
-    }
-
     if (!EvaluateInPlace(Value, Info, LVal, this,
                          /*AllowNonLiteralTypes=*/true) ||
         EStatus.HasSideEffects)
@@ -13939,14 +13932,16 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
-  assert(getEvaluatedValue() && !getEvaluatedValue()->isAbsent() &&
-         "cannot evaluate destruction of non-constant-initialized variable");
-
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  // Make a copy of the value for the destructor to mutate.
-  APValue DestroyedValue = *getEvaluatedValue();
+  // Make a copy of the value for the destructor to mutate, if we know it.
+  // Otherwise, treat the value as default-initialized; if the destructor works
+  // anyway, then the destruction is constant (and must be essentially empty).
+  APValue DestroyedValue =
+      (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
+          ? *getEvaluatedValue()
+          : getDefaultInitValue(getType());
 
   EvalInfo Info(getASTContext(), EStatus, EvalInfo::EM_ConstantExpression);
   Info.setEvaluatingDecl(this, DestroyedValue,
@@ -13959,8 +13954,6 @@ bool VarDecl::evaluateDestruction(
   LValue LVal;
   LVal.set(this);
 
-  // FIXME: Consider storing whether this variable has constant destruction in
-  // the EvaluatedStmt so that CodeGen can query it.
   if (!HandleDestruction(Info, DeclLoc, LVal.Base, DestroyedValue, DeclTy) ||
       EStatus.HasSideEffects)
     return false;
