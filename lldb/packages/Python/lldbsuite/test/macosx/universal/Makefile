@@ -18,6 +18,3 @@ testit.x86_64h.o: main.c
 
 testit.x86_64.o: main.c
 	$(CC) -g -O0 -arch x86_64 -c -o testit.x86_64.o $<
-
-clean::
-	rm -rf $(wildcard testit* *~)
