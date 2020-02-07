@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++14 | FileCheck --check-prefixes=CHECK,CXX14 %s
 
 // CHECK-LABEL: define void @_ZN19non_inline_function3fooEv()
 // CHECK-LABEL: define internal void @"_ZZN19non_inline_function3fooEvENK3$_0clEi"(%class.anon
@@ -51,3 +52,18 @@ inline int foo() {
 }
 int use = foo();
 }
+
+#if __cplusplus >= 201402L
+// CXX14-LABEL: define internal void @"_ZZZN32lambda_capture_in_generic_lambda3fooIiEEDavENKUlT_E_clIZNS_L1fEvE3$_1EEDaS1_ENKUlvE_clEv"
+namespace lambda_capture_in_generic_lambda {
+template <typename T> auto foo() {
+  return [](auto func) {
+    [func] { func(); }();
+  };
+}
+static void f() {
+  foo<int>()([] { });
+}
+void f1() { f(); }
+}
+#endif
