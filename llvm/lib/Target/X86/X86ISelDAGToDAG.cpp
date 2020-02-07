@@ -879,13 +879,19 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::ANY_EXTEND_VECTOR_INREG: {
       // Replace vector any extend with the zero extend equivalents so we don't
       // need 2 sets of patterns. Ignore vXi1 extensions.
-      if (!N->getValueType(0).isVector() ||
-          N->getOperand(0).getScalarValueSizeInBits() == 1)
+      if (!N->getValueType(0).isVector())
         break;
 
-      unsigned NewOpc = N->getOpcode() == ISD::ANY_EXTEND
-                            ? ISD::ZERO_EXTEND
-                            : ISD::ZERO_EXTEND_VECTOR_INREG;
+      unsigned NewOpc;
+      if (N->getOperand(0).getScalarValueSizeInBits() == 1) {
+        assert(N->getOpcode() == ISD::ANY_EXTEND &&
+               "Unexpected opcode for mask vector!");
+        NewOpc = ISD::SIGN_EXTEND;
+      } else {
+        NewOpc = N->getOpcode() == ISD::ANY_EXTEND
+                              ? ISD::ZERO_EXTEND
+                              : ISD::ZERO_EXTEND_VECTOR_INREG;
+      }
 
       SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
                                     N->getOperand(0));

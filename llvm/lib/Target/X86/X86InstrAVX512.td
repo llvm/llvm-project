@@ -9804,10 +9804,6 @@ def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   !strconcat(OpcodeStr##Vec.Suffix, "\t{$src, $dst|$dst, $src}"),
                   [(set Vec.RC:$dst, (Vec.VT (sext Vec.KRC:$src)))]>,
                   EVEX, Sched<[WriteMove]>; // TODO - WriteVecTrunc?
-
-// Also need a pattern for anyextend.
-def : Pat<(Vec.VT (anyext Vec.KRC:$src)),
-          (!cast<Instruction>(NAME#"rr") Vec.KRC:$src)>;
 }
 
 multiclass cvt_mask_by_elt_width<bits<8> opc, AVX512VLVectorVTInfo VTInfo,
@@ -9881,18 +9877,10 @@ let Predicates = [HasDQI, NoBWI] in {
             (VPMOVDBZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
   def : Pat<(v16i16 (sext (v16i1 VK16:$src))),
             (VPMOVDWZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
-
-  def : Pat<(v16i8 (anyext (v16i1 VK16:$src))),
-            (VPMOVDBZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
-  def : Pat<(v16i16 (anyext (v16i1 VK16:$src))),
-            (VPMOVDWZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
 }
 
 let Predicates = [HasDQI, NoBWI, HasVLX] in {
   def : Pat<(v8i16 (sext (v8i1 VK8:$src))),
-            (VPMOVDWZ256rr (v8i32 (VPMOVM2DZ256rr VK8:$src)))>;
-
-  def : Pat<(v8i16 (anyext (v8i1 VK8:$src))),
             (VPMOVDWZ256rr (v8i32 (VPMOVM2DZ256rr VK8:$src)))>;
 }
 
