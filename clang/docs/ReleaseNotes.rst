@@ -61,6 +61,10 @@ New Compiler Flags
 ------------------
 
 
+- -fstack-clash-protection will provide a protection against the stack clash
+  attack for x86 architecture through automatic probing of each page of
+  allocated stack.
+
 Deprecated Compiler Flags
 -------------------------
 
