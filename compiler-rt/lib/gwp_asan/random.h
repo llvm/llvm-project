@@ -12,6 +12,9 @@
 #include <stdint.h>
 
 namespace gwp_asan {
+// Initialise the PRNG, using time and thread ID as the seed.
+void initPRNG();
+
 // xorshift (32-bit output), extremely fast PRNG that uses arithmetic operations
 // only. Seeded using walltime.
 uint32_t getRandomUnsigned32();

@@ -9,6 +9,7 @@
 #ifndef GWP_ASAN_GUARDED_POOL_ALLOCATOR_H_
 #define GWP_ASAN_GUARDED_POOL_ALLOCATOR_H_
 
+#include "gwp_asan/common.h"
 #include "gwp_asan/definitions.h"
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
@@ -31,57 +32,6 @@ public:
   // Name of the GWP-ASan mapping that for `Metadata`.
   static constexpr const char *kGwpAsanMetadataName = "GWP-ASan Metadata";
 
-  static constexpr uint64_t kInvalidThreadID = UINT64_MAX;
-
-  enum class Error {
-    UNKNOWN,
-    USE_AFTER_FREE,
-    DOUBLE_FREE,
-    INVALID_FREE,
-    BUFFER_OVERFLOW,
-    BUFFER_UNDERFLOW
-  };
-
-  struct AllocationMetadata {
-    // The number of bytes used to store a compressed stack frame. On 64-bit
-    // platforms, assuming a compression ratio of 50%, this should allow us to
-    // store ~64 frames per trace.
-    static constexpr size_t kStackFrameStorageBytes = 256;
-
-    // Maximum number of stack frames to collect on allocation/deallocation. The
-    // actual number of collected frames may be less than this as the stack
-    // frames are compressed into a fixed memory range.
-    static constexpr size_t kMaxTraceLengthToCollect = 128;
-
-    // Records the given allocation metadata into this struct.
-    void RecordAllocation(uintptr_t Addr, size_t Size,
-                          options::Backtrace_t Backtrace);
-
-    // Record that this allocation is now deallocated.
-    void RecordDeallocation(options::Backtrace_t Backtrace);
-
-    struct CallSiteInfo {
-      // The compressed backtrace to the allocation/deallocation.
-      uint8_t CompressedTrace[kStackFrameStorageBytes];
-      // The thread ID for this trace, or kInvalidThreadID if not available.
-      uint64_t ThreadID = kInvalidThreadID;
-      // The size of the compressed trace (in bytes). Zero indicates that no
-      // trace was collected.
-      size_t TraceSize = 0;
-    };
-
-    // The address of this allocation.
-    uintptr_t Addr = 0;
-    // Represents the actual size of the allocation.
-    size_t Size = 0;
-
-    CallSiteInfo AllocationTrace;
-    CallSiteInfo DeallocationTrace;
-
-    // Whether this allocation has been deallocated yet.
-    bool IsDeallocated = false;
-  };
-
   // During program startup, we must ensure that memory allocations do not land
   // in this allocation pool if the allocator decides to runtime-disable
   // GWP-ASan. The constructor value-initialises the class such that if no
@@ -103,14 +53,22 @@ public:
   void init(const options::Options &Opts);
   void uninitTestOnly();
 
+  // Functions exported for libmemunreachable's use on Android. disable()
+  // installs a lock in the allocator that prevents any thread from being able
+  // to allocate memory, until enable() is called.
   void disable();
   void enable();
 
   typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
-  // Execute the callback Cb for every allocation the lies in [Base, Base + Size).
-  // Must be called while the allocator is disabled. The callback can not
+  // Execute the callback Cb for every allocation the lies in [Base, Base +
+  // Size). Must be called while the allocator is disabled. The callback can not
   // allocate.
   void iterate(void *Base, size_t Size, iterate_callback Cb, void *Arg);
+
+  // This function is used to signal the allocator to indefinitely stop
+  // functioning, as a crash has occurred. This stops the allocator from
+  // servicing any further allocations permanently.
+  void stop();
 
   // Return whether the allocation should be randomly chosen for sampling.
   GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
@@ -130,8 +88,7 @@ public:
   // Returns whether the provided pointer is a current sampled allocation that
   // is owned by this pool.
   GWP_ASAN_ALWAYS_INLINE bool pointerIsMine(const void *Ptr) const {
-    uintptr_t P = reinterpret_cast<uintptr_t>(Ptr);
-    return P < GuardedPagePoolEnd && GuardedPagePool <= P;
+    return State.pointerIsMine(Ptr);
   }
 
   // Allocate memory in a guarded slot, and return a pointer to the new
@@ -146,21 +103,11 @@ public:
   // Returns the size of the allocation at Ptr.
   size_t getSize(const void *Ptr);
 
-  // Returns the largest allocation that is supported by this pool. Any
-  // allocations larger than this should go to the regular system allocator.
-  size_t maximumAllocationSize() const;
+  // Returns a pointer to the Metadata region, or nullptr if it doesn't exist.
+  const AllocationMetadata *getMetadataRegion() const { return Metadata; }
 
-  // Dumps an error report (including allocation and deallocation stack traces).
-  // An optional error may be provided if the caller knows what the error is
-  // ahead of time. This is primarily a helper function to locate the static
-  // singleton pointer and call the internal version of this function. This
-  // method is never thread safe, and should only be called when fatal errors
-  // occur.
-  static void reportError(uintptr_t AccessPtr, Error E = Error::UNKNOWN);
-
-  // Get the current thread ID, or kInvalidThreadID if failure. Note: This
-  // implementation is platform-specific.
-  static uint64_t getThreadID();
+  // Returns a pointer to the AllocatorState region.
+  const AllocatorState *getAllocatorState() const { return &State; }
 
 private:
   // Name of actively-occupied slot mappings.
@@ -191,34 +138,9 @@ private:
   // be called once, and the result should be cached in PageSize in this class.
   static size_t getPlatformPageSize();
 
-  // Install the SIGSEGV crash handler for printing use-after-free and heap-
-  // buffer-{under|over}flow exceptions. This is platform specific as even
-  // though POSIX and Windows both support registering handlers through
-  // signal(), we have to use platform-specific signal handlers to obtain the
-  // address that caused the SIGSEGV exception.
-  static void installSignalHandlers();
-  static void uninstallSignalHandlers();
-
-  // Returns the index of the slot that this pointer resides in. If the pointer
-  // is not owned by this pool, the result is undefined.
-  size_t addrToSlot(uintptr_t Ptr) const;
-
-  // Returns the address of the N-th guarded slot.
-  uintptr_t slotToAddr(size_t N) const;
-
   // Returns a pointer to the metadata for the owned pointer. If the pointer is
   // not owned by this pool, the result is undefined.
   AllocationMetadata *addrToMetadata(uintptr_t Ptr) const;
-
-  // Returns the address of the page that this pointer resides in.
-  uintptr_t getPageAddr(uintptr_t Ptr) const;
-
-  // Gets the nearest slot to the provided address.
-  size_t getNearestSlot(uintptr_t Ptr) const;
-
-  // Returns whether the provided pointer is a guard page or not. The pointer
-  // must be within memory owned by this pool, else the result is undefined.
-  bool isGuardPage(uintptr_t Ptr) const;
 
   // Reserve a slot for a new guarded allocation. Returns kInvalidSlotID if no
   // slot is available to be reserved.
@@ -232,33 +154,24 @@ private:
   // the allocation and the options provided at init-time.
   uintptr_t allocationSlotOffset(size_t AllocationSize) const;
 
-  // Returns the diagnosis for an unknown error. If the diagnosis is not
-  // Error::INVALID_FREE or Error::UNKNOWN, the metadata for the slot
-  // responsible for the error is placed in *Meta.
-  Error diagnoseUnknownError(uintptr_t AccessPtr, AllocationMetadata **Meta);
-
-  void reportErrorInternal(uintptr_t AccessPtr, Error E);
+  // Raise a SEGV and set the corresponding fields in the Allocator's State in
+  // order to tell the crash handler what happened. Used when errors are
+  // detected internally (Double Free, Invalid Free).
+  void trapOnAddress(uintptr_t Address, Error E);
 
   static GuardedPoolAllocator *getSingleton();
 
   // Install a pthread_atfork handler.
   void installAtFork();
 
-  // Cached page size for this system in bytes.
-  size_t PageSize = 0;
+  gwp_asan::AllocatorState State;
 
   // A mutex to protect the guarded slot and metadata pool for this class.
   Mutex PoolMutex;
-  // The number of guarded slots that this pool holds.
-  size_t MaxSimultaneousAllocations = 0;
   // Record the number allocations that we've sampled. We store this amount so
   // that we don't randomly choose to recycle a slot that previously had an
   // allocation before all the slots have been utilised.
   size_t NumSampledAllocations = 0;
-  // Pointer to the pool of guarded slots. Note that this points to the start of
-  // the pool (which is a guard page), not a pointer to the first guarded page.
-  uintptr_t GuardedPagePool = 0;
-  uintptr_t GuardedPagePoolEnd = 0;
   // Pointer to the allocation metadata (allocation/deallocation stack traces),
   // if any.
   AllocationMetadata *Metadata = nullptr;
@@ -271,12 +184,9 @@ private:
   // See options.{h, inc} for more information.
   bool PerfectlyRightAlign = false;
 
-  // Printf function supplied by the implementing allocator. We can't (in
-  // general) use printf() from the cstdlib as it may malloc(), causing infinite
-  // recursion.
-  options::Printf_t Printf = nullptr;
+  // Backtrace function provided by the supporting allocator. See `options.h`
+  // for more information.
   options::Backtrace_t Backtrace = nullptr;
-  options::PrintBacktrace_t PrintBacktrace = nullptr;
 
   // The adjusted sample rate for allocation sampling. Default *must* be
   // nonzero, as dynamic initialisation may call malloc (e.g. from libstdc++)

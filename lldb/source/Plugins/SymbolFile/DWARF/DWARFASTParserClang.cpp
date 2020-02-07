@@ -726,8 +726,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx;
-    SymbolFileDWARF::GetDWARFDeclContext(die, die_decl_ctx);
+    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
 
     type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
 
@@ -1515,8 +1514,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx;
-    SymbolFileDWARF::GetDWARFDeclContext(die, die_decl_ctx);
+    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
 
     // type_sp = FindDefinitionTypeForDIE (dwarf_cu, die,
     // type_name_const_str);
@@ -2323,10 +2321,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         unsigned type_quals = 0;
         std::vector<CompilerType> param_types;
         std::vector<clang::ParmVarDecl *> param_decls;
-        DWARFDeclContext decl_ctx;
         StreamString sstr;
 
-        SymbolFileDWARF::GetDWARFDeclContext(die, decl_ctx);
+        DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
         sstr << decl_ctx.GetQualifiedName();
 
         clang::DeclContext *containing_decl_ctx =

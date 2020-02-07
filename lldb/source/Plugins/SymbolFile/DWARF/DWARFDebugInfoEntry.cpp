@@ -868,19 +868,28 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
   }
 }
 
-void DWARFDebugInfoEntry::GetDWARFDeclContext(
-    DWARFUnit *cu, DWARFDeclContext &dwarf_decl_ctx) const {
-  const dw_tag_t tag = Tag();
-  if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
-    return;
-  dwarf_decl_ctx.AppendDeclContext(tag, GetName(cu));
-  DWARFDIE parent_decl_ctx_die = GetParentDeclContextDIE(cu);
-  if (parent_decl_ctx_die && parent_decl_ctx_die.GetDIE() != this) {
-    if (parent_decl_ctx_die.Tag() != DW_TAG_compile_unit &&
-        parent_decl_ctx_die.Tag() != DW_TAG_partial_unit)
-      parent_decl_ctx_die.GetDIE()->GetDWARFDeclContext(
-          parent_decl_ctx_die.GetCU(), dwarf_decl_ctx);
+DWARFDeclContext
+DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
+                                               DWARFUnit *cu) {
+  DWARFDeclContext dwarf_decl_ctx;
+  for (;;) {
+    const dw_tag_t tag = die->Tag();
+    if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+      return dwarf_decl_ctx;
+    dwarf_decl_ctx.AppendDeclContext(tag, die->GetName(cu));
+    DWARFDIE parent_decl_ctx_die = die->GetParentDeclContextDIE(cu);
+    if (!parent_decl_ctx_die || parent_decl_ctx_die.GetDIE() == die)
+      return dwarf_decl_ctx;
+    if (parent_decl_ctx_die.Tag() == DW_TAG_compile_unit ||
+        parent_decl_ctx_die.Tag() == DW_TAG_partial_unit)
+      return dwarf_decl_ctx;
+    die = parent_decl_ctx_die.GetDIE();
+    cu = parent_decl_ctx_die.GetCU();
   }
+}
+
+DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
+  return GetDWARFDeclContextStatic(this, cu);
 }
 
 DWARFDIE

@@ -32,13 +32,17 @@ class Operation;
 
 namespace LLVM {
 
+namespace detail {
+class DebugTranslation;
+} // end namespace detail
+
 class LLVMFuncOp;
 
-// Implementation class for module translation.  Holds a reference to the module
-// being translated, and the mappings between the original and the translated
-// functions, basic blocks and values.  It is practically easier to hold these
-// mappings in one class since the conversion of control flow operations
-// needs to look up block and function mappings.
+/// Implementation class for module translation. Holds a reference to the module
+/// being translated, and the mappings between the original and the translated
+/// functions, basic blocks and values. It is practically easier to hold these
+/// mappings in one class since the conversion of control flow operations
+/// needs to look up block and function mappings.
 class ModuleTranslation {
 public:
   template <typename T = ModuleTranslation>
@@ -51,8 +55,7 @@ public:
     if (!llvmModule)
       return nullptr;
 
-    T translator(m);
-    translator.llvmModule = std::move(llvmModule);
+    T translator(m, std::move(llvmModule));
     translator.convertGlobals();
     if (failed(translator.convertFunctions()))
       return nullptr;
@@ -65,14 +68,12 @@ public:
   static Block &getModuleBody(Operation *m) { return m->getRegion(0).front(); }
 
 protected:
-  // Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
-  // LLVM IR module.  The MLIR LLVM IR dialect holds a pointer to an
-  // LLVMContext, the LLVM IR module will be created in that context.
-  explicit ModuleTranslation(Operation *module) : mlirModule(module) {
-    assert(satisfiesLLVMModule(mlirModule) &&
-           "mlirModule should honor LLVM's module semantics.");
-  }
-  virtual ~ModuleTranslation() {}
+  /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
+  /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
+  /// LLVMContext, the LLVM IR module will be created in that context.
+  ModuleTranslation(Operation *module,
+                    std::unique_ptr<llvm::Module> llvmModule);
+  virtual ~ModuleTranslation();
 
   virtual LogicalResult convertOperation(Operation &op,
                                          llvm::IRBuilder<> &builder);
@@ -94,15 +95,18 @@ private:
   llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
                                   Location loc);
 
-  // Original and translated module.
+  /// Original and translated module.
   Operation *mlirModule;
   std::unique_ptr<llvm::Module> llvmModule;
 
-  // Mappings between llvm.mlir.global definitions and corresponding globals.
+  /// A converter for translating debug information.
+  std::unique_ptr<detail::DebugTranslation> debugTranslation;
+
+  /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
 
 protected:
-  // Mappings between original and translated values, used for lookups.
+  /// Mappings between original and translated values, used for lookups.
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;

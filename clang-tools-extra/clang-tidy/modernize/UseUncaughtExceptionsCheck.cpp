@@ -34,15 +34,18 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl_ref_expr"),
       this);
 
+  auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
+      declRefExpr(hasDeclaration(functionDecl(hasName(MatchText)))))));
+
   // CallExpr: warning, fix-it.
-  Finder->addMatcher(callExpr(hasDeclaration(functionDecl(hasName(MatchText))),
+  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
                               unless(hasAncestor(initListExpr())))
                          .bind("call_expr"),
                      this);
   // CallExpr in initialisation list: warning, fix-it with avoiding narrowing
   // conversions.
-  Finder->addMatcher(callExpr(hasAncestor(initListExpr()),
-                              hasDeclaration(functionDecl(hasName(MatchText))))
+  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
+                              hasAncestor(initListExpr()))
                          .bind("init_call_expr"),
                      this);
 }

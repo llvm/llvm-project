@@ -113,6 +113,9 @@ static lto::Config createConfig() {
 
   c.HasWholeProgramVisibility = config->ltoWholeProgramVisibility;
 
+  c.TimeTraceEnabled = config->timeTraceEnabled;
+  c.TimeTraceGranularity = config->timeTraceGranularity;
+
   c.CSIRProfile = std::string(config->ltoCSProfileFile);
   c.RunCSIRInstr = config->ltoCSProfileGenerate;
 

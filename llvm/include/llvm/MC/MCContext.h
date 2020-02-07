@@ -296,7 +296,7 @@ namespace llvm {
                                        unsigned EntrySize,
                                        const MCSymbolELF *Group,
                                        unsigned UniqueID,
-                                       const MCSymbolELF *Associated);
+                                       const MCSymbolELF *LinkedToSym);
 
     /// Map of currently defined macros.
     StringMap<MCAsmMacro> MacroMap;
@@ -442,12 +442,12 @@ namespace llvm {
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
                                 const Twine &Group, unsigned UniqueID,
-                                const MCSymbolELF *Associated);
+                                const MCSymbolELF *LinkedToSym);
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
                                 const MCSymbolELF *Group, unsigned UniqueID,
-                                const MCSymbolELF *Associated);
+                                const MCSymbolELF *LinkedToSym);
 
     /// Get a section with the provided group identifier. This section is
     /// named by concatenating \p Prefix with '.' then \p Suffix. The \p Type

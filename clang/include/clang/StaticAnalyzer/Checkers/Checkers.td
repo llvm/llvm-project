@@ -109,6 +109,7 @@ def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
 
 def Fuchsia : Package<"fuchsia">;
+def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
 //===----------------------------------------------------------------------===//
 // Core Checkers.
@@ -1476,6 +1477,10 @@ let ParentPackage = Fuchsia in {
 def FuchsiaHandleChecker : Checker<"HandleChecker">,
   HelpText<"A Checker that detect leaks related to Fuchsia handles">,
   Documentation<HasDocumentation>;
+
+}
+
+let ParentPackage = FuchsiaAlpha in {
 
 def FuchsiaLockChecker : Checker<"Lock">,
   HelpText<"Check for the correct usage of locking APIs.">,

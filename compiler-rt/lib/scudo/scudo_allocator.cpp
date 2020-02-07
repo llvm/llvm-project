@@ -674,8 +674,12 @@ void initScudo() {
   gwp_asan::options::initOptions();
   gwp_asan::options::Options &Opts = gwp_asan::options::getOptions();
   Opts.Backtrace = gwp_asan::options::getBacktraceFunction();
-  Opts.PrintBacktrace = gwp_asan::options::getPrintBacktraceFunction();
   GuardedAlloc.init(Opts);
+
+  if (Opts.InstallSignalHandlers)
+    gwp_asan::crash_handler::installSignalHandlers(
+        &GuardedAlloc, __sanitizer::Printf,
+        gwp_asan::options::getPrintBacktraceFunction(), Opts.Backtrace);
 #endif // GWP_ASAN_HOOKS
 }
 

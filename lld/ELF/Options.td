@@ -354,6 +354,12 @@ defm threads: B<"threads",
     "Run the linker multi-threaded (default)",
     "Do not run the linker multi-threaded">;
 
+def time_trace: F<"time-trace">, HelpText<"Record time trace">;
+def time_trace_file_eq: J<"time-trace-file=">, HelpText<"Specify time trace output file">;
+
+defm time_trace_granularity: Eq<"time-trace-granularity",
+  "Minimum time granularity (in microseconds) traced by time profiler">;
+
 defm toc_optimize : B<"toc-optimize",
     "(PowerPC64) Enable TOC related optimizations (default)",
     "(PowerPC64) Disable TOC related optimizations">;

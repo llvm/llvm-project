@@ -2290,12 +2290,12 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
   if (TemplateTypeParmDecl *TTP =
           GetContainedInventedTypeParmVisitor().Visit(OldDI->getType())) {
     if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
-      auto *Inst = cast<TemplateTypeParmDecl>(
+      auto *Inst = cast_or_null<TemplateTypeParmDecl>(
           FindInstantiatedDecl(TTP->getLocation(), TTP, TemplateArgs));
       // We will first get here when instantiating the abbreviated function
       // template's described function, but we might also get here later.
       // Make sure we do not instantiate the TypeConstraint more than once.
-      if (Inst && !Inst->hasTypeConstraint()) {
+      if (Inst && !Inst->getTypeConstraint()) {
         // TODO: Concepts: do not instantiate the constraint (delayed constraint
         // substitution)
         const ASTTemplateArgumentListInfo *TemplArgInfo

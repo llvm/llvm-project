@@ -406,8 +406,7 @@ body: |
     ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; SI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; SI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+    ; SI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; SI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; SI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; SI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
@@ -440,8 +439,7 @@ body: |
     ; SI: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; SI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; SI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT2]](<3 x s16>), 0
+    ; SI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
     ; SI: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     ; VI-LABEL: name: test_fminnum_v3s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -459,8 +457,7 @@ body: |
     ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; VI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; VI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+    ; VI: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; VI: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; VI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; VI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
@@ -490,8 +487,7 @@ body: |
     ; VI: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; VI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT2]](<3 x s16>), 0
+    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
     ; VI: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     ; GFX9-LABEL: name: test_fminnum_v3s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -500,8 +496,7 @@ body: |
     ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[COPY1]](<4 x s16>), 0
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
     ; GFX9: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[UV]]
@@ -512,8 +507,7 @@ body: |
     ; GFX9: [[FMINNUM_IEEE1:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[FMINNUM_IEEE]](<2 x s16>), [[FMINNUM_IEEE1]](<2 x s16>)
     ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT2]](<3 x s16>), 0
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
     ; GFX9: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = COPY $vgpr2_vgpr3

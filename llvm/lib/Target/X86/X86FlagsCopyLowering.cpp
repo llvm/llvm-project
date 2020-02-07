@@ -639,8 +639,6 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           FlagsKilled = true;
 
           switch (MI.getOpcode()) {
-          case X86::SETB_C8r:
-          case X86::SETB_C16r:
           case X86::SETB_C32r:
           case X86::SETB_C64r:
             // Use custom lowering for arithmetic that is merely extending the
@@ -1057,24 +1055,9 @@ void X86FlagsCopyLoweringPass::rewriteSetCarryExtended(
 
   unsigned Sub;
   switch (SetBI.getOpcode()) {
-  case X86::SETB_C8r:
-    Sub = X86::SUB8rr;
-    break;
-
-  case X86::SETB_C16r:
-    Sub = X86::SUB16rr;
-    break;
-
-  case X86::SETB_C32r:
-    Sub = X86::SUB32rr;
-    break;
-
-  case X86::SETB_C64r:
-    Sub = X86::SUB64rr;
-    break;
-
-  default:
-    llvm_unreachable("Invalid SETB_C* opcode!");
+  default: llvm_unreachable("Invalid SETB_C* opcode!");
+  case X86::SETB_C32r: Sub = X86::SUB32rr; break;
+  case X86::SETB_C64r: Sub = X86::SUB64rr; break;
   }
   Register ResultReg = MRI->createVirtualRegister(&SetBRC);
   BuildMI(MBB, SetPos, SetLoc, TII->get(Sub), ResultReg)

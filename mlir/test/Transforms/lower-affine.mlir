@@ -605,3 +605,18 @@ func @affine_min(%arg0: index, %arg1: index) -> index{
   %0 = affine.min affine_map<(d0,d1) -> (d0 - d1, d1 - d0)>(%arg0, %arg1)
   return %0 : index
 }
+
+// CHECK-LABEL: func @affine_max
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func @affine_max(%arg0: index, %arg1: index) -> index{
+  // CHECK: %[[Cm1:.*]] = constant -1
+  // CHECK: %[[neg1:.*]] = muli %[[ARG1]], %[[Cm1:.*]]
+  // CHECK: %[[first:.*]] = addi %[[ARG0]], %[[neg1]]
+  // CHECK: %[[Cm2:.*]] = constant -1
+  // CHECK: %[[neg2:.*]] = muli %[[ARG0]], %[[Cm2:.*]]
+  // CHECK: %[[second:.*]] = addi %[[ARG1]], %[[neg2]]
+  // CHECK: %[[cmp:.*]] = cmpi "sgt", %[[first]], %[[second]]
+  // CHECK: select %[[cmp]], %[[first]], %[[second]]
+  %0 = affine.max affine_map<(d0,d1) -> (d0 - d1, d1 - d0)>(%arg0, %arg1)
+  return %0 : index
+}

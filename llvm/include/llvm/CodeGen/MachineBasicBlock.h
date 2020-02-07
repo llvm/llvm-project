@@ -18,6 +18,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/simple_ilist.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
@@ -588,7 +589,9 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
-  MachineBasicBlock *SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P);
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to

@@ -191,11 +191,7 @@ private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumRegions = SCUDO_MMAP_RANGE_SIZE >> RegionSizeLog;
-#if SCUDO_WORDSIZE == 32U
   typedef FlatByteMap<NumRegions> ByteMap;
-#else
-  typedef TwoLevelByteMap<(NumRegions >> 12), 1UL << 12> ByteMap;
-#endif
 
   struct SizeClassStats {
     uptr PoppedBlocks;

@@ -137,9 +137,8 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
 }
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
-arm::ReadTPMode arm::getReadTPMode(const ToolChain &TC, const ArgList &Args) {
+arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
-    const Driver &D = TC.getDriver();
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::Cp15)
@@ -156,11 +155,14 @@ arm::ReadTPMode arm::getReadTPMode(const ToolChain &TC, const ArgList &Args) {
   return ReadTPMode::Soft;
 }
 
+arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
+  return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
+}
+
 // Select the float ABI as determined by -msoft-float, -mhard-float, and
 // -mfloat-abi=.
-arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
-  const Driver &D = TC.getDriver();
-  const llvm::Triple &Triple = TC.getEffectiveTriple();
+arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
+                                  const ArgList &Args) {
   auto SubArch = getARMSubArchVersionNumber(Triple);
   arm::FloatABI ABI = FloatABI::Invalid;
   if (Arg *A =
@@ -276,18 +278,13 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return ABI;
 }
 
-void arm::getARMTargetFeatures(const ToolChain &TC,
-                               const llvm::Triple &Triple,
-                               const ArgList &Args,
-                               ArgStringList &CmdArgs,
-                               std::vector<StringRef> &Features,
-                               bool ForAS) {
-  const Driver &D = TC.getDriver();
-
+void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                               const ArgList &Args, ArgStringList &CmdArgs,
+                               std::vector<StringRef> &Features, bool ForAS) {
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
-  arm::FloatABI ABI = arm::getARMFloatABI(TC, Args);
-  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(TC, Args);
+  arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
+  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(D, Args);
   const Arg *WaCPU = nullptr, *WaFPU = nullptr;
   const Arg *WaHDiv = nullptr, *WaArch = nullptr;
 

@@ -1269,19 +1269,7 @@ public:
     if (!E->getConstructor()->isTrivial())
       return nullptr;
 
-    // FIXME: We should not have to call getBaseElementType here.
-    const auto *RT =
-        CGM.getContext().getBaseElementType(Ty)->castAs<RecordType>();
-    const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
-
-    // If the class doesn't have a trivial destructor, we can't emit it as a
-    // constant expr.
-    if (!RD->hasTrivialDestructor())
-      return nullptr;
-
-    // Only copy and default constructors can be trivial.
-
-
+    // Only default and copy/move constructors can be trivial.
     if (E->getNumArgs()) {
       assert(E->getNumArgs() == 1 && "trivial ctor with > 1 argument");
       assert(E->getConstructor()->isCopyOrMoveConstructor() &&

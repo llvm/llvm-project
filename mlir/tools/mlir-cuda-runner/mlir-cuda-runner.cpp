@@ -28,6 +28,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/JitRunner.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "cuda.h"
 
@@ -106,6 +107,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
 
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
+  kernelPm.addPass(createStripDebugInfoPass());
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
   kernelPm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
   pm.addPass(createLowerToLLVMPass());

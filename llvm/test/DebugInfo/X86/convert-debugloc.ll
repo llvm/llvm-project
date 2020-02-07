@@ -48,7 +48,7 @@
 define dso_local signext i8 @foo(i8 signext %x) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.value(metadata i8 %x, metadata !13, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
+  call void @llvm.dbg.value(metadata i8 32, metadata !13, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
   ret i8 %x, !dbg !16
 }
 

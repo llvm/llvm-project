@@ -707,6 +707,25 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
 
 // -----
 
+#contraction_accesses = [
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ]
+#contraction_trait = {
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
+func @contraction(%arg0: vector<4x3xi32>,
+                  %arg1: vector<3x7xf32>,
+                  %arg2: vector<4x7xf32>) -> vector<4x7xf32> {
+  // expected-error@+1 {{'vector.contract' op failed to verify that first operand lhs and result have same element type}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<4x3xi32>, vector<3x7xf32> into vector<4x7xf32>
+}
+
+// -----
+
 func @create_mask() {
   %c2 = constant 2 : index
   %c3 = constant 3 : index
@@ -888,4 +907,86 @@ func @reshape_bad_output_fixed_size(%arg0 : vector<3x2x4xf32>) {
   // expected-error@+1 {{fixed vector size must match output vector for dim 0}}
   %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
     : vector<3x2x4xf32> to vector<2x3x5xf32>
+}
+
+// -----
+
+func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{op source/result vectors must have same element type}}
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
+}
+
+// -----
+
+func @shape_cast_wrong_element_type_tuple(%arg0 : tuple<vector<5x4x2xf32>,
+                                                        vector<3x4x2xf32>>) {
+  // expected-error@+1 {{op source/result vectors must have same element type}}
+  %0 = vector.shape_cast %arg0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                                 tuple<vector<20x2xi32>, vector<12x2xi32>>
+}
+
+// -----
+
+func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{op source/result number of elements must match}}
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<10x2xf32>
+}
+
+// -----
+
+func @shape_cast_wrong_num_elements_tuple(%arg0 : tuple<vector<5x4x2xf32>,
+                                                        vector<3x4x2xf32>>) {
+  // expected-error@+1 {{op source/result number of elements must match}}
+  %0 = vector.shape_cast %arg0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                                 tuple<vector<21x2xf32>, vector<13x2xf32>>
+}
+
+// -----
+
+func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{invalid shape cast}}
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<2x15xf32>
+}
+
+// -----
+
+func @shape_cast_invalid_rank_reduction_tuple(%arg0
+  : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>) {
+  // expected-error@+1 {{invalid shape cast}}
+  %0 = vector.shape_cast %arg0: tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                                tuple<vector<10x4xf32>, vector<6x4xf32>>
+}
+
+// -----
+
+func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
+  // expected-error@+1 {{invalid shape cast}}
+  %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
+}
+
+// -----
+
+func @shape_cast_invalid_rank_expansion_tuple(%arg0 : tuple<vector<20x2xf32>,
+                                                            vector<12x2xf32>>) {
+  // expected-error@+1 {{invalid shape cast}}
+  %0 = vector.shape_cast %arg0 : tuple<vector<20x2xf32>, vector<12x2xf32>> to
+                                 tuple<vector<5x2x4xf32>, vector<4x3x2xf32>>
+}
+
+// -----
+
+func @shape_cast_source_result_different_types(
+  %arg1 : tuple<vector<20x2xf32>, vector<12x2xf32>>) {
+  // expected-error@+1 {{source/result must be of same type}}
+  %1 = vector.shape_cast %arg1 : tuple<vector<20x2xf32>, vector<12x2xf32>> to
+                                 vector<5x2x4xf32>
+}
+
+// -----
+
+func @shape_cast_different_tuple_sizes(
+  %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>) {
+  // expected-error@+1 {{op source/result tuples must be the same size}}
+  %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                                 tuple<vector<20x2xf32>>
 }

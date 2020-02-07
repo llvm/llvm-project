@@ -1837,6 +1837,23 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
+
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {
     QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc,
@@ -2176,6 +2193,23 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
+
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
 
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {

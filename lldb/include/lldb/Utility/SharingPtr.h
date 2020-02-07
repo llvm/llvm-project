@@ -135,7 +135,6 @@ public:
   void swap(SharingPtr &r);
   void reset();
   template <class Y> void reset(Y *p);
-  void reset(std::nullptr_t);
 
   element_type *get() const { return ptr_; }
   element_type &operator*() const { return *ptr_; }
@@ -233,10 +232,6 @@ template <class T> inline void SharingPtr<T>::swap(SharingPtr &r) {
 
 template <class T> inline void SharingPtr<T>::reset() {
   SharingPtr().swap(*this);
-}
-
-template <class T> inline void SharingPtr<T>::reset(std::nullptr_t p) {
-  reset();
 }
 
 template <class T> template <class Y> inline void SharingPtr<T>::reset(Y *p) {

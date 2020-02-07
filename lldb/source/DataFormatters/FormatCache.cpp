@@ -68,6 +68,8 @@ FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
   return m_map[type];
 }
 
+namespace lldb_private {
+
 template<> bool FormatCache::Entry::IsCached<lldb::TypeFormatImplSP>() {
   return IsFormatCached();
 }
@@ -77,6 +79,8 @@ template<> bool FormatCache::Entry::IsCached<lldb::TypeSummaryImplSP> () {
 template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
   return IsSyntheticCached();
 }
+
+} // namespace lldb_private
 
 template <typename ImplSP>
 bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {

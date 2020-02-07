@@ -960,7 +960,7 @@ bool isGCN3Encoding(const MCSubtargetInfo &STI) {
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
-  const unsigned FirstSubReg = TRI->getSubReg(Reg, 1);
+  const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
 }

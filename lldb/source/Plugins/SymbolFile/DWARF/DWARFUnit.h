@@ -79,6 +79,8 @@ public:
           DIERef::Section section, lldb::offset_t *offset_ptr);
   virtual ~DWARFUnit();
 
+  bool IsDWOUnit() { return m_is_dwo; }
+
   void ExtractUnitDIEIfNeeded();
   void ExtractDIEsIfNeeded();
 

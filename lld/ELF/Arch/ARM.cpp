@@ -409,7 +409,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // not of type STT_FUNC then we must preserve the original instruction.
     // PLT entries are always ARM state so we know we don't need to interwork.
     bool isBlx = (read32le(loc) & 0xfe000000) == 0xfa000000;
-    bool interwork = rel.sym && rel.sym->isFunc() && rel.type != R_PLT_PC;
+    bool interwork = rel.sym && rel.sym->isFunc() && rel.expr != R_PLT_PC;
     if (interwork ? val & 1 : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
@@ -454,7 +454,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // not of type STT_FUNC then we must preserve the original instruction.
     // PLT entries are always ARM state so we know we need to interwork.
     bool isBlx = (read16le(loc + 2) & 0x1000) == 0;
-    bool interwork = (rel.sym && rel.sym->isFunc()) || rel.type == R_PLT_PC;
+    bool interwork = (rel.sym && rel.sym->isFunc()) || rel.expr == R_PLT_PC;
     if (interwork ? (val & 1) == 0 : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done

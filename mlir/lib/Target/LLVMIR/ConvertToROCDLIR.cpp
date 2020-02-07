@@ -57,11 +57,8 @@ static llvm::Value *createDeviceFunctionCall(llvm::IRBuilder<> &builder,
 
 namespace {
 class ModuleTranslation : public LLVM::ModuleTranslation {
-
 public:
-  explicit ModuleTranslation(Operation *module)
-      : LLVM::ModuleTranslation(module) {}
-  ~ModuleTranslation() override {}
+  using LLVM::ModuleTranslation::ModuleTranslation;
 
 protected:
   LogicalResult convertOperation(Operation &opInst,
@@ -71,12 +68,13 @@ protected:
 
     return LLVM::ModuleTranslation::convertOperation(opInst, builder);
   }
+
+  /// Allow access to the constructor.
+  friend LLVM::ModuleTranslation;
 };
 } // namespace
 
 std::unique_ptr<llvm::Module> mlir::translateModuleToROCDLIR(Operation *m) {
-  ModuleTranslation translation(m);
-
   // lower MLIR (with RODL Dialect) to LLVM IR (with ROCDL intrinsics)
   auto llvmModule =
       LLVM::ModuleTranslation::translateModule<ModuleTranslation>(m);

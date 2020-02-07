@@ -234,7 +234,20 @@ def AffineIfOp : Affine_Op<"if", [ImplicitAffineTerminator]> {
   let hasFolder = 1;
 }
 
-def AffineMinOp : Affine_Op<"min"> {
+class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
+    Op<Affine_Dialect, mnemonic, traits> {
+  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
+  let results = (outs Index);
+  let extraClassDeclaration = [{
+    static StringRef getMapAttrName() { return "map"; }
+  }];
+  let verifier = [{ return ::verifyAffineMinMaxOp(*this); }];
+  let printer = [{ return ::printAffineMinMaxOp(p, *this); }];
+  let parser = [{ return ::parseAffineMinMaxOp<$cppClass>(parser, result); }];
+  let hasFolder = 1;
+}
+
+def AffineMinOp : AffineMinMaxOpBase<"min"> {
   let summary = "min operation";
   let description = [{
     The "min" operation computes the minimum value result from a multi-result
@@ -244,12 +257,18 @@ def AffineMinOp : Affine_Op<"min"> {
 
        %0 = affine.min (d0) -> (1000, d0 + 512) (%i0) : index
   }];
-  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
-  let results = (outs Index);
-  let extraClassDeclaration = [{
-    static StringRef getMapAttrName() { return "map"; }
+}
+
+def AffineMaxOp : AffineMinMaxOpBase<"max"> {
+  let summary = "max operation";
+  let description = [{
+    The "max" operation computes the maximum value result from a multi-result
+    affine map.
+
+    Example:
+
+       %0 = affine.max (d0) -> (1000, d0 + 512) (%i0) : index
   }];
-  let hasFolder = 1;
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch"> {

@@ -152,8 +152,6 @@ def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
 def X86setcc   : SDNode<"X86ISD::SETCC",    SDTX86SetCC>;
 def X86setcc_c : SDNode<"X86ISD::SETCC_CARRY", SDTX86SetCC_C>;
 
-def X86sahf    : SDNode<"X86ISD::SAHF",     SDTX86sahf>;
-
 def X86rdrand  : SDNode<"X86ISD::RDRAND",   SDTX86rdrand,
                         [SDNPHasChain, SDNPSideEffect]>;
 
@@ -1787,9 +1785,8 @@ def MOV8rm_NOREX : I<0x8A, MRMSrcMem,
 
 // Condition code ops, incl. set if equal/not equal/...
 let SchedRW = [WriteLAHFSAHF] in {
-let Defs = [EFLAGS], Uses = [AH] in
-def SAHF     : I<0x9E, RawFrm, (outs),  (ins), "sahf",
-                 [(set EFLAGS, (X86sahf AH))]>,
+let Defs = [EFLAGS], Uses = [AH], hasSideEffects = 0 in
+def SAHF     : I<0x9E, RawFrm, (outs),  (ins), "sahf", []>,  // flags = AH
                  Requires<[HasLAHFSAHF]>;
 let Defs = [AH], Uses = [EFLAGS], hasSideEffects = 0 in
 def LAHF     : I<0x9F, RawFrm, (outs),  (ins), "lahf", []>,  // AH = flags

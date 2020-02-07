@@ -24,7 +24,7 @@ size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
 }
 
 static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
-                           gwp_asan::options::Printf_t Printf) {
+                           gwp_asan::crash_handler::Printf_t Printf) {
   if (TraceLength == 0) {
     Printf("  <not found (does your allocator support backtracing?)>\n\n");
     return;
@@ -49,6 +49,8 @@ static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
 namespace gwp_asan {
 namespace options {
 Backtrace_t getBacktraceFunction() { return Backtrace; }
-PrintBacktrace_t getPrintBacktraceFunction() { return PrintBacktrace; }
+crash_handler::PrintBacktrace_t getPrintBacktraceFunction() {
+  return PrintBacktrace;
+}
 } // namespace options
 } // namespace gwp_asan

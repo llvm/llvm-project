@@ -12,11 +12,14 @@
 
 #include "RNBRemote.h"
 
+#include <bsm/audit.h>
+#include <bsm/audit_session.h>
 #include <errno.h>
 #include <libproc.h>
 #include <mach-o/loader.h>
 #include <mach/exception_types.h>
 #include <mach/task_info.h>
+#include <pwd.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -3684,6 +3687,42 @@ static bool attach_failed_due_to_sip (nub_process_t pid) {
   return retval;
 }
 
+// my_uid and process_uid are only initialized if this function
+// returns true -- that there was a uid mismatch -- and those
+// id's may want to be used in the error message.
+// 
+// NOTE: this should only be called after process_does_not_exist().
+// This sysctl will return uninitialized data if we ask for a pid
+// that doesn't exist.  The alternative would be to fetch all
+// processes and step through to find the one we're looking for
+// (as process_does_not_exist() does).
+static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
+                                               uid_t &my_uid,
+                                               uid_t &process_uid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0) {
+    return false; // pid doesn't exist? can't check uid mismatch - it was fine
+  }
+  my_uid = geteuid();
+  if (my_uid == 0)
+    return false; // if we're root, attach didn't fail because of uid mismatch
+  process_uid = kinfo.kp_eproc.e_ucred.cr_uid;
+
+  // If my uid != the process' uid, then the attach probably failed because
+  // of that.
+  if (my_uid != process_uid)
+    return true;
+  else
+    return false;
+}
+
+// NOTE: this should only be called after process_does_not_exist().
+// This sysctl will return uninitialized data if we ask for a pid
+// that doesn't exist.  The alternative would be to fetch all
+// processes and step through to find the one we're looking for
+// (as process_does_not_exist() does).
 static bool process_is_already_being_debugged (nub_process_t pid) {
   struct kinfo_proc kinfo;
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
@@ -3693,6 +3732,19 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
   }
   if (kinfo.kp_proc.p_flag & P_TRACED)
     return true; // is being debugged already
+  else
+    return false;
+}
+
+// Test if this current login session has a connection to the
+// window server (if it does not have that access, it cannot ask
+// for debug permission by popping up a dialog box and attach
+// may fail outright).
+static bool login_session_has_gui_access () {
+  auditinfo_addr_t info;
+  getaudit_addr(&info, sizeof(info));
+  if (info.ai_flags & AU_SESSION_FLAG_HAS_GRAPHIC_ACCESS)
+    return true;
   else
     return false;
 }
@@ -3714,6 +3766,9 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
 // $ security authorizationdb read system.privilege.taskport.debug
 
 static bool developer_mode_enabled () {
+#if TARGET_OS_OSX == 0
+  return true;
+#else
  CFDictionaryRef currentRightDict = NULL;
  const char *debug_right = "system.privilege.taskport.debug";
  // caller must free dictionary initialized by the following
@@ -3745,7 +3800,13 @@ static bool developer_mode_enabled () {
  } else {
    CFStringRef item = (CFStringRef) CFDictionaryGetValue(currentRightDict, CFSTR("class"));
    if (item && CFGetTypeID(item) == CFStringGetTypeID()) {
-     if (strcmp (CFStringGetCStringPtr (item, ::CFStringGetSystemEncoding()), "rule") != 0) {
+     char tmpbuf[128];
+     if (CFStringGetCString (item, tmpbuf, sizeof(tmpbuf), CFStringGetSystemEncoding())) {
+       tmpbuf[sizeof (tmpbuf) - 1] = '\0';
+       if (strcmp (tmpbuf, "rule") != 0) {
+         devmode_enabled = false;
+       }
+     } else {
        devmode_enabled = false;
      }
    } else {
@@ -3773,6 +3834,7 @@ static bool developer_mode_enabled () {
  ::CFRelease(currentRightDict);
 
  return devmode_enabled;
+#endif // TARGET_OS_OSX
 }
 
 /*
@@ -3943,6 +4005,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       // string to lldb.
 
       if (pid_attaching_to != INVALID_NUB_PROCESS) {
+        // The order of these checks is important.  
         if (process_does_not_exist (pid_attaching_to)) {
           DNBLogError("Tried to attach to pid that doesn't exist");
           std::string return_message = "E96;";
@@ -3956,12 +4019,44 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "process already being debugged");
           return SendPacket(return_message.c_str());
         }
-        if (!developer_mode_enabled()) {
-          DNBLogError("Developer mode is not enabled");
+        uid_t my_uid, process_uid;
+        if (attach_failed_due_to_uid_mismatch (pid_attaching_to, 
+                                               my_uid, process_uid)) {
+          std::string my_username = "uid " + std::to_string (my_uid);
+          std::string process_username = "uid " + std::to_string (process_uid);
+          struct passwd *pw = getpwuid (my_uid);
+          if (pw && pw->pw_name) {
+            my_username = pw->pw_name;
+          }
+          pw = getpwuid (process_uid);
+          if (pw && pw->pw_name) {
+            process_username = pw->pw_name;
+          }
+          DNBLogError("Tried to attach to process with uid mismatch");
           std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("developer mode is not "
-                                           "enabled on this machine.  "
-                                           "sudo DevToolsSecurity --enable");
+          std::string msg = "tried to attach to process as user '" 
+                            + my_username + "' and process is running "
+                            "as user '" + process_username + "'";
+          return_message += cstring_to_asciihex_string(msg.c_str());
+          return SendPacket(return_message.c_str());
+        }
+        if (!login_session_has_gui_access() && !developer_mode_enabled()) {
+          DNBLogError("Developer mode is not enabled and this is a "
+                      "non-interactive session");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("developer mode is "
+                                           "not enabled on this machine "
+                                           "and this is a non-interactive "
+                                           "debug session.");
+          return SendPacket(return_message.c_str());
+        }
+        if (!login_session_has_gui_access()) {
+          DNBLogError("This is a non-interactive session");
+          std::string return_message = "E96;";
+          return_message += cstring_to_asciihex_string("this is a "
+                                           "non-interactive debug session, "
+                                           "cannot get permission to debug "
+                                           "processes.");
           return SendPacket(return_message.c_str());
         }
         if (attach_failed_due_to_sip (pid_attaching_to)) {
@@ -3973,7 +4068,16 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         }
       }
 
-      SendPacket("E01"); // E01 is our magic error value for attach failed.
+      std::string error_explainer = "attach failed";
+      if (err_str[0] != '\0') {
+        error_explainer += " (";
+        error_explainer += err_str;
+        error_explainer += ")";
+      }
+      std::string default_return_msg = "E96;";
+      default_return_msg += cstring_to_asciihex_string 
+                              (error_explainer.c_str());
+      SendPacket (default_return_msg.c_str());
       DNBLogError("Attach failed: \"%s\".", err_str);
       return rnb_err;
     }

@@ -18,13 +18,12 @@
 
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
-
 #include "sanitizer_platform_limits_posix.h"
 
 // FreeBSD's dlopen() returns a pointer to an Obj_Entry structure that
 // incorporates the map structure.
-# define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-    ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 560)))
+#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
+  ((link_map *)((handle) == nullptr ? nullptr : ((char *)(handle) + 560)))
 // Get sys/_types.h, because that tells us whether 64-bit inodes are
 // used in struct dirent below.
 #include <sys/_types.h>
@@ -148,7 +147,7 @@ struct __sanitizer_ifaddrs {
   unsigned int ifa_flags;
   void *ifa_addr;     // (struct sockaddr *)
   void *ifa_netmask;  // (struct sockaddr *)
-# undef ifa_dstaddr
+#undef ifa_dstaddr
   void *ifa_dstaddr;  // (struct sockaddr *)
   void *ifa_data;
 };
@@ -631,27 +630,27 @@ extern unsigned struct_cap_rights_sz;
 
 extern unsigned struct_fstab_sz;
 extern unsigned struct_StringList_sz;
-} // namespace __sanitizer
+}  // namespace __sanitizer
 
 #define CHECK_TYPE_SIZE(TYPE) \
   COMPILER_CHECK(sizeof(__sanitizer_##TYPE) == sizeof(TYPE))
 
-#define CHECK_SIZE_AND_OFFSET(CLASS, MEMBER)                       \
-  COMPILER_CHECK(sizeof(((__sanitizer_##CLASS *) NULL)->MEMBER) == \
-                 sizeof(((CLASS *) NULL)->MEMBER));                \
-  COMPILER_CHECK(offsetof(__sanitizer_##CLASS, MEMBER) ==          \
+#define CHECK_SIZE_AND_OFFSET(CLASS, MEMBER)                      \
+  COMPILER_CHECK(sizeof(((__sanitizer_##CLASS *)NULL)->MEMBER) == \
+                 sizeof(((CLASS *)NULL)->MEMBER));                \
+  COMPILER_CHECK(offsetof(__sanitizer_##CLASS, MEMBER) ==         \
                  offsetof(CLASS, MEMBER))
 
 // For sigaction, which is a function and struct at the same time,
 // and thus requires explicit "struct" in sizeof() expression.
-#define CHECK_STRUCT_SIZE_AND_OFFSET(CLASS, MEMBER)                       \
-  COMPILER_CHECK(sizeof(((struct __sanitizer_##CLASS *) NULL)->MEMBER) == \
-                 sizeof(((struct CLASS *) NULL)->MEMBER));                \
-  COMPILER_CHECK(offsetof(struct __sanitizer_##CLASS, MEMBER) ==          \
+#define CHECK_STRUCT_SIZE_AND_OFFSET(CLASS, MEMBER)                      \
+  COMPILER_CHECK(sizeof(((struct __sanitizer_##CLASS *)NULL)->MEMBER) == \
+                 sizeof(((struct CLASS *)NULL)->MEMBER));                \
+  COMPILER_CHECK(offsetof(struct __sanitizer_##CLASS, MEMBER) ==         \
                  offsetof(struct CLASS, MEMBER))
 
 #define SIGACTION_SYMNAME sigaction
 
 #endif
 
-#endif // SANITIZER_FREEBSD
+#endif  // SANITIZER_FREEBSD

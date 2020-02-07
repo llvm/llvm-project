@@ -273,8 +273,7 @@ body: |
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[TRUNC]](<3 x s8>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF1]](<4 x s8>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
     ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[TRUNC1]](<3 x s8>), 0
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT1]](<4 x s16>)
     ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[INSERT]](<4 x s8>)
@@ -404,12 +403,10 @@ body: |
     ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[COPY2]](<4 x s16>), 0
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT1]](<3 x s16>), 0
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; CHECK: [[SELECT:%[0-9]+]]:_(<4 x s16>) = G_SELECT [[ICMP]](s1), [[INSERT]], [[INSERT1]]
     ; CHECK: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[SELECT]](<4 x s16>), 0
-    ; CHECK: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT2]](<3 x s16>), 0
+    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
     ; CHECK: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     %0:_(s32) = COPY $vgpr0
     %1:_(<4 x s16>) = COPY $vgpr1_vgpr2
@@ -921,7 +918,8 @@ body: |
     ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[EXTRACT]], [[EXTRACT2]]
     ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[EXTRACT1]], [[EXTRACT3]]
     ; CHECK: [[DEF2:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[DEF2]], [[SELECT]](s64), 0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s96) = COPY [[DEF2]](s96)
+    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[COPY1]], [[SELECT]](s64), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:_(s96) = G_INSERT [[INSERT]], [[SELECT1]](s32), 64
     ; CHECK: [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[UV1]](s96), 0
     ; CHECK: [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[UV1]](s96), 64
@@ -929,8 +927,7 @@ body: |
     ; CHECK: [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[UV3]](s96), 64
     ; CHECK: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[EXTRACT4]], [[EXTRACT6]]
     ; CHECK: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[EXTRACT5]], [[EXTRACT7]]
-    ; CHECK: [[DEF3:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT2:%[0-9]+]]:_(s96) = G_INSERT [[DEF3]], [[SELECT2]](s64), 0
+    ; CHECK: [[INSERT2:%[0-9]+]]:_(s96) = G_INSERT [[DEF2]], [[SELECT2]](s64), 0
     ; CHECK: [[INSERT3:%[0-9]+]]:_(s96) = G_INSERT [[INSERT2]], [[SELECT3]](s32), 64
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s96>) = G_BUILD_VECTOR [[INSERT1]](s96), [[INSERT3]](s96)
     ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s96>)

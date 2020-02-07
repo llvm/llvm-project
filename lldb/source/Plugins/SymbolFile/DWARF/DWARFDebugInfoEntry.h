@@ -158,8 +158,7 @@ public:
     return HasChildren() ? this + 1 : nullptr;
   }
 
-  void GetDWARFDeclContext(DWARFUnit *cu,
-                           DWARFDeclContext &dwarf_decl_ctx) const;
+  DWARFDeclContext GetDWARFDeclContext(DWARFUnit *cu) const;
 
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu) const;
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu,
@@ -169,6 +168,9 @@ public:
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
 protected:
+  static DWARFDeclContext
+  GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
+
   dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
   uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
                          // If zero this die has no parent

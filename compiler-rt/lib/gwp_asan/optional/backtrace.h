@@ -9,6 +9,7 @@
 #ifndef GWP_ASAN_OPTIONAL_BACKTRACE_H_
 #define GWP_ASAN_OPTIONAL_BACKTRACE_H_
 
+#include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
 
 namespace gwp_asan {
@@ -21,7 +22,7 @@ namespace options {
 // note any thread-safety descriptions for the implementation of these functions
 // that you use.
 Backtrace_t getBacktraceFunction();
-PrintBacktrace_t getPrintBacktraceFunction();
+crash_handler::PrintBacktrace_t getPrintBacktraceFunction();
 } // namespace options
 } // namespace gwp_asan
 

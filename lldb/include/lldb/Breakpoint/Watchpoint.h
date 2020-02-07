@@ -160,8 +160,8 @@ private:
   void ResetHitCount() { m_hit_count = 0; }
 
   void ResetHistoricValues() {
-    m_old_value_sp.reset(nullptr);
-    m_new_value_sp.reset(nullptr);
+    m_old_value_sp.reset();
+    m_new_value_sp.reset();
   }
 
   Target &m_target;

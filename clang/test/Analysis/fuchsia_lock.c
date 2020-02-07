@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=fuchsia.Lock -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.fuchsia.Lock -verify %s
 
 typedef int spin_lock_t;
 typedef int zx_status_t;

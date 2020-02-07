@@ -284,7 +284,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16})
       .clampScalar(0, S16, S32)
-      .scalarize(0);
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32);
   } else {
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32})
@@ -323,8 +324,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
     .legalIf(all(isRegisterType(0), isRegisterType(1)))
-    // FIXME: Testing hack
-    .legalForCartesianProduct({S16, LLT::vector(2, 8), })
     .lower();
 
 

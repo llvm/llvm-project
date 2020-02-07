@@ -65,7 +65,7 @@ using dice_iterator = content_iterator<DiceRef>;
 /// ExportEntry encapsulates the current-state-of-the-walk used when doing a
 /// non-recursive walk of the trie data structure.  This allows you to iterate
 /// across all exported symbols using:
-///      Error Err;
+///      Error Err = Error::success();
 ///      for (const llvm::object::ExportEntry &AnExport : Obj->exports(&Err)) {
 ///      }
 ///      if (Err) { report error ...
@@ -160,7 +160,7 @@ private:
 /// MachORebaseEntry encapsulates the current state in the decompression of
 /// rebasing opcodes. This allows you to iterate through the compressed table of
 /// rebasing using:
-///    Error Err;
+///    Error Err = Error::success();
 ///    for (const llvm::object::MachORebaseEntry &Entry : Obj->rebaseTable(&Err)) {
 ///    }
 ///    if (Err) { report error ...
@@ -204,7 +204,7 @@ using rebase_iterator = content_iterator<MachORebaseEntry>;
 /// MachOBindEntry encapsulates the current state in the decompression of
 /// binding opcodes. This allows you to iterate through the compressed table of
 /// bindings using:
-///    Error Err;
+///    Error Err = Error::success();
 ///    for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable(&Err)) {
 ///    }
 ///    if (Err) { report error ...

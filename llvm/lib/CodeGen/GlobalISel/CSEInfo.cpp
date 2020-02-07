@@ -52,6 +52,7 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ANYEXT:
@@ -64,7 +65,7 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
 }
 
 bool CSEConfigConstantOnly::shouldCSEOpc(unsigned Opc) {
-  return Opc == TargetOpcode::G_CONSTANT;
+  return Opc == TargetOpcode::G_CONSTANT || Opc == TargetOpcode::G_IMPLICIT_DEF;
 }
 
 std::unique_ptr<CSEConfigBase>

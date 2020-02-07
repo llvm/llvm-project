@@ -3180,8 +3180,8 @@ void AsmPrinter::emitXRayTable() {
   MCSection *InstMap = nullptr;
   MCSection *FnSledIndex = nullptr;
   if (MF->getSubtarget().getTargetTriple().isOSBinFormatELF()) {
-    auto Associated = dyn_cast<MCSymbolELF>(CurrentFnSym);
-    assert(Associated != nullptr);
+    auto LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    assert(LinkedToSym != nullptr);
     auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
     std::string GroupName;
     if (F.hasComdat()) {
@@ -3192,10 +3192,10 @@ void AsmPrinter::emitXRayTable() {
     auto UniqueID = ++XRayFnUniqueID;
     InstMap =
         OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS, Flags, 0,
-                                 GroupName, UniqueID, Associated);
+                                 GroupName, UniqueID, LinkedToSym);
     FnSledIndex =
         OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS, Flags, 0,
-                                 GroupName, UniqueID, Associated);
+                                 GroupName, UniqueID, LinkedToSym);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
     InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
                                          SectionKind::getReadOnlyWithRel());

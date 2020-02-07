@@ -666,7 +666,8 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
-; SSE-NEXT:    sbbw %ax, %ax
+; SSE-NEXT:    sbbl %eax, %eax
+; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v16i16_legal_sext:
@@ -678,7 +679,8 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
-; AVX1-NEXT:    sbbw %ax, %ax
+; AVX1-NEXT:    sbbl %eax, %eax
+; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -689,7 +691,8 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    sbbw %ax, %ax
+; AVX2-NEXT:    sbbl %eax, %eax
+; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -731,7 +734,8 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
-; SSE-NEXT:    sbbb %al, %al
+; SSE-NEXT:    sbbl %eax, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_sext:
@@ -739,7 +743,8 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX-NEXT:    negl %eax
-; AVX-NEXT:    sbbb %al, %al
+; AVX-NEXT:    sbbl %eax, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16i8_sext:
@@ -778,7 +783,8 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
-; SSE-NEXT:    sbbb %al, %al
+; SSE-NEXT:    sbbl %eax, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v32i8_sext:
@@ -790,7 +796,8 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
-; AVX1-NEXT:    sbbb %al, %al
+; AVX1-NEXT:    sbbl %eax, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -799,7 +806,8 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    sbbb %al, %al
+; AVX2-NEXT:    sbbl %eax, %eax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

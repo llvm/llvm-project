@@ -19,6 +19,13 @@ append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding SCUDO_CFLAGS)
 
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SCUDO_CFLAGS)
 
+if (COMPILER_RT_HAS_GWP_ASAN)
+  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer
+                SCUDO_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG
+                -mno-omit-leaf-frame-pointer SCUDO_CFLAGS)
+endif() # COMPILER_RT_HAS_GWP_ASAN
+
 if(COMPILER_RT_DEBUG)
   list(APPEND SCUDO_CFLAGS -O0)
 else()
@@ -107,7 +114,8 @@ set(SCUDO_SOURCES_CXX_WRAPPERS
 set(SCUDO_OBJECT_LIBS)
 
 if (COMPILER_RT_HAS_GWP_ASAN)
-  list(APPEND SCUDO_OBJECT_LIBS RTGwpAsan)
+  list(APPEND SCUDO_OBJECT_LIBS
+       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 

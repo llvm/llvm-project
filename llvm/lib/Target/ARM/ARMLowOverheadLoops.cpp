@@ -390,6 +390,8 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // The element count register maybe defined after InsertPt, in which case we
   // need to try to move either InsertPt or the def so that the [w|d]lstp can
   // use the value.
+  // TODO: On failing to move an instruction, check if the count is provided by
+  // a mov and whether we can use the mov operand directly.
   MachineBasicBlock *InsertBB = StartInsertPt->getParent();
   if (!RDA->isReachingDefLiveOut(StartInsertPt, NumElements)) {
     if (auto *ElemDef = RDA->getLocalLiveOutMIDef(InsertBB, NumElements)) {

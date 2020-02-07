@@ -13,10 +13,6 @@ if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
   message(WARNING "Disabling ASan tests because they are unreliable on Windows 7 and earlier")
 endif()
 
-if (SHADOW_MAPPING_UNRELIABLE)
-  set(EXCLUDE_FROM_ALL TRUE)
-endif()
-
 macro(get_bits_for_arch arch bits)
   if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x|sparcv9")
     set(${bits} 64)
@@ -82,7 +78,6 @@ endforeach()
 # variable to select which iOS device or simulator to use, e.g.:
 # SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
 if(APPLE)
-  set(EXCLUDE_FROM_ALL ON)
   set(ASAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
   set(ASAN_TEST_DYNAMIC True)
   set(ASAN_APPLE_PLATFORMS ${SANITIZER_COMMON_SUPPORTED_OS})
@@ -116,10 +111,10 @@ if(APPLE)
         )
       add_lit_testsuite(check-asan-${platform}-${arch} "AddressSanitizer ${platform} ${arch} tests"
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+        EXCLUDE_FROM_CHECK_ALL
         DEPENDS ${ASAN_TEST_DEPS})
     endforeach()
   endforeach()
-  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 # Add unit tests.
@@ -145,8 +140,15 @@ if(COMPILER_RT_INCLUDE_TESTS)
   endif()
 endif()
 
+if (SHADOW_MAPPING_UNRELIABLE)
+  set(exclude_from_check_all.g "EXCLUDE_FROM_CHECK_ALL")
+else()
+  set(exclude_from_check_all.g "")
+endif()
+
 add_lit_testsuite(check-asan "Running the AddressSanitizer tests"
   ${ASAN_TESTSUITES}
+  ${exclude_from_check_all}
   DEPENDS ${ASAN_TEST_DEPS})
 set_target_properties(check-asan PROPERTIES FOLDER "Compiler-RT Misc")
 
@@ -154,12 +156,8 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
   add_lit_testsuite(check-asan-dynamic
                     "Running the AddressSanitizer tests with dynamic runtime"
                     ${ASAN_DYNAMIC_TESTSUITES}
+                    ${exclude_from_check_all.g}
                     DEPENDS ${ASAN_DYNAMIC_TEST_DEPS})
   set_target_properties(check-asan-dynamic
                         PROPERTIES FOLDER "Compiler-RT Misc")
-endif()
-
-# Reset EXCLUDE_FROM_ALL to its initial value.
-if (SHADOW_MAPPING_UNRELIABLE)
-  set(EXCLUDE_FROM_ALL FALSE)
 endif()

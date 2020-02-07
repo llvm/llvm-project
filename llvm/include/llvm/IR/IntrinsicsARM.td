@@ -1152,4 +1152,10 @@ defm int_arm_mve_vdwdup: MVEMXPredicated<
    [llvm_i32_ty /* base */, llvm_i32_ty /* limit */, llvm_i32_ty /* step */],
    LLVMMatchType<0>, llvm_anyvector_ty>;
 
+// Flags:
+// * unsigned
+defm int_arm_mve_vcvt_fix: MVEMXPredicated<
+  [llvm_anyvector_ty /* output */], [llvm_i32_ty],
+  [llvm_anyvector_ty /* input vector */, llvm_i32_ty /* scale */],
+  LLVMMatchType<0>, llvm_anyvector_ty>;
 } // end TargetPrefix

@@ -1560,10 +1560,10 @@ endfunction()
 
 # A function to add a set of lit test suites to be driven through 'check-*' targets.
 function(add_lit_testsuite target comment)
-  cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
+  cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
   # EXCLUDE_FROM_ALL excludes the test ${target} out of check-all.
-  if(NOT EXCLUDE_FROM_ALL)
+  if(NOT ARG_EXCLUDE_FROM_CHECK_ALL)
     # Register the testsuites, params and depends for the global check rule.
     set_property(GLOBAL APPEND PROPERTY LLVM_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
     set_property(GLOBAL APPEND PROPERTY LLVM_LIT_PARAMS ${ARG_PARAMS})
@@ -1582,7 +1582,7 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
     # Search recursively for test directories by assuming anything not
     # in a directory called Inputs contains tests.
@@ -1605,6 +1605,7 @@ function(add_lit_testsuites project directory)
         string(TOLOWER "${project}${name_dashes}" name_var)
         add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
           ${lit_suite}
+          ${EXCLUDE_FROM_CHECK_ALL}
           PARAMS ${ARG_PARAMS}
           DEPENDS ${ARG_DEPENDS}
           ARGS ${ARG_ARGS}

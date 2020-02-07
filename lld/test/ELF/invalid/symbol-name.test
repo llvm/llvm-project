@@ -12,4 +12,4 @@ FileHeader:
   Type:        ET_REL
   Machine:     EM_X86_64
 Symbols:
-  - NameIndex: 255
+  - StName: 255

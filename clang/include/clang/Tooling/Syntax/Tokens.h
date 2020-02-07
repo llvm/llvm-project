@@ -317,9 +317,14 @@ private:
 /// This always returns 0-2 tokens.
 llvm::ArrayRef<syntax::Token>
 spelledTokensTouching(SourceLocation Loc, const syntax::TokenBuffer &Tokens);
+llvm::ArrayRef<syntax::Token>
+spelledTokensTouching(SourceLocation Loc, llvm::ArrayRef<syntax::Token> Tokens);
 
 /// The identifier token that overlaps or touches a spelling location Loc.
 /// If there is none, returns nullptr.
+const syntax::Token *
+spelledIdentifierTouching(SourceLocation Loc,
+                          llvm::ArrayRef<syntax::Token> Tokens);
 const syntax::Token *
 spelledIdentifierTouching(SourceLocation Loc,
                           const syntax::TokenBuffer &Tokens);

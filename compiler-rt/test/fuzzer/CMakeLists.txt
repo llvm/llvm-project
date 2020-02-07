@@ -89,7 +89,6 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 
 if (APPLE)
-  set(EXCLUDE_FROM_ALL ON)
   set(LIBFUZZER_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
   set(FUZZER_APPLE_PLATFORMS ${FUZZER_SUPPORTED_OS})
   foreach(platform ${FUZZER_APPLE_PLATFORMS})
@@ -119,9 +118,9 @@ if (APPLE)
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py
         )
       add_lit_testsuite(check-fuzzer-${platform}-${arch} "libFuzzer ${platform} ${arch} tests"
+        EXCLUDE_FROM_CHECK_ALL
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
         DEPENDS ${LIBFUZZER_TEST_DEPS})
     endforeach()
   endforeach()
-  set(EXCLUDE_FROM_ALL OFF)
 endif()

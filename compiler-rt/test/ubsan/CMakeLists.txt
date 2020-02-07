@@ -86,6 +86,7 @@ macro(add_ubsan_device_testsuite test_mode sanitizer platform arch)
   add_lit_testsuite(check-ubsan-${test_mode}-${platform}-${arch}
     "UBSan ${CONFIG_NAME} tests"
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+    EXCLUDE_FROM_CHECK_ALL
     DEPENDS ${UBSAN_TEST_DEPS})
 endmacro()
 
@@ -102,7 +103,6 @@ if(APPLE)
   # "check-asan-iossim-x86_64" and similar. They also require that an extra env
   # variable to select which iOS device or simulator to use, e.g.:
   # SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
-  set(EXCLUDE_FROM_ALL ON)
   set(UBSAN_APPLE_PLATFORMS ${SANITIZER_COMMON_SUPPORTED_OS})
   foreach(platform ${UBSAN_APPLE_PLATFORMS})
     list_intersect(
@@ -127,7 +127,6 @@ if(APPLE)
       endif()
     endforeach()
   endforeach()
-  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"

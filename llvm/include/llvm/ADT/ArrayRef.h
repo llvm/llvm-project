@@ -308,17 +308,17 @@ namespace llvm {
     /// Construct an empty MutableArrayRef from None.
     /*implicit*/ MutableArrayRef(NoneType) : ArrayRef<T>() {}
 
-    /// Construct an MutableArrayRef from a single element.
+    /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
 
-    /// Construct an MutableArrayRef from a pointer and length.
+    /// Construct a MutableArrayRef from a pointer and length.
     /*implicit*/ MutableArrayRef(T *data, size_t length)
       : ArrayRef<T>(data, length) {}
 
-    /// Construct an MutableArrayRef from a range.
+    /// Construct a MutableArrayRef from a range.
     MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
-    /// Construct an MutableArrayRef from a SmallVector.
+    /// Construct a MutableArrayRef from a SmallVector.
     /*implicit*/ MutableArrayRef(SmallVectorImpl<T> &Vec)
     : ArrayRef<T>(Vec) {}
 
@@ -326,12 +326,12 @@ namespace llvm {
     /*implicit*/ MutableArrayRef(std::vector<T> &Vec)
     : ArrayRef<T>(Vec) {}
 
-    /// Construct an ArrayRef from a std::array
+    /// Construct a MutableArrayRef from a std::array
     template <size_t N>
     /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
         : ArrayRef<T>(Arr) {}
 
-    /// Construct an MutableArrayRef from a C array.
+    /// Construct a MutableArrayRef from a C array.
     template <size_t N>
     /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
 

@@ -842,8 +842,7 @@ body: |
     ; CHECK-LABEL: name: extract_s16_v3s16_offset0
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT]](<4 x s16>), 0
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT1]](s16)
     ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
@@ -926,8 +925,7 @@ body: |
     ; CHECK-LABEL: name: extract_v2s16_v3s16_offset0
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
     ; CHECK: $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF

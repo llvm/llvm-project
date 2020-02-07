@@ -14794,10 +14794,13 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 
   // If the destructor is constexpr, check whether the variable has constant
   // destruction now.
-  if (Destructor->isConstexpr() && VD->getInit() &&
-      !VD->getInit()->isValueDependent() && VD->evaluateValue()) {
+  if (Destructor->isConstexpr()) {
+    bool HasConstantInit = false;
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr()) {
+    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
+        HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
       for (unsigned I = 0, N = Notes.size(); I != N; ++I)

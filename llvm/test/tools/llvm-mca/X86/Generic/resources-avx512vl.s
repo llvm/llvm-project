@@ -121,6 +121,16 @@ vdivps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax), %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
+vgatherdpd        (%rax,%xmm1,2), %ymm2 {k1}
+vgatherdps        (%rax,%ymm1,2), %ymm2 {k1}
+vgatherqpd        (%rax,%ymm1,2), %ymm2 {k1}
+vgatherqps        (%rax,%ymm1,2), %xmm2 {k1}
+
+vgatherdpd        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherdps        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherqpd        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherqps        (%rax,%xmm1,2), %xmm2 {k1}
+
 vmaxpd            %xmm16, %xmm17, %xmm19
 vmaxpd            (%rax), %xmm17, %xmm19
 vmaxpd            (%rax){1to2}, %xmm17, %xmm19
@@ -420,6 +430,16 @@ vpermq            (%rax){1to4}, %ymm17, %ymm19 {k1}
 vpermq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpermq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpermq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vpgatherdq        (%rax,%xmm1,2), %ymm2 {k1}
+vpgatherdd        (%rax,%ymm1,2), %ymm2 {k1}
+vpgatherqq        (%rax,%ymm1,2), %ymm2 {k1}
+vpgatherqd        (%rax,%ymm1,2), %xmm2 {k1}
+
+vpgatherdq        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherdd        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherqq        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherqd        (%rax,%xmm1,2), %xmm2 {k1}
 
 vpmulld           %xmm16, %xmm17, %xmm19
 vpmulld           (%rax), %xmm17, %xmm19
@@ -858,6 +878,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  3      29    28.00                       vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  4      36    28.00   *                   vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  4      36    28.00   *                   vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherqps	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherdpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherdps	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherqpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vgatherqps	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  1      3     1.00                        vmaxpd	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  2      9     1.00    *                   vmaxpd	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  2      9     1.00    *                   vmaxpd	(%rax){1to2}, %xmm17, %xmm19
@@ -1128,6 +1156,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        vpermq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vpermq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vpermq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherdq	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherdd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherqq	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherqd	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherdq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherdd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherqq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  1      5     0.50    *                   vpgatherqd	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  1      5     1.00                        vpmulld	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  2      11    1.00    *                   vpmulld	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  2      11    1.00    *                   vpmulld	(%rax){1to4}, %xmm17, %xmm19
@@ -1429,7 +1465,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1935.00 180.00 229.50  -    346.50 222.00 222.00
+# CHECK-NEXT:  -     1935.00 180.00 229.50  -    346.50 230.00 230.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1541,6 +1577,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -     28.00  2.50    -      -     0.50    -      -     vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -     28.00  2.50    -      -     0.50   0.50   0.50   vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -     28.00  2.50    -      -     0.50   0.50   0.50   vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherqps	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherdpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherdps	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherqpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vgatherqps	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vmaxpd	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vmaxpd	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vmaxpd	(%rax){1to2}, %xmm17, %xmm19
@@ -1811,6 +1855,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpermq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpermq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherdq	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherdd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherqq	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherqd	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherdq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherdd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherqq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vpgatherqd	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vpmulld	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vpmulld	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vpmulld	(%rax){1to4}, %xmm17, %xmm19

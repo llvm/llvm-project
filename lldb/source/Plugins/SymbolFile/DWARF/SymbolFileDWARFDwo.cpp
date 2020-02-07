@@ -23,12 +23,12 @@ using namespace lldb_private;
 
 char SymbolFileDWARFDwo::ID;
 
-SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFCompileUnit &dwarf_cu)
+SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
+                                       ObjectFileSP objfile, uint32_t id)
     : SymbolFileDWARF(objfile, objfile->GetSectionList(
                                    /*update_module_section_list*/ false)),
-      m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
+      m_base_symbol_file(base_symbol_file) {
+  SetID(user_id_t(id) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
@@ -47,14 +47,6 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   }
 
   SymbolFileDWARF::LoadSectionData(sect_type, data);
-}
-
-lldb::CompUnitSP
-SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
-  assert(GetCompileUnit() == &dwarf_cu &&
-         "SymbolFileDWARFDwo::ParseCompileUnit called with incompatible "
-         "compile unit");
-  return GetBaseSymbolFile().ParseCompileUnit(m_base_dwarf_cu);
 }
 
 DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
@@ -131,10 +123,6 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
     bool must_be_implementation) {
   return GetBaseSymbolFile().FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
-}
-
-SymbolFileDWARF &SymbolFileDWARFDwo::GetBaseSymbolFile() {
-  return m_base_dwarf_cu.GetSymbolFileDWARF();
 }
 
 llvm::Expected<TypeSystem &>

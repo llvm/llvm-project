@@ -14,7 +14,7 @@ TEST_F(BacktraceGuardedPoolAllocator, DoubleFree) {
   void *Ptr = GPA.allocate(1);
   GPA.deallocate(Ptr);
 
-  std::string DeathRegex = "Double free.*";
+  std::string DeathRegex = "Double Free.*";
   DeathRegex.append("backtrace\\.cpp:25.*");
 
   DeathRegex.append("was deallocated.*");
@@ -29,7 +29,7 @@ TEST_F(BacktraceGuardedPoolAllocator, UseAfterFree) {
   char *Ptr = static_cast<char *>(GPA.allocate(1));
   GPA.deallocate(Ptr);
 
-  std::string DeathRegex = "Use after free.*";
+  std::string DeathRegex = "Use After Free.*";
   DeathRegex.append("backtrace\\.cpp:40.*");
 
   DeathRegex.append("was deallocated.*");

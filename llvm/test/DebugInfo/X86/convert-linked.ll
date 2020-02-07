@@ -19,14 +19,14 @@
 define dso_local signext i8 @foo(i8 signext %x) !dbg !9 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !13, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.value(metadata i8 %x, metadata !15, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !17
+  call void @llvm.dbg.value(metadata i8 32, metadata !15, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !17
   ret i8 %x, !dbg !18
 }
 
 define dso_local signext i8 @bar(i8 signext %x) !dbg !19 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !20, metadata !DIExpression()), !dbg !21
-  call void @llvm.dbg.value(metadata i8 %x, metadata !22, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value)), !dbg !24
+  call void @llvm.dbg.value(metadata i8 32, metadata !22, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value)), !dbg !24
   ret i8 %x, !dbg !25
 }
 

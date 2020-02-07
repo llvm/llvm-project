@@ -299,8 +299,7 @@ body: |
     ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY4]], 16
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32), [[SEXT_INREG2]](s32)
     ; CHECK: [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR]](<3 x s32>), 64
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
     ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
@@ -314,8 +313,7 @@ body: |
     ; CHECK: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY7]], 16
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG3]](s32), [[SEXT_INREG4]](s32), [[SEXT_INREG5]](s32)
     ; CHECK: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR1]](<3 x s32>), 32
-    ; CHECK: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; CHECK: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
     ; CHECK: [[BITCAST4:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
     ; CHECK: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST4]], [[C]](s32)
@@ -329,8 +327,7 @@ body: |
     ; CHECK: [[SEXT_INREG8:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY10]], 16
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG6]](s32), [[SEXT_INREG7]](s32), [[SEXT_INREG8]](s32)
     ; CHECK: [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[BUILD_VECTOR2]](<3 x s32>), 0
-    ; CHECK: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT3]](<4 x s16>)
     ; CHECK: [[BITCAST6:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
     ; CHECK: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST6]], [[C]](s32)

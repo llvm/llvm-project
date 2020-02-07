@@ -332,7 +332,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               unsigned EntrySize,
                                               const MCSymbolELF *Group,
                                               unsigned UniqueID,
-                                              const MCSymbolELF *Associated) {
+                                              const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *R;
   MCSymbol *&Sym = Symbols[Section];
   // A section symbol can not redefine regular symbols. There may be multiple
@@ -352,7 +352,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   R->setType(ELF::STT_SECTION);
 
   auto *Ret = new (ELFAllocator.Allocate()) MCSectionELF(
-      Section, Type, Flags, K, EntrySize, Group, UniqueID, R, Associated);
+      Section, Type, Flags, K, EntrySize, Group, UniqueID, R, LinkedToSym);
 
   auto *F = new MCDataFragment();
   Ret->getFragmentList().insert(Ret->begin(), F);
@@ -386,20 +386,20 @@ MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const Twine &Group, unsigned UniqueID,
-                                       const MCSymbolELF *Associated) {
+                                       const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, UniqueID,
-                       Associated);
+                       LinkedToSym);
 }
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const MCSymbolELF *GroupSym,
                                        unsigned UniqueID,
-                                       const MCSymbolELF *Associated) {
+                                       const MCSymbolELF *LinkedToSym) {
   StringRef Group = "";
   if (GroupSym)
     Group = GroupSym->getName();
@@ -420,8 +420,9 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   else
     Kind = SectionKind::getReadOnly();
 
-  MCSectionELF *Result = createELFSectionImpl(
-      CachedName, Type, Flags, Kind, EntrySize, GroupSym, UniqueID, Associated);
+  MCSectionELF *Result =
+      createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
+                           UniqueID, LinkedToSym);
   Entry.second = Result;
   return Result;
 }
