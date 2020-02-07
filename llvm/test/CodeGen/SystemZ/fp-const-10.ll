@@ -6,7 +6,7 @@
 ; converstion to QNaN.
 define double @f1() {
 ; CHECK-LABEL: .LCPI0_0
-; CHECK:      .quad   9219994337134247936
+; CHECK:      .quad   0x7ff4000000000000
 ; CHECK-LABEL: f1:
 ; CHECK:      larl    %r1, .LCPI0_0
 ; CHECK-NOT:  ldeb    %f0, 0(%r1)

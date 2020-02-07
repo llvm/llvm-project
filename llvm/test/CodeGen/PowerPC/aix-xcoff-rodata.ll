@@ -36,15 +36,15 @@
 ; CHECK-NEXT:          .globl  const_fvar
 ; CHECK-NEXT:          .align  2
 ; CHECK-NEXT:  const_fvar:
-; CHECK-NEXT:          .long   1145569280
+; CHECK-NEXT:          .long   0x44480000
 ; CHECK-NEXT:          .globl  const_dvar
 ; CHECK-NEXT:          .align  3
 ; CHECK-NEXT:  const_dvar:
-; CHECK-NEXT:          .llong  4651127699538968576
+; CHECK-NEXT:          .llong  0x408c200000000000
 ; CHECK-NEXT:          .globl  const_over_aligned
 ; CHECK-NEXT:          .align  5
 ; CHECK-NEXT:  const_over_aligned:
-; CHECK-NEXT:          .llong  4651127699538968576
+; CHECK-NEXT:          .llong  0x408c200000000000
 ; CHECK-NEXT:          .globl  const_chrarray
 ; CHECK-NEXT:  const_chrarray:
 ; CHECK-NEXT:          .byte   97
@@ -54,10 +54,10 @@
 ; CHECK-NEXT:          .globl  const_dblarr
 ; CHECK-NEXT:          .align  3
 ; CHECK-NEXT:  const_dblarr:
-; CHECK-NEXT:          .llong  4607182418800017408
-; CHECK-NEXT:          .llong  4611686018427387904
-; CHECK-NEXT:          .llong  4613937818241073152
-; CHECK-NEXT:          .llong  4616189618054758400
+; CHECK-NEXT:          .llong  0x3ff0000000000000
+; CHECK-NEXT:          .llong  0x4000000000000000
+; CHECK-NEXT:          .llong  0x4008000000000000
+; CHECK-NEXT:          .llong  0x4010000000000000
 
 
 ; OBJ:      File: {{.*}}aix-xcoff-rodata.ll.tmp.o

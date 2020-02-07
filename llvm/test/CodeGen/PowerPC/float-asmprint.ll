@@ -11,24 +11,24 @@
 @var16 = global half -0.0, align 2
 
 ; CHECK: var128:
-; CHECK-NEXT: .quad -9223372036854775808      # fp128 -0
+; CHECK-NEXT: .quad 0x8000000000000000      # fp128 -0
 ; CHECK-NEXT: .quad 0
 ; CHECK-NEXT: .size
 
 ; CHECK: varppc128:
-; CHECK-NEXT: .quad -9223372036854775808      # ppc_fp128 -0
+; CHECK-NEXT: .quad 0x8000000000000000      # ppc_fp128 -0
 ; CHECK-NEXT: .quad 0
 ; CHECK-NEXT: .size
 
 ; CHECK: var64:
-; CHECK-NEXT: .quad -9223372036854775808      # double -0
+; CHECK-NEXT: .quad 0x8000000000000000      # double -0
 ; CHECK-NEXT: .size
 
 ; CHECK: var32:
-; CHECK-NEXT: .long 2147483648                # float -0
+; CHECK-NEXT: .long 0x80000000              # float -0
 ; CHECK-NEXT: .size
 
 ; CHECK: var16:
-; CHECK-NEXT: .short 32768                    # half -0
+; CHECK-NEXT: .short 0x8000                 # half -0
 ; CHECK-NEXT: .size
 

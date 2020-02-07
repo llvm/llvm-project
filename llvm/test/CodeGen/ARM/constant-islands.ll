@@ -6,7 +6,7 @@ define void @test_no_duplicate_branches(float %in) {
 ; CHECK: b .LBB
 ; CHECK-NOT: b .LBB
 ; CHECK: [[CONST]]:
-; CHECK-NEXT: .long 1150963712
+; CHECK-NEXT: .long 0x449a5000
 
   %tst = fcmp oeq float %in, 1234.5
 

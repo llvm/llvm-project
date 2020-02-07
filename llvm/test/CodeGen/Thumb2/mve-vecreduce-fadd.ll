@@ -14,7 +14,7 @@ define arm_aapcs_vfpcc float @fadd_v2f32(<2 x float> %x, float %y) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float %y, <2 x float> %x)
   ret float %z
@@ -79,7 +79,7 @@ define arm_aapcs_vfpcc void @fadd_v4f16(<4 x half> %x, half* %yy) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .short 0 @ half 0
+; CHECK-NEXT:    .short 0x0000 @ half 0
 entry:
   %y = load half, half* %yy
   %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half %y, <4 x half> %x)

@@ -23,10 +23,10 @@
 ; CST-NEXT: .long	1392508928              ## 0x53000000
 
 ; CST: [[MAGICCSTADDR:LCPI0_[0-9]+]]:
-; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
-; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
-; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
-; CST-NEXT: .long	1392509056              ## float 5.49764202E+11
+; CST-NEXT: .long	0x53000080              ## float 5.49764202E+11
+; CST-NEXT: .long	0x53000080              ## float 5.49764202E+11
+; CST-NEXT: .long	0x53000080              ## float 5.49764202E+11
+; CST-NEXT: .long	0x53000080              ## float 5.49764202E+11
 
 ; AVX2: [[LOWCSTADDR:LCPI0_[0-9]+]]:
 ; AVX2-NEXT: .long	1258291200              ## 0x4b000000
@@ -35,7 +35,7 @@
 ; AVX2-NEXT: .long	1392508928              ## 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:LCPI0_[0-9]+]]:
-; AVX2-NEXT: .long	1392509056              ## float 5.49764202E+11
+; AVX2-NEXT: .long	0x53000080              ## float 5.49764202E+11
 
 define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; CHECK-LABEL: test1:
@@ -91,7 +91,7 @@ define <4 x float> @test1(<4 x i32> %A) nounwind {
 ; AVX2-NEXT: .long	1392508928              ## 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:LCPI1_[0-9]+]]:
-; AVX2-NEXT: .long	1392509056              ## float 5.49764202E+11
+; AVX2-NEXT: .long	0x53000080              ## float 5.49764202E+11
 
 define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; CHECK-LABEL: test2:

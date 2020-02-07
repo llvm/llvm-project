@@ -39,7 +39,7 @@ entry:
   ret void
 }
 ; CHECK: .LCPI[[LC:[0-9]+]]_0:
-; CHECK: .long   1065353216
+; CHECK: .long   0x3f800000
 ; CHECK: .LCPI[[LC]]_1:
 ; CHECK: .long   0
 ; CHECK: @caller_const
