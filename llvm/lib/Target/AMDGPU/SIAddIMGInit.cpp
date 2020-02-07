@@ -154,7 +154,7 @@ bool SIAddIMGInit::runOnMachineFunction(MachineFunction &MF) {
               BuildMI(MBB, I, DL, TII->get(TargetOpcode::INSERT_SUBREG), NewDst)
                   .addReg(PrevDst)
                   .addReg(SubReg)
-                  .addImm(AMDGPURegisterInfo::getSubRegFromChannel(CurrIdx));
+                  .addImm(SIRegisterInfo::getSubRegFromChannel(CurrIdx));
 
               PrevDst = NewDst;
             }
