@@ -84,10 +84,6 @@ Changes to the X86 Target
 During this release ...
 
 
-* Functions with the probe-stack attribute set to "inline-asm" are now protected
-  against stack clash without the need of a third-party probing function and
-  with limited impact on performance.
-
 Changes to the AMDGPU Target
 -----------------------------
 
