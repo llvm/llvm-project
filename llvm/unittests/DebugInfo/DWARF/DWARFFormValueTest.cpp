@@ -120,4 +120,182 @@ TEST(DWARFFormValue, SignedConstantForms) {
   EXPECT_EQ(memcmp(Str.data(), "000102030405060708090a0b0c0d0e0f", 32), 0);
 }
 
+using ParamType = std::tuple<Form, uint16_t, uint8_t, DwarfFormat,
+                             ArrayRef<uint8_t>, uint32_t, bool>;
+
+struct FormSkipValueFixtureBase : public testing::TestWithParam<ParamType> {
+  void SetUp() {
+    std::tie(Fm, Version, AddrSize, Dwarf, InitialData, ExpectedSkipped,
+             ExpectedResult) = GetParam();
+  }
+
+  void doSkipValueTest() {
+    SCOPED_TRACE("Inputs: Form = " + std::to_string(Fm) +
+                 ", Version = " + std::to_string(Version) +
+                 ", AddrSize = " + std::to_string(uint32_t(AddrSize)) +
+                 ", DwarfFormat = " + std::to_string(Dwarf));
+    std::vector<uint8_t> Buf(InitialData.data(),
+                             InitialData.data() + InitialData.size());
+    // The data extractor only adjusts the offset to the end of the buffer when
+    // attempting to read past the end, so the buffer must be bigger than the
+    // expected amount to be skipped to identify cases where more data than
+    // expected is skipped.
+    Buf.resize(ExpectedSkipped + 1);
+    DWARFDataExtractor Data(Buf, sys::IsLittleEndianHost, AddrSize);
+    uint64_t Offset = 0;
+    EXPECT_EQ(DWARFFormValue::skipValue(Fm, Data, &Offset,
+                                        {Version, AddrSize, Dwarf}),
+              ExpectedResult);
+    EXPECT_EQ(Offset, ExpectedSkipped);
+  }
+
+  Form Fm;
+  uint16_t Version;
+  uint8_t AddrSize;
+  DwarfFormat Dwarf;
+  ArrayRef<uint8_t> InitialData;
+  uint32_t ExpectedSkipped;
+  bool ExpectedResult;
+};
+
+const uint8_t LEBData[] = {0x80, 0x1};
+ArrayRef<uint8_t> SampleLEB(LEBData, sizeof(LEBData));
+const uint32_t SampleLength = 0x80;
+ArrayRef<uint8_t>
+SampleUnsigned(reinterpret_cast<const uint8_t *>(&SampleLength),
+               sizeof(SampleLength));
+const uint8_t StringData[] = "abcdef";
+ArrayRef<uint8_t> SampleString(StringData, sizeof(StringData));
+const uint8_t IndirectData8[] = {DW_FORM_data8};
+const uint8_t IndirectData16[] = {DW_FORM_data16};
+const uint8_t IndirectAddr[] = {DW_FORM_addr};
+const uint8_t IndirectIndirectData1[] = {DW_FORM_indirect, DW_FORM_data1};
+const uint8_t IndirectIndirectEnd[] = {DW_FORM_indirect};
+
+// Gtest's paramterised tests only allow a maximum of 50 cases, so split the
+// test into multiple identical parts to share the cases.
+struct FormSkipValueFixture1 : FormSkipValueFixtureBase {};
+struct FormSkipValueFixture2 : FormSkipValueFixtureBase {};
+TEST_P(FormSkipValueFixture1, skipValuePart1) { doSkipValueTest(); }
+TEST_P(FormSkipValueFixture2, skipValuePart2) { doSkipValueTest(); }
+
+INSTANTIATE_TEST_CASE_P(
+    SkipValueTestParams1, FormSkipValueFixture1,
+    testing::Values(
+        // Form, Version, AddrSize, DwarfFormat, InitialData, ExpectedSize,
+        // ExpectedResult.
+        ParamType(DW_FORM_exprloc, 0, 0, DWARF32, SampleLEB,
+                  SampleLength + SampleLEB.size(), true),
+        ParamType(DW_FORM_block, 0, 0, DWARF32, SampleLEB,
+                  SampleLength + SampleLEB.size(), true),
+        ParamType(DW_FORM_block1, 0, 0, DWARF32, SampleUnsigned,
+                  SampleLength + 1, true),
+        ParamType(DW_FORM_block2, 0, 0, DWARF32, SampleUnsigned,
+                  SampleLength + 2, true),
+        ParamType(DW_FORM_block4, 0, 0, DWARF32, SampleUnsigned,
+                  SampleLength + 4, true),
+        ParamType(DW_FORM_string, 0, 0, DWARF32, SampleString,
+                  SampleString.size(), true),
+        ParamType(DW_FORM_addr, 0, 42, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_addr, 4, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_addr, 4, 42, DWARF32, SampleUnsigned, 42, true),
+        ParamType(DW_FORM_ref_addr, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_ref_addr, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_ref_addr, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_ref_addr, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_ref_addr, 2, 42, DWARF32, SampleUnsigned, 42, true),
+        ParamType(DW_FORM_ref_addr, 2, 42, DWARF64, SampleUnsigned, 42, true),
+        ParamType(DW_FORM_ref_addr, 3, 3, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_ref_addr, 3, 3, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_flag_present, 4, 4, DWARF32, SampleUnsigned, 0, true),
+        ParamType(DW_FORM_data1, 0, 0, DWARF32, SampleUnsigned, 1, true),
+        ParamType(DW_FORM_data2, 0, 0, DWARF32, SampleUnsigned, 2, true),
+        ParamType(DW_FORM_data4, 0, 0, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_data8, 0, 0, DWARF32, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_data16, 0, 0, DWARF32, SampleUnsigned, 16, true),
+        ParamType(DW_FORM_flag, 0, 0, DWARF32, SampleUnsigned, 1, true),
+        ParamType(DW_FORM_ref1, 0, 0, DWARF32, SampleUnsigned, 1, true),
+        ParamType(DW_FORM_ref2, 0, 0, DWARF32, SampleUnsigned, 2, true),
+        ParamType(DW_FORM_ref4, 0, 0, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_ref8, 0, 0, DWARF32, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_ref_sig8, 0, 0, DWARF32, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_ref_sup4, 0, 0, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_ref_sup8, 0, 0, DWARF32, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_strx1, 0, 0, DWARF32, SampleUnsigned, 1, true),
+        ParamType(DW_FORM_strx2, 0, 0, DWARF32, SampleUnsigned, 2, true),
+        ParamType(DW_FORM_strx4, 0, 0, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_addrx1, 0, 0, DWARF32, SampleUnsigned, 1, true),
+        ParamType(DW_FORM_addrx2, 0, 0, DWARF32, SampleUnsigned, 2, true),
+        ParamType(DW_FORM_addrx4, 0, 0, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_sec_offset, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_sec_offset, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_sec_offset, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_sec_offset, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_strp, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_strp, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_strp, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_strp, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_strp_sup, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_strp_sup, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_strp_sup, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_strp_sup, 1, 1, DWARF64, SampleUnsigned, 8, true)), );
+
+INSTANTIATE_TEST_CASE_P(
+    SkipValueTestParams2, FormSkipValueFixture2,
+    testing::Values(
+        ParamType(DW_FORM_line_strp, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_line_strp, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_line_strp, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_line_strp, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_GNU_ref_alt, 0, 1, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_GNU_ref_alt, 1, 0, DWARF32, SampleUnsigned, 0, false),
+        ParamType(DW_FORM_GNU_ref_alt, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_GNU_ref_alt, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_GNU_strp_alt, 0, 1, DWARF32, SampleUnsigned, 0,
+                  false),
+        ParamType(DW_FORM_GNU_strp_alt, 1, 0, DWARF32, SampleUnsigned, 0,
+                  false),
+        ParamType(DW_FORM_GNU_strp_alt, 1, 1, DWARF32, SampleUnsigned, 4, true),
+        ParamType(DW_FORM_GNU_strp_alt, 1, 1, DWARF64, SampleUnsigned, 8, true),
+        ParamType(DW_FORM_sdata, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_udata, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_ref_udata, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_strx, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_addrx, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_loclistx, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_rnglistx, 0, 0, DWARF32, SampleLEB, SampleLEB.size(),
+                  true),
+        ParamType(DW_FORM_GNU_addr_index, 0, 0, DWARF32, SampleLEB,
+                  SampleLEB.size(), true),
+        ParamType(DW_FORM_GNU_str_index, 0, 0, DWARF32, SampleLEB,
+                  SampleLEB.size(), true),
+        ParamType(DW_FORM_indirect, 0, 0, DWARF32,
+                  ArrayRef<uint8_t>(IndirectData8, sizeof(IndirectData8)), 9,
+                  true),
+        ParamType(DW_FORM_indirect, 0, 0, DWARF32,
+                  ArrayRef<uint8_t>(IndirectData16, sizeof(IndirectData16)), 17,
+                  true),
+        ParamType(DW_FORM_indirect, 4, 0, DWARF32,
+                  ArrayRef<uint8_t>(IndirectAddr, sizeof(IndirectAddr)), 1,
+                  false),
+        ParamType(DW_FORM_indirect, 4, 4, DWARF32,
+                  ArrayRef<uint8_t>(IndirectAddr, sizeof(IndirectAddr)), 5,
+                  true),
+        ParamType(DW_FORM_indirect, 4, 4, DWARF32,
+                  ArrayRef<uint8_t>(IndirectIndirectData1,
+                                    sizeof(IndirectIndirectData1)),
+                  3, true),
+        ParamType(DW_FORM_indirect, 4, 4, DWARF32,
+                  ArrayRef<uint8_t>(IndirectIndirectEnd,
+                                    sizeof(IndirectIndirectEnd)),
+                  2, false),
+        ParamType(/*Unknown=*/Form(0xff), 4, 4, DWARF32, SampleUnsigned, 0,
+                  false)), );
+
 } // end anonymous namespace
