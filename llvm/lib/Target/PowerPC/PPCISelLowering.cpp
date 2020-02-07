@@ -15120,9 +15120,7 @@ EVT PPCTargetLowering::getOptimalMemOpType(
     // When expanding a memset, require at least two QPX instructions to cover
     // the cost of loading the value to be stored from the constant pool.
     if (Subtarget.hasQPX() && Op.size() >= 32 &&
-        (!Op.isMemset() || Op.size() >= 64) &&
-        (!Op.getSrcAlign() || Op.getSrcAlign() >= 32) &&
-        (!Op.getDstAlign() || Op.getDstAlign() >= 32) &&
+        (Op.isMemcpy() || Op.size() >= 64) && Op.isAligned(Align(32)) &&
         !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
       return MVT::v4f64;
     }
@@ -15130,8 +15128,7 @@ EVT PPCTargetLowering::getOptimalMemOpType(
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.
     if (Subtarget.hasAltivec() && Op.size() >= 16 &&
-        (((!Op.getSrcAlign() || Op.getSrcAlign() >= 16) &&
-          (!Op.getDstAlign() || Op.getDstAlign() >= 16)) ||
+        (Op.isAligned(Align(16)) ||
          ((Op.isMemset() && Subtarget.hasVSX()) || Subtarget.hasP8Vector())))
       return MVT::v4i32;
   }
