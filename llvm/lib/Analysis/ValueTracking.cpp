@@ -4439,6 +4439,16 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    AssumptionCache *AC,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
+  // Checking for conditions implied by dominating conditions may be expensive.
+  // Limit it to usub_with_overflow calls for now.
+  if (match(CxtI,
+            m_Intrinsic<Intrinsic::usub_with_overflow>(m_Value(), m_Value())))
+    if (auto C =
+            isImpliedByDomCondition(CmpInst::ICMP_UGE, LHS, RHS, CxtI, DL)) {
+      if (*C)
+        return OverflowResult::NeverOverflows;
+      return OverflowResult::AlwaysOverflowsLow;
+    }
   ConstantRange LHSRange = computeConstantRangeIncludingKnownBits(
       LHS, /*ForSigned=*/false, DL, /*Depth=*/0, AC, CxtI, DT);
   ConstantRange RHSRange = computeConstantRangeIncludingKnownBits(
