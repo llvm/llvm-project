@@ -388,6 +388,38 @@ def Vector_ExtractSlicesOp :
   }];
 }
 
+def Vector_FMAOp :
+  Op<Vector_Dialect, "fma", [NoSideEffect,
+                             AllTypesMatch<["lhs", "rhs", "acc", "result"]>]>,
+    Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyVector:$acc)>,
+    Results<(outs AnyVector:$result)> {
+  let summary = "vector fused multiply-add";
+  let description = [{
+    Multiply-add expressions operate on n-D vectors and compute a fused
+    pointwise multiply-and-accumulate: `$result = `$lhs * $rhs + $acc`.
+    All operands and result have the same vector type. The semantics
+    of the operation correspond to those of the `llvm.fma`
+    [intrinsic](https://llvm.org/docs/LangRef.html#int-fma). In the
+    particular case of lowering to LLVM, this is guaranteed to lower
+    to the `llvm.fma.*` intrinsic.
+
+    Example:
+    
+    ```
+      %3 = vector.fma %0, %1, %2: vector<8x16xf32>
+    ```
+  }];
+  // Fully specified by traits.
+  let verifier = ?;
+  let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` type($lhs)";
+  let builders = [OpBuilder<
+    "Builder *b, OperationState &result, Value lhs, Value rhs, Value acc",
+    "build(b, result, lhs.getType(), lhs, rhs, acc);">];
+  let extraClassDeclaration = [{
+    VectorType getVectorType() { return lhs().getType().cast<VectorType>(); }
+  }];
+}
+
 def Vector_InsertElementOp :
   Vector_Op<"insertelement", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
