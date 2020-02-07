@@ -52,7 +52,7 @@ private:
       CounterName = CounterName.trim();
       pfm::PerfEvent PerfEvent(CounterName);
       if (!PerfEvent.valid())
-        report_fatal_error(
+        return make_error<Failure>(
             Twine("invalid perf event '").concat(CounterName).concat("'"));
       pfm::Counter Counter(PerfEvent);
       Scratch->clear();
@@ -67,7 +67,7 @@ private:
         CrashRecoveryContext::Disable();
         // FIXME: Better diagnosis.
         if (Crashed)
-          return make_error<Failure>("snippet crashed while running");
+          return make_error<SnippetCrash>("snippet crashed while running");
       }
       CounterValue += Counter.read();
     }
@@ -79,7 +79,7 @@ private:
 };
 } // namespace
 
-InstructionBenchmark BenchmarkRunner::runConfiguration(
+Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     const BenchmarkCode &BC, unsigned NumRepetitions,
     const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
@@ -138,6 +138,8 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
                                       Scratch.get());
   auto Measurements = runMeasurements(Executor);
   if (Error E = Measurements.takeError()) {
+    if (!E.isA<SnippetCrash>())
+      return std::move(E);
     InstrBenchmark.Error = toString(std::move(E));
     return InstrBenchmark;
   }

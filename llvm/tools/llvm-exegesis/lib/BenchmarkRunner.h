@@ -38,10 +38,10 @@ public:
 
   virtual ~BenchmarkRunner();
 
-  InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
-                                        unsigned NumRepetitions,
-                                        const SnippetRepetitor &Repetitor,
-                                        bool DumpObjectToDisk) const;
+  Expected<InstructionBenchmark>
+  runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
+                   const SnippetRepetitor &Repetitor,
+                   bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
