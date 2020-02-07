@@ -1559,8 +1559,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 bool IRTranslator::translateInlineAsm(const CallInst &CI,
                                       MachineIRBuilder &MIRBuilder) {
   const InlineAsm &IA = cast<InlineAsm>(*CI.getCalledValue());
-  if (!IA.getConstraintString().empty())
-    return false;
+  StringRef ConstraintStr = IA.getConstraintString();
+
+  bool HasOnlyMemoryClobber = false;
+  if (!ConstraintStr.empty()) {
+    // Until we have full inline assembly support, we just try to handle the
+    // very simple case of just "~{memory}" to avoid falling back so often.
+    if (ConstraintStr != "~{memory}")
+      return false;
+    HasOnlyMemoryClobber = true;
+  }
 
   unsigned ExtraInfo = 0;
   if (IA.hasSideEffects())
@@ -1568,9 +1576,15 @@ bool IRTranslator::translateInlineAsm(const CallInst &CI,
   if (IA.getDialect() == InlineAsm::AD_Intel)
     ExtraInfo |= InlineAsm::Extra_AsmDialect;
 
-  MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
-    .addExternalSymbol(IA.getAsmString().c_str())
-    .addImm(ExtraInfo);
+  // HACK: special casing for ~memory.
+  if (HasOnlyMemoryClobber)
+    ExtraInfo |= (InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore);
+
+  auto Inst = MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
+                  .addExternalSymbol(IA.getAsmString().c_str())
+                  .addImm(ExtraInfo);
+  if (const MDNode *SrcLoc = CI.getMetadata("srcloc"))
+    Inst.addMetadata(SrcLoc);
 
   return true;
 }
