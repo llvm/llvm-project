@@ -3380,21 +3380,12 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
 /// determined using generic target-independent logic.
 EVT HexagonTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-
-  auto Aligned = [](unsigned GivenA, unsigned MinA) -> bool {
-    return (GivenA % MinA) == 0;
-  };
-
-  if (Op.size() >= 8 && Aligned(Op.getDstAlign(), 8) &&
-      (Op.isMemset() || Aligned(Op.getSrcAlign(), 8)))
+  if (Op.size() >= 8 && Op.isAligned(Align(8)))
     return MVT::i64;
-  if (Op.size() >= 4 && Aligned(Op.getDstAlign(), 4) &&
-      (Op.isMemset() || Aligned(Op.getSrcAlign(), 4)))
+  if (Op.size() >= 4 && Op.isAligned(Align(4)))
     return MVT::i32;
-  if (Op.size() >= 2 && Aligned(Op.getDstAlign(), 2) &&
-      (Op.isMemset() || Aligned(Op.getSrcAlign(), 2)))
+  if (Op.size() >= 2 && Op.isAligned(Align(2)))
     return MVT::i16;
-
   return MVT::Other;
 }
 
