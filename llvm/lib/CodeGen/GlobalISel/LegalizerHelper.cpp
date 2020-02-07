@@ -3393,7 +3393,7 @@ LegalizerHelper::narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
     }
   }
 
-  MIRBuilder.buildMerge(MI.getOperand(0), {Lo.getReg(), Hi.getReg()});
+  MIRBuilder.buildMerge(MI.getOperand(0), {Lo, Hi});
   MI.eraseFromParent();
 
   return Legalized;
@@ -3994,7 +3994,7 @@ LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
     auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(NarrowTy, UnmergeSrc.getReg(1));
     auto LoOut = B.buildSelect(NarrowTy, HiIsZero, HiIsZeroCTLZ, HiCTLZ);
 
-    B.buildMerge(MI.getOperand(0), {LoOut.getReg(0), C_0.getReg(0)});
+    B.buildMerge(MI.getOperand(0), {LoOut, C_0});
 
     MI.eraseFromParent();
     return Legalized;
@@ -4025,7 +4025,7 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
     auto LoCTTZ = B.buildCTTZ_ZERO_UNDEF(NarrowTy, UnmergeSrc.getReg(0));
     auto LoOut = B.buildSelect(NarrowTy, LoIsZero, LoIsZeroCTTZ, LoCTTZ);
 
-    B.buildMerge(MI.getOperand(0), {LoOut.getReg(0), C_0.getReg(0)});
+    B.buildMerge(MI.getOperand(0), {LoOut, C_0});
 
     MI.eraseFromParent();
     return Legalized;

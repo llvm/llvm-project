@@ -1037,7 +1037,7 @@ TEST_F(GISelMITest, WidenScalarMergeValuesPointer) {
   auto Lo = B.buildTrunc(S32, Copies[0]);
   auto Hi = B.buildTrunc(S32, Copies[1]);
 
-  auto Merge = B.buildMerge(P0, {Lo.getReg(0), Hi.getReg(0)});
+  auto Merge = B.buildMerge(P0, {Lo, Hi});
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*Merge, 1, S64));
