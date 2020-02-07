@@ -309,8 +309,8 @@ void benchmarkMain() {
     BenchmarkFile = "-";
 
   for (const BenchmarkCode &Conf : Configurations) {
-    InstructionBenchmark Result = Runner->runConfiguration(
-        Conf, NumRepetitions, *Repetitor, DumpObjectToDisk);
+    InstructionBenchmark Result = ExitOnErr(Runner->runConfiguration(
+        Conf, NumRepetitions, *Repetitor, DumpObjectToDisk));
     ExitOnFileError(BenchmarkFile, Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
