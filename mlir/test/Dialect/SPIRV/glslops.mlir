@@ -107,3 +107,35 @@ func @sqrtvec(%arg0 : vector<3xf16>) -> () {
   %2 = spv.GLSL.Sqrt %arg0 : vector<3xf16>
   return
 }
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Cos
+//===----------------------------------------------------------------------===//
+
+func @cos(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Cos {{%.*}} : f32
+  %2 = spv.GLSL.Cos %arg0 : f32
+  return
+}
+
+func @cosvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Cos {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Cos %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Sin
+//===----------------------------------------------------------------------===//
+
+func @sin(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Sin {{%.*}} : f32
+  %2 = spv.GLSL.Sin %arg0 : f32
+  return
+}
+
+func @sinvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Sin {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Sin %arg0 : vector<3xf16>
+  return
+}
