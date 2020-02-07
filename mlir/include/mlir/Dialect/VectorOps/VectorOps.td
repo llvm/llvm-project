@@ -567,21 +567,25 @@ def Vector_OuterProductOp :
     Results<(outs AnyVector)> {
   let summary = "vector outerproduct with optional fused add";
   let description = [{
-    Takes 2 1-D vectors and returns the 2-D vector containing the outer product.
+    Takes 2 1-D vectors and returns the 2-D vector containing the outer-product.
 
     An optional extra 2-D vector argument may be specified in which case the
-    operation returns the sum of the outer product and the extra vector. When
-    lowered to the LLVMIR dialect, this form emits `llvm.intr.fmuladd`, which
-    can lower to actual `fma` instructions in LLVM.
+    operation returns the sum of the outer-product and the extra vector. In this
+    multiply-accumulate scenario, the rounding mode is that obtained by
+    guaranteeing that a fused-multiply add operation is emitted. When lowered to
+    the LLVMIR dialect, this form emits `llvm.intr.fma`, which is guaranteed to
+    lower to actual `fma` instructions on x86.
 
-    Examples
+    Examples:
 
+    ```
       %2 = vector.outerproduct %0, %1: vector<4xf32>, vector<8xf32>
       return %2: vector<4x8xf32>
 
       %3 = vector.outerproduct %0, %1, %2:
         vector<4xf32>, vector<8xf32>, vector<4x8xf32>
       return %3: vector<4x8xf32>
+    ```
   }];
   let extraClassDeclaration = [{
     VectorType getOperandVectorTypeLHS() {
