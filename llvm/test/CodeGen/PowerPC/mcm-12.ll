@@ -17,19 +17,19 @@ entry:
 }
 
 ; CHECK: [[VAR:[a-z0-9A-Z_.]+]]:
-; CHECK: .quad 4562098671269285104
+; CHECK: .quad 0x3f4fd4920b498cf0
 ; CHECK-LABEL: test_double_const:
 ; CHECK: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; CHECK: lfd {{[0-9]+}}, [[VAR]]@toc@l([[REG1]])
 
 ; CHECK-VSX: [[VAR:[a-z0-9A-Z_.]+]]:
-; CHECK-VSX: .quad 4562098671269285104
+; CHECK-VSX: .quad 0x3f4fd4920b498cf0
 ; CHECK-VSX-LABEL: test_double_const:
 ; CHECK-VSX: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; CHECK-VSX: lfd {{[0-9]+}}, [[VAR]]@toc@l({{[0-9]+}}) 
 
 ; CHECK-P9: [[VAR:[a-z0-9A-Z_.]+]]:
-; CHECK-P9: .quad 4562098671269285104
+; CHECK-P9: .quad 0x3f4fd4920b498cf0
 ; CHECK-P9-LABEL: test_double_const:
 ; CHECK-P9: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; CHECK-P9: lfd {{[0-9]+}}, [[VAR]]@toc@l([[REG1]])

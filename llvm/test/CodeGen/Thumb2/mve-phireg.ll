@@ -227,9 +227,9 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 4 @ float 5.60519386E-45
+; CHECK-NEXT:    .long 0x00000004 @ float 5.60519386E-45
 ; CHECK-NEXT:  .LCPI1_1:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %f = alloca i16, align 2
   %g = alloca [3 x [8 x [4 x i16*]]], align 4

@@ -60,17 +60,17 @@
 ; CHECK:      .globl  fvar
 ; CHECK-NEXT: .align  2
 ; CHECK-NEXT: fvar:
-; CHECK-NEXT: .long   1145569280
+; CHECK-NEXT: .long   0x44480000
 
 ; CHECK:      .globl  dvar
 ; CHECK-NEXT: .align  3
 ; CHECK-NEXT: dvar:
-; CHECK-NEXT: .llong  4651127699538968576
+; CHECK-NEXT: .llong  0x408c200000000000
 
 ; CHECK:      .globl  over_aligned
 ; CHECK-NEXT: .align  5
 ; CHECK-NEXT: over_aligned:
-; CHECK-NEXT: .llong  4651127699538968576
+; CHECK-NEXT: .llong  0x408c200000000000
 
 ; CHECK:      .globl  chrarray
 ; CHECK-NEXT: chrarray:
@@ -82,10 +82,10 @@
 ; CHECK:      .globl  dblarr
 ; CHECK-NEXT: .align  3
 ; CHECK-NEXT: dblarr:
-; CHECK-NEXT: .llong  4607182418800017408
-; CHECK-NEXT: .llong  4611686018427387904
-; CHECK-NEXT: .llong  4613937818241073152
-; CHECK-NEXT: .llong  4616189618054758400
+; CHECK-NEXT: .llong  0x3ff0000000000000
+; CHECK-NEXT: .llong  0x4000000000000000
+; CHECK-NEXT: .llong  0x4008000000000000
+; CHECK-NEXT: .llong  0x4010000000000000
 
 ; CHECK:      .globl  d_0
 ; CHECK-NEXT: .align 3

@@ -7,8 +7,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; the constant load values because those are important.
 
 ; CHECK:        [[SIGNMASK1:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
 
 define double @mag_pos0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_pos0_double:
@@ -20,7 +20,7 @@ define double @mag_pos0_double(double %x) nounwind {
 }
 
 ; CHECK:        [[SIGNMASK2:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
 
 define double @mag_neg0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg0_double:
@@ -33,10 +33,10 @@ define double @mag_neg0_double(double %x) nounwind {
 }
 
 ; CHECK:        [[SIGNMASK3:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
 ; CHECK:        [[ONE3:L.+]]:
-; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
+; CHECK-NEXT:   .quad 0x3ff0000000000000     ## double 1
 
 define double @mag_pos1_double(double %x) nounwind {
 ; CHECK-LABEL: mag_pos1_double:
@@ -50,11 +50,11 @@ define double @mag_pos1_double(double %x) nounwind {
 }
 
 ; CHECK:        [[SIGNMASK4:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
-; CHECK-NEXT:   .quad -9223372036854775808    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
+; CHECK-NEXT:   .quad 0x8000000000000000    ## double -0
 ; CHECK:        [[ONE4:L.+]]:
-; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
-; CHECK-NEXT:   .quad 4607182418800017408     ## double 1
+; CHECK-NEXT:   .quad 0x3ff0000000000000     ## double 1
+; CHECK-NEXT:   .quad 0x3ff0000000000000     ## double 1
 
 define double @mag_neg1_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg1_double:
@@ -67,10 +67,10 @@ define double @mag_neg1_double(double %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK5:L.+]]:
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
 
 define float @mag_pos0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos0_float:
@@ -82,7 +82,7 @@ define float @mag_pos0_float(float %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK6:L.+]]:
-; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
 
 define float @mag_neg0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg0_float:
@@ -95,12 +95,12 @@ define float @mag_neg0_float(float %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK7:L.+]]:
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
 ; CHECK:        [[ONE7:L.+]]:
-; CHECK-NEXT:  .long 1065353216              ## float 1
+; CHECK-NEXT:  .long 0x3f800000              ## float 1
 
 define float @mag_pos1_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos1_float:
@@ -114,15 +114,15 @@ define float @mag_pos1_float(float %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK8:L.+]]:
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
-; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
+; CHECK-NEXT:  .long 0x80000000              ## float -0
 ; CHECK:        [[ONE8:L.+]]:
-; CHECK-NEXT:  .long 1065353216              ## float 1
-; CHECK-NEXT:  .long 1065353216              ## float 1
-; CHECK-NEXT:  .long 1065353216              ## float 1
-; CHECK-NEXT:  .long 1065353216              ## float 1
+; CHECK-NEXT:  .long 0x3f800000              ## float 1
+; CHECK-NEXT:  .long 0x3f800000              ## float 1
+; CHECK-NEXT:  .long 0x3f800000              ## float 1
+; CHECK-NEXT:  .long 0x3f800000              ## float 1
 
 define float @mag_neg1_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg1_float:

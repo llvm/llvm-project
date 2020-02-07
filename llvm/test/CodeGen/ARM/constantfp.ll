@@ -198,8 +198,8 @@ define arm_aapcs_vfpcc float @lower_fpconst_select(float %f) {
 ; CHECK-NO-XO: vldr {{s[0-9]+}}, {{[[]}}[[REG]]{{[]]}}
 ; CHECK-NO-XO-NOT: .rodata
 ; CHECK-NO-XO: [[LABEL]]:
-; CHECK-NO-XO: .long   1335165689
-; CHECK-NO-XO: .long   1307470632
+; CHECK-NO-XO: .long   0x4f9502f9
+; CHECK-NO-XO: .long   0x4dee6b28
 
 ; CHECK-XO-FLOAT-LABEL: lower_fpconst_select
 ; CHECK-XO-FLOAT: movw [[REG:r[0-9]+]], :lower16:[[LABEL:.?LCP[0-9]+_[0-9]+]]
@@ -208,8 +208,8 @@ define arm_aapcs_vfpcc float @lower_fpconst_select(float %f) {
 ; CHECK-XO-FLOAT: .rodata
 ; CHECK-XO-FLOAT-NOT: .text
 ; CHECK-XO-FLOAT: [[LABEL]]:
-; CHECK-XO-FLOAT: .long   1335165689
-; CHECK-XO-FLOAT: .long   1307470632
+; CHECK-XO-FLOAT: .long   0x4f9502f9
+; CHECK-XO-FLOAT: .long   0x4dee6b28
 
 ; CHECK-XO-ROPI-LABEL: lower_fpconst_select
 ; CHECK-XO-ROPI: movw [[REG:r[0-9]+]], :lower16:([[LABEL1:.?LCP[0-9]+_[0-9]+]]-([[LABEL2:.?LPC[0-9]+_[0-9]+]]+4))
@@ -219,8 +219,8 @@ define arm_aapcs_vfpcc float @lower_fpconst_select(float %f) {
 ; CHECK-XO-ROPI: .rodata
 ; CHECK-XO-ROPI-NOT: .text
 ; CHECK-XO-ROPI: [[LABEL1]]:
-; CHECK-XO-ROPI: .long   1335165689
-; CHECK-XO-ROPI: .long   1307470632
+; CHECK-XO-ROPI: .long   0x4f9502f9
+; CHECK-XO-ROPI: .long   0x4dee6b28
 
   %cmp = fcmp nnan oeq float %f, 0.000000e+00
   %sel = select i1 %cmp, float 5.000000e+08, float 5.000000e+09
