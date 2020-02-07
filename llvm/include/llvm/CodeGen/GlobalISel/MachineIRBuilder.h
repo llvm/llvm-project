@@ -788,6 +788,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
+  MachineInstrBuilder buildMerge(const DstOp &Res,
+                                 std::initializer_list<SrcOp> Ops);
 
   /// Build and insert \p Res0, ... = G_UNMERGE_VALUES \p Op
   ///

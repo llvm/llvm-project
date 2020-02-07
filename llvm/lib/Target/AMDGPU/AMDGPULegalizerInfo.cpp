@@ -1398,7 +1398,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     // extra ptrtoint would be kind of pointless.
     auto HighAddr = B.buildConstant(
       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
-    B.buildMerge(Dst, {Src, HighAddr.getReg(0)});
+    B.buildMerge(Dst, {Src, HighAddr});
     MI.eraseFromParent();
     return true;
   }
@@ -1555,7 +1555,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   const auto Zero32 = B.buildConstant(S32, 0);
 
   // Extend back to 64-bits.
-  auto SignBit64 = B.buildMerge(S64, {Zero32.getReg(0), SignBit.getReg(0)});
+  auto SignBit64 = B.buildMerge(S64, {Zero32, SignBit});
 
   auto Shr = B.buildAShr(S64, FractMask, Exp);
   auto Not = B.buildNot(S64, Shr);
@@ -1632,7 +1632,7 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
     B.buildFPTOUI(S32, FloorMul);
   auto Lo = B.buildFPTOUI(S32, Fma);
 
-  B.buildMerge(Dst, { Lo.getReg(0), Hi.getReg(0) });
+  B.buildMerge(Dst, { Lo, Hi });
   MI.eraseFromParent();
 
   return true;
