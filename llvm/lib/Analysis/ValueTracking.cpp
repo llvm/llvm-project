@@ -5589,19 +5589,17 @@ isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
 /// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
 /// false.  Otherwise, return None if we can't infer anything.
 static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
-                                         const ICmpInst *RHS,
+                                         CmpInst::Predicate BPred,
+                                         const Value *BLHS, const Value *BRHS,
                                          const DataLayout &DL, bool LHSIsTrue,
                                          unsigned Depth) {
   Value *ALHS = LHS->getOperand(0);
   Value *ARHS = LHS->getOperand(1);
+
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
-  ICmpInst::Predicate APred =
+  CmpInst::Predicate APred =
       LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
-
-  Value *BLHS = RHS->getOperand(0);
-  Value *BRHS = RHS->getOperand(1);
-  ICmpInst::Predicate BPred = RHS->getPredicate();
 
   // Can we infer anything when the two compares have matching operands?
   bool AreSwappedOps;
@@ -5633,10 +5631,11 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 /// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
 /// false.  Otherwise, return None if we can't infer anything.  We expect the
 /// RHS to be an icmp and the LHS to be an 'and' or an 'or' instruction.
-static Optional<bool> isImpliedCondAndOr(const BinaryOperator *LHS,
-                                         const ICmpInst *RHS,
-                                         const DataLayout &DL, bool LHSIsTrue,
-                                         unsigned Depth) {
+static Optional<bool>
+isImpliedCondAndOr(const BinaryOperator *LHS, CmpInst::Predicate RHSPred,
+                   const Value *RHSOp0, const Value *RHSOp1,
+
+                   const DataLayout &DL, bool LHSIsTrue, unsigned Depth) {
   // The LHS must be an 'or' or an 'and' instruction.
   assert((LHS->getOpcode() == Instruction::And ||
           LHS->getOpcode() == Instruction::Or) &&
@@ -5651,35 +5650,32 @@ static Optional<bool> isImpliedCondAndOr(const BinaryOperator *LHS,
   if ((!LHSIsTrue && match(LHS, m_Or(m_Value(ALHS), m_Value(ARHS)))) ||
       (LHSIsTrue && match(LHS, m_And(m_Value(ALHS), m_Value(ARHS))))) {
     // FIXME: Make this non-recursion.
-    if (Optional<bool> Implication =
-            isImpliedCondition(ALHS, RHS, DL, LHSIsTrue, Depth + 1))
+    if (Optional<bool> Implication = isImpliedCondition(
+            ALHS, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue, Depth + 1))
       return Implication;
-    if (Optional<bool> Implication =
-            isImpliedCondition(ARHS, RHS, DL, LHSIsTrue, Depth + 1))
+    if (Optional<bool> Implication = isImpliedCondition(
+            ARHS, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue, Depth + 1))
       return Implication;
     return None;
   }
   return None;
 }
 
-Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
-                                        const DataLayout &DL, bool LHSIsTrue,
-                                        unsigned Depth) {
+Optional<bool>
+llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
+                         const Value *RHSOp0, const Value *RHSOp1,
+                         const DataLayout &DL, bool LHSIsTrue, unsigned Depth) {
   // Bail out when we hit the limit.
   if (Depth == MaxDepth)
     return None;
 
   // A mismatch occurs when we compare a scalar cmp to a vector cmp, for
   // example.
-  if (LHS->getType() != RHS->getType())
+  if (RHSOp0->getType()->isVectorTy() != LHS->getType()->isVectorTy())
     return None;
 
   Type *OpTy = LHS->getType();
   assert(OpTy->isIntOrIntVectorTy(1) && "Expected integer type only!");
-
-  // LHS ==> RHS by definition
-  if (LHS == RHS)
-    return LHSIsTrue;
 
   // FIXME: Extending the code below to handle vectors.
   if (OpTy->isVectorTy())
@@ -5689,51 +5685,87 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
 
   // Both LHS and RHS are icmps.
   const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
-  const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS);
-  if (LHSCmp && RHSCmp)
-    return isImpliedCondICmps(LHSCmp, RHSCmp, DL, LHSIsTrue, Depth);
+  if (LHSCmp)
+    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
+                              Depth);
 
-  // The LHS should be an 'or' or an 'and' instruction.  We expect the RHS to be
-  // an icmp. FIXME: Add support for and/or on the RHS.
+  /// The LHS should be an 'or' or an 'and' instruction.  We expect the RHS to
+  /// be / an icmp. FIXME: Add support for and/or on the RHS.
   const BinaryOperator *LHSBO = dyn_cast<BinaryOperator>(LHS);
-  if (LHSBO && RHSCmp) {
+  if (LHSBO) {
     if ((LHSBO->getOpcode() == Instruction::And ||
          LHSBO->getOpcode() == Instruction::Or))
-      return isImpliedCondAndOr(LHSBO, RHSCmp, DL, LHSIsTrue, Depth);
+      return isImpliedCondAndOr(LHSBO, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
+                                Depth);
   }
   return None;
 }
 
-Optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
-                                             const Instruction *ContextI,
-                                             const DataLayout &DL) {
-  assert(Cond->getType()->isIntOrIntVectorTy(1) && "Condition must be bool");
+Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
+                                        const DataLayout &DL, bool LHSIsTrue,
+                                        unsigned Depth) {
+  // LHS ==> RHS by definition
+  if (LHS == RHS)
+    return LHSIsTrue;
+
+  const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS);
+  if (RHSCmp)
+    return isImpliedCondition(LHS, RHSCmp->getPredicate(),
+                              RHSCmp->getOperand(0), RHSCmp->getOperand(1), DL,
+                              LHSIsTrue, Depth);
+  return None;
+}
+
+// Returns a pair (Condition, ConditionIsTrue), where Condition is a branch
+// condition dominating ContextI or nullptr, if no condition is found.
+static std::pair<Value *, bool>
+getDomPredecessorCondition(const Instruction *ContextI) {
   if (!ContextI || !ContextI->getParent())
-    return None;
+    return {nullptr, false};
 
   // TODO: This is a poor/cheap way to determine dominance. Should we use a
   // dominator tree (eg, from a SimplifyQuery) instead?
   const BasicBlock *ContextBB = ContextI->getParent();
   const BasicBlock *PredBB = ContextBB->getSinglePredecessor();
   if (!PredBB)
-    return None;
+    return {nullptr, false};
 
   // We need a conditional branch in the predecessor.
   Value *PredCond;
   BasicBlock *TrueBB, *FalseBB;
   if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
-    return None;
+    return {nullptr, false};
 
   // The branch should get simplified. Don't bother simplifying this condition.
   if (TrueBB == FalseBB)
-    return None;
+    return {nullptr, false};
 
   assert((TrueBB == ContextBB || FalseBB == ContextBB) &&
          "Predecessor block does not point to successor?");
 
   // Is this condition implied by the predecessor condition?
-  bool CondIsTrue = TrueBB == ContextBB;
-  return isImpliedCondition(PredCond, Cond, DL, CondIsTrue);
+  return {PredCond, TrueBB == ContextBB};
+}
+
+Optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
+                                             const Instruction *ContextI,
+                                             const DataLayout &DL) {
+  assert(Cond->getType()->isIntOrIntVectorTy(1) && "Condition must be bool");
+  auto PredCond = getDomPredecessorCondition(ContextI);
+  if (PredCond.first)
+    return isImpliedCondition(PredCond.first, Cond, DL, PredCond.second);
+  return None;
+}
+
+Optional<bool> llvm::isImpliedByDomCondition(CmpInst::Predicate Pred,
+                                             const Value *LHS, const Value *RHS,
+                                             const Instruction *ContextI,
+                                             const DataLayout &DL) {
+  auto PredCond = getDomPredecessorCondition(ContextI);
+  if (PredCond.first)
+    return isImpliedCondition(PredCond.first, Pred, LHS, RHS, DL,
+                              PredCond.second);
+  return None;
 }
 
 static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
