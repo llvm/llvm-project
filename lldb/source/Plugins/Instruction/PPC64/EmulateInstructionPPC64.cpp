@@ -25,6 +25,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(EmulateInstructionPPC64);
+
 EmulateInstructionPPC64::EmulateInstructionPPC64(const ArchSpec &arch)
     : EmulateInstruction(arch) {}
 

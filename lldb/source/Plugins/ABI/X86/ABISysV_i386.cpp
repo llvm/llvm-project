@@ -31,6 +31,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABISysV_i386);
+
 //   This source file uses the following document as a reference:
 //====================================================================
 //             System V Application Binary Interface

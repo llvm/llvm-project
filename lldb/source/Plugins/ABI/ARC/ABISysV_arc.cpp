@@ -55,6 +55,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABISysV_arc);
+
 namespace {
 namespace dwarf {
 enum regnums {

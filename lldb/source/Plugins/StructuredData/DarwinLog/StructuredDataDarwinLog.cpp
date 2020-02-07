@@ -36,6 +36,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(StructuredDataDarwinLog);
+
 #pragma mark -
 #pragma mark Anonymous Namespace
 

@@ -33,6 +33,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABISysV_arm64);
+
 static RegisterInfo g_register_infos[] = {
     //  NAME       ALT       SZ OFF ENCODING          FORMAT
     //  EH_FRAME             DWARF                  GENERIC

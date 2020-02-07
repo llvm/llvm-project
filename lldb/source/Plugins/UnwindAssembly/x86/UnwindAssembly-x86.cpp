@@ -30,6 +30,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(UnwindAssembly_x86);
+
 //  UnwindAssemblyParser_x86 method definitions
 
 UnwindAssembly_x86::UnwindAssembly_x86(const ArchSpec &arch)
