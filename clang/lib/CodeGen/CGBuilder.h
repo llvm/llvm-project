@@ -280,6 +280,13 @@ public:
                         IsVolatile);
   }
 
+  using CGBuilderBaseTy::CreateMemCpyInline;
+  llvm::CallInst *CreateMemCpyInline(Address Dest, Address Src, uint64_t Size) {
+    return CreateMemCpyInline(
+        Dest.getPointer(), Dest.getAlignment().getAsAlign(), Src.getPointer(),
+        Src.getAlignment().getAsAlign(), getInt64(Size));
+  }
+
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
