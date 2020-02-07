@@ -10,6 +10,8 @@
 #include "empty.h"
 #ifdef EARLY_INDIRECT_INCLUDE
 #include "indirect.h"
+// expected-warning@defs.h:28 3{{anonymous non-C-compatible type}}
+// expected-note@defs.h:28 6{{type is}}
 #endif
 
 A pre_a;
