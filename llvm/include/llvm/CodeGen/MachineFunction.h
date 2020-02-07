@@ -983,10 +983,14 @@ public:
     return VariableDbgInfos;
   }
 
+  /// Start tracking the arguments passed to the call \p CallI.
   void addCallArgsForwardingRegs(const MachineInstr *CallI,
                                  CallSiteInfoImpl &&CallInfo) {
-    assert(CallI->isCall());
-    CallSitesInfo[CallI] = std::move(CallInfo);
+    assert(CallI->isCandidateForCallSiteEntry());
+    bool Inserted =
+        CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
+    (void)Inserted;
+    assert(Inserted && "Call site info not unique");
   }
 
   const CallSiteInfoMap &getCallSitesInfo() const {

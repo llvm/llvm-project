@@ -764,7 +764,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Skip instructions which aren't calls. Both calls and tail-calling jump
       // instructions (e.g TAILJMPd64) are classified correctly here.
-      if (!MI.isCall())
+      if (!MI.isCandidateForCallSiteEntry())
         continue;
 
       // TODO: Add support for targets with delay slots (see: beginInstruction).
