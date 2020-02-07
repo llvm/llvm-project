@@ -4040,16 +4040,17 @@ LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
   if (TypeIdx != 1)
     return UnableToLegalize;
 
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
     auto UnmergeSrc = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1));
 
-    auto LoCTPOP = MIRBuilder.buildCTPOP(NarrowTy, UnmergeSrc.getReg(0));
-    auto HiCTPOP = MIRBuilder.buildCTPOP(NarrowTy, UnmergeSrc.getReg(1));
-    auto Out = MIRBuilder.buildAdd(NarrowTy, HiCTPOP, LoCTPOP);
-    MIRBuilder.buildZExt(MI.getOperand(0), Out);
+    auto LoCTPOP = MIRBuilder.buildCTPOP(DstTy, UnmergeSrc.getReg(0));
+    auto HiCTPOP = MIRBuilder.buildCTPOP(DstTy, UnmergeSrc.getReg(1));
+    MIRBuilder.buildAdd(DstReg, HiCTPOP, LoCTPOP);
 
     MI.eraseFromParent();
     return Legalized;
