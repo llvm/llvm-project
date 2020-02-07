@@ -1,4 +1,5 @@
 REQUIRES: python
+RUN: rm -f %t
 RUN: mkdir -p %t
 RUN: %build %p/Inputs/hello.cpp -o %t/target.out
 RUN: %lldb %t/target.out -s %p/Inputs/convenience.in -o quit | FileCheck %s
