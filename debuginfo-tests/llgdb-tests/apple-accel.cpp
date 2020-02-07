@@ -13,11 +13,11 @@
 __attribute__((section("1,__text_foo"))) void foo() {}
 int main (int argc, char const *argv[]) { return argc; }
 
-// CHECK: __debug_abbrev
-// CHECK-NEXT: __debug_info
-// CHECK-NEXT: __debug_str
-// CHECK-NEXT: __debug_ranges
-// CHECK-NEXT: __apple_names
-// CHECK-NEXT: __apple_objc
-// CHECK-NEXT: __apple_namespac
-// CHECK-NEXT: __apple_types
+// CHECK-DAG: __debug_abbrev
+// CHECK-DAG: __debug_info
+// CHECK-DAG: __debug_str
+// CHECK-DAG: __debug_ranges
+// CHECK-DAG: __apple_names
+// CHECK-DAG: __apple_objc
+// CHECK-DAG: __apple_namespac
+// CHECK-DAG: __apple_types
