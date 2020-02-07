@@ -17,7 +17,6 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -32,12 +31,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cstdlib>
-
-#define DEBUG_TYPE "x86-fl"
-
-STATISTIC(NumFrameLoopProbe, "Number of loop stack probes used in prologue");
-STATISTIC(NumFrameExtraProbe,
-          "Number of extra stack probes generated in prologue");
 
 using namespace llvm;
 
@@ -264,27 +257,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
 
   uint64_t Chunk = (1LL << 31) - 1;
 
-  MachineFunction &MF = *MBB.getParent();
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86TargetLowering &TLI = *STI.getTargetLowering();
-  const bool EmitInlineStackProbe = TLI.hasInlineStackProbe(MF);
-
-  // It's ok to not take into account large chunks when probing, as the
-  // allocation is split in smaller chunks anyway.
-  if (EmitInlineStackProbe && !InEpilogue) {
-
-    // stack probing may involve looping, and control flow generations is
-    // disallowed at this point. Rely to later processing through
-    // `inlineStackProbe`.
-    MachineInstr *Stub = emitStackProbeInlineStub(MF, MBB, MBBI, DL, true);
-
-    // Encode the static offset as a metadata attached to the stub.
-    LLVMContext &Context = MF.getFunction().getContext();
-    MachineInstrBuilder(MF, Stub).addMetadata(
-        MDTuple::get(Context, {ConstantAsMetadata::get(ConstantInt::get(
-                                  IntegerType::get(Context, 64), Offset))}));
-    return;
-  } else if (Offset > Chunk) {
+  if (Offset > Chunk) {
     // Rather than emit a long series of instructions for large offsets,
     // load the offset into a register and do one sub/add
     unsigned Reg = 0;
@@ -408,8 +381,8 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   } else {
     bool IsSub = Offset < 0;
     uint64_t AbsOffset = IsSub ? -Offset : Offset;
-    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr, AbsOffset)
-                               : getADDriOpcode(Uses64BitFramePtr, AbsOffset);
+    unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr, AbsOffset)
+                         : getADDriOpcode(Uses64BitFramePtr, AbsOffset);
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
              .addImm(AbsOffset);
@@ -554,169 +527,6 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
                                             MachineBasicBlock::iterator MBBI,
                                             const DebugLoc &DL,
                                             bool InProlog) const {
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  if (STI.isTargetWindowsCoreCLR() && STI.is64Bit())
-    emitStackProbeInlineWindowsCoreCLR64(MF, MBB, MBBI, DL, InProlog);
-  else
-    emitStackProbeInlineGeneric(MF, MBB, MBBI, DL, InProlog);
-}
-
-void X86FrameLowering::emitStackProbeInlineGeneric(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
-  MachineInstr &CallToInline = *std::prev(MBBI);
-  assert(CallToInline.getOperand(1).isMetadata() &&
-         "no metadata attached to that probe");
-  uint64_t Offset =
-      cast<ConstantInt>(
-          cast<ConstantAsMetadata>(
-              cast<MDTuple>(CallToInline.getOperand(1).getMetadata())
-                  ->getOperand(0))
-              ->getValue())
-          ->getZExtValue();
-
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86TargetLowering &TLI = *STI.getTargetLowering();
-  assert(!(STI.is64Bit() && STI.isTargetWindowsCoreCLR()) &&
-         "different expansion expected for CoreCLR 64 bit");
-
-  const uint64_t StackProbeSize = TLI.getStackProbeSize(MF);
-  uint64_t ProbeChunk = StackProbeSize * 8;
-
-  // Synthesize a loop or unroll it, depending on the number of iterations.
-  if (Offset > ProbeChunk) {
-    emitStackProbeInlineGenericLoop(MF, MBB, MBBI, DL, Offset);
-  } else {
-    emitStackProbeInlineGenericBlock(MF, MBB, MBBI, DL, Offset);
-  }
-}
-
-void X86FrameLowering::emitStackProbeInlineGenericBlock(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-    uint64_t Offset) const {
-
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86TargetLowering &TLI = *STI.getTargetLowering();
-  const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, Offset);
-  const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
-  const uint64_t StackProbeSize = TLI.getStackProbeSize(MF);
-  uint64_t CurrentOffset = 0;
-  // 0 Thanks to return address being saved on the stack
-  uint64_t CurrentProbeOffset = 0;
-
-  // For the first N - 1 pages, just probe. I tried to take advantage of
-  // natural probes but it implies much more logic and there was very few
-  // interesting natural probes to interleave.
-  while (CurrentOffset + StackProbeSize < Offset) {
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-                           .addReg(StackPtr)
-                           .addImm(StackProbeSize)
-                           .setMIFlag(MachineInstr::FrameSetup);
-    MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
-
-
-    addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
-                     .setMIFlag(MachineInstr::FrameSetup),
-                 StackPtr, false, 0)
-        .addImm(0)
-        .setMIFlag(MachineInstr::FrameSetup);
-    NumFrameExtraProbe++;
-    CurrentOffset += StackProbeSize;
-    CurrentProbeOffset += StackProbeSize;
-  }
-
-  uint64_t ChunkSize = Offset - CurrentOffset;
-  MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-                         .addReg(StackPtr)
-                         .addImm(ChunkSize)
-                         .setMIFlag(MachineInstr::FrameSetup);
-  MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
-}
-
-void X86FrameLowering::emitStackProbeInlineGenericLoop(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-    uint64_t Offset) const {
-
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86TargetLowering &TLI = *STI.getTargetLowering();
-  const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
-  const uint64_t StackProbeSize = TLI.getStackProbeSize(MF);
-
-  // Synthesize a loop
-  NumFrameLoopProbe++;
-  const BasicBlock *LLVM_BB = MBB.getBasicBlock();
-
-  MachineBasicBlock *testMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *tailMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-
-  MachineFunction::iterator MBBIter = ++MBB.getIterator();
-  MF.insert(MBBIter, testMBB);
-  MF.insert(MBBIter, tailMBB);
-
-  unsigned FinalStackPtr = Uses64BitFramePtr ? X86::R11 : X86::R11D;
-  BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rr), FinalStackPtr)
-      .addReg(StackPtr)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-  // save loop bound
-  {
-    const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, Offset);
-    BuildMI(MBB, MBBI, DL, TII.get(Opc), FinalStackPtr)
-        .addReg(FinalStackPtr)
-        .addImm(Offset / StackProbeSize * StackProbeSize)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-
-  // allocate a page
-  {
-    const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, StackProbeSize);
-    BuildMI(testMBB, DL, TII.get(Opc), StackPtr)
-        .addReg(StackPtr)
-        .addImm(StackProbeSize)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-
-  // touch the page
-  addRegOffset(BuildMI(testMBB, DL, TII.get(MovMIOpc))
-                   .setMIFlag(MachineInstr::FrameSetup),
-               StackPtr, false, 0)
-      .addImm(0)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-  // cmp with stack pointer bound
-  BuildMI(testMBB, DL, TII.get(IsLP64 ? X86::CMP64rr : X86::CMP32rr))
-      .addReg(StackPtr)
-      .addReg(FinalStackPtr)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-  // jump
-  BuildMI(testMBB, DL, TII.get(X86::JCC_1))
-      .addMBB(testMBB)
-      .addImm(X86::COND_NE)
-      .setMIFlag(MachineInstr::FrameSetup);
-  testMBB->addSuccessor(testMBB);
-  testMBB->addSuccessor(tailMBB);
-
-  // allocate a block and touch it
-
-  tailMBB->splice(tailMBB->end(), &MBB, MBBI, MBB.end());
-  tailMBB->transferSuccessorsAndUpdatePHIs(&MBB);
-  MBB.addSuccessor(testMBB);
-
-  if (Offset % StackProbeSize) {
-    const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, Offset);
-    BuildMI(*tailMBB, tailMBB->begin(), DL, TII.get(Opc), StackPtr)
-        .addReg(StackPtr)
-        .addImm(Offset % StackProbeSize)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-}
-
-void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   assert(STI.is64Bit() && "different expansion needed for 32 bit");
   assert(STI.isTargetWindowsCoreCLR() && "custom expansion expects CoreCLR");
@@ -1011,13 +821,13 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
   }
 }
 
-MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
+void X86FrameLowering::emitStackProbeInlineStub(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
 
   assert(InProlog && "ChkStkStub called outside prolog!");
 
-  return BuildMI(MBB, MBBI, DL, TII.get(X86::CALLpcrel32))
+  BuildMI(MBB, MBBI, DL, TII.get(X86::CALLpcrel32))
       .addExternalSymbol("__chkstk_stub");
 }
 
@@ -1204,8 +1014,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     X86FI->setCalleeSavedFrameSize(
       X86FI->getCalleeSavedFrameSize() - TailCallReturnAddrDelta);
 
-  const bool EmitStackProbeCall =
-      STI.getTargetLowering()->hasStackProbeSymbol(MF);
+  bool UseStackProbe = !STI.getTargetLowering()->getStackProbeSymbolName(MF).empty();
   unsigned StackProbeSize = STI.getTargetLowering()->getStackProbeSize(MF);
 
   // Re-align the stack on 64-bit if the x86-interrupt calling convention is
@@ -1223,10 +1032,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer, calls, or dynamic alloca then we do not need to adjust the
   // stack pointer (we fit in the Red Zone). We also check that we don't
   // push and pop from the stack.
-  if (has128ByteRedZone(MF) && !TRI->needsStackRealignment(MF) &&
+  if (has128ByteRedZone(MF) &&
+      !TRI->needsStackRealignment(MF) &&
       !MFI.hasVarSizedObjects() &&             // No dynamic alloca.
       !MFI.adjustsStack() &&                   // No calls.
-      !EmitStackProbeCall &&                   // No stack probes.
+      !UseStackProbe &&                        // No stack probes.
       !MFI.hasCopyImplyingStackAdjustment() && // Don't push and pop.
       !MF.shouldSplitStack()) {                // Regular stack
     uint64_t MinSize = X86FI->getCalleeSavedFrameSize();
@@ -1427,7 +1237,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t AlignedNumBytes = NumBytes;
   if (IsWin64Prologue && !IsFunclet && TRI->needsStackRealignment(MF))
     AlignedNumBytes = alignTo(AlignedNumBytes, MaxAlign);
-  if (AlignedNumBytes >= StackProbeSize && EmitStackProbeCall) {
+  if (AlignedNumBytes >= StackProbeSize && UseStackProbe) {
     assert(!X86FI->getUsesRedZone() &&
            "The Red Zone is not accounted for in stack probes");
 
