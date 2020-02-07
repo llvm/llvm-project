@@ -103,6 +103,43 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
+- Clang now implements a restriction on giving non-C-compatible anonymous
+  structs a typedef name for linkage purposes, as described in C++ committee
+  paper `P1766R1 <http://wg21.link/p1766r1>`. This paper was adopted by the
+  C++ committee as a Defect Report resolution, so it is applied retroactively
+  to all C++ standard versions. This affects code such as:
+
+  .. code-block:: c++
+
+    typedef struct {
+      int f() { return 0; }
+    } S;
+
+  Previous versions of Clang rejected some constructs of this form
+  (specifically, where the linkage of the type happened to be computed
+  before the parser reached the typedef name); those cases are still rejected
+  in Clang 11.  In addition, cases that previous versions of Clang did not
+  reject now produce an extension warning. This warning can be disabled with
+  the warning flag ``-Wno-non-c-typedef-for-linkage``.
+
+  Affected code should be updated to provide a tag name for the anonymous
+  struct:
+
+  .. code-block:: c++
+
+    struct S {
+      int f() { return 0; }
+    };
+
+  If the code is shared with a C compilation (for example, if the parts that
+  are not C-compatible are guarded with ``#ifdef __cplusplus``), the typedef
+  declaration should be retained, but a tag name should still be provided:
+
+  .. code-block:: c++
+
+    typedef struct S {
+      int f() { return 0; }
+    } S;
 
 C++1z Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
