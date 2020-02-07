@@ -606,24 +606,23 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   return true;
 }
 
-// Perform RCP optimizations:
+// Optimize fdiv with rcp:
 //
-// 1/x -> rcp(x) when fast unsafe rcp is legal or fpmath >= 2.5ULP with
-//                                                denormals flushed.
+// 1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
+//               allowed with unsafe-fp-math or afn.
 //
-// a/b -> a*rcp(b) when fast unsafe rcp is legal.
-static Value *performRCPOpt(Value *Num, Value *Den, bool FastUnsafeRcpLegal,
-                            IRBuilder<> Builder, MDNode *FPMath, Module *Mod,
-                            bool HasDenormals, bool NeedHighAccuracy) {
+// a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
+static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
+                              bool RcpIsAccurate, IRBuilder<> Builder,
+                              Module *Mod) {
 
-  Type *Ty = Den->getType();
-  if (!FastUnsafeRcpLegal && Ty->isFloatTy() &&
-                             (HasDenormals || NeedHighAccuracy))
+  if (!AllowInaccurateRcp && !RcpIsAccurate)
     return nullptr;
 
+  Type *Ty = Den->getType();
   Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, Ty);
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
-    if (FastUnsafeRcpLegal || Ty->isFloatTy() || Ty->isHalfTy()) {
+    if (AllowInaccurateRcp || RcpIsAccurate) {
       if (CLHS->isExactlyValue(1.0)) {
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
@@ -648,49 +647,63 @@ static Value *performRCPOpt(Value *Num, Value *Den, bool FastUnsafeRcpLegal,
     }
   }
 
-  if (FastUnsafeRcpLegal) {
+  if (AllowInaccurateRcp) {
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
     Value *Recip = Builder.CreateCall(Decl, { Den });
-    return Builder.CreateFMul(Num, Recip, "", FPMath);
+    return Builder.CreateFMul(Num, Recip);
   }
   return nullptr;
 }
 
-static bool shouldKeepFDivF32(Value *Num, bool FastUnsafeRcpLegal,
-                              bool HasDenormals) {
-  const ConstantFP *CNum = dyn_cast<ConstantFP>(Num);
-  if (!CNum)
-    return HasDenormals;
+// optimize with fdiv.fast:
+//
+// a/b -> fdiv.fast(a, b) when !fpmath >= 2.5ulp with denormals flushed.
+//
+// 1/x -> fdiv.fast(1,x)  when !fpmath >= 2.5ulp.
+//
+// NOTE: optimizeWithRcp should be tried first because rcp is the preference.
+static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
+                                   bool HasDenormals, IRBuilder<> Builder,
+                                   Module *Mod) {
+  // fdiv.fast can achieve 2.5 ULP accuracy.
+  if (ReqdAccuracy < 2.5f)
+    return nullptr;
 
-  if (FastUnsafeRcpLegal)
-    return true;
+  // Only have fdiv.fast for f32.
+  Type *Ty = Den->getType();
+  if (!Ty->isFloatTy())
+    return nullptr;
 
-  bool IsOne = CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0);
+  bool NumIsOne = false;
+  if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
+    if (CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0))
+      NumIsOne = true;
+  }
 
-  // Reciprocal f32 is handled separately without denormals.
-  return HasDenormals ^ IsOne;
+  // fdiv does not support denormals. But 1.0/x is always fine to use it.
+  if (HasDenormals && !NumIsOne)
+    return nullptr;
+
+  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
+  return Builder.CreateCall(Decl, { Num, Den });
 }
 
-
-// Optimizations is performed based on fpmath, fast math flags as wells as
-// denormals to lower fdiv using either rcp or fdiv.fast.
+// Optimizations is performed based on fpmath, fast math flags as well as
+// denormals to optimize fdiv with either rcp or fdiv.fast.
 //
-// FastUnsafeRcpLegal: We determine whether it is legal to use rcp based on
-//                     unsafe-fp-math, fast math flags, denormals and fpmath
-//                     accuracy request.
+// With rcp:
+//   1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
+//                 allowed with unsafe-fp-math or afn.
 //
-// RCP Optimizations:
-//   1/x -> rcp(x) when fast unsafe rcp is legal or fpmath >= 2.5ULP with
-//                                                  denormals flushed.
-//   a/b -> a*rcp(b) when fast unsafe rcp is legal.
+//   a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
 //
-// Use fdiv.fast:
-//   a/b -> fdiv.fast(a, b) when RCP optimization is not performed and
-//                          fpmath >= 2.5ULP with denormals flushed.
+// With fdiv.fast:
+//   a/b -> fdiv.fast(a, b) when !fpmath >= 2.5ulp with denormals flushed.
 //
-//   1/x -> fdiv.fast(1,x)  when RCP optimization is not performed and
-//                          fpmath >= 2.5ULP with denormals.
+//   1/x -> fdiv.fast(1,x)  when !fpmath >= 2.5ulp.
+//
+// NOTE: rcp is the preference in cases that both are legal.
 bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Type *Ty = FDiv.getType()->getScalarType();
@@ -700,19 +713,17 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&FDiv);
-  MDNode *FPMath = FDiv.getMetadata(LLVMContext::MD_fpmath);
-  const bool NeedHighAccuracy = !FPMath || FPOp->getFPAccuracy() < 2.5f;
+  const float ReqdAccuracy =  FPOp->getFPAccuracy();
 
+  // Inaccurate rcp is allowed with unsafe-fp-math or afn.
   FastMathFlags FMF = FPOp->getFastMathFlags();
-  // Determine whether it is ok to use rcp based on unsafe-fp-math,
-  // fast math flags, denormals and accuracy request.
-  const bool FastUnsafeRcpLegal = HasUnsafeFPMath || FMF.isFast() ||
-          (FMF.allowReciprocal() && ((!HasFP32Denormals && !NeedHighAccuracy)
-                                     || FMF.approxFunc()));
+  const bool AllowInaccurateRcp = HasUnsafeFPMath || FMF.approxFunc();
 
-  // Use fdiv.fast for only f32, fpmath >= 2.5ULP and rcp is not used.
-  const bool UseFDivFast = Ty->isFloatTy() && !NeedHighAccuracy &&
-                           !FastUnsafeRcpLegal;
+  // rcp_f16 is accurate for !fpmath >= 1.0ulp.
+  // rcp_f32 is accurate for !fpmath >= 1.0ulp and denormals are flushed.
+  // rcp_f64 is never accurate.
+  const bool RcpIsAccurate = (Ty->isHalfTy() && ReqdAccuracy >= 1.0f) ||
+            (Ty->isFloatTy() && !HasFP32Denormals && ReqdAccuracy >= 1.0f);
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(FMF);
@@ -730,31 +741,24 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
       Value *NumEltI = Builder.CreateExtractElement(Num, I);
       Value *DenEltI = Builder.CreateExtractElement(Den, I);
-      Value *NewElt = nullptr;
-      if (UseFDivFast && !shouldKeepFDivF32(NumEltI, FastUnsafeRcpLegal,
-                                           HasFP32Denormals)) {
-        Function *Decl =
-                 Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
-        NewElt = Builder.CreateCall(Decl, { NumEltI, DenEltI }, "", FPMath);
-      }
-      if (!NewElt) // Try rcp.
-        NewElt = performRCPOpt(NumEltI, DenEltI, FastUnsafeRcpLegal, Builder,
-                               FPMath, Mod, HasFP32Denormals, NeedHighAccuracy);
-      if (!NewElt)
-        NewElt = Builder.CreateFDiv(NumEltI, DenEltI, "", FPMath);
+      // Try rcp first.
+      Value *NewElt = optimizeWithRcp(NumEltI, DenEltI, AllowInaccurateRcp,
+                                      RcpIsAccurate, Builder, Mod);
+      if (!NewElt) // Try fdiv.fast.
+        NewElt = optimizeWithFDivFast(NumEltI, DenEltI, ReqdAccuracy,
+                                      HasFP32Denormals, Builder, Mod);
+      if (!NewElt) // Keep the original.
+        NewElt = Builder.CreateFDiv(NumEltI, DenEltI);
 
       NewFDiv = Builder.CreateInsertElement(NewFDiv, NewElt, I);
     }
-  } else { // Scalar.
-    if (UseFDivFast && !shouldKeepFDivF32(Num, FastUnsafeRcpLegal,
-                                          HasFP32Denormals)) {
-      Function *Decl =
-               Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
-      NewFDiv = Builder.CreateCall(Decl, { Num, Den }, "", FPMath);
-    }
-    if (!NewFDiv) { // Try rcp.
-      NewFDiv = performRCPOpt(Num, Den, FastUnsafeRcpLegal, Builder, FPMath,
-                              Mod, HasFP32Denormals, NeedHighAccuracy);
+  } else { // Scalar FDiv.
+    // Try rcp first.
+    NewFDiv = optimizeWithRcp(Num, Den, AllowInaccurateRcp, RcpIsAccurate,
+                              Builder, Mod);
+    if (!NewFDiv) { // Try fdiv.fast.
+      NewFDiv = optimizeWithFDivFast(Num, Den, ReqdAccuracy, HasFP32Denormals,
+                                     Builder, Mod);
     }
   }
 
