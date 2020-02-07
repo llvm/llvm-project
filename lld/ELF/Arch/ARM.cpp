@@ -402,15 +402,11 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(loc, val, 31, rel);
     write32le(loc, (read32le(loc) & 0x80000000) | (val & ~0x80000000));
     break;
-  case R_ARM_CALL: {
-    // R_ARM_CALL is used for BL and BLX instructions, for symbols of type
-    // STT_FUNC we choose whether to write a BL or BLX depending on the
-    // value of bit 0 of Val. With bit 0 == 1 denoting Thumb. If the symbol is
-    // not of type STT_FUNC then we must preserve the original instruction.
-    // PLT entries are always ARM state so we know we don't need to interwork.
-    bool isBlx = (read32le(loc) & 0xfe000000) == 0xfa000000;
-    bool interwork = rel.sym && rel.sym->isFunc() && rel.expr != R_PLT_PC;
-    if (interwork ? val & 1 : isBlx) {
+  case R_ARM_CALL:
+    // R_ARM_CALL is used for BL and BLX instructions, depending on the
+    // value of bit 0 of Val, we must select a BL or BLX instruction
+    if (val & 1) {
+      // If bit 0 of Val is 1 the target is Thumb, we must select a BLX.
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
       write32le(loc, 0xfa000000 |                    // opcode
@@ -418,11 +414,11 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                          ((val >> 2) & 0x00ffffff)); // imm24
       break;
     }
-    // BLX (always unconditional) instruction to an ARM Target, select an
-    // unconditional BL.
-    write32le(loc, 0xeb000000 | (read32le(loc) & 0x00ffffff));
+    if ((read32le(loc) & 0xfe000000) == 0xfa000000)
+      // BLX (always unconditional) instruction to an ARM Target, select an
+      // unconditional BL.
+      write32le(loc, 0xeb000000 | (read32le(loc) & 0x00ffffff));
     // fall through as BL encoding is shared with B
-  }
     LLVM_FALLTHROUGH;
   case R_ARM_JUMP24:
   case R_ARM_PC24:
@@ -447,23 +443,16 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                   ((val >> 5) & 0x2000) | // J1
                   ((val >> 1) & 0x07ff)); // imm11
     break;
-  case R_ARM_THM_CALL: {
-    // R_ARM_THM_CALL is used for BL and BLX instructions, for symbols of type
-    // STT_FUNC we choose whether to write a BL or BLX depending on the
-    // value of bit 0 of Val. With bit 0 == 0 denoting ARM, if the symbol is
-    // not of type STT_FUNC then we must preserve the original instruction.
-    // PLT entries are always ARM state so we know we need to interwork.
-    bool isBlx = (read16le(loc + 2) & 0x1000) == 0;
-    bool interwork = (rel.sym && rel.sym->isFunc()) || rel.expr == R_PLT_PC;
-    if (interwork ? (val & 1) == 0 : isBlx) {
-      // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
-      // the BLX instruction may only be two byte aligned. This must be done
-      // before overflow check.
+  case R_ARM_THM_CALL:
+    // R_ARM_THM_CALL is used for BL and BLX instructions, depending on the
+    // value of bit 0 of Val, we must select a BL or BLX instruction
+    if ((val & 1) == 0) {
+      // Ensure BLX destination is 4-byte aligned. As BLX instruction may
+      // only be two byte aligned. This must be done before overflow check
       val = alignTo(val, 4);
-      write16le(loc + 2, read16le(loc + 2) & ~0x1000);
-    } else {
-      write16le(loc + 2, (read16le(loc + 2) & ~0x1000) | 1 << 12);
     }
+    // Bit 12 is 0 for BLX, 1 for BL
+    write16le(loc + 2, (read16le(loc + 2) & ~0x1000) | (val & 1) << 12);
     if (!config->armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
@@ -477,7 +466,6 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                     ((val >> 1) & 0x07ff));    // imm11
       break;
     }
-  }
     // Fall through as rest of encoding is the same as B.W
     LLVM_FALLTHROUGH;
   case R_ARM_THM_JUMP24:
