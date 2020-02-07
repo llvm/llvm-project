@@ -6760,6 +6760,10 @@ def err_bad_cxx_cast_scalar_to_vector_different_size : Error<
 def err_bad_cxx_cast_vector_to_vector_different_size : Error<
   "%select{||reinterpret_cast||C-style cast|}0 from vector %1 "
   "to vector %2 of different size">;
+def warn_bad_cxx_cast_nested_pointer_addr_space : Warning<
+  "%select{reinterpret_cast|C-style cast}0 from %1 to %2 "
+  "changes address space of nested pointers">,
+  InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
 def err_bad_lvalue_to_rvalue_cast : Error<
   "cannot cast from lvalue of type %1 to rvalue reference type %2; types are "
   "not compatible">;
@@ -9652,6 +9656,8 @@ def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
+def err_omp_atomic_several_mem_order_clauses : Error<
+  "directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause">;
 def note_omp_atomic_previous_clause : Note<
   "'%0' clause used here">;
 def err_omp_target_contains_not_only_teams : Error<
@@ -9890,6 +9896,10 @@ def err_omp_one_defaultmap_each_category: Error<
 def err_omp_lastprivate_conditional_non_scalar : Error<
   "expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier"
   >;
+def err_omp_flush_order_clause_and_list : Error<
+  "'flush' directive with memory order clause '%0' cannot have the list">;
+def note_omp_flush_order_clause_here : Note<
+  "memory order clause '%0' is specified here">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

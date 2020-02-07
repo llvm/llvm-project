@@ -2640,6 +2640,11 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return TokError("Value '" + FieldName->getValue() + "' unknown!");
 
   RecTy *Type = Field->getType();
+  if (!BitList.empty() && isa<BitsRecTy>(Type)) {
+    // When assigning to a subset of a 'bits' object, expect the RHS to have
+    // the type of that subset instead of the type of the whole object.
+    Type = BitsRecTy::get(BitList.size());
+  }
 
   Init *Val = ParseValue(CurRec, Type);
   if (!Val) return true;

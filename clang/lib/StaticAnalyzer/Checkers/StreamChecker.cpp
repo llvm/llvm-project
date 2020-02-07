@@ -135,31 +135,32 @@ bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 }
 
 void StreamChecker::evalFopen(const CallEvent &Call, CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
+
   auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return;
 
-  DefinedSVal RetVal =
-      svalBuilder.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount())
-          .castAs<DefinedSVal>();
-  state = state->BindExpr(CE, C.getLocationContext(), RetVal);
+  DefinedSVal RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount())
+                           .castAs<DefinedSVal>();
+  SymbolRef RetSym = RetVal.getAsSymbol();
+  assert(RetSym && "RetVal must be a symbol here.");
 
-  ConstraintManager &CM = C.getConstraintManager();
+  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+
   // Bifurcate the state into two: one with a valid FILE* pointer, the other
   // with a NULL.
-  ProgramStateRef stateNotNull, stateNull;
-  std::tie(stateNotNull, stateNull) = CM.assumeDual(state, RetVal);
+  ProgramStateRef StateNotNull, StateNull;
+  std::tie(StateNotNull, StateNull) =
+      C.getConstraintManager().assumeDual(State, RetVal);
 
-  SymbolRef Sym = RetVal.getAsSymbol();
-  assert(Sym && "RetVal must be a symbol here.");
-  stateNotNull = stateNotNull->set<StreamMap>(Sym, StreamState::getOpened());
-  stateNull = stateNull->set<StreamMap>(Sym, StreamState::getOpenFailed());
+  StateNotNull = StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened());
+  StateNull = StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed());
 
-  C.addTransition(stateNotNull);
-  C.addTransition(stateNull);
+  C.addTransition(StateNotNull);
+  C.addTransition(StateNull);
 }
 
 void StreamChecker::evalFreopen(const CallEvent &Call,
@@ -228,8 +229,6 @@ void StreamChecker::evalFseek(const CallEvent &Call, CheckerContext &C) const {
 
   if (!C.isDifferent() && StateChanged)
     C.addTransition(State);
-
-  return;
 }
 
 void StreamChecker::checkArgNullStream(const CallEvent &Call, CheckerContext &C,

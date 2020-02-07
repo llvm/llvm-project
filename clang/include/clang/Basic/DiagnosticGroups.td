@@ -1178,7 +1178,7 @@ the token limit, which can be set in three ways:
    which works like and overrides the ``-fmax-tokens=`` flag:
 
    .. code-block: c++
-      #pragma clang max_file_tokens 1234
+      #pragma clang max_tokens_total 1234
 
 These limits can be helpful in limiting code growth through included files.
 

@@ -216,6 +216,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_CTPOP)
       .lowerFor({{s32, s32}})
+      .clampScalar(0, s32, s32)
       .clampScalar(1, s32, s32);
 
   // FP instructions

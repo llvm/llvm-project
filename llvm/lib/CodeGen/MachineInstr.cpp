@@ -696,6 +696,20 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
+bool MachineInstr::isCandidateForCallSiteEntry() const {
+  if (!isCall(MachineInstr::IgnoreBundle))
+    return false;
+  switch (getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+  case TargetOpcode::PATCHPOINT:
+  case TargetOpcode::STACKMAP:
+  case TargetOpcode::STATEPOINT:
+    return false;
+  }
+  return true;
+}
+
 unsigned MachineInstr::getNumExplicitOperands() const {
   unsigned NumOperands = MCID->getNumOperands();
   if (!MCID->isVariadic())

@@ -2563,17 +2563,17 @@ static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP) {
     int Chunk = API.getNumWords() - 1;
 
     if (TrailingBytes)
-      AP.OutStreamer->EmitIntValue(p[Chunk--], TrailingBytes);
+      AP.OutStreamer->EmitIntValueInHexWithPadding(p[Chunk--], TrailingBytes);
 
     for (; Chunk >= 0; --Chunk)
-      AP.OutStreamer->EmitIntValue(p[Chunk], sizeof(uint64_t));
+      AP.OutStreamer->EmitIntValueInHexWithPadding(p[Chunk], sizeof(uint64_t));
   } else {
     unsigned Chunk;
     for (Chunk = 0; Chunk < NumBytes / sizeof(uint64_t); ++Chunk)
-      AP.OutStreamer->EmitIntValue(p[Chunk], sizeof(uint64_t));
+      AP.OutStreamer->EmitIntValueInHexWithPadding(p[Chunk], sizeof(uint64_t));
 
     if (TrailingBytes)
-      AP.OutStreamer->EmitIntValue(p[Chunk], TrailingBytes);
+      AP.OutStreamer->EmitIntValueInHexWithPadding(p[Chunk], TrailingBytes);
   }
 
   // Emit the tail padding for the long double.

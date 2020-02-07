@@ -415,6 +415,11 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
   llvm_unreachable("unknown storage duration");
 }
 
+/// Helper method to check if the underlying ABI is AAPCS
+static bool isAAPCS(const TargetInfo &TargetInfo) {
+  return TargetInfo.getABI().startswith("aapcs");
+}
+
 LValue CodeGenFunction::
 EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
   const Expr *E = M->getSubExpr();
@@ -2068,6 +2073,14 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     SrcVal = Builder.CreateOr(Val, SrcVal, "bf.set");
   } else {
     assert(Info.Offset == 0);
+    // According to the AACPS:
+    // When a volatile bit-field is written, and its container does not overlap
+    // with any non-bit-field member, its container must be read exactly once and
+    // written exactly once using the access width appropriate to the type of the
+    // container. The two accesses are not atomic.
+    if (Dst.isVolatileQualified() && isAAPCS(CGM.getTarget()) &&
+        CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
+      Builder.CreateLoad(Ptr, true, "bf.load");
   }
 
   // Write the new value back out.

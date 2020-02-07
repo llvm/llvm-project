@@ -579,6 +579,13 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
   return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, TmpVec);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildMerge(const DstOp &Res,
+                             std::initializer_list<SrcOp> Ops) {
+  assert(Ops.size() > 1);
+  return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, Ops);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
                                                    const SrcOp &Op) {
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<DstOp>,

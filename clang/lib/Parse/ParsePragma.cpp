@@ -3336,7 +3336,7 @@ void PragmaMaxTokensHereHandler::HandlePragma(Preprocessor &PP,
   }
 }
 
-// Handle '#pragma clang max_file_tokens 12345'.
+// Handle '#pragma clang max_tokens_total 12345'.
 void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
                                                PragmaIntroducer Introducer,
                                                Token &Tok) {

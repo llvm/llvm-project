@@ -70,9 +70,17 @@ public:
                          std::string symbol, bool regexp)> const &callback) {
     for (auto entry : m_recognizers) {
       if (entry.is_regexp) {
-        callback(entry.recognizer_id, entry.recognizer->GetName(),
-                 std::string(entry.module_regexp->GetText()),
-                 std::string(entry.symbol_regexp->GetText()), true);
+        std::string module_name;
+        std::string symbol_name;
+
+        if (entry.module_regexp)
+          module_name = entry.module_regexp->GetText().str();
+        if (entry.symbol_regexp)
+          symbol_name = entry.symbol_regexp->GetText().str();
+
+        callback(entry.recognizer_id, entry.recognizer->GetName(), module_name,
+                 symbol_name, true);
+
       } else {
         callback(entry.recognizer_id, entry.recognizer->GetName(), entry.module.GetCString(),
                  entry.symbol.GetCString(), false);

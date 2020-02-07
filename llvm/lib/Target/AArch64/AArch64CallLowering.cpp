@@ -316,8 +316,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                 }
                 auto Undef = MIRBuilder.buildUndef({OldLLT});
                 CurVReg =
-                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef.getReg(0)})
-                        .getReg(0);
+                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef}).getReg(0);
               } else {
                 // Just do a vector extend.
                 CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})

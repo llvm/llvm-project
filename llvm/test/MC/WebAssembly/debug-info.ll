@@ -53,21 +53,21 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 121
-; CHECK-NEXT:    Offset: 145
-; CHECK-NEXT:    Name: .debug_str
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Section {
-; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 86
-; CHECK-NEXT:    Offset: 283
+; CHECK-NEXT:    Offset: 145
 ; CHECK-NEXT:    Name: .debug_abbrev
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 111
-; CHECK-NEXT:    Offset: 389
+; CHECK-NEXT:    Offset: 251
 ; CHECK-NEXT:    Name: .debug_info
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Section {
+; CHECK-NEXT:    Type: CUSTOM (0x0)
+; CHECK-NEXT:    Size: 121
+; CHECK-NEXT:    Offset: 380
+; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
@@ -135,7 +135,7 @@
 ; CHECK-NEXT:    0x6 R_WASM_MEMORY_ADDR_I32 myextern 0
 ; CHECK-NEXT:    0xF R_WASM_TABLE_INDEX_I32 f2
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (10) .debug_info {
+; CHECK-NEXT:  Section (9) .debug_info {
 ; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_abbrev 0
 ; CHECK-NEXT:    0xC R_WASM_SECTION_OFFSET_I32 .debug_str 0
 ; CHECK-NEXT:    0x12 R_WASM_SECTION_OFFSET_I32 .debug_str 55
@@ -199,7 +199,7 @@
 ; CHECK-NEXT:    Size: 0x4
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_str
+; CHECK-NEXT:    Name: .debug_abbrev
 ; CHECK-NEXT:    Type: SECTION (0x3)
 ; CHECK-NEXT:    Flags [ (0x2)
 ; CHECK-NEXT:      BINDING_LOCAL (0x2)
@@ -207,7 +207,7 @@
 ; CHECK-NEXT:    ElementIndex: 0x7
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_abbrev
+; CHECK-NEXT:    Name: .debug_info
 ; CHECK-NEXT:    Type: SECTION (0x3)
 ; CHECK-NEXT:    Flags [ (0x2)
 ; CHECK-NEXT:      BINDING_LOCAL (0x2)
@@ -215,7 +215,7 @@
 ; CHECK-NEXT:    ElementIndex: 0x8
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_info
+; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:    Type: SECTION (0x3)
 ; CHECK-NEXT:    Flags [ (0x2)
 ; CHECK-NEXT:      BINDING_LOCAL (0x2)

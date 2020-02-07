@@ -1535,7 +1535,7 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -1692,7 +1692,7 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI10_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %cmp9 = icmp eq i32 %N, 0
   br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader
@@ -1858,7 +1858,7 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI11_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %cmp10 = icmp eq i32 %N, 0
   br i1 %cmp10, label %for.cond.cleanup, label %for.body.preheader

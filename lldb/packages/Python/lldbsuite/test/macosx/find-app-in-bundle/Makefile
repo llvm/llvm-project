@@ -15,6 +15,3 @@ TestApp.app/Contents/MacOS/TestApp: $(SRCDIR)/main.c
 	cp -r $(SRCDIR)/TestApp.app .
 	mv TestApp TestApp.app/Contents/MacOS/TestApp
 	mv TestApp.dSYM TestApp.app.dSYM
-
-clean:
-	rm -rf TestApp.app/Contents/MacOS/TestApp TestApp.app.dSYM

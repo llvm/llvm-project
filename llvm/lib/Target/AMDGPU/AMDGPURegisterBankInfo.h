@@ -76,6 +76,7 @@ public:
   applyMappingImage(MachineInstr &MI,
                     const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
+  bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
   void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
 

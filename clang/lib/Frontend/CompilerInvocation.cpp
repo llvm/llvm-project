@@ -1438,6 +1438,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SymbolPartition =
       std::string(Args.getLastArgValue(OPT_fsymbol_partition_EQ));
 
+  Opts.ForceAAPCSBitfieldLoad = Args.hasArg(OPT_ForceAAPCSBitfieldLoad);
   return Success;
 }
 
@@ -3465,6 +3466,7 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     Opts.LexEditorPlaceholders = false;
 
   Opts.SetUpStaticAnalyzer = Args.hasArg(OPT_setup_static_analyzer);
+  Opts.DisablePragmaDebugCrash = Args.hasArg(OPT_disable_pragma_debug_crash);
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
