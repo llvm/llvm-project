@@ -268,3 +268,12 @@ func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
 
   return %0, %1 : vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>
 }
+
+// CHECK-LABEL: @vector_fma
+func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
+  // CHECK: vector.fma %{{.*}} : vector<8xf32>
+  vector.fma %a, %a, %a : vector<8xf32>
+  // CHECK: vector.fma %{{.*}} : vector<8x4xf32>
+  vector.fma %b, %b, %b : vector<8x4xf32>
+  return
+}
