@@ -3978,23 +3978,24 @@ LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
   if (TypeIdx != 1)
     return UnableToLegalize;
 
-  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
     MachineIRBuilder &B = MIRBuilder;
-    auto UnmergeSrc = B.buildUnmerge(NarrowTy, MI.getOperand(1));
+    auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // ctlz(Hi:Lo) -> Hi == 0 ? (NarrowSize + ctlz(Lo)) : ctlz(Hi)
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto HiIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
                                 UnmergeSrc.getReg(1), C_0);
-    auto LoCTLZ = B.buildCTLZ(NarrowTy, UnmergeSrc.getReg(0));
-    auto C_NarrowSize = B.buildConstant(NarrowTy, NarrowSize);
-    auto HiIsZeroCTLZ = B.buildAdd(NarrowTy, LoCTLZ, C_NarrowSize);
-    auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(NarrowTy, UnmergeSrc.getReg(1));
-    auto LoOut = B.buildSelect(NarrowTy, HiIsZero, HiIsZeroCTLZ, HiCTLZ);
-
-    B.buildMerge(MI.getOperand(0), {LoOut, C_0});
+    auto LoCTLZ = B.buildCTLZ(DstTy, UnmergeSrc.getReg(0));
+    auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
+    auto HiIsZeroCTLZ = B.buildAdd(DstTy, LoCTLZ, C_NarrowSize);
+    auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(1));
+    B.buildSelect(DstReg, HiIsZero, HiIsZeroCTLZ, HiCTLZ);
 
     MI.eraseFromParent();
     return Legalized;
@@ -4009,23 +4010,24 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
   if (TypeIdx != 1)
     return UnableToLegalize;
 
-  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
     MachineIRBuilder &B = MIRBuilder;
-    auto UnmergeSrc = B.buildUnmerge(NarrowTy, MI.getOperand(1));
+    auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // cttz(Hi:Lo) -> Lo == 0 ? (cttz(Hi) + NarrowSize) : cttz(Lo)
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
                                 UnmergeSrc.getReg(0), C_0);
-    auto HiCTTZ = B.buildCTTZ(NarrowTy, UnmergeSrc.getReg(1));
-    auto C_NarrowSize = B.buildConstant(NarrowTy, NarrowSize);
-    auto LoIsZeroCTTZ = B.buildAdd(NarrowTy, HiCTTZ, C_NarrowSize);
-    auto LoCTTZ = B.buildCTTZ_ZERO_UNDEF(NarrowTy, UnmergeSrc.getReg(0));
-    auto LoOut = B.buildSelect(NarrowTy, LoIsZero, LoIsZeroCTTZ, LoCTTZ);
-
-    B.buildMerge(MI.getOperand(0), {LoOut, C_0});
+    auto HiCTTZ = B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
+    auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
+    auto LoIsZeroCTTZ = B.buildAdd(DstTy, HiCTTZ, C_NarrowSize);
+    auto LoCTTZ = B.buildCTTZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(0));
+    B.buildSelect(DstReg, LoIsZero, LoIsZeroCTTZ, LoCTTZ);
 
     MI.eraseFromParent();
     return Legalized;
