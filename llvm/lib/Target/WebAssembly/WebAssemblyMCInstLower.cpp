@@ -309,6 +309,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
   if (!WasmKeepRegisters)
     removeRegisterOperands(MI, OutMI);
+  else if (Desc.variadicOpsAreDefs())
+    OutMI.insert(OutMI.begin(), MCOperand::createImm(MI->getNumExplicitDefs()));
 }
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {

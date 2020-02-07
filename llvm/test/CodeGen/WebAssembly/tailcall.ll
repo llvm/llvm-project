@@ -36,7 +36,7 @@ define void @recursive_tail_nullary() {
 }
 
 ; CHECK-LABEL: recursive_notail:
-; CHECK: i32.call $push[[L:[0-9]+]]=, recursive_notail, $0, $1{{$}}
+; CHECK: call $push[[L:[0-9]+]]=, recursive_notail, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[L]]{{$}}
 define i32 @recursive_notail(i32 %x, i32 %y) {
   %v = notail call i32 @recursive_notail(i32 %x, i32 %y)
@@ -52,7 +52,7 @@ define i32 @recursive_musttail(i32 %x, i32 %y) {
 
 ; CHECK-LABEL: recursive_tail:
 ; SLOW: return_call recursive_tail, $0, $1{{$}}
-; FAST: i32.call $push[[L:[0-9]+]]=, recursive_tail, $0, $1{{$}}
+; FAST: call $push[[L:[0-9]+]]=, recursive_tail, $0, $1{{$}}
 ; FAST-NEXT: return $pop[[L]]{{$}}
 define i32 @recursive_tail(i32 %x, i32 %y) {
   %v = tail call i32 @recursive_tail(i32 %x, i32 %y)
@@ -60,7 +60,7 @@ define i32 @recursive_tail(i32 %x, i32 %y) {
 }
 
 ; CHECK-LABEL: indirect_notail:
-; CHECK: i32.call_indirect $push[[L:[0-9]+]]=, $0, $1, $2, $0{{$}}
+; CHECK: call_indirect $push[[L:[0-9]+]]=, $0, $1, $2, $0{{$}}
 ; CHECK-NEXT: return $pop[[L]]{{$}}
 define i32 @indirect_notail(%fn %f, i32 %x, i32 %y) {
   %p = extractvalue %fn %f, 0
@@ -85,7 +85,7 @@ define i32 @indirect_tail(%fn %f, i32 %x, i32 %y) {
 }
 
 ; CHECK-LABEL: choice_notail:
-; CHECK: i32.call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
+; CHECK: call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: return $pop[[L]]{{$}}
 define i1 @choice_notail(i1 %x) {
   %p = select i1 %x, i1 (i1)* @foo, i1 (i1)* @bar
@@ -103,7 +103,7 @@ define i1 @choice_musttail(i1 %x) {
 
 ; CHECK-LABEL: choice_tail:
 ; SLOW: return_call_indirect , $0, $pop{{[0-9]+}}{{$}}
-; FAST: i32.call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
+; FAST: call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
 ; FAST: return $pop[[L]]{{$}}
 define i1 @choice_tail(i1 %x) {
   %p = select i1 %x, i1 (i1)* @foo, i1 (i1)* @bar
@@ -117,7 +117,7 @@ define i1 @choice_tail(i1 %x) {
 
 ; CHECK-LABEL: mismatched_prototypes:
 ; SLOW: return_call baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
-; FAST: i32.call $push[[L:[0-9]+]]=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; FAST: call $push[[L:[0-9]+]]=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; FAST: return $pop[[L]]{{$}}
 declare i32 @baz(i32, i32, i32)
 define i32 @mismatched_prototypes() {
@@ -126,7 +126,7 @@ define i32 @mismatched_prototypes() {
 }
 
 ; CHECK-LABEL: mismatched_return_void:
-; CHECK: i32.call $drop=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: call $drop=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK: return{{$}}
 define void @mismatched_return_void() {
   %v = tail call i32 @baz(i32 0, i32 42, i32 6)
@@ -134,7 +134,7 @@ define void @mismatched_return_void() {
 }
 
 ; CHECK-LABEL: mismatched_return_f32:
-; CHECK: i32.call $push[[L:[0-9]+]]=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: call $push[[L:[0-9]+]]=, baz, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK: f32.reinterpret_i32 $push[[L1:[0-9]+]]=, $pop[[L]]{{$}}
 ; CHECK: return $pop[[L1]]{{$}}
 define float @mismatched_return_f32() {
@@ -144,7 +144,7 @@ define float @mismatched_return_f32() {
 }
 
 ; CHECK-LABEL: mismatched_indirect_void:
-; CHECK: i32.call_indirect $drop=, $0, $1, $2, $0{{$}}
+; CHECK: call_indirect $drop=, $0, $1, $2, $0{{$}}
 ; CHECK: return{{$}}
 define void @mismatched_indirect_void(%fn %f, i32 %x, i32 %y) {
   %p = extractvalue %fn %f, 0
@@ -153,7 +153,7 @@ define void @mismatched_indirect_void(%fn %f, i32 %x, i32 %y) {
 }
 
 ; CHECK-LABEL: mismatched_indirect_f32:
-; CHECK: i32.call_indirect $push[[L:[0-9]+]]=, $0, $1, $2, $0{{$}}
+; CHECK: call_indirect $push[[L:[0-9]+]]=, $0, $1, $2, $0{{$}}
 ; CHECK: f32.reinterpret_i32 $push[[L1:[0-9]+]]=, $pop[[L]]{{$}}
 ; CHECK: return $pop[[L1]]{{$}}
 define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
@@ -174,7 +174,7 @@ define i32 @mismatched_byval(i32* %x) {
 
 ; CHECK-LABEL: varargs:
 ; CHECK: i32.store
-; CHECK: i32.call $0=, var, $1{{$}}
+; CHECK: call $0=, var, $1{{$}}
 ; CHECK: return $0{{$}}
 declare i32 @var(...)
 define i32 @varargs(i32 %x) {
@@ -185,7 +185,7 @@ define i32 @varargs(i32 %x) {
 ; Type transformations inhibit tail calls, even when they are nops
 
 ; CHECK-LABEL: mismatched_return_zext:
-; CHECK: i32.call
+; CHECK: call
 define i32 @mismatched_return_zext() {
   %v = tail call i1 @foo(i1 1)
   %u = zext i1 %v to i32
@@ -193,7 +193,7 @@ define i32 @mismatched_return_zext() {
 }
 
 ; CHECK-LABEL: mismatched_return_sext:
-; CHECK: i32.call
+; CHECK: call
 define i32 @mismatched_return_sext() {
   %v = tail call i1 @foo(i1 1)
   %u = sext i1 %v to i32
@@ -201,7 +201,7 @@ define i32 @mismatched_return_sext() {
 }
 
 ; CHECK-LABEL: mismatched_return_trunc:
-; CHECK: i32.call
+; CHECK: call
 declare i32 @int()
 define i1 @mismatched_return_trunc() {
   %v = tail call i32 @int()
@@ -212,7 +212,7 @@ define i1 @mismatched_return_trunc() {
 ; Stack-allocated arguments inhibit tail calls
 
 ; CHECK-LABEL: stack_arg:
-; CHECK: i32.call
+; CHECK: call
 define i32 @stack_arg(i32* %x) {
   %a = alloca i32
   %v = tail call i32 @stack_arg(i32* %a)
@@ -220,7 +220,7 @@ define i32 @stack_arg(i32* %x) {
 }
 
 ; CHECK-LABEL: stack_arg_gep:
-; CHECK: i32.call
+; CHECK: call
 define i32 @stack_arg_gep(i32* %x) {
   %a = alloca { i32, i32 }
   %p = getelementptr { i32, i32 }, { i32, i32 }* %a, i32 0, i32 1
@@ -231,7 +231,7 @@ define i32 @stack_arg_gep(i32* %x) {
 ; CHECK-LABEL: stack_arg_cast:
 ; CHECK: global.get $push{{[0-9]+}}=, __stack_pointer
 ; CHECK: global.set __stack_pointer, $pop{{[0-9]+}}
-; FAST: i32.call ${{[0-9]+}}=, stack_arg_cast, $pop{{[0-9]+}}
+; FAST: call ${{[0-9]+}}=, stack_arg_cast, $pop{{[0-9]+}}
 ; CHECK: global.set __stack_pointer, $pop{{[0-9]+}}
 ; SLOW: return_call stack_arg_cast, ${{[0-9]+}}
 define i32 @stack_arg_cast(i32 %x) {

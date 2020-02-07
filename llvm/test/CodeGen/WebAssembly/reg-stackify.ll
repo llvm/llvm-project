@@ -71,7 +71,7 @@ define i32 @sink_trap(i32 %x, i32 %y, i32* %p) {
 ; Yes because the call is readnone.
 
 ; CHECK-LABEL: sink_readnone_call:
-; CHECK: return $pop0{{$}}
+; CHECK: return $pop1{{$}}
 ; NOREGS-LABEL: sink_readnone_call:
 ; NOREGS: return{{$}}
 declare i32 @readnone_callee() readnone nounwind
@@ -378,18 +378,18 @@ define void @multiple_uses_in_same_insn(i32 %x, i32 %y) {
 
 ; CHECK-LABEL: commute:
 ; CHECK:  .functype commute () -> (i32){{$}}
-; CHECK-NEXT:  i32.call    $push0=, red{{$}}
-; CHECK-NEXT:  i32.call    $push1=, green{{$}}
+; CHECK-NEXT:  call        $push0=, red{{$}}
+; CHECK-NEXT:  call        $push1=, green{{$}}
 ; CHECK-NEXT:  i32.add     $push2=, $pop0, $pop1{{$}}
-; CHECK-NEXT:  i32.call    $push3=, blue{{$}}
+; CHECK-NEXT:  call        $push3=, blue{{$}}
 ; CHECK-NEXT:  i32.add     $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT:  return      $pop4{{$}}
 ; NOREGS-LABEL: commute:
 ; NOREGS:  .functype commute () -> (i32){{$}}
-; NOREGS-NEXT:  i32.call    red{{$}}
-; NOREGS-NEXT:  i32.call    green{{$}}
+; NOREGS-NEXT:  call        red{{$}}
+; NOREGS-NEXT:  call        green{{$}}
 ; NOREGS-NEXT:  i32.add {{$}}
-; NOREGS-NEXT:  i32.call    blue{{$}}
+; NOREGS-NEXT:  call        blue{{$}}
 ; NOREGS-NEXT:  i32.add {{$}}
 ; NOREGS-NEXT:  return{{$}}
 declare i32 @red()
@@ -408,21 +408,21 @@ define i32 @commute() {
 ; an implicit local.get for the register.
 
 ; CHECK-LABEL: no_stackify_past_use:
-; CHECK:      i32.call        $1=, callee, $0
+; CHECK:      call            $1=, callee, $0
 ; CHECK-NEXT: i32.const       $push0=, 1
 ; CHECK-NEXT: i32.add         $push1=, $0, $pop0
-; CHECK-NEXT: i32.call        $push2=, callee, $pop1
+; CHECK-NEXT: call            $push2=, callee, $pop1
 ; CHECK-NEXT: i32.sub         $push3=, $pop2, $1
 ; CHECK-NEXT: i32.div_s       $push4=, $pop3, $1
 ; CHECK-NEXT: return          $pop4
 ; NOREGS-LABEL: no_stackify_past_use:
 ; NOREGS:      local.get       0{{$}}
-; NOREGS-NEXT: i32.call        callee
+; NOREGS-NEXT: call            callee
 ; NOREGS-NEXT: local.set       1{{$}}
 ; NOREGS-NEXT: local.get       0{{$}}
 ; NOREGS-NEXT: i32.const       1
 ; NOREGS-NEXT: i32.add
-; NOREGS-NEXT: i32.call        callee
+; NOREGS-NEXT: call            callee
 ; NOREGS-NEXT: local.get       1{{$}}
 ; NOREGS-NEXT: i32.sub
 ; NOREGS-NEXT: local.get       1{{$}}
@@ -442,23 +442,23 @@ define i32 @no_stackify_past_use(i32 %arg) {
 ; so we can reorder the operands and stackify.
 
 ; CHECK-LABEL: commute_to_fix_ordering:
-; CHECK: i32.call        $push[[L0:.+]]=, callee, $0
+; CHECK: call            $push[[L0:.+]]=, callee, $0
 ; CHECK: local.tee       $push[[L1:.+]]=, $1=, $pop[[L0]]
 ; CHECK: i32.const       $push0=, 1
 ; CHECK: i32.add         $push1=, $0, $pop0
-; CHECK: i32.call        $push2=, callee, $pop1
+; CHECK: call            $push2=, callee, $pop1
 ; CHECK: i32.add         $push3=, $1, $pop2
 ; CHECK: i32.mul         $push4=, $pop[[L1]], $pop3
 ; CHECK: return          $pop4
 ; NOREGS-LABEL: commute_to_fix_ordering:
 ; NOREGS: local.get       0{{$}}
-; NOREGS: i32.call        callee
+; NOREGS: call            callee
 ; NOREGS: local.tee       1
 ; NOREGS: local.get       1{{$}}
 ; NOREGS: local.get       0{{$}}
 ; NOREGS: i32.const       1
 ; NOREGS: i32.add
-; NOREGS: i32.call        callee
+; NOREGS: call            callee
 ; NOREGS: i32.add
 ; NOREGS: i32.mul
 ; NOREGS: return
@@ -521,11 +521,11 @@ exit:
 
 ; Don't move calls past loads
 ; CHECK-LABEL: no_stackify_call_past_load:
-; CHECK: i32.call $0=, red
+; CHECK: call $0=, red
 ; CHECK: i32.const $push0=, 0
 ; CHECK: i32.load $1=, count($pop0)
 ; NOREGS-LABEL: no_stackify_call_past_load:
-; NOREGS: i32.call red
+; NOREGS: call red
 ; NOREGS: i32.const 0
 ; NOREGS: i32.load count
 @count = hidden global i32 0, align 4
@@ -541,11 +541,11 @@ define i32 @no_stackify_call_past_load() {
 ; CHECK-LABEL: no_stackify_store_past_load
 ; CHECK: i32.store 0($1), $0
 ; CHECK: i32.load {{.*}}, 0($2)
-; CHECK: i32.call {{.*}}, callee, $0{{$}}
+; CHECK: call {{.*}}, callee, $0{{$}}
 ; NOREGS-LABEL: no_stackify_store_past_load
 ; NOREGS: i32.store 0
 ; NOREGS: i32.load 0
-; NOREGS: i32.call callee{{$}}
+; NOREGS: call callee{{$}}
 define i32 @no_stackify_store_past_load(i32 %a, i32* %p1, i32* %p2) {
   store i32 %a, i32* %p1
   %b = load i32, i32* %p2, align 4
@@ -556,12 +556,12 @@ define i32 @no_stackify_store_past_load(i32 %a, i32* %p1, i32* %p2) {
 ; Can still stackify past invariant loads.
 ; CHECK-LABEL: store_past_invar_load
 ; CHECK: i32.store 0($1), $0
-; CHECK: i32.call {{.*}}, callee, $0
+; CHECK: call {{.*}}, callee, $0
 ; CHECK: i32.load $push{{.*}}, 0($2)
 ; CHECK: return $pop
 ; NOREGS-LABEL: store_past_invar_load
 ; NOREGS: i32.store 0
-; NOREGS: i32.call callee
+; NOREGS: call callee
 ; NOREGS: i32.load 0
 ; NOREGS: return
 define i32 @store_past_invar_load(i32 %a, i32* %p1, i32* dereferenceable(4) %p2) {
@@ -649,13 +649,13 @@ define i32 @stackpointer_dependency(i8* readnone) {
 ; CHECK-NEXT: local.tee $push[[L3:.+]]=, $0=, $pop[[L4]]
 ; CHECK-NEXT: i32.load  $push[[L0:.+]]=, 0($0)
 ; CHECK-NEXT: i32.load  $push[[L1:.+]]=, 0($pop[[L0]])
-; CHECK-NEXT: i32.call_indirect $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
+; CHECK-NEXT: call_indirect $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
 ; NOREGS-LABEL: call_indirect_stackify:
 ; NOREGS: i32.load  0
 ; NOREGS-NEXT: local.tee 0
 ; NOREGS:      i32.load  0
 ; NOREGS-NEXT: i32.load  0
-; NOREGS-NEXT: i32.call_indirect (i32, i32) -> (i32)
+; NOREGS-NEXT: call_indirect (i32, i32) -> (i32)
 %class.call_indirect = type { i32 (...)** }
 define i32 @call_indirect_stackify(%class.call_indirect** %objptr, i32 %arg) {
   %obj = load %class.call_indirect*, %class.call_indirect** %objptr
@@ -680,4 +680,3 @@ define i32 @call_indirect_stackify(%class.call_indirect** %objptr, i32 %arg) {
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !DIExpression()
 !10 = !DILocation(line: 15, column: 6, scope: !5)
-

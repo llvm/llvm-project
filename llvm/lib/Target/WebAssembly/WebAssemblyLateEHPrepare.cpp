@@ -343,7 +343,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
              "There is no __clang_call_terminate() function");
       Register Reg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::CONST_I32), Reg).addImm(0);
-      BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL_VOID))
+      BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL))
           .addGlobalAddress(ClangCallTerminateFn)
           .addReg(Reg);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::UNREACHABLE));

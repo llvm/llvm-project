@@ -61,21 +61,21 @@ define i128 @i128libcalls(i128 %x, i128 %y) {
 
 ; CHECK-LABEL: f64libcalls:
 define i32 @f64libcalls(double %x, double %y, i32 %z) {
- ; CHECK: f64.call $push{{[0-9]}}=, cos
+ ; CHECK: call $push{{[0-9]}}=, cos
  %a = call double @llvm.cos.f64(double %x)
- ; CHECK: f64.call $push{{[0-9]}}=, log10
+ ; CHECK: call $push{{[0-9]}}=, log10
  %b = call double @llvm.log10.f64(double %a)
- ; CHECK: f64.call $push{{[0-9]}}=, pow
+ ; CHECK: call $push{{[0-9]}}=, pow
  %c = call double @llvm.pow.f64(double %b, double %y)
- ; CHECK: f64.call $push{{[0-9]}}=, __powidf2
+ ; CHECK: call $push{{[0-9]}}=, __powidf2
  %d = call double @llvm.powi.f64(double %c, i32 %z)
- ; CHECK: f64.call $push{{[0-9]}}=, log
+ ; CHECK: call $push{{[0-9]}}=, log
  %e = call double @llvm.log.f64(double %d)
- ; CHECK: f64.call $push{{[0-9]}}=, exp
+ ; CHECK: call $push{{[0-9]}}=, exp
  %f = call double @llvm.exp.f64(double %e)
- ; CHECK: f64.call $push{{[0-9]}}=, cbrt
+ ; CHECK: call $push{{[0-9]}}=, cbrt
  %g = call fast double @llvm.pow.f64(double %f, double 0x3FD5555555555555)
- ; CHECK: i32.call $push{{[0-9]}}=, lround
+ ; CHECK: call $push{{[0-9]}}=, lround
  %h = call i32 @llvm.lround(double %g)
  ret i32 %h
 }
@@ -112,7 +112,7 @@ define i1 @unordf(float %x, float %y) {
 
 ; CHECK-LABEL: unordt:
 define i1 @unordt(fp128 %x, fp128 %y) {
- ; CHECK: i32.call $push[[CALL:[0-9]]]=, __unordtf2
+ ; CHECK: call $push[[CALL:[0-9]]]=, __unordtf2
  ; CHECK-NEXT: i32.const $push[[ZERO:[0-9]+]]=, 0
  ; CHECK-NEXT: i32.ne $push{{[0-9]}}=, $pop[[CALL]], $pop[[ZERO]]
  %a = fcmp uno fp128 %x, %y
@@ -121,7 +121,7 @@ define i1 @unordt(fp128 %x, fp128 %y) {
 
 ; CHECK-LABEL: ordt:
 define i1 @ordt(fp128 %x, fp128 %y) {
- ; CHECK: i32.call $push[[CALL:[0-9]]]=, __unordtf2
+ ; CHECK: call $push[[CALL:[0-9]]]=, __unordtf2
  ; CHECK-NEXT: i32.eqz $push{{[0-9]}}=, $pop[[CALL]]
  %a = fcmp ord fp128 %x, %y
  ret i1 %a

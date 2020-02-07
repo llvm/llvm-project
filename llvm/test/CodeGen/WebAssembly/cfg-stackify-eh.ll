@@ -27,13 +27,13 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: catch
 ; CHECK:   block
 ; CHECK:     br_if     0, {{.*}}                       # 0: down to label2
-; CHECK:     i32.call  $drop=, __cxa_begin_catch
+; CHECK:     call      $drop=, __cxa_begin_catch
 ; CHECK:     call      __cxa_end_catch
 ; CHECK:     br        1                               # 1: down to label0
 ; CHECK:   end_block                                   # label2:
 ; CHECK:   block
 ; CHECK:     br_if     0, {{.*}}                       # 0: down to label3
-; CHECK:     i32.call  $drop=, __cxa_begin_catch
+; CHECK:     call      $drop=, __cxa_begin_catch
 ; CHECK:     call      __cxa_end_catch
 ; CHECK:     br        1                               # 1: down to label0
 ; CHECK:   end_block                                   # label3:
@@ -98,7 +98,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:   block
 ; CHECK:     block
 ; CHECK:       br_if     0, {{.*}}                     # 0: down to label7
-; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      $drop=, __cxa_begin_catch
 ; CHECK:       try
 ; CHECK:         call      foo
 ; CHECK:         br        2                           # 2: down to label6
@@ -106,7 +106,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:         try
 ; CHECK:           block
 ; CHECK:             br_if     0, {{.*}}               # 0: down to label11
-; CHECK:             i32.call  $drop=, __cxa_begin_catch
+; CHECK:             call      $drop=, __cxa_begin_catch
 ; CHECK:             try
 ; CHECK:               call      foo
 ; CHECK:               br        2                     # 2: down to label9
@@ -216,7 +216,7 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
-; CHECK:   i32.call  $drop=, __cxa_begin_catch
+; CHECK:   call      $drop=, __cxa_begin_catch
 ; CHECK:   loop                                        # label15:
 ; CHECK:     block
 ; CHECK:       block
@@ -447,8 +447,8 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; --- Nested try/catch/end_try starts
 ; NOSORT:     try
 ; NOSORT:       call      bar
-; NOSORT:       i32.call  ${{[0-9]+}}=, baz
-; NOSORT-NOT:   i32.call  $push{{.*}}=, baz
+; NOSORT:       call      ${{[0-9]+}}=, baz
+; NOSORT-NOT:   call      $push{{.*}}=, baz
 ; NOSORT:     catch     $[[REG:[0-9]+]]=
 ; NOSORT:       br        1                            # 1: down to label35
 ; NOSORT:     end_try
@@ -570,7 +570,7 @@ try.cont:                                         ; preds = %catch.start
 ; NOSORT:           end_try
 ; --- Nested try/catch/end_try ends
 ; NOSORT:         end_block                            # label46:
-; NOSORT:         i32.call  $drop=, __cxa_begin_catch
+; NOSORT:         call      $drop=, __cxa_begin_catch
 ; --- Nested try/catch/end_try starts
 ; NOSORT:         try
 ; NOSORT:           call      __cxa_end_catch
@@ -582,7 +582,7 @@ try.cont:                                         ; preds = %catch.start
 ; NOSORT:       end_try
 ; NOSORT:     catch     $[[REG0]]=
 ; NOSORT:     end_try                                  # label43:
-; NOSORT:     i32.call  $drop=, __cxa_begin_catch
+; NOSORT:     call      $drop=, __cxa_begin_catch
 ; NOSORT:     call      __cxa_end_catch
 ; NOSORT:   end_block                                  # label42:
 ; NOSORT:   return
@@ -678,9 +678,9 @@ if.end:                                           ; preds = %cont, %catch.start,
 ; NOSORT-LABEL: test10
 ; NOSORT: try
 ; NOSORT:   call  foo
-; NOSORT:   i32.call {{.*}} memcpy
-; NOSORT:   i32.call {{.*}} memmove
-; NOSORT:   i32.call {{.*}} memset
+; NOSORT:   call {{.*}} memcpy
+; NOSORT:   call {{.*}} memmove
+; NOSORT:   call {{.*}} memset
 ; NOSORT:   return
 ; NOSORT: catch
 ; NOSORT:   rethrow
@@ -711,7 +711,7 @@ ehcleanup:                                        ; preds = %entry
 
 ; CHECK-LABEL: test11
 ; CHECK: try
-; CHECK: i32.call  $push{{.*}}=, nothrow_i32
+; CHECK: call      $push{{.*}}=, nothrow_i32
 ; CHECK: call      fun, $pop{{.*}}
 define void @test11() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:

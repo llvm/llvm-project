@@ -206,7 +206,8 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case WebAssemblyISD::CALL: {
+  case WebAssemblyISD::CALL:
+  case WebAssemblyISD::RET_CALL: {
     // CALL has both variable operands and variable results, but ISel only
     // supports one or the other. Split calls into two nodes glued together, one
     // for the operands and one for the results. These two nodes will be
@@ -214,16 +215,23 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     SmallVector<SDValue, 16> Ops;
     for (size_t i = 1; i < Node->getNumOperands(); ++i) {
       SDValue Op = Node->getOperand(i);
-      if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+      if (i == 1 && Op->getOpcode() == WebAssemblyISD::Wrapper)
         Op = Op->getOperand(0);
       Ops.push_back(Op);
     }
+
+    // Add the chain last
     Ops.push_back(Node->getOperand(0));
     MachineSDNode *CallParams =
         CurDAG->getMachineNode(WebAssembly::CALL_PARAMS, DL, MVT::Glue, Ops);
+
+    unsigned Results = Node->getOpcode() == WebAssemblyISD::CALL
+                           ? WebAssembly::CALL_RESULTS
+                           : WebAssembly::RET_CALL_RESULTS;
+
     SDValue Link(CallParams, 0);
-    MachineSDNode *CallResults = CurDAG->getMachineNode(
-        WebAssembly::CALL_RESULTS, DL, Node->getVTList(), Link);
+    MachineSDNode *CallResults =
+        CurDAG->getMachineNode(Results, DL, Node->getVTList(), Link);
     ReplaceNode(Node, CallResults);
     return;
   }
