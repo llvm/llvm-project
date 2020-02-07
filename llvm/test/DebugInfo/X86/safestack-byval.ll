@@ -14,7 +14,7 @@
 ; }
 
 ; CHECK: ![[ZZZ:.*]] = !DILocalVariable(name: "zzz",
-; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], !DIExpression(DW_OP_constu, 400, DW_OP_minus, DW_OP_deref)
+; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
 
 %struct.S = type { [100 x i32] }
 
@@ -78,7 +78,7 @@ attributes #2 = { argmemonly nounwind }
 !20 = !{i32 2, !"Debug Info Version", i32 3}
 !21 = !{!"clang version 3.8.0 (trunk 254107) (llvm/trunk 254109)"}
 !22 = !DILocation(line: 8, column: 9, scope: !12)
-!23 = !DIExpression(DW_OP_constu, 400, DW_OP_minus)
+!23 = !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
 !24 = !DILocation(line: 8, column: 28, scope: !12)
 !25 = !DIExpression()
 !26 = !DILocation(line: 9, column: 10, scope: !12)
