@@ -13,7 +13,4 @@ dirsymlink: dirreal
 	mkdir $@
 	ln -s ../$</stripped.out $@/stripped.symlink
 
-clean::
-	$(RM) -r dirreal dirsymlink
-
 include Makefile.rules
