@@ -13,6 +13,7 @@
 
 #include "include/mlir_runner_utils.h"
 
+#include <cinttypes>
 #include <cstdio>
 
 extern "C" void
@@ -76,7 +77,9 @@ extern "C" void print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
 // Small runtime support "lib" for vector.print lowering.
 // By providing elementary printing methods only, this
 // library can remain fully unaware of low-level implementation
-// details of our vectors.
+// details of our vectors. Also useful for direct LLVM IR output.
+extern "C" void print_i32(int32_t i) { fprintf(stdout, "%" PRId32, i); }
+extern "C" void print_i64(int64_t l) { fprintf(stdout, "%" PRId64, l); }
 extern "C" void print_f32(float f) { fprintf(stdout, "%g", f); }
 extern "C" void print_f64(double d) { fprintf(stdout, "%lg", d); }
 extern "C" void print_open() { fputs("( ", stdout); }

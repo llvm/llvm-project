@@ -809,7 +809,11 @@ public:
     Type eltType = vectorType ? vectorType.getElementType() : printType;
     int64_t rank = vectorType ? vectorType.getRank() : 0;
     Operation *printer;
-    if (eltType.isF32())
+    if (eltType.isInteger(32))
+      printer = getPrintI32(op);
+    else if (eltType.isInteger(64))
+      printer = getPrintI64(op);
+    else if (eltType.isF32())
       printer = getPrintFloat(op);
     else if (eltType.isF64())
       printer = getPrintDouble(op);
@@ -872,6 +876,16 @@ private:
   }
 
   // Helpers for method names.
+  Operation *getPrintI32(Operation *op) const {
+    LLVM::LLVMDialect *dialect = lowering.getDialect();
+    return getPrint(op, dialect, "print_i32",
+                    LLVM::LLVMType::getInt32Ty(dialect));
+  }
+  Operation *getPrintI64(Operation *op) const {
+    LLVM::LLVMDialect *dialect = lowering.getDialect();
+    return getPrint(op, dialect, "print_i64",
+                    LLVM::LLVMType::getInt64Ty(dialect));
+  }
   Operation *getPrintFloat(Operation *op) const {
     LLVM::LLVMDialect *dialect = lowering.getDialect();
     return getPrint(op, dialect, "print_f32",
