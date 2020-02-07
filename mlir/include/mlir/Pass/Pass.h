@@ -121,6 +121,7 @@ public:
 protected:
   explicit Pass(const PassID *passID, Optional<StringRef> opName = llvm::None)
       : passID(passID), opName(opName) {}
+  Pass(const Pass &other) : Pass(other.passID, other.opName) {}
 
   /// Returns the current pass state.
   detail::PassExecutionState &getPassState() {
@@ -178,6 +179,9 @@ private:
 
   /// Allow access to 'clone' and 'run'.
   friend class OpPassManager;
+
+  /// Allow access to 'passOptions'.
+  friend class PassInfo;
 };
 
 //===----------------------------------------------------------------------===//

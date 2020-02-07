@@ -21,6 +21,10 @@ namespace mlir {
 class OpPassManager;
 class Pass;
 
+namespace detail {
+class PassOptions;
+} // end namespace detail
+
 /// A registry function that adds passes to the given pass manager. This should
 /// also parse options and return success() if parsing succeeded.
 using PassRegistryFunction =
@@ -55,28 +59,45 @@ public:
   /// Returns a description for the pass, this never returns null.
   StringRef getPassDescription() const { return description; }
 
+  /// Print the help information for this pass. This includes the argument,
+  /// description, and any pass options. `descIndent` is the indent that the
+  /// descriptions should be aligned.
+  void printHelpStr(size_t indent, size_t descIndent) const;
+
+  /// Return the maximum width required when printing the options of this entry.
+  size_t getOptionWidth() const;
+
 protected:
-  PassRegistryEntry(StringRef arg, StringRef description,
-                    const PassRegistryFunction &builder)
-      : arg(arg), description(description), builder(builder) {}
+  PassRegistryEntry(
+      StringRef arg, StringRef description, const PassRegistryFunction &builder,
+      std::function<void(function_ref<void(const detail::PassOptions &)>)>
+          optHandler)
+      : arg(arg), description(description), builder(builder),
+        optHandler(optHandler) {}
 
 private:
-  // The argument with which to invoke the pass via mlir-opt.
+  /// The argument with which to invoke the pass via mlir-opt.
   StringRef arg;
 
-  // Description of the pass.
+  /// Description of the pass.
   StringRef description;
 
-  // Function to register this entry to a pass manager pipeline.
+  /// Function to register this entry to a pass manager pipeline.
   PassRegistryFunction builder;
+
+  /// Function to invoke a handler for a pass options instance.
+  std::function<void(function_ref<void(const detail::PassOptions &)>)>
+      optHandler;
 };
 
 /// A structure to represent the information of a registered pass pipeline.
 class PassPipelineInfo : public PassRegistryEntry {
 public:
-  PassPipelineInfo(StringRef arg, StringRef description,
-                   const PassRegistryFunction &builder)
-      : PassRegistryEntry(arg, description, builder) {}
+  PassPipelineInfo(
+      StringRef arg, StringRef description, const PassRegistryFunction &builder,
+      std::function<void(function_ref<void(const detail::PassOptions &)>)>
+          optHandler)
+      : PassRegistryEntry(arg, description, builder, optHandler) {}
 };
 
 /// A structure to represent the information for a derived pass class.
@@ -94,8 +115,10 @@ public:
 
 /// Register a specific dialect pipeline registry function with the system,
 /// typically used through the PassPipelineRegistration template.
-void registerPassPipeline(StringRef arg, StringRef description,
-                          const PassRegistryFunction &function);
+void registerPassPipeline(
+    StringRef arg, StringRef description, const PassRegistryFunction &function,
+    std::function<void(function_ref<void(const detail::PassOptions &)>)>
+        optHandler);
 
 /// Register a specific dialect pass allocator function with the system,
 /// typically used through the PassRegistration template.
@@ -113,7 +136,6 @@ void registerPass(StringRef arg, StringRef description, const PassID *passID,
 ///   static PassRegistration<MyPass> reg("my-pass", "My Pass Description.");
 ///
 template <typename ConcretePass> struct PassRegistration {
-
   PassRegistration(StringRef arg, StringRef description,
                    const PassAllocatorFunction &constructor) {
     registerPass(arg, description, PassID::getID<ConcretePass>(), constructor);
@@ -142,14 +164,18 @@ struct PassPipelineRegistration {
   PassPipelineRegistration(
       StringRef arg, StringRef description,
       std::function<void(OpPassManager &, const Options &options)> builder) {
-    registerPassPipeline(arg, description,
-                         [builder](OpPassManager &pm, StringRef optionsStr) {
-                           Options options;
-                           if (failed(options.parseFromString(optionsStr)))
-                             return failure();
-                           builder(pm, options);
-                           return success();
-                         });
+    registerPassPipeline(
+        arg, description,
+        [builder](OpPassManager &pm, StringRef optionsStr) {
+          Options options;
+          if (failed(options.parseFromString(optionsStr)))
+            return failure();
+          builder(pm, options);
+          return success();
+        },
+        [](function_ref<void(const detail::PassOptions &)> optHandler) {
+          optHandler(Options());
+        });
   }
 };
 
@@ -158,13 +184,15 @@ struct PassPipelineRegistration {
 template <> struct PassPipelineRegistration<EmptyPipelineOptions> {
   PassPipelineRegistration(StringRef arg, StringRef description,
                            std::function<void(OpPassManager &)> builder) {
-    registerPassPipeline(arg, description,
-                         [builder](OpPassManager &pm, StringRef optionsStr) {
-                           if (!optionsStr.empty())
-                             return failure();
-                           builder(pm);
-                           return success();
-                         });
+    registerPassPipeline(
+        arg, description,
+        [builder](OpPassManager &pm, StringRef optionsStr) {
+          if (!optionsStr.empty())
+            return failure();
+          builder(pm);
+          return success();
+        },
+        [](function_ref<void(const detail::PassOptions &)>) {});
   }
 };
 
