@@ -13,7 +13,7 @@
 __attribute__((section("1,__text_foo"))) void foo() {}
 int main (int argc, char const *argv[]) { return argc; }
 
-// CHECK-NEXT: __debug_abbrev
+// CHECK: __debug_abbrev
 // CHECK-NEXT: __debug_info
 // CHECK-NEXT: __debug_str
 // CHECK-NEXT: __debug_ranges
