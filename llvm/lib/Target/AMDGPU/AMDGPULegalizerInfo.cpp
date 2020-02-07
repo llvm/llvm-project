@@ -284,7 +284,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16})
       .clampScalar(0, S16, S32)
-      .scalarize(0);
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32);
   } else {
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32})
