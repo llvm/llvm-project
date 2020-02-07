@@ -41,6 +41,8 @@ namespace scudo {
 template <class SizeClassMapT, uptr RegionSizeLog> class SizeClassAllocator32 {
 public:
   typedef SizeClassMapT SizeClassMap;
+  // The bytemap can only track UINT8_MAX - 1 classes.
+  static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
   static_assert((1UL << RegionSizeLog) >= SizeClassMap::MaxSize, "");
   typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog> ThisT;
@@ -87,8 +89,7 @@ public:
     while (NumberOfStashedRegions > 0)
       unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
             RegionSize);
-    // TODO(kostyak): unmap the TransferBatch regions as well.
-    for (uptr I = 0; I < NumRegions; I++)
+    for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
       if (PossibleRegions[I])
         unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
     PossibleRegions.unmapTestOnly();
@@ -147,8 +148,9 @@ public:
 
   template <typename F> void iterateOverBlocks(F Callback) {
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
-      if (PossibleRegions[I]) {
-        const uptr BlockSize = getSizeByClassId(PossibleRegions[I]);
+      if (PossibleRegions[I] &&
+          (PossibleRegions[I] - 1U) != SizeClassMap::BatchClassId) {
+        const uptr BlockSize = getSizeByClassId(PossibleRegions[I] - 1U);
         const uptr From = I * RegionSize;
         const uptr To = From + (RegionSize / BlockSize) * BlockSize;
         for (uptr Block = From; Block < To; Block += BlockSize)
@@ -258,14 +260,12 @@ private:
     if (!Region)
       Region = allocateRegionSlow();
     if (LIKELY(Region)) {
-      if (ClassId) {
-        const uptr RegionIndex = computeRegionId(Region);
-        if (RegionIndex < MinRegionIndex)
-          MinRegionIndex = RegionIndex;
-        if (RegionIndex > MaxRegionIndex)
-          MaxRegionIndex = RegionIndex;
-        PossibleRegions.set(RegionIndex, static_cast<u8>(ClassId));
-      }
+      const uptr RegionIndex = computeRegionId(Region);
+      if (RegionIndex < MinRegionIndex)
+        MinRegionIndex = RegionIndex;
+      if (RegionIndex > MaxRegionIndex)
+        MaxRegionIndex = RegionIndex;
+      PossibleRegions.set(RegionIndex, static_cast<u8>(ClassId + 1U));
     }
     return Region;
   }
@@ -350,10 +350,10 @@ private:
     const uptr InUse = Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks;
     const uptr AvailableChunks = Sci->AllocatedUser / getSizeByClassId(ClassId);
     Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu avail: %6zu rss: %6zuK\n",
+                "inuse: %6zu avail: %6zu rss: %6zuK releases: %6zu\n",
                 ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
                 Sci->Stats.PoppedBlocks, Sci->Stats.PushedBlocks, InUse,
-                AvailableChunks, Rss >> 10);
+                AvailableChunks, Rss >> 10, Sci->ReleaseInfo.RangesReleased);
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
@@ -389,10 +389,11 @@ private:
     // regions. But it will have to do for now.
     uptr TotalReleasedBytes = 0;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
-      if (PossibleRegions[I] == ClassId) {
-        ReleaseRecorder Recorder(I * RegionSize);
-        releaseFreeMemoryToOS(Sci->FreeList, I * RegionSize,
-                              RegionSize / PageSize, BlockSize, &Recorder);
+      if (PossibleRegions[I] - 1U == ClassId) {
+        const uptr Region = I * RegionSize;
+        ReleaseRecorder Recorder(Region);
+        releaseFreeMemoryToOS(Sci->FreeList, Region, RegionSize / PageSize,
+                              BlockSize, &Recorder);
         if (Recorder.getReleasedRangesCount() > 0) {
           Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
           Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
@@ -407,6 +408,7 @@ private:
 
   SizeClassInfo SizeClassInfoArray[NumClasses];
 
+  // Track the regions in use, 0 is unused, otherwise store ClassId + 1.
   ByteMap PossibleRegions;
   // Keep track of the lowest & highest regions allocated to avoid looping
   // through the whole NumRegions.
