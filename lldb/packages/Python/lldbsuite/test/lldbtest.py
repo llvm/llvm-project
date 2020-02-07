@@ -498,7 +498,7 @@ class Base(unittest2.TestCase):
             mydir = TestBase.compute_mydir(__file__)
         '''
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
-        rel_prefix = test_file[len(os.environ["LLDB_TEST"]) + 1:]
+        rel_prefix = test_file[len(os.environ["LLDB_TEST_SRC"]) + 1:]
         return os.path.dirname(rel_prefix)
 
     def TraceOn(self):
@@ -518,10 +518,10 @@ class Base(unittest2.TestCase):
         # Save old working directory.
         cls.oldcwd = os.getcwd()
 
-        # Change current working directory if ${LLDB_TEST} is defined.
-        # See also dotest.py which sets up ${LLDB_TEST}.
-        if ("LLDB_TEST" in os.environ):
-            full_dir = os.path.join(os.environ["LLDB_TEST"],
+        # Change current working directory if ${LLDB_TEST_SRC} is defined.
+        # See also dotest.py which sets up ${LLDB_TEST_SRC}.
+        if ("LLDB_TEST_SRC" in os.environ):
+            full_dir = os.path.join(os.environ["LLDB_TEST_SRC"],
                                     cls.mydir)
             if traceAlways:
                 print("Change dir to:", full_dir, file=sys.stderr)
@@ -656,7 +656,7 @@ class Base(unittest2.TestCase):
 
     def getSourceDir(self):
         """Return the full path to the current test."""
-        return os.path.join(os.environ["LLDB_TEST"], self.mydir)
+        return os.path.join(os.environ["LLDB_TEST_SRC"], self.mydir)
 
     def getBuildDirBasename(self):
         return self.__class__.__module__ + "." + self.testMethodName
@@ -1089,7 +1089,7 @@ class Base(unittest2.TestCase):
 
         <session-dir>/<arch>-<compiler>-<test-file>.<test-class>.<test-method>
         """
-        dname = os.path.join(os.environ["LLDB_TEST"],
+        dname = os.path.join(os.environ["LLDB_TEST_SRC"],
                              os.environ["LLDB_SESSION_DIRNAME"])
         if not os.path.isdir(dname):
             os.mkdir(dname)
