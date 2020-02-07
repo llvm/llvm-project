@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s
+// RUN: not llvm-tblgen -gen-searchable-tables -I %p/../../include -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 // XFAIL: vg_leak
 
 include "llvm/TableGen/SearchableTable.td"
@@ -136,3 +137,21 @@ def lookupCEntry : SearchIndex {
   let Table = CTable;
   let Key = ["Name", "Kind"];
 }
+
+#ifdef ERROR1
+
+class DEntry<string str, int val1> {
+  string Str = str;
+  bits<8> Val1 = val1;
+}
+
+def DFoo : DEntry<"foo", 1>;
+// ERROR1: [[@LINE+1]]:1: error: Record 'DBar' in table 'DTable' is missing field 'Val1'
+def DBar : DEntry<"bar", ?>;
+
+def DTable : GenericTable {
+  let FilterClass = "DEntry";
+  let Fields = ["Str", "Val1"];
+}
+
+#endif // ERROR1
