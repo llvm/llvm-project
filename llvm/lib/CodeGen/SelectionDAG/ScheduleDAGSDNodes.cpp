@@ -198,10 +198,10 @@ static void RemoveUnusedGlue(SDNode *N, SelectionDAG *DAG) {
 /// outputs to ensure they are scheduled together and in order. This
 /// optimization may benefit some targets by improving cache locality.
 void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
-  SDNode *Chain = nullptr;
+  SDValue Chain;
   unsigned NumOps = Node->getNumOperands();
   if (Node->getOperand(NumOps-1).getValueType() == MVT::Other)
-    Chain = Node->getOperand(NumOps-1).getNode();
+    Chain = Node->getOperand(NumOps-1);
   if (!Chain)
     return;
 
@@ -234,6 +234,9 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   unsigned UseCount = 0;
   for (SDNode::use_iterator I = Chain->use_begin(), E = Chain->use_end();
        I != E && UseCount < 100; ++I, ++UseCount) {
+    if (I.getUse().getResNo() != Chain.getResNo())
+      continue;
+
     SDNode *User = *I;
     if (User == Node || !Visited.insert(User).second)
       continue;
