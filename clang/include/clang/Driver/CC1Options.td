@@ -751,8 +751,6 @@ def stack_protector : Separate<["-"], "stack-protector">,
   HelpText<"Enable stack protectors">;
 def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">,
   HelpText<"Lower bound for a buffer to be considered for stack protection">;
-def stack_clash_protection : Separate<["-"], "stack-clash-protection">,
-  HelpText<"Enable stack clash protection">;
 def fvisibility : Separate<["-"], "fvisibility">,
   HelpText<"Default type and symbol visibility">;
 def ftype_visibility : Separate<["-"], "ftype-visibility">,
