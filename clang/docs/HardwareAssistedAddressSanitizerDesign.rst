@@ -67,43 +67,59 @@ Instrumentation
 
 Memory Accesses
 ---------------
-All memory accesses are prefixed with an inline instruction sequence that
-verifies the tags. Currently, the following sequence is used:
+In the majority of cases, memory accesses are prefixed with a call to
+an outlined instruction sequence that verifies the tags. The code size
+and performance overhead of the call is reduced by using a custom calling
+convention that
+
+* preserves most registers, and
+* is specialized to the register containing the address, and the type and
+  size of the memory access.
+
+Currently, the following sequence is used:
 
 .. code-block:: none
 
   // int foo(int *a) { return *a; }
-  // clang -O2 --target=aarch64-linux -fsanitize=hwaddress -fsanitize-recover=hwaddress -c load.c
+  // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - load.c
+  [...]
   foo:
-       0:	90000008 	adrp	x8, 0 <__hwasan_shadow>
-       4:	f9400108 	ldr	x8, [x8]         // shadow base (to be resolved by the loader)
-       8:	d344dc09 	ubfx	x9, x0, #4, #52  // shadow offset
-       c:	38696909 	ldrb	w9, [x8, x9]     // load shadow tag
-      10:	d378fc08 	lsr	x8, x0, #56      // extract address tag
-      14:	6b09011f 	cmp	w8, w9           // compare tags
-      18:	54000061 	b.ne	24 <foo+0x24>    // jump to short tag handler on mismatch
-      1c:	b9400000 	ldr	w0, [x0]         // original load
-      20:	d65f03c0 	ret
-      24:	7100413f 	cmp	w9, #0x10        // is this a short tag?
-      28:	54000142 	b.cs	50 <foo+0x50>    // if not, trap
-      2c:	12000c0a 	and	w10, w0, #0xf    // find the address's position in the short granule
-      30:	11000d4a 	add	w10, w10, #0x3   // adjust to the position of the last byte loaded
-      34:	6b09015f 	cmp	w10, w9          // check that position is in bounds
-      38:	540000c2 	b.cs	50 <foo+0x50>    // if not, trap
-      3c:	9240dc09 	and	x9, x0, #0xffffffffffffff
-      40:	b2400d29 	orr	x9, x9, #0xf     // compute address of last byte of granule
-      44:	39400129 	ldrb	w9, [x9]         // load tag from it
-      48:	6b09011f 	cmp	w8, w9           // compare with pointer tag
-      4c:	54fffe80 	b.eq	1c <foo+0x1c>    // if so, continue
-      50:	d4212440 	brk	#0x922           // otherwise trap
-      54:	b9400000 	ldr	w0, [x0]         // tail duplicated original load (to handle recovery)
-      58:	d65f03c0 	ret
+        str     x30, [sp, #-16]!
+        adrp    x9, :got:__hwasan_shadow                // load shadow address from GOT into x9
+        ldr     x9, [x9, :got_lo12:__hwasan_shadow]
+        bl      __hwasan_check_x0_2_short               // call outlined tag check
+                                                        // (arguments: x0 = address, x9 = shadow base;
+                                                        // "2" encodes the access type and size)
+        ldr     w0, [x0]                                // inline load
+        ldr     x30, [sp], #16
+        ret
 
-Alternatively, memory accesses are prefixed with a function call.
-On AArch64, a function call is used by default in trapping mode. The code size
-and performance overhead of the call is reduced by using a custom calling
-convention that preserves most registers and is specialized to the register
-containing the address and the type and size of the memory access.
+  [...]
+  __hwasan_check_x0_2_short:
+        ubfx    x16, x0, #4, #52                        // shadow offset
+        ldrb    w16, [x9, x16]                          // load shadow tag
+        cmp     x16, x0, lsr #56                        // extract address tag, compare with shadow tag
+        b.ne    .Ltmp0                                  // jump to short tag handler on mismatch
+  .Ltmp1:
+        ret
+  .Ltmp0:
+        cmp     w16, #15                                // is this a short tag?
+        b.hi    .Ltmp2                                  // if not, error
+        and     x17, x0, #0xf                           // find the address's position in the short granule
+        add     x17, x17, #3                            // adjust to the position of the last byte loaded
+        cmp     w16, w17                                // check that position is in bounds
+        b.ls    .Ltmp2                                  // if not, error
+        orr     x16, x0, #0xf                           // compute address of last byte of granule
+        ldrb    w16, [x16]                              // load tag from it
+        cmp     x16, x0, lsr #56                        // compare with pointer tag
+        b.eq    .Ltmp1                                  // if matches, continue
+  .Ltmp2:
+        stp     x0, x1, [sp, #-256]!                    // save original x0, x1 on stack (they will be overwritten)
+        stp     x29, x30, [sp, #232]                    // create frame record
+        mov     x1, #2                                  // set x1 to a constant indicating the type of failure
+        adrp    x16, :got:__hwasan_tag_mismatch_v2      // call runtime function to save remaining registers and report error
+        ldr     x16, [x16, :got_lo12:__hwasan_tag_mismatch_v2] // (load address from GOT to avoid potential register clobbers in delay load handler)
+        br      x16
 
 Heap
 ----
@@ -131,7 +147,67 @@ but could be optional.
 Globals
 -------
 
-TODO: details.
+Most globals in HWASAN instrumented code are tagged. This is accomplished
+using the following mechanisms:
+
+  * The address of each global has a static tag associated with it. The first
+    defined global in a translation unit has a pseudorandom tag associated
+    with it, based on the hash of the file path. Subsequent global tags are
+    incremental from the previously-assigned tag.
+
+  * The global's tag is added to its symbol address in the object file's symbol
+    table. This causes the global's address to be tagged when its address is
+    taken.
+
+  * When the address of a global is taken directly (i.e. not via the GOT), a special
+    instruction sequence needs to be used to add the tag to the address,
+    because the tag would otherwise take the address outside of the small code
+    model (4GB on AArch64). No changes are required when the address is taken
+    via the GOT because the address stored in the GOT will contain the tag.
+
+  * An associated ``hwasan_globals`` section is emitted for each tagged global,
+    which indicates the address of the global, its size and its tag.  These
+    sections are concatenated by the linker into a single ``hwasan_globals``
+    section that is enumerated by the runtime (via an ELF note) when a binary
+    is loaded and the memory is tagged accordingly.
+
+A complete example is given below:
+
+.. code-block:: none
+
+  // int x = 1; int *f() { return &x; }
+  // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - global.c
+
+  [...]
+  f:
+        adrp    x0, :pg_hi21_nc:x            // set bits 12-63 to upper bits of untagged address
+        movk    x0, #:prel_g3:x+0x100000000  // set bits 48-63 to tag
+        add     x0, x0, :lo12:x              // set bits 0-11 to lower bits of address
+        ret
+
+  [...]
+        .data
+  .Lx.hwasan:
+        .word   1
+
+        .globl  x
+        .set x, .Lx.hwasan+0x2d00000000000000
+
+  [...]
+        .section        .note.hwasan.globals,"aG",@note,hwasan.module_ctor,comdat
+  .Lhwasan.note:
+        .word   8                            // namesz
+        .word   8                            // descsz
+        .word   3                            // NT_LLVM_HWASAN_GLOBALS
+        .asciz  "LLVM\000\000\000"
+        .word   __start_hwasan_globals-.Lhwasan.note
+        .word   __stop_hwasan_globals-.Lhwasan.note
+
+  [...]
+        .section        hwasan_globals,"ao",@progbits,.Lx.hwasan,unique,2
+  .Lx.hwasan.descriptor:
+        .word   .Lx.hwasan-.Lx.hwasan.descriptor
+        .word   0x2d000004                   // tag = 0x2d, size = 4
 
 Error reporting
 ---------------
