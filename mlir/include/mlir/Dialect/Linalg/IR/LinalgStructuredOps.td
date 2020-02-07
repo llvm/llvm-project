@@ -146,6 +146,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     InterfaceMethod<[{
         Query whether the op has only MemRef input and outputs.
       }], "bool", "hasBufferSemantics">,
+    InterfaceMethod<[{
+        Query whether the op has only RankedTensor input and outputs.
+      }], "bool", "hasTensorSemantics">,
 
     //========================================================================//
     // Other static interface methods.
