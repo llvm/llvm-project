@@ -41,6 +41,9 @@
 // RUN:   -fuse-ld=gold -fno-lto -flto -### 2>&1 | FileCheck --check-prefix=LLVMGOLD %s
 // LLVMGOLD: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
+/// lld does not need LLVMgold.
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=gold -flto -fno-lto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // NO-LLVMGOLD-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
