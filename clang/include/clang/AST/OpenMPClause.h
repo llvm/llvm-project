@@ -1875,6 +1875,46 @@ public:
   }
 };
 
+/// This represents 'acq_rel' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush acq_rel
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'acq_rel' clause.
+class OMPAcqRelClause : public OMPClause {
+public:
+  /// Build 'ack_rel' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPAcqRelClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_acq_rel, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPAcqRelClause()
+      : OMPClause(OMPC_acq_rel, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_acq_rel;
+  }
+};
+
 /// This represents clause 'private' in the '#pragma omp ...' directives.
 ///
 /// \code
