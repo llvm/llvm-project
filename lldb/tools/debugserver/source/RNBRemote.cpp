@@ -3690,6 +3690,12 @@ static bool attach_failed_due_to_sip (nub_process_t pid) {
 // my_uid and process_uid are only initialized if this function
 // returns true -- that there was a uid mismatch -- and those
 // id's may want to be used in the error message.
+// 
+// NOTE: this should only be called after process_does_not_exist().
+// This sysctl will return uninitialized data if we ask for a pid
+// that doesn't exist.  The alternative would be to fetch all
+// processes and step through to find the one we're looking for
+// (as process_does_not_exist() does).
 static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
                                                uid_t &my_uid,
                                                uid_t &process_uid) {
@@ -3712,6 +3718,11 @@ static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
     return false;
 }
 
+// NOTE: this should only be called after process_does_not_exist().
+// This sysctl will return uninitialized data if we ask for a pid
+// that doesn't exist.  The alternative would be to fetch all
+// processes and step through to find the one we're looking for
+// (as process_does_not_exist() does).
 static bool process_is_already_being_debugged (nub_process_t pid) {
   struct kinfo_proc kinfo;
   int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
@@ -3994,6 +4005,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       // string to lldb.
 
       if (pid_attaching_to != INVALID_NUB_PROCESS) {
+        // The order of these checks is important.  
         if (process_does_not_exist (pid_attaching_to)) {
           DNBLogError("Tried to attach to pid that doesn't exist");
           std::string return_message = "E96;";
@@ -4056,7 +4068,16 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         }
       }
 
-      SendPacket("E01"); // E01 is our magic error value for attach failed.
+      std::string error_explainer = "attach failed";
+      if (err_str[0] != '\0') {
+        error_explainer += " (";
+        error_explainer += err_str;
+        error_explainer += ")";
+      }
+      std::string default_return_msg = "E96;";
+      default_return_msg += cstring_to_asciihex_string 
+                              (error_explainer.c_str());
+      SendPacket (default_return_msg.c_str());
       DNBLogError("Attach failed: \"%s\".", err_str);
       return rnb_err;
     }
