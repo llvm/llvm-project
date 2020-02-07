@@ -247,7 +247,7 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
   let hasFolder = 1;
 }
 
-def AffineMinOp : AffineMinMaxOpBase<"min"> {
+def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
   let summary = "min operation";
   let description = [{
     The "min" operation computes the minimum value result from a multi-result
@@ -259,7 +259,7 @@ def AffineMinOp : AffineMinMaxOpBase<"min"> {
   }];
 }
 
-def AffineMaxOp : AffineMinMaxOpBase<"max"> {
+def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
   let summary = "max operation";
   let description = [{
     The "max" operation computes the maximum value result from a multi-result
