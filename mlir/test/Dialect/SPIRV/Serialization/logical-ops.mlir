@@ -1,57 +1,57 @@
 // RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
 spv.module "Logical" "GLSL450" {
-  func @iequal_scalar(%arg0: i32, %arg1: i32)  {
+  spv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spv.IEqual {{.*}}, {{.*}} : i32
     %0 = spv.IEqual %arg0, %arg1 : i32
     spv.Return
   }
-  func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.INotEqual {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.INotEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @sgt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @sgt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.SGreaterThan {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.SGreaterThan %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @sge_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @sge_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.SGreaterThanEqual {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.SGreaterThanEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @slt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @slt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.SLessThan {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.SLessThan %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @slte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @slte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.SLessThanEqual {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.SLessThanEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @ugt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @ugt_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.UGreaterThan {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.UGreaterThan %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @ugte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @ugte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.UGreaterThanEqual {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.UGreaterThanEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @ult_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
+  spv.func @ult_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
     // CHECK: {{.*}} = spv.ULessThan {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.ULessThan %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @ulte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>)  {
+  spv.func @ulte_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>)  "None" {
     // CHECK: {{.*}} = spv.ULessThanEqual {{.*}}, {{.*}} : vector<4xi32>
     %0 = spv.ULessThanEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
-  func @cmpf(%arg0 : f32, %arg1 : f32) {
+  spv.func @cmpf(%arg0 : f32, %arg1 : f32) "None" {
     // CHECK: spv.FOrdEqual
     %1 = spv.FOrdEqual %arg0, %arg1 : f32
     // CHECK: spv.FOrdGreaterThan
@@ -84,7 +84,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   spv.specConstant @condition_scalar = true
-  func @select() -> () {
+  spv.func @select() -> () "None" {
     %0 = spv.constant 4.0 : f32
     %1 = spv.constant 5.0 : f32
     %2 = spv._reference_of @condition_scalar : i1
