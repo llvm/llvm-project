@@ -1800,11 +1800,19 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // For 32-bit SVR4, allocate the nonvolatile CR spill slot iff the
-  // function uses CR 2, 3, or 4.
-  if (Subtarget.is32BitELFABI() &&
+  // function uses CR 2, 3, or 4. For 64-bit SVR4 we create a FixedStack
+  // object at the offset of the CR-save slot in the linkage area. The actual
+  // save and restore of the condition register will be created as part of the
+  // prologue and epilogue insertion, but the FixedStack object is needed to
+  // keep the CalleSavedInfo valid.
+  if (Subtarget.isSVR4ABI() &&
       (SavedRegs.test(PPC::CR2) || SavedRegs.test(PPC::CR3) ||
        SavedRegs.test(PPC::CR4))) {
-    int FrameIdx = MFI.CreateFixedObject((uint64_t)4, (int64_t)-4, true);
+    const uint64_t SpillSize = 4; // Condition register is always 4 bytes.
+    const int64_t SpillOffset = Subtarget.isPPC64() ? 8 : -4;
+    int FrameIdx =
+        MFI.CreateFixedObject(SpillSize, SpillOffset,
+                              /* IsImmutable */ true, /* IsAliased */ false);
     FI->setCRSpillFrameIndex(FrameIdx);
   }
 }

@@ -929,16 +929,12 @@ bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   // For the nonvolatile condition registers (CR2, CR3, CR4) in an SVR4
   // ABI, return true to prevent allocating an additional frame slot.
-  // For 64-bit, the CR save area is at SP+8; the value of FrameIdx = 0
-  // is arbitrary and will be subsequently ignored.  For 32-bit, we have
-  // previously created the stack slot if needed, so return its FrameIdx.
+  // For 64-bit, the CR save area is in the linkage area at SP+8; but we have
+  // created a FrameIndex to that spill slot to keep the CalleSaveInfos valid.
+  // For 32-bit, we have previously created the stack slot if needed, so return
+  // its FrameIdx.
   if (Subtarget.isSVR4ABI() && PPC::CR2 <= Reg && Reg <= PPC::CR4) {
-    if (TM.isPPC64())
-      FrameIdx = 0;
-    else {
-      const PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
-      FrameIdx = FI->getCRSpillFrameIndex();
-    }
+    FrameIdx = MF.getInfo<PPCFunctionInfo>()->getCRSpillFrameIndex();
     return true;
   }
   return false;
