@@ -18,9 +18,6 @@
 # CHECK-NEXT: .Ltmp6:
 # CHECK: .Lfunc_end0:
 #
-# CHECK: .Linfo_string7:
-# CHECK-NEXT: .asciz  "local1"
-#
 # CHECK: .Ldebug_loc2:
 # CHECK-NEXT: .quad   .Ltmp1-.Lfunc_begin0
 # CHECK-NEXT: .quad   .Ltmp4-.Lfunc_begin0
@@ -34,8 +31,9 @@
 #
 # CHECK: .long   .Ldebug_loc2            # DW_AT_location
 # CHECK-NEXT: .long   .Linfo_string7          # DW_AT_name
-
-
+#
+# CHECK: .Linfo_string7:
+# CHECK-NEXT: .asciz  "local1"
 --- |
   ; ModuleID = 'dbg-stack-value-range.ll'
   source_filename = "dbg-stack-value-range.c"
