@@ -250,7 +250,7 @@ void ArgConverter::notifyOpRemoved(Operation *op) {
       // Check if this block was converted.
       auto it = conversionInfo.find(&block);
       if (it == conversionInfo.end())
-        return;
+        continue;
 
       // Drop all uses of the original arguments and delete the original block.
       Block *origBlock = it->second.origBlock;
