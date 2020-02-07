@@ -3625,9 +3625,11 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
     // We need to generate struct instances based off ParsedAttrInfo from
     // ParsedAttr.cpp.
+    const std::string &AttrName = I->first;
     const Record &Attr = *I->second;
     OS << "struct ParsedAttrInfo" << I->first << " : public ParsedAttrInfo {\n";
     OS << "  ParsedAttrInfo" << I->first << "() {\n";
+    OS << "    AttrKind = ParsedAttr::AT_" << AttrName << ";\n";
     emitArgInfo(Attr, OS);
     OS << "    HasCustomParsing = ";
     OS << Attr.getValueAsBit("HasCustomParsing") << ";\n";
@@ -3642,6 +3644,20 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     OS << IsKnownToGCC(Attr) << ";\n";
     OS << "    IsSupportedByPragmaAttribute = ";
     OS << PragmaAttributeSupport.isAttributedSupported(*I->second) << ";\n";
+    for (const auto &S : GetFlattenedSpellings(Attr)) {
+      const std::string &RawSpelling = S.name();
+      std::string Spelling;
+      if (S.variety() == "CXX11" || S.variety() == "C2x") {
+        Spelling += S.nameSpace();
+        Spelling += "::";
+      }
+      if (S.variety() == "GNU")
+        Spelling += NormalizeGNUAttrSpelling(RawSpelling);
+      else
+        Spelling += RawSpelling;
+      OS << "    Spellings.push_back({AttributeCommonInfo::AS_" << S.variety();
+      OS << ",\"" << Spelling << "\"});\n";
+    }
     OS << "  }\n";
     GenerateAppertainsTo(Attr, OS);
     GenerateLangOptRequirements(Attr, OS);
