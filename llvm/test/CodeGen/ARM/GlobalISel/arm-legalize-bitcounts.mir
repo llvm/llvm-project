@@ -36,8 +36,8 @@ body:             |
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
     ; LIBCALLS: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; LIBCALLS: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[X]](s32), [[ZERO]]
+    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_SELECT [[CMP]](s1), [[BITS]], [[COUNT]]
     ; LIBCALLS-NOT: G_CTLZ
     %1(s32) = G_CTLZ %0
@@ -112,8 +112,8 @@ body:             |
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
     ; LIBCALLS: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; LIBCALLS: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), [[ZERO]]
+    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; LIBCALLS: [[COUNT:%[0-9]+]]:_(s32) = G_SELECT [[CMP]](s1), [[BITS]], [[UNDEFCOUNT]]
     ; LIBCALLS-NOT: G_CTLZ
     ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 16

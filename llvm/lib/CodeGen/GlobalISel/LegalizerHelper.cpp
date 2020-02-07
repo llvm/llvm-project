@@ -4077,16 +4077,20 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case TargetOpcode::G_CTLZ: {
+    Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
-    unsigned Len = Ty.getSizeInBits();
-    if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {Ty, Ty}})) {
+    LLT DstTy = MRI.getType(DstReg);
+    LLT SrcTy = MRI.getType(SrcReg);
+    unsigned Len = SrcTy.getSizeInBits();
+
+    if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTLZ_ZERO_UNDEF is supported, emit that and a select for zero.
-      auto MIBCtlzZU = MIRBuilder.buildCTLZ_ZERO_UNDEF(Ty, SrcReg);
-      auto MIBZero = MIRBuilder.buildConstant(Ty, 0);
-      auto MIBLen = MIRBuilder.buildConstant(Ty, Len);
-      auto MIBICmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                          SrcReg, MIBZero);
-      MIRBuilder.buildSelect(MI.getOperand(0), MIBICmp, MIBLen, MIBCtlzZU);
+      auto CtlzZU = MIRBuilder.buildCTLZ_ZERO_UNDEF(DstTy, SrcReg);
+      auto ZeroSrc = MIRBuilder.buildConstant(SrcTy, 0);
+      auto ICmp = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, SrcTy.changeElementSize(1), SrcReg, ZeroSrc);
+      auto LenConst = MIRBuilder.buildConstant(DstTy, Len);
+      MIRBuilder.buildSelect(DstReg, ICmp, LenConst, CtlzZU);
       MI.eraseFromParent();
       return Legalized;
     }
@@ -4104,13 +4108,13 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register Op = SrcReg;
     unsigned NewLen = PowerOf2Ceil(Len);
     for (unsigned i = 0; (1U << i) <= (NewLen / 2); ++i) {
-      auto MIBShiftAmt = MIRBuilder.buildConstant(Ty, 1ULL << i);
-      auto MIBOp =
-          MIRBuilder.buildOr(Ty, Op, MIRBuilder.buildLShr(Ty, Op, MIBShiftAmt));
+      auto MIBShiftAmt = MIRBuilder.buildConstant(SrcTy, 1ULL << i);
+      auto MIBOp = MIRBuilder.buildOr(
+          SrcTy, Op, MIRBuilder.buildLShr(SrcTy, Op, MIBShiftAmt));
       Op = MIBOp.getReg(0);
     }
-    auto MIBPop = MIRBuilder.buildCTPOP(Ty, Op);
-    MIRBuilder.buildSub(MI.getOperand(0), MIRBuilder.buildConstant(Ty, Len),
+    auto MIBPop = MIRBuilder.buildCTPOP(DstTy, Op);
+    MIRBuilder.buildSub(MI.getOperand(0), MIRBuilder.buildConstant(DstTy, Len),
                         MIBPop);
     MI.eraseFromParent();
     return Legalized;
@@ -4123,17 +4127,21 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case TargetOpcode::G_CTTZ: {
+    Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
-    unsigned Len = Ty.getSizeInBits();
-    if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {Ty, Ty}})) {
+    LLT DstTy = MRI.getType(DstReg);
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    unsigned Len = SrcTy.getSizeInBits();
+    if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {DstTy, SrcTy}})) {
       // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
       // zero.
-      auto MIBCttzZU = MIRBuilder.buildCTTZ_ZERO_UNDEF(Ty, SrcReg);
-      auto MIBZero = MIRBuilder.buildConstant(Ty, 0);
-      auto MIBLen = MIRBuilder.buildConstant(Ty, Len);
-      auto MIBICmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                          SrcReg, MIBZero);
-      MIRBuilder.buildSelect(MI.getOperand(0), MIBICmp, MIBLen, MIBCttzZU);
+      auto CttzZU = MIRBuilder.buildCTTZ_ZERO_UNDEF(DstTy, SrcReg);
+      auto Zero = MIRBuilder.buildConstant(SrcTy, 0);
+      auto ICmp = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, DstTy.changeElementSize(1), SrcReg, Zero);
+      auto LenConst = MIRBuilder.buildConstant(DstTy, Len);
+      MIRBuilder.buildSelect(DstReg, ICmp, LenConst, CttzZU);
       MI.eraseFromParent();
       return Legalized;
     }
