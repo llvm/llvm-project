@@ -465,7 +465,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
                {S32, S1}, {S64, S1}, {S16, S1}})
     .scalarize(0)
-    .clampScalar(0, S32, S64);
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(1, 32);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
@@ -566,9 +567,27 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF,
-                               G_CTTZ, G_CTTZ_ZERO_UNDEF,
-                               G_CTPOP})
+  getActionDefinitionsBuilder(G_CTPOP)
+    .legalFor({{S32, S32}, {S32, S64}})
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64)
+    .scalarize(0)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32);
+
+  // The hardware instructions return a different result on 0 than the generic
+  // instructions expect. The hardware produces -1, but these produce the
+  // bitwidth.
+  getActionDefinitionsBuilder({G_CTLZ, G_CTTZ})
+    .scalarize(0)
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32)
+    .lower();
+
+  // The 64-bit versions produce 32-bit results, but only on the SALU.
+  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
     .clampScalar(1, S32, S64)
