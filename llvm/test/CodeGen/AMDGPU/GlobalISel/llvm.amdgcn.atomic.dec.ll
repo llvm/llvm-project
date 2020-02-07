@@ -1141,10 +1141,9 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0(i32 addrspace(1)* %out, i32
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 0, v0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, 8, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 9
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_dec_rtn_u32 v3, v0, v1
+; CI-NEXT:    ds_dec_rtn_u32 v3, v0, v1 offset:8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
@@ -1160,10 +1159,9 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0(i32 addrspace(1)* %out, i32
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 2, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 0, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 8, v0
 ; VI-NEXT:    v_mov_b32_e32 v1, 9
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    ds_dec_rtn_u32 v3, v0, v1
+; VI-NEXT:    ds_dec_rtn_u32 v3, v0, v1 offset:8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -1708,15 +1706,14 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(i64 addrspa
 define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
 ; CI-LABEL: atomic_dec_shl_base_lds_0_i64:
 ; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CI-NEXT:    v_add_i32_e32 v4, vcc, 2, v0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, 0, v0
-; CI-NEXT:    v_add_i32_e32 v2, vcc, 16, v0
+; CI-NEXT:    v_add_i32_e32 v2, vcc, 0, v0
 ; CI-NEXT:    v_mov_b32_e32 v0, 9
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1]
+; CI-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1] offset:16
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v2, s2
 ; CI-NEXT:    v_mov_b32_e32 v3, s3
@@ -1728,15 +1725,14 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ;
 ; VI-LABEL: atomic_dec_shl_base_lds_0_i64:
 ; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 2, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 0, v0
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 0, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1]
+; VI-NEXT:    ds_dec_rtn_u64 v[0:1], v2, v[0:1] offset:16
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
