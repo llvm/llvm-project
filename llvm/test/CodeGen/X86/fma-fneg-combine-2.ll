@@ -5,14 +5,14 @@
 define float @test_fneg_fma_subx_y_negz_f32(float %w, float %x, float %y, float %z)  {
 ; FMA3-LABEL: test_fneg_fma_subx_y_negz_f32:
 ; FMA3:       # %bb.0: # %entry
-; FMA3-NEXT:    vsubss %xmm0, %xmm1, %xmm0
-; FMA3-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm3
+; FMA3-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: test_fneg_fma_subx_y_negz_f32:
 ; FMA4:       # %bb.0: # %entry
-; FMA4-NEXT:    vsubss %xmm0, %xmm1, %xmm0
-; FMA4-NEXT:    vfmaddss %xmm3, %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vfnmaddss %xmm3, %xmm2, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 entry:
   %subx = fsub nsz float %w, %x
@@ -25,14 +25,14 @@ entry:
 define float @test_fneg_fma_x_suby_negz_f32(float %w, float %x, float %y, float %z)  {
 ; FMA3-LABEL: test_fneg_fma_x_suby_negz_f32:
 ; FMA3:       # %bb.0: # %entry
-; FMA3-NEXT:    vsubss %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm3
+; FMA3-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; FMA3-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: test_fneg_fma_x_suby_negz_f32:
 ; FMA4:       # %bb.0: # %entry
-; FMA4-NEXT:    vsubss %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vfmaddss %xmm3, %xmm0, %xmm1, %xmm0
+; FMA4-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    vfnmaddss %xmm3, %xmm0, %xmm1, %xmm0
 ; FMA4-NEXT:    retq
 entry:
   %suby = fsub nsz float %w, %y
@@ -46,15 +46,15 @@ define float @test_fneg_fma_subx_suby_negz_f32(float %w, float %x, float %y, flo
 ; FMA3-LABEL: test_fneg_fma_subx_suby_negz_f32:
 ; FMA3:       # %bb.0: # %entry
 ; FMA3-NEXT:    vsubss %xmm1, %xmm0, %xmm1
-; FMA3-NEXT:    vsubss %xmm0, %xmm2, %xmm0
-; FMA3-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm3
+; FMA3-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; FMA3-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: test_fneg_fma_subx_suby_negz_f32:
 ; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vsubss %xmm1, %xmm0, %xmm1
-; FMA4-NEXT:    vsubss %xmm0, %xmm2, %xmm0
-; FMA4-NEXT:    vfmaddss %xmm3, %xmm0, %xmm1, %xmm0
+; FMA4-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    vfnmaddss %xmm3, %xmm0, %xmm1, %xmm0
 ; FMA4-NEXT:    retq
 entry:
   %subx = fsub nsz float %w, %x
@@ -92,13 +92,13 @@ define float @negated_constant(float %x) {
 ; FMA3-LABEL: negated_constant:
 ; FMA3:       # %bb.0:
 ; FMA3-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
-; FMA3-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
+; FMA3-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
-; FMA4-NEXT:    vfmaddss %xmm1, {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vfnmsubss %xmm1, {{.*}}(%rip), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %m = fmul float %x, 42.0
   %fma = call nsz float @llvm.fma.f32(float %x, float -42.0, float %m)
