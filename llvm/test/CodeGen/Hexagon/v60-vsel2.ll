@@ -14,8 +14,8 @@ b0:
   %v4 = add i32 %v2, %v3
   %v5 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 -1)
   %v6 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %v7 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v4)
-  %v8 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v6, <512 x i1> %v7, i32 12)
+  %v7 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v4)
+  %v8 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v6, <64 x i1> %v7, i32 12)
   %v9 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v8, <16 x i32> %v8)
   %v10 = and i32 %v4, 511
   %v11 = icmp eq i32 %v10, 0
@@ -31,8 +31,8 @@ b2:                                               ; preds = %b1, %b0
   br i1 %v14, label %b3, label %b6
 
 b3:                                               ; preds = %b2
-  %v15 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %a5)
-  %v16 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1> %v15, i32 16843009)
+  %v15 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %a5)
+  %v16 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v15, i32 16843009)
   %v17 = tail call <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32> %v16)
   %v18 = add i32 %v3, %a1
   %v19 = add i32 %v18, -1
@@ -71,16 +71,16 @@ b6:                                               ; preds = %b5, %b2
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32>) #1

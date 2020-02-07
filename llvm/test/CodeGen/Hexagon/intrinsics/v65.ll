@@ -136,21 +136,21 @@ define <16 x i32> @V6_vmpyuhe(<16 x i32> %a, i32 %b) {
 }
 ; CHECK: = vmpye(v0.uh,r0.uh)
 
-;declare <16 x i32> @llvm.hexagon.V6.vprefixqb(<512 x i1>)
-;define <16 x i32> @V6_vprefixqb(<512 x i1> %a) {
-;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqb(<512 x i1> %a)
+;declare <16 x i32> @llvm.hexagon.V6.vprefixqb(<64 x i1>)
+;define <16 x i32> @V6_vprefixqb(<64 x i1> %a) {
+;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqb(<64 x i1> %a)
 ;  ret <16 x i32> %b
 ;}
 
-;declare <16 x i32> @llvm.hexagon.V6.vprefixqh(<512 x i1>)
-;define <16 x i32> @V6_vprefixqh(<512 x i1> %a) {
-;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqh(<512 x i1> %a)
+;declare <16 x i32> @llvm.hexagon.V6.vprefixqh(<64 x i1>)
+;define <16 x i32> @V6_vprefixqh(<64 x i1> %a) {
+;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqh(<64 x i1> %a)
 ;  ret <16 x i32> %b
 ;}
 
-;declare <16 x i32> @llvm.hexagon.V6.vprefixqw(<512 x i1>)
-;define <16 x i32> @V6_vprefixqw(<512 x i1> %a) {
-;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqw(<512 x i1> %a)
+;declare <16 x i32> @llvm.hexagon.V6.vprefixqw(<64 x i1>)
+;define <16 x i32> @V6_vprefixqw(<64 x i1> %a) {
+;  %b = call <16 x i32> @llvm.hexagon.V6.vprefixqw(<64 x i1> %a)
 ;  ret <16 x i32> %b
 ;}
 

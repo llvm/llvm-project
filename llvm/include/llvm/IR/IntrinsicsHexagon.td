@@ -258,44 +258,22 @@ Hexagon_v64i32_v64i32v32i32i64_rtt_Intrinsic<"HEXAGON_V6_vrmpyub_rtt_acc_128B">;
 // Masked vector stores
 //
 
-//
-// Hexagon_vv64ivmemv512_Intrinsic<string GCCIntSuffix>
-// tag: V6_vS32b_qpred_ai
-class Hexagon_vv64ivmemv512_Intrinsic<string GCCIntSuffix>
- : Hexagon_Intrinsic<GCCIntSuffix,
-                          [], [llvm_v512i1_ty,llvm_ptr_ty,llvm_v16i32_ty],
-                          [IntrArgMemOnly]>;
+class Hexagon_custom_vms_Intrinsic
+  : Hexagon_NonGCC_Intrinsic<
+       [], [llvm_v64i1_ty,llvm_ptr_ty,llvm_v16i32_ty], [IntrWriteMem]>;
 
-//
-// Hexagon_vv128ivmemv1024_Intrinsic<string GCCIntSuffix>
-// tag: V6_vS32b_qpred_ai_128B
-class Hexagon_vv128ivmemv1024_Intrinsic<string GCCIntSuffix>
- : Hexagon_Intrinsic<GCCIntSuffix,
-                          [], [llvm_v1024i1_ty,llvm_ptr_ty,llvm_v32i32_ty],
-                          [IntrArgMemOnly]>;
+class Hexagon_custom_vms_Intrinsic_128B
+  : Hexagon_NonGCC_Intrinsic<
+       [], [llvm_v128i1_ty,llvm_ptr_ty,llvm_v32i32_ty], [IntrWriteMem]>;
 
-def int_hexagon_V6_vmaskedstoreq :
-Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstoreq">;
+def int_hexagon_V6_vmaskedstoreq: Hexagon_custom_vms_Intrinsic;
+def int_hexagon_V6_vmaskedstorenq: Hexagon_custom_vms_Intrinsic;
+def int_hexagon_V6_vmaskedstorentq: Hexagon_custom_vms_Intrinsic;
+def int_hexagon_V6_vmaskedstorentnq: Hexagon_custom_vms_Intrinsic;
 
-def int_hexagon_V6_vmaskedstorenq :
-Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorenq">;
-
-def int_hexagon_V6_vmaskedstorentq :
-Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorentq">;
-
-def int_hexagon_V6_vmaskedstorentnq :
-Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorentnq">;
-
-def int_hexagon_V6_vmaskedstoreq_128B :
-Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstoreq_128B">;
-
-def int_hexagon_V6_vmaskedstorenq_128B :
-Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorenq_128B">;
-
-def int_hexagon_V6_vmaskedstorentq_128B :
-Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentq_128B">;
-
-def int_hexagon_V6_vmaskedstorentnq_128B :
-Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentnq_128B">;
+def int_hexagon_V6_vmaskedstoreq_128B: Hexagon_custom_vms_Intrinsic_128B;
+def int_hexagon_V6_vmaskedstorenq_128B: Hexagon_custom_vms_Intrinsic_128B;
+def int_hexagon_V6_vmaskedstorentq_128B: Hexagon_custom_vms_Intrinsic_128B;
+def int_hexagon_V6_vmaskedstorentnq_128B: Hexagon_custom_vms_Intrinsic_128B;
 
 include "llvm/IR/IntrinsicsHexagonDep.td"
