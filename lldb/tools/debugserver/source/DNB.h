@@ -150,6 +150,7 @@ nub_size_t DNBProcessGetAvailableProfileData(nub_process_t pid, char *buf,
                                              nub_size_t buf_size) DNB_EXPORT;
 nub_size_t DNBProcessGetStopCount(nub_process_t pid) DNB_EXPORT;
 uint32_t DNBProcessGetCPUType(nub_process_t pid) DNB_EXPORT;
+size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
 
 // Process executable and arguments
 const char *DNBProcessGetExecutablePath(nub_process_t pid);
