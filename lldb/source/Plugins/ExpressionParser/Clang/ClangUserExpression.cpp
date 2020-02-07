@@ -659,7 +659,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       const char *error_cstr = static_init_error.AsCString();
       if (error_cstr && error_cstr[0])
         diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                  "couldn't run static initializers: %s\n",
+                                  "%s\n",
                                   error_cstr);
       else
         diagnostic_manager.PutString(eDiagnosticSeverityError,
