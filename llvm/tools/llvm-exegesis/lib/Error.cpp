@@ -13,11 +13,17 @@ namespace exegesis {
 
 char ClusteringError::ID;
 
-void ClusteringError::log(raw_ostream &OS) const {
-  OS << Msg;
-}
+void ClusteringError::log(raw_ostream &OS) const { OS << Msg; }
 
 std::error_code ClusteringError::convertToErrorCode() const {
+  return inconvertibleErrorCode();
+}
+
+char SnippetCrash::ID;
+
+void SnippetCrash::log(raw_ostream &OS) const { OS << Msg; }
+
+std::error_code SnippetCrash::convertToErrorCode() const {
   return inconvertibleErrorCode();
 }
 
