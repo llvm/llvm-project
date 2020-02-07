@@ -1,5 +1,6 @@
-add_lldb_library(lldbPluginABIMacOSX_i386 PLUGIN
-  ABIMacOSX_i386.cpp
+add_lldb_library(lldbPluginABIMips PLUGIN
+  ABISysV_mips.cpp
+  ABISysV_mips64.cpp
 
   LINK_LIBS
     lldbCore
