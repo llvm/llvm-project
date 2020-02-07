@@ -964,7 +964,8 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
   bool isNaN = apValue.isNaN();
   if (!isInf && !isNaN) {
     SmallString<128> strValue;
-    apValue.toString(strValue, 6, 0, false);
+    apValue.toString(strValue, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
+                     /*TruncateZero=*/false);
 
     // Check to make sure that the stringized number is not some string like
     // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
@@ -975,18 +976,26 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
            "[-+]?[0-9] regex does not match!");
 
     // Parse back the stringized version and check that the value is equal
-    // (i.e., there is no precision loss). If it is not, use the default format
-    // of APFloat instead of the exponential notation.
-    if (!APFloat(apValue.getSemantics(), strValue).bitwiseIsEqual(apValue)) {
-      strValue.clear();
-      apValue.toString(strValue);
+    // (i.e., there is no precision loss).
+    if (APFloat(apValue.getSemantics(), strValue).bitwiseIsEqual(apValue)) {
+      os << strValue;
+      return;
     }
-    os << strValue;
-    return;
+
+    // If it is not, use the default format of APFloat instead of the
+    // exponential notation.
+    strValue.clear();
+    apValue.toString(strValue);
+
+    // Make sure that we can parse the default form as a float.
+    if (StringRef(strValue).contains('.')) {
+      os << strValue;
+      return;
+    }
   }
 
-  // Print special values in hexadecimal format.  The sign bit should be
-  // included in the literal.
+  // Print special values in hexadecimal format. The sign bit should be included
+  // in the literal.
   SmallVector<char, 16> str;
   APInt apInt = apValue.bitcastToAPInt();
   apInt.toString(str, /*Radix=*/16, /*Signed=*/false,

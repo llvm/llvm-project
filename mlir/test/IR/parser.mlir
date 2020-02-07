@@ -1027,6 +1027,11 @@ func @f64_special_values() {
   // CHECK: constant 0xFFF0000000000000 : f64
   %5 = constant 0xFFF0000000000000 : f64
 
+  // Check that values that can't be represented with the default format, use
+  // hex instead.
+  // CHECK: constant 0xC1CDC00000000000 : f64
+  %6 = constant 0xC1CDC00000000000 : f64
+
   return
 }
 
