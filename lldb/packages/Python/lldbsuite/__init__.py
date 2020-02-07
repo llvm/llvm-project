@@ -20,10 +20,13 @@ def find_lldb_root():
 # lldbsuite.lldb_root refers to the root of the git/svn source checkout
 lldb_root = find_lldb_root()
 
-# lldbsuite.lldb_test_root refers to the root of the python test tree
+# lldbsuite.lldb_test_src_root refers to the root of the python test case tree
+# (i.e. the actual unit tests).
 lldb_test_root = os.path.join(
     lldb_root,
     "packages",
     "Python",
     "lldbsuite",
     "test")
+# TODO(rupprecht): update the above definition after moving test cases:
+# lldb_test_root = os.path.join(lldb_root, "test", "API")

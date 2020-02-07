@@ -61,12 +61,13 @@ def getMake(test_subdir, test_name):
 
     # Construct the base make invocation.
     lldb_test = os.environ["LLDB_TEST"]
+    lldb_test_src = os.environ["LLDB_TEST_SRC"]
     lldb_build = os.environ["LLDB_BUILD"]
-    if not (lldb_test and lldb_build and test_subdir and test_name and
-            (not os.path.isabs(test_subdir))):
+    if not (lldb_test and lldb_test_src and lldb_build and test_subdir and
+            test_name and (not os.path.isabs(test_subdir))):
         raise Exception("Could not derive test directories")
     build_dir = os.path.join(lldb_build, test_subdir, test_name)
-    src_dir = os.path.join(lldb_test, test_subdir)
+    src_dir = os.path.join(lldb_test_src, test_subdir)
     # This is a bit of a hack to make inline testcases work.
     makefile = os.path.join(src_dir, "Makefile")
     if not os.path.isfile(makefile):
