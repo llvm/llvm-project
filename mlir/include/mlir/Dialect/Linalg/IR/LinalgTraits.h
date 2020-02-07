@@ -221,6 +221,15 @@ public:
                         [](Value v) { return v.getType().isa<MemRefType>(); });
   }
 
+  /// Query whether the op has only tensor inputs and outputs.
+  bool hasTensorSemantics() {
+    auto isTensorType = [](Value v) {
+      return v.getType().isa<RankedTensorType>();
+    };
+    return llvm::all_of(getInputs(), isTensorType) &&
+           llvm::all_of(this->getOperation()->getResults(), isTensorType);
+  }
+
   //==========================================================================//
   // Other static interface methods.
   //==========================================================================//
