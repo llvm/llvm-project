@@ -452,6 +452,8 @@ def _SLASH_Qpar : CLFlag<"Qpar">;
 def _SLASH_Qpar_report : CLJoined<"Qpar-report">;
 def _SLASH_Qsafe_fp_loads : CLFlag<"Qsafe_fp_loads">;
 def _SLASH_Qspectre : CLFlag<"Qspectre">;
+def _SLASH_Qspectre_load : CLFlag<"Qspectre-load">;
+def _SLASH_Qspectre_load_cf : CLFlag<"Qspectre-load-cf">;
 def _SLASH_Qvec_report : CLJoined<"Qvec-report">;
 def _SLASH_u : CLFlag<"u">;
 def _SLASH_V : CLFlag<"V">;
