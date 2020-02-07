@@ -258,22 +258,13 @@ void Compilation::initCompilationForDiagnostics() {
 
   // Remove any user specified output.  Claim any unclaimed arguments, so as
   // to avoid emitting warnings about unused args.
-  OptSpecifier OutputOpts[] = {
-      options::OPT_o,  options::OPT_MD, options::OPT_MMD, options::OPT_M,
-      options::OPT_MM, options::OPT_MF, options::OPT_MG,  options::OPT_MJ,
-      options::OPT_MQ, options::OPT_MT, options::OPT_MV};
+  OptSpecifier OutputOpts[] = { options::OPT_o, options::OPT_MD,
+                                options::OPT_MMD };
   for (unsigned i = 0, e = llvm::array_lengthof(OutputOpts); i != e; ++i) {
     if (TranslatedArgs->hasArg(OutputOpts[i]))
       TranslatedArgs->eraseArg(OutputOpts[i]);
   }
   TranslatedArgs->ClaimAllArgs();
-
-  // Force re-creation of the toolchain Args, otherwise our modifications just
-  // above will have no effect.
-  for (auto Arg : TCArgs)
-    if (Arg.second != TranslatedArgs)
-      delete Arg.second;
-  TCArgs.clear();
 
   // Redirect stdout/stderr to /dev/null.
   Redirects = {None, {""}, {""}};
