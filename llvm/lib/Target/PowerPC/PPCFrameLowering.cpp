@@ -2241,8 +2241,15 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         // Use !IsLiveIn for the kill flag.
         // We do not want to kill registers that are live in this function
         // before their use because they will become undefined registers.
-        TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn,
-                                CSI[i].getFrameIdx(), RC, TRI);
+        // Functions without NoUnwind need to preserve the order of elements in
+        // saved vector registers.
+        if (Subtarget.needsSwapsForVSXMemOps() &&
+            !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
+          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
+                                       CSI[i].getFrameIdx(), RC, TRI);
+        else
+          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, CSI[i].getFrameIdx(),
+                                  RC, TRI);
       }
     }
   }
@@ -2394,7 +2401,16 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
       } else {
        // Default behavior for non-CR saves.
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+
+        // Functions without NoUnwind need to preserve the order of elements in
+        // saved vector registers.
+        if (Subtarget.needsSwapsForVSXMemOps() &&
+            !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
+          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
+                                        TRI);
+        else
+          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+
         assert(I != MBB.begin() &&
                "loadRegFromStackSlot didn't insert any code!");
       }
