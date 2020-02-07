@@ -22023,9 +22023,8 @@ SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const 
 
   // Recreate the carry if needed.
   EVT CarryVT = Carry.getValueType();
-  APInt NegOne = APInt::getAllOnesValue(CarryVT.getScalarSizeInBits());
   Carry = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
-                      Carry, DAG.getConstant(NegOne, DL, CarryVT));
+                      Carry, DAG.getAllOnesConstant(DL, CarryVT));
 
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
   SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry.getValue(1));
@@ -28191,9 +28190,8 @@ static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
   // Set the carry flag.
   SDValue Carry = Op.getOperand(2);
   EVT CarryVT = Carry.getValueType();
-  APInt NegOne = APInt::getAllOnesValue(CarryVT.getScalarSizeInBits());
   Carry = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
-                      Carry, DAG.getConstant(NegOne, DL, CarryVT));
+                      Carry, DAG.getAllOnesConstant(DL, CarryVT));
 
   unsigned Opc = Op.getOpcode() == ISD::ADDCARRY ? X86ISD::ADC : X86ISD::SBB;
   SDValue Sum = DAG.getNode(Opc, DL, VTs, Op.getOperand(0),
