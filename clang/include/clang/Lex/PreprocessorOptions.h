@@ -189,9 +189,6 @@ public:
   /// Set up preprocessor for RunAnalysis action.
   bool SetUpStaticAnalyzer = false;
 
-  /// Prevents intended crashes when using #pragma clang __debug. For testing.
-  bool DisablePragmaDebugCrash = false;
-
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 

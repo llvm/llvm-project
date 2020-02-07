@@ -4750,11 +4750,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                                  : "-");
   }
 
-  // Give the gen diagnostics more chances to succeed, by avoiding intentional
-  // crashes.
-  if (D.CCGenDiagnostics)
-    CmdArgs.push_back("-disable-pragma-debug-crash");
-
   bool UseSeparateSections = isUseSeparateSections(Triple);
 
   if (Args.hasFlag(options::OPT_ffunction_sections,
