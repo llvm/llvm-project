@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
 struct S1 { // expected-note 2 {{declared here}}
   int a;
@@ -132,5 +134,9 @@ label1 : {
 #pragma omp flush(argc) flush(argc) // expected-warning {{extra tokens at the end of '#pragma omp flush' are ignored}}
 #pragma omp parallel flush(argc) // expected-warning {{extra tokens at the end of '#pragma omp parallel' are ignored}}
   ;
+#pragma omp flush seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp flush'}}
+#pragma omp flush acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}}
+#pragma omp flush acq_rel (argc) // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp50-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp50-note {{memory order clause 'acq_rel' is specified here}}
+#pragma omp flush(argc) acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp50-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp50-note {{memory order clause 'acq_rel' is specified here}}
   return tmain(argc);
 }
