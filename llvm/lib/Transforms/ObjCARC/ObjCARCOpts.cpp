@@ -879,7 +879,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
 /// This function returns true if the value is inert. An ObjC ARC runtime call
 /// taking an inert operand can be safely deleted.
-static bool isInertARCValue(Value *V) {
+static bool isInertARCValue(Value *V, SmallPtrSet<Value *, 1> &VisitedPhis) {
   V = V->stripPointerCasts();
 
   if (IsNullOrUndef(V))
@@ -891,9 +891,12 @@ static bool isInertARCValue(Value *V) {
       return true;
 
   if (auto PN = dyn_cast<PHINode>(V)) {
+    // Ignore this phi if it has already been discovered.
+    if (!VisitedPhis.insert(PN).second)
+      return true;
     // Look through phis's operands.
     for (Value *Opnd : PN->incoming_values())
-      if (!isInertARCValue(Opnd))
+      if (!isInertARCValue(Opnd, VisitedPhis))
         return false;
     return true;
   }
@@ -907,8 +910,10 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
   LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
 
   // We can delete this call if it takes an inert value.
+  SmallPtrSet<Value *, 1> VisitedPhis;
+
   if (IsNoopOnGlobal(Class))
-    if (isInertARCValue(Inst->getOperand(0))) {
+    if (isInertARCValue(Inst->getOperand(0), VisitedPhis)) {
       if (!Inst->getType()->isVoidTy())
         Inst->replaceAllUsesWith(Inst->getOperand(0));
       Inst->eraseFromParent();
