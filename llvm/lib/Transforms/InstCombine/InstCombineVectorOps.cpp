@@ -1917,10 +1917,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       else
         Elts.push_back(ConstantInt::get(Int32Ty, Mask[i] % LHSWidth));
     }
-    SVI.setOperand(0, SVI.getOperand(1));
-    SVI.setOperand(1, UndefValue::get(RHS->getType()));
-    SVI.setOperand(2, ConstantVector::get(Elts));
-    return &SVI;
+    return new ShuffleVectorInst(LHS, UndefValue::get(RHS->getType()),
+                                 ConstantVector::get(Elts));
   }
 
   // shuffle undef, x, mask --> shuffle x, undef, mask'

@@ -1680,12 +1680,11 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
         if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
           return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
       } else {
-        Cmp.setOperand(1, ConstantInt::get(And->getType(), NewCst));
         APInt NewAndCst = IsShl ? C2.lshr(*C3) : C2.shl(*C3);
-        And->setOperand(1, ConstantInt::get(And->getType(), NewAndCst));
-        And->setOperand(0, Shift->getOperand(0));
-        Worklist.push(Shift); // Shift is dead.
-        return &Cmp;
+        Value *NewAnd = Builder.CreateAnd(
+            Shift->getOperand(0), ConstantInt::get(And->getType(), NewAndCst));
+        return new ICmpInst(Cmp.getPredicate(),
+            NewAnd, ConstantInt::get(And->getType(), NewCst));
       }
     }
   }
@@ -4154,9 +4153,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     if (X) { // Build (X^Y) & Z
       Op1 = Builder.CreateXor(X, Y);
       Op1 = Builder.CreateAnd(Op1, Z);
-      I.setOperand(0, Op1);
-      I.setOperand(1, Constant::getNullValue(Op1->getType()));
-      return &I;
+      return new ICmpInst(Pred, Op1, Constant::getNullValue(Op1->getType()));
     }
   }
 
