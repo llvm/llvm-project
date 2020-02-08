@@ -268,9 +268,10 @@ struct OperationFormat {
 ///
 /// {0}: The storage type of the attribute.
 /// {1}: The name of the attribute.
+/// {2}: The type for the attribute.
 const char *const attrParserCode = R"(
   {0} {1}Attr;
-  if (parser.parseAttribute({1}Attr, "{1}", result.attributes))
+  if (parser.parseAttribute({1}Attr{2}, "{1}", result.attributes))
     return failure();
 )";
 
@@ -368,6 +369,10 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
       OpMethod::MP_Static);
   auto &body = method.body();
 
+  // A format context used when parsing attributes with buildable types.
+  FmtContext attrTypeCtx;
+  attrTypeCtx.withBuilder("parser.getBuilder()");
+
   // Generate parsers for each of the elements.
   for (auto &element : elements) {
     /// Literals.
@@ -377,7 +382,19 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
       /// Arguments.
     } else if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
       const NamedAttribute *var = attr->getVar();
-      body << formatv(attrParserCode, var->attr.getStorageType(), var->name);
+
+      // If this attribute has a buildable type, use that when parsing the
+      // attribute.
+      std::string attrTypeStr;
+      if (Optional<Type> attrType = var->attr.getValueType()) {
+        if (Optional<StringRef> typeBuilder = attrType->getBuilderCall()) {
+          llvm::raw_string_ostream os(attrTypeStr);
+          os << ", " << tgfmt(*typeBuilder, &attrTypeCtx);
+        }
+      }
+
+      body << formatv(attrParserCode, var->attr.getStorageType(), var->name,
+                      attrTypeStr);
     } else if (auto *operand = dyn_cast<OperandVariable>(element.get())) {
       bool isVariadic = operand->getVar()->isVariadic();
       body << formatv(isVariadic ? variadicOperandParserCode
@@ -615,7 +632,14 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
     shouldEmitSpace = true;
 
     if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
-      body << "  p << " << attr->getVar()->name << "Attr();\n";
+      const NamedAttribute *var = attr->getVar();
+
+      // Elide the attribute type if it is buildable..
+      Optional<Type> attrType = var->attr.getValueType();
+      if (attrType && attrType->getBuilderCall())
+        body << "  p.printAttributeWithoutType(" << var->name << "Attr());\n";
+      else
+        body << "  p.printAttribute(" << var->name << "Attr());\n";
     } else if (auto *operand = dyn_cast<OperandVariable>(element.get())) {
       body << "  p << " << operand->getVar()->name << "();\n";
     } else if (isa<OperandsDirective>(element.get())) {
