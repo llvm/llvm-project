@@ -169,9 +169,9 @@ add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
 
 if(LLVM_BUILD_TOOLS)
-  set(exclude_from_check_all "EXCLUDE_FROM_CHECK_ALL")
-else()
   set(exclude_from_check_all "")
+else()
+  set(exclude_from_check_all "EXCLUDE_FROM_CHECK_ALL")
 endif()
 
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
