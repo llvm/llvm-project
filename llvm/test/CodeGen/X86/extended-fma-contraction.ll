@@ -5,7 +5,7 @@
 define <3 x float> @fmafunc(<3 x float> %a, <3 x float> %b, <3 x float> %c) {
 ; CHECK-LABEL: fmafunc:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vfmaddps %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfmaddps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-NOFMA-LABEL: fmafunc:
