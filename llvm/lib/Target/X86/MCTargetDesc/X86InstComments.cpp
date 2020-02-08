@@ -199,6 +199,40 @@ using namespace llvm;
   CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
   CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
 
+#define CASE_FMA4(Inst, suf)                      \
+  CASE_AVX_INS_COMMON(Inst, 4, suf)               \
+  CASE_AVX_INS_COMMON(Inst, 4Y, suf)
+
+#define CASE_FMA4_PACKED_RR(Inst)                 \
+  CASE_FMA4(Inst##PD, rr)                         \
+  CASE_FMA4(Inst##PS, rr)
+
+#define CASE_FMA4_PACKED_RM(Inst)                 \
+  CASE_FMA4(Inst##PD, rm)                         \
+  CASE_FMA4(Inst##PS, rm)
+
+#define CASE_FMA4_PACKED_MR(Inst)                 \
+  CASE_FMA4(Inst##PD, mr)                         \
+  CASE_FMA4(Inst##PS, mr)
+
+#define CASE_FMA4_SCALAR_RR(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rr)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rr)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rr_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rr_Int)
+
+#define CASE_FMA4_SCALAR_RM(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rm)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rm)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rm_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rm_Int)
+
+#define CASE_FMA4_SCALAR_MR(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , mr)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , mr)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , mr_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , mr_Int)
+
 static unsigned getVectorRegSize(unsigned RegNo) {
   if (X86::ZMM0 <= RegNo && RegNo <= X86::ZMM31)
     return 512;
@@ -247,14 +281,14 @@ static void printMasking(raw_ostream &OS, const MCInst *MI,
     OS << " {z}";
 }
 
-static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
+static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
   const char *Mul1Name = nullptr, *Mul2Name = nullptr, *AccName = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
   bool Negate = false;
   StringRef AccStr = "+";
 
-  // The operands for FMA instructions without rounding fall into two forms.
+  // The operands for FMA3 instructions without rounding fall into two forms:
   //  dest, src1, src2, src3
   //  dest, src1, mask, src2, src3
   // Where src3 is either a register or 5 memory address operands. So to find
@@ -262,9 +296,118 @@ static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
   // index from the end by taking into account memory vs register form when
   // finding src2.
 
+  // The operands for FMA4 instructions:
+  //  dest, src1, src2, src3
+  // Where src2 OR src3 are either a register or 5 memory address operands. So
+  // to find dest and src1 we can index from the front, src2 (reg/mem) follows
+  // and then src3 (reg) will be at the end.
+
   switch (MI->getOpcode()) {
   default:
     return false;
+
+  CASE_FMA4_PACKED_RR(FMADD)
+  CASE_FMA4_SCALAR_RR(FMADD)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMADD)
+  CASE_FMA4_SCALAR_RM(FMADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    break;
+  CASE_FMA4_PACKED_MR(FMADD)
+  CASE_FMA4_SCALAR_MR(FMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    break;
+
+  CASE_FMA4_PACKED_RR(FMSUB)
+  CASE_FMA4_SCALAR_RR(FMSUB)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMSUB)
+  CASE_FMA4_SCALAR_RM(FMSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+  CASE_FMA4_PACKED_MR(FMSUB)
+  CASE_FMA4_SCALAR_MR(FMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+
+  CASE_FMA4_PACKED_RR(FNMADD)
+  CASE_FMA4_SCALAR_RR(FNMADD)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FNMADD)
+  CASE_FMA4_SCALAR_RM(FNMADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+  CASE_FMA4_PACKED_MR(FNMADD)
+  CASE_FMA4_SCALAR_MR(FNMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+
+  CASE_FMA4_PACKED_RR(FNMSUB)
+  CASE_FMA4_SCALAR_RR(FNMSUB)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FNMSUB)
+  CASE_FMA4_SCALAR_RM(FNMSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+  CASE_FMA4_PACKED_MR(FNMSUB)
+  CASE_FMA4_SCALAR_MR(FNMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+
+  CASE_FMA4_PACKED_RR(FMADDSUB)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMADDSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+  CASE_FMA4_PACKED_MR(FMADDSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+
+  CASE_FMA4_PACKED_RR(FMSUBADD)
+    RegForm = true;
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMSUBADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+  CASE_FMA4_PACKED_MR(FMSUBADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+
   CASE_FMA_PACKED_REG(FMADD132)
   CASE_FMA_SCALAR_REG(FMADD132)
     Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
@@ -504,7 +647,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
 
-  if (printFMA3Comments(MI, OS))
+  if (printFMAComments(MI, OS))
     return true;
 
   switch (MI->getOpcode()) {
