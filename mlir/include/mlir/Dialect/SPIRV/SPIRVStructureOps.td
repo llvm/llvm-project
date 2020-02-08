@@ -365,8 +365,7 @@ def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
 
   let results = (outs);
 
-  let parser = [{ return parseNoIOOp(parser, result); }];
-  let printer = [{ printNoIOOp(getOperation(), p); }];
+  let assemblyFormat = "attr-dict";
 
   let verifier = [{ return success(); }];
 
