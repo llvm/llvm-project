@@ -77,7 +77,7 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpcklwd(<16 x i16> %a
 }
 
 define <16 x i8> @combine_shuffle_vrotri_v2i64(<2 x i64> %a0) {
-; CHECK-LABEL: combine_shuffle_proti_v2i64:
+; CHECK-LABEL: combine_shuffle_vrotri_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprorq $48, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
@@ -90,7 +90,7 @@ define <16 x i8> @combine_shuffle_vrotri_v2i64(<2 x i64> %a0) {
 declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 
 define <16 x i8> @combine_shuffle_vrotli_v4i32(<4 x i32> %a0) {
-; CHECK-LABEL: combine_shuffle_proti_v4i32:
+; CHECK-LABEL: combine_shuffle_vrotli_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprold $8, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
