@@ -15,6 +15,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -129,6 +130,11 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
+static llvm::cl::opt<bool> FullCommandLine(
+    "full-command-line",
+    llvm::cl::desc("Include the full command lines to use to build modules"),
+    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
@@ -189,9 +195,10 @@ private:
 /// based on the result.
 ///
 /// \returns True on error.
-static bool handleDependencyToolResult(const std::string &Input,
-                                       llvm::Expected<std::string> &MaybeFile,
-                                       SharedStream &OS, SharedStream &Errs) {
+static bool
+handleMakeDependencyToolResult(const std::string &Input,
+                               llvm::Expected<std::string> &MaybeFile,
+                               SharedStream &OS, SharedStream &Errs) {
   if (!MaybeFile) {
     llvm::handleAllErrors(
         MaybeFile.takeError(), [&Input, &Errs](llvm::StringError &Err) {
@@ -203,6 +210,184 @@ static bool handleDependencyToolResult(const std::string &Input,
     return true;
   }
   OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
+  return false;
+}
+
+static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
+  std::vector<llvm::StringRef> Strings;
+  for (auto &&I : Set)
+    Strings.push_back(I.getKey());
+  std::sort(Strings.begin(), Strings.end());
+  return llvm::json::Array(Strings);
+}
+
+static llvm::json::Array toJSONSorted(std::vector<ClangModuleDep> V) {
+  std::sort(V.begin(), V.end(),
+            [](const ClangModuleDep &A, const ClangModuleDep &B) {
+              return std::tie(A.ModuleName, A.ContextHash) <
+                     std::tie(B.ModuleName, B.ContextHash);
+            });
+
+  llvm::json::Array Ret;
+  for (const ClangModuleDep &CMD : V)
+    Ret.push_back(llvm::json::Object(
+        {{"module-name", CMD.ModuleName}, {"context-hash", CMD.ContextHash}}));
+  return Ret;
+}
+
+// Thread safe.
+class FullDeps {
+public:
+  void mergeDeps(StringRef Input, FullDependenciesResult FDR,
+                 size_t InputIndex) {
+    const FullDependencies &FD = FDR.FullDeps;
+
+    InputDeps ID;
+    ID.FileName = Input;
+    ID.ContextHash = std::move(FD.ContextHash);
+    ID.FileDeps = std::move(FD.FileDeps);
+    ID.ModuleDeps = std::move(FD.ClangModuleDeps);
+
+    std::unique_lock<std::mutex> ul(Lock);
+    for (const ModuleDeps &MD : FDR.DiscoveredModules) {
+      auto I = Modules.find({MD.ContextHash, MD.ModuleName, 0});
+      if (I != Modules.end()) {
+        I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
+        continue;
+      }
+      Modules.insert(
+          I, {{MD.ContextHash, MD.ModuleName, InputIndex}, std::move(MD)});
+    }
+
+    if (FullCommandLine)
+      ID.AdditonalCommandLine = FD.getAdditionalCommandLine(
+          [&](ClangModuleDep CMD) { return lookupPCMPath(CMD); },
+          [&](ClangModuleDep CMD) -> const ModuleDeps & {
+            return lookupModuleDeps(CMD);
+          });
+
+    Inputs.push_back(std::move(ID));
+  }
+
+  void printFullOutput(raw_ostream &OS) {
+    // Sort the modules by name to get a deterministic order.
+    std::vector<ContextModulePair> ModuleNames;
+    for (auto &&M : Modules)
+      ModuleNames.push_back(M.first);
+    std::sort(ModuleNames.begin(), ModuleNames.end(),
+              [](const ContextModulePair &A, const ContextModulePair &B) {
+                return std::tie(A.ModuleName, A.InputIndex) <
+                       std::tie(B.ModuleName, B.InputIndex);
+              });
+
+    std::sort(Inputs.begin(), Inputs.end(),
+              [](const InputDeps &A, const InputDeps &B) {
+                return A.FileName < B.FileName;
+              });
+
+    using namespace llvm::json;
+
+    Array OutModules;
+    for (auto &&ModName : ModuleNames) {
+      auto &MD = Modules[ModName];
+      Object O{
+          {"name", MD.ModuleName},
+          {"context-hash", MD.ContextHash},
+          {"file-deps", toJSONSorted(MD.FileDeps)},
+          {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
+          {"clang-modulemap-file", MD.ClangModuleMapFile},
+          {"command-line",
+           FullCommandLine
+               ? MD.getFullCommandLine(
+                     [&](ClangModuleDep CMD) { return lookupPCMPath(CMD); },
+                     [&](ClangModuleDep CMD) -> const ModuleDeps & {
+                       return lookupModuleDeps(CMD);
+                     })
+               : MD.NonPathCommandLine},
+      };
+      OutModules.push_back(std::move(O));
+    }
+
+    Array TUs;
+    for (auto &&I : Inputs) {
+      Object O{
+          {"input-file", I.FileName},
+          {"clang-context-hash", I.ContextHash},
+          {"file-deps", I.FileDeps},
+          {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
+          {"command-line", I.AdditonalCommandLine},
+      };
+      TUs.push_back(std::move(O));
+    }
+
+    Object Output{
+        {"modules", std::move(OutModules)},
+        {"translation-units", std::move(TUs)},
+    };
+
+    OS << llvm::formatv("{0:2}\n", Value(std::move(Output)));
+  }
+
+private:
+  StringRef lookupPCMPath(ClangModuleDep CMD) {
+    return Modules[ContextModulePair{CMD.ContextHash, CMD.ModuleName, 0}]
+        .ImplicitModulePCMPath;
+  }
+
+  const ModuleDeps &lookupModuleDeps(ClangModuleDep CMD) {
+    auto I =
+        Modules.find(ContextModulePair{CMD.ContextHash, CMD.ModuleName, 0});
+    assert(I != Modules.end());
+    return I->second;
+  };
+
+  struct ContextModulePair {
+    std::string ContextHash;
+    std::string ModuleName;
+    mutable size_t InputIndex;
+
+    bool operator==(const ContextModulePair &Other) const {
+      return ContextHash == Other.ContextHash && ModuleName == Other.ModuleName;
+    }
+  };
+
+  struct ContextModulePairHasher {
+    std::size_t operator()(const ContextModulePair &CMP) const {
+      using llvm::hash_combine;
+
+      return hash_combine(CMP.ContextHash, CMP.ModuleName);
+    }
+  };
+
+  struct InputDeps {
+    std::string FileName;
+    std::string ContextHash;
+    std::vector<std::string> FileDeps;
+    std::vector<ClangModuleDep> ModuleDeps;
+    std::vector<std::string> AdditonalCommandLine;
+  };
+
+  std::mutex Lock;
+  std::unordered_map<ContextModulePair, ModuleDeps, ContextModulePairHasher>
+      Modules;
+  std::vector<InputDeps> Inputs;
+};
+
+static bool handleFullDependencyToolResult(
+    const std::string &Input,
+    llvm::Expected<FullDependenciesResult> &MaybeFullDeps, FullDeps &FD,
+    size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeFullDeps) {
+    llvm::handleAllErrors(
+        MaybeFullDeps.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+          Errs.applyLocked([&](raw_ostream &OS) {
+            OS << "Error while scanning dependencies for " << Input << ":\n";
+            OS << Err.getMessage();
+          });
+        });
+    return true;
+  }
+  FD.mergeDeps(Input, std::move(*MaybeFullDeps), InputIndex);
   return false;
 }
 
@@ -316,6 +501,7 @@ int main(int argc, const char **argv) {
 
   std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);
+  FullDeps FD;
   std::mutex Lock;
   size_t Index = 0;
 
@@ -324,26 +510,38 @@ int main(int argc, const char **argv) {
                  << " files using " << NumWorkers << " workers\n";
   }
   for (unsigned I = 0; I < NumWorkers; ++I) {
-    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &WorkerTools,
+    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
                    &DependencyOS, &Errs]() {
+      llvm::StringSet<> AlreadySeenModules;
       while (true) {
         const SingleCommandCompilationDatabase *Input;
         std::string Filename;
         std::string CWD;
+        size_t LocalIndex;
         // Take the next input.
         {
           std::unique_lock<std::mutex> LockGuard(Lock);
           if (Index >= Inputs.size())
             return;
+          LocalIndex = Index;
           Input = &Inputs[Index++];
           tooling::CompileCommand Cmd = Input->getAllCompileCommands()[0];
           Filename = std::move(Cmd.Filename);
           CWD = std::move(Cmd.Directory);
         }
         // Run the tool on it.
-        auto MaybeFile = WorkerTools[I]->getDependencyFile(*Input, CWD);
-        if (handleDependencyToolResult(Filename, MaybeFile, DependencyOS, Errs))
-          HadErrors = true;
+        if (Format == ScanningOutputFormat::Make) {
+          auto MaybeFile = WorkerTools[I]->getDependencyFile(*Input, CWD);
+          if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
+                                             Errs))
+            HadErrors = true;
+        } else {
+          auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
+              *Input, CWD, AlreadySeenModules);
+          if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
+                                             LocalIndex, DependencyOS, Errs))
+            HadErrors = true;
+        }
       }
     };
 #if LLVM_ENABLE_THREADS
@@ -355,6 +553,9 @@ int main(int argc, const char **argv) {
   }
   for (auto &W : WorkerThreads)
     W.join();
+
+  if (Format == ScanningOutputFormat::Full)
+    FD.printFullOutput(llvm::outs());
 
   return HadErrors;
 }
