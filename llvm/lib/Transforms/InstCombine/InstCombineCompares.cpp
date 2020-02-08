@@ -1642,50 +1642,57 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
   bool IsShl = ShiftOpcode == Instruction::Shl;
   const APInt *C3;
   if (match(Shift->getOperand(1), m_APInt(C3))) {
-    bool CanFold = false;
+    APInt NewAndCst, NewCmpCst;
+    bool AnyCmpCstBitsShiftedOut;
     if (ShiftOpcode == Instruction::Shl) {
       // For a left shift, we can fold if the comparison is not signed. We can
       // also fold a signed comparison if the mask value and comparison value
       // are not negative. These constraints may not be obvious, but we can
       // prove that they are correct using an SMT solver.
-      if (!Cmp.isSigned() || (!C2.isNegative() && !C1.isNegative()))
-        CanFold = true;
-    } else {
-      bool IsAshr = ShiftOpcode == Instruction::AShr;
+      if (Cmp.isSigned() && (C2.isNegative() || C1.isNegative()))
+        return nullptr;
+
+      NewCmpCst = C1.lshr(*C3);
+      NewAndCst = C2.lshr(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.shl(*C3) != C1;
+    } else if (ShiftOpcode == Instruction::LShr) {
       // For a logical right shift, we can fold if the comparison is not signed.
       // We can also fold a signed comparison if the shifted mask value and the
       // shifted comparison value are not negative. These constraints may not be
       // obvious, but we can prove that they are correct using an SMT solver.
+      NewCmpCst = C1.shl(*C3);
+      NewAndCst = C2.shl(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.lshr(*C3) != C1;
+      if (Cmp.isSigned() && (NewAndCst.isNegative() || NewCmpCst.isNegative()))
+        return nullptr;
+    } else {
       // For an arithmetic shift right we can do the same, if we ensure
       // the And doesn't use any bits being shifted in. Normally these would
       // be turned into lshr by SimplifyDemandedBits, but not if there is an
       // additional user.
-      if (!IsAshr || (C2.shl(*C3).lshr(*C3) == C2)) {
-        if (!Cmp.isSigned() ||
-            (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
-          CanFold = true;
-      }
+      assert(ShiftOpcode == Instruction::AShr && "Unknown shift opcode");
+      NewCmpCst = C1.shl(*C3);
+      NewAndCst = C2.shl(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.lshr(*C3) != C1;
+      if (NewAndCst.lshr(*C3) != C2)
+        return nullptr;
+      if (Cmp.isSigned() && (NewAndCst.isNegative() || NewCmpCst.isNegative()))
+        return nullptr;
     }
 
-    if (CanFold) {
-      APInt NewCst = IsShl ? C1.lshr(*C3) : C1.shl(*C3);
-      APInt SameAsC1 = IsShl ? NewCst.shl(*C3) : NewCst.lshr(*C3);
-      // Check to see if we are shifting out any of the bits being compared.
-      if (SameAsC1 != C1) {
-        // If we shifted bits out, the fold is not going to work out. As a
-        // special case, check to see if this means that the result is always
-        // true or false now.
-        if (Cmp.getPredicate() == ICmpInst::ICMP_EQ)
-          return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
-        if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
-          return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
-      } else {
-        APInt NewAndCst = IsShl ? C2.lshr(*C3) : C2.shl(*C3);
-        Value *NewAnd = Builder.CreateAnd(
-            Shift->getOperand(0), ConstantInt::get(And->getType(), NewAndCst));
-        return new ICmpInst(Cmp.getPredicate(),
-            NewAnd, ConstantInt::get(And->getType(), NewCst));
-      }
+    if (AnyCmpCstBitsShiftedOut) {
+      // If we shifted bits out, the fold is not going to work out. As a
+      // special case, check to see if this means that the result is always
+      // true or false now.
+      if (Cmp.getPredicate() == ICmpInst::ICMP_EQ)
+        return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
+      if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
+        return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
+    } else {
+      Value *NewAnd = Builder.CreateAnd(
+          Shift->getOperand(0), ConstantInt::get(And->getType(), NewAndCst));
+      return new ICmpInst(Cmp.getPredicate(),
+          NewAnd, ConstantInt::get(And->getType(), NewCmpCst));
     }
   }
 
