@@ -835,7 +835,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     ctx->lmaOffset = sec->lmaExpr().getValue() - dot;
 
   if (MemoryRegion *mr = sec->lmaRegion)
-    ctx->lmaOffset = mr->curPos - dot;
+    ctx->lmaOffset = alignTo(mr->curPos, sec->alignment) - dot;
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
   // will set the LMA such that the difference between VMA and LMA for the
