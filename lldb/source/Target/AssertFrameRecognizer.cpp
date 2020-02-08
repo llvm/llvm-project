@@ -16,6 +16,26 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
+/// Checkes if the module containing a symbol has debug info.
+///
+/// \param[in] target
+///    The target containing the module.
+/// \param[in] module_spec
+///    The module spec that should contain the symbol.
+/// \param[in] symbol_name
+///    The symbol's name that should be contained in the debug info.
+/// \return
+///    If  \b true the symbol was found, \b false otherwise.
+bool ModuleHasDebugInfo(Target &target, FileSpec &module_spec,
+                        StringRef symbol_name) {
+  ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec);
+
+  if (!module_sp)
+    return false;
+
+  return module_sp->FindFirstSymbolWithNameAndType(ConstString(symbol_name));
+}
+
 /// Fetches the abort frame location depending on the current platform.
 ///
 /// \param[in] process_sp
@@ -40,7 +60,9 @@ GetAbortLocation(Process *process) {
     break;
   case llvm::Triple::Linux:
     module_spec = FileSpec("libc.so.6");
-    symbol_name = "raise";
+    symbol_name = "__GI_raise";
+    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
+      symbol_name = "raise";
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -76,7 +98,9 @@ GetAssertLocation(Process *process) {
     break;
   case llvm::Triple::Linux:
     module_spec = FileSpec("libc.so.6");
-    symbol_name = "__assert_fail";
+    symbol_name = "__GI___assert_fail";
+    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
+      symbol_name = "__assert_fail";
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
