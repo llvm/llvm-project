@@ -668,3 +668,87 @@ define <16 x float>@test_int_x86_avx512_mask_vfnmadd_ps_512(<16 x float> %x0, <1
   %res = call <16 x float> @llvm.x86.avx512.mask.vfnmadd.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 4)
   ret <16 x float> %res
 }
+
+define <8 x double>@test_int_x86_avx512_mask_vfmaddsub_pd_512_rne(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask_vfmaddsub_pd_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub132pd {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmaddsub.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 8)
+  ret <8 x double> %res
+}
+
+define <8 x double>@test_int_x86_avx512_mask3_vfmaddsub_pd_512_rne(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask3_vfmaddsub_pd_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.mask3.vfmaddsub.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 8)
+  ret <8 x double> %res
+}
+
+define <8 x double>@test_int_x86_avx512_maskz_vfmaddsub_pd_512_rne(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512_maskz_vfmaddsub_pd_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.maskz.vfmaddsub.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 8)
+  ret <8 x double> %res
+}
+
+define <16 x float>@test_int_x86_avx512_mask_vfmaddsub_ps_512_rne(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask_vfmaddsub_ps_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub132ps {rn-sae}, %zmm1, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmaddsub.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 8)
+  ret <16 x float> %res
+}
+
+define <16 x float>@test_int_x86_avx512_mask3_vfmaddsub_ps_512_rne(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask3_vfmaddsub_ps_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.mask3.vfmaddsub.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 8)
+  ret <16 x float> %res
+}
+
+define <16 x float>@test_int_x86_avx512_maskz_vfmaddsub_ps_512_rne(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3){
+; CHECK-LABEL: test_int_x86_avx512_maskz_vfmaddsub_ps_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.maskz.vfmaddsub.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 8)
+  ret <16 x float> %res
+}
+
+define <8 x double>@test_int_x86_avx512_mask3_vfmsubadd_pd_512_rne(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsubadd_pd_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.mask3.vfmsubadd.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 8)
+  ret <8 x double> %res
+}
+
+define <16 x float>@test_int_x86_avx512_mask3_vfmsubadd_ps_512_rne(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3){
+; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsubadd_ps_512_rne:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vfmaddsub231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.mask3.vfmsubadd.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 8)
+  ret <16 x float> %res
+}
