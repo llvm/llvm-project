@@ -26,6 +26,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::wasm;
 
+LLDB_PLUGIN(SymbolVendorWasm);
+
 // SymbolVendorWasm constructor
 SymbolVendorWasm::SymbolVendorWasm(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}

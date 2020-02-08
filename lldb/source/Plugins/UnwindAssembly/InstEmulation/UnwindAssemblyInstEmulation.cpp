@@ -28,6 +28,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(UnwindAssemblyInstEmulation);
+
 //  UnwindAssemblyInstEmulation method definitions
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(

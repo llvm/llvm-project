@@ -7,103 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemInitializerTest.h"
-
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Timer.h"
-
-#include "Plugins/ABI/AArch64/ABIMacOSX_arm64.h"
-#include "Plugins/ABI/AArch64/ABISysV_arm64.h"
-#include "Plugins/ABI/ARC/ABISysV_arc.h"
-#include "Plugins/ABI/ARM/ABIMacOSX_arm.h"
-#include "Plugins/ABI/ARM/ABISysV_arm.h"
-#include "Plugins/ABI/Hexagon/ABISysV_hexagon.h"
-#include "Plugins/ABI/Mips/ABISysV_mips.h"
-#include "Plugins/ABI/Mips/ABISysV_mips64.h"
-#include "Plugins/ABI/PowerPC/ABISysV_ppc.h"
-#include "Plugins/ABI/PowerPC/ABISysV_ppc64.h"
-#include "Plugins/ABI/SystemZ/ABISysV_s390x.h"
-#include "Plugins/ABI/X86/ABIMacOSX_i386.h"
-#include "Plugins/ABI/X86/ABISysV_i386.h"
-#include "Plugins/ABI/X86/ABISysV_x86_64.h"
-#include "Plugins/ABI/X86/ABIWindows_x86_64.h"
-#include "Plugins/Architecture/Arm/ArchitectureArm.h"
-#include "Plugins/Architecture/Mips/ArchitectureMips.h"
-#include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
-#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
-#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
-#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
-#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
-#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
-#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
-#include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
-#include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
-#include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
-#include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
-#include "Plugins/InstrumentationRuntime/ASan/InstrumentationRuntimeASan.h"
-#include "Plugins/InstrumentationRuntime/MainThreadChecker/InstrumentationRuntimeMainThreadChecker.h"
-#include "Plugins/InstrumentationRuntime/TSan/InstrumentationRuntimeTSan.h"
-#include "Plugins/InstrumentationRuntime/UBSan/InstrumentationRuntimeUBSan.h"
-#include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
-#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
-#include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
-#include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
-#include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
-#include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
-#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
-#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
-#include "Plugins/Platform/Android/PlatformAndroid.h"
-#include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
-#include "Plugins/Platform/Linux/PlatformLinux.h"
-#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
-#include "Plugins/Platform/NetBSD/PlatformNetBSD.h"
-#include "Plugins/Platform/OpenBSD/PlatformOpenBSD.h"
-#include "Plugins/Platform/Windows/PlatformWindows.h"
-#include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
-#include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
-#include "Plugins/Process/mach-core/ProcessMachCore.h"
-#include "Plugins/Process/minidump/ProcessMinidump.h"
-#include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
-#include "Plugins/SymbolFile/Breakpad/SymbolFileBreakpad.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDebugMap.h"
-#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
-#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
-#include "Plugins/SymbolVendor/wasm/SymbolVendorWasm.h"
-#include "Plugins/SystemRuntime/MacOSX/SystemRuntimeMacOSX.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Plugins/UnwindAssembly/InstEmulation/UnwindAssemblyInstEmulation.h"
-#include "Plugins/UnwindAssembly/x86/UnwindAssembly-x86.h"
-
-#if defined(__APPLE__)
-#include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
-#include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
-#include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
-#endif
-#include "Plugins/StructuredData/DarwinLog/StructuredDataDarwinLog.h"
-
-#if defined(__FreeBSD__)
-#include "Plugins/Process/FreeBSD/ProcessFreeBSD.h"
-#endif
-
-#if defined(_WIN32)
-#include "Plugins/Process/Windows/Common/ProcessWindows.h"
-#include "lldb/Host/windows/windows.h"
-#endif
-
 #include "llvm/Support/TargetSelect.h"
 
 #include <string>
@@ -115,24 +24,24 @@ SystemInitializerTest::SystemInitializerTest() {}
 SystemInitializerTest::~SystemInitializerTest() {}
 
 #define LLDB_PROCESS_AArch64(op)                                               \
-  ABIMacOSX_arm64::op();                                                       \
-  ABISysV_arm64::op();
+  op(ABIMacOSX_arm64);                                                         \
+  op(ABISysV_arm64);
 #define LLDB_PROCESS_ARM(op)                                                   \
-  ABIMacOSX_arm::op();                                                         \
-  ABISysV_arm::op();
-#define LLDB_PROCESS_Hexagon(op) ABISysV_hexagon::op();
+  op(ABIMacOSX_arm);                                                           \
+  op(ABISysV_arm);
+#define LLDB_PROCESS_Hexagon(op) op(ABISysV_hexagon);
 #define LLDB_PROCESS_Mips(op)                                                  \
-  ABISysV_mips::op();                                                          \
-  ABISysV_mips64::op();
+  op(ABISysV_mips);                                                            \
+  op(ABISysV_mips64);
 #define LLDB_PROCESS_PowerPC(op)                                               \
-  ABISysV_ppc::op();                                                          \
-  ABISysV_ppc64::op();
-#define LLDB_PROCESS_SystemZ(op) ABISysV_s390x::op();
+  op(ABISysV_ppc);                                                             \
+  op(ABISysV_ppc64);
+#define LLDB_PROCESS_SystemZ(op) op(ABISysV_s390x);
 #define LLDB_PROCESS_X86(op)                                                   \
-  ABIMacOSX_i386::op();                                                        \
-  ABISysV_i386::op();                                                          \
-  ABISysV_x86_64::op();                                                        \
-  ABIWindows_x86_64::op();
+  op(ABIMacOSX_i386);                                                          \
+  op(ABISysV_i386);                                                            \
+  op(ABISysV_x86_64);                                                          \
+  op(ABIWindows_x86_64);
 
 #define LLDB_PROCESS_AMDGPU(op)
 #define LLDB_PROCESS_ARC(op)
@@ -150,25 +59,25 @@ llvm::Error SystemInitializerTest::Initialize() {
   if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
-  breakpad::ObjectFileBreakpad::Initialize();
-  ObjectFileELF::Initialize();
-  ObjectFileMachO::Initialize();
-  ObjectFilePECOFF::Initialize();
-  wasm::ObjectFileWasm::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ObjectFileBreakpad);
+  LLDB_PLUGIN_INITIALIZE(ObjectFileELF);
+  LLDB_PLUGIN_INITIALIZE(ObjectFileMachO);
+  LLDB_PLUGIN_INITIALIZE(ObjectFilePECOFF);
+  LLDB_PLUGIN_INITIALIZE(ObjectFileWasm);
 
-  ObjectContainerBSDArchive::Initialize();
-  ObjectContainerUniversalMachO::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ObjectContainerBSDArchive);
+  LLDB_PLUGIN_INITIALIZE(ObjectContainerUniversalMachO);
 
-  ScriptInterpreterNone::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ScriptInterpreterNone);
 
-  platform_freebsd::PlatformFreeBSD::Initialize();
-  platform_linux::PlatformLinux::Initialize();
-  platform_netbsd::PlatformNetBSD::Initialize();
-  platform_openbsd::PlatformOpenBSD::Initialize();
-  PlatformWindows::Initialize();
-  platform_android::PlatformAndroid::Initialize();
-  PlatformRemoteiOS::Initialize();
-  PlatformMacOSX::Initialize();
+  LLDB_PLUGIN_INITIALIZE(PlatformFreeBSD);
+  LLDB_PLUGIN_INITIALIZE(PlatformLinux);
+  LLDB_PLUGIN_INITIALIZE(PlatformNetBSD);
+  LLDB_PLUGIN_INITIALIZE(PlatformOpenBSD);
+  LLDB_PLUGIN_INITIALIZE(PlatformWindows);
+  LLDB_PLUGIN_INITIALIZE(PlatformAndroid);
+  LLDB_PLUGIN_INITIALIZE(PlatformRemoteiOS);
+  LLDB_PLUGIN_INITIALIZE(PlatformMacOSX);
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
@@ -176,82 +85,83 @@ llvm::Error SystemInitializerTest::Initialize() {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
-  TypeSystemClang::Initialize();
+  LLDB_PLUGIN_INITIALIZE(TypeSystemClang);
 
-#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Initialize)
+#define LLVM_TARGET(t) LLDB_PROCESS_##t(LLDB_PLUGIN_INITIALIZE)
 #include "llvm/Config/Targets.def"
 
-  ArchitectureArm::Initialize();
-  ArchitectureMips::Initialize();
-  ArchitecturePPC64::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ArchitectureArm);
+  LLDB_PLUGIN_INITIALIZE(ArchitectureMips);
+  LLDB_PLUGIN_INITIALIZE(ArchitecturePPC64);
 
-  DisassemblerLLVMC::Initialize();
+  LLDB_PLUGIN_INITIALIZE(DisassemblerLLVMC);
 
-  JITLoaderGDB::Initialize();
-  ProcessElfCore::Initialize();
-  ProcessMachCore::Initialize();
-  minidump::ProcessMinidump::Initialize();
-  MemoryHistoryASan::Initialize();
-  InstrumentationRuntimeASan::Initialize();
-  InstrumentationRuntimeTSan::Initialize();
-  InstrumentationRuntimeUBSan::Initialize();
-  InstrumentationRuntimeMainThreadChecker::Initialize();
+  LLDB_PLUGIN_INITIALIZE(JITLoaderGDB);
+  LLDB_PLUGIN_INITIALIZE(ProcessElfCore);
+  LLDB_PLUGIN_INITIALIZE(ProcessMachCore);
+  LLDB_PLUGIN_INITIALIZE(ProcessMinidump);
+  LLDB_PLUGIN_INITIALIZE(MemoryHistoryASan);
+  LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeASan);
+  LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeTSan);
+  LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeUBSan);
+  LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeMainThreadChecker);
 
-  SymbolVendorELF::Initialize();
-  breakpad::SymbolFileBreakpad::Initialize();
-  SymbolFileDWARF::Initialize();
-  SymbolFilePDB::Initialize();
-  SymbolFileSymtab::Initialize();
-  wasm::SymbolVendorWasm::Initialize();
-  UnwindAssemblyInstEmulation::Initialize();
-  UnwindAssembly_x86::Initialize();
+  LLDB_PLUGIN_INITIALIZE(SymbolVendorELF);
+  LLDB_PLUGIN_INITIALIZE(SymbolFileBreakpad);
+  LLDB_PLUGIN_INITIALIZE(SymbolFileDWARF);
+  LLDB_PLUGIN_INITIALIZE(SymbolFilePDB);
+  LLDB_PLUGIN_INITIALIZE(SymbolFileSymtab);
+  LLDB_PLUGIN_INITIALIZE(SymbolVendorWasm);
+  LLDB_PLUGIN_INITIALIZE(UnwindAssemblyInstEmulation);
+  LLDB_PLUGIN_INITIALIZE(UnwindAssembly_x86);
 
-  EmulateInstructionARM::Initialize();
-  EmulateInstructionARM64::Initialize();
-  EmulateInstructionMIPS::Initialize();
-  EmulateInstructionMIPS64::Initialize();
-  EmulateInstructionPPC64::Initialize();
+  LLDB_PLUGIN_INITIALIZE(EmulateInstructionARM);
+  LLDB_PLUGIN_INITIALIZE(EmulateInstructionARM64);
+  LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS);
+  LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS64);
+  LLDB_PLUGIN_INITIALIZE(EmulateInstructionPPC64);
 
-  SymbolFileDWARFDebugMap::Initialize();
-  ItaniumABILanguageRuntime::Initialize();
-  AppleObjCRuntime::Initialize();
-  SystemRuntimeMacOSX::Initialize();
-  RenderScriptRuntime::Initialize();
+  LLDB_PLUGIN_INITIALIZE(SymbolFileDWARFDebugMap);
+  LLDB_PLUGIN_INITIALIZE(ItaniumABILanguageRuntime);
+  LLDB_PLUGIN_INITIALIZE(AppleObjCRuntime);
+  LLDB_PLUGIN_INITIALIZE(SystemRuntimeMacOSX);
+  LLDB_PLUGIN_INITIALIZE(RenderScriptRuntime);
 
-  CPlusPlusLanguage::Initialize();
-  ObjCLanguage::Initialize();
-  ObjCPlusPlusLanguage::Initialize();
+  LLDB_PLUGIN_INITIALIZE(CPlusPlusLanguage);
+  LLDB_PLUGIN_INITIALIZE(ObjCLanguage);
+  LLDB_PLUGIN_INITIALIZE(ObjCPlusPlusLanguage);
 
 #if defined(_WIN32)
-  ProcessWindows::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ProcessWindows);
 #endif
 #if defined(__FreeBSD__)
-  ProcessFreeBSD::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ProcessFreeBSD);
 #endif
 #if defined(__APPLE__)
-  SymbolVendorMacOSX::Initialize();
-  ProcessKDP::Initialize();
+  LLDB_PLUGIN_INITIALIZE(SymbolVendorMacOSX);
+  LLDB_PLUGIN_INITIALIZE(ProcessKDP);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderDarwinKernel);
 #endif
 
   // This plugin is valid on any host that talks to a Darwin remote. It
   // shouldn't be limited to __APPLE__.
-  StructuredDataDarwinLog::Initialize();
+  LLDB_PLUGIN_INITIALIZE(StructuredDataDarwinLog);
 
   // Platform agnostic plugins
-  platform_gdb_server::PlatformRemoteGDBServer::Initialize();
+  LLDB_PLUGIN_INITIALIZE(PlatformRemoteGDBServer);
 
-  process_gdb_remote::ProcessGDBRemote::Initialize();
-  DynamicLoaderMacOSXDYLD::Initialize();
-  DynamicLoaderMacOS::Initialize();
-  DynamicLoaderPOSIXDYLD::Initialize();
-  DynamicLoaderStatic::Initialize();
-  DynamicLoaderWindowsDYLD::Initialize();
+  LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOS);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
 
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
 
-  // The process settings need to know about installed plug-ins, so the Settings
-  // must be initialized
+  // The process settings need to know about installed plug-ins, so the
+  // Settings must be initialized
   // AFTER PluginManager::Initialize is called.
 
   Debugger::SettingsInitialize();
@@ -268,90 +178,93 @@ void SystemInitializerTest::Terminate() {
   // Terminate and unload and loaded system or user LLDB plug-ins
   PluginManager::Terminate();
 
-  TypeSystemClang::Terminate();
+  LLDB_PLUGIN_TERMINATE(TypeSystemClang);
 
-  ArchitectureArm::Terminate();
-  ArchitectureMips::Terminate();
-  ArchitecturePPC64::Terminate();
+  LLDB_PLUGIN_TERMINATE(ArchitectureArm);
+  LLDB_PLUGIN_TERMINATE(ArchitectureMips);
+  LLDB_PLUGIN_TERMINATE(ArchitecturePPC64);
 
-#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Terminate)
+#define LLVM_TARGET(t) LLDB_PROCESS_##t(LLDB_PLUGIN_TERMINATE)
 #include "llvm/Config/Targets.def"
 
-  DisassemblerLLVMC::Terminate();
+  LLDB_PLUGIN_TERMINATE(DisassemblerLLVMC);
 
-  JITLoaderGDB::Terminate();
-  ProcessElfCore::Terminate();
-  ProcessMachCore::Terminate();
-  minidump::ProcessMinidump::Terminate();
-  MemoryHistoryASan::Terminate();
-  InstrumentationRuntimeASan::Terminate();
-  InstrumentationRuntimeTSan::Terminate();
-  InstrumentationRuntimeUBSan::Terminate();
-  InstrumentationRuntimeMainThreadChecker::Terminate();
+  LLDB_PLUGIN_TERMINATE(JITLoaderGDB);
+  LLDB_PLUGIN_TERMINATE(ProcessElfCore);
+  LLDB_PLUGIN_TERMINATE(ProcessMachCore);
+  LLDB_PLUGIN_TERMINATE(ProcessMinidump);
+  LLDB_PLUGIN_TERMINATE(MemoryHistoryASan);
 
-  wasm::SymbolVendorWasm::Terminate();
-  SymbolVendorELF::Terminate();
-  breakpad::SymbolFileBreakpad::Terminate();
-  SymbolFileDWARF::Terminate();
-  SymbolFilePDB::Terminate();
-  SymbolFileSymtab::Terminate();
-  UnwindAssembly_x86::Terminate();
-  UnwindAssemblyInstEmulation::Terminate();
+  LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeASan);
+  LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeTSan);
+  LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeUBSan);
+  LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeMainThreadChecker);
 
-  EmulateInstructionARM::Terminate();
-  EmulateInstructionARM64::Terminate();
-  EmulateInstructionMIPS::Terminate();
-  EmulateInstructionMIPS64::Terminate();
-  EmulateInstructionPPC64::Terminate();
+  LLDB_PLUGIN_TERMINATE(SymbolVendorWasm);
+  LLDB_PLUGIN_TERMINATE(SymbolVendorELF);
+  LLDB_PLUGIN_TERMINATE(SymbolFileBreakpad);
+  LLDB_PLUGIN_TERMINATE(SymbolFileDWARF);
+  LLDB_PLUGIN_TERMINATE(SymbolFilePDB);
+  LLDB_PLUGIN_TERMINATE(SymbolFileSymtab);
+  LLDB_PLUGIN_TERMINATE(UnwindAssembly_x86);
+  LLDB_PLUGIN_TERMINATE(UnwindAssemblyInstEmulation);
 
-  SymbolFileDWARFDebugMap::Terminate();
-  ItaniumABILanguageRuntime::Terminate();
-  AppleObjCRuntime::Terminate();
-  SystemRuntimeMacOSX::Terminate();
-  RenderScriptRuntime::Terminate();
+  LLDB_PLUGIN_TERMINATE(EmulateInstructionARM);
+  LLDB_PLUGIN_TERMINATE(EmulateInstructionARM64);
+  LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS);
+  LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS64);
+  LLDB_PLUGIN_TERMINATE(EmulateInstructionPPC64);
 
-  CPlusPlusLanguage::Terminate();
-  ObjCLanguage::Terminate();
-  ObjCPlusPlusLanguage::Terminate();
+  LLDB_PLUGIN_TERMINATE(SymbolFileDWARFDebugMap);
+  LLDB_PLUGIN_TERMINATE(ItaniumABILanguageRuntime);
+  LLDB_PLUGIN_TERMINATE(AppleObjCRuntime);
+  LLDB_PLUGIN_TERMINATE(SystemRuntimeMacOSX);
+  LLDB_PLUGIN_TERMINATE(RenderScriptRuntime);
+
+  LLDB_PLUGIN_TERMINATE(CPlusPlusLanguage);
+  LLDB_PLUGIN_TERMINATE(ObjCLanguage);
+  LLDB_PLUGIN_TERMINATE(ObjCPlusPlusLanguage);
 
 #if defined(__APPLE__)
-  DynamicLoaderDarwinKernel::Terminate();
-  ProcessKDP::Terminate();
-  SymbolVendorMacOSX::Terminate();
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderDarwinKernel);
+  LLDB_PLUGIN_TERMINATE(ProcessKDP);
+  LLDB_PLUGIN_TERMINATE(SymbolVendorMacOSX);
 #endif
 
 #if defined(__FreeBSD__)
-  ProcessFreeBSD::Terminate();
+  LLDB_PLUGIN_TERMINATE(ProcessFreeBSD);
 #endif
   Debugger::SettingsTerminate();
 
-  platform_gdb_server::PlatformRemoteGDBServer::Terminate();
-  process_gdb_remote::ProcessGDBRemote::Terminate();
-  StructuredDataDarwinLog::Terminate();
+  LLDB_PLUGIN_TERMINATE(PlatformRemoteGDBServer);
+  LLDB_PLUGIN_TERMINATE(ProcessGDBRemote);
+  LLDB_PLUGIN_TERMINATE(StructuredDataDarwinLog);
 
-  DynamicLoaderMacOSXDYLD::Terminate();
-  DynamicLoaderMacOS::Terminate();
-  DynamicLoaderPOSIXDYLD::Terminate();
-  DynamicLoaderStatic::Terminate();
-  DynamicLoaderWindowsDYLD::Terminate();
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOS);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);
 
-  platform_freebsd::PlatformFreeBSD::Terminate();
-  platform_linux::PlatformLinux::Terminate();
-  platform_netbsd::PlatformNetBSD::Terminate();
-  platform_openbsd::PlatformOpenBSD::Terminate();
-  PlatformWindows::Terminate();
-  platform_android::PlatformAndroid::Terminate();
-  PlatformMacOSX::Terminate();
-  PlatformRemoteiOS::Terminate();
+  LLDB_PLUGIN_TERMINATE(PlatformFreeBSD);
+  LLDB_PLUGIN_TERMINATE(PlatformLinux);
+  LLDB_PLUGIN_TERMINATE(PlatformNetBSD);
+  LLDB_PLUGIN_TERMINATE(PlatformOpenBSD);
+  LLDB_PLUGIN_TERMINATE(PlatformWindows);
+  LLDB_PLUGIN_TERMINATE(PlatformAndroid);
+  LLDB_PLUGIN_TERMINATE(PlatformRemoteiOS);
+  LLDB_PLUGIN_TERMINATE(PlatformMacOSX);
 
-  breakpad::ObjectFileBreakpad::Terminate();
-  ObjectFileELF::Terminate();
-  ObjectFileMachO::Terminate();
-  ObjectFilePECOFF::Terminate();
-  wasm::ObjectFileWasm::Terminate();
+  LLDB_PLUGIN_TERMINATE(ObjectFileBreakpad);
+  LLDB_PLUGIN_TERMINATE(ObjectFileELF);
+  LLDB_PLUGIN_TERMINATE(ObjectFileMachO);
+  LLDB_PLUGIN_TERMINATE(ObjectFilePECOFF);
+  LLDB_PLUGIN_TERMINATE(ObjectFileWasm);
 
-  ObjectContainerBSDArchive::Terminate();
-  ObjectContainerUniversalMachO::Terminate();
+  LLDB_PLUGIN_TERMINATE(ObjectContainerBSDArchive);
+  LLDB_PLUGIN_TERMINATE(ObjectContainerUniversalMachO);
+
+  LLDB_PLUGIN_TERMINATE(ScriptInterpreterNone);
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

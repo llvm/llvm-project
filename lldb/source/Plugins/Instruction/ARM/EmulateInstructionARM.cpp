@@ -30,6 +30,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(EmulateInstructionARM);
+
 // Convenient macro definitions.
 #define APSR_C Bit32(m_opcode_cpsr, CPSR_C_POS)
 #define APSR_V Bit32(m_opcode_cpsr, CPSR_V_POS)

@@ -16,6 +16,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
+LLDB_PLUGIN(ObjectFileBreakpad);
+
 namespace {
 struct Header {
   ArchSpec arch;

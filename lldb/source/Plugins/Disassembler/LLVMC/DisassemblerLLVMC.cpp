@@ -43,6 +43,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(DisassemblerLLVMC);
+
 class DisassemblerLLVMC::MCDisasmInstance {
 public:
   static std::unique_ptr<MCDisasmInstance>

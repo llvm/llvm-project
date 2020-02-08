@@ -94,6 +94,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(SymbolFileDWARF);
+
 char SymbolFileDWARF::ID;
 
 // static inline bool

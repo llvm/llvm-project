@@ -19,6 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ScriptInterpreterLua);
+
 class IOHandlerLuaInterpreter : public IOHandlerDelegate,
                                 public IOHandlerEditline {
 public:
