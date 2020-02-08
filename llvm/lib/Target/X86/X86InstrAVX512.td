@@ -10972,16 +10972,15 @@ defm VSHUFPD: avx512_shufp<"vshufpd", avx512vl_i64_info, avx512vl_f64_info>, PD,
 // AVX-512 - Byte shift Left/Right
 //===----------------------------------------------------------------------===//
 
-// FIXME: The SSE/AVX names are PSLLDQri etc. - should we add the i here as well?
 multiclass avx512_shift_packed<bits<8> opc, SDNode OpNode, Format MRMr,
                                Format MRMm, string OpcodeStr,
                                X86FoldableSchedWrite sched, X86VectorVTInfo _>{
-  def rr : AVX512<opc, MRMr,
+  def ri : AVX512<opc, MRMr,
              (outs _.RC:$dst), (ins _.RC:$src1, u8imm:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set _.RC:$dst,(_.VT (OpNode _.RC:$src1, (i8 timm:$src2))))]>,
              Sched<[sched]>;
-  def rm : AVX512<opc, MRMm,
+  def mi : AVX512<opc, MRMm,
            (outs _.RC:$dst), (ins _.MemOp:$src1, u8imm:$src2),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
            [(set _.RC:$dst,(_.VT (OpNode
