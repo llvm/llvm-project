@@ -176,11 +176,9 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 }
 
 // FIXME: Can we eleminate these in favour of generic code?
-bool
-MSP430FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MI,
-                                        const std::vector<CalleeSavedInfo> &CSI,
-                                        const TargetRegisterInfo *TRI) const {
+bool MSP430FrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 
