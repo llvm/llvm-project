@@ -735,7 +735,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfmsubadd_pd_512_rne(<8 x double> 
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsubadd_pd_512_rne:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vfmaddsub231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vfmsubadd231pd {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x double> @llvm.x86.avx512.mask3.vfmsubadd.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 8)
@@ -746,7 +746,7 @@ define <16 x float>@test_int_x86_avx512_mask3_vfmsubadd_ps_512_rne(<16 x float> 
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsubadd_ps_512_rne:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vfmaddsub231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vfmsubadd231ps {rn-sae}, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <16 x float> @llvm.x86.avx512.mask3.vfmsubadd.ps.512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3, i32 8)
