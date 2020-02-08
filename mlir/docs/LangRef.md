@@ -1457,14 +1457,15 @@ This attribute can only be held internally by
 [array attributes](#array-attribute) and
 [dictionary attributes](#dictionary-attribute)(including the top-level operation
 attribute dictionary), i.e. no other attribute kinds such as Locations or
-extended attribute kinds. If a reference to a symbol is necessary from outside
-of the symbol table that the symbol is defined in, a
-[string attribute](#string-attribute) can be used to refer to the symbol name.
+extended attribute kinds.
 
 **Rationale:** Given that MLIR models global accesses with symbol references, to
 enable efficient multi-threading, it becomes difficult to effectively reason
 about their uses. By restricting the places that can legally hold a symbol
 reference, we can always opaquely reason about a symbols usage characteristics.
+
+See [`Symbols And SymbolTables`](SymbolsAndSymbolTables.md) for more
+information.
 
 #### Type Attribute
 
