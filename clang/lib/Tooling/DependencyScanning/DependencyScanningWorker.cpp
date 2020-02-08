@@ -142,12 +142,17 @@ public:
                                                         Consumer));
       break;
     case ScanningOutputFormat::Full:
-      Compiler.addDependencyCollector(
-          std::make_shared<ModuleDepCollector>(Compiler, Consumer));
+      Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
+          std::move(Opts), Compiler, Consumer));
       break;
     }
 
-    Consumer.handleContextHash(Compiler.getInvocation().getModuleHash(Compiler.getDiagnostics()));
+    // Consider different header search and diagnostic options to create
+    // different modules. This avoids the unsound aliasing of module PCMs.
+    //
+    // TODO: Implement diagnostic bucketing and header search pruning to reduce
+    // the impact of strict context hashing.
+    Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
     auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
@@ -213,5 +218,31 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
                                     PPSkipMappings.get(), Format);
     return !Tool.run(&Action);
+  });
+}
+
+llvm::Error DependencyScanningWorker::computeDependenciesForClangInvocation(
+    StringRef WorkingDirectory, ArrayRef<std::string> Arguments,
+    DependencyConsumer &Consumer) {
+  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
+    IntrusiveRefCntPtr<DiagnosticIDs> DiagID = new DiagnosticIDs();
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, &DC, /*ShouldOwnClient=*/false);
+
+    llvm::opt::ArgStringList CC1Args;
+    for (const auto &Arg : Arguments)
+      CC1Args.push_back(Arg.c_str());
+    std::unique_ptr<CompilerInvocation> Invocation(
+        newInvocation(&Diags, CC1Args));
+
+    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
+                                    PPSkipMappings.get(), Format);
+
+    llvm::IntrusiveRefCntPtr<FileManager> FM = Files;
+    if (!FM)
+      FM = new FileManager(FileSystemOptions(), RealFS);
+    return Action.runInvocation(std::move(Invocation), FM.get(),
+                                PCHContainerOps, &DC);
   });
 }
