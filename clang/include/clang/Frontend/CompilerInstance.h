@@ -128,7 +128,7 @@ class CompilerInstance : public ModuleLoader {
 
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
-  std::map<std::string, std::string> BuiltModules;
+  std::map<std::string, std::string, std::less<>> BuiltModules;
 
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
