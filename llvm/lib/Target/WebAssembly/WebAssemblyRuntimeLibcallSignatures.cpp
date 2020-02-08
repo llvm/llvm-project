@@ -82,6 +82,7 @@ enum RuntimeLibcallSignature {
   func_iPTR_i32,
   func_iPTR_i64,
   func_iPTR_i64_i64,
+  func_iPTR_i64_i64_i32,
   func_iPTR_i64_i64_i64_i64,
   func_iPTR_i64_i64_i64_i64_i64_i64,
   i32_func_i64_i64,
@@ -173,7 +174,7 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMA_F128] = func_iPTR_i64_i64_i64_i64_i64_i64;
     Table[RTLIB::POWI_F32] = f32_func_f32_i32;
     Table[RTLIB::POWI_F64] = f64_func_f64_i32;
-    Table[RTLIB::POWI_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::POWI_F128] = func_iPTR_i64_i64_i32;
     Table[RTLIB::SQRT_F32] = f32_func_f32;
     Table[RTLIB::SQRT_F64] = f64_func_f64;
     Table[RTLIB::SQRT_F128] = func_iPTR_i64_i64;
@@ -828,6 +829,12 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case func_iPTR_i64_i64_i32:
+    Params.push_back(PtrTy);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I32);
     break;
   case func_iPTR_i64_i64_i64_i64:
     Params.push_back(PtrTy);
