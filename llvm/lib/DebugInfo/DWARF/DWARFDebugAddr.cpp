@@ -108,11 +108,11 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
                        " has unsupported address size %" PRIu8,
                        HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.AddrSize != AddrSize && AddrSize != 0)
-    return createStringError(errc::invalid_argument,
-                       ".debug_addr table at offset 0x%" PRIx64
-                       " has address size %" PRIu8
-                       " which is different from CU address size %" PRIu8,
-                       HeaderOffset, HeaderData.AddrSize, AddrSize);
+    WarnCallback(createStringError(
+        errc::invalid_argument,
+        ".debug_addr table at offset 0x%" PRIx64 " has address size %" PRIu8
+        " which is different from CU address size %" PRIu8,
+        HeaderOffset, HeaderData.AddrSize, AddrSize));
 
   // TODO: add support for non-zero segment selector size.
   if (HeaderData.SegSize != 0)
