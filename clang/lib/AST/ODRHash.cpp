@@ -499,11 +499,6 @@ void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
   AddBoolean(SuperClass);
   if (SuperClass)
     ID.AddInteger(SuperClass->getODRHash());
-  ID.AddInteger(IF->getReferencedProtocols().size());
-  for (auto *P : IF->protocols()) {
-    unsigned ProtoHash = reinterpret_cast<ObjCProtocolDecl *>(P)->getODRHash();
-    ID.AddInteger(ProtoHash);
-  }
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
@@ -523,13 +518,6 @@ void ODRHash::AddObjCProtocolDecl(const ObjCProtocolDecl *P) {
   // Trigger ODR computation for methods.
   for (auto *M : P->methods())
     reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
-
-  // Store the hash of each referenced protocol.
-  ID.AddInteger(P->getReferencedProtocols().size());
-  for (auto *RefP : P->protocols()) {
-    unsigned RefHash = reinterpret_cast<ObjCProtocolDecl *>(RefP)->getODRHash();
-    ID.AddInteger(RefHash);
-  }
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.

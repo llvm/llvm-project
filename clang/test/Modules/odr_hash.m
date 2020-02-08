@@ -46,6 +46,10 @@ __attribute__((objc_root_class))
 @protocol P2
 @end
 
+@protocol UP1;
+@protocol UP2;
+@protocol UP3;
+
 @interface I1
 @end
 
@@ -621,6 +625,55 @@ WI1 *wi1;
 // expected-note@second.h:* {{but in 'SecondModule' found 'optional' method control}}
 @interface IMW5 <MW5> // No diagnostics: @required is the default.
 @end
+#endif
+
+#if defined(FIRST)
+@protocol PP1 <UP1>
+@end
+#elif defined(SECOND)
+@protocol UP1
+@end
+@protocol PP11 <UP1>
+@end
+#else
+@interface II0 <PP1>
+@end
+II0 *ii0;
+#endif
+
+#if defined(FIRST)
+@protocol PP2 <UP2>
+@end
+#elif defined(SECOND)
+@protocol PP2 <UP2>
+@end
+#else
+#endif
+
+#if defined(FIRST)
+@protocol PP3 <UP2>
+@end
+#elif defined(SECOND)
+@protocol PP3 <UP3>
+@end
+#else
+@protocol PP4 <PP3>
+@end
+// expected-error@first.h:* {{'PP3' has different definitions in different modules; first difference is definition in module 'FirstModule' found with 1st protocol named 'UP2'}}
+// expected-note@second.h:* {{but in 'SecondModule' found with 1st protocol named 'UP3'}}
+#endif
+
+#if defined(FIRST)
+@interface II1 <UP3>
+@end
+// expected-warning@first.h:* {{cannot find protocol definition for 'UP3'}}
+// expected-note@first.h:* {{protocol 'UP3' has no definition}}
+#elif defined(SECOND)
+@protocol UP3
+@end
+@interface II1 <UP3>
+@end
+#else
 #endif
 
 // Keep macros contained to one file.
