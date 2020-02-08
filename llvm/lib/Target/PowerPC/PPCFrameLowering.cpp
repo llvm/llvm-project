@@ -2162,12 +2162,9 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
   return AllSpilledToReg;
 }
 
-
-bool
-PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MI,
-                                     const std::vector<CalleeSavedInfo> &CSI,
-                                     const TargetRegisterInfo *TRI) const {
+bool PPCFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
 
   // Currently, this function only handles SVR4 32- and 64-bit ABIs.
   // Return false otherwise to maintain pre-existing behavior.
@@ -2256,11 +2253,10 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   return true;
 }
 
-static void
-restoreCRs(bool isPPC64, bool is31,
-           bool CR2Spilled, bool CR3Spilled, bool CR4Spilled,
-           MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-           const std::vector<CalleeSavedInfo> &CSI, unsigned CSIIndex) {
+static void restoreCRs(bool isPPC64, bool is31, bool CR2Spilled,
+                       bool CR3Spilled, bool CR4Spilled, MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MI,
+                       ArrayRef<CalleeSavedInfo> CSI, unsigned CSIIndex) {
 
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *MF->getSubtarget<PPCSubtarget>().getInstrInfo();
