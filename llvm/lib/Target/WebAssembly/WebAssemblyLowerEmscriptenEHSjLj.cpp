@@ -259,7 +259,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
   template <typename CallOrInvoke> Value *wrapInvoke(CallOrInvoke *CI);
-  void wrapTestSetjmp(BasicBlock *BB, Instruction *InsertPt, Value *Threw,
+  void wrapTestSetjmp(BasicBlock *BB, DebugLoc DL, Value *Threw,
                       Value *SetjmpTable, Value *SetjmpTableSize, Value *&Label,
                       Value *&LongjmpResult, BasicBlock *&EndBB);
   template <typename CallOrInvoke> Function *getInvokeWrapper(CallOrInvoke *CI);
@@ -538,13 +538,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::isEmAsmCall(Module &M,
 // As output parameters. returns %label, %longjmp_result, and the BB the last
 // instruction (%longjmp_result = ...) is in.
 void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
-    BasicBlock *BB, Instruction *InsertPt, Value *Threw, Value *SetjmpTable,
+    BasicBlock *BB, DebugLoc DL, Value *Threw, Value *SetjmpTable,
     Value *SetjmpTableSize, Value *&Label, Value *&LongjmpResult,
     BasicBlock *&EndBB) {
   Function *F = BB->getParent();
   LLVMContext &C = BB->getModule()->getContext();
   IRBuilder<> IRB(C);
-  IRB.SetInsertPoint(InsertPt);
+  IRB.SetCurrentDebugLocation(DL);
 
   // if (%__THREW__.val != 0 & threwValue != 0)
   IRB.SetInsertPoint(BB);
@@ -891,13 +891,22 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // this instruction to a constant 4, because this value will be used in
   // SSAUpdater.AddAvailableValue(...) later.
   BasicBlock &EntryBB = F.getEntryBlock();
+  DebugLoc FirstDL = EntryBB.begin()->getDebugLoc();
   BinaryOperator *SetjmpTableSize = BinaryOperator::Create(
       Instruction::Add, IRB.getInt32(4), IRB.getInt32(0), "setjmpTableSize",
       &*EntryBB.getFirstInsertionPt());
+  SetjmpTableSize->setDebugLoc(FirstDL);
   // setjmpTable = (int *) malloc(40);
   Instruction *SetjmpTable = CallInst::CreateMalloc(
       SetjmpTableSize, IRB.getInt32Ty(), IRB.getInt32Ty(), IRB.getInt32(40),
       nullptr, nullptr, "setjmpTable");
+  SetjmpTable->setDebugLoc(FirstDL);
+  // CallInst::CreateMalloc may return a bitcast instruction if the result types
+  // mismatch. We need to set the debug loc for the original call too.
+  auto *MallocCall = SetjmpTable->stripPointerCasts();
+  if (auto *MallocCallI = dyn_cast<Instruction>(MallocCall)) {
+    MallocCallI->setDebugLoc(FirstDL);
+  }
   // setjmpTable[0] = 0;
   IRB.SetInsertPoint(SetjmpTableSize);
   IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
@@ -1027,12 +1036,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       Value *Label = nullptr;
       Value *LongjmpResult = nullptr;
       BasicBlock *EndBB = nullptr;
-      wrapTestSetjmp(BB, CI, Threw, SetjmpTable, SetjmpTableSize, Label,
-                     LongjmpResult, EndBB);
+      wrapTestSetjmp(BB, CI->getDebugLoc(), Threw, SetjmpTable, SetjmpTableSize,
+                     Label, LongjmpResult, EndBB);
       assert(Label && LongjmpResult && EndBB);
 
       // Create switch instruction
       IRB.SetInsertPoint(EndBB);
+      IRB.SetCurrentDebugLocation(EndBB->getInstList().back().getDebugLoc());
       SwitchInst *SI = IRB.CreateSwitch(Label, Tail, SetjmpRetPHIs.size());
       // -1 means no longjmp happened, continue normally (will hit the default
       // switch case). 0 means a longjmp that is not ours to handle, needs a
@@ -1056,8 +1066,16 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // Free setjmpTable buffer before each return instruction
   for (BasicBlock &BB : F) {
     Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI))
-      CallInst::CreateFree(SetjmpTable, TI);
+    if (isa<ReturnInst>(TI)) {
+      auto *Free = CallInst::CreateFree(SetjmpTable, TI);
+      Free->setDebugLoc(TI->getDebugLoc());
+      // CallInst::CreateFree may create a bitcast instruction if its argument
+      // types mismatch. We need to set the debug loc for the bitcast too.
+      if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
+        if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
+          BitCastI->setDebugLoc(TI->getDebugLoc());
+      }
+    }
   }
 
   // Every call to saveSetjmp can change setjmpTable and setjmpTableSize

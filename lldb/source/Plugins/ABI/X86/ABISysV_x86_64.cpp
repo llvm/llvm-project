@@ -35,6 +35,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABISysV_x86_64);
+
 enum dwarf_regnums {
   dwarf_rax = 0,
   dwarf_rdx,

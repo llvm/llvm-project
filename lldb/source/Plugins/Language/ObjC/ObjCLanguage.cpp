@@ -37,6 +37,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+LLDB_PLUGIN(ObjCLanguage);
+
 void ObjCLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Objective-C Language",
                                 CreateInstance);

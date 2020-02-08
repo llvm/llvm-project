@@ -10,10 +10,12 @@ declare fp128 @llvm.floor.f128(fp128)
 declare fp128 @llvm.trunc.f128(fp128)
 declare fp128 @llvm.nearbyint.f128(fp128)
 declare fp128 @llvm.pow.f128(fp128, fp128)
+declare fp128 @llvm.powi.f128(fp128, i32)
 
 declare double @llvm.cos.f64(double)
 declare double @llvm.log10.f64(double)
 declare double @llvm.pow.f64(double, double)
+declare double @llvm.powi.f64(double, i32)
 declare double @llvm.log.f64(double)
 declare double @llvm.exp.f64(double)
 declare i32 @llvm.lround(double)
@@ -21,7 +23,7 @@ declare i32 @llvm.lround(double)
 
 
 ; CHECK-LABEL: fp128libcalls:
-define fp128 @fp128libcalls(fp128 %x, fp128 %y) {
+define fp128 @fp128libcalls(fp128 %x, fp128 %y, i32 %z) {
   ; compiler-rt call
   ; CHECK: call __addtf3
   %a = fadd fp128 %x, %y
@@ -36,11 +38,13 @@ define fp128 @fp128libcalls(fp128 %x, fp128 %y) {
   %e = call fp128 @llvm.floor.f128(fp128 %d)
   ; CHECK: call powl
   %f = call fp128 @llvm.pow.f128(fp128 %e, fp128 %y)
+  ; CHECK: call __powitf2
+  %g = call fp128 @llvm.powi.f128(fp128 %f, i32 %z)
   ; CHECK: call truncl
-  %g = call fp128 @llvm.trunc.f128(fp128 %f)
+  %h = call fp128 @llvm.trunc.f128(fp128 %g)
   ; CHECK: call nearbyintl
-  %h = call fp128 @llvm.nearbyint.f128(fp128 %g)
-  ret fp128 %h
+  %i = call fp128 @llvm.nearbyint.f128(fp128 %h)
+  ret fp128 %i
 }
 
 ; CHECK-LABEL: i128libcalls:
@@ -56,20 +60,22 @@ define i128 @i128libcalls(i128 %x, i128 %y) {
 }
 
 ; CHECK-LABEL: f64libcalls:
-define i32 @f64libcalls(double %x, double %y) {
+define i32 @f64libcalls(double %x, double %y, i32 %z) {
  ; CHECK: f64.call $push{{[0-9]}}=, cos
  %a = call double @llvm.cos.f64(double %x)
  ; CHECK: f64.call $push{{[0-9]}}=, log10
  %b = call double @llvm.log10.f64(double %a)
  ; CHECK: f64.call $push{{[0-9]}}=, pow
  %c = call double @llvm.pow.f64(double %b, double %y)
+ ; CHECK: f64.call $push{{[0-9]}}=, __powidf2
+ %d = call double @llvm.powi.f64(double %c, i32 %z)
  ; CHECK: f64.call $push{{[0-9]}}=, log
- %d = call double @llvm.log.f64(double %c)
+ %e = call double @llvm.log.f64(double %d)
  ; CHECK: f64.call $push{{[0-9]}}=, exp
- %e = call double @llvm.exp.f64(double %d)
+ %f = call double @llvm.exp.f64(double %e)
  ; CHECK: i32.call $push{{[0-9]}}=, lround
- %f = call i32 @llvm.lround(double %e)
- ret i32 %f
+ %g = call i32 @llvm.lround(double %f)
+ ret i32 %g
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see

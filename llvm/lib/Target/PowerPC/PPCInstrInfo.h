@@ -296,11 +296,29 @@ public:
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
+  // Emits a register spill without updating the register class for vector
+  // registers. This ensures that when we spill a vector register the
+  // element order in the register is the same as it was in memory.
+  void storeRegToStackSlotNoUpd(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                unsigned SrcReg, bool isKill, int FrameIndex,
+                                const TargetRegisterClass *RC,
+                                const TargetRegisterInfo *TRI) const;
+
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             Register DestReg, int FrameIndex,
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
+
+  // Emits a register reload without updating the register class for vector
+  // registers. This ensures that when we reload a vector register the
+  // element order in the register is the same as it was in memory.
+  void loadRegFromStackSlotNoUpd(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 unsigned DestReg, int FrameIndex,
+                                 const TargetRegisterClass *RC,
+                                 const TargetRegisterInfo *TRI) const;
 
   unsigned getStoreOpcodeForSpill(unsigned Reg,
                                   const TargetRegisterClass *RC = nullptr) const;

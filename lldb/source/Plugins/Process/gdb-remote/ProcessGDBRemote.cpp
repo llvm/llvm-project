@@ -90,6 +90,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
+LLDB_PLUGIN(ProcessGDBRemote);
+
 namespace lldb {
 // Provide a function that can easily dump the packet history if we know a
 // ProcessGDBRemote * value (which we can get from logs or from debugging). We

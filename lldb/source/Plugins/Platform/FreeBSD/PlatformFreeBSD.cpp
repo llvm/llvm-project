@@ -36,6 +36,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_freebsd;
 
+LLDB_PLUGIN(PlatformFreeBSD);
+
 static uint32_t g_initialize_count = 0;
 
 

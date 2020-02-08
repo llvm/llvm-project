@@ -2,9 +2,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config graph-trim-interval=5 -analyzer-config suppress-null-return-paths=false %s -o %t.plist
 // RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/eager-reclamation-path-notes.cpp.plist -
 
-typedef struct {
+struct IntWrapper {
   int getValue();
-} IntWrapper;
+};
 
 IntWrapper *getNullWrapper() {
   return 0;

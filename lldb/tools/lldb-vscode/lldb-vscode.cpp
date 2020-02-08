@@ -1260,8 +1260,22 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsGotoTargetsRequest", false);
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", false);
-  // The debug adapter supports the completionsRequest.
-  body.try_emplace("supportsCompletionsRequest", true);
+  // We need to improve the current implementation of completions in order to
+  // enable it again. For some context, this is how VSCode works: 
+  // - VSCode sends a completion request whenever chars are added, the user
+  //   triggers completion manually via CTRL-space or similar mechanisms, but
+  //   not when there's a deletion. Besides, VSCode doesn't let us know which
+  //   of these events we are handling. What is more, the use can paste or cut
+  //   sections of the text arbitrarily.
+  //   https://github.com/microsoft/vscode/issues/89531 tracks part of the
+  //   issue just mentioned.
+  // This behavior causes many problems with the current way completion is
+  // implemented in lldb-vscode, as these requests could be really expensive,
+  // blocking the debugger, and there could be many concurrent requests unless
+  // the user types very slowly... We need to address this specific issue, or
+  // at least trigger completion only when the user explicitly wants it, which
+  // is the behavior of LLDB CLI, that expects a TAB.
+  body.try_emplace("supportsCompletionsRequest", false);
   // The debug adapter supports the modules request.
   body.try_emplace("supportsModulesRequest", false);
   // The set of additional module information exposed by the debug adapter.

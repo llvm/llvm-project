@@ -2165,7 +2165,7 @@ bool DWARFLinker::emitPaperTrailWarnings(const DwarfLinkerObjFile &OF,
     Size += getULEB128Size(Abbrev.getNumber());
   }
   CUDie->setSize(Size);
-  TheDwarfEmitter->emitPaperTrailWarningsDie(TheTriple, *CUDie);
+  TheDwarfEmitter->emitPaperTrailWarningsDie(*CUDie);
 
   return true;
 }

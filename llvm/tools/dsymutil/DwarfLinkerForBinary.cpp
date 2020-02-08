@@ -287,8 +287,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
   DebugMap DebugMap(Map.getTriple(), Map.getBinaryPath());
 
-  DWARFLinker GeneralLinker(Map.getTriple(), Streamer.get(),
-                            DwarfLinkerClient::Dsymutil);
+  DWARFLinker GeneralLinker(Streamer.get(), DwarfLinkerClient::Dsymutil);
 
   remarks::RemarkLinker RL;
   if (!Options.RemarksPrependPath.empty())

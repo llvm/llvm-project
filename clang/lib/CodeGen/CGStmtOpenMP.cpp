@@ -24,6 +24,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/Instructions.h"
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
@@ -3743,6 +3744,9 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
+  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
+                                ? llvm::AtomicOrdering::NotAtomic
+                                : llvm::AtomicOrdering::AcquireRelease;
   CGM.getOpenMPRuntime().emitFlush(
       *this,
       [&S]() -> ArrayRef<const Expr *> {
@@ -3751,7 +3755,7 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
                                     FlushClause->varlist_end());
         return llvm::None;
       }(),
-      S.getBeginLoc());
+      S.getBeginLoc(), AO);
 }
 
 void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
@@ -4070,16 +4074,22 @@ convertToComplexValue(CodeGenFunction &CGF, RValue Val, QualType SrcType,
   return ComplexVal;
 }
 
-static void emitSimpleAtomicStore(CodeGenFunction &CGF, bool IsSeqCst,
+static void emitSimpleAtomicStore(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
                                   LValue LVal, RValue RVal) {
-  if (LVal.isGlobalReg()) {
+  if (LVal.isGlobalReg())
     CGF.EmitStoreThroughGlobalRegLValue(RVal, LVal);
-  } else {
-    CGF.EmitAtomicStore(RVal, LVal,
-                        IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
-                                 : llvm::AtomicOrdering::Monotonic,
-                        LVal.isVolatile(), /*isInit=*/false);
-  }
+  else
+    CGF.EmitAtomicStore(RVal, LVal, AO, LVal.isVolatile(), /*isInit=*/false);
+}
+
+static RValue emitSimpleAtomicLoad(CodeGenFunction &CGF,
+                                   llvm::AtomicOrdering AO, LValue LVal,
+                                   SourceLocation Loc) {
+  if (LVal.isGlobalReg())
+    return CGF.EmitLoadOfLValue(LVal, Loc);
+  return CGF.EmitAtomicLoad(
+      LVal, Loc, llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO),
+      LVal.isVolatile());
 }
 
 void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
@@ -4100,7 +4110,7 @@ void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
   }
 }
 
-static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, bool IsSeqCst,
+static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
                                   const Expr *X, const Expr *V,
                                   SourceLocation Loc) {
   // v = x;
@@ -4108,36 +4118,54 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, bool IsSeqCst,
   assert(X->isLValue() && "X of 'omp atomic read' is not lvalue");
   LValue XLValue = CGF.EmitLValue(X);
   LValue VLValue = CGF.EmitLValue(V);
-  RValue Res = XLValue.isGlobalReg()
-                   ? CGF.EmitLoadOfLValue(XLValue, Loc)
-                   : CGF.EmitAtomicLoad(
-                         XLValue, Loc,
-                         IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
-                                  : llvm::AtomicOrdering::Monotonic,
-                         XLValue.isVolatile());
-  // OpenMP, 2.12.6, atomic Construct
-  // Any atomic construct with a seq_cst clause forces the atomically
-  // performed operation to include an implicit flush operation without a
-  // list.
-  if (IsSeqCst)
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc);
+  RValue Res = emitSimpleAtomicLoad(CGF, AO, XLValue, Loc);
+  // OpenMP, 2.17.7, atomic Construct
+  // If the read or capture clause is specified and the acquire, acq_rel, or
+  // seq_cst clause is specified then the strong flush on exit from the atomic
+  // operation is also an acquire flush.
+  switch (AO) {
+  case llvm::AtomicOrdering::Acquire:
+  case llvm::AtomicOrdering::AcquireRelease:
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::Acquire);
+    break;
+  case llvm::AtomicOrdering::Monotonic:
+  case llvm::AtomicOrdering::Release:
+    break;
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::Unordered:
+    llvm_unreachable("Unexpected ordering.");
+  }
   CGF.emitOMPSimpleStore(VLValue, Res, X->getType().getNonReferenceType(), Loc);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, V);
 }
 
-static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF, bool IsSeqCst,
-                                   const Expr *X, const Expr *E,
-                                   SourceLocation Loc) {
+static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
+                                   llvm::AtomicOrdering AO, const Expr *X,
+                                   const Expr *E, SourceLocation Loc) {
   // x = expr;
   assert(X->isLValue() && "X of 'omp atomic write' is not lvalue");
-  emitSimpleAtomicStore(CGF, IsSeqCst, CGF.EmitLValue(X), CGF.EmitAnyExpr(E));
+  emitSimpleAtomicStore(CGF, AO, CGF.EmitLValue(X), CGF.EmitAnyExpr(E));
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, X);
-  // OpenMP, 2.12.6, atomic Construct
-  // Any atomic construct with a seq_cst clause forces the atomically
-  // performed operation to include an implicit flush operation without a
-  // list.
-  if (IsSeqCst)
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc);
+  // OpenMP, 2.17.7, atomic Construct
+  // If the write, update, or capture clause is specified and the release,
+  // acq_rel, or seq_cst clause is specified then the strong flush on entry to
+  // the atomic operation is also a release flush.
+  switch (AO) {
+  case llvm::AtomicOrdering::Release:
+  case llvm::AtomicOrdering::AcquireRelease:
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::Release);
+    break;
+  case llvm::AtomicOrdering::Acquire:
+  case llvm::AtomicOrdering::Monotonic:
+    break;
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::Unordered:
+    llvm_unreachable("Unexpected ordering.");
+  }
 }
 
 static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
@@ -4258,10 +4286,10 @@ std::pair<bool, RValue> CodeGenFunction::EmitOMPAtomicSimpleUpdateExpr(
   return Res;
 }
 
-static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF, bool IsSeqCst,
-                                    const Expr *X, const Expr *E,
-                                    const Expr *UE, bool IsXLHSInRHSPart,
-                                    SourceLocation Loc) {
+static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
+                                    llvm::AtomicOrdering AO, const Expr *X,
+                                    const Expr *E, const Expr *UE,
+                                    bool IsXLHSInRHSPart, SourceLocation Loc) {
   assert(isa<BinaryOperator>(UE->IgnoreImpCasts()) &&
          "Update expr in 'atomic update' must be a binary operator.");
   const auto *BOUE = cast<BinaryOperator>(UE->IgnoreImpCasts());
@@ -4274,9 +4302,6 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF, bool IsSeqCst,
   assert(X->isLValue() && "X of 'omp atomic update' is not lvalue");
   LValue XLValue = CGF.EmitLValue(X);
   RValue ExprRValue = CGF.EmitAnyExpr(E);
-  llvm::AtomicOrdering AO = IsSeqCst
-                                ? llvm::AtomicOrdering::SequentiallyConsistent
-                                : llvm::AtomicOrdering::Monotonic;
   const auto *LHS = cast<OpaqueValueExpr>(BOUE->getLHS()->IgnoreImpCasts());
   const auto *RHS = cast<OpaqueValueExpr>(BOUE->getRHS()->IgnoreImpCasts());
   const OpaqueValueExpr *XRValExpr = IsXLHSInRHSPart ? LHS : RHS;
@@ -4289,12 +4314,24 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF, bool IsSeqCst,
   (void)CGF.EmitOMPAtomicSimpleUpdateExpr(
       XLValue, ExprRValue, BOUE->getOpcode(), IsXLHSInRHSPart, AO, Loc, Gen);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, X);
-  // OpenMP, 2.12.6, atomic Construct
-  // Any atomic construct with a seq_cst clause forces the atomically
-  // performed operation to include an implicit flush operation without a
-  // list.
-  if (IsSeqCst)
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc);
+  // OpenMP, 2.17.7, atomic Construct
+  // If the write, update, or capture clause is specified and the release,
+  // acq_rel, or seq_cst clause is specified then the strong flush on entry to
+  // the atomic operation is also a release flush.
+  switch (AO) {
+  case llvm::AtomicOrdering::Release:
+  case llvm::AtomicOrdering::AcquireRelease:
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::Release);
+    break;
+  case llvm::AtomicOrdering::Acquire:
+  case llvm::AtomicOrdering::Monotonic:
+    break;
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::Unordered:
+    llvm_unreachable("Unexpected ordering.");
+  }
 }
 
 static RValue convertToType(CodeGenFunction &CGF, RValue Value,
@@ -4314,7 +4351,8 @@ static RValue convertToType(CodeGenFunction &CGF, RValue Value,
   llvm_unreachable("Must be a scalar or complex.");
 }
 
-static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
+static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
+                                     llvm::AtomicOrdering AO,
                                      bool IsPostfixUpdate, const Expr *V,
                                      const Expr *X, const Expr *E,
                                      const Expr *UE, bool IsXLHSInRHSPart,
@@ -4325,9 +4363,6 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
   LValue VLValue = CGF.EmitLValue(V);
   LValue XLValue = CGF.EmitLValue(X);
   RValue ExprRValue = CGF.EmitAnyExpr(E);
-  llvm::AtomicOrdering AO = IsSeqCst
-                                ? llvm::AtomicOrdering::SequentiallyConsistent
-                                : llvm::AtomicOrdering::Monotonic;
   QualType NewVValType;
   if (UE) {
     // 'x' is updated with some additional value.
@@ -4391,32 +4426,53 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
   // Emit post-update store to 'v' of old/new 'x' value.
   CGF.emitOMPSimpleStore(VLValue, NewVVal, NewVValType, Loc);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, V);
-  // OpenMP, 2.12.6, atomic Construct
-  // Any atomic construct with a seq_cst clause forces the atomically
-  // performed operation to include an implicit flush operation without a
-  // list.
-  if (IsSeqCst)
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc);
+  // OpenMP, 2.17.7, atomic Construct
+  // If the write, update, or capture clause is specified and the release,
+  // acq_rel, or seq_cst clause is specified then the strong flush on entry to
+  // the atomic operation is also a release flush.
+  // If the read or capture clause is specified and the acquire, acq_rel, or
+  // seq_cst clause is specified then the strong flush on exit from the atomic
+  // operation is also an acquire flush.
+  switch (AO) {
+  case llvm::AtomicOrdering::Release:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::Release);
+    break;
+  case llvm::AtomicOrdering::Acquire:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::Acquire);
+    break;
+  case llvm::AtomicOrdering::AcquireRelease:
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, llvm::None, Loc,
+                                         llvm::AtomicOrdering::AcquireRelease);
+    break;
+  case llvm::AtomicOrdering::Monotonic:
+    break;
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::Unordered:
+    llvm_unreachable("Unexpected ordering.");
+  }
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
-                              bool IsSeqCst, bool IsPostfixUpdate,
+                              llvm::AtomicOrdering AO, bool IsPostfixUpdate,
                               const Expr *X, const Expr *V, const Expr *E,
                               const Expr *UE, bool IsXLHSInRHSPart,
                               SourceLocation Loc) {
   switch (Kind) {
   case OMPC_read:
-    emitOMPAtomicReadExpr(CGF, IsSeqCst, X, V, Loc);
+    emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
     break;
   case OMPC_write:
-    emitOMPAtomicWriteExpr(CGF, IsSeqCst, X, E, Loc);
+    emitOMPAtomicWriteExpr(CGF, AO, X, E, Loc);
     break;
   case OMPC_unknown:
   case OMPC_update:
-    emitOMPAtomicUpdateExpr(CGF, IsSeqCst, X, E, UE, IsXLHSInRHSPart, Loc);
+    emitOMPAtomicUpdateExpr(CGF, AO, X, E, UE, IsXLHSInRHSPart, Loc);
     break;
   case OMPC_capture:
-    emitOMPAtomicCaptureExpr(CGF, IsSeqCst, IsPostfixUpdate, V, X, E, UE,
+    emitOMPAtomicCaptureExpr(CGF, AO, IsPostfixUpdate, V, X, E, UE,
                              IsXLHSInRHSPart, Loc);
     break;
   case OMPC_if:
@@ -4482,7 +4538,11 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 }
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
-  bool IsSeqCst = S.getSingleClause<OMPSeqCstClause>();
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
+  if (S.getSingleClause<OMPSeqCstClause>())
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
+  else if (S.getSingleClause<OMPAcqRelClause>())
+    AO = llvm::AtomicOrdering::AcquireRelease;
   OpenMPClauseKind Kind = OMPC_unknown;
   for (const OMPClause *C : S.clauses()) {
     // Find first clause (skip seq_cst|acq_rel clause, if it is first).
@@ -4504,12 +4564,12 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     }
   }
 
-  auto &&CodeGen = [&S, Kind, IsSeqCst, CS](CodeGenFunction &CGF,
+  auto &&CodeGen = [&S, Kind, AO, CS](CodeGenFunction &CGF,
                                             PrePostActionTy &) {
     CGF.EmitStopPoint(CS);
-    emitOMPAtomicExpr(CGF, Kind, IsSeqCst, S.isPostfixUpdate(), S.getX(),
-                      S.getV(), S.getExpr(), S.getUpdateExpr(),
-                      S.isXLHSInRHSPart(), S.getBeginLoc());
+    emitOMPAtomicExpr(CGF, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
+                      S.getExpr(), S.getUpdateExpr(), S.isXLHSInRHSPart(),
+                      S.getBeginLoc());
   };
   OMPLexicalScope Scope(*this, S, OMPD_unknown);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_atomic, CodeGen);

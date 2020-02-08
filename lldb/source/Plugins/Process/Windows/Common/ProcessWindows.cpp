@@ -44,6 +44,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ProcessWindows);
+
 namespace {
 std::string GetProcessExecutableName(HANDLE process_handle) {
   std::vector<wchar_t> file_name;

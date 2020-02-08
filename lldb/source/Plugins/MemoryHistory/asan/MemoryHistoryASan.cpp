@@ -28,6 +28,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(MemoryHistoryASan);
+
 MemoryHistorySP MemoryHistoryASan::CreateInstance(const ProcessSP &process_sp) {
   if (!process_sp.get())
     return nullptr;

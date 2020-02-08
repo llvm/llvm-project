@@ -20,6 +20,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
+LLDB_PLUGIN(ObjectContainerUniversalMachO);
+
 void ObjectContainerUniversalMachO::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,

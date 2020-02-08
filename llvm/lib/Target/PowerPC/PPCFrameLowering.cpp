@@ -1800,11 +1800,19 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // For 32-bit SVR4, allocate the nonvolatile CR spill slot iff the
-  // function uses CR 2, 3, or 4.
-  if (Subtarget.is32BitELFABI() &&
+  // function uses CR 2, 3, or 4. For 64-bit SVR4 we create a FixedStack
+  // object at the offset of the CR-save slot in the linkage area. The actual
+  // save and restore of the condition register will be created as part of the
+  // prologue and epilogue insertion, but the FixedStack object is needed to
+  // keep the CalleSavedInfo valid.
+  if (Subtarget.isSVR4ABI() &&
       (SavedRegs.test(PPC::CR2) || SavedRegs.test(PPC::CR3) ||
        SavedRegs.test(PPC::CR4))) {
-    int FrameIdx = MFI.CreateFixedObject((uint64_t)4, (int64_t)-4, true);
+    const uint64_t SpillSize = 4; // Condition register is always 4 bytes.
+    const int64_t SpillOffset = Subtarget.isPPC64() ? 8 : -4;
+    int FrameIdx =
+        MFI.CreateFixedObject(SpillSize, SpillOffset,
+                              /* IsImmutable */ true, /* IsAliased */ false);
     FI->setCRSpillFrameIndex(FrameIdx);
   }
 }
@@ -2233,8 +2241,15 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         // Use !IsLiveIn for the kill flag.
         // We do not want to kill registers that are live in this function
         // before their use because they will become undefined registers.
-        TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn,
-                                CSI[i].getFrameIdx(), RC, TRI);
+        // Functions without NoUnwind need to preserve the order of elements in
+        // saved vector registers.
+        if (Subtarget.needsSwapsForVSXMemOps() &&
+            !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
+          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
+                                       CSI[i].getFrameIdx(), RC, TRI);
+        else
+          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, CSI[i].getFrameIdx(),
+                                  RC, TRI);
       }
     }
   }
@@ -2386,7 +2401,16 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
       } else {
        // Default behavior for non-CR saves.
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+
+        // Functions without NoUnwind need to preserve the order of elements in
+        // saved vector registers.
+        if (Subtarget.needsSwapsForVSXMemOps() &&
+            !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
+          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
+                                        TRI);
+        else
+          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+
         assert(I != MBB.begin() &&
                "loadRegFromStackSlot didn't insert any code!");
       }

@@ -14,6 +14,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ObjCPlusPlusLanguage);
+
 bool ObjCPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".h", ".mm"};
   for (auto suffix : suffixes) {

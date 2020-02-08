@@ -35,6 +35,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(InstrumentationRuntimeTSan);
+
 lldb::InstrumentationRuntimeSP
 InstrumentationRuntimeTSan::CreateInstance(const lldb::ProcessSP &process_sp) {
   return InstrumentationRuntimeSP(new InstrumentationRuntimeTSan(process_sp));

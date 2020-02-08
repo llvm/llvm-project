@@ -32,6 +32,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABISysV_s390x);
+
 enum dwarf_regnums {
   // General Purpose Registers
   dwarf_r0_s390x = 0,
