@@ -130,18 +130,6 @@ GenericLoopNestRangeBuilder<loop::ParallelOp>::GenericLoopNestRangeBuilder(
 } // namespace edsc
 } // namespace mlir
 
-static void getMaxDimIndex(ArrayRef<StructuredIndexed> structuredIndices,
-                           unsigned &pos) {
-  for (auto sidx : structuredIndices) {
-    for (auto expr : sidx.getExprs()) {
-      expr.walk([&pos](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
-          pos = std::max(pos, d.getPosition());
-      });
-    }
-  }
-}
-
 Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
@@ -155,20 +143,16 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   auto *ctx = builder.getContext();
   unsigned nInputs = inputs.size();
   unsigned nOutputs = outputs.size();
-  unsigned maxPos = 0;
-  getMaxDimIndex(inputs, maxPos);
-  getMaxDimIndex(outputs, maxPos);
-  // maxPos is 0 indexed, need to turn this into a count (i.e. +1)
-  unsigned nDims = maxPos + 1;
 
-  SmallVector<AffineMap, 4> maps;
-  maps.reserve(nInputs + nOutputs);
-  for (auto in : inputs)
-    maps.push_back(
-        AffineMap::get(/*dimCount=*/nDims, /*symbolCount=*/0, in.getExprs()));
-  for (auto out : outputs)
-    maps.push_back(
-        AffineMap::get(/*dimCount=*/nDims, /*symbolCount=*/0, out.getExprs()));
+  SmallVector<SmallVector<AffineExpr, 4>, 4> exprsList;
+  exprsList.reserve(nInputs + nOutputs);
+  for (auto structuredIndexed : inputs)
+    exprsList.emplace_back(structuredIndexed.getExprs().begin(),
+                           structuredIndexed.getExprs().end());
+  for (auto structuredIndexed : outputs)
+    exprsList.emplace_back(structuredIndexed.getExprs().begin(),
+                           structuredIndexed.getExprs().end());
+  auto maps = AffineMap::inferFromExprList(exprsList);
 
   unsigned nViews = nInputs + nOutputs;
   SmallVector<Value, 4> values;

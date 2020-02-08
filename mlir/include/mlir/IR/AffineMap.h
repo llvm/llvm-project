@@ -63,6 +63,14 @@ public:
   static AffineMap getPermutationMap(ArrayRef<unsigned> permutation,
                                      MLIRContext *context);
 
+  /// Returns a vector of AffineMaps; each with as many results as
+  /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
+  /// symbols as the largest symbol in `exprs`.
+  static SmallVector<AffineMap, 4>
+  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList);
+  static SmallVector<AffineMap, 4>
+  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList);
+
   MLIRContext *getContext() const;
 
   explicit operator bool() { return map != nullptr; }

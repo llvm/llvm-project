@@ -14,6 +14,7 @@ target_link_libraries(mlir-edsc-builder-api-test
   MLIRLoopOps
   MLIRStandardOps
   MLIRTransforms
+  MLIRVectorOps
   LLVMCore
   LLVMSupport
 )
@@ -25,5 +26,6 @@ whole_archive_link(mlir-edsc-builder-api-test
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
+  MLIRVectorOps
   MLIRTransforms
 )

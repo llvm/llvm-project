@@ -66,6 +66,19 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 
 void vector::ContractionOp::build(Builder *builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
+                                  ArrayRef<ArrayRef<AffineExpr>> indexingExprs,
+                                  ArrayRef<StringRef> iteratorTypes) {
+  result.addOperands({lhs, rhs, acc});
+  result.addTypes(acc.getType());
+  result.addAttribute(getIndexingMapsAttrName(),
+                      builder->getAffineMapArrayAttr(
+                          AffineMap::inferFromExprList(indexingExprs)));
+  result.addAttribute(getIteratorTypesAttrName(),
+                      builder->getStrArrayAttr(iteratorTypes));
+}
+
+void vector::ContractionOp::build(Builder *builder, OperationState &result,
+                                  Value lhs, Value rhs, Value acc,
                                   ArrayAttr indexingMaps,
                                   ArrayAttr iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
