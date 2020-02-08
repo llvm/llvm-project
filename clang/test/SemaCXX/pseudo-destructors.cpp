@@ -2,7 +2,7 @@
 struct A {};
 
 enum Foo { F };
-typedef Foo Bar; // expected-note{{type 'Bar' (aka 'Foo') is declared here}}
+typedef Foo Bar; // expected-note{{type 'Bar' (aka 'Foo') found by destructor name lookup}}
 
 typedef int Integer;
 typedef double Double;
@@ -23,7 +23,7 @@ void f(A* a, Foo *f, int *i, double *d, int ii) {
   a->~A();
   a->A::~A();
   
-  a->~foo(); // expected-error{{identifier 'foo' in object destruction expression does not name a type}}
+  a->~foo(); // expected-error{{undeclared identifier 'foo' in destructor name}}
   
   a->~Bar(); // expected-error{{destructor type 'Bar' (aka 'Foo') in object destruction expression does not match the type 'A' of the object being destroyed}}
   
@@ -83,7 +83,7 @@ namespace PR11339 {
   template<class T>
   void destroy(T* p) {
     p->~T(); // ok
-    p->~oops(); // expected-error{{identifier 'oops' in object destruction expression does not name a type}}
+    p->~oops(); // expected-error{{undeclared identifier 'oops' in destructor name}}
   }
 
   template void destroy(int*); // expected-note{{in instantiation of function template specialization}}

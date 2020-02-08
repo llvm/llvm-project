@@ -1911,17 +1911,33 @@ def err_destructor_with_params : Error<"destructor cannot have any parameters">;
 def err_destructor_variadic : Error<"destructor cannot be variadic">;
 def err_destructor_typedef_name : Error<
   "destructor cannot be declared using a %select{typedef|type alias}1 %0 of the class name">;
+def err_undeclared_destructor_name : Error<
+  "undeclared identifier %0 in destructor name">;
 def err_destructor_name : Error<
   "expected the class name after '~' to name the enclosing class">;
-def err_destructor_class_name : Error<
-  "expected the class name after '~' to name a destructor">;
-def err_ident_in_dtor_not_a_type : Error<
+def err_destructor_name_nontype : Error<
+  "identifier %0 after '~' in destructor name does not name a type">;
+def err_destructor_expr_mismatch : Error<
+  "identifier %0 in object destruction expression does not name the type "
+  "%1 of the object being destroyed">;
+def err_destructor_expr_nontype : Error<
   "identifier %0 in object destruction expression does not name a type">;
 def err_destructor_expr_type_mismatch : Error<
   "destructor type %0 in object destruction expression does not match the "
   "type %1 of the object being destroyed">;
 def note_destructor_type_here : Note<
-  "type %0 is declared here">;
+  "type %0 found by destructor name lookup">;
+def note_destructor_nontype_here : Note<
+  "non-type declaration found by destructor name lookup">;
+def ext_dtor_named_in_wrong_scope : Extension<
+  "ISO C++ requires the name after '::~' to be found in the same scope as "
+  "the name before '::~'">, InGroup<DtorName>;
+def ext_dtor_name_missing_template_arguments : Extension<
+  "ISO C++ requires template argument list in destructor name">,
+  InGroup<DtorName>;
+def ext_qualified_dtor_named_in_lexical_scope : ExtWarn<
+  "qualified destructor name only found in lexical scope; omit the qualifier "
+  "to find this type name by unqualified lookup">, InGroup<DtorName>;
 
 def err_destroy_attr_on_non_static_var : Error<
   "%select{no_destroy|always_destroy}0 attribute can only be applied to a"
