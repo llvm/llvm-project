@@ -1152,6 +1152,30 @@ void ASTDeclReader::ReadObjCDefinitionData(
                                   Reader.getContext());
 }
 
+static bool MergeCheckProtocolList(const ObjCProtocolList &FirstProtos,
+                                   const ObjCProtocolList &SecondProtos) {
+  if (FirstProtos.size() != SecondProtos.size())
+    return true;
+
+  for (unsigned I = 0, E = FirstProtos.size(); I != E; ++I) {
+    auto *FirstParam = FirstProtos[I];
+    auto *SecondParam = SecondProtos[I];
+    DeclarationName FirstParamName = FirstParam->getDeclName();
+    DeclarationName SecondParamName = SecondParam->getDeclName();
+
+    // If parameters match name but do not both have a definition, we
+    // can't disambiguate it during ODR diagnostic time, skip.
+    if (FirstParamName == SecondParamName &&
+        (FirstParam->hasDefinition() != SecondParam->hasDefinition()))
+      return false;
+
+    if (FirstParamName != SecondParamName)
+      return true;
+  }
+
+  return false;
+}
+
 void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
          struct ObjCInterfaceDecl::DefinitionData &&NewDD) {
   bool DetectedOdrViolation = false;
@@ -1163,6 +1187,10 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
       NewDD.CategoryList)
     return;
 
+  auto &FirstProtos = D->getReferencedProtocols();
+  auto &SecondProtos = NewDD.ReferencedProtocols;
+  if (MergeCheckProtocolList(FirstProtos, SecondProtos))
+    DetectedOdrViolation = true;
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;
 
@@ -1239,6 +1267,10 @@ void ASTDeclReader::MergeDefinitionData(ObjCProtocolDecl *D,
   bool DetectedOdrViolation = false;
   auto &DD = D->data();
 
+  auto &FirstProtos = D->getReferencedProtocols();
+  auto &SecondProtos = NewDD.ReferencedProtocols;
+  if (MergeCheckProtocolList(FirstProtos, SecondProtos))
+    DetectedOdrViolation = true;
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;
 
