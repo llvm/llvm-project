@@ -1454,9 +1454,8 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
   // as a parent. This version hierarchy is, probably against your
   // instinct, purely for hint; the runtime doesn't care about it
   // at all. In LLD, we simply ignore it.
-  if (peek() != ";")
-    skip();
-  expect(";");
+  if (next() != ";")
+    expect(";");
 }
 
 static bool hasWildcard(StringRef s) {
