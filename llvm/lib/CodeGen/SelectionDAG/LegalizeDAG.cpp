@@ -4342,8 +4342,13 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTPOP:
-    // Zero extend the argument.
-    Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
+    // Zero extend the argument unless its cttz, then use any_extend.
+    if (Node->getOpcode() == ISD::CTTZ ||
+        Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+      Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    else
+      Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
+
     if (Node->getOpcode() == ISD::CTTZ) {
       // The count is the same in the promoted type except if the original
       // value was zero.  This can be handled by setting the bit just off
