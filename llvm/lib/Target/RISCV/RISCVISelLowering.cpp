@@ -884,8 +884,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue RCW =
         DAG.getNode(RISCVISD::READ_CYCLE_WIDE, DL, VTs, N->getOperand(0));
 
-    Results.push_back(RCW);
-    Results.push_back(RCW.getValue(1));
+    Results.push_back(
+        DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, RCW, RCW.getValue(1)));
     Results.push_back(RCW.getValue(2));
     break;
   }

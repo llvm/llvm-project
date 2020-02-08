@@ -2401,8 +2401,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     // Swap true/false values and condition.
     CmpInst *Cond = cast<CmpInst>(CondVal);
     Cond->setPredicate(CmpInst::getInversePredicate(Pred));
-    SI.setOperand(1, FalseVal);
-    SI.setOperand(2, TrueVal);
+    SI.swapValues();
     SI.swapProfMetadata();
     Worklist.push(Cond);
     return &SI;
@@ -2783,8 +2782,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *NotCond;
   if (match(CondVal, m_Not(m_Value(NotCond)))) {
     SI.setOperand(0, NotCond);
-    SI.setOperand(1, FalseVal);
-    SI.setOperand(2, TrueVal);
+    SI.swapValues();
     SI.swapProfMetadata();
     return &SI;
   }

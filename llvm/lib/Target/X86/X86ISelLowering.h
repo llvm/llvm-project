@@ -789,19 +789,6 @@ namespace llvm {
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-    // Return true if it is profitable to combine a BUILD_VECTOR with a
-    // stride-pattern to a shuffle and a truncate.
-    // Example of such a combine:
-    // v4i32 build_vector((extract_elt V, 1),
-    //                    (extract_elt V, 3),
-    //                    (extract_elt V, 5),
-    //                    (extract_elt V, 7))
-    //  -->
-    // v4i32 truncate (bitcast (shuffle<1,u,3,u,4,u,5,u,6,u,7,u> V, u) to
-    // v4i64)
-    bool isDesirableToCombineBuildVectorToShuffleTruncate(
-        ArrayRef<int> ShuffleMask, EVT SrcVT, EVT TruncVT) const override;
-
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16

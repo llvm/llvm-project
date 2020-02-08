@@ -115,7 +115,7 @@ public:
   std::string ModuleUserBuildPath;
 
   /// The mapping of module names to prebuilt module files.
-  std::map<std::string, std::string> PrebuiltModuleFiles;
+  std::map<std::string, std::string, std::less<>> PrebuiltModuleFiles;
 
   /// The directories used to load prebuilt module files.
   std::vector<std::string> PrebuiltModulePaths;

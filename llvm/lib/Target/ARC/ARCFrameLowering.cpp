@@ -74,8 +74,7 @@ static void generateStackAdjustment(MachineBasicBlock &MBB,
       .addImm(AbsAmount);
 }
 
-static unsigned
-determineLastCalleeSave(const std::vector<CalleeSavedInfo> &CSI) {
+static unsigned determineLastCalleeSave(ArrayRef<CalleeSavedInfo> CSI) {
   unsigned Last = 0;
   for (auto Reg : CSI) {
     assert(Reg.getReg() >= ARC::R13 && Reg.getReg() <= ARC::R25 &&
@@ -401,8 +400,7 @@ bool ARCFrameLowering::assignCalleeSavedSpillSlots(
 
 bool ARCFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    const std::vector<CalleeSavedInfo> &CSI,
-    const TargetRegisterInfo *TRI) const {
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   LLVM_DEBUG(dbgs() << "Spill callee saved registers: "
                     << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)

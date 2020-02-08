@@ -2738,33 +2738,24 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (A | B) ^ (A & B) -> A ^ B
   // (A | B) ^ (B & A) -> A ^ B
   if (match(&I, m_c_Xor(m_And(m_Value(A), m_Value(B)),
-                        m_c_Or(m_Deferred(A), m_Deferred(B))))) {
-    I.setOperand(0, A);
-    I.setOperand(1, B);
-    return &I;
-  }
+                        m_c_Or(m_Deferred(A), m_Deferred(B)))))
+    return BinaryOperator::CreateXor(A, B);
 
   // (A | ~B) ^ (~A | B) -> A ^ B
   // (~B | A) ^ (~A | B) -> A ^ B
   // (~A | B) ^ (A | ~B) -> A ^ B
   // (B | ~A) ^ (A | ~B) -> A ^ B
   if (match(&I, m_Xor(m_c_Or(m_Value(A), m_Not(m_Value(B))),
-                      m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B))))) {
-    I.setOperand(0, A);
-    I.setOperand(1, B);
-    return &I;
-  }
+                      m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B)))))
+    return BinaryOperator::CreateXor(A, B);
 
   // (A & ~B) ^ (~A & B) -> A ^ B
   // (~B & A) ^ (~A & B) -> A ^ B
   // (~A & B) ^ (A & ~B) -> A ^ B
   // (B & ~A) ^ (A & ~B) -> A ^ B
   if (match(&I, m_Xor(m_c_And(m_Value(A), m_Not(m_Value(B))),
-                      m_c_And(m_Not(m_Deferred(A)), m_Deferred(B))))) {
-    I.setOperand(0, A);
-    I.setOperand(1, B);
-    return &I;
-  }
+                      m_c_And(m_Not(m_Deferred(A)), m_Deferred(B)))))
+    return BinaryOperator::CreateXor(A, B);
 
   // For the remaining cases we need to get rid of one of the operands.
   if (!Op0->hasOneUse() && !Op1->hasOneUse())
@@ -3104,10 +3095,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
           MaskedValueIsZero(X, *C, 0, &I)) {
         Constant *NewC = ConstantInt::get(I.getType(), *C ^ *RHSC);
-        Worklist.push(cast<Instruction>(Op0));
-        I.setOperand(0, X);
-        I.setOperand(1, NewC);
-        return &I;
+        return BinaryOperator::CreateXor(X, NewC);
       }
     }
   }

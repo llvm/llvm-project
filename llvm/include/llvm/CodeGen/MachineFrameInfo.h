@@ -797,8 +797,8 @@ public:
 
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.
-  void setCalleeSavedInfo(const std::vector<CalleeSavedInfo> &CSI) {
-    CSInfo = CSI;
+  void setCalleeSavedInfo(std::vector<CalleeSavedInfo> CSI) {
+    CSInfo = std::move(CSI);
   }
 
   /// Has the callee saved info been calculated yet?

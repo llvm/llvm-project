@@ -1634,15 +1634,15 @@ enum ModuleSource {
 
 /// Select a source for loading the named module and compute the filename to
 /// load it from.
-static ModuleSource
-selectModuleSource(Module *M, StringRef ModuleName, std::string &ModuleFilename,
-                   const std::map<std::string, std::string> &BuiltModules,
-                   HeaderSearch &HS) {
+static ModuleSource selectModuleSource(
+    Module *M, StringRef ModuleName, std::string &ModuleFilename,
+    const std::map<std::string, std::string, std::less<>> &BuiltModules,
+    HeaderSearch &HS) {
   assert(ModuleFilename.empty() && "Already has a module source?");
 
   // Check to see if the module has been built as part of this compilation
   // via a module build pragma.
-  auto BuiltModuleIt = BuiltModules.find(std::string(ModuleName));
+  auto BuiltModuleIt = BuiltModules.find(ModuleName);
   if (BuiltModuleIt != BuiltModules.end()) {
     ModuleFilename = BuiltModuleIt->second;
     return MS_ModuleBuildPragma;

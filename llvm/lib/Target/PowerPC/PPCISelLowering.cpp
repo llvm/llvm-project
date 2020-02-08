@@ -10496,8 +10496,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
     SDValue RTB = DAG.getNode(PPCISD::READ_TIME_BASE, dl, VTs, N->getOperand(0));
 
-    Results.push_back(RTB);
-    Results.push_back(RTB.getValue(1));
+    Results.push_back(
+        DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, RTB, RTB.getValue(1)));
     Results.push_back(RTB.getValue(2));
     break;
   }
