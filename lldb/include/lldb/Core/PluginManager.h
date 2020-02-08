@@ -23,16 +23,20 @@
 #include <stdint.h>
 
 #define LLDB_PLUGIN(PluginName)                                                \
+  namespace lldb_private {                                                     \
   void lldb_initialize_##PluginName() { PluginName::Initialize(); }            \
   void lldb_terminate_##PluginName() { PluginName::Terminate(); }              \
+  }
 
 // FIXME: Generate me with CMake
-#define LLDB_PLUGIN_INITIALIZE(PluginName)                                     \
+#define LLDB_PLUGIN_DECLARE(PluginName)                                         \
+  namespace lldb_private {                                                     \
   extern void lldb_initialize_##PluginName();                                  \
-  lldb_initialize_##PluginName()
-#define LLDB_PLUGIN_TERMINATE(PluginName)                                      \
   extern void lldb_terminate_##PluginName();                                   \
-  lldb_terminate_##PluginName()
+  }
+
+#define LLDB_PLUGIN_INITIALIZE(PluginName) lldb_initialize_##PluginName()
+#define LLDB_PLUGIN_TERMINATE(PluginName) lldb_terminate_##PluginName()
 
 namespace lldb_private {
 class CommandInterpreter;
