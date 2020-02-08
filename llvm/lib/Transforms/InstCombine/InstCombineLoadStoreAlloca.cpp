@@ -1336,6 +1336,11 @@ static bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC,
   if (!isMinMaxWithLoads(LoadAddr, CmpLoadTy))
     return false;
 
+  // Make sure the type would actually change.
+  // This condition can be hit with chains of bitcasts.
+  if (LI->getType() == CmpLoadTy)
+    return false;
+
   // Make sure we're not changing the size of the load/store.
   const auto &DL = IC.getDataLayout();
   if (DL.getTypeStoreSizeInBits(LI->getType()) !=
