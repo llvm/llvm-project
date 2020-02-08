@@ -54,6 +54,39 @@ define internal void @__globalBlock_block_invoke(i8* nocapture readnone) {
   ret void
 }
 
+; CHECK: define %[[V0:.*]]* @test_conditional0(
+; CHECK: %[[PHI0:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ null, %{{.*}} ]
+
+; CHECK: %[[PHI1:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ %[[PHI0]], %{{.*}} ]
+; CHECK-NEXT: %[[PHI2:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ %{{.*}}, %{{.*}} ]
+; CHECK-NEXT: %[[V2:.*]] = bitcast %[[V0]]* %[[PHI1]] to i8*
+; CHECK-NEXT: %[[V4:.*]] = bitcast %[[V0]]* %[[PHI2]] to i8*
+; CHECK-NEXT: %[[V5:.*]] = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[V4]])
+; CHECK-NEXT: ret %[[V0]]* %[[PHI2]]
+
+define %0* @test_conditional0(i32 %i, %0* %b) {
+entry:
+  %v0 = icmp eq i32 %i, 1
+  br i1 %v0, label %bb2, label %bb1
+
+bb1:
+  %v1 = icmp eq i32 %i, 2
+  br i1 %v1, label %bb2, label %return
+
+bb2:
+  %phi0 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %entry ], [ null, %bb1 ]
+  br label %return
+
+return:
+  %phi1 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %bb1 ], [ %phi0, %bb2 ]
+  %phi2 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %bb1 ], [ %b, %bb2 ]
+  %v2 = bitcast %0* %phi1 to i8*
+  %v3 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %v2)
+  %v4 = bitcast %0* %phi2 to i8*
+  %v5 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %v4)
+  ret %0* %phi2
+}
+
 declare void @foo()
 
 declare i8* @llvm.objc.retain(i8*) local_unnamed_addr
