@@ -114,52 +114,6 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
   }
 }
 
-static llvm::SmallString<64>
-calculateRelativeFilePath(const InfoType &Type, const StringRef &Path,
-                          const StringRef &Name, const StringRef &CurrentPath) {
-  llvm::SmallString<64> FilePath;
-
-  if (CurrentPath != Path) {
-    // iterate back to the top
-    for (llvm::sys::path::const_iterator I =
-             llvm::sys::path::begin(CurrentPath);
-         I != llvm::sys::path::end(CurrentPath); ++I)
-      llvm::sys::path::append(FilePath, "..");
-    llvm::sys::path::append(FilePath, Path);
-  }
-
-  // Namespace references have a Path to the parent namespace, but
-  // the file is actually in the subdirectory for the namespace.
-  if (Type == doc::InfoType::IT_namespace)
-    llvm::sys::path::append(FilePath, Name);
-
-  return llvm::sys::path::relative_path(FilePath);
-}
-
-llvm::SmallString<64>
-Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(RefType, Path, Name, CurrentPath);
-}
-
-llvm::SmallString<16> Reference::getFileBaseName() const {
-  if (RefType == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
-
-  return Name;
-}
-
-llvm::SmallString<64>
-Info::getRelativeFilePath(const StringRef &CurrentPath) const {
-  return calculateRelativeFilePath(IT, Path, extractName(), CurrentPath);
-}
-
-llvm::SmallString<16> Info::getFileBaseName() const {
-  if (IT == InfoType::IT_namespace)
-    return llvm::SmallString<16>("index");
-
-  return extractName();
-}
-
 bool Reference::mergeable(const Reference &Other) {
   return RefType == Other.RefType && USR == Other.USR;
 }
