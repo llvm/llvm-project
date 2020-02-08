@@ -2085,9 +2085,9 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
 
       // Broadcast our state into a vector register.
       Register VStateReg = MRI->createVirtualRegister(OpRC);
-      unsigned BroadcastOp =
-          Is128Bit ? X86::VPBROADCASTQrZ128r
-                   : Is256Bit ? X86::VPBROADCASTQrZ256r : X86::VPBROADCASTQrZr;
+      unsigned BroadcastOp = Is128Bit ? X86::VPBROADCASTQrZ128rr
+                                      : Is256Bit ? X86::VPBROADCASTQrZ256rr
+                                                 : X86::VPBROADCASTQrZrr;
       auto BroadcastI =
           BuildMI(MBB, InsertPt, Loc, TII->get(BroadcastOp), VStateReg)
               .addReg(StateReg);
