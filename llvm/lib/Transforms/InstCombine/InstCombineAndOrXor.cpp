@@ -3099,7 +3099,6 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
           MaskedValueIsZero(X, *C, 0, &I)) {
         Constant *NewC = ConstantInt::get(I.getType(), *C ^ *RHSC);
-        Worklist.push(cast<Instruction>(Op0));
         return BinaryOperator::CreateXor(X, NewC);
       }
     }
