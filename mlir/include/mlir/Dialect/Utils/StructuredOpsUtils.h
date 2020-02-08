@@ -24,63 +24,47 @@
 namespace mlir {
 /// Attribute name for the AffineArrayAttr which encodes the relationship
 /// between a structured op iterators' and its operands.
-static constexpr StringLiteral getIndexingMapsAttrName() {
-  return StringLiteral("indexing_maps");
-}
+constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }
 
 /// Attribute name for the StrArrayAttr which encodes the type of a structured
 /// op's iterators.
-static constexpr StringLiteral getIteratorTypesAttrName() {
-  return StringLiteral("iterator_types");
-}
+constexpr StringRef getIteratorTypesAttrName() { return "iterator_types"; }
 
 /// Attribute name for the IntegerAttr which encodes the number of input buffer
 /// arguments.
-static constexpr StringLiteral getArgsInAttrName() {
-  return StringLiteral("args_in");
-}
+constexpr StringRef getArgsInAttrName() { return "args_in"; }
 
 /// Attribute name for the IntegerAttr which encodes the number of input buffer
 /// arguments.
-static constexpr StringLiteral getArgsOutAttrName() {
-  return StringLiteral("args_out");
-}
+constexpr StringRef getArgsOutAttrName() { return "args_out"; }
 
 /// Attribute name for the StringAttr which encodes an optional documentation
 /// string of the structured op.
-static constexpr StringLiteral getDocAttrName() { return StringLiteral("doc"); }
+constexpr StringRef getDocAttrName() { return "doc"; }
 
 /// Attribute name for the StrArrayAttr which encodes the SymbolAttr for the
 /// MLIR function that implements the body of the structured op.
-static constexpr StringLiteral getFunAttrName() { return StringLiteral("fun"); }
+constexpr StringRef getFunAttrName() { return "fun"; }
 
 /// Attribute name for the StrArrayAttr which encodes the external library
 /// function that implements the structured op.
-static constexpr StringLiteral getLibraryCallAttrName() {
-  return StringLiteral("library_call");
-}
+constexpr StringRef getLibraryCallAttrName() { return "library_call"; }
 
 /// Use to encode that a particular iterator type has parallel semantics.
-inline static constexpr StringLiteral getParallelIteratorTypeName() {
-  return StringLiteral("parallel");
-}
+constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
 
 /// Use to encode that a particular iterator type has reduction semantics.
-inline static constexpr StringLiteral getReductionIteratorTypeName() {
-  return StringLiteral("reduction");
-}
+constexpr StringRef getReductionIteratorTypeName() { return "reduction"; }
 
 /// Use to encode that a particular iterator type has window semantics.
-inline static constexpr StringLiteral getWindowIteratorTypeName() {
-  return StringLiteral("window");
-}
+constexpr StringRef getWindowIteratorTypeName() { return "window"; }
 
 /// Use to encode that a particular iterator type has window semantics.
-inline static ArrayRef<StringRef> getAllIteratorTypeNames() {
-  static StringRef names[3] = {getParallelIteratorTypeName(),
-                               getReductionIteratorTypeName(),
-                               getWindowIteratorTypeName()};
-  return llvm::makeArrayRef(names);
+inline ArrayRef<StringRef> getAllIteratorTypeNames() {
+  static constexpr StringRef names[3] = {getParallelIteratorTypeName(),
+                                         getReductionIteratorTypeName(),
+                                         getWindowIteratorTypeName()};
+  return names;
 }
 
 /// Returns the iterator of a certain type.
