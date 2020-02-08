@@ -5433,7 +5433,9 @@ static CompilerType BindAllArchetypes(CompilerType type,
     return type;
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
-  return runtime->DoArchetypeBindingForType(*frame, type);
+  if (auto bound = runtime->DoArchetypeBindingForType(*frame, type))
+    return bound;
+  return type;
 }
 
 bool SwiftASTContext::IsErrorType(const CompilerType &compiler_type) {
