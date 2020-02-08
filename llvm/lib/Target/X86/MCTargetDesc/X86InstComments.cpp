@@ -669,14 +669,14 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::PSLLDQri:
   case X86::VPSLLDQri:
   case X86::VPSLLDQYri:
-  case X86::VPSLLDQZ128rr:
-  case X86::VPSLLDQZ256rr:
-  case X86::VPSLLDQZrr:
+  case X86::VPSLLDQZ128ri:
+  case X86::VPSLLDQZ256ri:
+  case X86::VPSLLDQZri:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     LLVM_FALLTHROUGH;
-  case X86::VPSLLDQZ128rm:
-  case X86::VPSLLDQZ256rm:
-  case X86::VPSLLDQZrm:
+  case X86::VPSLLDQZ128mi:
+  case X86::VPSLLDQZ256mi:
+  case X86::VPSLLDQZmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSLLDQMask(getRegOperandNumElts(MI, 8, 0),
@@ -687,14 +687,14 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::PSRLDQri:
   case X86::VPSRLDQri:
   case X86::VPSRLDQYri:
-  case X86::VPSRLDQZ128rr:
-  case X86::VPSRLDQZ256rr:
-  case X86::VPSRLDQZrr:
+  case X86::VPSRLDQZ128ri:
+  case X86::VPSRLDQZ256ri:
+  case X86::VPSRLDQZri:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     LLVM_FALLTHROUGH;
-  case X86::VPSRLDQZ128rm:
-  case X86::VPSRLDQZ256rm:
-  case X86::VPSRLDQZrm:
+  case X86::VPSRLDQZ128mi:
+  case X86::VPSRLDQZ256mi:
+  case X86::VPSRLDQZmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSRLDQMask(getRegOperandNumElts(MI, 8, 0),
