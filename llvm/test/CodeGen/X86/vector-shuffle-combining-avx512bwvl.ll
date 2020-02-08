@@ -75,3 +75,29 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpcklwd(<16 x i16> %a
   %res0 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 0, i16 16, i16 1, i16 17, i16 2, i16 18, i16 3, i16 19, i16 8, i16 24, i16 9, i16 25, i16 10, i16 26, i16 11, i16 27>, <16 x i16> %a0, <16 x i16> %a1, i16 -1)
   ret <16 x i16> %res0
 }
+
+define <16 x i8> @combine_shuffle_vrotri_v2i64(<2 x i64> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprorq $48, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 48, i64 48>)
+  %2 = bitcast <2 x i64> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
+
+define <16 x i8> @combine_shuffle_vrotli_v4i32(<4 x i32> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprold $8, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
+  %2 = bitcast <4 x i32> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
