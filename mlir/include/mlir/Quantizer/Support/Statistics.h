@@ -27,11 +27,25 @@ struct TensorAxisStatistics {
   double mean = 0;
   double variance = 0;
 
+  int64_t sampleSizePerAxis = 0;
+  SmallVector<double, 4> minValuePerAxis;
+  SmallVector<double, 4> maxValuePerAxis;
+  SmallVector<double, 4> meanPerAxis;
+  SmallVector<double, 4> variancePerAxis;
+
   TensorAxisStatistics() {}
   TensorAxisStatistics(int64_t sampleSize, double minValue, double maxValue,
                        double mean, double variance)
       : sampleSize(sampleSize), minValue(minValue), maxValue(maxValue),
         mean(mean), variance(variance) {}
+  TensorAxisStatistics(int64_t sampleSize, ArrayRef<double> minValues,
+                       ArrayRef<double> maxValues, ArrayRef<double> means,
+                       ArrayRef<double> variances)
+      : sampleSizePerAxis(sampleSize),
+        minValuePerAxis(minValues.begin(), minValues.end()),
+        maxValuePerAxis(maxValues.begin(), maxValues.end()),
+        meanPerAxis(means.begin(), means.end()),
+        variancePerAxis(variances.begin(), variances.end()) {}
   void clear() { *this = TensorAxisStatistics(); }
 };
 
@@ -70,7 +84,11 @@ public:
 
   bool get(TensorAxisStatistics &stats) const override;
 
-  // TODO: Implement per-axis.
+  bool supportsPerAxis() const override;
+
+  unsigned getAxisCount() const override;
+
+  bool getForAxis(unsigned axis, TensorAxisStatistics &stats) const override;
 
 private:
   Attribute attr;
