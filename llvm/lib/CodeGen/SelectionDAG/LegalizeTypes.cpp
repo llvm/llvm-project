@@ -912,17 +912,6 @@ bool DAGTypeLegalizer::CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult) {
     // The target didn't want to custom lower it after all.
     return false;
 
-  // When called from DAGTypeLegalizer::ExpandIntegerResult, we might need to
-  // provide the same kind of custom splitting behavior.
-  if (Results.size() == N->getNumValues() + 1 && LegalizeResult) {
-    // We've legalized a return type by splitting it. If there is a chain,
-    // replace that too.
-    SetExpandedInteger(SDValue(N, 0), Results[0], Results[1]);
-    if (N->getNumValues() > 1)
-      ReplaceValueWith(SDValue(N, 1), Results[2]);
-    return true;
-  }
-
   // Make everything that once used N's values now use those in Results instead.
   assert(Results.size() == N->getNumValues() &&
          "Custom lowering returned the wrong number of results!");
