@@ -1058,6 +1058,9 @@ public:
   /// fully visited by the DFS prior to calling this routine.
   void removeDeadFunction(Function &F);
 
+  /// Introduce a node for the function \p NewF in the SCC \p C.
+  void addNewFunctionIntoSCC(Function &NewF, SCC &C);
+
   ///@}
 
   ///@{

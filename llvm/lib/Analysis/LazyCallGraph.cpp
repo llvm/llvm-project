@@ -1566,6 +1566,15 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   // allocators.
 }
 
+void LazyCallGraph::addNewFunctionIntoSCC(Function &NewF, SCC &C) {
+  Node &CGNode = get(NewF);
+  CGNode.DFSNumber = CGNode.LowLink = -1;
+  CGNode.populate();
+  C.Nodes.push_back(&CGNode);
+  SCCMap[&CGNode] = &C;
+  NodeMap[&NewF] = &CGNode;
+}
+
 LazyCallGraph::Node &LazyCallGraph::insertInto(Function &F, Node *&MappedN) {
   return *new (MappedN = BPA.Allocate()) Node(*this, F);
 }
