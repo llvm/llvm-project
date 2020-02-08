@@ -3093,6 +3093,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     // Try to further simplify the result.
     CallInst *SimplifiedCI = dyn_cast<CallInst>(SimplifiedFortifiedCI);
     if (SimplifiedCI && SimplifiedCI->getCalledFunction()) {
+      // Ensure that SimplifiedCI's uses are complete, since some calls have
+      // their uses analyzed.
+      replaceAllUsesWith(CI, SimplifiedCI);
+
       // Use an IR Builder from SimplifiedCI if available instead of CI
       // to guarantee we reach all uses we might replace later on.
       IRBuilder<> TmpBuilder(SimplifiedCI);
@@ -3354,6 +3358,14 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
   return Ret;
 }
 
+Value *FortifiedLibCallSimplifier::optimizeStrLenChk(CallInst *CI,
+                                                     IRBuilder<> &B) {
+  if (isFortifiedCallFoldable(CI, 1, None, 0))
+    return emitStrLen(CI->getArgOperand(0), B, CI->getModule()->getDataLayout(),
+                      TLI);
+  return nullptr;
+}
+
 Value *FortifiedLibCallSimplifier::optimizeStrpNCpyChk(CallInst *CI,
                                                        IRBuilder<> &B,
                                                        LibFunc Func) {
@@ -3494,6 +3506,8 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
   case LibFunc_stpcpy_chk:
   case LibFunc_strcpy_chk:
     return optimizeStrpCpyChk(CI, Builder, Func);
+  case LibFunc_strlen_chk:
+    return optimizeStrLenChk(CI, Builder);
   case LibFunc_stpncpy_chk:
   case LibFunc_strncpy_chk:
     return optimizeStrpNCpyChk(CI, Builder, Func);

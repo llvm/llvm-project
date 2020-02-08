@@ -659,6 +659,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy() &&
             FTy.getReturnType()->isIntegerTy(32));
+  case LibFunc_strlen_chk:
+    --NumParams;
+    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+      return false;
+    LLVM_FALLTHROUGH;
   case LibFunc_strlen:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getReturnType()->isIntegerTy());
