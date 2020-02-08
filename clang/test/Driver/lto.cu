@@ -55,7 +55,9 @@
 //
 // LLVMGOLD: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
-// Check that subsequent -fno-lto takes precedence
+/// lld does not need LLVMgold.
+// RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto=full -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=gold -flto=full -fno-lto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 //
