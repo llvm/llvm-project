@@ -145,6 +145,7 @@
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv67t \
+// RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK02B %s
 // CHECK02B: "-cc1" {{.*}} "-target-cpu" "hexagonv67t"
