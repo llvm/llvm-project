@@ -418,22 +418,6 @@ static LogicalResult verify(ReduceReturnOp op) {
   return success();
 }
 
-static ParseResult parseReduceReturnOp(OpAsmParser &parser,
-                                       OperationState &result) {
-  OpAsmParser::OperandType operand;
-  Type resultType;
-  if (parser.parseOperand(operand) || parser.parseColonType(resultType) ||
-      parser.resolveOperand(operand, resultType, result.operands))
-    return failure();
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, ReduceReturnOp op) {
-  p << op.getOperationName() << " " << op.result() << " : "
-    << op.result().getType();
-}
-
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//

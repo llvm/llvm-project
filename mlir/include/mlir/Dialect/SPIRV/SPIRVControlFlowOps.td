@@ -333,8 +333,7 @@ def SPV_MergeOp : SPV_Op<"_merge", [Terminator]> {
 
   let results = (outs);
 
-  let parser = [{ return parseNoIOOp(parser, result); }];
-  let printer = [{ printNoIOOp(getOperation(), p); }];
+  let assemblyFormat = "attr-dict";
 
   let hasOpcode = 0;
 
@@ -360,8 +359,7 @@ def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, Terminator]> {
 
   let results = (outs);
 
-  let parser = [{ return parseNoIOOp(parser, result); }];
-  let printer = [{ printNoIOOp(getOperation(), p); }];
+  let assemblyFormat = "attr-dict";
 }
 
 // -----
@@ -383,8 +381,7 @@ def SPV_UnreachableOp : SPV_Op<"Unreachable", [InFunctionScope, Terminator]> {
 
   let results = (outs);
 
-  let parser = [{ return parseNoIOOp(parser, result); }];
-  let printer = [{ printNoIOOp(getOperation(), p); }];
+  let assemblyFormat = "attr-dict";
 }
 
 // -----
