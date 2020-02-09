@@ -9,7 +9,7 @@ The LLDB test suite consists of three different kinds of test:
   located under ``lldb/packages/Python/lldbsuite`` and are written in Python
   using ``dotest`` (LLDB's custom testing framework on top of unittest2).
 * Integration tests that test the debugger through the command line. These are
-  locarted under `lldb/tests/Shell` and are written in a shell-style format
+  located under `lldb/test/Shell` and are written in a shell-style format
   using FileCheck to verify its output.
 
 All three test suites use the `LLVM Integrated Tester
@@ -82,7 +82,7 @@ run as part of a test suite.
 
 ::
 
-   > ./bin/llvm-lit -sv lldb/test --filter <test>
+   > ./bin/llvm-lit -sv tools/lldb/test --filter <test>
 
 
 Because lit automatically scans a directory for tests, it's also possible to

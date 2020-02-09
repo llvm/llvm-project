@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMVectorize
   LoopVectorize.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
+  VectorCombine.cpp
   VPlan.cpp
   VPlanHCFGBuilder.cpp
   VPlanPredicator.cpp
