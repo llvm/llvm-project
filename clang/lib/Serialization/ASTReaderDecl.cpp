@@ -812,6 +812,13 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
     RecordDecl *Canon = static_cast<RecordDecl *>(RD->getCanonicalDecl());
     if (RD == Canon || Canon->getODRHash() == RD->getODRHash())
       return Redecl;
+    // No point in checking equivalence between types that don't match in
+    // presence of definition. Note that we might still wanna check when
+    // both types don't have a definition (e.g. when adding checks for
+    // mismtaches in their __attribute__ lists)
+    if (RD->isThisDeclarationADefinition() !=
+        Canon->isThisDeclarationADefinition())
+      return Redecl;
     Reader.PendingRecordOdrMergeFailures[Canon].push_back(RD);
     // Track that we merged the definitions.
     Reader.MergedDeclContexts.insert(std::make_pair(RD, Canon));

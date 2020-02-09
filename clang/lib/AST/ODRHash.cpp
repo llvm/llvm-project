@@ -643,7 +643,7 @@ void ODRHash::AddRecordDecl(const RecordDecl *Record) {
   llvm::SmallVector<const Decl *, 16> Decls;
   for (Decl *SubDecl : Record->decls()) {
     if (auto *SubRD = dyn_cast<RecordDecl>(SubDecl)) {
-      if (!SubRD->isCompleteDefinition())
+      if (!SubRD->isAnonymousStructOrUnion())
         continue;
       ID.AddInteger(SubRD->getODRHash());
       continue;
