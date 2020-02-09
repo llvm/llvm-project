@@ -808,7 +808,9 @@ foreach vt = SReg_128.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX4", vt>;
 }
 
-defm : SMRD_Pattern <"S_LOAD_DWORDX8",  v8i32>;
+foreach vt = SReg_256.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX8", vt>;
+}
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
