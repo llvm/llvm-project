@@ -2110,12 +2110,11 @@ std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
     // time, we don't want to create a separate load segment for the headers,
     // even if the first output section has an AT or AT> attribute.
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
-    if (!load ||
-        ((sec->lmaExpr ||
-          (sec->lmaRegion && (sec->lmaRegion != load->firstSec->lmaRegion))) &&
-         load->lastSec != Out::programHeaders) ||
-        sec->memRegion != load->firstSec->memRegion || flags != newFlags ||
-        sec == relroEnd) {
+    bool sameLMARegion =
+        load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
+    if (!(load && newFlags == flags && sec != relroEnd &&
+          sec->memRegion == load->firstSec->memRegion &&
+          (sameLMARegion || load->lastSec == Out::programHeaders))) {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }
