@@ -3698,6 +3698,24 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MI.getOperand(DMaskIdx).setImm(DMask);
   }
 
+  if (BaseOpcode->Atomic) {
+    Register VData0 = MI.getOperand(2).getReg();
+    LLT Ty = MRI->getType(VData0);
+
+    // TODO: Allow atomic swap and bit ops for v2s16/v4s16
+    if (Ty.isVector())
+      return false;
+
+    if (BaseOpcode->AtomicX2) {
+      Register VData1 = MI.getOperand(3).getReg();
+      // The two values are packed in one register.
+      LLT PackedTy = LLT::vector(2, Ty);
+      auto Concat = B.buildBuildVector(PackedTy, {VData0, VData1});
+      MI.getOperand(2).setReg(Concat.getReg(0));
+      MI.getOperand(3).setReg(AMDGPU::NoRegister);
+    }
+  }
+
   int CorrectedNumVAddrs = NumVAddrs;
 
   // Optimize _L to _LZ when _L is zero
@@ -3784,6 +3802,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   } else if (!UseNSA && NumVAddrs > 1) {
     convertImageAddrToPacked(B, MI, AddrIdx, NumVAddrs);
   }
+
 
   if (BaseOpcode->Store) { // No TFE for stores?
     // TODO: Handle dmask trim
