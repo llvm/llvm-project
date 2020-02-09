@@ -17,59 +17,12 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-std::vector<std::string> ModuleDeps::getFullCommandLine(
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const {
-  std::vector<std::string> Ret = NonPathCommandLine;
-
-  // TODO: Build full command line. That also means capturing the original
-  //       command line into NonPathCommandLine.
-
-  dependencies::detail::appendCommonModuleArguments(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, Ret);
-
-  return Ret;
-}
-
-void dependencies::detail::appendCommonModuleArguments(
-    llvm::ArrayRef<ClangModuleDep> Modules,
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps,
-    std::vector<std::string> &Result) {
-  llvm::StringSet<> AlreadyAdded;
-
-  std::function<void(llvm::ArrayRef<ClangModuleDep>)> AddArgs =
-      [&](llvm::ArrayRef<ClangModuleDep> Modules) {
-        for (const ClangModuleDep &CMD : Modules) {
-          if (!AlreadyAdded.insert(CMD.ModuleName + CMD.ContextHash).second)
-            continue;
-          const ModuleDeps &M = LookupModuleDeps(CMD);
-          // Depth first traversal.
-          AddArgs(M.ClangModuleDeps);
-          Result.push_back(("-fmodule-file=" + LookupPCMPath(CMD)).str());
-          if (!M.ClangModuleMapFile.empty()) {
-            Result.push_back("-fmodule-map-file=" + M.ClangModuleMapFile);
-          }
-        }
-      };
-
-  AddArgs(Modules);
-}
-
 void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
                                        FileChangeReason Reason,
                                        SrcMgr::CharacteristicKind FileType,
                                        FileID PrevFID) {
   if (Reason != PPCallbacks::EnterFile)
     return;
-  
-  // This has to be delayed as the context hash can change at the start of
-  // `CompilerInstance::ExecuteAction`.
-  if (MDC.ContextHash.empty()) {
-    MDC.ContextHash =
-        Instance.getInvocation().getModuleHash(Instance.getDiagnostics());
-    MDC.Consumer.handleContextHash(MDC.ContextHash);
-  }
 
   SourceManager &SM = Instance.getSourceManager();
 
@@ -97,16 +50,7 @@ void ModuleDepCollectorPP::InclusionDirective(
     // here as `FileChanged` will never see it.
     MDC.MainDeps.push_back(FileName);
   }
-  handleImport(Imported);
-}
 
-void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
-                                        ModuleIdPath Path,
-                                        const Module *Imported) {
-  handleImport(Imported);
-}
-
-void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (!Imported)
     return;
 
@@ -127,8 +71,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (auto &&I : MDC.Deps)
     MDC.Consumer.handleModuleDependency(I.second);
 
+  DependencyOutputOptions Opts;
   for (auto &&I : MDC.MainDeps)
-    MDC.Consumer.handleFileDependency(*MDC.Opts, I);
+    MDC.Consumer.handleFileDependency(Opts, I);
 }
 
 void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
@@ -145,63 +90,43 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   const FileEntry *ModuleMap = Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
-                                   .getModuleMapFileForUniquing(M);
+                                   .getContainingModuleMapFile(M);
 
   MD.ClangModuleMapFile = ModuleMap ? ModuleMap->getName() : "";
   MD.ModuleName = M->getFullModuleName();
-  MD.ImplicitModulePCMPath = M->getASTFile()->getName();
+  MD.ModulePCMPath = M->getASTFile()->getName();
   MD.ContextHash = MDC.ContextHash;
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(
       *MF, true, true, [&](const serialization::InputFile &IF, bool isSystem) {
-        // __inferred_module.map is the result of the way in which an implicit
-        // module build handles inferred modules. It adds an overlay VFS with
-        // this file in the proper directory and relies on the rest of Clang to
-        // handle it like normal. With explicitly built modules we don't need
-        // to play VFS tricks, so replace it with the correct module map.
-        if (IF.getFile()->getName().endswith("__inferred_module.map")) {
-          MD.FileDeps.insert(ModuleMap->getName());
-          return;
-        }
         MD.FileDeps.insert(IF.getFile()->getName());
       });
-  MD.NonPathCommandLine = {
-    "-remove-preceeding-explicit-module-build-incompatible-options",
-    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ModuleName,
-  };
 
-  llvm::DenseSet<const Module *> AddedModules;
-  addAllSubmoduleDeps(M, MD, AddedModules);
+  addAllSubmoduleDeps(M, MD);
 }
 
-void ModuleDepCollectorPP::addAllSubmoduleDeps(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
-  addModuleDep(M, MD, AddedModules);
+void ModuleDepCollectorPP::addAllSubmoduleDeps(const Module *M,
+                                               ModuleDeps &MD) {
+  addModuleDep(M, MD);
 
   for (const Module *SubM : M->submodules())
-    addAllSubmoduleDeps(SubM, MD, AddedModules);
+    addAllSubmoduleDeps(SubM, MD);
 }
 
-void ModuleDepCollectorPP::addModuleDep(
-    const Module *M, ModuleDeps &MD,
-    llvm::DenseSet<const Module *> &AddedModules) {
+void ModuleDepCollectorPP::addModuleDep(const Module *M, ModuleDeps &MD) {
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule()) {
-      if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back({Import->getTopLevelModuleName(),
-                                      Instance.getInvocation().getModuleHash(
-                                          Instance.getDiagnostics())});
+      MD.ClangModuleDeps.insert(Import->getTopLevelModuleName());
       handleTopLevelModule(Import->getTopLevelModule());
     }
   }
 }
 
-ModuleDepCollector::ModuleDepCollector(
-    std::unique_ptr<DependencyOutputOptions> Opts, CompilerInstance &I,
-    DependencyConsumer &C)
-    : Instance(I), Consumer(C), Opts(std::move(Opts)) {}
+ModuleDepCollector::ModuleDepCollector(CompilerInstance &I,
+                                       DependencyConsumer &C)
+    : Instance(I), Consumer(C), ContextHash(I.getInvocation().getModuleHash(I.getDiagnostics())) {
+}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(Instance, *this));

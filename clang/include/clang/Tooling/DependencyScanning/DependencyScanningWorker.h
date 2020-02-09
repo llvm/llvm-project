@@ -63,15 +63,6 @@ public:
                                   const CompilationDatabase &CDB,
                                   DependencyConsumer &Consumer);
 
-  llvm::Error
-  computeDependenciesForClangInvocation(StringRef WorkingDirectory,
-                                        ArrayRef<std::string> Arguments,
-                                        DependencyConsumer &Consumer);
-
-  ScanningOutputFormat getFormat() const { return Format; }
-
-  llvm::StringSet<> AlreadySeen;
-
 private:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;

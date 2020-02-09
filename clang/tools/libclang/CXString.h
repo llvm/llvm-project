@@ -17,7 +17,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
 #include <vector>
@@ -69,8 +68,6 @@ CXString createRef(std::string String) = delete;
 CXString createCXString(CXStringBuf *buf);
 
 CXStringSet *createSet(const std::vector<std::string> &Strings);
-
-CXStringSet *createSet(const llvm::StringSet<> &Strings);
 
 /// A string pool used for fast allocation/deallocation of strings.
 class CXStringPool {
