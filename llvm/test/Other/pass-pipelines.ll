@@ -46,6 +46,7 @@
 ; CHECK-O2-NEXT: Call Graph SCC Pass Manager
 ; CHECK-O2-NEXT: Remove unused exception handling info
 ; CHECK-O2-NEXT: Function Integration/Inlining
+; CHECK-O2-NEXT: Deduce and propagate attributes (CGSCC pass)
 ; CHECK-O2-NEXT: OpenMP specific optimizations
 ; CHECK-O2-NEXT: Deduce function attributes
 ; Next up is the main function pass pipeline. It shouldn't be split up and

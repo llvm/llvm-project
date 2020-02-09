@@ -30,7 +30,7 @@ define void @caller(i32** %Y, %struct.pair* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i32** nocapture readonly [[Y:%.*]], %struct.pair* nocapture nofree readonly [[P:%.*]])
 ; CHECK-NEXT:    call void @test(i32** nocapture readonly align 8 [[Y]]), !dbg !4
-; CHECK-NEXT:    call void @test_byval() #1, !dbg !5
+; CHECK-NEXT:    call void @test_byval(), !dbg !5
 ; CHECK-NEXT:    ret void
 ;
   call void @test(i32** %Y), !dbg !1
