@@ -192,6 +192,11 @@ __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy, Int32)
+__OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
 __OMP_RTL(omp_get_num_threads, false, Int32, )
@@ -224,13 +229,6 @@ __OMP_RTL(omp_set_schedule, false, Void, Int32, Int32)
 __OMP_RTL(omp_set_max_active_levels, false, Void, Int32)
 
 __OMP_RTL(__last, false, Void, )
-
-__OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
-__OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
-__OMP_RTL(__kmpc_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
-__OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy, Int32)
-__OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
-
 #undef __OMP_RTL
 #undef OMP_RTL
 
