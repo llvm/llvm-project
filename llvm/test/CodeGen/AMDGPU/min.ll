@@ -9,7 +9,7 @@
 
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_sle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds i32, i32 addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
@@ -164,7 +164,7 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(<4 x i16> addrspace(1)* %out, <
 
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr inbounds i32, i32 addrspace(1)* %bptr, i32 %tid
   %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
@@ -184,7 +184,7 @@ define amdgpu_kernel void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrs
 
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_slt_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr, i16 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i16, i16 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr inbounds i16, i16 addrspace(1)* %bptr, i32 %tid
   %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i32 %tid
@@ -248,7 +248,7 @@ define amdgpu_kernel void @s_test_imin_sle_imm_i32(i32 addrspace(1)* %out, i32 %
 
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ule_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds i32, i32 addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
@@ -271,7 +271,7 @@ define amdgpu_kernel void @v_test_umin_ule_i32(i32 addrspace(1)* %out, i32 addrs
 ; EG: MIN_UINT
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %a.ptr, <3 x i32> addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <3 x i32>, <3 x i32> addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds <3 x i32>, <3 x i32> addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds <3 x i32>, <3 x i32> addrspace(1)* %out, i32 %tid
@@ -305,7 +305,7 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <
 ; EG: MIN_UINT
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ule_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(1)* %a.ptr, <3 x i16> addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <3 x i16>, <3 x i16> addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds <3 x i16>, <3 x i16> addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds <3 x i16>, <3 x i16> addrspace(1)* %out, i32 %tid
@@ -334,7 +334,7 @@ define amdgpu_kernel void @s_test_umin_ule_i32(i32 addrspace(1)* %out, i32 %a, i
 
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %a.ptr, i32 addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i32, i32 addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds i32, i32 addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
@@ -358,7 +358,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i8, i8 addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds i8, i8 addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds i8, i8 addrspace(1)* %out, i32 %tid
@@ -606,7 +606,7 @@ define amdgpu_kernel void @test_imin_sle_i64(i64 addrspace(1)* %out, i64 %a, i64
 ; EG: MIN_INT
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_sle_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %a.ptr, <2 x i16> addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
@@ -631,7 +631,7 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(<2 x i16> addrspace(1)* %out, <
 ; EG: MIN_UINT
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_imin_ule_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %a.ptr, <2 x i16> addrspace(1)* %b.ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %b.ptr, i32 %tid
   %out.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
@@ -643,7 +643,7 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(<2 x i16> addrspace(1)* %out, <
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -13,7 +13,7 @@ declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}fma_f32:
 ; SI: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
@@ -86,7 +86,7 @@ define amdgpu_kernel void @fma_v4f32(<4 x float> addrspace(1)* %out, <4 x float>
 ; FUNC-LABEL: @fma_commute_mul_inline_imm_f32
 ; SI: v_fma_f32 {{v[0-9]+}}, {{v[0-9]+}}, 2.0, {{v[0-9]+}}
 define amdgpu_kernel void @fma_commute_mul_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, float addrspace(1)* %in.a, i32 %tid
   %in.b.gep = getelementptr float, float addrspace(1)* %in.b, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -101,7 +101,7 @@ define amdgpu_kernel void @fma_commute_mul_inline_imm_f32(float addrspace(1)* no
 
 ; FUNC-LABEL: @fma_commute_mul_s_f32
 define amdgpu_kernel void @fma_commute_mul_s_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b, float %b) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %in.a.gep = getelementptr float, float addrspace(1)* %in.a, i32 %tid
   %in.b.gep = getelementptr float, float addrspace(1)* %in.b, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -125,7 +125,7 @@ define amdgpu_kernel void @fma_commute_mul_s_f32(float addrspace(1)* noalias %ou
 ; GFX906: v_fma_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
 define amdgpu_kernel void @fold_inline_imm_into_fmac_src2_f32(float addrspace(1)* %out, float addrspace(1)* %a, float addrspace(1)* %b) nounwind {
 bb:
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %gep.a = getelementptr inbounds float, float addrspace(1)* %a, i64 %tid.ext
   %gep.b = getelementptr inbounds float, float addrspace(1)* %b, i64 %tid.ext
