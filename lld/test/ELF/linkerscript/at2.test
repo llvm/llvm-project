@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/at2.s -o %t.o
 # RUN: ld.lld -o %t.exe %t.o --script %s
-# RUN: llvm-readobj -l %t.exe | FileCheck %s
+# RUN: llvm-readelf -l %t.exe | FileCheck %s
 # RUN: llvm-objdump -section-headers %t.exe | FileCheck %s --check-prefix=SECTIONS
 
 MEMORY {
@@ -19,33 +19,9 @@ SECTIONS {
  .bar3 : { *(.bar3) } > AW AT >RAM
 }
 
-# CHECK:      ProgramHeaders [
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x1000
-# CHECK-NEXT:     VirtualAddress: 0x2000
-# CHECK-NEXT:     PhysicalAddress: 0x6000
-# CHECK-NEXT:     FileSize: 16
-# CHECK-NEXT:     MemSize: 16
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment:
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x2000
-# CHECK-NEXT:     VirtualAddress: 0x3000
-# CHECK-NEXT:     PhysicalAddress: 0x7000
-# CHECK-NEXT:     FileSize: 24
-# CHECK-NEXT:     MemSize: 24
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_W
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 4096
-# CHECK-NEXT:   }
+# CHECK:      Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD  0x001000 0x0000000000002000 0x0000000000006000 0x000010 0x000010 R E 0x1000
+# CHECK-NEXT: LOAD  0x002000 0x0000000000003000 0x0000000000007000 0x000018 0x000018 RW  0x1000
 
 # SECTIONS:      Sections:
 # SECTIONS-NEXT: Idx Name          Size     VMA
