@@ -111,11 +111,47 @@ struct OpenMPOpt {
                       << " functions\n");
 
     Changed |= deduplicateRuntimeCalls();
+    Changed |= deleteParallelRegions();
 
     return Changed;
   }
 
 private:
+  /// Try to delete parallel regions if possible
+  bool deleteParallelRegions() {
+    const unsigned CallbackCalleeOperand = 2;
+
+    RuntimeFunctionInfo &RFI = RFIs[OMPRTL___kmpc_fork_call];
+    if (!RFI.Declaration)
+      return false;
+
+    bool Changed = false;
+    auto DeleteCallCB = [&](Use &U, Function &) {
+      CallInst *CI = getCallIfRegularCall(U);
+      if (!CI)
+        return false;
+      auto *Fn = dyn_cast<Function>(
+          CI->getArgOperand(CallbackCalleeOperand)->stripPointerCasts());
+      if (!Fn)
+        return false;
+      if (!Fn->onlyReadsMemory())
+        return false;
+      if (!Fn->hasFnAttribute(Attribute::WillReturn))
+        return false;
+
+      LLVM_DEBUG(dbgs() << TAG << "Delete read-only parallel region in "
+                        << CI->getCaller()->getName() << "\n");
+      CGUpdater.removeCallSite(*CI);
+      CI->eraseFromParent();
+      Changed = true;
+      return true;
+    };
+
+    RFI.foreachUse(DeleteCallCB);
+
+    return Changed;
+  }
+
   /// Try to eliminiate runtime calls by reusing existing ones.
   bool deduplicateRuntimeCalls() {
     bool Changed = false;
