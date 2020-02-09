@@ -4,6 +4,7 @@ static_library("IPO") {
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",
