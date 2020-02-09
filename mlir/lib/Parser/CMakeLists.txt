@@ -1,4 +1,4 @@
-add_llvm_library(MLIRParser
+add_mlir_library(MLIRParser
   Lexer.cpp
   Parser.cpp
   Token.cpp

@@ -12,7 +12,7 @@ set(LLVM_OPTIONAL_SOURCES
   Verifier.cpp
   )
 
-add_llvm_library(MLIRAnalysis
+add_mlir_library(MLIRAnalysis
   CallGraph.cpp
   InferTypeOpInterface.cpp
   Liveness.cpp
@@ -35,7 +35,7 @@ add_llvm_library(MLIRAnalysis
   LLVMSupport
   )
 
-add_llvm_library(MLIRLoopAnalysis
+add_mlir_library(MLIRLoopAnalysis
   AffineAnalysis.cpp
   AffineStructures.cpp
   LoopAnalysis.cpp
