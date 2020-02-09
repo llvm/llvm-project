@@ -1,7 +1,6 @@
 set(SOURCES
   ARCMigrate.cpp
   BuildSystem.cpp
-  CDependencies.cpp
   CIndex.cpp
   CIndexCXX.cpp
   CIndexCodeCompletion.cpp
@@ -20,7 +19,6 @@ set(SOURCES
   CXStoredDiagnostic.cpp
   CXString.cpp
   CXType.cpp
-  Driver.cpp
   Indexing.cpp
   FatalErrorHandler.cpp
 
@@ -42,7 +40,6 @@ set(LIBS
   clangASTMatchers
   clangAPINotes
   clangBasic
-  clangDependencyScanning
   clangDriver
   clangFrontend
   clangIndex

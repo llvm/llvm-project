@@ -109,9 +109,6 @@ public:
   /// The name of the umbrella entry, as written in the module map.
   std::string UmbrellaAsWritten;
 
-  // The path to the umbrella entry relative to the root module's \c Directory.
-  std::string UmbrellaRelativeToRootModuleDirectory;
-
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
@@ -159,7 +156,6 @@ public:
   /// file.
   struct Header {
     std::string NameAsWritten;
-    std::string PathRelativeToRootModuleDirectory;
     const FileEntry *Entry;
 
     explicit operator bool() { return Entry; }
@@ -169,7 +165,6 @@ public:
   /// file.
   struct DirectoryName {
     std::string NameAsWritten;
-    std::string PathRelativeToRootModuleDirectory;
     const DirectoryEntry *Entry;
 
     explicit operator bool() { return Entry; }
@@ -496,8 +491,7 @@ public:
   /// module.
   Header getUmbrellaHeader() const {
     if (auto *E = Umbrella.dyn_cast<const FileEntry *>())
-      return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    E};
+      return Header{UmbrellaAsWritten, E};
     return Header{};
   }
 

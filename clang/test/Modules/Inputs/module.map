@@ -475,8 +475,3 @@ module template_nontrivial1 {
   header "template-nontrivial1.h"
   export *
 }
-
-module objc_redef_indirect {
-  header "objc_redef_indirect.h"
-  export *
-}
