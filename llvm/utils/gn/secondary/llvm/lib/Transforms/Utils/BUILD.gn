@@ -13,6 +13,7 @@ static_library("Utils") {
     "BreakCriticalEdges.cpp",
     "BuildLibCalls.cpp",
     "BypassSlowDivision.cpp",
+    "CallGraphUpdater.cpp",
     "CallPromotionUtils.cpp",
     "CanonicalizeAliases.cpp",
     "CloneFunction.cpp",

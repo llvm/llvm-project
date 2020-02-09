@@ -249,6 +249,7 @@ def ReduceReturnOp :
   }];
 
   let arguments = (ins AnyType:$result);
+  let assemblyFormat = "$result attr-dict `:` type($result)";
 }
 
 def TerminatorOp : Loop_Op<"terminator", [Terminator]> {

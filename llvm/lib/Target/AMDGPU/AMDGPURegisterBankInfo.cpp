@@ -203,6 +203,7 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
     assert(&getRegBank(AMDGPU::SGPRRegBankID) == &AMDGPU::SGPRRegBank &&
            &getRegBank(AMDGPU::VGPRRegBankID) == &AMDGPU::VGPRRegBank &&
            &getRegBank(AMDGPU::AGPRRegBankID) == &AMDGPU::AGPRRegBank);
+    (void)this;
   };
 
   llvm::call_once(InitializeRegisterBankFlag, InitializeRegisterBankOnce);

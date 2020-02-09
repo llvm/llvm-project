@@ -87,57 +87,6 @@ private:
   std::unique_ptr<BuilderType> builder;
 };
 
-enum class IterType { Parallel, Reduction };
-
-inline StringRef toString(IterType t) {
-  switch (t) {
-  case IterType::Parallel:
-    return getParallelIteratorTypeName();
-  case IterType::Reduction:
-    return getReductionIteratorTypeName();
-  }
-  llvm_unreachable("Unsupported IterType");
-}
-
-/// A StructuredIndexed represents an indexable quantity that is either:
-/// 1. a captured value, which is suitable for buffer and tensor operands, or;
-/// 2. a captured type, which is suitable for tensor return values.
-///
-/// A StructuredIndexed itself is indexed and passed to `makeGenericLinalgOp`.
-/// It enable an idiomatic syntax for index expressions such as:
-///
-/// ```
-///      StructuredIndexed A(buffer_or_tensor_value), B(buffer_or_tensor_value),
-///        C(buffer_value_or_tensor_type);
-///      makeGenericLinalgOp({A({m, n}), B({k, n})}, {C({m, n})}, ... );
-/// ```
-struct StructuredIndexed : public ValueHandle {
-  StructuredIndexed(Type type) : ValueHandle(type) {}
-  StructuredIndexed(Value value) : ValueHandle(value) {}
-  StructuredIndexed(ValueHandle valueHandle) : ValueHandle(valueHandle) {}
-  StructuredIndexed operator()(ArrayRef<AffineExpr> indexings) {
-    return StructuredIndexed(*this, indexings);
-  }
-
-  ArrayRef<AffineExpr> getExprs() { return exprs; }
-
-private:
-  StructuredIndexed(Type t, ArrayRef<AffineExpr> indexings)
-      : ValueHandle(t), exprs(indexings.begin(), indexings.end()) {
-    assert(t.isa<RankedTensorType>() && "RankedTensor expected");
-  }
-  StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
-      : ValueHandle(v), exprs(indexings.begin(), indexings.end()) {
-    assert((v.getType().isa<MemRefType>() ||
-            v.getType().isa<RankedTensorType>()) &&
-           "MemRef or RankedTensor expected");
-  }
-  StructuredIndexed(ValueHandle vh, ArrayRef<AffineExpr> indexings)
-      : ValueHandle(vh), exprs(indexings.begin(), indexings.end()) {}
-
-  SmallVector<AffineExpr, 4> exprs;
-};
-
 inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 
 /// Build a `linalg.generic` op with the specified `inputs`, `outputs` and
@@ -157,7 +106,7 @@ inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 /// restriction output tensor results would need to be reordered, which would
 /// result in surprising behavior when combined with region definition.
 Operation *makeGenericLinalgOp(
-    ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
+    ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
     function_ref<void(ArrayRef<BlockArgument>)> regionBuilder =
         defaultRegionBuilder,

@@ -488,41 +488,6 @@ namespace {
 // Common parsers and printers
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseBitFieldExtractOp(OpAsmParser &parser,
-                                          OperationState &state) {
-  SmallVector<OpAsmParser::OperandType, 3> operandInfo;
-  Type baseType;
-  Type offsetType;
-  Type countType;
-  auto loc = parser.getCurrentLocation();
-
-  if (parser.parseOperandList(operandInfo, 3) || parser.parseColon() ||
-      parser.parseType(baseType) || parser.parseComma() ||
-      parser.parseType(offsetType) || parser.parseComma() ||
-      parser.parseType(countType) ||
-      parser.resolveOperands(operandInfo, {baseType, offsetType, countType},
-                             loc, state.operands)) {
-    return failure();
-  }
-  state.addTypes(baseType);
-  return success();
-}
-
-static void printBitFieldExtractOp(Operation *op, OpAsmPrinter &printer) {
-  printer << op->getName() << ' ' << op->getOperands() << " : "
-          << op->getOperandTypes();
-}
-
-static LogicalResult verifyBitFieldExtractOp(Operation *op) {
-  if (op->getOperand(0).getType() != op->getResult(0).getType()) {
-    return op->emitError("expected the same type for the first operand and "
-                         "result, but provided ")
-           << op->getOperand(0).getType() << " and "
-           << op->getResult(0).getType();
-  }
-  return success();
-}
-
 // Parses an atomic update op. If the update op does not take a value (like
 // AtomicIIncrement) `hasValue` must be false.
 static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
@@ -666,19 +631,6 @@ static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
           "cluster size operand must be a power of two");
   }
   return success();
-}
-
-// Parses an op that has no inputs and no outputs.
-static ParseResult parseNoIOOp(OpAsmParser &parser, OperationState &state) {
-  if (parser.parseOptionalAttrDict(state.attributes))
-    return failure();
-  return success();
-}
-
-// Prints an op that has no inputs and no outputs.
-static void printNoIOOp(Operation *op, OpAsmPrinter &printer) {
-  printer << op->getName();
-  printer.printOptionalAttrDict(op->getAttrs());
 }
 
 static ParseResult parseUnaryOp(OpAsmParser &parser, OperationState &state) {

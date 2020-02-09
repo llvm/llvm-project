@@ -252,6 +252,32 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
+define <16 x i8> @combine_shuffle_proti_v2i64(<2 x i64> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotq $16, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 48, i64 48>)
+  %2 = bitcast <2 x i64> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
+
+define <16 x i8> @combine_shuffle_proti_v4i32(<4 x i32> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotd $8, %xmm0, %xmm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
+  %2 = bitcast <4 x i32> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
 define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X86-LABEL: buildvector_v4f32_0404:
 ; X86:       # %bb.0:

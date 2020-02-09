@@ -285,14 +285,14 @@ public:
   Attribute parseDecOrHexAttr(Type type, bool isNegative);
 
   /// Parse an opaque elements attribute.
-  Attribute parseOpaqueElementsAttr();
+  Attribute parseOpaqueElementsAttr(Type attrType);
 
   /// Parse a dense elements attribute.
-  Attribute parseDenseElementsAttr();
-  ShapedType parseElementsLiteralType();
+  Attribute parseDenseElementsAttr(Type attrType);
+  ShapedType parseElementsLiteralType(Type type);
 
   /// Parse a sparse elements attribute.
-  Attribute parseSparseElementsAttr();
+  Attribute parseSparseElementsAttr(Type attrType);
 
   //===--------------------------------------------------------------------===//
   // Location Parsing
@@ -1505,7 +1505,7 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse a dense elements attribute.
   case Token::kw_dense:
-    return parseDenseElementsAttr();
+    return parseDenseElementsAttr(type);
 
   // Parse a dictionary attribute.
   case Token::l_brace: {
@@ -1543,11 +1543,11 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an opaque elements attribute.
   case Token::kw_opaque:
-    return parseOpaqueElementsAttr();
+    return parseOpaqueElementsAttr(type);
 
   // Parse a sparse elements attribute.
   case Token::kw_sparse:
-    return parseSparseElementsAttr();
+    return parseSparseElementsAttr(type);
 
   // Parse a string attribute.
   case Token::string: {
@@ -1783,7 +1783,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
 }
 
 /// Parse an opaque elements attribute.
-Attribute Parser::parseOpaqueElementsAttr() {
+Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   consumeToken(Token::kw_opaque);
   if (parseToken(Token::less, "expected '<' after 'opaque'"))
     return nullptr;
@@ -1816,11 +1816,10 @@ Attribute Parser::parseOpaqueElementsAttr() {
     return (emitError("opaque string only contains hex digits"), nullptr);
 
   consumeToken(Token::string);
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
 
@@ -2086,7 +2085,7 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
 }
 
 /// Parse a dense elements attribute.
-Attribute Parser::parseDenseElementsAttr() {
+Attribute Parser::parseDenseElementsAttr(Type attrType) {
   consumeToken(Token::kw_dense);
   if (parseToken(Token::less, "expected '<' after 'dense'"))
     return nullptr;
@@ -2096,12 +2095,11 @@ Attribute Parser::parseDenseElementsAttr() {
   if (literalParser.parse())
     return nullptr;
 
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
   auto typeLoc = getToken().getLoc();
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
   return literalParser.getAttr(typeLoc, type);
@@ -2112,10 +2110,14 @@ Attribute Parser::parseDenseElementsAttr() {
 ///   elements-literal-type ::= vector-type | ranked-tensor-type
 ///
 /// This method also checks the type has static shape.
-ShapedType Parser::parseElementsLiteralType() {
-  auto type = parseType();
-  if (!type)
-    return nullptr;
+ShapedType Parser::parseElementsLiteralType(Type type) {
+  // If the user didn't provide a type, parse the colon type for the literal.
+  if (!type) {
+    if (parseToken(Token::colon, "expected ':'"))
+      return nullptr;
+    if (!(type = parseType()))
+      return nullptr;
+  }
 
   if (!type.isa<RankedTensorType>() && !type.isa<VectorType>()) {
     emitError("elements literal must be a ranked tensor or vector type");
@@ -2130,7 +2132,7 @@ ShapedType Parser::parseElementsLiteralType() {
 }
 
 /// Parse a sparse elements attribute.
-Attribute Parser::parseSparseElementsAttr() {
+Attribute Parser::parseSparseElementsAttr(Type attrType) {
   consumeToken(Token::kw_sparse);
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
@@ -2150,11 +2152,10 @@ Attribute Parser::parseSparseElementsAttr() {
   if (valuesParser.parse())
     return nullptr;
 
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
 
