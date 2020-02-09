@@ -616,6 +616,9 @@ A variable is an entity that has been registered on the operation itself, i.e.
 an argument(attribute or operand), result, etc. In the `CallOp` example above,
 the variables would be `$callee`  and `$args`.
 
+Attribute variables are printed with their respective value type, unless that
+value type is buildable. In those cases, the type of the attribute is elided.
+
 #### Requirements
 
 The format specification has a certain set of requirements that must be adhered

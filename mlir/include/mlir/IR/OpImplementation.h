@@ -58,6 +58,10 @@ public:
   virtual void printType(Type type) = 0;
   virtual void printAttribute(Attribute attr) = 0;
 
+  /// Print the given attribute without its type. The corresponding parser must
+  /// provide a valid type for the attribute.
+  virtual void printAttributeWithoutType(Attribute attr) = 0;
+
   /// Print a successor, and use list, of a terminator operation given the
   /// terminator and the successor index.
   virtual void printSuccessorAndUseList(Operation *term, unsigned index) = 0;

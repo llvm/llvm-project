@@ -855,10 +855,21 @@ public:
     mlir::interleaveComma(c, os, each_fn);
   }
 
-  /// Print the given attribute. If 'mayElideType' is true, some attributes are
-  /// printed without the type when the type matches the default used in the
-  /// parser (for example i64 is the default for integer attributes).
-  void printAttribute(Attribute attr, bool mayElideType = false);
+  /// This enum descripes the different kinds of elision for the type of an
+  /// attribute when printing it.
+  enum class AttrTypeElision {
+    /// The type must not be elided,
+    Never,
+    /// The type may be elided when it matches the default used in the parser
+    /// (for example i64 is the default for integer attributes).
+    May,
+    /// The type must be elided.
+    Must
+  };
+
+  /// Print the given attribute.
+  void printAttribute(Attribute attr,
+                      AttrTypeElision typeElision = AttrTypeElision::Never);
 
   void printType(Type type);
   void printLocation(LocationAttr loc);
@@ -1185,7 +1196,8 @@ static void printElidedElementsAttr(raw_ostream &os) {
   os << R"(opaque<"", "0xDEADBEEF">)";
 }
 
-void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
+void ModulePrinter::printAttribute(Attribute attr,
+                                   AttrTypeElision typeElision) {
   if (!attr) {
     os << "<<NULL ATTRIBUTE>>";
     return;
@@ -1200,6 +1212,7 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
     }
   }
 
+  auto attrType = attr.getType();
   switch (attr.getKind()) {
   default:
     return printDialectAttribute(attr);
@@ -1236,12 +1249,11 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
   case StandardAttributes::Integer: {
     auto intAttr = attr.cast<IntegerAttr>();
     // Print all integer attributes as signed unless i1.
-    bool isSigned = intAttr.getType().isIndex() ||
-                    intAttr.getType().getIntOrFloatBitWidth() != 1;
+    bool isSigned = attrType.isIndex() || attrType.getIntOrFloatBitWidth() != 1;
     intAttr.getValue().print(os, isSigned);
 
     // IntegerAttr elides the type if I64.
-    if (mayElideType && intAttr.getType().isInteger(64))
+    if (typeElision == AttrTypeElision::May && attrType.isInteger(64))
       return;
     break;
   }
@@ -1250,7 +1262,7 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
     printFloatValue(floatAttr.getValue(), os);
 
     // FloatAttr elides the type if F64.
-    if (mayElideType && floatAttr.getType().isF64())
+    if (typeElision == AttrTypeElision::May && attrType.isF64())
       return;
     break;
   }
@@ -1262,7 +1274,7 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
   case StandardAttributes::Array:
     os << '[';
     interleaveComma(attr.cast<ArrayAttr>().getValue(), [&](Attribute attr) {
-      printAttribute(attr, /*mayElideType=*/true);
+      printAttribute(attr, AttrTypeElision::May);
     });
     os << ']';
     break;
@@ -1339,9 +1351,8 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
     break;
   }
 
-  // Print the type if it isn't a 'none' type.
-  auto attrType = attr.getType();
-  if (!attrType.isa<NoneType>()) {
+  // Don't print the type if we must elide it, or if it is a None type.
+  if (typeElision != AttrTypeElision::Must && !attrType.isa<NoneType>()) {
     os << " : ";
     printType(attrType);
   }
@@ -1902,6 +1913,12 @@ public:
   /// Print the given attribute.
   void printAttribute(Attribute attr) override {
     ModulePrinter::printAttribute(attr);
+  }
+
+  /// Print the given attribute without its type. The corresponding parser must
+  /// provide a valid type for the attribute.
+  void printAttributeWithoutType(Attribute attr) override {
+    ModulePrinter::printAttribute(attr, AttrTypeElision::Must);
   }
 
   /// Print the ID for the given value.
