@@ -103,7 +103,7 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
             name = child.attrib.get("name")
             libraries_svr4_names.append(os.path.realpath(name))
         for lib in self.get_expected_libs():
-            self.assertIn(self.getBuildDir() + "/" + lib, libraries_svr4_names)
+            self.assertIn(os.path.realpath(self.getBuildDir() + "/" + lib), libraries_svr4_names)
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "netbsd"])
