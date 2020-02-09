@@ -1,4 +1,4 @@
-add_llvm_library(MLIRTransformUtils
+add_mlir_library(MLIRTransformUtils
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
   InliningUtils.cpp
