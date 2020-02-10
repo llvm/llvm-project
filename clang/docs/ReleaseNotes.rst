@@ -427,10 +427,24 @@ libclang
 Static Analyzer
 ---------------
 
-- The Clang analyzer checker ``DeadStores`` gets a new option called
-  ``WarnForDeadNestedAssignments`` to detect nested dead assignments
-  (enabled by default).
-- ...
+- New checker: ``alpha.cplusplus.PlacementNew`` to detect whether the storage
+  provided for default placement new is sufficiently large.
+
+- New checker: ``fuchsia.HandleChecker`` to detect leaks related to Fuchsia
+  handles.
+
+- New checker: ``security.insecureAPI.decodeValueOfObjCType`` warns about
+  potential buffer overflows when using ``[NSCoder decodeValueOfObjCType:at:]``
+
+- ``deadcode.DeadStores`` now warns about nested dead stores.
+
+- Condition values that are relevant to the occurance of a bug are far better
+  explained in bug reports.
+
+- Despite still being at an alpha stage, checkers implementing taint analyses
+  and C++ iterator rules were improved greatly.
+
+- Numerous smaller fixes.
 
 .. _release-notes-ubsan:
 
