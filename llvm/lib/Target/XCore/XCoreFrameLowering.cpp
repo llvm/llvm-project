@@ -412,11 +412,9 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
   } // else Don't erase the return instruction.
 }
 
-bool XCoreFrameLowering::
-spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MI,
-                          const std::vector<CalleeSavedInfo> &CSI,
-                          const TargetRegisterInfo *TRI) const {
+bool XCoreFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return true;
 
@@ -429,8 +427,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
-  for (std::vector<CalleeSavedInfo>::const_iterator it = CSI.begin();
-                                                    it != CSI.end(); ++it) {
+  for (auto it = CSI.begin(); it != CSI.end(); ++it) {
     unsigned Reg = it->getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitPrologue");

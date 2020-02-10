@@ -113,7 +113,7 @@ public:
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
-                                 const std::vector<CalleeSavedInfo> &CSI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
   /// This function will assign callee saved gprs to volatile vector registers
   /// for prologue spills when applicable. It returns false if there are any
