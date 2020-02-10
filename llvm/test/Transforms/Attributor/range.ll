@@ -639,21 +639,10 @@ bb13:                                             ; preds = %bb12, %bb11
 }
 
 define dso_local i1 @select(i32 %a) local_unnamed_addr #0 {
-; OLD_PM-LABEL: define {{[^@]+}}@select
-; OLD_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
-; OLD_PM-NEXT:  entry:
-; OLD_PM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; OLD_PM-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; OLD_PM-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; OLD_PM-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; OLD_PM-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; OLD_PM-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; OLD_PM-NEXT:    ret i1 [[CMP6]]
-;
-; NEW_PM-LABEL: define {{[^@]+}}@select
-; NEW_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
-; NEW_PM-NEXT:  entry:
-; NEW_PM-NEXT:    ret i1 false
+; CHECK-LABEL: define {{[^@]+}}@select
+; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
@@ -666,22 +655,10 @@ entry:
 }
 
 define dso_local i32 @select_zext(i32 %a) local_unnamed_addr #0 {
-; OLD_PM-LABEL: define {{[^@]+}}@select_zext
-; OLD_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
-; OLD_PM-NEXT:  entry:
-; OLD_PM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; OLD_PM-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; OLD_PM-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; OLD_PM-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; OLD_PM-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; OLD_PM-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; OLD_PM-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
-; OLD_PM-NEXT:    ret i32 [[DOT13]]
-;
-; NEW_PM-LABEL: define {{[^@]+}}@select_zext
-; NEW_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
-; NEW_PM-NEXT:  entry:
-; NEW_PM-NEXT:    ret i32 0
+; CHECK-LABEL: define {{[^@]+}}@select_zext
+; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
