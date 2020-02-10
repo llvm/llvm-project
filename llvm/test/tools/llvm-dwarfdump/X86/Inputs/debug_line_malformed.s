@@ -383,6 +383,46 @@
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_md5_end1:
 
+# V5 invalid directory content description has unsupported form.
+.long   .Linvalid_dir_form_end0-.Linvalid_dir_form_start0   # Length of Unit
+.Linvalid_dir_form_start0:
+.short  5               # DWARF version number
+.byte   8               # Address Size
+.byte   0               # Segment Selector Size
+.long   .Linvalid_dir_form_header_end0 - .Linvalid_dir_form_params0
+.Linvalid_dir_form_params0:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+# Directory table format
+.byte   2               # Two elements per directory entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+.byte   2               # DW_LNCT_directory_index (ignored)
+.byte   0x7f            # Unknown form
+# Directory table entries
+.byte   2               # 2 directories
+.asciz  "/foo"          # Directory name
+.byte   0xff            # Arbitrary data for unknown form
+.asciz  "/bar"          # Directory name
+.byte   0xff            # Arbitrary data for unknown form
+# File table format
+.byte   1               # 1 element per file entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+# File table entries
+.byte   1               # 1 file
+.asciz  "xyz"           # File names
+.Linvalid_dir_form_header_end0:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xaaaabbbbccccdddd
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Linvalid_dir_form_end0:
+
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)
 .Lunit_good_start:
