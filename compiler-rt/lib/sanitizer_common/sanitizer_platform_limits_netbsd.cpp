@@ -213,6 +213,7 @@ struct urio_command {
 #include <dev/wscons/wsdisplay_usl_io.h>
 #include <fs/autofs/autofs_ioctl.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <glob.h>
 #include <grp.h>
 #include <ifaddrs.h>
@@ -258,9 +259,15 @@ struct urio_command {
 
 // Include these after system headers to avoid name clashes and ambiguities.
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_netbsd.h"
 
 namespace __sanitizer {
+void *__sanitizer_get_link_map_by_dlopen_handle(void* handle) {
+  void *p = nullptr;
+  return internal_dlinfo(handle, RTLD_DI_LINKMAP, &p) == 0 ? p : nullptr;
+}
+
 unsigned struct_utsname_sz = sizeof(struct utsname);
 unsigned struct_stat_sz = sizeof(struct stat);
 unsigned struct_rusage_sz = sizeof(struct rusage);
