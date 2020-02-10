@@ -6189,6 +6189,11 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       if (CI->getOperand(0)->getType()->isIntegerTy())
         return;
 
+    // We can work with select instruction as we traverse their operands
+    // during update.
+    if (isa<SelectInst>(V))
+      return;
+
     // Otherwise we give up.
     indicatePessimisticFixpoint();
 
