@@ -529,8 +529,8 @@ bool SymbolizerProcess::ReadFromSymbolizer(char *buffer, uptr max_length) {
       break;
     if (read_len + 1 == max_length) {
       Report("WARNING: Symbolizer buffer too small\n");
-      buffer[0] = '\0';
-      return false;
+      read_len = 0;
+      break;
     }
   }
   buffer[read_len] = '\0';
