@@ -109,7 +109,7 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
 static void dumpExpression(raw_ostream &OS, ArrayRef<uint8_t> Data,
                            bool IsLittleEndian, unsigned AddressSize,
                            const MCRegisterInfo *MRI, DWARFUnit *U) {
-  DWARFDataExtractor Extractor(toStringRef(Data), IsLittleEndian, AddressSize);
+  DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
   DWARFExpression(Extractor, AddressSize).print(OS, MRI, U);
 }
 

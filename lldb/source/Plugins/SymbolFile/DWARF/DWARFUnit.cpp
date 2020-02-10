@@ -468,8 +468,8 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
 std::unique_ptr<llvm::DWARFLocationTable>
 DWARFUnit::GetLocationTable(const DataExtractor &data) const {
   llvm::DWARFDataExtractor llvm_data(
-      toStringRef(data.GetData()),
-      data.GetByteOrder() == lldb::eByteOrderLittle, data.GetAddressByteSize());
+      data.GetData(), data.GetByteOrder() == lldb::eByteOrderLittle,
+      data.GetAddressByteSize());
 
   if (m_is_dwo || GetVersion() >= 5)
     return std::make_unique<llvm::DWARFDebugLoclists>(llvm_data, GetVersion());
