@@ -93,6 +93,55 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunction(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
+void OpenMPIRBuilder::finalize() {
+  for (OutlineInfo &OI : OutlineInfos) {
+    assert(!OI.Blocks.empty() &&
+           "Outlined regions should have at least a single block!");
+    BasicBlock *RegEntryBB = OI.Blocks.front();
+    Function *OuterFn = RegEntryBB->getParent();
+    CodeExtractorAnalysisCache CEAC(*OuterFn);
+    CodeExtractor Extractor(OI.Blocks, /* DominatorTree */ nullptr,
+                            /* AggregateArgs */ false,
+                            /* BlockFrequencyInfo */ nullptr,
+                            /* BranchProbabilityInfo */ nullptr,
+                            /* AssumptionCache */ nullptr,
+                            /* AllowVarArgs */ true,
+                            /* AllowAlloca */ true,
+                            /* Suffix */ ".omp_par");
+
+    LLVM_DEBUG(dbgs() << "Before     outlining: " << *OuterFn << "\n");
+
+    Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
+
+    LLVM_DEBUG(dbgs() << "After      outlining: " << *OuterFn << "\n");
+    LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
+
+    // For compability with the clang CG we move the outlined function after the
+    // one with the parallel region.
+    OutlinedFn->removeFromParent();
+    M.getFunctionList().insertAfter(OuterFn->getIterator(), OutlinedFn);
+
+    // Remove the artificial entry introduced by the extractor right away, we
+    // made our own entry block after all.
+    {
+      BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
+      assert(ArtificialEntry.getUniqueSuccessor() == RegEntryBB);
+      assert(RegEntryBB->getUniquePredecessor() == &ArtificialEntry);
+      RegEntryBB->moveBefore(&ArtificialEntry);
+      ArtificialEntry.eraseFromParent();
+    }
+    assert(&OutlinedFn->getEntryBlock() == RegEntryBB);
+    assert(OutlinedFn && OutlinedFn->getNumUses() == 1);
+
+    // Run a user callback, e.g. to add attributes.
+    if (OI.PostOutlineCB)
+      OI.PostOutlineCB(*OutlinedFn);
+  }
+
+  // Allow finalize to be called multiple times.
+  OutlineInfos.clear();
+}
+
 Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
                                          IdentFlag LocFlags) {
   // Enable "C-mode".
@@ -415,17 +464,18 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   // PRegionExitBB          <- A common exit to simplify block collection.
   //
 
-  LLVM_DEBUG(dbgs() << "Before body codegen: " << *UI->getFunction() << "\n");
+  LLVM_DEBUG(dbgs() << "Before body codegen: " << *OuterFn << "\n");
 
   // Let the caller create the body.
   assert(BodyGenCB && "Expected body generation callback!");
   InsertPointTy CodeGenIP(PRegBodyBB, PRegBodyBB->begin());
   BodyGenCB(AllocaIP, CodeGenIP, *PRegPreFiniBB);
 
-  LLVM_DEBUG(dbgs() << "After  body codegen: " << *UI->getFunction() << "\n");
+  LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
+  OutlineInfo OI;
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
-  SmallVector<BasicBlock *, 32> ParallelRegionBlocks, Worklist;
+  SmallVector<BasicBlock *, 32> Worklist;
   ParallelRegionBlockSet.insert(PRegEntryBB);
   ParallelRegionBlockSet.insert(PRegExitBB);
 
@@ -433,14 +483,14 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   Worklist.push_back(PRegEntryBB);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
-    ParallelRegionBlocks.push_back(BB);
+    OI.Blocks.push_back(BB);
     for (BasicBlock *SuccBB : successors(BB))
       if (ParallelRegionBlockSet.insert(SuccBB).second)
         Worklist.push_back(SuccBB);
   }
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
-  CodeExtractor Extractor(ParallelRegionBlocks, /* DominatorTree */ nullptr,
+  CodeExtractor Extractor(OI.Blocks, /* DominatorTree */ nullptr,
                           /* AggregateArgs */ false,
                           /* BlockFrequencyInfo */ nullptr,
                           /* BranchProbabilityInfo */ nullptr,
@@ -455,7 +505,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   Extractor.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands);
 
-  LLVM_DEBUG(dbgs() << "Before privatization: " << *UI->getFunction() << "\n");
+  LLVM_DEBUG(dbgs() << "Before privatization: " << *OuterFn << "\n");
 
   FunctionCallee TIDRTLFn =
       getOrCreateRuntimeFunction(OMPRTL___kmpc_global_thread_num);
@@ -496,55 +546,11 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
     PrivHelper(*Output);
   }
 
-  LLVM_DEBUG(dbgs() << "After  privatization: " << *UI->getFunction() << "\n");
+  LLVM_DEBUG(dbgs() << "After  privatization: " << *OuterFn << "\n");
   LLVM_DEBUG({
-    for (auto *BB : ParallelRegionBlocks)
+    for (auto *BB : OI.Blocks)
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
-
-  // Add some known attributes to the outlined function.
-  Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
-  OutlinedFn->addParamAttr(0, Attribute::NoAlias);
-  OutlinedFn->addParamAttr(1, Attribute::NoAlias);
-  OutlinedFn->addFnAttr(Attribute::NoUnwind);
-  OutlinedFn->addFnAttr(Attribute::NoRecurse);
-
-  LLVM_DEBUG(dbgs() << "After      outlining: " << *UI->getFunction() << "\n");
-  LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
-
-  // For compability with the clang CG we move the outlined function after the
-  // one with the parallel region.
-  OutlinedFn->removeFromParent();
-  M.getFunctionList().insertAfter(OuterFn->getIterator(), OutlinedFn);
-
-  // Remove the artificial entry introduced by the extractor right away, we
-  // made our own entry block after all.
-  {
-    BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
-    assert(ArtificialEntry.getUniqueSuccessor() == PRegEntryBB);
-    assert(PRegEntryBB->getUniquePredecessor() == &ArtificialEntry);
-    PRegEntryBB->moveBefore(&ArtificialEntry);
-    ArtificialEntry.eraseFromParent();
-  }
-  LLVM_DEBUG(dbgs() << "PP Outlined function: " << *OutlinedFn << "\n");
-  assert(&OutlinedFn->getEntryBlock() == PRegEntryBB);
-
-  assert(OutlinedFn && OutlinedFn->getNumUses() == 1);
-  assert(OutlinedFn->arg_size() >= 2 &&
-         "Expected at least tid and bounded tid as arguments");
-  unsigned NumCapturedVars = OutlinedFn->arg_size() - /* tid & bounded tid */ 2;
-
-  CallInst *CI = cast<CallInst>(OutlinedFn->user_back());
-  CI->getParent()->setName("omp_parallel");
-  Builder.SetInsertPoint(CI);
-
-  // Build call __kmpc_fork_call(Ident, n, microtask, var1, .., varn);
-  Value *ForkCallArgs[] = {Ident, Builder.getInt32(NumCapturedVars),
-                           Builder.CreateBitCast(OutlinedFn, ParallelTaskPtr)};
-
-  SmallVector<Value *, 16> RealArgs;
-  RealArgs.append(std::begin(ForkCallArgs), std::end(ForkCallArgs));
-  RealArgs.append(CI->arg_begin() + /* tid & bound tid */ 2, CI->arg_end());
 
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_fork_call);
   if (auto *F = dyn_cast<llvm::Function>(RTLFn.getCallee())) {
@@ -558,59 +564,86 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       //    callback callee.
       F->addMetadata(
           llvm::LLVMContext::MD_callback,
-          *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                      2, {-1, -1},
-                                      /* VarArgsArePassed */ true)}));
+          *llvm::MDNode::get(
+              Ctx, {MDB.createCallbackEncoding(2, {-1, -1},
+                                               /* VarArgsArePassed */ true)}));
     }
   }
 
-  Builder.CreateCall(RTLFn, RealArgs);
+  OI.PostOutlineCB = [=](Function &OutlinedFn) {
+    // Add some known attributes.
+    OutlinedFn.addParamAttr(0, Attribute::NoAlias);
+    OutlinedFn.addParamAttr(1, Attribute::NoAlias);
+    OutlinedFn.addFnAttr(Attribute::NoUnwind);
+    OutlinedFn.addFnAttr(Attribute::NoRecurse);
 
-  LLVM_DEBUG(dbgs() << "With fork_call placed: "
-                    << *Builder.GetInsertBlock()->getParent() << "\n");
+    assert(OutlinedFn.arg_size() >= 2 &&
+           "Expected at least tid and bounded tid as arguments");
+    unsigned NumCapturedVars =
+        OutlinedFn.arg_size() - /* tid & bounded tid */ 2;
 
-  InsertPointTy AfterIP(UI->getParent(), UI->getParent()->end());
-  InsertPointTy ExitIP(PRegExitBB, PRegExitBB->end());
-  UI->eraseFromParent();
+    CallInst *CI = cast<CallInst>(OutlinedFn.user_back());
+    CI->getParent()->setName("omp_parallel");
+    Builder.SetInsertPoint(CI);
 
-  // Initialize the local TID stack location with the argument value.
-  Builder.SetInsertPoint(PrivTID);
-  Function::arg_iterator OutlinedAI = OutlinedFn->arg_begin();
-  Builder.CreateStore(Builder.CreateLoad(OutlinedAI), PrivTIDAddr);
+    // Build call __kmpc_fork_call(Ident, n, microtask, var1, .., varn);
+    Value *ForkCallArgs[] = {
+        Ident, Builder.getInt32(NumCapturedVars),
+        Builder.CreateBitCast(&OutlinedFn, ParallelTaskPtr)};
 
-  // If no "if" clause was present we do not need the call created during
-  // outlining, otherwise we reuse it in the serialized parallel region.
-  if (!ElseTI) {
-    CI->eraseFromParent();
-  } else {
+    SmallVector<Value *, 16> RealArgs;
+    RealArgs.append(std::begin(ForkCallArgs), std::end(ForkCallArgs));
+    RealArgs.append(CI->arg_begin() + /* tid & bound tid */ 2, CI->arg_end());
 
-    // If an "if" clause was present we are now generating the serialized
-    // version into the "else" branch.
-    Builder.SetInsertPoint(ElseTI);
+    Builder.CreateCall(RTLFn, RealArgs);
 
-    // Build calls __kmpc_serialized_parallel(&Ident, GTid);
-    Value *SerializedParallelCallArgs[] = {Ident, ThreadID};
-    Builder.CreateCall(
-        getOrCreateRuntimeFunction(OMPRTL___kmpc_serialized_parallel),
-        SerializedParallelCallArgs);
-
-    // OutlinedFn(&GTid, &zero, CapturedStruct);
-    CI->removeFromParent();
-    Builder.Insert(CI);
-
-    // __kmpc_end_serialized_parallel(&Ident, GTid);
-    Value *EndArgs[] = {Ident, ThreadID};
-    Builder.CreateCall(
-        getOrCreateRuntimeFunction(OMPRTL___kmpc_end_serialized_parallel),
-        EndArgs);
-
-    LLVM_DEBUG(dbgs() << "With serialized parallel region: "
+    LLVM_DEBUG(dbgs() << "With fork_call placed: "
                       << *Builder.GetInsertBlock()->getParent() << "\n");
-  }
+
+    InsertPointTy ExitIP(PRegExitBB, PRegExitBB->end());
+
+    // Initialize the local TID stack location with the argument value.
+    Builder.SetInsertPoint(PrivTID);
+    Function::arg_iterator OutlinedAI = OutlinedFn.arg_begin();
+    Builder.CreateStore(Builder.CreateLoad(OutlinedAI), PrivTIDAddr);
+
+    // If no "if" clause was present we do not need the call created during
+    // outlining, otherwise we reuse it in the serialized parallel region.
+    if (!ElseTI) {
+      CI->eraseFromParent();
+    } else {
+
+      // If an "if" clause was present we are now generating the serialized
+      // version into the "else" branch.
+      Builder.SetInsertPoint(ElseTI);
+
+      // Build calls __kmpc_serialized_parallel(&Ident, GTid);
+      Value *SerializedParallelCallArgs[] = {Ident, ThreadID};
+      Builder.CreateCall(
+          getOrCreateRuntimeFunction(OMPRTL___kmpc_serialized_parallel),
+          SerializedParallelCallArgs);
+
+      // OutlinedFn(&GTid, &zero, CapturedStruct);
+      CI->removeFromParent();
+      Builder.Insert(CI);
+
+      // __kmpc_end_serialized_parallel(&Ident, GTid);
+      Value *EndArgs[] = {Ident, ThreadID};
+      Builder.CreateCall(
+          getOrCreateRuntimeFunction(OMPRTL___kmpc_end_serialized_parallel),
+          EndArgs);
+
+      LLVM_DEBUG(dbgs() << "With serialized parallel region: "
+                        << *Builder.GetInsertBlock()->getParent() << "\n");
+    }
+
+    for (Instruction *I : ToBeDeleted)
+      I->eraseFromParent();
+  };
 
   // Adjust the finalization stack, verify the adjustment, and call the
-  // finalize function a last time to finalize values between the pre-fini block
-  // and the exit block if we left the parallel "the normal way".
+  // finalize function a last time to finalize values between the pre-fini
+  // block and the exit block if we left the parallel "the normal way".
   auto FiniInfo = FinalizationStack.pop_back_val();
   (void)FiniInfo;
   assert(FiniInfo.DK == OMPD_parallel &&
@@ -618,15 +651,17 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
 
   Instruction *PreFiniTI = PRegPreFiniBB->getTerminator();
   assert(PreFiniTI->getNumSuccessors() == 1 &&
-         PreFiniTI->getSuccessor(0)->size() == 1 &&
-         isa<ReturnInst>(PreFiniTI->getSuccessor(0)->getTerminator()) &&
+         PreFiniTI->getSuccessor(0) == PRegExitBB &&
          "Unexpected CFG structure!");
 
   InsertPointTy PreFiniIP(PRegPreFiniBB, PreFiniTI->getIterator());
   FiniCB(PreFiniIP);
 
-  for (Instruction *I : ToBeDeleted)
-    I->eraseFromParent();
+  InsertPointTy AfterIP(UI->getParent(), UI->getParent()->end());
+  UI->eraseFromParent();
+
+  // Register the outlined info.
+  addOutlineInfo(std::move(OI));
 
   return AfterIP;
 }
