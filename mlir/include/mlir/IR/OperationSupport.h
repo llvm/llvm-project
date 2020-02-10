@@ -56,9 +56,11 @@ class OwningRewritePatternList;
 //===----------------------------------------------------------------------===//
 
 enum class OperationProperty {
-  /// This bit is set for an operation if it is a commutative operation: that
-  /// is a binary operator (two inputs) where "a op b" and "b op a" produce the
-  /// same results.
+  /// This bit is set for an operation if it is a commutative
+  /// operation: that is an operator where order of operands does not
+  /// change the result of the operation.  For example, in a binary
+  /// commutative operation, "a op b" and "b op a" produce the same
+  /// results.
   Commutative = 0x1,
 
   /// This bit is set for operations that have no side effects: that means that

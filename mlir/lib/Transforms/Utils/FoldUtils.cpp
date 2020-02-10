@@ -134,19 +134,18 @@ LogicalResult OperationFolder::tryToFold(
   SmallVector<Attribute, 8> operandConstants;
   SmallVector<OpFoldResult, 8> foldResults;
 
+  // If this is a commutative operation, move constants to be trailing operands.
+  if (op->getNumOperands() >= 2 && op->isCommutative()) {
+    std::stable_partition(
+        op->getOpOperands().begin(), op->getOpOperands().end(),
+        [&](OpOperand &O) { return !matchPattern(O.get(), m_Constant()); });
+  }
+
   // Check to see if any operands to the operation is constant and whether
   // the operation knows how to constant fold itself.
   operandConstants.assign(op->getNumOperands(), Attribute());
   for (unsigned i = 0, e = op->getNumOperands(); i != e; ++i)
     matchPattern(op->getOperand(i), m_Constant(&operandConstants[i]));
-
-  // If this is a commutative binary operation with a constant on the left
-  // side move it to the right side.
-  if (operandConstants.size() == 2 && operandConstants[0] &&
-      !operandConstants[1] && op->isCommutative()) {
-    std::swap(op->getOpOperand(0), op->getOpOperand(1));
-    std::swap(operandConstants[0], operandConstants[1]);
-  }
 
   // Attempt to constant fold the operation.
   if (failed(op->fold(operandConstants, foldResults)))
