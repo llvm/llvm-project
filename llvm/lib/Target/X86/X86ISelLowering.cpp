@@ -45880,6 +45880,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                       TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget) {
   assert(Subtarget.hasAVX() && "AVX assumed for concat_vectors");
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   if (llvm::all_of(Ops, [](SDValue Op) { return Op.isUndef(); }))
     return DAG.getUNDEF(VT);
@@ -45924,7 +45925,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // concat_vectors(scalar_to_vector(x),scalar_to_vector(x)) -> broadcast(x)
     if (Op0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
         (Subtarget.hasAVX2() ||
-         (VT.getScalarSizeInBits() >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
+         (EltSizeInBits >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
   }
@@ -45963,6 +45964,23 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Res = DAG.getNode(X86ISD::VPERMILPI, DL, MVT::v8f32, Res,
                           Op0.getOperand(1));
         return DAG.getBitcast(VT, Res);
+      }
+      break;
+    case X86ISD::VSHLI:
+    case X86ISD::VSRAI:
+    case X86ISD::VSRLI:
+      if (((VT.is256BitVector() && Subtarget.hasInt256()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(1) == Op.getOperand(1);
+          })) {
+        SmallVector<SDValue, 2> Src;
+        for (unsigned i = 0; i != NumOps; ++i)
+          Src.push_back(Ops[i].getOperand(0));
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src),
+                           Op0.getOperand(1));
       }
       break;
     case X86ISD::VROTLI:
