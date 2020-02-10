@@ -1955,6 +1955,46 @@ public:
   }
 };
 
+/// This represents 'release' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush release
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'release' clause.
+class OMPReleaseClause final : public OMPClause {
+public:
+  /// Build 'release' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPReleaseClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_release, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPReleaseClause()
+      : OMPClause(OMPC_release, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_release;
+  }
+};
+
 /// This represents clause 'private' in the '#pragma omp ...' directives.
 ///
 /// \code

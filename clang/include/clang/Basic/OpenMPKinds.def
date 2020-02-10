@@ -259,6 +259,7 @@ OPENMP_CLAUSE(capture, OMPCaptureClause)
 OPENMP_CLAUSE(seq_cst, OMPSeqCstClause)
 OPENMP_CLAUSE(acq_rel, OMPAcqRelClause)
 OPENMP_CLAUSE(acquire, OMPAcquireClause)
+OPENMP_CLAUSE(release, OMPReleaseClause)
 OPENMP_CLAUSE(depend, OMPDependClause)
 OPENMP_CLAUSE(device, OMPDeviceClause)
 OPENMP_CLAUSE(threads, OMPThreadsClause)
@@ -493,6 +494,7 @@ OPENMP_ATOMIC_CLAUSE(capture)
 OPENMP_ATOMIC_CLAUSE(seq_cst)
 OPENMP_ATOMIC_CLAUSE(acq_rel)
 OPENMP_ATOMIC_CLAUSE(acquire)
+OPENMP_ATOMIC_CLAUSE(release)
 
 // Clauses allowed for OpenMP directive 'target'.
 OPENMP_TARGET_CLAUSE(if)
@@ -1092,6 +1094,7 @@ OPENMP_ORDER_KIND(concurrent)
 // Clauses allowed for OpenMP directive 'flush'.
 OPENMP_FLUSH_CLAUSE(acq_rel)
 OPENMP_FLUSH_CLAUSE(acquire)
+OPENMP_FLUSH_CLAUSE(release)
 
 #undef OPENMP_FLUSH_CLAUSE
 #undef OPENMP_ORDER_KIND
