@@ -3,9 +3,9 @@
 ; XUN: llc < %s -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s -check-prefixes=FUNC,GCN,VI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs | FileCheck %s -allow-deprecated-dag-overlap -check-prefixes=FUNC,EG
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-declare i32 @llvm.r600.read.tgid.x() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() #0
 
 define amdgpu_kernel void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
 ; GCN-LABEL: shl_v2i32:
@@ -341,7 +341,7 @@ define amdgpu_kernel void @shl_i16_computed_amount(i16 addrspace(1)* %out, i16 a
 ; EG-NEXT:     MOV * T0.Z, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds i16, i16 addrspace(1)* %out, i32 %tid
   %b_ptr = getelementptr i16, i16 addrspace(1)* %gep, i16 1
@@ -467,7 +467,7 @@ define amdgpu_kernel void @shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> add
 ; EG-NEXT:     OR_INT T0.X, PV.W, PS,
 ; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
   %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %gep, i16 1
@@ -587,7 +587,7 @@ define amdgpu_kernel void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> add
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     MOV T7.X, PV.Y,
 ; EG-NEXT:     MOV * T10.X, T6.X,
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %out, i32 %tid
   %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %gep, i16 1
@@ -905,7 +905,7 @@ define amdgpu_kernel void @v_shl_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)
 ; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
 ; EG-NEXT:     MOV * T1.Y, T0.X,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %tid = call i32 @llvm.r600.read.tgid.x() #0
+  %tid = call i32 @llvm.amdgcn.workgroup.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep.in

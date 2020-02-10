@@ -9,7 +9,7 @@ declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i64 @llvm.cttz.i64(i64, i1) nounwind readnone
 declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1) nounwind readnone
 declare <4 x i32> @llvm.cttz.v4i32(<4 x i32>, i1) nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}s_cttz_zero_undef_i32:
 ; SI: s_load_dword [[VAL:s[0-9]+]],
@@ -33,7 +33,7 @@ define amdgpu_kernel void @s_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out,
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
   %val = load i32, i32 addrspace(1)* %in.gep, align 4
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 true) nounwind readnone
@@ -51,7 +51,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out,
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
   %val = load <2 x i32>, <2 x i32> addrspace(1)* %in.gep, align 8
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %val, i1 true) nounwind readnone
@@ -73,7 +73,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_v2i32(<2 x i32> addrspace(1)* noali
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %valptr, i32 %tid
   %val = load <4 x i32>, <4 x i32> addrspace(1)* %in.gep, align 16
   %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %val, i1 true) nounwind readnone

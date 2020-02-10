@@ -161,7 +161,7 @@ define amdgpu_kernel void @sext_in_reg_i32_to_i64(i64 addrspace(1)* %out, i64 %a
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i1_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -188,7 +188,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_to_i64(i64 addrspace(1)* %out, i64 a
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i8_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -215,7 +215,7 @@ define amdgpu_kernel void @v_sext_in_reg_i8_to_i64(i64 addrspace(1)* %out, i64 a
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i16_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -239,7 +239,7 @@ define amdgpu_kernel void @v_sext_in_reg_i16_to_i64(i64 addrspace(1)* %out, i64 
 ; GCN: v_ashrrev_i32_e32 v[[SHR:[0-9]+]], 31, v[[LO]]
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[SHR]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i32_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -473,7 +473,7 @@ define amdgpu_kernel void @sext_in_reg_to_illegal_type(i16 addrspace(1)* nocaptu
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i1_to_i64_move_use(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 %s.val) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -503,7 +503,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_to_i64_move_use(i64 addrspace(1)* %o
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 ; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 %s.val) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
@@ -562,7 +562,7 @@ define amdgpu_kernel void @s_sext_in_reg_i2_i16(i16 addrspace(1)* %out, i32 addr
 
 ; GCN: ds_write_b16 v{{[0-9]+}}, [[BFE]]
 define amdgpu_kernel void @v_sext_in_reg_i1_i16(i16 addrspace(3)* %out, i16 addrspace(1)* %ptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i16, i16 addrspace(1)* %ptr, i32 %tid
   %out.gep = getelementptr i16, i16 addrspace(3)* %out, i32 %tid
 
@@ -583,7 +583,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_i16(i16 addrspace(3)* %out, i16 addr
 ; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[REG]], 0, 1{{$}}
 ; GCN: ds_write_b16 v{{[0-9]+}}, [[BFE]]
 define amdgpu_kernel void @v_sext_in_reg_i1_i16_nonload(i16 addrspace(3)* %out, i16 addrspace(1)* %aptr, i16 addrspace(1)* %bptr, i16 %s.val) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr i16, i16 addrspace(1)* %aptr, i32 %tid
   %b.gep = getelementptr i16, i16 addrspace(1)* %bptr, i32 %tid
   %out.gep = getelementptr i16, i16 addrspace(3)* %out, i32 %tid
@@ -715,7 +715,7 @@ define amdgpu_kernel void @sext_in_reg_v3i8_to_v3i16(<3 x i16> addrspace(1)* %ou
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
