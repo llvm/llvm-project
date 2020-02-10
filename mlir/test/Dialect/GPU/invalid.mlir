@@ -175,23 +175,21 @@ module attributes {gpu.container_module} {
 
 // -----
 
-gpu.module @kernels {
-  gpu.func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
-    gpu.return
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    gpu.func @kernel_1(%arg1 : f32) attributes { gpu.kernel } {
+      gpu.return
+    }
+  }
+
+  func @launch_func_kernel_operand_types(%sz : index, %arg : f32) {
+    // expected-err@+1 {{type of function argument 0 does not match}}
+    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
+        {kernel = "kernel_1", kernel_module = @kernels}
+        : (index, index, index, index, index, index, f32) -> ()
+    return
   }
 }
-
-// Due to the ordering of the current impl of lowering and LLVMLowering, type
-// checks need to be temporarily disabled.
-// TODO(ntv,zinenko,herhut): reactivate checks once "changing gpu.launchFunc
-// to encode target module" has landed.
-// func @launch_func_kernel_operand_types(%sz : index, %arg : f32) {
-//   // expected-err@+1 {{type of function argument 0 does not match}}
-//   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
-//       {kernel = "kernel_1"}
-//       : (index, index, index, index, index, index, f32) -> ()
-//   return
-// }
 
 // -----
 

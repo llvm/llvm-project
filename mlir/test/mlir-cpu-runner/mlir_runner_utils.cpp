@@ -16,8 +16,8 @@
 #include <cinttypes>
 #include <cstdio>
 
-extern "C" void
-print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
+extern "C" void _mlir_ciface_print_memref_vector_4x4xf32(
+    StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
   impl::printMemRef(*M);
 }
 
@@ -26,7 +26,7 @@ print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
     impl::printMemRef(*(static_cast<StridedMemRefType<TYPE, RANK> *>(ptr)));   \
     break
 
-extern "C" void print_memref_i8(UnrankedMemRefType<int8_t> *M) {
+extern "C" void _mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M) {
   printUnrankedMemRefMetaData(std::cout, *M);
   int rank = M->rank;
   void *ptr = M->descriptor;
@@ -42,7 +42,7 @@ extern "C" void print_memref_i8(UnrankedMemRefType<int8_t> *M) {
   }
 }
 
-extern "C" void print_memref_f32(UnrankedMemRefType<float> *M) {
+extern "C" void _mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M) {
   printUnrankedMemRefMetaData(std::cout, *M);
   int rank = M->rank;
   void *ptr = M->descriptor;
@@ -58,19 +58,31 @@ extern "C" void print_memref_f32(UnrankedMemRefType<float> *M) {
   }
 }
 
-extern "C" void print_memref_0d_f32(StridedMemRefType<float, 0> *M) {
+extern "C" void print_memref_f32(int64_t rank, void *ptr) {
+  UnrankedMemRefType<float> descriptor;
+  descriptor.rank = rank;
+  descriptor.descriptor = ptr;
+  _mlir_ciface_print_memref_f32(&descriptor);
+}
+
+extern "C" void
+_mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M) {
   impl::printMemRef(*M);
 }
-extern "C" void print_memref_1d_f32(StridedMemRefType<float, 1> *M) {
+extern "C" void
+_mlir_ciface_print_memref_1d_f32(StridedMemRefType<float, 1> *M) {
   impl::printMemRef(*M);
 }
-extern "C" void print_memref_2d_f32(StridedMemRefType<float, 2> *M) {
+extern "C" void
+_mlir_ciface_print_memref_2d_f32(StridedMemRefType<float, 2> *M) {
   impl::printMemRef(*M);
 }
-extern "C" void print_memref_3d_f32(StridedMemRefType<float, 3> *M) {
+extern "C" void
+_mlir_ciface_print_memref_3d_f32(StridedMemRefType<float, 3> *M) {
   impl::printMemRef(*M);
 }
-extern "C" void print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
+extern "C" void
+_mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
   impl::printMemRef(*M);
 }
 
