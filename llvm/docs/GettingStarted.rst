@@ -501,6 +501,12 @@ LLVM currently has a linear-history policy, which means that merge commits are
 not allowed. The `llvm-project` repo on github is configured to reject pushes
 that include merges, so the `git rebase` step above is required.
 
+Bisecting commits
+^^^^^^^^^^^^^^^^^
+
+See `Bisecting LLVM code <GitBisecting.html>` for how to use ``git bisect``
+on LLVM.
+
 Reverting a change
 ^^^^^^^^^^^^^^^^^^
 
