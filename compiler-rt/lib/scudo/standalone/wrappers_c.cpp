@@ -22,13 +22,11 @@
 #define SCUDO_ALLOCATOR Allocator
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
-static scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)>
-    SCUDO_ALLOCATOR;
-// Pointer to the static allocator so that the C++ wrappers can access it.
+
+// Export the static allocator so that the C++ wrappers can access it.
 // Technically we could have a completely separated heap for C & C++ but in
 // reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)> *
-    CONCATENATE(SCUDO_ALLOCATOR, Ptr) = &SCUDO_ALLOCATOR;
+scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)> SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
 
