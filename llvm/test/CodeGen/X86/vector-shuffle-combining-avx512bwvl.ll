@@ -79,8 +79,7 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpcklwd(<16 x i16> %a
 define <16 x i8> @combine_shuffle_vrotri_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: combine_shuffle_vrotri_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vprorq $48, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13,12,11,10,9,8,15,14,5,4,3,2,1,0,7,6]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 48, i64 48>)
   %2 = bitcast <2 x i64> %1 to <16 x i8>
@@ -92,8 +91,7 @@ declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 define <16 x i8> @combine_shuffle_vrotli_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: combine_shuffle_vrotli_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vprold $8, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
   %2 = bitcast <4 x i32> %1 to <16 x i8>
