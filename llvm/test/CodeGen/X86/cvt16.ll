@@ -37,8 +37,7 @@ define void @test1(float %src, i16* %dest) {
 ; F16C-LABEL: test1:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; SOFTFLOAT-LABEL: test1:
