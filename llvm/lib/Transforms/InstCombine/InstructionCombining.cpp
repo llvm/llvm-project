@@ -3620,20 +3620,10 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
 
       // See if we can constant fold its operands.
       for (Use &U : Inst->operands()) {
-        bool WrapAsMetadata = false;
-        auto *V = cast<Value>(U);
-
-        // Look through metadata wrappers.
-        if (auto *MAV = dyn_cast<MetadataAsValue>(V))
-          if (auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata())) {
-            V = VAM->getValue();
-            WrapAsMetadata = true;
-          }
-
-        if (!isa<ConstantVector>(V) && !isa<ConstantExpr>(V))
+        if (!isa<ConstantVector>(U) && !isa<ConstantExpr>(U))
           continue;
 
-        auto *C = cast<Constant>(V);
+        auto *C = cast<Constant>(U);
         Constant *&FoldRes = FoldedConstants[C];
         if (!FoldRes)
           FoldRes = ConstantFoldConstant(C, DL, TLI);
@@ -3644,11 +3634,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
           LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << *Inst
                             << "\n    Old = " << *C
                             << "\n    New = " << *FoldRes << '\n');
-          if (WrapAsMetadata)
-            U = MetadataAsValue::get(Inst->getContext(),
-                                     ValueAsMetadata::get(FoldRes));
-          else
-            U = FoldRes;
+          U = FoldRes;
           MadeIRChange = true;
         }
       }
