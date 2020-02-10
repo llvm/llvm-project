@@ -436,7 +436,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     }
 
     std::shared_ptr<const PreambleData> OldPreamble =
-        getPossiblyStalePreamble();
+        Inputs.ForceRebuild ? std::shared_ptr<const PreambleData>()
+                            : getPossiblyStalePreamble();
     std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
         FileName, *Invocation, OldPreamble, OldCommand, Inputs,
         StorePreambleInMemory,
