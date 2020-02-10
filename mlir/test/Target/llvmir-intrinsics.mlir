@@ -99,6 +99,37 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
   llvm.return
 }
 
+// CHECK-LABEL: @vector_reductions
+llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %arg2: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.experimental.vector.reduce.add.v8i32
+  "llvm.intr.experimental.vector.reduce.add"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.and.v8i32
+  "llvm.intr.experimental.vector.reduce.and"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call float @llvm.experimental.vector.reduce.fmax.v8f32
+  "llvm.intr.experimental.vector.reduce.fmax"(%arg1) : (!llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call float @llvm.experimental.vector.reduce.fmin.v8f32
+  "llvm.intr.experimental.vector.reduce.fmin"(%arg1) : (!llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call i32 @llvm.experimental.vector.reduce.mul.v8i32
+  "llvm.intr.experimental.vector.reduce.mul"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.or.v8i32
+  "llvm.intr.experimental.vector.reduce.or"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.smax.v8i32
+  "llvm.intr.experimental.vector.reduce.smax"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.smin.v8i32
+  "llvm.intr.experimental.vector.reduce.smin"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.umax.v8i32
+  "llvm.intr.experimental.vector.reduce.umax"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.umin.v8i32
+  "llvm.intr.experimental.vector.reduce.umin"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call i32 @llvm.experimental.vector.reduce.xor.v8i32
+  "llvm.intr.experimental.vector.reduce.xor"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
