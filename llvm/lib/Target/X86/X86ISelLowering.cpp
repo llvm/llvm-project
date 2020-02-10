@@ -46538,27 +46538,6 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   return true;
 }
 
-bool X86TargetLowering::
-    isDesirableToCombineBuildVectorToShuffleTruncate(
-        ArrayRef<int> ShuffleMask, EVT SrcVT, EVT TruncVT) const {
-
-  assert(SrcVT.getVectorNumElements() == ShuffleMask.size() &&
-         "Element count mismatch");
-  assert(
-      Subtarget.getTargetLowering()->isShuffleMaskLegal(ShuffleMask, SrcVT) &&
-      "Shuffle Mask expected to be legal");
-
-  // For 32-bit elements VPERMD is better than shuffle+truncate.
-  // TODO: After we improve lowerBuildVector, add execption for VPERMW.
-  if (SrcVT.getScalarSizeInBits() == 32 || !Subtarget.hasAVX2())
-    return false;
-
-  if (is128BitLaneCrossingShuffleMask(SrcVT.getSimpleVT(), ShuffleMask))
-    return false;
-
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //                           X86 Inline Assembly Support
 //===----------------------------------------------------------------------===//
