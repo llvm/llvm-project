@@ -80,7 +80,7 @@ Bisecting across multiple roots
 
 Here's how LLVM's history currently looks:
 
-  .. code-block::
+  .. code-block:: none
 
      A-o-o-......-o-D-o-o-HEAD
                    /
