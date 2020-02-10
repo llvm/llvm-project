@@ -164,8 +164,8 @@ DWARFDebugLine::Prologue dwarfgen::LineTable::createBasicPrologue() const {
     P.PrologueLength = 36;
     break;
   case 5:
-    P.TotalLength = 47;
-    P.PrologueLength = 39;
+    P.TotalLength = 50;
+    P.PrologueLength = 42;
     P.FormParams.AddrSize = AddrSize;
     break;
   default:
@@ -343,13 +343,16 @@ static void writeV5IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
     writeCString(*Include.getAsCString(), Asm);
   }
 
-  Asm.emitInt8(1); // file_name_entry_format_count.
+  Asm.emitInt8(2); // file_name_entry_format_count.
   Asm.EmitULEB128(DW_LNCT_path);
   Asm.EmitULEB128(DW_FORM_string);
+  Asm.EmitULEB128(DW_LNCT_directory_index);
+  Asm.EmitULEB128(DW_FORM_data1);
   Asm.EmitULEB128(Prologue.FileNames.size());
   for (auto File : Prologue.FileNames) {
     assert(File.Name.getAsCString() && "expected a string form for file name");
     writeCString(*File.Name.getAsCString(), Asm);
+    Asm.emitInt8(File.DirIdx);
   }
 }
 
