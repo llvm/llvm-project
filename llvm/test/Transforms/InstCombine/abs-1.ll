@@ -569,3 +569,62 @@ define i1 @abs_must_be_positive(i32 %x) {
   ret i1 %c2
 }
 
+define i8 @abs_swapped(i8 %a) {
+; CHECK-LABEL: @abs_swapped(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    call void @extra_use(i8 [[NEG]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[M1]]
+;
+  %neg = sub i8 0, %a
+  call void @extra_use(i8 %neg)
+  %cmp1 = icmp sgt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  ret i8 %m1
+}
+
+define i8 @nabs_swapped(i8 %a) {
+; CHECK-LABEL: @nabs_swapped(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    call void @extra_use(i8 [[NEG]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[A]], 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %neg = sub i8 0, %a
+  call void @extra_use(i8 %neg)
+  %cmp2 = icmp sgt i8 %a, 0
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  ret i8 %m2
+}
+
+define i8 @abs_different_constants(i8 %a) {
+; CHECK-LABEL: @abs_different_constants(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    call void @extra_use(i8 [[NEG]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A]], -1
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[M1]]
+;
+  %neg = sub i8 0, %a
+  call void @extra_use(i8 %neg)
+  %cmp1 = icmp sgt i8 %a, -1
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  ret i8 %m1
+}
+
+define i8 @nabs_different_constants(i8 %a) {
+; CHECK-LABEL: @nabs_different_constants(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    call void @extra_use(i8 [[NEG]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[A]], -1
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[M2]]
+;
+  %neg = sub i8 0, %a
+  call void @extra_use(i8 %neg)
+  %cmp2 = icmp sgt i8 %a, -1
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  ret i8 %m2
+}
