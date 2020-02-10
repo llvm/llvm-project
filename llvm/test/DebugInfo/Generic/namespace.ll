@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v - | FileCheck %s
 ; CHECK: debug_info contents
 ; CHECK: DW_AT_name{{.*}}= [[F1:.*]])

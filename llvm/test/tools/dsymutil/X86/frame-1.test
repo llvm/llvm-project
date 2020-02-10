@@ -1,4 +1,3 @@
-# REQUIRES: object-emission
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../Inputs/frame-dw2.ll -o %t/frame-dw2.o

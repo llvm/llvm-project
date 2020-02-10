@@ -1,4 +1,3 @@
-# REQUIRES: object-emission
 # RUN: dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o /dev/null -verbose 2>&1 | FileCheck %s
 
 # We detect thumb triples from the binaries, because those are the only ones
