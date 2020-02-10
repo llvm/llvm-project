@@ -258,6 +258,21 @@ TEST_F(FormatTestCSharp, Attributes) {
       "// The const char* returned by hello_world must not be deleted.\n"
       "private static extern IntPtr HelloFromCpp();)");
 
+  // Class attributes go on their own line and do not affect layout of
+  // interfaces. Line wrapping decisions previously caused each interface to be
+  // on its own line.
+  verifyFormat("[SomeAttribute]\n"
+               "[SomeOtherAttribute]\n"
+               "public class A : IShape, IAnimal, IVehicle\n"
+               "{\n"
+               "    int X;\n"
+               "}");
+
+  // Attributes in a method declaration do not cause line wrapping.
+  verifyFormat("void MethodA([In][Out] ref double x)\n"
+               "{\n"
+               "}");
+
   //  Unwrappable lines go on a line of their own.
   // 'target:' is not treated as a label.
   // Modify Style to enforce a column limit.

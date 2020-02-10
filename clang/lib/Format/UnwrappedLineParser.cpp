@@ -323,6 +323,20 @@ void UnwrappedLineParser::parseFile() {
   addUnwrappedLine();
 }
 
+void UnwrappedLineParser::parseCSharpAttribute() {
+  do {
+    switch (FormatTok->Tok.getKind()) {
+    case tok::r_square:
+      nextToken();
+      addUnwrappedLine();
+      return;
+    default:
+      nextToken();
+      break;
+    }
+  } while (!eof());
+}
+
 void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
   bool SwitchLabelEncountered = false;
   do {
@@ -381,6 +395,13 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       SwitchLabelEncountered = true;
       parseStructuralElement();
       break;
+    case tok::l_square:
+      if (Style.isCSharp()) {
+        nextToken();
+        parseCSharpAttribute();
+        break;
+      }
+      LLVM_FALLTHROUGH;
     default:
       parseStructuralElement();
       break;
