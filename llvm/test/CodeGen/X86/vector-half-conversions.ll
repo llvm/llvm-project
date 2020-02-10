@@ -12,7 +12,7 @@
 define float @cvt_i16_to_f32(i16 %a0) nounwind {
 ; ALL-LABEL: cvt_i16_to_f32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl %di, %eax
+; ALL-NEXT:    movzwl %di, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    retq
@@ -27,21 +27,21 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    shrq $32, %rcx
-; ALL-NEXT:    movswl %ax, %edx
+; ALL-NEXT:    movzwl %ax, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    movl %eax, %edx
 ; ALL-NEXT:    shrl $16, %edx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; ALL-NEXT:    shrq $48, %rax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
@@ -57,21 +57,21 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    shrq $32, %rcx
-; ALL-NEXT:    movswl %ax, %edx
+; ALL-NEXT:    movzwl %ax, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    movl %eax, %edx
 ; ALL-NEXT:    shrl $16, %edx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; ALL-NEXT:    shrq $48, %rax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
@@ -91,39 +91,39 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) nounwind {
 ; ALL-NEXT:    vpextrq $1, %xmm0, %rdx
 ; ALL-NEXT:    movq %rdx, %rsi
 ; ALL-NEXT:    shrq $32, %rsi
-; ALL-NEXT:    movswl %dx, %edi
+; ALL-NEXT:    movzwl %dx, %edi
 ; ALL-NEXT:    vmovd %edi, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    movl %edx, %edi
 ; ALL-NEXT:    shrl $16, %edi
-; ALL-NEXT:    movswl %di, %edi
+; ALL-NEXT:    movzwl %di, %edi
 ; ALL-NEXT:    vmovd %edi, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; ALL-NEXT:    movswl %si, %esi
+; ALL-NEXT:    movzwl %si, %esi
 ; ALL-NEXT:    vmovd %esi, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; ALL-NEXT:    shrq $48, %rdx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; ALL-NEXT:    movswl %ax, %edx
+; ALL-NEXT:    movzwl %ax, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    movl %eax, %edx
 ; ALL-NEXT:    shrl $16, %edx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; ALL-NEXT:    shrq $48, %rax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
@@ -150,76 +150,76 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
 ; AVX1-NEXT:    movq %rsi, %rax
 ; AVX1-NEXT:    shrq $32, %rax
-; AVX1-NEXT:    movswl %si, %ecx
+; AVX1-NEXT:    movzwl %si, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX1-NEXT:    movl %esi, %ecx
 ; AVX1-NEXT:    shrl $16, %ecx
-; AVX1-NEXT:    movswl %cx, %ecx
+; AVX1-NEXT:    movzwl %cx, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX1-NEXT:    shrq $48, %rsi
-; AVX1-NEXT:    movswl %si, %eax
+; AVX1-NEXT:    movzwl %si, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX1-NEXT:    movswl %di, %eax
+; AVX1-NEXT:    movzwl %di, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX1-NEXT:    movswl %r11w, %eax
+; AVX1-NEXT:    movzwl %r11w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX1-NEXT:    shrq $48, %rdi
-; AVX1-NEXT:    movswl %di, %eax
+; AVX1-NEXT:    movzwl %di, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    movswl %dx, %eax
+; AVX1-NEXT:    movzwl %dx, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX1-NEXT:    movswl %r9w, %eax
+; AVX1-NEXT:    movzwl %r9w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    movswl %dx, %eax
+; AVX1-NEXT:    movzwl %dx, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
-; AVX1-NEXT:    movswl %r10w, %eax
+; AVX1-NEXT:    movzwl %r10w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    movl %r10d, %eax
 ; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX1-NEXT:    movswl %r8w, %eax
+; AVX1-NEXT:    movzwl %r8w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; AVX1-NEXT:    shrq $48, %r10
-; AVX1-NEXT:    movswl %r10w, %eax
+; AVX1-NEXT:    movzwl %r10w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
@@ -241,76 +241,76 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
 ; AVX2-NEXT:    movq %rsi, %rax
 ; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    movswl %si, %ecx
+; AVX2-NEXT:    movzwl %si, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    movl %esi, %ecx
 ; AVX2-NEXT:    shrl $16, %ecx
-; AVX2-NEXT:    movswl %cx, %ecx
+; AVX2-NEXT:    movzwl %cx, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX2-NEXT:    shrq $48, %rsi
-; AVX2-NEXT:    movswl %si, %eax
+; AVX2-NEXT:    movzwl %si, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX2-NEXT:    movswl %di, %eax
+; AVX2-NEXT:    movzwl %di, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX2-NEXT:    movswl %r11w, %eax
+; AVX2-NEXT:    movzwl %r11w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX2-NEXT:    shrq $48, %rdi
-; AVX2-NEXT:    movswl %di, %eax
+; AVX2-NEXT:    movzwl %di, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    movswl %dx, %eax
+; AVX2-NEXT:    movzwl %dx, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX2-NEXT:    movswl %r9w, %eax
+; AVX2-NEXT:    movzwl %r9w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    movswl %dx, %eax
+; AVX2-NEXT:    movzwl %dx, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
-; AVX2-NEXT:    movswl %r10w, %eax
+; AVX2-NEXT:    movzwl %r10w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    movl %r10d, %eax
 ; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX2-NEXT:    movswl %r8w, %eax
+; AVX2-NEXT:    movzwl %r8w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; AVX2-NEXT:    shrq $48, %r10
-; AVX2-NEXT:    movswl %r10w, %eax
+; AVX2-NEXT:    movzwl %r10w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
@@ -332,76 +332,76 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rsi
 ; AVX512-NEXT:    movq %rsi, %rax
 ; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    movswl %si, %ecx
+; AVX512-NEXT:    movzwl %si, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    movl %esi, %ecx
 ; AVX512-NEXT:    shrl $16, %ecx
-; AVX512-NEXT:    movswl %cx, %ecx
+; AVX512-NEXT:    movzwl %cx, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movzwl %ax, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX512-NEXT:    shrq $48, %rsi
-; AVX512-NEXT:    movswl %si, %eax
+; AVX512-NEXT:    movzwl %si, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX512-NEXT:    movswl %di, %eax
+; AVX512-NEXT:    movzwl %di, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    movl %edi, %eax
 ; AVX512-NEXT:    shrl $16, %eax
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movzwl %ax, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX512-NEXT:    movswl %r11w, %eax
+; AVX512-NEXT:    movzwl %r11w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX512-NEXT:    shrq $48, %rdi
-; AVX512-NEXT:    movswl %di, %eax
+; AVX512-NEXT:    movzwl %di, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    movswl %dx, %eax
+; AVX512-NEXT:    movzwl %dx, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    shrl $16, %eax
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movzwl %ax, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX512-NEXT:    movswl %r9w, %eax
+; AVX512-NEXT:    movzwl %r9w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX512-NEXT:    shrq $48, %rdx
-; AVX512-NEXT:    movswl %dx, %eax
+; AVX512-NEXT:    movzwl %dx, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
-; AVX512-NEXT:    movswl %r10w, %eax
+; AVX512-NEXT:    movzwl %r10w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    movl %r10d, %eax
 ; AVX512-NEXT:    shrl $16, %eax
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movzwl %ax, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX512-NEXT:    movswl %r8w, %eax
+; AVX512-NEXT:    movzwl %r8w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; AVX512-NEXT:    shrq $48, %r10
-; AVX512-NEXT:    movswl %r10w, %eax
+; AVX512-NEXT:    movzwl %r10w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
@@ -420,7 +420,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    movzwl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    retq
@@ -440,21 +440,21 @@ define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
 ; ALL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; ALL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm1
 ; ALL-NEXT:    vpextrw $1, %xmm1, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; ALL-NEXT:    vpextrw $1, %xmm0, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -471,21 +471,21 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ; ALL-NEXT:    movq (%rdi), %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    shrq $32, %rcx
-; ALL-NEXT:    movswl %ax, %edx
+; ALL-NEXT:    movzwl %ax, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    movl %eax, %edx
 ; ALL-NEXT:    shrl $16, %edx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; ALL-NEXT:    shrq $48, %rax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
@@ -513,40 +513,40 @@ define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
 ; ALL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm2
 ; ALL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm3
 ; ALL-NEXT:    vpextrw $1, %xmm3, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm4
 ; ALL-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; ALL-NEXT:    vmovd %xmm3, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm3
 ; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[2,3]
 ; ALL-NEXT:    vmovd %xmm2, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm4
 ; ALL-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm4[0],xmm3[3]
 ; ALL-NEXT:    vpextrw $1, %xmm2, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm2[0]
 ; ALL-NEXT:    vpextrw $1, %xmm1, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm3
 ; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; ALL-NEXT:    vmovd %xmm1, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[2,3]
 ; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm3
 ; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
 ; ALL-NEXT:    vpextrw $1, %xmm0, %eax
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -587,79 +587,79 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX1-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm6
 ; AVX1-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm7
 ; AVX1-NEXT:    vpextrw $1, %xmm7, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm7, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm7
 ; AVX1-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm7[0],xmm1[0],xmm7[2,3]
 ; AVX1-NEXT:    vmovd %xmm6, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm7
 ; AVX1-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm7[0],xmm1[3]
 ; AVX1-NEXT:    vpextrw $1, %xmm6, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm6
 ; AVX1-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm6[0]
 ; AVX1-NEXT:    vpextrw $1, %xmm5, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm6
 ; AVX1-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX1-NEXT:    vmovd %xmm5, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm5
 ; AVX1-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm6
 ; AVX1-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
 ; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm5[0,1,2],xmm0[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpextrw $1, %xmm4, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm4, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm4
 ; AVX1-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[2,3]
 ; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm4
 ; AVX1-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0],xmm1[3]
 ; AVX1-NEXT:    vpextrw $1, %xmm3, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm3[0]
 ; AVX1-NEXT:    vpextrw $1, %xmm2, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vmovd %xmm2, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
 ; AVX1-NEXT:    vmovd %xmm8, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; AVX1-NEXT:    vpextrw $1, %xmm8, %eax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
@@ -695,79 +695,79 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm6
 ; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm7
 ; AVX2-NEXT:    vpextrw $1, %xmm7, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm7, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm7
 ; AVX2-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm7[0],xmm1[0],xmm7[2,3]
 ; AVX2-NEXT:    vmovd %xmm6, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm7
 ; AVX2-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm7[0],xmm1[3]
 ; AVX2-NEXT:    vpextrw $1, %xmm6, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm6
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm6[0]
 ; AVX2-NEXT:    vpextrw $1, %xmm5, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm6
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX2-NEXT:    vmovd %xmm5, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm5
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm6
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
 ; AVX2-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm5[0,1,2],xmm0[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpextrw $1, %xmm4, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm4, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm4
 ; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[2,3]
 ; AVX2-NEXT:    vmovd %xmm3, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm4
 ; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0],xmm1[3]
 ; AVX2-NEXT:    vpextrw $1, %xmm3, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm3[0]
 ; AVX2-NEXT:    vpextrw $1, %xmm2, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
 ; AVX2-NEXT:    vmovd %xmm8, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; AVX2-NEXT:    vpextrw $1, %xmm8, %eax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
@@ -803,79 +803,79 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm6
 ; AVX512F-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm7
 ; AVX512F-NEXT:    vpextrw $1, %xmm7, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm7, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm7
 ; AVX512F-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm7[0],xmm0[0],xmm7[2,3]
 ; AVX512F-NEXT:    vmovd %xmm6, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm7
 ; AVX512F-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm7[0],xmm0[3]
 ; AVX512F-NEXT:    vpextrw $1, %xmm6, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm6[0]
 ; AVX512F-NEXT:    vpextrw $1, %xmm5, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512F-NEXT:    vmovd %xmm5, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm5
 ; AVX512F-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
 ; AVX512F-NEXT:    vmovd %xmm4, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
 ; AVX512F-NEXT:    vpextrw $1, %xmm4, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
 ; AVX512F-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0,1,2],xmm4[0]
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm4
 ; AVX512F-NEXT:    vpextrw $1, %xmm3, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm3
 ; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm3[0],xmm0[0],xmm3[2,3]
 ; AVX512F-NEXT:    vmovd %xmm2, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm3
 ; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
 ; AVX512F-NEXT:    vpextrw $1, %xmm2, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
 ; AVX512F-NEXT:    vpextrw $1, %xmm1, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm1
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; AVX512F-NEXT:    vmovd %xmm8, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; AVX512F-NEXT:    vpextrw $1, %xmm8, %eax
-; AVX512F-NEXT:    cwtl
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
@@ -912,79 +912,79 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm6
 ; AVX512VL-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm7
 ; AVX512VL-NEXT:    vpextrw $1, %xmm7, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm0
 ; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm7, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm7
 ; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm7[0],xmm0[0],xmm7[2,3]
 ; AVX512VL-NEXT:    vmovd %xmm6, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm7
 ; AVX512VL-NEXT:    vcvtph2ps %xmm7, %xmm7
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm7[0],xmm0[3]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm6, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm6
 ; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm6[0]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm5, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm6
 ; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512VL-NEXT:    vmovd %xmm5, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm5
 ; AVX512VL-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[2,3]
 ; AVX512VL-NEXT:    vmovd %xmm4, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm6
 ; AVX512VL-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm6[0],xmm5[3]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm4, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm4
 ; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0,1,2],xmm4[0]
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
 ; AVX512VL-NEXT:    vpextrw $1, %xmm3, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm4
 ; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX512VL-NEXT:    vmovd %xmm3, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm3
 ; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[2,3]
 ; AVX512VL-NEXT:    vmovd %xmm2, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm4
 ; AVX512VL-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm4[0],xmm3[3]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm2, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm2
 ; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm2[0]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm1, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm3
 ; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm1
 ; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[2,3]
 ; AVX512VL-NEXT:    vmovd %xmm8, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm3
 ; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
 ; AVX512VL-NEXT:    vpextrw $1, %xmm8, %eax
-; AVX512VL-NEXT:    cwtl
+; AVX512VL-NEXT:    movzwl %ax, %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm3
 ; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm3[0]
@@ -1005,7 +1005,7 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 define double @cvt_i16_to_f64(i16 %a0) nounwind {
 ; ALL-LABEL: cvt_i16_to_f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl %di, %eax
+; ALL-NEXT:    movzwl %di, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
@@ -1019,12 +1019,12 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; ALL-LABEL: cvt_2i16_to_2f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movswl %ax, %ecx
+; ALL-NEXT:    movzwl %ax, %ecx
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    vmovd %ecx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1041,16 +1041,16 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
-; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    movzwl %ax, %esi
 ; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1058,7 +1058,7 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovd %esi, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1074,12 +1074,12 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; ALL-LABEL: cvt_8i16_to_2f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovd %xmm0, %eax
-; ALL-NEXT:    movswl %ax, %ecx
+; ALL-NEXT:    movzwl %ax, %ecx
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    vmovd %ecx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1097,16 +1097,16 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovq %xmm0, %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
-; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    movzwl %ax, %esi
 ; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1114,7 +1114,7 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; ALL-NEXT:    vmovd %esi, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1133,7 +1133,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX1-NEXT:    movq %rdx, %r9
 ; AVX1-NEXT:    movq %rdx, %r10
-; AVX1-NEXT:    movswl %dx, %r8d
+; AVX1-NEXT:    movzwl %dx, %r8d
 ; AVX1-NEXT:    # kill: def $edx killed $edx killed $rdx
 ; AVX1-NEXT:    shrl $16, %edx
 ; AVX1-NEXT:    shrq $32, %r9
@@ -1141,16 +1141,16 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vmovq %xmm0, %rdi
 ; AVX1-NEXT:    movq %rdi, %rsi
 ; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    movswl %di, %ecx
+; AVX1-NEXT:    movzwl %di, %ecx
 ; AVX1-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; AVX1-NEXT:    shrl $16, %edi
 ; AVX1-NEXT:    shrq $32, %rsi
 ; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movzwl %ax, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    movswl %si, %eax
+; AVX1-NEXT:    movzwl %si, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1158,17 +1158,17 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vmovd %ecx, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    movswl %di, %eax
+; AVX1-NEXT:    movzwl %di, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    movswl %r10w, %eax
+; AVX1-NEXT:    movzwl %r10w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    movswl %r9w, %eax
+; AVX1-NEXT:    movzwl %r9w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1176,7 +1176,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vmovd %r8d, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    movswl %dx, %eax
+; AVX1-NEXT:    movzwl %dx, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
@@ -1189,7 +1189,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX2-NEXT:    movq %rdx, %r9
 ; AVX2-NEXT:    movq %rdx, %r10
-; AVX2-NEXT:    movswl %dx, %r8d
+; AVX2-NEXT:    movzwl %dx, %r8d
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx
 ; AVX2-NEXT:    shrl $16, %edx
 ; AVX2-NEXT:    shrq $32, %r9
@@ -1197,16 +1197,16 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    vmovq %xmm0, %rdi
 ; AVX2-NEXT:    movq %rdi, %rsi
 ; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    movswl %di, %ecx
+; AVX2-NEXT:    movzwl %di, %ecx
 ; AVX2-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; AVX2-NEXT:    shrl $16, %edi
 ; AVX2-NEXT:    shrq $32, %rsi
 ; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movzwl %ax, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    movswl %si, %eax
+; AVX2-NEXT:    movzwl %si, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1214,17 +1214,17 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    vmovd %ecx, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    movswl %di, %eax
+; AVX2-NEXT:    movzwl %di, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    movswl %r10w, %eax
+; AVX2-NEXT:    movzwl %r10w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    movswl %r9w, %eax
+; AVX2-NEXT:    movzwl %r9w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1232,7 +1232,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    vmovd %r8d, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    movswl %dx, %eax
+; AVX2-NEXT:    movzwl %dx, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
@@ -1245,7 +1245,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vmovq %xmm0, %rdx
 ; AVX512-NEXT:    movq %rdx, %r9
 ; AVX512-NEXT:    movq %rdx, %r10
-; AVX512-NEXT:    movswl %dx, %r8d
+; AVX512-NEXT:    movzwl %dx, %r8d
 ; AVX512-NEXT:    # kill: def $edx killed $edx killed $rdx
 ; AVX512-NEXT:    shrl $16, %edx
 ; AVX512-NEXT:    shrq $32, %r9
@@ -1253,16 +1253,16 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rdi
 ; AVX512-NEXT:    movq %rdi, %rsi
 ; AVX512-NEXT:    movq %rdi, %rax
-; AVX512-NEXT:    movswl %di, %ecx
+; AVX512-NEXT:    movzwl %di, %ecx
 ; AVX512-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; AVX512-NEXT:    shrl $16, %edi
 ; AVX512-NEXT:    shrq $32, %rsi
 ; AVX512-NEXT:    shrq $48, %rax
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movzwl %ax, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    movswl %si, %eax
+; AVX512-NEXT:    movzwl %si, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1270,17 +1270,17 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    movswl %di, %eax
+; AVX512-NEXT:    movzwl %di, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    movswl %r10w, %eax
+; AVX512-NEXT:    movzwl %r10w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    movswl %r9w, %eax
+; AVX512-NEXT:    movzwl %r9w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1288,7 +1288,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vmovd %r8d, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    movswl %dx, %eax
+; AVX512-NEXT:    movzwl %dx, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
@@ -1308,7 +1308,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    movzwl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
@@ -1322,11 +1322,11 @@ define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_2i16_to_2f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl 2(%rdi), %eax
+; ALL-NEXT:    movzwl 2(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    movzwl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1341,20 +1341,20 @@ define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
 define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_4i16_to_4f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movswl 6(%rdi), %eax
+; ALL-NEXT:    movzwl 6(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    movswl 4(%rdi), %eax
+; ALL-NEXT:    movzwl 4(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; ALL-NEXT:    movswl 2(%rdi), %eax
+; ALL-NEXT:    movzwl 2(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    movswl (%rdi), %eax
+; ALL-NEXT:    movzwl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1373,16 +1373,16 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; ALL-NEXT:    movq (%rdi), %rax
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
-; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    movzwl %ax, %esi
 ; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
-; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    movzwl %dx, %edx
 ; ALL-NEXT:    vmovd %edx, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    movzwl %cx, %ecx
 ; ALL-NEXT:    vmovd %ecx, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
@@ -1390,7 +1390,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; ALL-NEXT:    vmovd %esi, %xmm1
 ; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    cwtl
+; ALL-NEXT:    movzwl %ax, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm2
 ; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
@@ -1407,39 +1407,39 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ; AVX1-LABEL: load_cvt_8i16_to_8f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movswl 6(%rdi), %eax
+; AVX1-NEXT:    movzwl 6(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    movswl 4(%rdi), %eax
+; AVX1-NEXT:    movzwl 4(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    movswl 2(%rdi), %eax
+; AVX1-NEXT:    movzwl 2(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    movswl (%rdi), %eax
+; AVX1-NEXT:    movzwl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    movswl 14(%rdi), %eax
+; AVX1-NEXT:    movzwl 14(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    movswl 12(%rdi), %eax
+; AVX1-NEXT:    movzwl 12(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX1-NEXT:    movswl 10(%rdi), %eax
+; AVX1-NEXT:    movzwl 10(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    movswl 8(%rdi), %eax
+; AVX1-NEXT:    movzwl 8(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm3
 ; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX1-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
@@ -1449,39 +1449,39 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX2-LABEL: load_cvt_8i16_to_8f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movswl 6(%rdi), %eax
+; AVX2-NEXT:    movzwl 6(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    movswl 4(%rdi), %eax
+; AVX2-NEXT:    movzwl 4(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    movswl 2(%rdi), %eax
+; AVX2-NEXT:    movzwl 2(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    movswl (%rdi), %eax
+; AVX2-NEXT:    movzwl (%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    movswl 14(%rdi), %eax
+; AVX2-NEXT:    movzwl 14(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    movswl 12(%rdi), %eax
+; AVX2-NEXT:    movzwl 12(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX2-NEXT:    movswl 10(%rdi), %eax
+; AVX2-NEXT:    movzwl 10(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm2
 ; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    movswl 8(%rdi), %eax
+; AVX2-NEXT:    movzwl 8(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm3
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX2-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
@@ -1491,39 +1491,39 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ;
 ; AVX512-LABEL: load_cvt_8i16_to_8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movswl 14(%rdi), %eax
+; AVX512-NEXT:    movzwl 14(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    movswl 12(%rdi), %eax
+; AVX512-NEXT:    movzwl 12(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    movswl 10(%rdi), %eax
+; AVX512-NEXT:    movzwl 10(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    movswl 8(%rdi), %eax
+; AVX512-NEXT:    movzwl 8(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    movswl 6(%rdi), %eax
+; AVX512-NEXT:    movzwl 6(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    movswl 4(%rdi), %eax
+; AVX512-NEXT:    movzwl 4(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    movswl 2(%rdi), %eax
+; AVX512-NEXT:    movzwl 2(%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    movswl (%rdi), %eax
+; AVX512-NEXT:    movzwl (%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3

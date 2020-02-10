@@ -42,10 +42,10 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ;
 ; F16C-LABEL: ir_fadd_v1f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movswl %si, %eax
+; F16C-NEXT:    movzwl %si, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movswl %di, %eax
+; F16C-NEXT:    movzwl %di, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
@@ -147,20 +147,20 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ;
 ; F16C-LABEL: ir_fadd_v2f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movswl %cx, %eax
+; F16C-NEXT:    movzwl %cx, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movswl %si, %eax
+; F16C-NEXT:    movzwl %si, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    vmovd %xmm0, %eax
 ; F16C-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; F16C-NEXT:    movswl %dx, %eax
+; F16C-NEXT:    movzwl %dx, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movswl %di, %eax
+; F16C-NEXT:    movzwl %di, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
