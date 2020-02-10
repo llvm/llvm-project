@@ -2446,16 +2446,16 @@ define <16 x i8> @PR31364(i8* nocapture readonly %a, i8* nocapture readonly %b) 
 ;
 ; SSE41-LABEL: PR31364:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pinsrb $0, (%rdi), %xmm0
+; SSE41-NEXT:    movzbl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    pinsrb $1, (%rsi), %xmm0
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1],zero,xmm0[1,1,1,1,1,0,0,0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR31364:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $0, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    movzbl (%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1],zero,xmm0[1,1,1,1,1,0,0,0]
 ; AVX-NEXT:    retq
