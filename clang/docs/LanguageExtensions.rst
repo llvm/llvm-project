@@ -2145,7 +2145,7 @@ Checked Arithmetic Builtins
 ---------------------------
 
 Clang provides a set of builtins that implement checked arithmetic for security
-critical applications in a manner that is fast and easily expressable in C. As
+critical applications in a manner that is fast and easily expressible in C. As
 an example of their usage:
 
 .. code-block:: c
@@ -2538,7 +2538,7 @@ pointers and integers.
 These builtins can be used to avoid relying on implementation-defined behavior
 of arithmetic on integers derived from pointers.
 Additionally, these builtins retain type information and, unlike bitwise
-arithmentic, they can perform semantic checking on the alignment value.
+arithmetic, they can perform semantic checking on the alignment value.
 
 **Syntax**:
 
