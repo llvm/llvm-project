@@ -30,6 +30,13 @@ inline StringRef getArgAttrName(unsigned arg, SmallVectorImpl<char> &out) {
   return ("arg" + Twine(arg)).toStringRef(out);
 }
 
+/// Returns true if the given name is a valid argument attribute name.
+inline bool isArgAttrName(StringRef name) {
+  APInt unused;
+  return name.startswith("arg") &&
+         !name.drop_front(3).getAsInteger(/*Radix=*/10, unused);
+}
+
 /// Return the name of the attribute used for function results.
 inline StringRef getResultAttrName(unsigned arg, SmallVectorImpl<char> &out) {
   out.clear();

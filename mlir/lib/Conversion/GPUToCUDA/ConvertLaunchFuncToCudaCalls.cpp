@@ -113,6 +113,8 @@ private:
   }
 
   void declareCudaFunctions(Location loc);
+  void addParamToList(OpBuilder &builder, Location loc, Value param, Value list,
+                      unsigned pos, Value one);
   Value setupParamsArray(gpu::LaunchFuncOp launchOp, OpBuilder &builder);
   Value generateKernelNameConstant(StringRef name, Location loc,
                                    OpBuilder &builder);
@@ -231,6 +233,35 @@ void GpuLaunchFuncToCudaCallsPass::declareCudaFunctions(Location loc) {
   }
 }
 
+/// Emits the IR with the following structure:
+///
+///   %data = llvm.alloca 1 x type-of(<param>)
+///   llvm.store <param>, %data
+///   %typeErased = llvm.bitcast %data to !llvm<"i8*">
+///   %addr = llvm.getelementptr <list>[<pos>]
+///   llvm.store %typeErased, %addr
+///
+/// This is necessary to construct the list of arguments passed to the kernel
+/// function as accepted by cuLaunchKernel, i.e. as a void** that points to list
+/// of stack-allocated type-erased pointers to the actual arguments.
+void GpuLaunchFuncToCudaCallsPass::addParamToList(OpBuilder &builder,
+                                                  Location loc, Value param,
+                                                  Value list, unsigned pos,
+                                                  Value one) {
+  auto memLocation = builder.create<LLVM::AllocaOp>(
+      loc, param.getType().cast<LLVM::LLVMType>().getPointerTo(), one,
+      /*alignment=*/1);
+  builder.create<LLVM::StoreOp>(loc, param, memLocation);
+  auto casted =
+      builder.create<LLVM::BitcastOp>(loc, getPointerType(), memLocation);
+
+  auto index = builder.create<LLVM::ConstantOp>(loc, getInt32Type(),
+                                                builder.getI32IntegerAttr(pos));
+  auto gep = builder.create<LLVM::GEPOp>(loc, getPointerPointerType(), list,
+                                         ArrayRef<Value>{index});
+  builder.create<LLVM::StoreOp>(loc, casted, gep);
+}
+
 // Generates a parameters array to be used with a CUDA kernel launch call. The
 // arguments are extracted from the launchOp.
 // The generated code is essentially as follows:
@@ -241,53 +272,66 @@ void GpuLaunchFuncToCudaCallsPass::declareCudaFunctions(Location loc) {
 // return %array
 Value GpuLaunchFuncToCudaCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
                                                      OpBuilder &builder) {
+
+  // Get the launch target.
+  auto containingModule = launchOp.getParentOfType<ModuleOp>();
+  if (!containingModule)
+    return {};
+  auto gpuModule = containingModule.lookupSymbol<gpu::GPUModuleOp>(
+      launchOp.getKernelModuleName());
+  if (!gpuModule)
+    return {};
+  auto gpuFunc = gpuModule.lookupSymbol<LLVM::LLVMFuncOp>(launchOp.kernel());
+  if (!gpuFunc)
+    return {};
+
+  unsigned numArgs = gpuFunc.getNumArguments();
+
   auto numKernelOperands = launchOp.getNumKernelOperands();
   Location loc = launchOp.getLoc();
   auto one = builder.create<LLVM::ConstantOp>(loc, getInt32Type(),
                                               builder.getI32IntegerAttr(1));
-  // Provision twice as much for the `array` to allow up to one level of
-  // indirection for each argument.
   auto arraySize = builder.create<LLVM::ConstantOp>(
-      loc, getInt32Type(), builder.getI32IntegerAttr(numKernelOperands));
+      loc, getInt32Type(), builder.getI32IntegerAttr(numArgs));
   auto array = builder.create<LLVM::AllocaOp>(loc, getPointerPointerType(),
                                               arraySize, /*alignment=*/0);
+
+  unsigned pos = 0;
   for (unsigned idx = 0; idx < numKernelOperands; ++idx) {
     auto operand = launchOp.getKernelOperand(idx);
     auto llvmType = operand.getType().cast<LLVM::LLVMType>();
-    Value memLocation = builder.create<LLVM::AllocaOp>(
-        loc, llvmType.getPointerTo(), one, /*alignment=*/1);
-    builder.create<LLVM::StoreOp>(loc, operand, memLocation);
-    auto casted =
-        builder.create<LLVM::BitcastOp>(loc, getPointerType(), memLocation);
 
     // Assume all struct arguments come from MemRef. If this assumption does not
     // hold anymore then we `launchOp` to lower from MemRefType and not after
     // LLVMConversion has taken place and the MemRef information is lost.
-    // Extra level of indirection in the `array`:
-    //   the descriptor pointer is registered via @mcuMemHostRegisterPtr
-    if (llvmType.isStructTy()) {
-      auto registerFunc =
-          getModule().lookupSymbol<LLVM::LLVMFuncOp>(kMcuMemHostRegister);
-      auto nullPtr = builder.create<LLVM::NullOp>(loc, llvmType.getPointerTo());
-      auto gep = builder.create<LLVM::GEPOp>(loc, llvmType.getPointerTo(),
-                                             ArrayRef<Value>{nullPtr, one});
-      auto size = builder.create<LLVM::PtrToIntOp>(loc, getInt64Type(), gep);
-      builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{},
-                                   builder.getSymbolRefAttr(registerFunc),
-                                   ArrayRef<Value>{casted, size});
-      Value memLocation = builder.create<LLVM::AllocaOp>(
-          loc, getPointerPointerType(), one, /*alignment=*/1);
-      builder.create<LLVM::StoreOp>(loc, casted, memLocation);
-      casted =
-          builder.create<LLVM::BitcastOp>(loc, getPointerType(), memLocation);
+    if (!llvmType.isStructTy()) {
+      addParamToList(builder, loc, operand, array, pos++, one);
+      continue;
     }
 
-    auto index = builder.create<LLVM::ConstantOp>(
-        loc, getInt32Type(), builder.getI32IntegerAttr(idx));
-    auto gep = builder.create<LLVM::GEPOp>(loc, getPointerPointerType(), array,
-                                           ArrayRef<Value>{index});
-    builder.create<LLVM::StoreOp>(loc, casted, gep);
+    // Put individual components of a memref descriptor into the flat argument
+    // list. We cannot use unpackMemref from LLVM lowering here because we have
+    // no access to MemRefType that had been lowered away.
+    for (int32_t j = 0, ej = llvmType.getStructNumElements(); j < ej; ++j) {
+      auto elemType = llvmType.getStructElementType(j);
+      if (elemType.isArrayTy()) {
+        for (int32_t k = 0, ek = elemType.getArrayNumElements(); k < ek; ++k) {
+          Value elem = builder.create<LLVM::ExtractValueOp>(
+              loc, elemType.getArrayElementType(), operand,
+              builder.getI32ArrayAttr({j, k}));
+          addParamToList(builder, loc, elem, array, pos++, one);
+        }
+      } else {
+        assert((elemType.isIntegerTy() || elemType.isFloatTy() ||
+                elemType.isDoubleTy() || elemType.isPointerTy()) &&
+               "expected scalar type");
+        Value strct = builder.create<LLVM::ExtractValueOp>(
+            loc, elemType, operand, builder.getI32ArrayAttr(j));
+        addParamToList(builder, loc, strct, array, pos++, one);
+      }
+    }
   }
+
   return array;
 }
 
@@ -392,6 +436,10 @@ void GpuLaunchFuncToCudaCallsPass::translateGpuLaunchCalls(
   auto cuFunctionRef =
       builder.create<LLVM::LoadOp>(loc, getPointerType(), cuFunction);
   auto paramsArray = setupParamsArray(launchOp, builder);
+  if (!paramsArray) {
+    launchOp.emitOpError() << "cannot pass given parameters to the kernel";
+    return signalPassFailure();
+  }
   auto nullpointer =
       builder.create<LLVM::IntToPtrOp>(loc, getPointerPointerType(), zero);
   builder.create<LLVM::CallOp>(

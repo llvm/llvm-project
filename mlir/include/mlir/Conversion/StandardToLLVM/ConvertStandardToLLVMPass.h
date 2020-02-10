@@ -29,16 +29,21 @@ void populateStdToLLVMMemoryConversionPatters(
 void populateStdToLLVMNonMemoryConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
-/// Collect the default pattern to convert a FuncOp to the LLVM dialect.
+/// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
+/// `emitCWrappers` is set, the pattern will also produce functions
+/// that pass memref descriptors by pointer-to-structure in addition to the
+/// default unpacked form.
 void populateStdToLLVMDefaultFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool emitCWrappers = false);
 
 /// Collect a set of default patterns to convert from the Standard dialect to
 /// LLVM. If `useAlloca` is set, the patterns for AllocOp and DeallocOp will
 /// generate `llvm.alloca` instead of calls to "malloc".
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns,
-                                         bool useAlloca = false);
+                                         bool useAlloca = false,
+                                         bool emitCWrappers = false);
 
 /// Collect a set of patterns to convert from the Standard dialect to
 /// LLVM using the bare pointer calling convention for MemRef function
@@ -53,7 +58,7 @@ void populateStdToLLVMBarePtrConversionPatterns(
 /// Specifying `useAlloca-true` emits stack allocations instead. In the future
 /// this may become an enum when we have concrete uses for other options.
 std::unique_ptr<OpPassBase<ModuleOp>>
-createLowerToLLVMPass(bool useAlloca = false);
+createLowerToLLVMPass(bool useAlloca = false, bool emitCWrappers = false);
 
 namespace LLVM {
 /// Make argument-taking successors of each block distinct.  PHI nodes in LLVM

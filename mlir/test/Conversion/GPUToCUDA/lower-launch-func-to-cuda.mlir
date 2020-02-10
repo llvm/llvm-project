@@ -6,8 +6,8 @@ module attributes {gpu.container_module} {
   // CHECK: llvm.mlir.global internal constant @[[global:.*]]("CUBIN")
 
   gpu.module @kernel_module attributes {nvvm.cubin = "CUBIN"} {
-    gpu.func @kernel(%arg0: !llvm.float, %arg1: !llvm<"float*">) attributes {gpu.kernel} {
-      gpu.return
+    llvm.func @kernel(%arg0: !llvm.float, %arg1: !llvm<"float*">) attributes {gpu.kernel} {
+      llvm.return
     }
   }
 

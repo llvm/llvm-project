@@ -577,7 +577,8 @@ void ConvertLinalgToLLVMPass::runOnModule() {
   LinalgTypeConverter converter(&getContext());
   populateAffineToStdConversionPatterns(patterns, &getContext());
   populateLoopToStdConversionPatterns(patterns, &getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns);
+  populateStdToLLVMConversionPatterns(converter, patterns, /*useAlloca=*/false,
+                                      /*emitCWrappers=*/true);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateLinalgToStandardConversionPatterns(patterns, &getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns, &getContext());
