@@ -881,7 +881,7 @@ bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
   } else {
     auto module = ConstString(m_options.m_module);
     auto func = ConstString(m_options.m_function);
-    StackFrameRecognizerManager::AddRecognizer(recognizer_sp, module, func, {});
+    StackFrameRecognizerManager::AddRecognizer(recognizer_sp, module, func);
   }
 #endif
 
@@ -960,13 +960,12 @@ protected:
     StackFrameRecognizerManager::ForEach(
         [&result, &any_printed](uint32_t recognizer_id, std::string name,
                                 std::string function, std::string symbol,
-                                std::string alternate_symbol, bool regexp) {
+                                bool regexp) {
           if (name == "")
             name = "(internal)";
           result.GetOutputStream().Printf(
-              "%d: %s, module %s, function %s{%s}%s\n", recognizer_id,
-              name.c_str(), function.c_str(), symbol.c_str(),
-              alternate_symbol.c_str(), regexp ? " (regexp)" : "");
+              "%d: %s, module %s, function %s%s\n", recognizer_id, name.c_str(),
+              function.c_str(), symbol.c_str(), regexp ? " (regexp)" : "");
           any_printed = true;
         });
 
