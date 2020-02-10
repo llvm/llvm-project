@@ -278,8 +278,8 @@ def AMDGPUatomic_cmp_swap : SDNode<"AMDGPUISD::ATOMIC_CMP_SWAP",
 def AMDGPUround : SDNode<"ISD::FROUND",
                          SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>>;
 
-def AMDGPUbfe_u32 : SDNode<"AMDGPUISD::BFE_U32", AMDGPUDTIntTernaryOp>;
-def AMDGPUbfe_i32 : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
+def AMDGPUbfe_u32_impl : SDNode<"AMDGPUISD::BFE_U32", AMDGPUDTIntTernaryOp>;
+def AMDGPUbfe_i32_impl : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
@@ -460,3 +460,11 @@ def AMDGPUmul_u24 : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUmul_i24 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_mul_i24 node:$src0, node:$src1),
    (AMDGPUmul_i24_impl node:$src0, node:$src1)]>;
+
+def AMDGPUbfe_i32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_sbfe node:$src0, node:$src1, node:$src2),
+   (AMDGPUbfe_i32_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUbfe_u32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_ubfe node:$src0, node:$src1, node:$src2),
+   (AMDGPUbfe_u32_impl node:$src0, node:$src1, node:$src2)]>;
