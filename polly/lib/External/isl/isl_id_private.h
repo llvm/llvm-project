@@ -11,6 +11,7 @@
 #define ISL_ID_PRIVATE_H
 
 #include <isl/id.h>
+#include <isl/stream.h>
 
 /* Represent a name and/or user pointer.
  *
@@ -35,7 +36,13 @@ struct isl_id {
 
 uint32_t isl_hash_id(uint32_t hash, __isl_keep isl_id *id);
 int isl_id_cmp(__isl_keep isl_id *id1, __isl_keep isl_id *id2);
+__isl_give isl_id *isl_stream_read_id(__isl_keep isl_stream *s);
 
 extern isl_id isl_id_none;
+
+#undef BASE
+#define BASE id
+
+#include <isl_multi_templ.h>
 
 #endif

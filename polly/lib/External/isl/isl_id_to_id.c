@@ -1,7 +1,8 @@
+#include <isl/ctx.h>
 #include <isl/id_to_id.h>
 #include <isl/id.h>
 
-#define isl_id_is_equal(id1,id2)	id1 == id2
+#define isl_id_is_equal(id1,id2)	isl_bool_ok(id1 == id2)
 
 #define ISL_KEY		isl_id
 #define ISL_VAL		isl_id

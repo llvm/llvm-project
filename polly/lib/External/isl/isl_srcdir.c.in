@@ -1,1 +1,1 @@
-static const char *srcdir = "@srcdir@";
+static const char *srcdir = "@OS_SRCDIR@";
