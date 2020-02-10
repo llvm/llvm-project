@@ -117,6 +117,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_capture:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
+  case OMPC_acquire:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -192,6 +193,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_capture:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
+  case OMPC_acquire:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -1338,6 +1340,10 @@ void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
 
 void OMPClausePrinter::VisitOMPAcqRelClause(OMPAcqRelClause *) {
   OS << "acq_rel";
+}
+
+void OMPClausePrinter::VisitOMPAcquireClause(OMPAcquireClause *) {
+  OS << "acquire";
 }
 
 void OMPClausePrinter::VisitOMPThreadsClause(OMPThreadsClause *) {

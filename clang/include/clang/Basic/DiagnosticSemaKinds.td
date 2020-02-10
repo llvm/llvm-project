@@ -9695,9 +9695,9 @@ def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
-def err_omp_atomic_several_mem_order_clauses : Error<
-  "directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause">;
-def note_omp_atomic_previous_clause : Note<
+def err_omp_several_mem_order_clauses : Error<
+  "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', |}1'acq_rel' or 'acquire' clause">;
+def note_omp_previous_mem_order_clause : Note<
   "'%0' clause used here">;
 def err_omp_target_contains_not_only_teams : Error<
   "target construct with nested teams region contains statements outside of the teams construct">;
