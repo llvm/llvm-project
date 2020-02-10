@@ -281,12 +281,6 @@ public:
     return true;
   }
 
-  ConstantInt *getConstantInt() const {
-    assert(isConstant() && isa<ConstantInt>(getConstant()) &&
-           "No integer constant");
-    return cast<ConstantInt>(getConstant());
-  }
-
   /// Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
