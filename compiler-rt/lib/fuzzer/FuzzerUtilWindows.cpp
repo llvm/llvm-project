@@ -152,6 +152,10 @@ FILE *OpenProcessPipe(const char *Command, const char *Mode) {
   return _popen(Command, Mode);
 }
 
+int CloseProcessPipe(FILE *F) {
+  return _pclose(F);
+}
+
 int ExecuteCommand(const Command &Cmd) {
   std::string CmdLine = Cmd.toString();
   return system(CmdLine.c_str());

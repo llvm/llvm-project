@@ -59,6 +59,7 @@ size_t GetPeakRSSMb();
 int ExecuteCommand(const Command &Cmd);
 
 FILE *OpenProcessPipe(const char *Command, const char *Mode);
+int CloseProcessPipe(FILE *F);
 
 const void *SearchMemory(const void *haystack, size_t haystacklen,
                          const void *needle, size_t needlelen);
