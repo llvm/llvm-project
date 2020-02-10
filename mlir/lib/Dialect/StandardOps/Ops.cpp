@@ -1586,6 +1586,14 @@ bool IndexCastOp::areCastCompatible(Type a, Type b) {
          (a.isa<IntegerType>() && b.isIndex());
 }
 
+OpFoldResult IndexCastOp::fold(ArrayRef<Attribute> cstOperands) {
+  // Fold IndexCast(IndexCast(x)) -> x
+  auto cast = dyn_cast_or_null<IndexCastOp>(getOperand().getDefiningOp());
+  if (cast && cast.getOperand().getType() == getType())
+    return cast.getOperand();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
