@@ -232,26 +232,26 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
     if (!FdOrErr) {
       // Report the ELF load error if YAML failed.
       consumeError(FdOrErr.takeError());
-      return E;
+      return std::move(E);
     }
 
     uint64_t FileSize;
     if (sys::fs::file_size(Filename, FileSize))
-      return E;
+      return std::move(E);
 
     // If the file is empty, we return the original error.
     if (FileSize == 0)
-      return E;
+      return std::move(E);
 
     // From this point on the errors will be only for the YAML parts, so we
     // consume the errors at this point.
     consumeError(std::move(E));
     if (auto E = loadYAML(*FdOrErr, FileSize, Filename, Map.Sleds,
                           Map.FunctionAddresses, Map.FunctionIds))
-      return E;
+      return std::move(E);
   } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,
                                 Map.FunctionAddresses, Map.FunctionIds)) {
-    return E;
+    return std::move(E);
   }
   return Map;
 }

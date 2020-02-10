@@ -948,7 +948,7 @@ Expected<ELFObjectFile<ELFT>>
 ELFObjectFile<ELFT>::create(MemoryBufferRef Object) {
   auto EFOrErr = ELFFile<ELFT>::create(Object.getBuffer());
   if (Error E = EFOrErr.takeError())
-    return E;
+    return std::move(E);
   auto EF = std::move(*EFOrErr);
 
   auto SectionsOrErr = EF.sections();

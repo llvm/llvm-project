@@ -102,10 +102,10 @@ Expected<std::unique_ptr<DyldELFObject<ELFT>>>
 DyldELFObject<ELFT>::create(MemoryBufferRef Wrapper) {
   auto Obj = ELFObjectFile<ELFT>::create(Wrapper);
   if (auto E = Obj.takeError())
-    return E;
+    return std::move(E);
   std::unique_ptr<DyldELFObject<ELFT>> Ret(
       new DyldELFObject<ELFT>(std::move(*Obj)));
-  return Ret;
+  return std::move(Ret);
 }
 
 template <class ELFT>
@@ -153,7 +153,7 @@ createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
   Expected<std::unique_ptr<DyldELFObject<ELFT>>> ObjOrErr =
       DyldELFObject<ELFT>::create(Buffer);
   if (Error E = ObjOrErr.takeError())
-    return E;
+    return std::move(E);
 
   std::unique_ptr<DyldELFObject<ELFT>> Obj = std::move(*ObjOrErr);
 
@@ -180,7 +180,7 @@ createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
     ++SI;
   }
 
-  return Obj;
+  return std::move(Obj);
 }
 
 static OwningBinary<ObjectFile>
@@ -1460,7 +1460,7 @@ RuntimeDyldELF::processRelocationRef(
           // so the final symbol value is calculated based on the relocation
           // values in the .opd section.
           if (auto Err = findOPDEntrySection(Obj, ObjSectionToID, Value))
-            return Err;
+            return std::move(Err);
         } else {
           // In the ELFv2 ABI, a function symbol may provide a local entry
           // point, which must be used for direct calls.
@@ -1574,7 +1574,7 @@ RuntimeDyldELF::processRelocationRef(
 
       RelocationValueRef TOCValue;
       if (auto Err = findPPC64TOCSection(Obj, ObjSectionToID, TOCValue))
-        return Err;
+        return std::move(Err);
       if (Value.SymbolName || Value.SectionID != TOCValue.SectionID)
         llvm_unreachable("Unsupported TOC relocation.");
       Value.Addend -= TOCValue.Addend;
@@ -1587,10 +1587,10 @@ RuntimeDyldELF::processRelocationRef(
       if (RelType == ELF::R_PPC64_TOC) {
         RelType = ELF::R_PPC64_ADDR64;
         if (auto Err = findPPC64TOCSection(Obj, ObjSectionToID, Value))
-          return Err;
+          return std::move(Err);
       } else if (TargetName == ".TOC.") {
         if (auto Err = findPPC64TOCSection(Obj, ObjSectionToID, Value))
-          return Err;
+          return std::move(Err);
         Value.Addend += Addend;
       }
 

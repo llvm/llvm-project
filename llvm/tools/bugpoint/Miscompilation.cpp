@@ -82,7 +82,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
   Expected<bool> Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "",
                                        true /*delete bitcode*/);
   if (Error E = Diff.takeError())
-    return E;
+    return std::move(E);
   if (*Diff) {
     outs() << " nope.\n";
     if (Suffix.empty()) {
@@ -123,7 +123,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
   // If the prefix maintains the predicate by itself, only keep the prefix!
   Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "", false);
   if (Error E = Diff.takeError())
-    return E;
+    return std::move(E);
   if (*Diff) {
     outs() << " nope.\n";
     sys::fs::remove(BitcodeResult);
@@ -169,7 +169,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
   Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "",
                         true /*delete bitcode*/);
   if (Error E = Diff.takeError())
-    return E;
+    return std::move(E);
   if (*Diff) {
     outs() << " nope.\n";
     return KeepSuffix;
@@ -200,14 +200,14 @@ public:
     if (!Suffix.empty()) {
       Expected<bool> Ret = TestFuncs(Suffix);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
       if (*Ret)
         return KeepSuffix;
     }
     if (!Prefix.empty()) {
       Expected<bool> Ret = TestFuncs(Prefix);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
       if (*Ret)
         return KeepPrefix;
     }
@@ -237,9 +237,9 @@ static Expected<std::unique_ptr<Module>> testMergedProgram(const BugDriver &BD,
   // Execute the program.
   Expected<bool> Diff = BD.diffProgram(*Merged, "", "", false);
   if (Error E = Diff.takeError())
-    return E;
+    return std::move(E);
   Broken = *Diff;
-  return Merged;
+  return std::move(Merged);
 }
 
 /// split functions in a Module into two groups: those that are under
@@ -335,7 +335,7 @@ ExtractLoops(BugDriver &BD,
     Expected<std::unique_ptr<Module>> New = testMergedProgram(
         BD, *ToOptimizeLoopExtracted, *ToNotOptimize, Failure);
     if (Error E = New.takeError())
-      return E;
+      return std::move(E);
     if (!*New)
       return false;
 
@@ -377,7 +377,7 @@ ExtractLoops(BugDriver &BD,
     Expected<bool> Result = TestFn(BD, std::move(ToOptimizeLoopExtracted),
                                    std::move(ToNotOptimize));
     if (Error E = Result.takeError())
-      return E;
+      return std::move(E);
 
     ToOptimizeLoopExtracted = std::move(TOLEBackup);
     ToNotOptimize = std::move(TNOBackup);
@@ -462,14 +462,14 @@ public:
     if (!Suffix.empty()) {
       Expected<bool> Ret = TestFuncs(Suffix);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
       if (*Ret)
         return KeepSuffix;
     }
     if (!Prefix.empty()) {
       Expected<bool> Ret = TestFuncs(Prefix);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
       if (*Ret)
         return KeepPrefix;
     }
@@ -556,7 +556,7 @@ ExtractBlocks(BugDriver &BD,
   Expected<bool> Ret = ReduceMiscompiledBlocks(BD, TestFn, MiscompiledFunctions)
                            .TestFuncs(std::vector<BasicBlock *>());
   if (Error E = Ret.takeError())
-    return E;
+    return std::move(E);
   if (*Ret) {
     Blocks.clear();
   } else {
@@ -564,7 +564,7 @@ ExtractBlocks(BugDriver &BD,
         ReduceMiscompiledBlocks(BD, TestFn, MiscompiledFunctions)
             .reduceList(Blocks);
     if (Error E = Ret.takeError())
-      return E;
+      return std::move(E);
     if (Blocks.size() == OldSize)
       return false;
   }
@@ -632,7 +632,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
                              .reduceList(MiscompiledFunctions);
     if (Error E = Ret.takeError()) {
       errs() << "\n***Cannot reduce functions: ";
-      return E;
+      return std::move(E);
     }
   }
   outs() << "\n*** The following function"
@@ -647,7 +647,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
   if (!BugpointIsInterrupted && !DisableLoopExtraction) {
     Expected<bool> Ret = ExtractLoops(BD, TestFn, MiscompiledFunctions);
     if (Error E = Ret.takeError())
-      return E;
+      return std::move(E);
     if (*Ret) {
       // Okay, we extracted some loops and the problem still appears.  See if
       // we can eliminate some of the created functions from being candidates.
@@ -658,7 +658,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
         Ret = ReduceMiscompilingFunctions(BD, TestFn)
                   .reduceList(MiscompiledFunctions);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
 
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
@@ -671,7 +671,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
   if (!BugpointIsInterrupted && !DisableBlockExtraction) {
     Expected<bool> Ret = ExtractBlocks(BD, TestFn, MiscompiledFunctions);
     if (Error E = Ret.takeError())
-      return E;
+      return std::move(E);
     if (*Ret) {
       // Okay, we extracted some blocks and the problem still appears.  See if
       // we can eliminate some of the created functions from being candidates.
@@ -681,7 +681,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
       Ret = ReduceMiscompilingFunctions(BD, TestFn)
                 .reduceList(MiscompiledFunctions);
       if (Error E = Ret.takeError())
-        return E;
+        return std::move(E);
 
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
@@ -711,7 +711,7 @@ static Expected<bool> TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
     BD.EmitProgressBitcode(*Test, "pass-error", false);
     BD.setNewProgram(std::move(Test));
     if (Error E = BD.debugOptimizerCrash())
-      return E;
+      return std::move(E);
     return false;
   }
   outs() << "done.\n";
@@ -720,7 +720,7 @@ static Expected<bool> TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
   bool Broken;
   auto Result = testMergedProgram(BD, *Optimized, *Safe, Broken);
   if (Error E = Result.takeError())
-    return E;
+    return std::move(E);
   if (auto New = std::move(*Result)) {
     outs() << (Broken ? " nope.\n" : " yup.\n");
     // Delete the original and set the new program.
@@ -987,7 +987,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
   Expected<std::string> SharedObject =
       BD.compileSharedObject(std::string(SafeModuleBC.str()));
   if (Error E = SharedObject.takeError())
-    return E;
+    return std::move(E);
 
   FileRemover SharedObjectRemover(*SharedObject, !SaveTemps);
 
@@ -996,7 +996,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
   Expected<bool> Result = BD.diffProgram(
       BD.getProgram(), std::string(TestModuleBC.str()), *SharedObject, false);
   if (Error E = Result.takeError())
-    return E;
+    return std::move(E);
 
   if (*Result)
     errs() << ": still failing!\n";

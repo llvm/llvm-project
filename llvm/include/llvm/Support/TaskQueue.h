@@ -98,7 +98,7 @@ public:
         IsTaskInFlight = true;
       }
     }
-    return F;
+    return std::move(F);
   }
 
 private:

@@ -963,7 +963,7 @@ Expected<T> handleExpected(Expected<T> ValOrErr, RecoveryFtor &&RecoveryPath,
 
   if (auto Err = handleErrors(ValOrErr.takeError(),
                               std::forward<HandlerTs>(Handlers)...))
-    return Err;
+    return std::move(Err);
 
   return RecoveryPath();
 }

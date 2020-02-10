@@ -151,5 +151,5 @@ Expected<IRSymtabFile> object::readIRSymtab(MemoryBufferRef MBRef) {
   F.Symtab = std::move(FCOrErr->Symtab);
   F.Strtab = std::move(FCOrErr->Strtab);
   F.TheReader = std::move(FCOrErr->TheReader);
-  return F;
+  return std::move(F);
 }

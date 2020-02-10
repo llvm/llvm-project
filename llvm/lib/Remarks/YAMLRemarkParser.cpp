@@ -164,7 +164,7 @@ remarks::createYAMLParserFromMeta(StringRef Buf,
           : std::make_unique<YAMLRemarkParser>(Buf);
   if (SeparateBuf)
     Result->SeparateBuf = std::move(SeparateBuf);
-  return Result;
+  return std::move(Result);
 }
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
@@ -190,7 +190,7 @@ Error YAMLRemarkParser::error() {
 Expected<std::unique_ptr<Remark>>
 YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
   if (Error E = error())
-    return E;
+    return std::move(E);
 
   yaml::Node *YAMLRoot = RemarkEntry.getRoot();
   if (!YAMLRoot) {
@@ -267,7 +267,7 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
     return error("Type, Pass, Name or Function missing.",
                  *RemarkEntry.getRoot());
 
-  return Result;
+  return std::move(Result);
 }
 
 Expected<Type> YAMLRemarkParser::parseType(yaml::MappingNode &Node) {

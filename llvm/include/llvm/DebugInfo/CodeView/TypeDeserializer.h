@@ -60,7 +60,7 @@ public:
     T Record(K);
     CVType CVT(Data);
     if (auto EC = deserializeAs<T>(CVT, Record))
-      return EC;
+      return std::move(EC);
     return Record;
   }
 

@@ -101,9 +101,9 @@ public:
         new LocalLazyCallThroughManager(ES, ErrorHandlerAddr));
 
     if (auto Err = LLCTM->init<ORCABI>())
-      return Err;
+      return std::move(Err);
 
-    return LLCTM;
+    return std::move(LLCTM);
   }
 };
 

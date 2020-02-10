@@ -320,7 +320,7 @@ Expected<InstructionBenchmarkClustering> InstructionBenchmarkClustering::create(
   InstructionBenchmarkClustering Clustering(
       Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
   if (auto Error = Clustering.validateAndSetup()) {
-    return Error;
+    return std::move(Error);
   }
   if (Clustering.ErrorCluster_.PointIndices.size() == Points.size()) {
     return Clustering; // Nothing to cluster.

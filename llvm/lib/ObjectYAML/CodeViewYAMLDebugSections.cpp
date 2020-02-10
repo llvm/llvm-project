@@ -694,11 +694,11 @@ YAMLStringTableSubsection::fromCodeViewSubsection(
   StringRef S;
   // First item is a single null string, skip it.
   if (auto EC = Reader.readCString(S))
-    return EC;
+    return std::move(EC);
   assert(S.empty());
   while (Reader.bytesRemaining() > 0) {
     if (auto EC = Reader.readCString(S))
-      return EC;
+      return std::move(EC);
     Result->Strings.push_back(S);
   }
   return Result;
@@ -749,7 +749,7 @@ llvm::CodeViewYAML::toCodeViewSubsectionList(
     const codeview::StringsAndChecksums &SC) {
   std::vector<std::shared_ptr<DebugSubsection>> Result;
   if (Subsections.empty())
-    return Result;
+    return std::move(Result);
 
   for (const auto &SS : Subsections) {
     std::shared_ptr<DebugSubsection> CVS;
@@ -757,7 +757,7 @@ llvm::CodeViewYAML::toCodeViewSubsectionList(
     assert(CVS != nullptr);
     Result.push_back(std::move(CVS));
   }
-  return Result;
+  return std::move(Result);
 }
 
 namespace {
@@ -892,7 +892,7 @@ YAMLDebugSubsection::fromCodeViewSubection(const StringsAndChecksumsRef &SC,
                                            const DebugSubsectionRecord &SS) {
   SubsectionConversionVisitor V;
   if (auto EC = visitDebugSubsection(SS, V, SC))
-    return EC;
+    return std::move(EC);
 
   return V.Subsection;
 }

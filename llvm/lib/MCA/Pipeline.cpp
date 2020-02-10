@@ -40,7 +40,7 @@ Expected<unsigned> Pipeline::run() {
   do {
     notifyCycleBegin();
     if (Error Err = runCycle())
-      return Err;
+      return std::move(Err);
     notifyCycleEnd();
     ++Cycles;
   } while (hasWorkToProcess());

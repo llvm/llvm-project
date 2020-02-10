@@ -238,8 +238,8 @@ public:
     std::unique_ptr<JITLinkSlabAllocator> Allocator(
         new JITLinkSlabAllocator(SlabSize, Err));
     if (Err)
-      return Err;
-    return Allocator;
+      return std::move(Err);
+    return std::move(Allocator);
   }
 
   Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
