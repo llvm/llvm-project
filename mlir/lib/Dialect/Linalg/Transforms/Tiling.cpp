@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/EDSC/Builders.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/AffineOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/EDSC/Helpers.h"
+#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
@@ -33,6 +33,8 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::loop;
+
+using folded_affine_min = folded::ValueBuilder<AffineMinOp>;
 
 #define DEBUG_TYPE "linalg-tiling"
 
@@ -83,8 +85,8 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   // Create a new range with the applied tile sizes.
   SmallVector<SubViewOp::Range, 4> res;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    res.push_back(SubViewOp::Range{constant_index(folder, 0), viewSizes[idx],
-                                   tileSizes[idx]});
+    res.push_back(SubViewOp::Range{folded_std_constant_index(folder, 0),
+                                   viewSizes[idx], tileSizes[idx]});
   }
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
@@ -239,16 +241,15 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
                            [](Value v) { return !isZero(v); })) &&
          "expected as many ivs as non-zero sizes");
 
-  using edsc::intrinsics::select;
-  using edsc::op::operator+;
-  using edsc::op::operator<;
+  using namespace edsc::op;
 
   // Construct (potentially temporary) mins and maxes on which to apply maps
   // that define tile subviews.
   SmallVector<Value, 8> lbs, subViewSizes;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     bool isTiled = !isZero(tileSizes[idx]);
-    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)constant_index(folder, 0));
+    lbs.push_back(isTiled ? ivs[idxIvs++]
+                          : (Value)folded_std_constant_index(folder, 0));
     subViewSizes.push_back(isTiled ? tileSizes[idx] : viewSizes[idx]);
   }
 
@@ -276,9 +277,9 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
     strides.reserve(rank);
     for (unsigned r = 0; r < rank; ++r) {
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
-        offsets.push_back(constant_index(folder, 0));
-        sizes.push_back(dim(view, r));
-        strides.push_back(constant_index(folder, 1));
+        offsets.push_back(folded_std_constant_index(folder, 0));
+        sizes.push_back(std_dim(view, r));
+        strides.push_back(folded_std_constant_index(folder, 1));
         continue;
       }
 
@@ -302,13 +303,13 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
             {getAffineDimExpr(/*position=*/0, b.getContext()),
              getAffineDimExpr(/*position=*/1, b.getContext()) -
                  getAffineDimExpr(/*position=*/2, b.getContext())});
-        auto d = dim(folder, view, r);
-        size = affine_min(folder, b.getIndexType(), minMap,
-                          ValueRange{size, d, offset});
+        auto d = folded_std_dim(folder, view, r);
+        size = folded_affine_min(folder, b.getIndexType(), minMap,
+                                 ValueRange{size, d, offset});
       }
 
       sizes.push_back(size);
-      strides.push_back(constant_index(folder, 1));
+      strides.push_back(folded_std_constant_index(folder, 1));
     }
 
     res.push_back(b.create<SubViewOp>(loc, view, offsets, sizes, strides));
@@ -367,8 +368,8 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
 
   // 3. Create the tiled loops.
   LinalgOp res = op;
-  SmallVector<IndexHandle, 4> ivs(loopRanges.size());
-  auto pivs = makeHandlePointers(MutableArrayRef<IndexHandle>(ivs));
+  auto ivs = ValueHandle::makeIndexHandles(loopRanges.size());
+  auto pivs = makeHandlePointers(MutableArrayRef<ValueHandle>(ivs));
   // Convert SubViewOp::Range to linalg_range.
   SmallVector<Value, 4> linalgRanges;
   for (auto &range : loopRanges) {
@@ -434,11 +435,11 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
   SmallVector<Value, 8> tileSizeValues;
   tileSizeValues.reserve(tileSizes.size());
   for (auto ts : tileSizes)
-    tileSizeValues.push_back(constant_index(folder, ts));
+    tileSizeValues.push_back(folded_std_constant_index(folder, ts));
   // Pad tile sizes with zero values to enforce our convention.
   if (tileSizeValues.size() < nLoops) {
     for (unsigned i = tileSizeValues.size(); i < nLoops; ++i)
-      tileSizeValues.push_back(constant_index(folder, 0));
+      tileSizeValues.push_back(folded_std_constant_index(folder, 0));
   }
 
   return tileLinalgOpImpl<LoopTy>(b, op, tileSizeValues, permutation, folder);

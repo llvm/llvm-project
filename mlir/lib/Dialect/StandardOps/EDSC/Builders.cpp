@@ -1,4 +1,4 @@
-//===- Helpers.cpp - MLIR Declarative Helper Functionality ----------------===//
+//===- Builders.cpp - MLIR Declarative Builder Classes --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/EDSC/Helpers.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
 
 using namespace mlir;
 using namespace mlir::edsc;
+using namespace mlir::edsc::intrinsics;
 
 static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
   MemRefType memRefType = memRef.getType().cast<MemRefType>();
@@ -21,32 +22,28 @@ static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
   res.reserve(memRefType.getShape().size());
   const auto &shape = memRefType.getShape();
   for (unsigned idx = 0, n = shape.size(); idx < n; ++idx) {
-    if (shape[idx] == -1) {
-      res.push_back(ValueHandle::create<DimOp>(memRef, idx));
-    } else {
-      res.push_back(static_cast<index_type>(shape[idx]));
-    }
+    if (shape[idx] == -1)
+      res.push_back(std_dim(memRef, idx));
+    else
+      res.push_back(std_constant_index(shape[idx]));
   }
   return res;
 }
 
-mlir::edsc::MemRefView::MemRefView(Value v) : base(v) {
-  assert(v.getType().isa<MemRefType>() && "MemRefType expected");
-
+mlir::edsc::MemRefBoundsCapture::MemRefBoundsCapture(Value v) : base(v) {
   auto memrefSizeValues = getMemRefSizes(v);
-  for (auto &size : memrefSizeValues) {
-    lbs.push_back(static_cast<index_type>(0));
-    ubs.push_back(size);
+  for (auto s : memrefSizeValues) {
+    lbs.push_back(std_constant_index(0));
+    ubs.push_back(s);
     steps.push_back(1);
   }
 }
 
-mlir::edsc::VectorView::VectorView(Value v) : base(v) {
+mlir::edsc::VectorBoundsCapture::VectorBoundsCapture(Value v) : base(v) {
   auto vectorType = v.getType().cast<VectorType>();
-
   for (auto s : vectorType.getShape()) {
-    lbs.push_back(static_cast<index_type>(0));
-    ubs.push_back(static_cast<index_type>(s));
+    lbs.push_back(std_constant_index(0));
+    ubs.push_back(std_constant_index(s));
     steps.push_back(1);
   }
 }

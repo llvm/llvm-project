@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/EDSC/Intrinsics.h"
-#include "mlir/EDSC/Builders.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 
 using namespace mlir;
