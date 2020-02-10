@@ -7,6 +7,7 @@ add_llvm_library(MLIRTransforms
   CSE.cpp
   DialectConversion.cpp
   Inliner.cpp
+  LocationSnapshot.cpp
   LoopCoalescing.cpp
   LoopFusion.cpp
   LoopInvariantCodeMotion.cpp
