@@ -753,8 +753,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
-  BasicBlock *IPBB = SplitPos->getParent();
-  assert(IPBB == ExitBB && "Unexpected Insertion point location!");
+  assert(SplitPos->getParent() == ExitBB &&
+         "Unexpected Insertion point location!");
   if (!Conditional && SkipEmittingRegion) {
     ExitBB->eraseFromParent();
     Builder.ClearInsertionPoint();
