@@ -47,7 +47,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(EmulateInstructionARM64);
+LLDB_PLUGIN(EmulateInstructionARM64)
 
 static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
   if (reg_num >= llvm::array_lengthof(g_register_infos_arm64_le))

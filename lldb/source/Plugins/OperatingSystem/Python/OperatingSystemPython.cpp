@@ -39,7 +39,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(OperatingSystemPython);
+LLDB_PLUGIN(OperatingSystemPython)
 
 void OperatingSystemPython::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(SymbolFileSymtab);
+LLDB_PLUGIN(SymbolFileSymtab)
 
 char SymbolFileSymtab::ID;
 

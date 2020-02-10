@@ -66,7 +66,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
-LLDB_PLUGIN(ObjectFileMachO);
+LLDB_PLUGIN(ObjectFileMachO)
 
 // Some structure definitions needed for parsing the dyld shared cache files
 // found on iOS devices.

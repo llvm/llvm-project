@@ -81,7 +81,7 @@ using namespace lldb_private;
 using namespace clang;
 using llvm::StringSwitch;
 
-LLDB_PLUGIN(TypeSystemClang);
+LLDB_PLUGIN(TypeSystemClang)
 
 namespace {
 #ifdef LLDB_CONFIGURATION_DEBUG

@@ -58,7 +58,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
 
-LLDB_PLUGIN(SymbolFilePDB);
+LLDB_PLUGIN(SymbolFilePDB)
 
 char SymbolFilePDB::ID;
 
