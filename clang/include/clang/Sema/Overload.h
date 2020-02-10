@@ -850,6 +850,8 @@ class Sema;
       return static_cast<OverloadCandidateRewriteKind>(RewriteKind);
     }
 
+    bool isReversed() const { return getRewriteKind() & CRK_Reversed; }
+
     /// hasAmbiguousConversion - Returns whether this overload
     /// candidate requires an ambiguous conversion or not.
     bool hasAmbiguousConversion() const {
