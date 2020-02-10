@@ -6828,20 +6828,23 @@ class sve2_char_match<bit sz, bit opc, string asm,
   let Defs = [NZCV];
 }
 
-multiclass sve2_char_match<bit opc, string asm> {
+multiclass sve2_char_match<bit opc, string asm, SDPatternOperator op> {
   def _B : sve2_char_match<0b0, opc, asm, PPR8, ZPR8>;
   def _H : sve2_char_match<0b1, opc, asm, PPR16, ZPR16>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i1,  op, nxv8i1,  nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
 }
 
 //===----------------------------------------------------------------------===//
 // SVE2 Histogram Computation - Segment Group
 //===----------------------------------------------------------------------===//
 
-class sve2_hist_gen_segment<string asm>
+class sve2_hist_gen_segment<string asm, SDPatternOperator op>
 : I<(outs ZPR8:$Zd), (ins ZPR8:$Zn, ZPR8:$Zm),
   asm, "\t$Zd, $Zn, $Zm",
   "",
-  []>, Sched<[]> {
+  [(set nxv16i8:$Zd, (op nxv16i8:$Zn, nxv16i8:$Zm))]>, Sched<[]> {
   bits<5> Zd;
   bits<5> Zn;
   bits<5> Zm;
@@ -6875,9 +6878,12 @@ class sve2_hist_gen_vector<bit sz, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_hist_gen_vector<string asm> {
+multiclass sve2_hist_gen_vector<string asm, SDPatternOperator op> {
   def _S : sve2_hist_gen_vector<0b0, asm, ZPR32>;
   def _D : sve2_hist_gen_vector<0b1, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//

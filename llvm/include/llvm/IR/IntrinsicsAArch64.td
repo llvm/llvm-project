@@ -1796,6 +1796,20 @@ def int_aarch64_sve_fmlslt_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
 def int_aarch64_sve_flogb : AdvSIMD_SVE_LOGB_Intrinsic;
 
 //
+// SVE2 - Vector histogram count
+//
+
+def int_aarch64_sve_histcnt : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_histseg : AdvSIMD_2VectorArg_Intrinsic;
+
+//
+// SVE2 - Character match
+//
+
+def int_aarch64_sve_match   : AdvSIMD_SVE_Compare_Intrinsic;
+def int_aarch64_sve_nmatch  : AdvSIMD_SVE_Compare_Intrinsic;
+
+//
 // SVE2 - Unary narrowing operations
 //
 
