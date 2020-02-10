@@ -28861,8 +28861,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                      SDValue(Lo.getNode(), 1));
     Hi = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Hi);
     Lo = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Lo);
-    Results.push_back(Lo);
-    Results.push_back(Hi);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
     return;
   }
   // We might have generated v2f32 FMIN/FMAX operations. Widen them to v4f32.
