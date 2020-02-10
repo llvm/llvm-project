@@ -1865,10 +1865,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (errorCount())
     return;
 
-  // Now when we read all script files, we want to finalize order of linker
-  // script commands, which can be not yet final because of INSERT commands.
-  script->processInsertCommands();
-
   // We want to declare linker script's symbols early,
   // so that we can version them.
   // They also might be exported if referenced by DSOs.

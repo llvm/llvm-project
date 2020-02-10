@@ -523,13 +523,6 @@ std::vector<BaseCommand *> ScriptParser::readOverlay() {
 }
 
 void ScriptParser::readSections() {
-  script->hasSectionsCommand = true;
-
-  // -no-rosegment is used to avoid placing read only non-executable sections in
-  // their own segment. We do the same if SECTIONS command is present in linker
-  // script. See comment for computeFlags().
-  config->singleRoRx = true;
-
   expect("{");
   std::vector<BaseCommand *> v;
   while (!errorCount() && !consume("}")) {
@@ -548,22 +541,29 @@ void ScriptParser::readSections() {
     else
       v.push_back(readOutputSectionDescription(tok));
   }
+  script->sectionCommands.insert(script->sectionCommands.end(), v.begin(),
+                                 v.end());
 
-  if (!atEOF() && consume("INSERT")) {
-    std::vector<BaseCommand *> *dest = nullptr;
-    if (consume("AFTER"))
-      dest = &script->insertAfterCommands[next()];
-    else if (consume("BEFORE"))
-      dest = &script->insertBeforeCommands[next()];
-    else
-      setError("expected AFTER/BEFORE, but got '" + next() + "'");
-    if (dest)
-      dest->insert(dest->end(), v.begin(), v.end());
+  if (atEOF() || !consume("INSERT")) {
+    // --no-rosegment is used to avoid placing read only non-executable sections
+    // in their own segment. We do the same if SECTIONS command is present in
+    // linker script. See comment for computeFlags().
+    // TODO This rule will be dropped in the future.
+    config->singleRoRx = true;
+
+    script->hasSectionsCommand = true;
     return;
   }
 
-  script->sectionCommands.insert(script->sectionCommands.end(), v.begin(),
-                                 v.end());
+  bool isAfter = false;
+  if (consume("AFTER"))
+    isAfter = true;
+  else if (!consume("BEFORE"))
+    setError("expected AFTER/BEFORE, but got '" + next() + "'");
+  StringRef where = next();
+  for (BaseCommand *cmd : v)
+    if (auto *os = dyn_cast<OutputSection>(cmd))
+      script->insertCommands.push_back({os, isAfter, where});
 }
 
 void ScriptParser::readTarget() {
