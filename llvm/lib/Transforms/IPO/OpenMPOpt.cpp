@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -52,9 +53,10 @@ struct OpenMPOpt {
             SmallPtrSetImpl<Function *> &ModuleSlice,
             CallGraphUpdater &CGUpdater)
       : M(*(*SCC.begin())->getParent()), SCC(SCC), ModuleSlice(ModuleSlice),
-        CGUpdater(CGUpdater) {
+        OMPBuilder(M), CGUpdater(CGUpdater) {
     initializeTypes(M);
     initializeRuntimeFunctions();
+    OMPBuilder.initialize();
   }
 
   /// Generic information that describes a runtime function
@@ -118,12 +120,36 @@ private:
   bool deduplicateRuntimeCalls() {
     bool Changed = false;
 
+    RuntimeFunction DeduplicableRuntimeCallIDs[] = {
+        OMPRTL_omp_get_num_threads,
+        OMPRTL_omp_in_parallel,
+        OMPRTL_omp_get_cancellation,
+        OMPRTL_omp_get_thread_limit,
+        OMPRTL_omp_get_supported_active_levels,
+        OMPRTL_omp_get_level,
+        OMPRTL_omp_get_ancestor_thread_num,
+        OMPRTL_omp_get_team_size,
+        OMPRTL_omp_get_active_level,
+        OMPRTL_omp_in_final,
+        OMPRTL_omp_get_proc_bind,
+        OMPRTL_omp_get_num_places,
+        OMPRTL_omp_get_num_procs,
+        OMPRTL_omp_get_place_num,
+        OMPRTL_omp_get_partition_num_places,
+        OMPRTL_omp_get_partition_place_nums};
+
+    // Global-tid is handled separatly.
     SmallSetVector<Value *, 16> GTIdArgs;
     collectGlobalThreadIdArguments(GTIdArgs);
     LLVM_DEBUG(dbgs() << TAG << "Found " << GTIdArgs.size()
                       << " global thread ID arguments\n");
 
     for (Function *F : SCC) {
+      for (auto DeduplicableRuntimeCallID : DeduplicableRuntimeCallIDs)
+        deduplicateRuntimeCalls(*F, RFIs[DeduplicableRuntimeCallID]);
+
+      // __kmpc_global_thread_num is special as we can replace it with an
+      // argument in enough cases to make it worth trying.
       Value *GTIdArg = nullptr;
       for (Argument &Arg : F->args())
         if (GTIdArgs.count(&Arg)) {
@@ -132,7 +158,6 @@ private:
         }
       Changed |= deduplicateRuntimeCalls(
           *F, RFIs[OMPRTL___kmpc_global_thread_num], GTIdArg);
-      Changed |= deduplicateRuntimeCalls(*F, RFIs[OMPRTL_omp_get_thread_num]);
     }
 
     return Changed;
@@ -259,6 +284,7 @@ private:
       unsigned NumUses = 0;
       if (!RFI.Declaration)
         return NumUses;
+      OMPBuilder.addAttributes(RFI.Kind, *RFI.Declaration);
 
       NumOpenMPRuntimeFunctionsIdentified += 1;
       NumOpenMPRuntimeFunctionUsesIdentified += RFI.Declaration->getNumUses();
@@ -311,6 +337,9 @@ private:
 
   /// The slice of the module we are allowed to look at.
   SmallPtrSetImpl<Function *> &ModuleSlice;
+
+  /// An OpenMP-IR-Builder instance
+  OpenMPIRBuilder OMPBuilder;
 
   /// Callback to update the call graph, the first argument is a removed call,
   /// the second an optional replacement call.
