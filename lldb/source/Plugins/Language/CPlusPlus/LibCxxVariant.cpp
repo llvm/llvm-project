@@ -60,10 +60,10 @@ using namespace lldb_private;
 
 namespace {
 // libc++ std::variant index could have one of three states
-// 1) VALID, we can obtain it and its not variant_npos
-// 2) INVALID, we can't obtain it or it is not a type we expect
-// 3) NPOS, its value is variant_npos which means the variant has no value
-enum class LibcxxVariantIndexValidity { VALID, INVALID, NPOS };
+// 1) Valid, we can obtain it and its not variant_npos
+// 2) Invalid, we can't obtain it or it is not a type we expect
+// 3) NPos, its value is variant_npos which means the variant has no value
+enum class LibcxxVariantIndexValidity { Valid, Invalid, NPos };
 
 LibcxxVariantIndexValidity
 LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
@@ -71,14 +71,14 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
       impl_sp->GetChildMemberWithName(ConstString("__index"), true));
 
   if (!index_sp)
-    return LibcxxVariantIndexValidity::INVALID;
+    return LibcxxVariantIndexValidity::Invalid;
 
   int64_t index_value = index_sp->GetValueAsSigned(0);
 
   if (index_value == -1)
-    return LibcxxVariantIndexValidity::NPOS;
+    return LibcxxVariantIndexValidity::NPos;
 
-  return LibcxxVariantIndexValidity::VALID;
+  return LibcxxVariantIndexValidity::Valid;
 }
 
 llvm::Optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
@@ -129,10 +129,10 @@ bool LibcxxVariantSummaryProvider(ValueObject &valobj, Stream &stream,
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
-  if (validity == LibcxxVariantIndexValidity::INVALID)
+  if (validity == LibcxxVariantIndexValidity::Invalid)
     return false;
 
-  if (validity == LibcxxVariantIndexValidity::NPOS) {
+  if (validity == LibcxxVariantIndexValidity::NPos) {
     stream.Printf(" No Value");
     return true;
   }
@@ -196,10 +196,10 @@ bool VariantFrontEnd::Update() {
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
-  if (validity == LibcxxVariantIndexValidity::INVALID)
+  if (validity == LibcxxVariantIndexValidity::Invalid)
     return false;
 
-  if (validity == LibcxxVariantIndexValidity::NPOS)
+  if (validity == LibcxxVariantIndexValidity::NPos)
     return true;
 
   m_size = 1;
