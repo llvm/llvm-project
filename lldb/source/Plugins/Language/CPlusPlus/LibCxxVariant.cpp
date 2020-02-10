@@ -242,7 +242,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
   if (!head_value)
     return ValueObjectSP();
 
-  return head_value->Clone(ConstString(ConstString("Value").AsCString()));
+  return head_value->Clone(ConstString("Value"));
 }
 
 SyntheticChildrenFrontEnd *
