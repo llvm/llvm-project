@@ -1040,6 +1040,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class SVE2_2VectorArg_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMSubdivide2VectorType<0>,
+                 LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
+
   class SVE2_2VectorArg_Pred_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1720,6 +1726,33 @@ def int_aarch64_sve_ursqrte       : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_ursra         : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_usqadd        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_usra          : AdvSIMD_2VectorArgIndexed_Intrinsic;
+
+//
+// SVE2 - Widening DSP operations
+//
+
+def int_aarch64_sve_sabalb   : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabalt   : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabdlb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabdlt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_saddlb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_saddlt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smullb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smullt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmullb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmullt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ssublb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ssublt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabalb   : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabalt   : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabdlb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabdlt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uaddlb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uaddlt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umullb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umullt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_usublb   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_usublt   : SVE2_2VectorArg_Long_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic

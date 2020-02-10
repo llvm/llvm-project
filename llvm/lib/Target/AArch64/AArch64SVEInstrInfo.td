@@ -1561,18 +1561,18 @@ let Predicates = [HasSVE2] in {
   defm SQSHLU_ZPmI : sve2_int_bin_pred_shift_imm_left< 0b1111, "sqshlu", int_aarch64_sve_sqshlu>;
 
   // SVE2 integer add/subtract long
-  defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb">;
-  defm SADDLT_ZZZ : sve2_wide_int_arith_long<0b00001, "saddlt">;
-  defm UADDLB_ZZZ : sve2_wide_int_arith_long<0b00010, "uaddlb">;
-  defm UADDLT_ZZZ : sve2_wide_int_arith_long<0b00011, "uaddlt">;
-  defm SSUBLB_ZZZ : sve2_wide_int_arith_long<0b00100, "ssublb">;
-  defm SSUBLT_ZZZ : sve2_wide_int_arith_long<0b00101, "ssublt">;
-  defm USUBLB_ZZZ : sve2_wide_int_arith_long<0b00110, "usublb">;
-  defm USUBLT_ZZZ : sve2_wide_int_arith_long<0b00111, "usublt">;
-  defm SABDLB_ZZZ : sve2_wide_int_arith_long<0b01100, "sabdlb">;
-  defm SABDLT_ZZZ : sve2_wide_int_arith_long<0b01101, "sabdlt">;
-  defm UABDLB_ZZZ : sve2_wide_int_arith_long<0b01110, "uabdlb">;
-  defm UABDLT_ZZZ : sve2_wide_int_arith_long<0b01111, "uabdlt">;
+  defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb", int_aarch64_sve_saddlb>;
+  defm SADDLT_ZZZ : sve2_wide_int_arith_long<0b00001, "saddlt", int_aarch64_sve_saddlt>;
+  defm UADDLB_ZZZ : sve2_wide_int_arith_long<0b00010, "uaddlb", int_aarch64_sve_uaddlb>;
+  defm UADDLT_ZZZ : sve2_wide_int_arith_long<0b00011, "uaddlt", int_aarch64_sve_uaddlt>;
+  defm SSUBLB_ZZZ : sve2_wide_int_arith_long<0b00100, "ssublb", int_aarch64_sve_ssublb>;
+  defm SSUBLT_ZZZ : sve2_wide_int_arith_long<0b00101, "ssublt", int_aarch64_sve_ssublt>;
+  defm USUBLB_ZZZ : sve2_wide_int_arith_long<0b00110, "usublb", int_aarch64_sve_usublb>;
+  defm USUBLT_ZZZ : sve2_wide_int_arith_long<0b00111, "usublt", int_aarch64_sve_usublt>;
+  defm SABDLB_ZZZ : sve2_wide_int_arith_long<0b01100, "sabdlb", int_aarch64_sve_sabdlb>;
+  defm SABDLT_ZZZ : sve2_wide_int_arith_long<0b01101, "sabdlt", int_aarch64_sve_sabdlt>;
+  defm UABDLB_ZZZ : sve2_wide_int_arith_long<0b01110, "uabdlb", int_aarch64_sve_uabdlb>;
+  defm UABDLT_ZZZ : sve2_wide_int_arith_long<0b01111, "uabdlt", int_aarch64_sve_uabdlt>;
 
   // SVE2 integer add/subtract wide
   defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb">;
@@ -1585,12 +1585,12 @@ let Predicates = [HasSVE2] in {
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt">;
 
   // SVE2 integer multiply long
-  defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb">;
-  defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt">;
-  defm SMULLB_ZZZ   : sve2_wide_int_arith_long<0b11100, "smullb">;
-  defm SMULLT_ZZZ   : sve2_wide_int_arith_long<0b11101, "smullt">;
-  defm UMULLB_ZZZ   : sve2_wide_int_arith_long<0b11110, "umullb">;
-  defm UMULLT_ZZZ   : sve2_wide_int_arith_long<0b11111, "umullt">;
+  defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
+  defm SQDMULLT_ZZZ : sve2_wide_int_arith_long<0b11001, "sqdmullt", int_aarch64_sve_sqdmullt>;
+  defm SMULLB_ZZZ   : sve2_wide_int_arith_long<0b11100, "smullb",   int_aarch64_sve_smullb>;
+  defm SMULLT_ZZZ   : sve2_wide_int_arith_long<0b11101, "smullt",   int_aarch64_sve_smullt>;
+  defm UMULLB_ZZZ   : sve2_wide_int_arith_long<0b11110, "umullb",   int_aarch64_sve_umullb>;
+  defm UMULLT_ZZZ   : sve2_wide_int_arith_long<0b11111, "umullt",   int_aarch64_sve_umullt>;
   defm PMULLB_ZZZ   : sve2_pmul_long<0b0, "pmullb">;
   defm PMULLT_ZZZ   : sve2_pmul_long<0b1, "pmullt">;
 
@@ -1613,10 +1613,10 @@ let Predicates = [HasSVE2] in {
   defm UABA_ZZZ : sve2_int_absdiff_accum<0b1, "uaba", int_aarch64_sve_uaba>;
 
   // SVE2 integer absolute difference and accumulate long
-  defm SABALB_ZZZ : sve2_int_absdiff_accum_long<0b00, "sabalb">;
-  defm SABALT_ZZZ : sve2_int_absdiff_accum_long<0b01, "sabalt">;
-  defm UABALB_ZZZ : sve2_int_absdiff_accum_long<0b10, "uabalb">;
-  defm UABALT_ZZZ : sve2_int_absdiff_accum_long<0b11, "uabalt">;
+  defm SABALB_ZZZ : sve2_int_absdiff_accum_long<0b00, "sabalb", int_aarch64_sve_sabalb>;
+  defm SABALT_ZZZ : sve2_int_absdiff_accum_long<0b01, "sabalt", int_aarch64_sve_sabalt>;
+  defm UABALB_ZZZ : sve2_int_absdiff_accum_long<0b10, "uabalb", int_aarch64_sve_uabalb>;
+  defm UABALT_ZZZ : sve2_int_absdiff_accum_long<0b11, "uabalt", int_aarch64_sve_uabalt>;
 
   // SVE2 integer add/subtract long with carry
   defm ADCLB_ZZZ : sve2_int_addsub_long_carry<0b00, "adclb">;
