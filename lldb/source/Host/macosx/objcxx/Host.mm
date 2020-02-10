@@ -136,6 +136,8 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
   return false;
 }
 
+#if !NO_XPC_SERVICES
+
 static void *AcceptPIDFromInferior(void *arg) {
   const char *connect_url = (const char *)arg;
   ConnectionFileDescriptor file_conn;
@@ -153,8 +155,6 @@ static void *AcceptPIDFromInferior(void *arg) {
   }
   return NULL;
 }
-
-#if !NO_XPC_SERVICES
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
                                     "   activate\n"
