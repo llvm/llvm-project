@@ -1909,8 +1909,9 @@ def err_destructor_return_type : Error<"destructor cannot have a return type">;
 def err_destructor_redeclared : Error<"destructor cannot be redeclared">;
 def err_destructor_with_params : Error<"destructor cannot have any parameters">;
 def err_destructor_variadic : Error<"destructor cannot be variadic">;
-def err_destructor_typedef_name : Error<
-  "destructor cannot be declared using a %select{typedef|type alias}1 %0 of the class name">;
+def ext_destructor_typedef_name : ExtWarn<
+  "destructor cannot be declared using a %select{typedef|type alias}1 %0 "
+  "of the class name">, DefaultError, InGroup<DiagGroup<"dtor-typedef">>;
 def err_undeclared_destructor_name : Error<
   "undeclared identifier %0 in destructor name">;
 def err_destructor_name : Error<

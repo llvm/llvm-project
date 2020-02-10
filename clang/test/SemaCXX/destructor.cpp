@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s -pedantic
+// RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s -pedantic
 
 #if defined(BE_THE_HEADER)
 
@@ -491,5 +491,23 @@ void foo1() {
   C1<int> x;
   x.foo1();
 }
+}
+
+namespace DtorTypedef {
+  struct A { ~A(); };
+  using A = A;
+  DtorTypedef::A::~A() {}
+
+  // This is invalid, but compilers accept it.
+  struct B { ~B(); };
+  namespace N { using B = B; }
+  N::B::~B() {} // expected-error {{destructor cannot be declared using a type alias}}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdtor-typedef"
+  struct C { ~C(); };
+  namespace N { using C = C; }
+  N::C::~C() {}
+#pragma clang diagnostic pop
 }
 #endif // BE_THE_HEADER

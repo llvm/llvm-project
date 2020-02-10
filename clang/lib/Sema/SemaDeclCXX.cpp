@@ -9986,12 +9986,12 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   //   declaration.
   QualType DeclaratorType = GetTypeFromParser(D.getName().DestructorName);
   if (const TypedefType *TT = DeclaratorType->getAs<TypedefType>())
-    Diag(D.getIdentifierLoc(), diag::err_destructor_typedef_name)
+    Diag(D.getIdentifierLoc(), diag::ext_destructor_typedef_name)
       << DeclaratorType << isa<TypeAliasDecl>(TT->getDecl());
   else if (const TemplateSpecializationType *TST =
              DeclaratorType->getAs<TemplateSpecializationType>())
     if (TST->isTypeAlias())
-      Diag(D.getIdentifierLoc(), diag::err_destructor_typedef_name)
+      Diag(D.getIdentifierLoc(), diag::ext_destructor_typedef_name)
         << DeclaratorType << 1;
 
   // C++ [class.dtor]p2:
