@@ -60,7 +60,7 @@ static unsigned computeTOCSaveOffset(const PPCSubtarget &STI) {
 }
 
 static unsigned computeFramePointerSaveOffset(const PPCSubtarget &STI) {
-  // SVR4 ABI: First slot in the general register save area.
+  // First slot in the general register save area.
   return STI.isPPC64() ? -8U : -4U;
 }
 
@@ -2436,8 +2436,6 @@ unsigned PPCFrameLowering::getTOCSaveOffset() const {
 }
 
 unsigned PPCFrameLowering::getFramePointerSaveOffset() const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("FramePointer is not implemented on AIX yet.");
   return FramePointerSaveOffset;
 }
 
