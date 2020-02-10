@@ -443,7 +443,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     if (Version == 1 || Version == 2 || Version == 3) {
       if (auto E = loadNaiveFormatLog(DE.getData(), DE.isLittleEndian(),
                                       T.FileHeader, T.Records))
-        return E;
+        return std::move(E);
     } else {
       return make_error<StringError>(
           Twine("Unsupported version for Basic/Naive Mode logging: ") +
@@ -455,7 +455,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     if (Version >= 1 && Version <= 5) {
       if (auto E = loadFDRLog(DE.getData(), DE.isLittleEndian(), T.FileHeader,
                               T.Records))
-        return E;
+        return std::move(E);
     } else {
       return make_error<StringError>(
           Twine("Unsupported version for FDR Mode logging: ") + Twine(Version),
@@ -464,7 +464,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     break;
   default:
     if (auto E = loadYAMLLog(DE.getData(), T.FileHeader, T.Records))
-      return E;
+      return std::move(E);
   }
 
   if (Sort)
@@ -472,5 +472,5 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
       return L.TSC < R.TSC;
     });
 
-  return T;
+  return std::move(T);
 }

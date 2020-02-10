@@ -90,7 +90,7 @@ static Expected<std::vector<Profile::FuncID>> readPath(DataExtractor &Extractor,
     CurrentOffset = Offset;
     Path.push_back(FuncId);
   } while (FuncId != 0);
-  return Path;
+  return std::move(Path);
 }
 
 static Expected<Profile::Data> readData(DataExtractor &Extractor,
@@ -137,7 +137,7 @@ Expected<std::vector<Profile::FuncID>> Profile::expandPath(PathID P) const {
   std::vector<Profile::FuncID> Path;
   for (auto Node = It->second; Node; Node = Node->Caller)
     Path.push_back(Node->Func);
-  return Path;
+  return std::move(Path);
 }
 
 Profile::PathID Profile::internPath(ArrayRef<FuncID> P) {
@@ -308,7 +308,7 @@ Expected<Profile> loadProfile(StringRef Filename) {
     if (auto E =
             P.addBlock(Profile::Block{Profile::ThreadID{Header.Thread},
                                       {{P.internPath(Path), std::move(Data)}}}))
-      return E;
+      return std::move(E);
   }
 
   return P;
@@ -393,7 +393,7 @@ Expected<Profile> profileFromTrace(const Trace &T) {
             std::vector<std::pair<Profile::PathID, Profile::Data>>(
                 PathsData.begin(), PathsData.end()),
         }))
-      return E;
+      return std::move(E);
   }
 
   return P;

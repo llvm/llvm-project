@@ -182,7 +182,7 @@ ObjectFile::createObjectFile(StringRef ObjectPath) {
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       createObjectFile(Buffer->getMemBufferRef());
   if (Error Err = ObjOrErr.takeError())
-    return Err;
+    return std::move(Err);
   std::unique_ptr<ObjectFile> Obj = std::move(ObjOrErr.get());
 
   return OwningBinary<ObjectFile>(std::move(Obj), std::move(Buffer));

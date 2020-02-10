@@ -172,7 +172,7 @@ SerialSnippetGenerator::generateCodeTemplates(
   if (Results.empty())
     return make_error<Failure>(
         "No strategy found to make the execution serial");
-  return Results;
+  return std::move(Results);
 }
 
 } // namespace exegesis

@@ -547,7 +547,7 @@ EHFrameEdgeFixer::parseAugmentationString(BinaryStreamReader &RecordReader) {
   uint8_t *NextField = &AugInfo.Fields[0];
 
   if (auto Err = RecordReader.readInteger(NextChar))
-    return Err;
+    return std::move(Err);
 
   while (NextChar != 0) {
     switch (NextChar) {
@@ -556,7 +556,7 @@ EHFrameEdgeFixer::parseAugmentationString(BinaryStreamReader &RecordReader) {
       break;
     case 'e':
       if (auto Err = RecordReader.readInteger(NextChar))
-        return Err;
+        return std::move(Err);
       if (NextChar != 'h')
         return make_error<JITLinkError>("Unrecognized substring e" +
                                         Twine(NextChar) +
@@ -575,10 +575,10 @@ EHFrameEdgeFixer::parseAugmentationString(BinaryStreamReader &RecordReader) {
     }
 
     if (auto Err = RecordReader.readInteger(NextChar))
-      return Err;
+      return std::move(Err);
   }
 
-  return AugInfo;
+  return std::move(AugInfo);
 }
 
 Expected<JITTargetAddress>
@@ -589,11 +589,11 @@ EHFrameEdgeFixer::readAbsolutePointer(LinkGraph &G,
   JITTargetAddress Addr;
   if (G.getPointerSize() == 8) {
     if (auto Err = RecordReader.readInteger(Addr))
-      return Err;
+      return std::move(Err);
   } else if (G.getPointerSize() == 4) {
     uint32_t Addr32;
     if (auto Err = RecordReader.readInteger(Addr32))
-      return Err;
+      return std::move(Err);
     Addr = Addr32;
   } else
     llvm_unreachable("Pointer size is not 32-bit or 64-bit");

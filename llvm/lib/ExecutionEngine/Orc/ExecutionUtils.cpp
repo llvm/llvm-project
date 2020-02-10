@@ -267,9 +267,9 @@ StaticLibraryDefinitionGenerator::Create(
       new StaticLibraryDefinitionGenerator(L, std::move(ArchiveBuffer), Err));
 
   if (Err)
-    return Err;
+    return std::move(Err);
 
-  return ADG;
+  return std::move(ADG);
 }
 
 Error StaticLibraryDefinitionGenerator::tryToGenerate(

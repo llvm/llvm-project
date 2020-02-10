@@ -49,7 +49,7 @@ template <typename ElTy> struct ListReducer {
     std::mt19937 randomness(0x6e5ea738);  // Seed the random number generator
     Expected<TestResult> Result = doTest(TheList, empty);
     if (Error E = Result.takeError())
-      return E;
+      return std::move(E);
     switch (*Result) {
     case KeepPrefix:
       if (TheList.size() == 1) // we are done, it's the base case and it fails
@@ -122,7 +122,7 @@ template <typename ElTy> struct ListReducer {
 
       Expected<TestResult> Result = doTest(Prefix, Suffix);
       if (Error E = Result.takeError())
-        return E;
+        return std::move(E);
       switch (*Result) {
       case KeepSuffix:
         // The property still holds.  We can just drop the prefix elements, and
@@ -185,7 +185,7 @@ template <typename ElTy> struct ListReducer {
 
           Expected<TestResult> Result = doTest(EmptyList, TestList);
           if (Error E = Result.takeError())
-            return E;
+            return std::move(E);
           if (*Result == KeepSuffix) {
             // We can trim down the list!
             TheList.swap(TestList);

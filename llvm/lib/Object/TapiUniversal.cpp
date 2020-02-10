@@ -49,6 +49,6 @@ TapiUniversal::create(MemoryBufferRef Source) {
   Error Err = Error::success();
   std::unique_ptr<TapiUniversal> Ret(new TapiUniversal(Source, Err));
   if (Err)
-    return Err;
-  return Ret;
+    return std::move(Err);
+  return std::move(Ret);
 }

@@ -1250,7 +1250,7 @@ setupMemoryBuffer(const Twine &Filename) {
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint32_t>::max())
     return sampleprof_error::too_large;
 
-  return Buffer;
+  return std::move(Buffer);
 }
 
 /// Create a sample profile reader based on the format of the input file.
@@ -1362,7 +1362,7 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
     return EC;
   }
 
-  return Reader;
+  return std::move(Reader);
 }
 
 // For text and GCC file formats, we compute the summary after reading the

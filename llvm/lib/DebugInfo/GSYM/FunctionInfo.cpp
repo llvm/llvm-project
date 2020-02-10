@@ -90,7 +90,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
     }
     Offset += InfoLength;
   }
-  return FI;
+  return std::move(FI);
 }
 
 llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
@@ -114,7 +114,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
     const auto StartOffset = O.tell();
     llvm::Error err = OptLineTable->encode(O, Range.Start);
     if (err)
-      return err;
+      return std::move(err);
     const auto Length = O.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
@@ -132,7 +132,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
     const auto StartOffset = O.tell();
     llvm::Error err = Inline->encode(O, Range.Start);
     if (err)
-      return err;
+      return std::move(err);
     const auto Length = O.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
@@ -244,6 +244,6 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
   llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
                                        LR.Locations);
   if (Err)
-    return Err;
+    return std::move(Err);
   return LR;
 }
