@@ -562,6 +562,7 @@ namespace {
     SDValue TransformFPLoadStorePair(SDNode *N);
     SDValue convertBuildVecZextToZext(SDNode *N);
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
+    SDValue reduceBuildVecTruncToBitCast(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
@@ -17474,6 +17475,84 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   return DAG.getBitcast(VT, BV);
 }
 
+// Simplify (build_vec (trunc $1)
+//                     (trunc (srl $1 half-width))
+//                     (trunc (srl $1 (2 * half-width))) …)
+// to (bitcast $1)
+SDValue DAGCombiner::reduceBuildVecTruncToBitCast(SDNode *N) {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR && "Expected build vector");
+
+  // Only for little endian
+  if (!DAG.getDataLayout().isLittleEndian())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT OutScalarTy = VT.getScalarType();
+  uint64_t ScalarTypeBitsize = OutScalarTy.getSizeInBits();
+
+  // Only for power of two types to be sure that bitcast works well
+  if (!isPowerOf2_64(ScalarTypeBitsize))
+    return SDValue();
+
+  unsigned NumInScalars = N->getNumOperands();
+
+  // Look through bitcasts
+  auto PeekThroughBitcast = [](SDValue Op) {
+    if (Op.getOpcode() == ISD::BITCAST)
+      return Op.getOperand(0);
+    return Op;
+  };
+
+  // The source value where all the parts are extracted.
+  SDValue Src;
+  for (unsigned i = 0; i != NumInScalars; ++i) {
+    SDValue In = PeekThroughBitcast(N->getOperand(i));
+    // Ignore undef inputs.
+    if (In.isUndef()) continue;
+
+    if (In.getOpcode() != ISD::TRUNCATE)
+      return SDValue();
+
+    In = PeekThroughBitcast(In.getOperand(0));
+
+    if (In.getOpcode() != ISD::SRL) {
+      // For now only build_vec without shuffling, handle shifts here in the
+      // future.
+      if (i != 0)
+        return SDValue();
+
+      Src = In;
+    } else {
+      // In is SRL
+      SDValue part = PeekThroughBitcast(In.getOperand(0));
+
+      if (!Src) {
+        Src = part;
+      } else if (Src != part) {
+        // Vector parts do not stem from the same variable
+        return SDValue();
+      }
+
+      SDValue ShiftAmtVal = In.getOperand(1);
+      if (!isa<ConstantSDNode>(ShiftAmtVal))
+        return SDValue();
+
+      uint64_t ShiftAmt = In.getNode()->getConstantOperandVal(1);
+
+      // The extracted value is not extracted at the right position
+      if (ShiftAmt != i * ScalarTypeBitsize)
+        return SDValue();
+    }
+  }
+
+  // Only cast if the size is the same
+  if (Src.getValueType().getSizeInBits() != VT.getSizeInBits())
+    return SDValue();
+
+  return DAG.getBitcast(VT, Src);
+}
+
 SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                            ArrayRef<int> VectorMask,
                                            SDValue VecIn1, SDValue VecIn2,
@@ -18003,6 +18082,9 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
     return V;
 
   if (SDValue V = reduceBuildVecExtToExtBuildVec(N))
+    return V;
+
+  if (SDValue V = reduceBuildVecTruncToBitCast(N))
     return V;
 
   if (SDValue V = reduceBuildVecToShuffle(N))
