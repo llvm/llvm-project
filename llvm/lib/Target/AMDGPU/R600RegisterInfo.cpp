@@ -28,6 +28,18 @@ R600RegisterInfo::R600RegisterInfo() : R600GenRegisterInfo(0) {
 #define GET_REGINFO_TARGET_DESC
 #include "R600GenRegisterInfo.inc"
 
+unsigned R600RegisterInfo::getSubRegFromChannel(unsigned Channel) {
+  static const uint16_t SubRegFromChannelTable[] = {
+    R600::sub0, R600::sub1, R600::sub2, R600::sub3,
+    R600::sub4, R600::sub5, R600::sub6, R600::sub7,
+    R600::sub8, R600::sub9, R600::sub10, R600::sub11,
+    R600::sub12, R600::sub13, R600::sub14, R600::sub15
+  };
+
+  assert(Channel < array_lengthof(SubRegFromChannelTable));
+  return SubRegFromChannelTable[Channel];
+}
+
 BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
