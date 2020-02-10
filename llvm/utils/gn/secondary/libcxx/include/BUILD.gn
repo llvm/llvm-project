@@ -210,7 +210,18 @@ copy("include") {
     "wchar.h",
     "wctype.h",
   ]
-  deps = [ "//libcxxabi/include" ]
+  deps = []
+  if (target_os != "mac" && target_os != "win") {
+    # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
+    # LIBCXX_CXX_ABI_HEADER_TARGET if the libcxx abi library either of
+    # "libstdc++", "libsupc++", "libcxxabi", "libcxxrt", but not if it's "none",
+    # "default", or "vcruntime". So on Windows, these don't get copied due to
+    # LIBCXX_CXX_ABI_HEADER_TARGET not being set.
+    # On macOS, libcxx/CMakeLists.txt sets LIBCXX_CXX_ABI_SYSTEM to 1, which
+    # causes an empty header list to be passed to setup_abi_lib, so these
+    # don't get copied on macOS due to that.
+    deps += [ "//libcxxabi/include" ]
+  }
   if (!libcxx_needs_site_config) {
     sources += [ "__config" ]
   } else {
