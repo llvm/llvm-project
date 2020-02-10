@@ -88,10 +88,13 @@ Here's how LLVM's history currently looks:
  
 ``A`` is the first commit in LLVM ever, ``97724f18c79c``.
 
-``B`` is the first commit in MLIR, ``aed0d21a62db``.  ``D`` is the merge commit
-that merged MLIR into the main LLVM repository, ``0f0d0ed1c78f``. ``C`` is the
-last commit in MLIR before it got merged, ``0f0d0ed1c78f^2``. (The ``^n``
-modifier selects the n'th parent of a merge commit.)
+``B`` is the first commit in MLIR, ``aed0d21a62db``.
+
+``D`` is the merge commit that merged MLIR into the main LLVM repository,
+``0f0d0ed1c78f``.
+
+``C`` is the last commit in MLIR before it got merged, ``0f0d0ed1c78f^2``. (The
+``^n`` modifier selects the n'th parent of a merge commit.)
 
 ``git bisect`` goes through all parent revisions. Due to the way MLIR was
 merged, at every revision at ``C`` or earlier, *only* the ``mlir/`` directory
@@ -103,8 +106,12 @@ follow the first parent of ``D``.
 
 The best workaround is to pass a list of directories to ``git bisect``:
 If you know the bug is due to a change in llvm, clang, or compiler-rt, use
-``git bisect start -- clang llvm compiler-rt``. That way, the commits in
-``mlir`` are never evaluated.
+
+  .. code-block:: bash
+
+     git bisect start -- clang llvm compiler-rt
+
+That way, the commits in ``mlir`` are never evaluated.
 
 Alternatively, ``git bisect skip aed0d21a6 aed0d21a6..0f0d0ed1c78f`` explicitly
 skips all commits on that branch. It takes 1.5 minutes to run on a fast
