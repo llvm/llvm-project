@@ -95,7 +95,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(SymbolFileDWARF);
+LLDB_PLUGIN(SymbolFileDWARF)
 
 char SymbolFileDWARF::ID;
 

@@ -23,7 +23,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(DynamicLoaderWindowsDYLD);
+LLDB_PLUGIN(DynamicLoaderWindowsDYLD)
 
 DynamicLoaderWindowsDYLD::DynamicLoaderWindowsDYLD(Process *process)
     : DynamicLoader(process) {}

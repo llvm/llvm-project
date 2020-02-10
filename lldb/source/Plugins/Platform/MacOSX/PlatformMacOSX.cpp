@@ -38,7 +38,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(PlatformMacOSX);
+LLDB_PLUGIN(PlatformMacOSX)
 
 static uint32_t g_initialize_count = 0;
 

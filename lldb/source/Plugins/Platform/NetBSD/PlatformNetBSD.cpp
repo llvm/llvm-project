@@ -34,7 +34,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_netbsd;
 
-LLDB_PLUGIN(PlatformNetBSD);
+LLDB_PLUGIN(PlatformNetBSD)
 
 static uint32_t g_initialize_count = 0;
 
