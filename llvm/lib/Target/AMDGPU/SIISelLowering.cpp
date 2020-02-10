@@ -5401,7 +5401,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const MVT VAddrScalarVT = VAddrVT.getScalarType();
   if (((VAddrScalarVT == MVT::f16) || (VAddrScalarVT == MVT::i16))) {
     // Illegal to use a16 images
-    if (!ST->hasFeature(AMDGPU::FeatureR128A16))
+    if (!ST->hasFeature(AMDGPU::FeatureR128A16) && !ST->hasFeature(AMDGPU::FeatureGFX10A16))
       return Op;
 
     IsA16 = true;
@@ -5546,10 +5546,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(DLC);
   Ops.push_back(GLC);
   Ops.push_back(SLC);
-  Ops.push_back(IsA16 &&  // a16 or r128
+  Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
-  Ops.push_back(TFE); // tfe
-  Ops.push_back(LWE); // lwe
+  if (IsGFX10)
+    Ops.push_back(IsA16 ? True : False);
+  Ops.push_back(TFE);
+  Ops.push_back(LWE);
   if (!IsGFX10)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
