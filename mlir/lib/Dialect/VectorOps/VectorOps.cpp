@@ -280,7 +280,7 @@ static LogicalResult verify(ContractionOp op) {
 ArrayRef<StringRef> ContractionOp::getTraitAttrNames() {
   static constexpr StringRef names[2] = {getIndexingMapsAttrName(),
                                          getIteratorTypesAttrName()};
-  return names;
+  return llvm::makeArrayRef(names);
 }
 
 static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {

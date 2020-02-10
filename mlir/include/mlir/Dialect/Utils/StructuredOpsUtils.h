@@ -64,7 +64,7 @@ inline ArrayRef<StringRef> getAllIteratorTypeNames() {
   static constexpr StringRef names[3] = {getParallelIteratorTypeName(),
                                          getReductionIteratorTypeName(),
                                          getWindowIteratorTypeName()};
-  return names;
+  return llvm::makeArrayRef(names);
 }
 
 /// Returns the iterator of a certain type.
