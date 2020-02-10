@@ -162,13 +162,14 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   // memory for arguments.
   unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
-  bool EmitStackProbeCall = STI->getTargetLowering()->hasStackProbeSymbol(MF);
+  bool UseStackProbe =
+      !STI->getTargetLowering()->getStackProbeSymbolName(MF).empty();
   unsigned StackProbeSize = STI->getTargetLowering()->getStackProbeSize(MF);
   for (MachineBasicBlock &BB : MF) {
     bool InsideFrameSequence = false;
     for (MachineInstr &MI : BB) {
       if (MI.getOpcode() == FrameSetupOpcode) {
-        if (TII->getFrameSize(MI) >= StackProbeSize && EmitStackProbeCall)
+        if (TII->getFrameSize(MI) >= StackProbeSize && UseStackProbe)
           return false;
         if (InsideFrameSequence)
           return false;
