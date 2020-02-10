@@ -94,10 +94,6 @@ uptr internal_getpid() {
   return GetProcessId(GetCurrentProcess());
 }
 
-int internal_dlinfo(void *handle, int request, void *p) {
-  UNIMPLEMENTED();
-}
-
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
 tid_t GetTid() {
