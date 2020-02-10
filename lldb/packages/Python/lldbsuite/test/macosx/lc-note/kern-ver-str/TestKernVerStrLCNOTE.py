@@ -17,7 +17,7 @@ class TestKernVerStrLCNOTE(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is looking explicitly for a dSYM")
-    @skipIf(archs=no_match(['amd64']))
+    @skipIf(archs=no_match(['x86_64']))
     @skipUnlessDarwin
     def test_lc_note(self):
         self.build()
