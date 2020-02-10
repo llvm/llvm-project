@@ -26,7 +26,7 @@ using namespace lldb_private;
 using namespace lldb_private::platform_android;
 using namespace std::chrono;
 
-LLDB_PLUGIN(PlatformAndroid);
+LLDB_PLUGIN(PlatformAndroid)
 
 static uint32_t g_initialize_count = 0;
 static const unsigned int g_android_default_cache_size =

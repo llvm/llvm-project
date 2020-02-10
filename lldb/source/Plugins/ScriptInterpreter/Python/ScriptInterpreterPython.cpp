@@ -56,7 +56,7 @@ using namespace lldb_private;
 using namespace lldb_private::python;
 using llvm::Expected;
 
-LLDB_PLUGIN(ScriptInterpreterPython);
+LLDB_PLUGIN(ScriptInterpreterPython)
 
 // Defined in the SWIG source file
 #if PY_MAJOR_VERSION >= 3

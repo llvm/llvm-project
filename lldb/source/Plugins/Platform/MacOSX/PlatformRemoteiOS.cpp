@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(PlatformRemoteiOS);
+LLDB_PLUGIN(PlatformRemoteiOS)
 
 // Static Variables
 static uint32_t g_initialize_count = 0;

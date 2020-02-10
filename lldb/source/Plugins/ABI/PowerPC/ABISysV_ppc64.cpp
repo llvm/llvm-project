@@ -47,7 +47,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABISysV_ppc64);
+LLDB_PLUGIN(ABISysV_ppc64)
 
 const lldb_private::RegisterInfo *
 ABISysV_ppc64::GetRegisterInfoArray(uint32_t &count) {

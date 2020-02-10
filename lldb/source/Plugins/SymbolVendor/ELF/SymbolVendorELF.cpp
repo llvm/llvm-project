@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(SymbolVendorELF);
+LLDB_PLUGIN(SymbolVendorELF)
 
 // SymbolVendorELF constructor
 SymbolVendorELF::SymbolVendorELF(const lldb::ModuleSP &module_sp)

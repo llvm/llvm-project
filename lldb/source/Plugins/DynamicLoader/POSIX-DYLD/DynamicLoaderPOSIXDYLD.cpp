@@ -29,7 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(DynamicLoaderPOSIXDYLD);
+LLDB_PLUGIN(DynamicLoaderPOSIXDYLD)
 
 void DynamicLoaderPOSIXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

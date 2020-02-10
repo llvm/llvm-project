@@ -30,7 +30,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(InstrumentationRuntimeASan);
+LLDB_PLUGIN(InstrumentationRuntimeASan)
 
 lldb::InstrumentationRuntimeSP
 InstrumentationRuntimeASan::CreateInstance(const lldb::ProcessSP &process_sp) {

@@ -39,7 +39,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(SymbolFileDWARFDebugMap);
+LLDB_PLUGIN(SymbolFileDWARFDebugMap)
 
 char SymbolFileDWARFDebugMap::ID;
 

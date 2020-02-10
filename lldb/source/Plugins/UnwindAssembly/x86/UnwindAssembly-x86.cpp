@@ -30,7 +30,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(UnwindAssembly_x86);
+LLDB_PLUGIN(UnwindAssembly_x86)
 
 //  UnwindAssemblyParser_x86 method definitions
 
