@@ -180,7 +180,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
     UnitLength = PrologueLength + 2;
     break;
   case 5:
-    PrologueLength = 39;
+    PrologueLength = 42;
     UnitLength = PrologueLength + 4;
     EXPECT_EQ(Prologue.getAddressSize(), 8u);
     EXPECT_EQ(Prologue.SegSelectorSize, 0u);
@@ -204,6 +204,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
   ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
+  ASSERT_EQ(Prologue.FileNames[0].DirIdx, 0u);
   EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
 }
 
