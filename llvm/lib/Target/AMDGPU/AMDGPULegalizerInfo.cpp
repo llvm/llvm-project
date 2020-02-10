@@ -1668,8 +1668,12 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   // TODO: Should move some of this into LegalizerHelper.
 
   // TODO: Promote dynamic indexing of s16 to s32
-  // TODO: Dynamic s64 indexing is only legal for SGPR.
-  Optional<int64_t> IdxVal = getConstantVRegVal(MI.getOperand(2).getReg(), MRI);
+
+  // FIXME: Artifact combiner probably should have replaced the truncated
+  // constant before this, so we shouldn't need
+  // getConstantVRegValWithLookThrough.
+  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
+    MI.getOperand(2).getReg(), MRI);
   if (!IdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -1682,8 +1686,8 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
 
   B.setInstr(MI);
 
-  if (IdxVal.getValue() < VecTy.getNumElements())
-    B.buildExtract(Dst, Vec, IdxVal.getValue() * EltTy.getSizeInBits());
+  if (IdxVal->Value < VecTy.getNumElements())
+    B.buildExtract(Dst, Vec, IdxVal->Value * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
@@ -1697,8 +1701,12 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   // TODO: Should move some of this into LegalizerHelper.
 
   // TODO: Promote dynamic indexing of s16 to s32
-  // TODO: Dynamic s64 indexing is only legal for SGPR.
-  Optional<int64_t> IdxVal = getConstantVRegVal(MI.getOperand(3).getReg(), MRI);
+
+  // FIXME: Artifact combiner probably should have replaced the truncated
+  // constant before this, so we shouldn't need
+  // getConstantVRegValWithLookThrough.
+  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
+    MI.getOperand(3).getReg(), MRI);
   if (!IdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -1712,8 +1720,8 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   B.setInstr(MI);
 
-  if (IdxVal.getValue() < VecTy.getNumElements())
-    B.buildInsert(Dst, Vec, Ins, IdxVal.getValue() * EltTy.getSizeInBits());
+  if (IdxVal->Value < VecTy.getNumElements())
+    B.buildInsert(Dst, Vec, Ins, IdxVal->Value * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
