@@ -10,11 +10,9 @@ For more details, see the Features by OS section below.
 Linux
 -----
 
-LLDB is improving on Linux. While the debugserver has not been ported (to
-enable remote debugging) Linux is nearing feature completeness with Darwin to
-debug x86_64 programs, and is partially working with i386 programs. ARM
-architectures on Linux are untested. For more details, see the Features by OS
-section below.
+LLDB is improving on Linux. Linux is nearing feature completeness with Darwin
+to debug x86_64, i386, ARM, AArch64, IBM POWER (ppc64), IBM Z (s390x), and
+MIPS64 programs. For more details, see the Features by OS section below.
 
 macOS
 -----
