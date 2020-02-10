@@ -37,7 +37,7 @@ irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
 Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
   CompileResult CachedObject = tryToLoadFromObjectCache(M);
   if (CachedObject)
-    return std::move(CachedObject);
+    return CachedObject;
 
   SmallVector<char, 0> ObjBufferSV;
 
@@ -61,7 +61,7 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
     return Obj.takeError();
 
   notifyObjectCompiled(M, *ObjBuffer);
-  return std::move(ObjBuffer);
+  return ObjBuffer;
 }
 
 SimpleCompiler::CompileResult

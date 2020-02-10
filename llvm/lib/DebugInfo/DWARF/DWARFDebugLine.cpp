@@ -522,7 +522,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
   if (Pos.second) {
     if (Error Err =
             LT->parse(DebugLineData, &Offset, Ctx, U, RecoverableErrorCallback))
-      return std::move(Err);
+      return Err;
     return LT;
   }
   return LT;

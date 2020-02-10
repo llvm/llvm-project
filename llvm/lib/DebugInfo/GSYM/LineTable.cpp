@@ -256,7 +256,7 @@ llvm::Expected<LineTable> LineTable::decode(DataExtractor &Data,
     return true; // Keep parsing by returning true.
   });
   if (Err)
-    return std::move(Err);
+    return Err;
   return LT;
 }
 // Parse the line table on the fly and find the row we are looking for.
@@ -278,7 +278,7 @@ Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, ui
     return true; // Keep parsing till we find the right row.
   });
   if (Err)
-    return std::move(Err);
+    return Err;
   if (Result.isValid())
     return Result;
   return createStringError(std::errc::invalid_argument,

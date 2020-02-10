@@ -207,15 +207,15 @@ Expected<std::unique_ptr<Object>> COFFReader::create() const {
   }
 
   if (Error E = readExecutableHeaders(*Obj))
-    return std::move(E);
+    return E;
   if (Error E = readSections(*Obj))
-    return std::move(E);
+    return E;
   if (Error E = readSymbols(*Obj, IsBigObj))
-    return std::move(E);
+    return E;
   if (Error E = setSymbolTargets(*Obj))
-    return std::move(E);
+    return E;
 
-  return std::move(Obj);
+  return Obj;
 }
 
 } // end namespace coff

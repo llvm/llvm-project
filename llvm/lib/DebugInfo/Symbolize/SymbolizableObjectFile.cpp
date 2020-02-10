@@ -101,7 +101,7 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
   Uniquify(Fs);
   Uniquify(Os);
 
-  return std::move(res);
+  return res;
 }
 
 SymbolizableObjectFile::SymbolizableObjectFile(const ObjectFile *Obj,

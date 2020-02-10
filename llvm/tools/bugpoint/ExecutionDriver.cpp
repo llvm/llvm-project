@@ -347,7 +347,7 @@ Expected<std::string> BugDriver::executeProgram(const Module &Program,
                                             OutputFile, AdditionalLinkerArgs,
                                             SharedObjs, Timeout, MemoryLimit);
   if (Error E = RetVal.takeError())
-    return std::move(E);
+    return E;
 
   if (*RetVal == -1) {
     errs() << "<timeout>";
@@ -393,12 +393,12 @@ BugDriver::compileSharedObject(const std::string &BitcodeFile) {
   Expected<CC::FileType> FT =
       SafeInterpreter->OutputCode(BitcodeFile, OutputFile);
   if (Error E = FT.takeError())
-    return std::move(E);
+    return E;
 
   std::string SharedObjectFile;
   if (Error E = cc->MakeSharedObject(OutputFile, *FT, SharedObjectFile,
                                      AdditionalLinkerArgs))
-    return std::move(E);
+    return E;
 
   // Remove the intermediate C file
   sys::fs::remove(OutputFile);
@@ -444,7 +444,7 @@ Expected<bool> BugDriver::diffProgram(const Module &Program,
   Expected<std::string> Output =
       executeProgram(Program, "", BitcodeFile, SharedObject, nullptr);
   if (Error E = Output.takeError())
-    return std::move(E);
+    return E;
 
   std::string Error;
   bool FilesDifferent = false;

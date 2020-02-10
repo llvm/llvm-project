@@ -1154,7 +1154,7 @@ Expected<bool> FunctionImporter::importFunctions(
     // If modules were created with lazy metadata loading, materialize it
     // now, before linking it (otherwise this will be a noop).
     if (Error Err = SrcModule->materializeMetadata())
-      return std::move(Err);
+      return Err;
 
     auto &ImportGUIDs = FunctionsToImportPerModule->second;
     // Find the globals to import
@@ -1169,7 +1169,7 @@ Expected<bool> FunctionImporter::importFunctions(
                         << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         if (Error Err = F.materialize())
-          return std::move(Err);
+          return Err;
         if (EnableImportMetadata) {
           // Add 'thinlto_src_module' metadata for statistics and debugging.
           F.setMetadata(
@@ -1191,7 +1191,7 @@ Expected<bool> FunctionImporter::importFunctions(
                         << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         if (Error Err = GV.materialize())
-          return std::move(Err);
+          return Err;
         ImportedGVCount += GlobalsToImport.insert(&GV);
       }
     }
@@ -1205,11 +1205,11 @@ Expected<bool> FunctionImporter::importFunctions(
                         << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         if (Error Err = GA.materialize())
-          return std::move(Err);
+          return Err;
         // Import alias as a copy of its aliasee.
         GlobalObject *Base = GA.getBaseObject();
         if (Error Err = Base->materialize())
-          return std::move(Err);
+          return Err;
         auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << Base->getGUID()
                           << " " << Base->getName() << " from "

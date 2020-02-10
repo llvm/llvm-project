@@ -56,7 +56,7 @@ public:
       if (auto Sym = KV.second(Name, ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
-        return std::move(Err);
+        return Err;
     }
     return JITSymbol(nullptr);
   }

@@ -194,7 +194,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                                          CodeSize, CodeAlign,
                                          RODataSize, RODataAlign,
                                          RWDataSize, RWDataAlign))
-      return std::move(Err);
+      return Err;
     MemMgr.reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign,
                                   RWDataSize, RWDataAlign);
   }
@@ -319,7 +319,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       // Get symbol offset.
       uint64_t SectOffset;
       if (auto Err = getOffset(*I, *SI, SectOffset))
-        return std::move(Err);
+        return Err;
 
       bool IsCode = SI->isText();
       unsigned SectionID;
@@ -341,7 +341,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   // Allocate common symbols
   if (auto Err = emitCommonSymbols(Obj, CommonSymbolsToAllocate, CommonSize,
                                    CommonAlign))
-    return std::move(Err);
+    return Err;
 
   // Parse and process relocations
   LLVM_DEBUG(dbgs() << "Parse relocations:\n");
@@ -432,7 +432,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
   // Give the subclasses a chance to tie-up any loose ends.
   if (auto Err = finalizeLoad(Obj, LocalSections))
-    return std::move(Err);
+    return Err;
 
 //   for (auto E : LocalSections)
 //     llvm::dbgs() << "Added: " << E.first.getRawDataRefImpl() << " -> " << E.second << "\n";

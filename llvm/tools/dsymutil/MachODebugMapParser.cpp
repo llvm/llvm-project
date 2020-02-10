@@ -391,7 +391,7 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
     if (shouldLinkArch(Archs, Object->getArchTriple().getArchName()))
       Results.push_back(parseOneBinary(*Object, BinaryPath));
 
-  return std::move(Results);
+  return Results;
 }
 
 /// Interpret the STAB entries to fill the DebugMap.

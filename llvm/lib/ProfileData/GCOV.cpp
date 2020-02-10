@@ -711,7 +711,7 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
     errs() << EC.message() << "\n";
     return std::make_unique<raw_null_ostream>();
   }
-  return std::move(OS);
+  return OS;
 }
 
 /// print -  Print source files with collected line count information.

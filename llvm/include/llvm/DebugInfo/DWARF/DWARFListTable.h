@@ -280,7 +280,7 @@ DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
   if (Error E =
           List.extract(Data, getHeaderOffset(), End, &Offset,
                        Header.getSectionName(), Header.getListTypeString()))
-    return std::move(E);
+    return E;
   ListMap[StartingOffset] = List;
   return List;
 }

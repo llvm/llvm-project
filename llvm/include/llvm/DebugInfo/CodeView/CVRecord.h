@@ -100,14 +100,14 @@ inline Expected<CVRecord<Kind>> readCVRecordFromStream(BinaryStreamRef Stream,
   Reader.setOffset(Offset);
 
   if (auto EC = Reader.readObject(Prefix))
-    return std::move(EC);
+    return EC;
   if (Prefix->RecordLen < 2)
     return make_error<CodeViewError>(cv_error_code::corrupt_record);
 
   Reader.setOffset(Offset);
   ArrayRef<uint8_t> RawData;
   if (auto EC = Reader.readBytes(RawData, Prefix->RecordLen + sizeof(uint16_t)))
-    return std::move(EC);
+    return EC;
   return codeview::CVRecord<Kind>(RawData);
 }
 

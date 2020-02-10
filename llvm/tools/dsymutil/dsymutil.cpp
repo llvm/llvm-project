@@ -279,7 +279,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   }
 
   if (Error E = verifyOptions(Options))
-    return std::move(E);
+    return E;
   return Options;
 }
 
@@ -433,9 +433,9 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
     Path = DwarfFile + ".dSYM";
   if (!Options.LinkOpts.NoOutput) {
     if (auto E = createBundleDir(Path))
-      return std::move(E);
+      return E;
     if (auto E = createPlistFile(DwarfFile, Path, Options.Toolchain))
-      return std::move(E);
+      return E;
   }
 
   sys::path::append(Path, "Contents", "Resources");

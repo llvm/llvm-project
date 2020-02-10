@@ -295,7 +295,7 @@ CoveragePrinterHTML::createViewFile(StringRef Path, bool InToplevel) {
     emitPrelude(*OS.get(), Opts, getPathToStyle(ViewPath));
   }
 
-  return std::move(OS);
+  return OS;
 }
 
 void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {

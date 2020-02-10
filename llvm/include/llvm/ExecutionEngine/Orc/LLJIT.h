@@ -262,13 +262,13 @@ public:
   /// Create an instance of the JIT.
   Expected<std::unique_ptr<JITType>> create() {
     if (auto Err = impl().prepareForConstruction())
-      return std::move(Err);
+      return Err;
 
     Error Err = Error::success();
     std::unique_ptr<JITType> J(new JITType(impl(), Err));
     if (Err)
-      return std::move(Err);
-    return std::move(J);
+      return Err;
+    return J;
   }
 
 protected:

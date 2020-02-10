@@ -158,7 +158,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
         assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
         if (Error Err = JumpToBit(GetCurrentBitNo() +
                                   NumElts * EltEnc.getEncodingData()))
-          return std::move(Err);
+          return Err;
         break;
       case BitCodeAbbrevOp::VBR:
         assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
@@ -171,7 +171,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
         break;
       case BitCodeAbbrevOp::Char6:
         if (Error Err = JumpToBit(GetCurrentBitNo() + NumElts * 6))
-          return std::move(Err);
+          return Err;
         break;
       }
       continue;
@@ -197,7 +197,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
 
     // Skip over the blob.
     if (Error Err = JumpToBit(NewEnd))
-      return std::move(Err);
+      return Err;
   }
   return Code;
 }
@@ -326,7 +326,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     // over tail padding first, in case jumping to NewEnd invalidates the Blob
     // pointer.
     if (Error Err = JumpToBit(NewEnd))
-      return std::move(Err);
+      return Err;
     const char *Ptr = (const char *)getPointerToBit(CurBitPos, NumElts);
 
     // If we can return a reference to the data, do so to avoid copying it.
@@ -401,7 +401,7 @@ Error BitstreamCursor::ReadAbbrevRecord() {
 Expected<Optional<BitstreamBlockInfo>>
 BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
   if (llvm::Error Err = EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID))
-    return std::move(Err);
+    return Err;
 
   BitstreamBlockInfo NewBlockInfo;
 
@@ -421,7 +421,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
     case llvm::BitstreamEntry::Error:
       return None;
     case llvm::BitstreamEntry::EndBlock:
-      return std::move(NewBlockInfo);
+      return NewBlockInfo;
     case llvm::BitstreamEntry::Record:
       // The interesting case.
       break;
@@ -431,7 +431,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
     if (Entry.ID == bitc::DEFINE_ABBREV) {
       if (!CurBlockInfo) return None;
       if (Error Err = ReadAbbrevRecord())
-        return std::move(Err);
+        return Err;
 
       // ReadAbbrevRecord installs the abbrev in CurAbbrevs.  Move it to the
       // appropriate BlockInfo.

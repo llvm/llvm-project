@@ -49,7 +49,7 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
   default:
     break;
   }
-  return std::move(Result);
+  return Result;
 }
 
 } // namespace exegesis

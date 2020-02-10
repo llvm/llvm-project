@@ -607,7 +607,7 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
     return EC;
 
   Writer->Format = Format;
-  return std::move(Writer);
+  return Writer;
 }
 
 void SampleProfileWriter::computeSummary(

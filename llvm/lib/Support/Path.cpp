@@ -1264,7 +1264,7 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
     return errorCodeToError(EC);
   }
 #endif
-  return std::move(Ret);
+  return Ret;
 }
 }
 

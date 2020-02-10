@@ -44,7 +44,7 @@ static Expected<uint32_t> getHashForUdt(const CVType &Rec) {
   T Deserialized;
   if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
                                                Deserialized))
-    return std::move(E);
+    return E;
   return getHashForUdt(Deserialized, Rec.data());
 }
 
@@ -53,7 +53,7 @@ static Expected<TagRecordHash> getTagRecordHashForUdt(const CVType &Rec) {
   T Deserialized;
   if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
                                                Deserialized))
-    return std::move(E);
+    return E;
 
   ClassOptions Opts = Deserialized.getOptions();
 
@@ -79,7 +79,7 @@ static Expected<uint32_t> getSourceLineHash(const CVType &Rec) {
   T Deserialized;
   if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
                                                Deserialized))
-    return std::move(E);
+    return E;
   char Buf[4];
   support::endian::write32le(Buf, Deserialized.getUDT().getIndex());
   return hashStringV1(StringRef(Buf, 4));

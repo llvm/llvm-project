@@ -19,7 +19,7 @@
 // Take an expression returning llvm::Error and forward the error if it exists.
 #define RETURN_IF_ERROR(Expr)                                                  \
   if (auto Err = (Expr))                                                       \
-    return std::move(Err);
+    return Err;           
 
 // Take an expression returning llvm::Expected<T> and assign it to Var or
 // forward the error out of the function.
@@ -295,7 +295,7 @@ Expected<SmallVector<RCInt, 8>> RCParser::readIntsWithCommas(size_t MinCount,
   auto FailureHandler =
       [&](llvm::Error Err) -> Expected<SmallVector<RCInt, 8>> {
     if (Result.size() < MinCount)
-      return std::move(Err);
+      return Err;
     consumeError(std::move(Err));
     return Result;
   };
@@ -315,7 +315,7 @@ Expected<SmallVector<RCInt, 8>> RCParser::readIntsWithCommas(size_t MinCount,
       return FailureHandler(IntResult.takeError());
   }
 
-  return std::move(Result);
+  return Result;
 }
 
 Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc,
@@ -386,7 +386,7 @@ RCParser::parseOptionalStatements(OptStmtType StmtsType) {
     Result.addStmt(std::move(*SingleParse));
   }
 
-  return std::move(Result);
+  return Result;
 }
 
 Expected<std::unique_ptr<OptionalStmt>>
@@ -442,7 +442,7 @@ RCParser::ParseType RCParser::parseAcceleratorsResource() {
     Accels->addAccelerator(*EventResult, *IDResult, *FlagsResult);
   }
 
-  return std::move(Accels);
+  return Accels;
 }
 
 RCParser::ParseType RCParser::parseCursorResource() {
@@ -484,7 +484,7 @@ RCParser::ParseType RCParser::parseDialogResource(bool IsExtended) {
     Dialog->addControl(std::move(*ControlDefResult));
   }
 
-  return std::move(Dialog);
+  return Dialog;
 }
 
 RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
@@ -679,7 +679,7 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
         std::make_unique<MenuItem>(*CaptionResult, MenuResult, *FlagsResult));
   }
 
-  return std::move(List);
+  return List;
 }
 
 RCParser::ParseType RCParser::parseStringTableResource() {
@@ -702,7 +702,7 @@ RCParser::ParseType RCParser::parseStringTableResource() {
     Table->addString(*IDResult, *StrResult);
   }
 
-  return std::move(Table);
+  return Table;
 }
 
 Expected<std::unique_ptr<VersionInfoBlock>>
@@ -718,7 +718,7 @@ RCParser::parseVersionInfoBlockContents(StringRef BlockName) {
 
   consume(); // Consume BlockEnd.
 
-  return std::move(Contents);
+  return Contents;
 }
 
 Expected<std::unique_ptr<VersionInfoStmt>> RCParser::parseVersionInfoStmt() {

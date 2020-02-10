@@ -119,7 +119,7 @@ LegacyJITSymbolResolver::getResponsibilitySet(const LookupSet &Symbols) {
       if (!Sym.getFlags().isStrong())
         Result.insert(Symbol);
     } else if (auto Err = Sym.takeError())
-      return std::move(Err);
+      return Err;
     else {
       // If there is no existing definition then the caller is responsible for
       // it.
@@ -127,5 +127,5 @@ LegacyJITSymbolResolver::getResponsibilitySet(const LookupSet &Symbols) {
     }
   }
 
-  return std::move(Result);
+  return Result;
 }

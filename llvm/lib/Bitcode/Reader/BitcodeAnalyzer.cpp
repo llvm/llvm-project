@@ -415,41 +415,41 @@ static Expected<CurStreamTypeType> ReadSignature(BitstreamCursor &Stream) {
 
   char Signature[6];
   if (Error Err = tryRead(Signature[0], 8))
-    return std::move(Err);
+    return Err;
   if (Error Err = tryRead(Signature[1], 8))
-    return std::move(Err);
+    return Err;
 
   // Autodetect the file contents, if it is one we know.
   if (Signature[0] == 'C' && Signature[1] == 'P') {
     if (Error Err = tryRead(Signature[2], 8))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[3], 8))
-      return std::move(Err);
+      return Err;
     if (Signature[2] == 'C' && Signature[3] == 'H')
       return ClangSerializedASTBitstream;
   } else if (Signature[0] == 'D' && Signature[1] == 'I') {
     if (Error Err = tryRead(Signature[2], 8))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[3], 8))
-      return std::move(Err);
+      return Err;
     if (Signature[2] == 'A' && Signature[3] == 'G')
       return ClangSerializedDiagnosticsBitstream;
   } else if (Signature[0] == 'R' && Signature[1] == 'M') {
     if (Error Err = tryRead(Signature[2], 8))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[3], 8))
-      return std::move(Err);
+      return Err;
     if (Signature[2] == 'R' && Signature[3] == 'K')
       return LLVMBitstreamRemarks;
   } else {
     if (Error Err = tryRead(Signature[2], 4))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[3], 4))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[4], 4))
-      return std::move(Err);
+      return Err;
     if (Error Err = tryRead(Signature[5], 4))
-      return std::move(Err);
+      return Err;
     if (Signature[0] == 'B' && Signature[1] == 'C' && Signature[2] == 0x0 &&
         Signature[3] == 0xC && Signature[4] == 0xE && Signature[5] == 0xD)
       return LLVMIRBitstream;

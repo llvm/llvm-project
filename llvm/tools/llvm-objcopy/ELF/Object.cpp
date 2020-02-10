@@ -277,7 +277,7 @@ Expected<IHexRecord> IHexRecord::parse(StringRef Line) {
                              "line is too short: %zu chars.", Line.size());
 
   if (Error E = checkChars(Line))
-    return std::move(E);
+    return E;
 
   IHexRecord Rec;
   size_t DataLen = checkedGetHex<uint8_t>(Line.substr(1, 2));
@@ -293,7 +293,7 @@ Expected<IHexRecord> IHexRecord::parse(StringRef Line) {
   if (getChecksum(Line.drop_front(1)) != 0)
     return createStringError(errc::invalid_argument, "incorrect checksum.");
   if (Error E = checkRecord(Rec))
-    return std::move(E);
+    return E;
   return Rec;
 }
 
@@ -1665,7 +1665,7 @@ Expected<std::vector<IHexRecord>> IHexReader::parse() const {
   if (!HasSections)
     return parseError(-1U, "no sections");
 
-  return std::move(Records);
+  return Records;
 }
 
 std::unique_ptr<Object> IHexReader::create(bool /*EnsureSymtab*/) const {

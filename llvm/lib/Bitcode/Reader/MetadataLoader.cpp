@@ -711,7 +711,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_STRINGS: {
         // Rewind and parse the strings.
         if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
+          return Err;
         StringRef Blob;
         Record.clear();
         if (Expected<unsigned> MaybeRecord =
@@ -725,14 +725,14 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
           MDStringRef.push_back(Str);
         };
         if (auto Err = parseMetadataStrings(Record, Blob, IndexNextMDString))
-          return std::move(Err);
+          return Err;
         break;
       }
       case bitc::METADATA_INDEX_OFFSET: {
         // This is the offset to the index, when we see this we skip all the
         // records and load only an index to these.
         if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
+          return Err;
         Record.clear();
         if (Expected<unsigned> MaybeRecord =
                 IndexCursor.readRecord(Entry.ID, Record))
@@ -744,7 +744,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
         auto Offset = Record[0] + (Record[1] << 32);
         auto BeginPos = IndexCursor.GetCurrentBitNo();
         if (Error Err = IndexCursor.JumpToBit(BeginPos + Offset))
-          return std::move(Err);
+          return Err;
         Expected<BitstreamEntry> MaybeEntry =
             IndexCursor.advanceSkippingSubblocks(
                 BitstreamCursor::AF_DontPopBlockAtEnd);
@@ -778,7 +778,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_NAME: {
         // Named metadata need to be materialized now and aren't deferred.
         if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
+          return Err;
         Record.clear();
 
         unsigned Code;
@@ -823,7 +823,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
         // FIXME: we need to do this early because we don't materialize global
         // value explicitly.
         if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
+          return Err;
         Record.clear();
         if (Expected<unsigned> MaybeRecord =
                 IndexCursor.readRecord(Entry.ID, Record))
@@ -838,7 +838,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
         if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID]))
           if (Error Err = parseGlobalObjectAttachment(
                   *GO, ArrayRef<uint64_t>(Record).slice(1)))
-            return std::move(Err);
+            return Err;
         break;
       }
       case bitc::METADATA_KIND:
