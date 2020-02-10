@@ -1,4 +1,4 @@
- // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding %s | FileCheck %s
 
         mrs x8, icc_iar1_el1
         mrs x26, icc_iar0_el1
@@ -143,7 +143,6 @@
         msr ich_ap1r2_el2, x14
         msr ich_ap1r3_el2, x13
         msr ich_hcr_el2, x1
-        msr ich_misr_el2, x10
         msr ich_vmcr_el2, x24
         msr ich_lr0_el2, x26
         msr ich_lr1_el2, x9
@@ -195,7 +194,6 @@
 // CHECK: msr      {{ich_ap1r2_el2|ICH_AP1R2_EL2}}, x14         // encoding: [0x4e,0xc9,0x1c,0xd5]
 // CHECK: msr      {{ich_ap1r3_el2|ICH_AP1R3_EL2}}, x13         // encoding: [0x6d,0xc9,0x1c,0xd5]
 // CHECK: msr      {{ich_hcr_el2|ICH_HCR_EL2}}, x1            // encoding: [0x01,0xcb,0x1c,0xd5]
-// CHECK: msr      {{ich_misr_el2|ICH_MISR_EL2}}, x10          // encoding: [0x4a,0xcb,0x1c,0xd5]
 // CHECK: msr      {{ich_vmcr_el2|ICH_VMCR_EL2}}, x24          // encoding: [0xf8,0xcb,0x1c,0xd5]
 // CHECK: msr      {{ich_lr0_el2|ICH_LR0_EL2}}, x26           // encoding: [0x1a,0xcc,0x1c,0xd5]
 // CHECK: msr      {{ich_lr1_el2|ICH_LR1_EL2}}, x9            // encoding: [0x29,0xcc,0x1c,0xd5]

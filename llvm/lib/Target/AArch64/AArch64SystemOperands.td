@@ -844,7 +844,7 @@ def : RWSysReg<"SP_EL2",             0b11, 0b110, 0b0100, 0b0001, 0b000>;
 def : RWSysReg<"SPSel",              0b11, 0b000, 0b0100, 0b0010, 0b000>;
 def : RWSysReg<"NZCV",               0b11, 0b011, 0b0100, 0b0010, 0b000>;
 def : RWSysReg<"DAIF",               0b11, 0b011, 0b0100, 0b0010, 0b001>;
-def : RWSysReg<"CurrentEL",          0b11, 0b000, 0b0100, 0b0010, 0b010>;
+def : ROSysReg<"CurrentEL",          0b11, 0b000, 0b0100, 0b0010, 0b010>;
 def : RWSysReg<"SPSR_irq",           0b11, 0b100, 0b0100, 0b0011, 0b000>;
 def : RWSysReg<"SPSR_abt",           0b11, 0b100, 0b0100, 0b0011, 0b001>;
 def : RWSysReg<"SPSR_und",           0b11, 0b100, 0b0100, 0b0011, 0b010>;
@@ -1184,7 +1184,7 @@ def : RWSysReg<"ICH_AP1R1_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b001>;
 def : RWSysReg<"ICH_AP1R2_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b010>;
 def : RWSysReg<"ICH_AP1R3_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b011>;
 def : RWSysReg<"ICH_HCR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b000>;
-def : RWSysReg<"ICH_MISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b010>;
+def : ROSysReg<"ICH_MISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b010>;
 def : RWSysReg<"ICH_VMCR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b111>;
 def : RWSysReg<"ICH_LR0_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b000>;
 def : RWSysReg<"ICH_LR1_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b001>;
@@ -1258,7 +1258,7 @@ let Requires = [{ {AArch64::FeatureSPE} }] in {
 def : RWSysReg<"PMBLIMITR_EL1", 0b11, 0b000, 0b1001, 0b1010, 0b000>;
 def : RWSysReg<"PMBPTR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b001>;
 def : RWSysReg<"PMBSR_EL1",     0b11, 0b000, 0b1001, 0b1010, 0b011>;
-def : RWSysReg<"PMBIDR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b111>;
+def : ROSysReg<"PMBIDR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b111>;
 def : RWSysReg<"PMSCR_EL2",     0b11, 0b100, 0b1001, 0b1001, 0b000>;
 def : RWSysReg<"PMSCR_EL12",    0b11, 0b101, 0b1001, 0b1001, 0b000>;
 def : RWSysReg<"PMSCR_EL1",     0b11, 0b000, 0b1001, 0b1001, 0b000>;
@@ -1267,7 +1267,7 @@ def : RWSysReg<"PMSIRR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b011>;
 def : RWSysReg<"PMSFCR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b100>;
 def : RWSysReg<"PMSEVFR_EL1",   0b11, 0b000, 0b1001, 0b1001, 0b101>;
 def : RWSysReg<"PMSLATFR_EL1",  0b11, 0b000, 0b1001, 0b1001, 0b110>;
-def : RWSysReg<"PMSIDR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b111>;
+def : ROSysReg<"PMSIDR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b111>;
 }
 
 // v8.2a "RAS extension" registers
