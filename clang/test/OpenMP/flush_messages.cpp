@@ -136,6 +136,8 @@ label1 : {
   ;
 #pragma omp flush seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp flush'}}
 #pragma omp flush acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}}
+#pragma omp flush acquire // omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}}
+#pragma omp flush acq_rel acquire // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}} omp50-error {{directive '#pragma omp flush' cannot contain more than one 'acq_rel' or 'acquire' clause}} omp50-note {{'acq_rel' clause used here}}
 #pragma omp flush acq_rel (argc) // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp50-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp50-note {{memory order clause 'acq_rel' is specified here}}
 #pragma omp flush(argc) acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp50-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp50-note {{memory order clause 'acq_rel' is specified here}}
   return tmain(argc);

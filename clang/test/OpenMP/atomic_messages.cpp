@@ -733,7 +733,7 @@ T acq_rel() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause}} omp50-note@+1 2 {{'acq_rel' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'acq_rel' or 'acquire' clause}} omp50-note@+1 2 {{'acq_rel' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
 #pragma omp atomic acq_rel seq_cst
   a += b;
 
@@ -754,7 +754,7 @@ int acq_rel() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause}} omp50-note@+1 {{'seq_cst' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'acq_rel' or 'acquire' clause}} omp50-note@+1 {{'seq_cst' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}}
 #pragma omp atomic seq_cst acq_rel
   a += b;
 
@@ -765,6 +765,48 @@ int acq_rel() {
   ;
 
  return acq_rel<int>(); // omp50-note {{in instantiation of function template specialization 'acq_rel<int>' requested here}}
+}
+
+template <class T>
+T acquire() {
+  T a = 0, b = 0;
+// omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic acquire
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'acq_rel' or 'acquire' clause}} omp50-note@+1 2 {{'acquire' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic acquire seq_cst
+  a += b;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic update acquire
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+
+  return T();
+}
+
+int acquire() {
+  int a = 0, b = 0;
+// Test for atomic acquire
+// omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic acquire
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'acq_rel' or 'acquire' clause}} omp50-note@+1 {{'seq_cst' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic seq_cst acquire
+  a += b;
+
+// omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}}
+#pragma omp atomic update acquire
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  ;
+
+ return acquire<int>(); // omp50-note {{in instantiation of function template specialization 'acquire<int>' requested here}}
 }
 
 template <class T>

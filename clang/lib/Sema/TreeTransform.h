@@ -8813,6 +8813,13 @@ TreeTransform<Derived>::TransformOMPAcqRelClause(OMPAcqRelClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPAcquireClause(OMPAcquireClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPThreadsClause(OMPThreadsClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;

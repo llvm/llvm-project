@@ -314,13 +314,14 @@ int main() {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx4.b;
-// CHECK: [[LD:%.+]] = load atomic i8, i8* getelementptr inbounds (%struct.BitFields4_packed, %struct.BitFields4_packed* @bfx4_packed, i32 0, i32 0, i64 2) monotonic
+// CHECK: [[LD:%.+]] = load atomic i8, i8* getelementptr inbounds (%struct.BitFields4_packed, %struct.BitFields4_packed* @bfx4_packed, i32 0, i32 0, i64 2) acquire
 // CHECK: store i8 [[LD]], i8* [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i8, i8* [[LDTEMP]]
 // CHECK: [[ASHR:%.+]] = ashr i8 [[LD]], 1
 // CHECK: sext i8 [[ASHR]] to i64
+// CHECK: call{{.*}} @__kmpc_flush(
 // CHECK: store x86_fp80
-#pragma omp atomic read
+#pragma omp atomic read acquire
   ldv = bfx4_packed.b;
 // CHECK: [[LD:%.+]] = load atomic i64, i64* bitcast (<2 x float>* @{{.+}} to i64*) acquire
 // CHECK: [[BITCAST:%.+]] = bitcast <2 x float>* [[LDTEMP:%.+]] to i64*
