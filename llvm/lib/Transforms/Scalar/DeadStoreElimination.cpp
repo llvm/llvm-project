@@ -29,7 +29,10 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -40,6 +43,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -87,10 +91,19 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
   cl::init(true), cl::Hidden,
   cl::desc("Enable partial store merging in DSE"));
 
-// Temporary dummy option for tests.
 static cl::opt<bool>
     EnableMemorySSA("enable-dse-memoryssa", cl::init(false), cl::Hidden,
                     cl::desc("Use the new MemorySSA-backed DSE."));
+
+static cl::opt<unsigned>
+    MemorySSAScanLimit("dse-memoryssa-scanlimit", cl::init(100), cl::Hidden,
+                       cl::desc("The number of memory instructions to scan for "
+                                "dead store elimination (default = 100)"));
+
+static cl::opt<unsigned> MemorySSADefsPerBlockLimit(
+    "dse-memoryssa-defs-per-block-limit", cl::init(5000), cl::Hidden,
+    cl::desc("The number of MemoryDefs we consider as candidates to eliminated "
+             "other stores per basic block (default = 5000)"));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -1354,22 +1367,490 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis *AA,
   return MadeChange;
 }
 
+namespace {
+//=============================================================================
+// MemorySSA backed dead store elimination.
+//
+// The code below implements dead store elimination using MemorySSA. It uses
+// the following general approach: given a MemoryDef, walk upwards to find
+// clobbering MemoryDefs that may be killed by the starting def. Then check
+// that there are no uses that may read the location of the original MemoryDef
+// in between both MemoryDefs. A bit more concretely:
+//
+// For all MemoryDefs StartDef:
+// 1. Get the next dominating clobbering MemoryDef (DomAccess) by walking
+//    upwards.
+// 2. Check that there are no reads between DomAccess and the StartDef by
+//    checking all uses starting at DomAccess and walking until we see StartDef.
+// 3. For each found DomDef, check that:
+//   1. There are no barrier instructions between DomDef and StartDef (like
+//       throws or stores with ordering constraints).
+//   2. StartDef is executed whenever DomDef is executed.
+//   3. StartDef completely overwrites DomDef.
+// 4. Erase DomDef from the function and MemorySSA.
+
+// Returns true if \p M is an intrisnic that does not read or write memory.
+bool isNoopIntrinsic(MemoryUseOrDef *M) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(M->getMemoryInst())) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::invariant_end:
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::assume:
+      return true;
+    case Intrinsic::dbg_addr:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_label:
+    case Intrinsic::dbg_value:
+      llvm_unreachable("Intrinsic should not be modeled in MemorySSA");
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+// Check if we can ignore \p D for DSE.
+bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
+  Instruction *DI = D->getMemoryInst();
+  // Calls that only access inaccessible memory cannot read or write any memory
+  // locations we consider for elimination.
+  if (auto CS = CallSite(DI))
+    if (CS.onlyAccessesInaccessibleMemory())
+      return true;
+
+  // We can eliminate stores to locations not visible to the caller across
+  // throwing instructions.
+  if (DI->mayThrow() && !DefVisibleToCaller)
+    return true;
+
+  // We can remove the dead stores, irrespective of the fence and its ordering
+  // (release/acquire/seq_cst). Fences only constraints the ordering of
+  // already visible stores, it does not make a store visible to other
+  // threads. So, skipping over a fence does not change a store from being
+  // dead.
+  if (isa<FenceInst>(DI))
+    return true;
+
+  // Skip intrinsics that do not really read or modify memory.
+  if (isNoopIntrinsic(D))
+    return true;
+
+  return false;
+}
+
+struct DSEState {
+  Function &F;
+  AliasAnalysis &AA;
+  MemorySSA &MSSA;
+  DominatorTree &DT;
+  PostDominatorTree &PDT;
+  const TargetLibraryInfo &TLI;
+
+  // All MemoryDefs that potentially could kill other MemDefs.
+  SmallVector<MemoryDef *, 64> MemDefs;
+  // Any that should be skipped as they are already deleted
+  SmallPtrSet<MemoryAccess *, 4> SkipStores;
+  // Keep track of all of the objects that are invisible to the caller until the
+  // function returns.
+  SmallPtrSet<const Value *, 16> InvisibleToCaller;
+  // Keep track of blocks with throwing instructions not modeled in MemorySSA.
+  SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
+
+  DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
+           PostDominatorTree &PDT, const TargetLibraryInfo &TLI)
+      : F(F), AA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI) {}
+
+  static DSEState get(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
+                      DominatorTree &DT, PostDominatorTree &PDT,
+                      const TargetLibraryInfo &TLI) {
+    DSEState State(F, AA, MSSA, DT, PDT, TLI);
+    // Collect blocks with throwing instructions not modeled in MemorySSA and
+    // alloc-like objects.
+    for (Instruction &I : instructions(F)) {
+      if (I.mayThrow() && !MSSA.getMemoryAccess(&I))
+        State.ThrowingBlocks.insert(I.getParent());
+
+      auto *MD = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(&I));
+      if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
+          hasAnalyzableMemoryWrite(&I, TLI) && isRemovable(&I))
+        State.MemDefs.push_back(MD);
+
+      // Track alloca and alloca-like objects. Here we care about objects not
+      // visible to the caller during function execution. Alloca objects are
+      // invalid in the caller, for alloca-like objects we ensure that they are
+      // not captured throughout the function.
+      if (isa<AllocaInst>(&I) ||
+          (isAllocLikeFn(&I, &TLI) && !PointerMayBeCaptured(&I, false, true)))
+        State.InvisibleToCaller.insert(&I);
+    }
+    // Treat byval or inalloca arguments the same as Allocas, stores to them are
+    // dead at the end of the function.
+    for (Argument &AI : F.args())
+      if (AI.hasByValOrInAllocaAttr())
+        State.InvisibleToCaller.insert(&AI);
+    return State;
+  }
+
+  Optional<MemoryLocation> getLocForWriteEx(Instruction *I) const {
+    if (!I->mayWriteToMemory())
+      return None;
+
+    if (auto *MTI = dyn_cast<AnyMemIntrinsic>(I))
+      return {MemoryLocation::getForDest(MTI)};
+
+    if (auto CS = CallSite(I)) {
+      if (Function *F = CS.getCalledFunction()) {
+        StringRef FnName = F->getName();
+        if (TLI.has(LibFunc_strcpy) && FnName == TLI.getName(LibFunc_strcpy))
+          return {MemoryLocation(CS.getArgument(0))};
+        if (TLI.has(LibFunc_strncpy) && FnName == TLI.getName(LibFunc_strncpy))
+          return {MemoryLocation(CS.getArgument(0))};
+        if (TLI.has(LibFunc_strcat) && FnName == TLI.getName(LibFunc_strcat))
+          return {MemoryLocation(CS.getArgument(0))};
+        if (TLI.has(LibFunc_strncat) && FnName == TLI.getName(LibFunc_strncat))
+          return {MemoryLocation(CS.getArgument(0))};
+      }
+      return None;
+    }
+
+    return MemoryLocation::getOrNone(I);
+  }
+
+  /// Returns true if \p Use completely overwrites \p DefLoc.
+  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *UseInst) const {
+    // UseInst has a MemoryDef associated in MemorySSA. It's possible for a
+    // MemoryDef to not write to memory, e.g. a volatile load is modeled as a
+    // MemoryDef.
+    if (!UseInst->mayWriteToMemory())
+      return false;
+
+    if (auto CS = CallSite(UseInst))
+      if (CS.onlyAccessesInaccessibleMemory())
+        return false;
+
+    ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
+    // If necessary, perform additional analysis.
+    if (isModSet(MR))
+      MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
+
+    Optional<MemoryLocation> UseLoc = getLocForWriteEx(UseInst);
+    return isModSet(MR) && isMustSet(MR) &&
+           UseLoc->Size.getValue() >= DefLoc.Size.getValue();
+  }
+
+  /// Returns true if \p Use may read from \p DefLoc.
+  bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) const {
+    if (!UseInst->mayReadFromMemory())
+      return false;
+
+    if (auto CS = CallSite(UseInst))
+      if (CS.onlyAccessesInaccessibleMemory())
+        return false;
+
+    ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
+    // If necessary, perform additional analysis.
+    if (isRefSet(MR))
+      MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
+    return isRefSet(MR);
+  }
+
+  // Find a MemoryDef writing to \p DefLoc and dominating \p Current, with no
+  // read access in between or return None otherwise. The returned value may not
+  // (completely) overwrite \p DefLoc. Currently we bail out when we encounter
+  // any of the following
+  //  * An aliasing MemoryUse (read).
+  //  * A MemoryPHI.
+  Optional<MemoryAccess *> getDomMemoryDef(MemoryDef *KillingDef,
+                                           MemoryAccess *Current,
+                                           MemoryLocation DefLoc,
+                                           bool DefVisibleToCaller,
+                                           int &ScanLimit) const {
+    MemoryDef *DomDef;
+    MemoryAccess *StartDef = Current;
+    bool StepAgain;
+    LLVM_DEBUG(dbgs() << "  trying to get dominating access for " << *Current
+                      << "\n");
+    // Find the next clobbering Mod access for DefLoc, starting at Current.
+    do {
+      StepAgain = false;
+      // Reached TOP.
+      if (MSSA.isLiveOnEntryDef(Current))
+        return None;
+
+      MemoryUseOrDef *CurrentUD = dyn_cast<MemoryUseOrDef>(Current);
+      if (!CurrentUD)
+        return None;
+
+      // Look for access that clobber DefLoc.
+      MemoryAccess *DomAccess =
+          MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(
+              CurrentUD->getDefiningAccess(), DefLoc);
+      DomDef = dyn_cast<MemoryDef>(DomAccess);
+      if (!DomDef || MSSA.isLiveOnEntryDef(DomDef))
+        return None;
+
+      // Check if we can skip DomDef for DSE. We also require the KillingDef
+      // execute whenever DomDef executes and use post-dominance to ensure that.
+      if (canSkipDef(DomDef, DefVisibleToCaller) ||
+          !PDT.dominates(KillingDef->getBlock(), DomDef->getBlock())) {
+        StepAgain = true;
+        Current = DomDef;
+      }
+
+    } while (StepAgain);
+
+    LLVM_DEBUG(dbgs() << "  Checking for reads of " << *DomDef << " ("
+                      << *DomDef->getMemoryInst() << ")\n");
+
+    SmallSetVector<MemoryAccess *, 32> WorkList;
+    auto PushMemUses = [&WorkList](MemoryAccess *Acc) {
+      for (Use &U : Acc->uses())
+        WorkList.insert(cast<MemoryAccess>(U.getUser()));
+    };
+    PushMemUses(DomDef);
+
+    // Check if DomDef may be read.
+    for (unsigned I = 0; I < WorkList.size(); I++) {
+      MemoryAccess *UseAccess = WorkList[I];
+
+      LLVM_DEBUG(dbgs() << "   Checking use " << *UseAccess);
+      if (--ScanLimit == 0) {
+        LLVM_DEBUG(dbgs() << "  ...  hit scan limit\n");
+        return None;
+      }
+
+      // Bail out on MemoryPhis for now.
+      if (isa<MemoryPhi>(UseAccess)) {
+        LLVM_DEBUG(dbgs() << "  ...  hit MemoryPhi\n");
+        return None;
+      }
+
+      Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();
+      LLVM_DEBUG(dbgs() << " (" << *UseInst << ")\n");
+
+      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
+        PushMemUses(UseAccess);
+        continue;
+      }
+
+      // Uses which may read the original MemoryDef mean we cannot eliminate the
+      // original MD. Stop walk.
+      if (isReadClobber(DefLoc, UseInst)) {
+        LLVM_DEBUG(dbgs() << "  ... found read clobber\n");
+        return None;
+      }
+
+      if (StartDef == UseAccess)
+        continue;
+
+      // Check all uses for MemoryDefs, except for defs completely overwriting
+      // the original location. Otherwise we have to check uses of *all*
+      // MemoryDefs we discover, including non-aliasing ones. Otherwise we might
+      // miss cases like the following
+      //   1 = Def(LoE) ; <----- DomDef stores [0,1]
+      //   2 = Def(1)   ; (2, 1) = NoAlias,   stores [2,3]
+      //   Use(2)       ; MayAlias 2 *and* 1, loads [0, 3].
+      //                  (The Use points to the *first* Def it may alias)
+      //   3 = Def(1)   ; <---- Current  (3, 2) = NoAlias, (3,1) = MayAlias,
+      //                  stores [0,1]
+      if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
+        if (!isCompleteOverwrite(DefLoc, UseInst))
+          PushMemUses(UseDef);
+      }
+    }
+
+    // No aliasing MemoryUses of DomDef found, DomDef is potentially dead.
+    return {DomDef};
+  }
+
+  // Delete dead memory defs
+  void deleteDeadInstruction(Instruction *SI) {
+    MemorySSAUpdater Updater(&MSSA);
+    SmallVector<Instruction *, 32> NowDeadInsts;
+    NowDeadInsts.push_back(SI);
+    --NumFastOther;
+
+    while (!NowDeadInsts.empty()) {
+      Instruction *DeadInst = NowDeadInsts.pop_back_val();
+      ++NumFastOther;
+
+      // Try to preserve debug information attached to the dead instruction.
+      salvageDebugInfo(*DeadInst);
+
+      // Remove the Instruction from MSSA.
+      if (MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst)) {
+        Updater.removeMemoryAccess(MA);
+        if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
+          SkipStores.insert(MD);
+        }
+      }
+
+      // Remove its operands
+      for (Use &O : DeadInst->operands())
+        if (Instruction *OpI = dyn_cast<Instruction>(O)) {
+          O = nullptr;
+          if (isInstructionTriviallyDead(OpI, &TLI))
+            NowDeadInsts.push_back(OpI);
+        }
+
+      DeadInst->eraseFromParent();
+    }
+  }
+
+  // Check for any extra throws between SI and NI that block DSE.  This only
+  // checks extra maythrows (those that aren't MemoryDef's). MemoryDef that may
+  // throw are handled during the walk from one def to the next.
+  bool mayThrowBetween(Instruction *SI, Instruction *NI,
+                       const Value *SILocUnd) const {
+    // First see if we can ignore it by using the fact that SI is an
+    // alloca/alloca like object that is not visible to the caller during
+    // execution of the function.
+    if (SILocUnd && InvisibleToCaller.count(SILocUnd))
+      return false;
+
+    if (SI->getParent() == NI->getParent())
+      return ThrowingBlocks.find(SI->getParent()) != ThrowingBlocks.end();
+    return !ThrowingBlocks.empty();
+  }
+
+  // Check if \p NI acts as a DSE barrier for \p SI. The following instructions
+  // act as barriers:
+  //  * A memory instruction that may throw and \p SI accesses a non-stack
+  //  object.
+  //  * Atomic stores stronger that monotonic.
+  bool isDSEBarrier(Instruction *SI, MemoryLocation &SILoc,
+                    const Value *SILocUnd, Instruction *NI,
+                    MemoryLocation &NILoc) const {
+    // If NI may throw it acts as a barrier, unless we are to an alloca/alloca
+    // like object that does not escape.
+    if (NI->mayThrow() && !InvisibleToCaller.count(SILocUnd))
+      return true;
+
+    if (NI->isAtomic()) {
+      if (auto *NSI = dyn_cast<StoreInst>(NI)) {
+        if (isStrongerThanMonotonic(NSI->getOrdering()))
+          return true;
+      } else
+        llvm_unreachable(
+            "Other instructions should be modeled/skipped in MemorySSA");
+    }
+
+    return false;
+  }
+};
+
+bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
+                                  MemorySSA &MSSA, DominatorTree &DT,
+                                  PostDominatorTree &PDT,
+                                  const TargetLibraryInfo &TLI) {
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  bool MadeChange = false;
+
+  DSEState State = DSEState::get(F, AA, MSSA, DT, PDT, TLI);
+  // For each store:
+  for (unsigned I = 0; I < State.MemDefs.size(); I++) {
+    MemoryDef *Current = State.MemDefs[I];
+    if (State.SkipStores.count(Current))
+      continue;
+    Instruction *SI = cast<MemoryDef>(Current)->getMemoryInst();
+    auto MaybeSILoc = State.getLocForWriteEx(SI);
+    if (!MaybeSILoc) {
+      LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
+                        << *SI << "\n");
+      continue;
+    }
+    MemoryLocation SILoc = *MaybeSILoc;
+    assert(SILoc.Ptr && "SILoc should not be null");
+    const Value *SILocUnd = GetUnderlyingObject(SILoc.Ptr, DL);
+    Instruction *DefObj =
+        const_cast<Instruction *>(dyn_cast<Instruction>(SILocUnd));
+    bool DefVisibleToCaller = !State.InvisibleToCaller.count(SILocUnd);
+    if (DefObj && ((isAllocLikeFn(DefObj, &TLI) &&
+                    !PointerMayBeCapturedBefore(DefObj, false, true, SI, &DT))))
+      DefVisibleToCaller = false;
+
+    LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs killed by " << *SI
+                      << "\n");
+
+    int ScanLimit = MemorySSAScanLimit;
+    MemoryDef *StartDef = Current;
+    // Walk MemorySSA upward to find MemoryDefs that might be killed by SI.
+    while (Optional<MemoryAccess *> Next = State.getDomMemoryDef(
+               StartDef, Current, SILoc, DefVisibleToCaller, ScanLimit)) {
+      MemoryAccess *DomAccess = *Next;
+      LLVM_DEBUG(dbgs() << " Checking if we can kill " << *DomAccess << "\n");
+      MemoryDef *NextDef = dyn_cast<MemoryDef>(DomAccess);
+      Instruction *NI = NextDef->getMemoryInst();
+      LLVM_DEBUG(dbgs() << "  def " << *NI << "\n");
+
+      if (!hasAnalyzableMemoryWrite(NI, TLI))
+        break;
+      MemoryLocation NILoc = *State.getLocForWriteEx(NI);
+      // Check for anything that looks like it will be a barrier to further
+      // removal
+      if (State.isDSEBarrier(SI, SILoc, SILocUnd, NI, NILoc)) {
+        LLVM_DEBUG(dbgs() << "  stop, barrier\n");
+        break;
+      }
+
+      // Before we try to remove anything, check for any extra throwing
+      // instructions that block us from DSEing
+      if (State.mayThrowBetween(SI, NI, SILocUnd)) {
+        LLVM_DEBUG(dbgs() << " stop, may throw!\n");
+        break;
+      }
+
+      // Check if NI overwrites SI.
+      int64_t InstWriteOffset, DepWriteOffset;
+      InstOverlapIntervalsTy IOL;
+      OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
+                                       InstWriteOffset, NI, IOL, AA, &F);
+
+      if (OR == OW_Complete) {
+        LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *NI
+                          << "\n  KILLER: " << *SI << '\n');
+        State.deleteDeadInstruction(NI);
+        ++NumFastStores;
+        MadeChange = true;
+      } else
+        Current = NextDef;
+    }
+  }
+
+  return MadeChange;
+}
+} // end anonymous namespace
+
 //===----------------------------------------------------------------------===//
 // DSE Pass
 //===----------------------------------------------------------------------===//
 PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
-  AliasAnalysis *AA = &AM.getResult<AAManager>(F);
-  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  MemoryDependenceResults *MD = &AM.getResult<MemoryDependenceAnalysis>(F);
-  const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
+  AliasAnalysis &AA = AM.getResult<AAManager>(F);
+  const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!eliminateDeadStores(F, AA, MD, DT, TLI))
-    return PreservedAnalyses::all();
+  if (EnableMemorySSA) {
+    MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+    PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+
+    if (!eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI))
+      return PreservedAnalyses::all();
+  } else {
+    MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
+
+    if (!eliminateDeadStores(F, &AA, &MD, &DT, &TLI))
+      return PreservedAnalyses::all();
+  }
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
-  PA.preserve<MemoryDependenceAnalysis>();
+  if (EnableMemorySSA)
+    PA.preserve<MemorySSAAnalysis>();
+  else
+    PA.preserve<MemoryDependenceAnalysis>();
   return PA;
 }
 
@@ -1388,25 +1869,42 @@ public:
     if (skipFunction(F))
       return false;
 
-    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    MemoryDependenceResults *MD =
-        &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-    const TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
-    return eliminateDeadStores(F, AA, MD, DT, TLI);
+    if (EnableMemorySSA) {
+      MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+      PostDominatorTree &PDT =
+          getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+
+      return eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI);
+    } else {
+      MemoryDependenceResults &MD =
+          getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
+
+      return eliminateDeadStores(F, &AA, &MD, &DT, &TLI);
+    }
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<MemoryDependenceWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+
+    if (EnableMemorySSA) {
+      AU.addRequired<PostDominatorTreeWrapperPass>();
+      AU.addRequired<MemorySSAWrapperPass>();
+      AU.addPreserved<PostDominatorTreeWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
+    } else {
+      AU.addRequired<MemoryDependenceWrapperPass>();
+      AU.addPreserved<MemoryDependenceWrapperPass>();
+    }
   }
 };
 
@@ -1417,8 +1915,10 @@ char DSELegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(DSELegacyPass, "dse", "Dead Store Elimination", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(DSELegacyPass, "dse", "Dead Store Elimination", false,
