@@ -145,8 +145,6 @@ public:
 
   // Thumb 2 Addressing Modes:
   bool SelectT2AddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
-  template <unsigned Shift>
-  bool SelectT2AddrModeImm8(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectT2AddrModeImm8(SDValue N, SDValue &Base,
                             SDValue &OffImm);
   bool SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
@@ -1298,33 +1296,6 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
   // Base only.
   Base = N;
   OffImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
-  return true;
-}
-
-template <unsigned Shift>
-bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N, SDValue &Base,
-                                           SDValue &OffImm) {
-  if (N.getOpcode() == ISD::SUB || CurDAG->isBaseWithConstantOffset(N)) {
-    int RHSC;
-    if (isScaledConstantInRange(N.getOperand(1), 1 << Shift, -255, 256, RHSC)) {
-      Base = N.getOperand(0);
-      if (Base.getOpcode() == ISD::FrameIndex) {
-        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-        Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-      }
-
-      if (N.getOpcode() == ISD::SUB)
-        RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
-      return true;
-    }
-  }
-
-  // Base only.
-  Base = N;
-  OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
   return true;
 }
 
@@ -3586,26 +3557,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       ARM::t2WhileLoopStart : ARM::t2LoopEnd;
     SDNode *New = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
     ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::LDRD: {
-    if (Subtarget->isThumb2())
-      break; // TableGen handles isel in this case.
-    SDValue Base, RegOffset, ImmOffset;
-    const SDValue &Chain = N->getOperand(0);
-    const SDValue &Addr = N->getOperand(1);
-    SelectAddrMode3(Addr, Base, RegOffset, ImmOffset);
-    SDValue Ops[] = {Base, RegOffset, ImmOffset, Chain};
-    SDNode *New = CurDAG->getMachineNode(ARM::LOADDUAL, dl,
-                                         {MVT::Untyped, MVT::Other}, Ops);
-    SDValue Lo = CurDAG->getTargetExtractSubreg(ARM::gsub_0, dl, MVT::i32,
-                                                SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(ARM::gsub_1, dl, MVT::i32,
-                                                SDValue(New, 0));
-    ReplaceUses(SDValue(N, 0), Lo);
-    ReplaceUses(SDValue(N, 1), Hi);
-    ReplaceUses(SDValue(N, 2), SDValue(New, 1));
     CurDAG->RemoveDeadNode(N);
     return;
   }
