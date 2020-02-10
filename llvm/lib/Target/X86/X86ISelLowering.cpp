@@ -45983,6 +45983,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            Op0.getOperand(1));
       }
       break;
+    case X86ISD::VPERMI:
     case X86ISD::VROTLI:
     case X86ISD::VROTRI:
       if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
