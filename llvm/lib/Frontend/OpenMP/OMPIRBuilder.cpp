@@ -18,8 +18,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -558,9 +558,9 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       //    callback callee.
       F->addMetadata(
           llvm::LLVMContext::MD_callback,
-          *llvm::MDNode::get(
-              Ctx, {MDB.createCallbackEncoding(2, {-1, -1},
-                                               /* VarArgsArePassed */ true)}));
+          *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                      2, {-1, -1},
+                                      /* VarArgsArePassed */ true)}));
     }
   }
 
@@ -631,7 +631,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   return AfterIP;
 }
 
-void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc)
+{
   // Build call void __kmpc_flush(ident_t *loc)
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
   Value *Args[] = {getOrCreateIdent(SrcLocStr)};
@@ -639,245 +640,9 @@ void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
   Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_flush), Args);
 }
 
-void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc)
+{
   if (!updateToLocation(Loc))
-    return;
+   return;
   emitFlush(Loc);
-}
-
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
-                              BodyGenCallbackTy BodyGenCB,
-                              FinalizeCallbackTy FiniCB) {
-
-  if (!updateToLocation(Loc))
-    return Loc.IP;
-
-  Directive OMPD = Directive::OMPD_master;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
-  Value *Ident = getOrCreateIdent(SrcLocStr);
-  Value *ThreadId = getOrCreateThreadID(Ident);
-  Value *Args[] = {Ident, ThreadId};
-
-  Function *EntryRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_master);
-  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
-
-  Function *ExitRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_end_master);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
-
-  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ true, /*hasFinalize*/ true);
-}
-
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCritical(
-    const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
-
-  if (!updateToLocation(Loc))
-    return Loc.IP;
-
-  Directive OMPD = Directive::OMPD_critical;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
-  Value *Ident = getOrCreateIdent(SrcLocStr);
-  Value *ThreadId = getOrCreateThreadID(Ident);
-  Value *LockVar = getOMPCriticalRegionLock(CriticalName);
-  Value *Args[] = {Ident, ThreadId, LockVar};
-
-  SmallVector<llvm::Value *, 4> EnterArgs(std::begin(Args), std::end(Args));
-  Function *RTFn = nullptr;
-  if (HintInst) {
-    // Add Hint to entry Args and create call
-    EnterArgs.push_back(HintInst);
-    RTFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_critical_with_hint);
-  } else {
-    RTFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_critical);
-  }
-  Instruction *EntryCall = Builder.CreateCall(RTFn, EnterArgs);
-
-  Function *ExitRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_end_critical);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
-
-  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ false, /*hasFinalize*/ true);
-}
-
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
-    Directive OMPD, Instruction *EntryCall, Instruction *ExitCall,
-    BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,
-    bool HasFinalize) {
-
-  if (HasFinalize)
-    FinalizationStack.push_back({FiniCB, OMPD, /*IsCancellable*/ false});
-
-  // Create inlined region's entry and body blocks, in preparation
-  // for conditional creation
-  BasicBlock *EntryBB = Builder.GetInsertBlock();
-  Instruction *SplitPos = EntryBB->getTerminator();
-  if (!isa_and_nonnull<BranchInst>(SplitPos))
-    SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
-  BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
-  BasicBlock *FiniBB =
-      EntryBB->splitBasicBlock(EntryBB->getTerminator(), "omp_region.finalize");
-
-  Builder.SetInsertPoint(EntryBB->getTerminator());
-  emitCommonDirectiveEntry(OMPD, EntryCall, ExitBB, Conditional);
-
-  // generate body
-  BodyGenCB(/* AllocaIP */ InsertPointTy(),
-            /* CodeGenIP */ Builder.saveIP(), *FiniBB);
-
-  // If we didn't emit a branch to FiniBB during body generation, it means
-  // FiniBB is unreachable (e.g. while(1);). stop generating all the
-  // unreachable blocks, and remove anything we are not going to use.
-  auto SkipEmittingRegion = FiniBB->hasNPredecessors(0);
-  if (SkipEmittingRegion) {
-    FiniBB->eraseFromParent();
-    ExitCall->eraseFromParent();
-    // Discard finalization if we have it.
-    if (HasFinalize) {
-      assert(!FinalizationStack.empty() &&
-             "Unexpected finalization stack state!");
-      FinalizationStack.pop_back();
-    }
-  } else {
-    // emit exit call and do any needed finalization.
-    auto FinIP = InsertPointTy(FiniBB, FiniBB->getFirstInsertionPt());
-    assert(FiniBB->getTerminator()->getNumSuccessors() == 1 &&
-           FiniBB->getTerminator()->getSuccessor(0) == ExitBB &&
-           "Unexpected control flow graph state!!");
-    emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
-    assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
-           "Unexpected Control Flow State!");
-    MergeBlockIntoPredecessor(FiniBB);
-  }
-
-  // If we are skipping the region of a non conditional, remove the exit
-  // block, and clear the builder's insertion point.
-  assert(SplitPos->getParent() == ExitBB &&
-         "Unexpected Insertion point location!");
-  if (!Conditional && SkipEmittingRegion) {
-    ExitBB->eraseFromParent();
-    Builder.ClearInsertionPoint();
-  } else {
-    auto merged = MergeBlockIntoPredecessor(ExitBB);
-    BasicBlock *ExitPredBB = SplitPos->getParent();
-    auto InsertBB = merged ? ExitPredBB : ExitBB;
-    if (!isa_and_nonnull<BranchInst>(SplitPos))
-      SplitPos->eraseFromParent();
-    Builder.SetInsertPoint(InsertBB);
-  }
-
-  return Builder.saveIP();
-}
-
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveEntry(
-    Directive OMPD, Value *EntryCall, BasicBlock *ExitBB, bool Conditional) {
-
-  // if nothing to do, Return current insertion point.
-  if (!Conditional)
-    return Builder.saveIP();
-
-  BasicBlock *EntryBB = Builder.GetInsertBlock();
-  Value *CallBool = Builder.CreateIsNotNull(EntryCall);
-  auto *ThenBB = BasicBlock::Create(M.getContext(), "omp_region.body");
-  auto *UI = new UnreachableInst(Builder.getContext(), ThenBB);
-
-  // Emit thenBB and set the Builder's insertion point there for
-  // body generation next. Place the block after the current block.
-  Function *CurFn = EntryBB->getParent();
-  CurFn->getBasicBlockList().insertAfter(EntryBB->getIterator(), ThenBB);
-
-  // Move Entry branch to end of ThenBB, and replace with conditional
-  // branch (If-stmt)
-  Instruction *EntryBBTI = EntryBB->getTerminator();
-  Builder.CreateCondBr(CallBool, ThenBB, ExitBB);
-  EntryBBTI->removeFromParent();
-  Builder.SetInsertPoint(UI);
-  Builder.Insert(EntryBBTI);
-  UI->eraseFromParent();
-  Builder.SetInsertPoint(ThenBB->getTerminator());
-
-  // return an insertion point to ExitBB.
-  return IRBuilder<>::InsertPoint(ExitBB, ExitBB->getFirstInsertionPt());
-}
-
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
-    omp::Directive OMPD, InsertPointTy FinIP, Instruction *ExitCall,
-    bool HasFinalize) {
-
-  IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(FinIP);
-
-  // If there is finalization to do, emit it before the exit call
-  if (HasFinalize) {
-    assert(!FinalizationStack.empty() &&
-           "Unexpected finalization stack state!");
-
-    FinalizationInfo Fi = FinalizationStack.pop_back_val();
-    assert(Fi.DK == OMPD && "Unexpected Directive for Finalization call!");
-
-    Fi.FiniCB(FinIP);
-
-    BasicBlock *FiniBB = FinIP.getBlock();
-    Instruction *FiniBBTI = FiniBB->getTerminator();
-
-    // set Builder IP for call creation
-    Builder.SetInsertPoint(FiniBBTI);
-  }
-
-  // place the Exitcall as last instruction before Finalization block terminator
-  ExitCall->removeFromParent();
-  Builder.Insert(ExitCall);
-
-  return IRBuilder<>::InsertPoint(ExitCall->getParent(),
-                                  ExitCall->getIterator());
-}
-
-std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
-                                                   StringRef FirstSeparator,
-                                                   StringRef Separator) {
-  SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
-  StringRef Sep = FirstSeparator;
-  for (StringRef Part : Parts) {
-    OS << Sep << Part;
-    Sep = Separator;
-  }
-  return OS.str().str();
-}
-
-Constant *OpenMPIRBuilder::getOrCreateOMPInternalVariable(
-    llvm::Type *Ty, const llvm::Twine &Name, unsigned AddressSpace) {
-  // TODO: Replace the twine arg with stringref to get rid of the conversion
-  // logic. However This is taken from current implementation in clang as is.
-  // Since this method is used in many places exclusively for OMP internal use
-  // we will keep it as is for temporarily until we move all users to the
-  // builder and then, if possible, fix it everywhere in one go.
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << Name;
-  StringRef RuntimeName = Out.str();
-  auto &Elem = *InternalVars.try_emplace(RuntimeName, nullptr).first;
-  if (Elem.second) {
-    assert(Elem.second->getType()->getPointerElementType() == Ty &&
-           "OMP internal variable has different type than requested");
-  } else {
-    // TODO: investigate the appropriate linkage type used for the global
-    // variable for possibly changing that to internal or private, or maybe
-    // create different versions of the function for different OMP internal
-    // variables.
-    Elem.second = new llvm::GlobalVariable(
-        M, Ty, /*IsConstant*/ false, llvm::GlobalValue::CommonLinkage,
-        llvm::Constant::getNullValue(Ty), Elem.first(),
-        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-        AddressSpace);
-  }
-
-  return Elem.second;
-}
-
-Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
-  std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
-  std::string Name = getNameWithSeparators({Prefix, "var"}, ".", ".");
-  return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
 }
