@@ -5083,12 +5083,31 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // destination register is wider than 32 bits (4 bytes), and its user
     // instruction isn't scalar (SS).
     switch (UserOpc) {
+    case X86::CVTSS2SDrr_Int:
+    case X86::VCVTSS2SDrr_Int:
+    case X86::VCVTSS2SDZrr_Int:
+    case X86::VCVTSS2SDZrr_Intk:
+    case X86::VCVTSS2SDZrr_Intkz:
+    case X86::CVTSS2SIrr_Int:     case X86::CVTSS2SI64rr_Int:
+    case X86::VCVTSS2SIrr_Int:    case X86::VCVTSS2SI64rr_Int:
+    case X86::VCVTSS2SIZrr_Int:   case X86::VCVTSS2SI64Zrr_Int:
+    case X86::CVTTSS2SIrr_Int:    case X86::CVTTSS2SI64rr_Int:
+    case X86::VCVTTSS2SIrr_Int:   case X86::VCVTTSS2SI64rr_Int:
+    case X86::VCVTTSS2SIZrr_Int:  case X86::VCVTTSS2SI64Zrr_Int:
+    case X86::VCVTSS2USIZrr_Int:  case X86::VCVTSS2USI64Zrr_Int:
+    case X86::VCVTTSS2USIZrr_Int: case X86::VCVTTSS2USI64Zrr_Int:
+    case X86::RCPSSr_Int:   case X86::VRCPSSr_Int:
+    case X86::RSQRTSSr_Int: case X86::VRSQRTSSr_Int:
+    case X86::ROUNDSSr_Int: case X86::VROUNDSSr_Int:
+    case X86::COMISSrr_Int: case X86::VCOMISSrr_Int: case X86::VCOMISSZrr_Int:
+    case X86::UCOMISSrr_Int:case X86::VUCOMISSrr_Int:case X86::VUCOMISSZrr_Int:
     case X86::ADDSSrr_Int: case X86::VADDSSrr_Int: case X86::VADDSSZrr_Int:
     case X86::CMPSSrr_Int: case X86::VCMPSSrr_Int: case X86::VCMPSSZrr_Int:
     case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int: case X86::VDIVSSZrr_Int:
     case X86::MAXSSrr_Int: case X86::VMAXSSrr_Int: case X86::VMAXSSZrr_Int:
     case X86::MINSSrr_Int: case X86::VMINSSrr_Int: case X86::VMINSSZrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
+    case X86::SQRTSSr_Int: case X86::VSQRTSSr_Int: case X86::VSQRTSSZr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
     case X86::VADDSSZrr_Intk: case X86::VADDSSZrr_Intkz:
     case X86::VCMPSSZrr_Intk:
@@ -5096,6 +5115,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VMAXSSZrr_Intk: case X86::VMAXSSZrr_Intkz:
     case X86::VMINSSZrr_Intk: case X86::VMINSSZrr_Intkz:
     case X86::VMULSSZrr_Intk: case X86::VMULSSZrr_Intkz:
+    case X86::VSQRTSSZr_Intk: case X86::VSQRTSSZr_Intkz:
     case X86::VSUBSSZrr_Intk: case X86::VSUBSSZrr_Intkz:
     case X86::VFMADDSS4rr_Int:   case X86::VFNMADDSS4rr_Int:
     case X86::VFMSUBSS4rr_Int:   case X86::VFNMSUBSS4rr_Int:
@@ -5123,6 +5143,41 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFMSUB132SSZr_Intkz: case X86::VFNMSUB132SSZr_Intkz:
     case X86::VFMSUB213SSZr_Intkz: case X86::VFNMSUB213SSZr_Intkz:
     case X86::VFMSUB231SSZr_Intkz: case X86::VFNMSUB231SSZr_Intkz:
+    case X86::VFIXUPIMMSSZrri:
+    case X86::VFIXUPIMMSSZrrik:
+    case X86::VFIXUPIMMSSZrrikz:
+    case X86::VFPCLASSSSZrr:
+    case X86::VFPCLASSSSZrrk:
+    case X86::VGETEXPSSZr:
+    case X86::VGETEXPSSZrk:
+    case X86::VGETEXPSSZrkz:
+    case X86::VGETMANTSSZrri:
+    case X86::VGETMANTSSZrrik:
+    case X86::VGETMANTSSZrrikz:
+    case X86::VRANGESSZrri:
+    case X86::VRANGESSZrrik:
+    case X86::VRANGESSZrrikz:
+    case X86::VRCP14SSZrr:
+    case X86::VRCP14SSZrrk:
+    case X86::VRCP14SSZrrkz:
+    case X86::VRCP28SSZr:
+    case X86::VRCP28SSZrk:
+    case X86::VRCP28SSZrkz:
+    case X86::VREDUCESSZrri:
+    case X86::VREDUCESSZrrik:
+    case X86::VREDUCESSZrrikz:
+    case X86::VRNDSCALESSZr_Int:
+    case X86::VRNDSCALESSZr_Intk:
+    case X86::VRNDSCALESSZr_Intkz:
+    case X86::VRSQRT14SSZrr:
+    case X86::VRSQRT14SSZrrk:
+    case X86::VRSQRT14SSZrrkz:
+    case X86::VRSQRT28SSZr:
+    case X86::VRSQRT28SSZrk:
+    case X86::VRSQRT28SSZrkz:
+    case X86::VSCALEFSSZrr:
+    case X86::VSCALEFSSZrrk:
+    case X86::VSCALEFSSZrrkz:
       return false;
     default:
       return true;
@@ -5137,12 +5192,29 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // destination register is wider than 64 bits (8 bytes), and its user
     // instruction isn't scalar (SD).
     switch (UserOpc) {
+    case X86::CVTSD2SSrr_Int:
+    case X86::VCVTSD2SSrr_Int:
+    case X86::VCVTSD2SSZrr_Int:
+    case X86::VCVTSD2SSZrr_Intk:
+    case X86::VCVTSD2SSZrr_Intkz:
+    case X86::CVTSD2SIrr_Int:     case X86::CVTSD2SI64rr_Int:
+    case X86::VCVTSD2SIrr_Int:    case X86::VCVTSD2SI64rr_Int:
+    case X86::VCVTSD2SIZrr_Int:   case X86::VCVTSD2SI64Zrr_Int:
+    case X86::CVTTSD2SIrr_Int:    case X86::CVTTSD2SI64rr_Int:
+    case X86::VCVTTSD2SIrr_Int:   case X86::VCVTTSD2SI64rr_Int:
+    case X86::VCVTTSD2SIZrr_Int:  case X86::VCVTTSD2SI64Zrr_Int:
+    case X86::VCVTSD2USIZrr_Int:  case X86::VCVTSD2USI64Zrr_Int:
+    case X86::VCVTTSD2USIZrr_Int: case X86::VCVTTSD2USI64Zrr_Int:
+    case X86::ROUNDSDr_Int: case X86::VROUNDSDr_Int:
+    case X86::COMISDrr_Int: case X86::VCOMISDrr_Int: case X86::VCOMISDZrr_Int:
+    case X86::UCOMISDrr_Int:case X86::VUCOMISDrr_Int:case X86::VUCOMISDZrr_Int:
     case X86::ADDSDrr_Int: case X86::VADDSDrr_Int: case X86::VADDSDZrr_Int:
     case X86::CMPSDrr_Int: case X86::VCMPSDrr_Int: case X86::VCMPSDZrr_Int:
     case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int: case X86::VDIVSDZrr_Int:
     case X86::MAXSDrr_Int: case X86::VMAXSDrr_Int: case X86::VMAXSDZrr_Int:
     case X86::MINSDrr_Int: case X86::VMINSDrr_Int: case X86::VMINSDZrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
+    case X86::SQRTSDr_Int: case X86::VSQRTSDr_Int: case X86::VSQRTSDZr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
     case X86::VADDSDZrr_Intk: case X86::VADDSDZrr_Intkz:
     case X86::VCMPSDZrr_Intk:
@@ -5150,6 +5222,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VMAXSDZrr_Intk: case X86::VMAXSDZrr_Intkz:
     case X86::VMINSDZrr_Intk: case X86::VMINSDZrr_Intkz:
     case X86::VMULSDZrr_Intk: case X86::VMULSDZrr_Intkz:
+    case X86::VSQRTSDZr_Intk: case X86::VSQRTSDZr_Intkz:
     case X86::VSUBSDZrr_Intk: case X86::VSUBSDZrr_Intkz:
     case X86::VFMADDSD4rr_Int:   case X86::VFNMADDSD4rr_Int:
     case X86::VFMSUBSD4rr_Int:   case X86::VFNMSUBSD4rr_Int:
@@ -5177,6 +5250,41 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFMSUB132SDZr_Intkz: case X86::VFNMSUB132SDZr_Intkz:
     case X86::VFMSUB213SDZr_Intkz: case X86::VFNMSUB213SDZr_Intkz:
     case X86::VFMSUB231SDZr_Intkz: case X86::VFNMSUB231SDZr_Intkz:
+    case X86::VFIXUPIMMSDZrri:
+    case X86::VFIXUPIMMSDZrrik:
+    case X86::VFIXUPIMMSDZrrikz:
+    case X86::VFPCLASSSDZrr:
+    case X86::VFPCLASSSDZrrk:
+    case X86::VGETEXPSDZr:
+    case X86::VGETEXPSDZrk:
+    case X86::VGETEXPSDZrkz:
+    case X86::VGETMANTSDZrri:
+    case X86::VGETMANTSDZrrik:
+    case X86::VGETMANTSDZrrikz:
+    case X86::VRANGESDZrri:
+    case X86::VRANGESDZrrik:
+    case X86::VRANGESDZrrikz:
+    case X86::VRCP14SDZrr:
+    case X86::VRCP14SDZrrk:
+    case X86::VRCP14SDZrrkz:
+    case X86::VRCP28SDZr:
+    case X86::VRCP28SDZrk:
+    case X86::VRCP28SDZrkz:
+    case X86::VREDUCESDZrri:
+    case X86::VREDUCESDZrrik:
+    case X86::VREDUCESDZrrikz:
+    case X86::VRNDSCALESDZr_Int:
+    case X86::VRNDSCALESDZr_Intk:
+    case X86::VRNDSCALESDZr_Intkz:
+    case X86::VRSQRT14SDZrr:
+    case X86::VRSQRT14SDZrrk:
+    case X86::VRSQRT14SDZrrkz:
+    case X86::VRSQRT28SDZr:
+    case X86::VRSQRT28SDZrk:
+    case X86::VRSQRT28SDZrkz:
+    case X86::VSCALEFSDZrr:
+    case X86::VSCALEFSDZrrk:
+    case X86::VSCALEFSDZrrkz:
       return false;
     default:
       return true;
