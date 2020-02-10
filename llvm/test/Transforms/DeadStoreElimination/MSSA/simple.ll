@@ -294,8 +294,7 @@ define void @test37_atomic(i8* %P, i8* %Q, i8* %R) {
 ; The memmove is dead, because memcpy arguments cannot overlap.
 define void @test38(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P]], i8* [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[R:%.*]], i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -307,8 +306,7 @@ define void @test38(i8* %P, i8* %Q, i8* %R) {
 ; The memmove is dead, because memcpy arguments cannot overlap.
 define void @test38_atomic(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38_atomic(
-; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[R:%.*]], i64 12, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -379,7 +377,9 @@ declare void @free(i8* nocapture)
 define void @test41(i32* noalias %P) {
 ; CHECK-LABEL: @test41(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i32 1, i32* [[P]]
 ; CHECK-NEXT:    call void @unknown_func()
+; CHECK-NEXT:    store i32 2, i32* [[P]]
 ; CHECK-NEXT:    call void @free(i8* [[P2]])
 ; CHECK-NEXT:    ret void
 ;
