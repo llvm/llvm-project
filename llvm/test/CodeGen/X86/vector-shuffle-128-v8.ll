@@ -2462,14 +2462,21 @@ define <8 x i16> @shuffle_v8i16_10325476(<8 x i16> %a) {
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
 ; AVX2-FAST-NEXT:    retq
 ;
-; AVX512VL-LABEL: shuffle_v8i16_10325476:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vprold $16, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512VL-SLOW-LABEL: shuffle_v8i16_10325476:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,3,2,4,5,6,7]
+; AVX512VL-SLOW-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,7,6]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-LABEL: shuffle_v8i16_10325476:
+; AVX512VL-FAST:       # %bb.0:
+; AVX512VL-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
+; AVX512VL-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_10325476:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vprotd $16, %xmm0, %xmm0
+; XOP-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,3,2,4,5,6,7]
+; XOP-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,7,6]
 ; XOP-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x i16> %shuffle
@@ -2499,14 +2506,21 @@ define <8 x i16> @shuffle_v8i16_12305674(<8 x i16> %a) {
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9]
 ; AVX2-FAST-NEXT:    retq
 ;
-; AVX512VL-LABEL: shuffle_v8i16_12305674:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vprolq $16, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512VL-SLOW-LABEL: shuffle_v8i16_12305674:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6,7]
+; AVX512VL-SLOW-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-LABEL: shuffle_v8i16_12305674:
+; AVX512VL-FAST:       # %bb.0:
+; AVX512VL-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9]
+; AVX512VL-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_12305674:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vprotq $16, %xmm0, %xmm0
+; XOP-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,2,3,0,4,5,6,7]
+; XOP-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
 ; XOP-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4>
   ret <8 x i16> %shuffle
