@@ -226,17 +226,15 @@ single block that must terminate with `TerminatorOpType`.
 
 *   `OpTrait::Symbol` -- `Symbol`
 
-This trait is used for operations that define a `Symbol`.
-
-TODO(riverriddle) Link to the proper document detailing the design of symbols.
+This trait is used for operations that define a
+[`Symbol`](SymbolsAndSymbolTables.md#symbol).
 
 ### SymbolTable
 
 *   `OpTrait::SymbolTable` -- `SymbolTable`
 
-This trait is used for operations that define a `SymbolTable`.
-
-TODO(riverriddle) Link to the proper document detailing the design of symbols.
+This trait is used for operations that define a
+[`SymbolTable`](SymbolsAndSymbolTables.md#symbol-table).
 
 ### Terminator
 
