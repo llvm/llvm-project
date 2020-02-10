@@ -1028,8 +1028,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx == 1)
       switch (MI.getOpcode()) {
       case TargetOpcode::G_CTLZ:
+      case TargetOpcode::G_CTLZ_ZERO_UNDEF:
         return narrowScalarCTLZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTTZ:
+      case TargetOpcode::G_CTTZ_ZERO_UNDEF:
         return narrowScalarCTTZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTPOP:
         return narrowScalarCTPOP(MI, TypeIdx, NarrowTy);
@@ -3985,13 +3987,17 @@ LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
+    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF;
+
     MachineIRBuilder &B = MIRBuilder;
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // ctlz(Hi:Lo) -> Hi == 0 ? (NarrowSize + ctlz(Lo)) : ctlz(Hi)
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto HiIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
                                 UnmergeSrc.getReg(1), C_0);
-    auto LoCTLZ = B.buildCTLZ(DstTy, UnmergeSrc.getReg(0));
+    auto LoCTLZ = IsUndef ?
+      B.buildCTLZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(0)) :
+      B.buildCTLZ(DstTy, UnmergeSrc.getReg(0));
     auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
     auto HiIsZeroCTLZ = B.buildAdd(DstTy, LoCTLZ, C_NarrowSize);
     auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(1));
@@ -4017,13 +4023,17 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
+    const bool IsUndef = MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_UNDEF;
+
     MachineIRBuilder &B = MIRBuilder;
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // cttz(Hi:Lo) -> Lo == 0 ? (cttz(Hi) + NarrowSize) : cttz(Lo)
     auto C_0 = B.buildConstant(NarrowTy, 0);
     auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
                                 UnmergeSrc.getReg(0), C_0);
-    auto HiCTTZ = B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
+    auto HiCTTZ = IsUndef ?
+      B.buildCTTZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(1)) :
+      B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
     auto C_NarrowSize = B.buildConstant(DstTy, NarrowSize);
     auto LoIsZeroCTTZ = B.buildAdd(DstTy, HiCTTZ, C_NarrowSize);
     auto LoCTTZ = B.buildCTTZ_ZERO_UNDEF(DstTy, UnmergeSrc.getReg(0));
