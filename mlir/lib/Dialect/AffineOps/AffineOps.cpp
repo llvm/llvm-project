@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Dialect/AffineOps/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/Function.h"
