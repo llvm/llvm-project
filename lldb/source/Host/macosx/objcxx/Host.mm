@@ -9,10 +9,9 @@
 #include "lldb/Host/Host.h"
 
 #include <AvailabilityMacros.h>
-#include <TargetConditionals.h>
 
 // On device doesn't have supporty for XPC.
-#if defined(__APPLE__) && defined(TARGET_OS_EMBEDDED)
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 #define NO_XPC_SERVICES 1
 #endif
 
@@ -136,8 +135,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
   return false;
 }
 
-#if !NO_XPC_SERVICES
-
 static void *AcceptPIDFromInferior(void *arg) {
   const char *connect_url = (const char *)arg;
   ConnectionFileDescriptor file_conn;
@@ -155,6 +152,8 @@ static void *AcceptPIDFromInferior(void *arg) {
   }
   return NULL;
 }
+
+#if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
                                     "   activate\n"
@@ -308,11 +307,11 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   return error;
 }
 
-#endif // #if !NO_XPC_SERVICES
+#endif // #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 
 bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
                                     uint32_t line_no) {
-#if NO_XPC_SERVICES
+#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   return false;
 #else
   // We attach this to an 'odoc' event to specify a particular selection
@@ -405,7 +404,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   }
 
   return true;
-#endif // #if !NO_XPC_SERVICES
+#endif // #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 }
 
 Environment Host::GetEnvironment() { return Environment(*_NSGetEnviron()); }
@@ -1264,7 +1263,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   }
 
   if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
-#if !NO_XPC_SERVICES
+#if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
     return LaunchInNewTerminalWithAppleScript(exe_spec.GetPath().c_str(),
                                               launch_info);
 #else
