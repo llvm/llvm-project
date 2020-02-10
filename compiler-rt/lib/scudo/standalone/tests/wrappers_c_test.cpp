@@ -303,7 +303,11 @@ TEST(ScudoWrappersCTest, MallocDisableDeadlock) {
 #if !SCUDO_FUCHSIA
 
 TEST(ScudoWrappersCTest, MallocInfo) {
-  char Buffer[64];
+  // Use volatile so that the allocations don't get optimized away.
+  void *volatile P1 = malloc(1234);
+  void *volatile P2 = malloc(4321);
+
+  char Buffer[16384];
   FILE *F = fmemopen(Buffer, sizeof(Buffer), "w+");
   EXPECT_NE(F, nullptr);
   errno = 0;
@@ -311,6 +315,11 @@ TEST(ScudoWrappersCTest, MallocInfo) {
   EXPECT_EQ(errno, 0);
   fclose(F);
   EXPECT_EQ(strncmp(Buffer, "<malloc version=\"scudo-", 23), 0);
+  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"1234\" count=\""));
+  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"4321\" count=\""));
+
+  free(P1);
+  free(P2);
 }
 
 TEST(ScudoWrappersCTest, Fork) {
