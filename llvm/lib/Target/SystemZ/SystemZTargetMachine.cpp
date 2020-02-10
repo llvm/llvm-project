@@ -42,7 +42,8 @@ static bool UsesVectorABI(StringRef CPU, StringRef FS) {
   bool VectorABI = true;
   bool SoftFloat = false;
   if (CPU.empty() || CPU == "generic" ||
-      CPU == "z10" || CPU == "z196" || CPU == "zEC12")
+      CPU == "z10" || CPU == "z196" || CPU == "zEC12" ||
+      CPU == "arch8" || CPU == "arch9" || CPU == "arch10")
     VectorABI = false;
 
   SmallVector<StringRef, 3> Features;
