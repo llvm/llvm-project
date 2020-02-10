@@ -342,6 +342,7 @@ protected:
   bool HasDPP;
   bool HasDPP8;
   bool HasR128A16;
+  bool HasGFX10A16;
   bool HasNSAEncoding;
   bool HasDLInsts;
   bool HasDot1Insts;
@@ -990,6 +991,10 @@ public:
 
   bool hasR128A16() const {
     return HasR128A16;
+  }
+
+  bool hasGFX10A16() const {
+    return HasGFX10A16;
   }
 
   bool hasOffset3fBug() const {
