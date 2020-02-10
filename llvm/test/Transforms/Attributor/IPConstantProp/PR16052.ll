@@ -4,16 +4,33 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+; FIXME: Use the undef and do not pessimise the result because of it (no !range)
 define i64 @fn2() {
 ; CHECK-LABEL: define {{[^@]+}}@fn2()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #{{[0-9]+}}, !range !0
+; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #1, !range !0
 ; CHECK-NEXT:    ret i64 [[CALL2]]
 ;
 entry:
   %conv = sext i32 undef to i64
+  %div = sdiv i64 8, %conv
+  %call2 = call i64 @fn1(i64 %div)
+  ret i64 %call2
+}
+
+define i64 @fn2b(i32 %arg) {
+; CHECK-LABEL: define {{[^@]+}}@fn2b
+; CHECK-SAME: (i32 [[ARG:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #1, !range !0
+; CHECK-NEXT:    ret i64 [[CALL2]]
+;
+entry:
+  %conv = sext i32 %arg to i64
   %div = sdiv i64 8, %conv
   %call2 = call i64 @fn1(i64 %div)
   ret i64 %call2

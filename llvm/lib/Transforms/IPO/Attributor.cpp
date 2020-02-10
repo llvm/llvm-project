@@ -6183,6 +6183,12 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         return;
       }
 
+    // We handle casts in the updateImpl.
+    // TODO: Allow non integers as well.
+    if (CastInst *CI = dyn_cast<CastInst>(&V))
+      if (CI->getOperand(0)->getType()->isIntegerTy())
+        return;
+
     // Otherwise we give up.
     indicatePessimisticFixpoint();
 
@@ -6209,6 +6215,20 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
 
     // TODO: Track a known state too.
 
+    return T.isValidState();
+  }
+
+  bool calculateCastInst(Attributor &A, CastInst *CastI, IntegerRangeState &T,
+                         Instruction *CtxI) {
+    assert(CastI->getNumOperands() == 1 && "Expected cast to be unary!");
+    // TODO: Allow non integers as well.
+    Value &OpV = *CastI->getOperand(0);
+    assert(OpV.getType()->isIntegerTy() && "Expected integer cast");
+
+    auto &OpAA =
+        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV));
+    T.unionAssumed(
+        OpAA.getAssumed().castOp(CastI->getOpcode(), getState().getBitWidth()));
     return T.isValidState();
   }
 
@@ -6282,6 +6302,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         return calculateBinaryOperator(A, BinOp, T, CtxI);
       else if (auto *CmpI = dyn_cast<CmpInst>(I))
         return calculateCmpInst(A, CmpI, T, CtxI);
+      else if (auto *CastI = dyn_cast<CastInst>(I))
+        return calculateCastInst(A, CastI, T, CtxI);
       else {
         // Give up with other instructions.
         // TODO: Add other instructions
