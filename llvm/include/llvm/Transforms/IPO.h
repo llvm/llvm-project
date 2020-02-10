@@ -153,6 +153,10 @@ ModulePass *createDeadArgHackingPass();
 Pass *createArgumentPromotionPass(unsigned maxElements = 3);
 
 //===----------------------------------------------------------------------===//
+/// createOpenMPOptLegacyPass - OpenMP specific optimizations.
+Pass *createOpenMPOptLegacyPass();
+
+//===----------------------------------------------------------------------===//
 /// createIPConstantPropagationPass - This pass propagates constants from call
 /// sites into the bodies of functions.
 ///
