@@ -71,7 +71,7 @@ ValueObjectSP OptionalFrontEnd::GetChildAtIndex(size_t idx) {
   if (!holder_type)
     return ValueObjectSP();
 
-  return val_sp->Clone(ConstString(llvm::formatv("Value").str()));
+  return val_sp->Clone(ConstString("Value"));
 }
 
 SyntheticChildrenFrontEnd *
