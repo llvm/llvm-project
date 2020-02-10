@@ -436,8 +436,9 @@ struct StructuredIndexed : public ValueHandle {
   StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
       : ValueHandle(v), exprs(indexings.begin(), indexings.end()) {
     assert((v.getType().isa<MemRefType>() ||
-            v.getType().isa<RankedTensorType>()) &&
-           "MemRef or RankedTensor expected");
+            v.getType().isa<RankedTensorType>() ||
+            v.getType().isa<VectorType>()) &&
+           "MemRef, RankedTensor or Vector expected");
   }
   StructuredIndexed(ValueHandle vh, ArrayRef<AffineExpr> indexings)
       : ValueHandle(vh), exprs(indexings.begin(), indexings.end()) {}
