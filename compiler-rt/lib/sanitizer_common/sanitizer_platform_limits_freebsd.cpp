@@ -52,6 +52,7 @@
 #include <netinet/ip_mroute.h>
 //
 #include <dirent.h>
+#include <dlfcn.h>
 #include <fstab.h>
 #include <fts.h>
 #include <glob.h>
@@ -86,9 +87,15 @@
 
 // Include these after system headers to avoid name clashes and ambiguities.
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_freebsd.h"
 
 namespace __sanitizer {
+void *__sanitizer_get_link_map_by_dlopen_handle(void *handle) {
+  void *p = nullptr;
+  return internal_dlinfo(handle, RTLD_DI_LINKMAP, &p) == 0 ? p : nullptr;
+}
+
 unsigned struct_cap_rights_sz = sizeof(cap_rights_t);
 unsigned struct_utsname_sz = sizeof(struct utsname);
 unsigned struct_stat_sz = sizeof(struct stat);
