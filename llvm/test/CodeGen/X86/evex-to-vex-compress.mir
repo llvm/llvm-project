@@ -620,7 +620,7 @@ body: |
   ; CHECK: $ymm0 = VPSRAWYrr                   $ymm0, $xmm1
   $ymm0 = VPSRAWZ256rr                         $ymm0, $xmm1                                   
   ; CHECK: $ymm0 = VPSRLDQYri                  $ymm0, 7
-  $ymm0 = VPSRLDQZ256rr                        $ymm0, 7
+  $ymm0 = VPSRLDQZ256ri                        $ymm0, 7
   ; CHECK: $ymm0 = VPSRLDYri                   $ymm0, 7
   $ymm0 = VPSRLDZ256ri                         $ymm0, 7                                       
   ; CHECK: $ymm0 = VPSRLDYrm                   $ymm0, $rip, 1, $rax, 0, $noreg
@@ -780,7 +780,7 @@ body: |
   ; CHECK: $ymm0 = VPERMQYri                   $ymm0, 7                                   
   $ymm0 = VPERMQZ256ri                         $ymm0, 7                                               
   ; CHECK: $ymm0 = VPSLLDQYri                  $ymm0, 14
-  $ymm0 = VPSLLDQZ256rr                        $ymm0, 14                                      
+  $ymm0 = VPSLLDQZ256ri                        $ymm0, 14                                      
   ; CHECK: $ymm0 = VPSLLDYri                   $ymm0, 7
   $ymm0 = VPSLLDZ256ri                         $ymm0, 7                                       
   ; CHECK: $ymm0 = VPSLLDYrm                   $ymm0, $rip, 1, $rax, 0, $noreg
@@ -1610,7 +1610,7 @@ body: |
   ; CHECK: $xmm0 = VPSRAWrr                    $xmm0, $xmm0
   $xmm0 = VPSRAWZ128rr                         $xmm0, $xmm0
   ; CHECK: $xmm0 = VPSRLDQri                   $xmm0, 14
-  $xmm0 = VPSRLDQZ128rr                        $xmm0, 14                                           
+  $xmm0 = VPSRLDQZ128ri                        $xmm0, 14                                           
   ; CHECK: $xmm0 = VPSRLDri                    $xmm0, 7 
   $xmm0 = VPSRLDZ128ri                         $xmm0, 7                                            
   ; CHECK: $xmm0 = VPSRLDrm                    $xmm0, $rip, 1, $rax, 0, $noreg
@@ -1726,7 +1726,7 @@ body: |
   ; CHECK: $xmm0 = VPSHUFLWri                  $xmm0, -24
   $xmm0 = VPSHUFLWZ128ri                       $xmm0, -24                                          
   ; CHECK: $xmm0 = VPSLLDQri                   $xmm0, 7
-  $xmm0 = VPSLLDQZ128rr                        $xmm0, 7
+  $xmm0 = VPSLLDQZ128ri                        $xmm0, 7
   ; CHECK: $xmm0 = VSHUFPDrmi                  $xmm0, $rip, 1, $rax, 0, $noreg, -24
   $xmm0 = VSHUFPDZ128rmi                       $xmm0, $rip, 1, $rax, 0, $noreg, -24
   ; CHECK: $xmm0 = VSHUFPDrri                  $xmm0, $xmm1, -24
@@ -2982,8 +2982,8 @@ body: |
   $ymm16 = VPSRAWZ256rm                        $ymm16, $rip, 1, $rax, 0, $noreg
   ; CHECK: $ymm16 = VPSRAWZ256rr               $ymm16, $xmm1
   $ymm16 = VPSRAWZ256rr                        $ymm16, $xmm1                                 
-  ; CHECK: $ymm16 = VPSRLDQZ256rr              $ymm16, 7
-  $ymm16 = VPSRLDQZ256rr                       $ymm16, 7
+  ; CHECK: $ymm16 = VPSRLDQZ256ri              $ymm16, 7
+  $ymm16 = VPSRLDQZ256ri                       $ymm16, 7
   ; CHECK: $ymm16 = VPSRLDZ256ri               $ymm16, 7
   $ymm16 = VPSRLDZ256ri                        $ymm16, 7                                     
   ; CHECK: $ymm16 = VPSRLDZ256rm               $ymm16, $rip, 1, $rax, 0, $noreg
@@ -3142,8 +3142,8 @@ body: |
   $ymm16 = VPERMQZ256mi                        $rdi, 1, $noreg, 0, $noreg, 7
   ; CHECK: $ymm16 = VPERMQZ256ri               $ymm16, 7
   $ymm16 = VPERMQZ256ri                        $ymm16, 7                                               
-  ; CHECK: $ymm16 = VPSLLDQZ256rr              $ymm16, 14
-  $ymm16 = VPSLLDQZ256rr                       $ymm16, 14
+  ; CHECK: $ymm16 = VPSLLDQZ256ri              $ymm16, 14
+  $ymm16 = VPSLLDQZ256ri                       $ymm16, 14
   ; CHECK: $ymm16 = VPSLLDZ256ri               $ymm16, 7
   $ymm16 = VPSLLDZ256ri                        $ymm16, 7                                     
   ; CHECK: $ymm16 = VPSLLDZ256rm               $ymm16, $rip, 1, $rax, 0, $noreg
@@ -3980,8 +3980,8 @@ body: |
   $xmm16 = VPSRAWZ128rm                        $xmm16, $rip, 1, $rax, 0, $noreg
   ; CHECK: $xmm16 = VPSRAWZ128rr               $xmm16, $xmm16
   $xmm16 = VPSRAWZ128rr                        $xmm16, $xmm16
-  ; CHECK: $xmm16 = VPSRLDQZ128rr              $xmm16, 14
-  $xmm16 = VPSRLDQZ128rr                       $xmm16, 14                                                
+  ; CHECK: $xmm16 = VPSRLDQZ128ri              $xmm16, 14
+  $xmm16 = VPSRLDQZ128ri                       $xmm16, 14                                                
   ; CHECK: $xmm16 = VPSRLDZ128ri               $xmm16, 7 
   $xmm16 = VPSRLDZ128ri                        $xmm16, 7                                                 
   ; CHECK: $xmm16 = VPSRLDZ128rm               $xmm16, $rip, 1, $rax, 0, $noreg
@@ -4096,8 +4096,8 @@ body: |
   $xmm16 = VPSHUFLWZ128mi                      $rdi, 1, $noreg, 0, $noreg, -24
   ; CHECK: $xmm16 = VPSHUFLWZ128ri             $xmm16, -24
   $xmm16 = VPSHUFLWZ128ri                      $xmm16, -24                                               
-  ; CHECK: $xmm16 = VPSLLDQZ128rr              $xmm16, 1
-  $xmm16 = VPSLLDQZ128rr                       $xmm16, 1
+  ; CHECK: $xmm16 = VPSLLDQZ128ri              $xmm16, 1
+  $xmm16 = VPSLLDQZ128ri                       $xmm16, 1
   ; CHECK: $xmm16 = VSHUFPDZ128rmi             $xmm16, $rip, 1, $rax, 0, $noreg, -24
   $xmm16 = VSHUFPDZ128rmi                      $xmm16, $rip, 1, $rax, 0, $noreg, -24
   ; CHECK: $xmm16 = VSHUFPDZ128rri             $xmm16, $xmm1, -24
