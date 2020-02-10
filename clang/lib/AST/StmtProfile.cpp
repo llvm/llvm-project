@@ -522,6 +522,8 @@ void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcquireClause(const OMPAcquireClause *) {}
 
+void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
+
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}

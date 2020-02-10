@@ -91,8 +91,8 @@ int main() {
 #pragma omp atomic write acquire
   bx = bv;
 // CHECK: load i8, i8*
-// CHECK: store atomic i8
-#pragma omp atomic write
+// CHECK: store atomic i8{{.*}}release
+#pragma omp atomic write release
   cx = cv;
 // CHECK: load i8, i8*
 // CHECK: store atomic i8
