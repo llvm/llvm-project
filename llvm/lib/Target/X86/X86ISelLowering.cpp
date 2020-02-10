@@ -23111,9 +23111,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                            SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   bool SplitStack = MF.shouldSplitStack();
-  bool EmitStackProbeCall = hasStackProbeSymbol(MF);
+  bool EmitStackProbe = !getStackProbeSymbolName(MF).empty();
   bool Lower = (Subtarget.isOSWindows() && !Subtarget.isTargetMachO()) ||
-               SplitStack || EmitStackProbeCall;
+               SplitStack || EmitStackProbe;
   SDLoc dl(Op);
 
   // Get the inputs.
@@ -23137,21 +23137,11 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
                     " not tell us which reg is the stack pointer!");
 
+    SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
+    Chain = SP.getValue(1);
     const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
     const Align StackAlign(TFI.getStackAlignment());
-    if (hasInlineStackProbe(MF)) {
-      MachineRegisterInfo &MRI = MF.getRegInfo();
-
-      const TargetRegisterClass *AddrRegClass = getRegClassFor(SPTy);
-      Register Vreg = MRI.createVirtualRegister(AddrRegClass);
-      Chain = DAG.getCopyToReg(Chain, dl, Vreg, Size);
-      Result = DAG.getNode(X86ISD::PROBED_ALLOCA, dl, SPTy, Chain,
-                           DAG.getRegister(Vreg, SPTy));
-    } else {
-      SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-      Chain = SP.getValue(1);
-      Result = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
-    }
+    Result = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
     if (Alignment && Alignment > StackAlign)
       Result =
           DAG.getNode(ISD::AND, dl, VT, Result,
@@ -29883,7 +29873,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(MEMBARRIER)
   NODE_NAME_CASE(MFENCE)
   NODE_NAME_CASE(SEG_ALLOCA)
-  NODE_NAME_CASE(PROBED_ALLOCA)
   NODE_NAME_CASE(RDRAND)
   NODE_NAME_CASE(RDSEED)
   NODE_NAME_CASE(RDPKRU)
@@ -31152,97 +31141,6 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
-                                           MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const X86FrameLowering &TFI = *Subtarget.getFrameLowering();
-  DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-
-  const unsigned ProbeSize = getStackProbeSize(*MF);
-
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  MachineBasicBlock *testMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *tailMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *blockMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-
-  MachineFunction::iterator MBBIter = ++BB->getIterator();
-  MF->insert(MBBIter, testMBB);
-  MF->insert(MBBIter, blockMBB);
-  MF->insert(MBBIter, tailMBB);
-
-  unsigned sizeVReg = MI.getOperand(1).getReg();
-
-  const TargetRegisterClass *SizeRegClass = MRI.getRegClass(sizeVReg);
-
-  unsigned tmpSizeVReg = MRI.createVirtualRegister(SizeRegClass);
-  unsigned tmpSizeVReg2 = MRI.createVirtualRegister(SizeRegClass);
-
-  unsigned physSPReg = TFI.Uses64BitFramePtr ? X86::RSP : X86::ESP;
-
-  // test rsp size
-  BuildMI(testMBB, DL, TII->get(X86::PHI), tmpSizeVReg)
-      .addReg(sizeVReg)
-      .addMBB(BB)
-      .addReg(tmpSizeVReg2)
-      .addMBB(blockMBB);
-
-  BuildMI(testMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::CMP64ri32 : X86::CMP32ri))
-      .addReg(tmpSizeVReg)
-      .addImm(ProbeSize);
-
-  BuildMI(testMBB, DL, TII->get(X86::JCC_1))
-      .addMBB(tailMBB)
-      .addImm(X86::COND_L);
-  testMBB->addSuccessor(blockMBB);
-  testMBB->addSuccessor(tailMBB);
-
-  // allocate a block and touch it
-
-  BuildMI(blockMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64ri32 : X86::SUB32ri),
-          tmpSizeVReg2)
-      .addReg(tmpSizeVReg)
-      .addImm(ProbeSize);
-
-  BuildMI(blockMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64ri32 : X86::SUB32ri),
-          physSPReg)
-      .addReg(physSPReg)
-      .addImm(ProbeSize);
-
-  const unsigned MovMIOpc =
-      TFI.Uses64BitFramePtr ? X86::MOV64mi32 : X86::MOV32mi;
-  addRegOffset(BuildMI(blockMBB, DL, TII->get(MovMIOpc)), physSPReg, false, 0)
-      .addImm(0);
-
-  BuildMI(blockMBB, DL, TII->get(X86::JMP_1)).addMBB(testMBB);
-  blockMBB->addSuccessor(testMBB);
-
-  // allocate the tail and continue
-  BuildMI(tailMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64rr : X86::SUB32rr),
-          physSPReg)
-      .addReg(physSPReg)
-      .addReg(tmpSizeVReg);
-  BuildMI(tailMBB, DL, TII->get(TargetOpcode::COPY), MI.getOperand(0).getReg())
-      .addReg(physSPReg);
-
-  tailMBB->splice(tailMBB->end(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  tailMBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(testMBB);
-
-  // Delete the original pseudo instruction.
-  MI.eraseFromParent();
-
-  // And we're done.
-  return tailMBB;
-}
-
-MachineBasicBlock *
 X86TargetLowering::EmitLoweredSegAlloca(MachineInstr &MI,
                                         MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -32402,9 +32300,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::SEG_ALLOCA_32:
   case X86::SEG_ALLOCA_64:
     return EmitLoweredSegAlloca(MI, BB);
-  case X86::PROBED_ALLOCA_32:
-  case X86::PROBED_ALLOCA_64:
-    return EmitLoweredProbedAlloca(MI, BB);
   case X86::TLSCall_32:
   case X86::TLSCall_64:
     return EmitLoweredTLSCall(MI, BB);
@@ -47664,35 +47559,10 @@ bool X86TargetLowering::supportSwiftError() const {
   return Subtarget.is64Bit();
 }
 
-/// Returns true if stack probing through a function call is requested.
-bool X86TargetLowering::hasStackProbeSymbol(MachineFunction &MF) const {
-  return !getStackProbeSymbolName(MF).empty();
-}
-
-/// Returns true if stack probing through inline assembly is requested.
-bool X86TargetLowering::hasInlineStackProbe(MachineFunction &MF) const {
-
-  // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() ||
-      MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
-    return false;
-
-  // If the function specifically requests inline stack probes, emit them.
-  if (MF.getFunction().hasFnAttribute("probe-stack"))
-    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
-           "inline-asm";
-
-  return false;
-}
-
 /// Returns the name of the symbol used to emit stack probes or the empty
 /// string if not applicable.
 StringRef
 X86TargetLowering::getStackProbeSymbolName(MachineFunction &MF) const {
-  // Inline Stack probes disable stack probe call
-  if (hasInlineStackProbe(MF))
-    return "";
-
   // If the function specifically requests stack probes, emit them.
   if (MF.getFunction().hasFnAttribute("probe-stack"))
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
