@@ -29,6 +29,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ABIMacOSX_i386);
+
 enum {
   ehframe_eax = 0,
   ehframe_ecx,

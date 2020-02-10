@@ -25,6 +25,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
+LLDB_PLUGIN(SymbolFileBreakpad);
+
 char SymbolFileBreakpad::ID;
 
 class SymbolFileBreakpad::LineIterator {

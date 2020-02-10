@@ -20,6 +20,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
+LLDB_PLUGIN(ArchitecturePPC64);
+
 ConstString ArchitecturePPC64::GetPluginNameStatic() {
   return ConstString("ppc64");
 }

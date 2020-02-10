@@ -22,6 +22,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define LLDB_PLUGIN(PluginName)                                                \
+  namespace lldb_private {                                                     \
+  void lldb_initialize_##PluginName() { PluginName::Initialize(); }            \
+  void lldb_terminate_##PluginName() { PluginName::Terminate(); }              \
+  }
+
+// FIXME: Generate me with CMake
+#define LLDB_PLUGIN_INITIALIZE(PluginName)                                     \
+  extern void lldb_initialize_##PluginName();                                  \
+  lldb_initialize_##PluginName()
+#define LLDB_PLUGIN_TERMINATE(PluginName)                                      \
+  extern void lldb_terminate_##PluginName();                                   \
+  lldb_terminate_##PluginName()
+
 namespace lldb_private {
 class CommandInterpreter;
 class ConstString;
@@ -42,15 +56,13 @@ public:
 
   static ABICreateInstance GetABICreateCallbackAtIndex(uint32_t idx);
 
-  static ABICreateInstance
-  GetABICreateCallbackForPluginName(ConstString name);
+  static ABICreateInstance GetABICreateCallbackForPluginName(ConstString name);
 
   // Architecture
   using ArchitectureCreateInstance =
       std::unique_ptr<Architecture> (*)(const ArchSpec &);
 
-  static void RegisterPlugin(ConstString name,
-                             llvm::StringRef description,
+  static void RegisterPlugin(ConstString name, llvm::StringRef description,
                              ArchitectureCreateInstance create_callback);
 
   static void UnregisterPlugin(ArchitectureCreateInstance create_callback);

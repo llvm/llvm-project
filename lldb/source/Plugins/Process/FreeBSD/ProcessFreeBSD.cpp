@@ -56,6 +56,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ProcessFreeBSD);
+
 namespace {
 UnixSignalsSP &GetFreeBSDSignals() {
   static UnixSignalsSP s_freebsd_signals_sp(new FreeBSDSignals());

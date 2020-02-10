@@ -34,6 +34,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_linux;
 
+LLDB_PLUGIN(PlatformLinux);
+
 static uint32_t g_initialize_count = 0;
 
 

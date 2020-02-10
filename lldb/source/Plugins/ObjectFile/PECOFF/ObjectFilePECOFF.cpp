@@ -41,6 +41,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(ObjectFilePECOFF);
+
 struct CVInfoPdb70 {
   // 16-byte GUID
   struct _Guid {

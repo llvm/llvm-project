@@ -44,6 +44,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN(DynamicLoaderDarwinKernel);
+
 // Progressively greater amounts of scanning we will allow For some targets
 // very early in startup, we can't do any random reads of memory or we can
 // crash the device so a setting is needed that can completely disable the

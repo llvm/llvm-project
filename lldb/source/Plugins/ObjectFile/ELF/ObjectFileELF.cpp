@@ -51,6 +51,8 @@ using namespace lldb_private;
 using namespace elf;
 using namespace llvm::ELF;
 
+LLDB_PLUGIN(ObjectFileELF);
+
 namespace {
 
 // ELF note owner definitions
