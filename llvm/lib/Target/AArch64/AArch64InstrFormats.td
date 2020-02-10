@@ -10277,15 +10277,15 @@ class ComplexRotationOperand<int Angle, int Remainder, string Type>
   let DiagnosticType = "InvalidComplexRotation" # Type;
   let Name = "ComplexRotation" # Type;
 }
-def complexrotateop : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
-                                                 SDNodeXForm<imm, [{
+def complexrotateop : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                  SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant((N->getSExtValue() / 90), SDLoc(N), MVT::i32);
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<90, 0, "Even">;
   let PrintMethod = "printComplexRotationOp<90, 0>";
 }
-def complexrotateopodd : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
-                                                 SDNodeXForm<imm, [{
+def complexrotateopodd : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                  SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(((N->getSExtValue() - 90) / 180), SDLoc(N), MVT::i32);
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd">;

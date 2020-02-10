@@ -1448,13 +1448,13 @@ let Predicates = [HasSVE2] in {
   defm CDOT_ZZZ : sve2_cintx_dot<"cdot">;
 
   // SVE2 complex integer multiply-add (indexed)
-  defm CMLA_ZZZI      : sve2_cmla_by_indexed_elem<0b0, "cmla">;
+  defm CMLA_ZZZI      : sve2_cmla_by_indexed_elem<0b0, "cmla", int_aarch64_sve_cmla_lane_x>;
   // SVE2 complex saturating multiply-add (indexed)
-  defm SQRDCMLAH_ZZZI : sve2_cmla_by_indexed_elem<0b1, "sqrdcmlah">;
+  defm SQRDCMLAH_ZZZI : sve2_cmla_by_indexed_elem<0b1, "sqrdcmlah", int_aarch64_sve_sqrdcmlah_lane_x>;
 
   // SVE2 complex integer multiply-add
-  defm CMLA_ZZZ      : sve2_int_cmla<0b0, "cmla">;
-  defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah">;
+  defm CMLA_ZZZ      : sve2_int_cmla<0b0, "cmla",      int_aarch64_sve_cmla_x>;
+  defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah", int_aarch64_sve_sqrdcmlah_x>;
 
   // SVE2 integer multiply long (indexed)
   defm SMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b000, "smullb">;
@@ -1605,8 +1605,8 @@ let Predicates = [HasSVE2] in {
   defm URSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b11, "ursra", int_aarch64_sve_ursra>;
 
   // SVE2 complex integer add
-  defm CADD_ZZI   : sve2_int_cadd<0b0, "cadd">;
-  defm SQCADD_ZZI : sve2_int_cadd<0b1, "sqcadd">;
+  defm CADD_ZZI   : sve2_int_cadd<0b0, "cadd",   int_aarch64_sve_cadd_x>;
+  defm SQCADD_ZZI : sve2_int_cadd<0b1, "sqcadd", int_aarch64_sve_sqcadd_x>;
 
   // SVE2 integer absolute difference and accumulate
   defm SABA_ZZZ : sve2_int_absdiff_accum<0b0, "saba", int_aarch64_sve_saba>;
@@ -1681,9 +1681,9 @@ let Predicates = [HasSVE2] in {
   defm USHLLT_ZZI : sve2_bitwise_shift_left_long<0b11, "ushllt">;
 
   // SVE2 integer add/subtract interleaved long
-  defm SADDLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b00, "saddlbt">;
-  defm SSUBLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b10, "ssublbt">;
-  defm SSUBLTB_ZZZ : sve2_misc_int_addsub_long_interleaved<0b11, "ssubltb">;
+  defm SADDLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b00, "saddlbt", int_aarch64_sve_saddlbt>;
+  defm SSUBLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b10, "ssublbt", int_aarch64_sve_ssublbt>;
+  defm SSUBLTB_ZZZ : sve2_misc_int_addsub_long_interleaved<0b11, "ssubltb", int_aarch64_sve_ssubltb>;
 
   // SVE2 histogram generation (segment)
   def HISTSEG_ZZZ : sve2_hist_gen_segment<"histseg", int_aarch64_sve_histseg>;
