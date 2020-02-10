@@ -265,6 +265,11 @@ uptr internal_getppid() {
   return _REAL(getppid);
 }
 
+int internal_dlinfo(void *handle, int request, void *p) {
+  DEFINE__REAL(int, dlinfo, void *a, int b, void *c);
+  return _REAL(dlinfo, handle, request, p);
+}
+
 uptr internal_getdents(fd_t fd, void *dirp, unsigned int count) {
   DEFINE__REAL(int, __getdents30, int a, void *b, size_t c);
   return _REAL(__getdents30, fd, dirp, count);
