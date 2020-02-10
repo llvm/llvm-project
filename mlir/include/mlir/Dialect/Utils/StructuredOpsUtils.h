@@ -84,6 +84,19 @@ inline unsigned getNumIterators(ArrayAttr iteratorTypes) {
   return res;
 }
 
+/// Typed representation for loop type strings.
+enum class IteratorType { Parallel, Reduction };
+
+inline StringRef toString(IteratorType t) {
+  switch (t) {
+  case IteratorType::Parallel:
+    return getParallelIteratorTypeName();
+  case IteratorType::Reduction:
+    return getReductionIteratorTypeName();
+  }
+  llvm_unreachable("Unsupported IteratorType");
+}
+
 } // end namespace mlir
 
 #endif // MLIR_UTILS_STRUCTUREDOPSUTILS_H
