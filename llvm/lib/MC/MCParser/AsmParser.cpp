@@ -2854,18 +2854,18 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
     AsmToken Buf[1];
     Lexer.peekTokens(Buf, false);
 
-    if (Buf[0].isNot(AsmToken::Identifier))
+    if (Buf[0].isNot(AsmToken::Identifier) && Buf[0].isNot(AsmToken::Integer))
       return true;
 
-    // We have a '$' or '@' followed by an identifier, make sure they are adjacent.
+    // We have a '$' or '@' followed by an identifier or integer token, make
+    // sure they are adjacent.
     if (PrefixLoc.getPointer() + 1 != Buf[0].getLoc().getPointer())
       return true;
 
     // eat $ or @
     Lexer.Lex(); // Lexer's Lex guarantees consecutive token.
     // Construct the joined identifier and consume the token.
-    Res =
-        StringRef(PrefixLoc.getPointer(), getTok().getIdentifier().size() + 1);
+    Res = StringRef(PrefixLoc.getPointer(), getTok().getString().size() + 1);
     Lex(); // Parser Lex to maintain invariants.
     return false;
   }
