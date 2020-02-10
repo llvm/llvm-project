@@ -130,6 +130,8 @@ void CXXScopeSpec::Adopt(NestedNameSpecifierLoc Other) {
 
   Range = Other.getSourceRange();
   Builder.Adopt(Other);
+  assert(Range == Builder.getSourceRange() &&
+         "NestedNameSpecifierLoc range computation incorrect");
 }
 
 SourceLocation CXXScopeSpec::getLastQualifierNameLoc() const {

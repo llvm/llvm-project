@@ -75,7 +75,7 @@ struct F {
 };
 
 ~; // expected-error {{expected a class name after '~' to name a destructor}}
-~undef(); // expected-error {{expected the class name after '~' to name a destructor}}
+~undef(); // expected-error {{undeclared identifier 'undef' in destructor name}}
 ~operator+(int, int);  // expected-error {{expected a class name after '~' to name a destructor}}
 ~F(){} // expected-error {{destructor must be a non-static member function}}
 
@@ -432,7 +432,7 @@ namespace PR9238 {
 }
 
 namespace PR7900 {
-  struct A { // expected-note 2{{type 'PR7900::A' is declared here}}
+  struct A { // expected-note 2{{type 'PR7900::A' found by destructor name lookup}}
   };
   struct B : public A {
   };
