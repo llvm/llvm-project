@@ -1667,8 +1667,8 @@ let Predicates = [HasSVE2] in {
   defm SQXTUNT_ZZ : sve2_int_sat_extract_narrow_top<0b10, "sqxtunt", int_aarch64_sve_sqxtunt>;
 
   // SVE2 character match
-  defm MATCH_PPzZZ  : sve2_char_match<0b0, "match">;
-  defm NMATCH_PPzZZ : sve2_char_match<0b1, "nmatch">;
+  defm MATCH_PPzZZ  : sve2_char_match<0b0, "match",  int_aarch64_sve_match>;
+  defm NMATCH_PPzZZ : sve2_char_match<0b1, "nmatch", int_aarch64_sve_nmatch>;
 
   // SVE2 bitwise exclusive-or interleaved
   defm EORBT_ZZZ : sve2_bitwise_xor_interleaved<0b0, "eorbt">;
@@ -1686,10 +1686,10 @@ let Predicates = [HasSVE2] in {
   defm SSUBLTB_ZZZ : sve2_misc_int_addsub_long_interleaved<0b11, "ssubltb">;
 
   // SVE2 histogram generation (segment)
-  def HISTSEG_ZZZ : sve2_hist_gen_segment<"histseg">;
+  def HISTSEG_ZZZ : sve2_hist_gen_segment<"histseg", int_aarch64_sve_histseg>;
 
   // SVE2 histogram generation (vector)
-  defm HISTCNT_ZPzZZ : sve2_hist_gen_vector<"histcnt">;
+  defm HISTCNT_ZPzZZ : sve2_hist_gen_vector<"histcnt", int_aarch64_sve_histcnt>;
 
   // SVE2 floating-point base 2 logarithm as integer
   defm FLOGB_ZPmZ : sve2_fp_flogb<"flogb", int_aarch64_sve_flogb>;
