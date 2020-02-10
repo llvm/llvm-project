@@ -484,10 +484,10 @@ TEST(LazyCallGraphTest, BasicGraphMutationOutlining) {
   CallInst::Create(NewFn, "", &*IP);
   CG.addNewFunctionIntoSCC(*NewFn, *CG.lookupSCC(B));
 
-  EXPECT_EQ(CG.lookupSCC(A)->size(), 1U);
-  EXPECT_EQ(CG.lookupSCC(B)->size(), 2U);
-  EXPECT_EQ(CG.lookupSCC(C)->size(), 1U);
-  EXPECT_EQ(CG.lookupSCC(*CG.lookup(*NewFn))->size(), 2U);
+  EXPECT_EQ(CG.lookupSCC(A)->size(), 1);
+  EXPECT_EQ(CG.lookupSCC(B)->size(), 2);
+  EXPECT_EQ(CG.lookupSCC(C)->size(), 1);
+  EXPECT_EQ(CG.lookupSCC(*CG.lookup(*NewFn))->size(), 2);
   EXPECT_EQ(CG.lookupSCC(*CG.lookup(*NewFn))->size(), CG.lookupSCC(B)->size());
 }
 
