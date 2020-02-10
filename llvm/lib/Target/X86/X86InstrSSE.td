@@ -7400,7 +7400,7 @@ let Predicates = [HasF16C, NoVLX] in {
 
   def : Pat<(f16_to_fp GR16:$src),
             (f32 (COPY_TO_REGCLASS (v4f32 (VCVTPH2PSrr
-              (v4i32 (COPY_TO_REGCLASS (MOVSX32rr16 GR16:$src), VR128)))), FR32)) >;
+              (v4i32 (COPY_TO_REGCLASS (MOVZX32rr16 GR16:$src), VR128)))), FR32)) >;
 
   def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32:$src))),
             (f32 (COPY_TO_REGCLASS (v4f32 (VCVTPH2PSrr
