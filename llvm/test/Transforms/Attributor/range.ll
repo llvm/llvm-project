@@ -455,23 +455,32 @@ return:                                           ; preds = %if.else, %if.then
 
 
 define dso_local i32 @test4-g2(i32 %u) {
-; CHECK-LABEL: define {{[^@]+}}@test4-g2
-; CHECK-SAME: (i32 [[U:%.*]])
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]])
-; CHECK-NEXT:    ret i32 [[CALL]]
+; OLD_PM-LABEL: define {{[^@]+}}@test4-g2
+; OLD_PM-SAME: (i32 [[U:%.*]])
+; OLD_PM-NEXT:  entry:
+; OLD_PM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]])
+; OLD_PM-NEXT:    ret i32 [[CALL]]
 ;
-; FIXME: %call should have range [1, inf]
+; NEW_PM-LABEL: define {{[^@]+}}@test4-g2
+; NEW_PM-SAME: (i32 [[U:%.*]])
+; NEW_PM-NEXT:  entry:
+; NEW_PM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) #2, !range !3
+; NEW_PM-NEXT:    ret i32 [[CALL]]
 entry:
   %call = tail call i32 @test4-f2(i32 %u)
   ret i32 %call
 }
 
 define dso_local i32 @test-5() {
-; CHECK-LABEL: define {{[^@]+}}@test-5()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), !range !3
-; CHECK-NEXT:    ret i32 [[CALL]]
+; OLD_PM-LABEL: define {{[^@]+}}@test-5()
+; OLD_PM-NEXT:  entry:
+; OLD_PM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), !range !3
+; OLD_PM-NEXT:    ret i32 [[CALL]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@test-5()
+; NEW_PM-NEXT:  entry:
+; NEW_PM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), !range !4
+; NEW_PM-NEXT:    ret i32 [[CALL]]
 ;
 entry:
   %call = call i32 @rec(i32 0)
@@ -685,7 +694,11 @@ entry:
 
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
-;CHECK: !0 = !{i32 0, i32 10}
-;CHECK-NEXT: !1 = !{i32 10, i32 100}
-;CHECK-NEXT: !2 = !{i32 200, i32 1091}
+; CHECK: !0 = !{i32 0, i32 10}
+; CHECK-NEXT: !1 = !{i32 10, i32 100}
+; CHECK-NEXT: !2 = !{i32 200, i32 1091}
+; OLD_PM:     !3 = !{i32 0, i32 2}
+; NEW_PM:     !3 = !{i32 1, i32 -2147483648}
+; NEW_PM:     !4 = !{i32 0, i32 2}
+
 
