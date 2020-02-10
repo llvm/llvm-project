@@ -77,6 +77,7 @@ TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
   StackFrameRecognizerManager::ForEach(
       [&any_printed](uint32_t recognizer_id, std::string name,
                      std::string function, std::string symbol,
+                     std::string alternate_symbol,
                      bool regexp) { any_printed = true; });
 
   EXPECT_TRUE(any_printed);
