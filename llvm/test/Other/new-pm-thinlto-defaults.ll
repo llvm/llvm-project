@@ -79,6 +79,7 @@
 ; CHECK-O-NEXT: Running pass: LowerExpectIntrinsicPass
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O-NEXT: Running pass: AttributorPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
@@ -105,6 +106,7 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
 ; CHECK-O-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O-NEXT: Running pass: InlinerPass
+; CHECK-O-NEXT: Running pass: AttributorCGSCCPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
 ; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
 ; CHECK-O2-NEXT: Running pass: OpenMPOptPass on (foo)

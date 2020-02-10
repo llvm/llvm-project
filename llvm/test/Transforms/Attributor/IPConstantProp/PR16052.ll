@@ -9,7 +9,7 @@ define i64 @fn2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #0, !range !0
+; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #{{[0-9]+}}, !range !0
 ; CHECK-NEXT:    ret i64 [[CALL2]]
 ;
 entry:

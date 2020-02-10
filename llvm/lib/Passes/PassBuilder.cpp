@@ -748,6 +748,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       MPM.addPass(PGOIndirectCallPromotion(Phase == ThinLTOPhase::PostLink,
                                            true /* SamplePGO */));
   }
+  MPM.addPass(AttributorPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
@@ -829,6 +830,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
   MainCGPipeline.addPass(InlinerPass(IP));
+
+  MainCGPipeline.addPass(AttributorCGSCCPass());
 
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
