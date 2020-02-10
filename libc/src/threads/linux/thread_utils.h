@@ -20,6 +20,11 @@
 // corresponding to `uint32_t` or to something which is exaclty 4 bytes wide.
 using FutexData = atomic_uint;
 
+// We use a tri-state mutex because we want to avoid making syscalls
+// as much as possible. In `mtx_unlock` a syscall to wake waiting threads is
+// made only if the mutex status is `MutexStatus::Waiting`.
+enum MutexStatus : uint32_t { MS_Free, MS_Locked, MS_Waiting };
+
 static_assert(sizeof(atomic_uint) == 4,
               "Size of the `atomic_uint` type is not 4 bytes on your platform. "
               "The implementation of the standard threads library for linux "

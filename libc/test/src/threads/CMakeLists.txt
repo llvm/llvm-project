@@ -14,3 +14,21 @@ add_libc_unittest(
     thrd_create
     thrd_join
 )
+
+add_libc_unittest(
+  mtx_test
+  SUITE
+    libc_threads_unittests
+  SRCS
+    mtx_test.cpp
+  DEPENDS
+    __errno_location
+    mmap
+    munmap
+    mtx_init
+    mtx_lock
+    mtx_unlock
+    thrd_create
+    thrd_join
+    threads_h
+)
