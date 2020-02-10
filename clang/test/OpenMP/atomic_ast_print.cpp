@@ -59,6 +59,21 @@ T foo(T argc) {
     a = b;
     b++;
   }
+#pragma omp atomic acquire
+  a++;
+#pragma omp atomic read acquire
+  a = argc;
+#pragma omp atomic acquire write
+  a = argc + argc;
+#pragma omp atomic update acquire
+  a = a + argc;
+#pragma omp atomic acquire capture
+  a = b++;
+#pragma omp atomic capture acquire
+  {
+    a = b;
+    b++;
+  }
   return T();
 }
 
@@ -108,6 +123,21 @@ T foo(T argc) {
 // CHECK-NEXT: a = b;
 // CHECK-NEXT: b++;
 // CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp atomic acquire
+// CHECK-NEXT: a++;
+// CHECK-NEXT: #pragma omp atomic read acquire
+// CHECK-NEXT: a = argc;
+// CHECK-NEXT: #pragma omp atomic acquire write
+// CHECK-NEXT: a = argc + argc;
+// CHECK-NEXT: #pragma omp atomic update acquire
+// CHECK-NEXT: a = a + argc;
+// CHECK-NEXT: #pragma omp atomic acquire capture
+// CHECK-NEXT: a = b++;
+// CHECK-NEXT: #pragma omp atomic capture acquire
+// CHECK-NEXT: {
+// CHECK-NEXT: a = b;
+// CHECK-NEXT: b++;
+// CHECK-NEXT: }
 // CHECK: int a = int();
 // CHECK-NEXT: #pragma omp atomic
 // CHECK-NEXT: a++;
@@ -150,6 +180,21 @@ T foo(T argc) {
 // CHECK-NEXT: #pragma omp atomic acq_rel capture
 // CHECK-NEXT: a = b++;
 // CHECK-NEXT: #pragma omp atomic capture acq_rel
+// CHECK-NEXT: {
+// CHECK-NEXT: a = b;
+// CHECK-NEXT: b++;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp atomic acquire
+// CHECK-NEXT: a++;
+// CHECK-NEXT: #pragma omp atomic read acquire
+// CHECK-NEXT: a = argc;
+// CHECK-NEXT: #pragma omp atomic acquire write
+// CHECK-NEXT: a = argc + argc;
+// CHECK-NEXT: #pragma omp atomic update acquire
+// CHECK-NEXT: a = a + argc;
+// CHECK-NEXT: #pragma omp atomic acquire capture
+// CHECK-NEXT: a = b++;
+// CHECK-NEXT: #pragma omp atomic capture acquire
 // CHECK-NEXT: {
 // CHECK-NEXT: a = b;
 // CHECK-NEXT: b++;
@@ -204,6 +249,21 @@ int main(int argc, char **argv) {
     a = b;
     b++;
   }
+#pragma omp atomic acquire
+  a++;
+#pragma omp atomic read acquire
+  a = argc;
+#pragma omp atomic acquire write
+  a = argc + argc;
+#pragma omp atomic update acquire
+  a = a + argc;
+#pragma omp atomic acquire capture
+  a = b++;
+#pragma omp atomic capture acquire
+  {
+    a = b;
+    b++;
+  }
   // CHECK-NEXT: #pragma omp atomic
   // CHECK-NEXT: a++;
   // CHECK-NEXT: #pragma omp atomic read
@@ -245,6 +305,21 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp atomic acq_rel capture
   // CHECK-NEXT: a = b++;
   // CHECK-NEXT: #pragma omp atomic capture acq_rel
+  // CHECK-NEXT: {
+  // CHECK-NEXT: a = b;
+  // CHECK-NEXT: b++;
+  // CHECK-NEXT: }
+  // CHECK-NEXT: #pragma omp atomic acquire
+  // CHECK-NEXT: a++;
+  // CHECK-NEXT: #pragma omp atomic read acquire
+  // CHECK-NEXT: a = argc;
+  // CHECK-NEXT: #pragma omp atomic acquire write
+  // CHECK-NEXT: a = argc + argc;
+  // CHECK-NEXT: #pragma omp atomic update acquire
+  // CHECK-NEXT: a = a + argc;
+  // CHECK-NEXT: #pragma omp atomic acquire capture
+  // CHECK-NEXT: a = b++;
+  // CHECK-NEXT: #pragma omp atomic capture acquire
   // CHECK-NEXT: {
   // CHECK-NEXT: a = b;
   // CHECK-NEXT: b++;
