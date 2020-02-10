@@ -305,7 +305,7 @@ public:
     Resolvers[K] = std::make_shared<CBindingsResolver>(*this, ExternalResolver,
                                                        ExternalResolverCtx);
     if (auto Err = Layer.addModule(K, std::move(M)))
-      return std::move(Err);
+      return Err;
 
     KeyLayers[K] = detail::createGenericLayer(Layer);
 
@@ -314,7 +314,7 @@ public:
     orc::LegacyCtorDtorRunner<OrcCBindingsStack> CtorRunner(
         AcknowledgeORCv1Deprecation, std::move(CtorNames), K);
     if (auto Err = CtorRunner.runViaLayer(*this))
-      return std::move(Err);
+      return Err;
 
     IRStaticDestructorRunners.emplace_back(AcknowledgeORCv1Deprecation,
                                            std::move(DtorNames), K);
@@ -365,7 +365,7 @@ public:
           *this, ExternalResolver, ExternalResolverCtx);
 
       if (auto Err = ObjectLayer.addObject(K, std::move(ObjBuffer)))
-        return std::move(Err);
+        return Err;
 
       KeyLayers[K] = detail::createGenericLayer(ObjectLayer);
 
@@ -399,7 +399,7 @@ public:
         return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return std::move(Err);
+      return Err;
     }
 
     // No symbol not found. Return 0.
@@ -417,7 +417,7 @@ public:
         return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return std::move(Err);
+      return Err;
     }
 
     // Symbol not found. Return 0.

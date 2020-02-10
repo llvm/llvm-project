@@ -321,28 +321,28 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   // A dummy coverage mapping data consists of just one region with zero count.
   uint64_t NumFileMappings;
   if (Error Err = readSize(NumFileMappings))
-    return std::move(Err);
+    return Err;
   if (NumFileMappings != 1)
     return false;
   // We don't expect any specific value for the filename index, just skip it.
   uint64_t FilenameIndex;
   if (Error Err =
           readIntMax(FilenameIndex, std::numeric_limits<unsigned>::max()))
-    return std::move(Err);
+    return Err;
   uint64_t NumExpressions;
   if (Error Err = readSize(NumExpressions))
-    return std::move(Err);
+    return Err;
   if (NumExpressions != 0)
     return false;
   uint64_t NumRegions;
   if (Error Err = readSize(NumRegions))
-    return std::move(Err);
+    return Err;
   if (NumRegions != 1)
     return false;
   uint64_t EncodedCounterAndRegion;
   if (Error Err = readIntMax(EncodedCounterAndRegion,
                              std::numeric_limits<unsigned>::max()))
-    return std::move(Err);
+    return Err;
   unsigned Tag = EncodedCounterAndRegion & Counter::EncodingTagMask;
   return Tag == Counter::Zero;
 }
@@ -494,7 +494,7 @@ public:
     size_t FilenamesBegin = Filenames.size();
     RawCoverageFilenamesReader Reader(StringRef(Buf, FilenamesSize), Filenames);
     if (auto Err = Reader.read())
-      return std::move(Err);
+      return Err;
     Buf += FilenamesSize;
 
     // We'll read the coverage mapping records in the loop below.
@@ -521,7 +521,7 @@ public:
 
       if (Error Err =
               insertFunctionRecordIfNeeded(CFR, Mapping, FilenamesBegin))
-        return std::move(Err);
+        return Err;
       CFR++;
     }
     return Buf;
@@ -545,7 +545,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version3:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
-      return std::move(E);
+      return E;
     if (Version == CovMapVersion::Version2)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version2, IntPtrT, Endian>>(P, R, F);
@@ -597,26 +597,26 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
             readCoverageMappingData<uint32_t, support::endianness::little>(
                 Reader->ProfileNames, Coverage, Reader->MappingRecords,
                 Reader->Filenames))
-      return std::move(E);
+      return E;
   } else if (BytesInAddress == 4 && Endian == support::endianness::big) {
     if (Error E = readCoverageMappingData<uint32_t, support::endianness::big>(
             Reader->ProfileNames, Coverage, Reader->MappingRecords,
             Reader->Filenames))
-      return std::move(E);
+      return E;
   } else if (BytesInAddress == 8 && Endian == support::endianness::little) {
     if (Error E =
             readCoverageMappingData<uint64_t, support::endianness::little>(
                 Reader->ProfileNames, Coverage, Reader->MappingRecords,
                 Reader->Filenames))
-      return std::move(E);
+      return E;
   } else if (BytesInAddress == 8 && Endian == support::endianness::big) {
     if (Error E = readCoverageMappingData<uint64_t, support::endianness::big>(
             Reader->ProfileNames, Coverage, Reader->MappingRecords,
             Reader->Filenames))
-      return std::move(E);
+      return E;
   } else
     return make_error<CoverageMapError>(coveragemap_error::malformed);
-  return std::move(Reader);
+  return Reader;
 }
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>
@@ -643,7 +643,7 @@ loadTestingFormat(StringRef Data) {
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   InstrProfSymtab ProfileNames;
   if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
-    return std::move(E);
+    return E;
   StringRef CoverageMapping = Data.substr(ProfileNamesSize);
   // Skip the padding bytes because coverage map data has an alignment of 8.
   if (CoverageMapping.empty())
@@ -708,12 +708,12 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch) {
       lookupSection(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
                                                  /*AddSegmentInfo=*/false));
   if (auto E = NamesSection.takeError())
-    return std::move(E);
+    return E;
   auto CoverageSection =
       lookupSection(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
                                                  /*AddSegmentInfo=*/false));
   if (auto E = CoverageSection.takeError())
-    return std::move(E);
+    return E;
 
   // Get the contents of the given sections.
   auto CoverageMappingOrErr = CoverageSection->getContents();
@@ -722,7 +722,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch) {
 
   InstrProfSymtab ProfileNames;
   if (Error E = ProfileNames.create(*NamesSection))
-    return std::move(E);
+    return E;
 
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
       CoverageMappingOrErr.get(), std::move(ProfileNames), BytesInAddress,
@@ -741,7 +741,7 @@ BinaryCoverageReader::create(
     if (!ReaderOrErr)
       return ReaderOrErr.takeError();
     Readers.push_back(std::move(ReaderOrErr.get()));
-    return std::move(Readers);
+    return Readers;
   }
 
   auto BinOrErr = createBinary(ObjectBuffer);
@@ -786,7 +786,7 @@ BinaryCoverageReader::create(
         Readers.push_back(std::move(Reader));
     }
     if (Err)
-      return std::move(Err);
+      return Err;
 
     // Thin archives reference object files outside of the archive file, i.e.
     // files which reside in memory not owned by the caller. Transfer ownership
@@ -795,14 +795,14 @@ BinaryCoverageReader::create(
       for (auto &Buffer : Ar->takeThinBuffers())
         ObjectFileBuffers.push_back(std::move(Buffer));
 
-    return std::move(Readers);
+    return Readers;
   }
 
   auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));
-  return std::move(Readers);
+  return Readers;
 }
 
 Error BinaryCoverageReader::readNextRecord(CoverageMappingRecord &Record) {

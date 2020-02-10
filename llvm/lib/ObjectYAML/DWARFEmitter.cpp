@@ -377,5 +377,5 @@ DWARFYAML::EmitDebugSections(StringRef YAMLString, bool ApplyFixups,
                        DebugSections);
   EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAranges, "debug_aranges",
                        DebugSections);
-  return std::move(DebugSections);
+  return DebugSections;
 }

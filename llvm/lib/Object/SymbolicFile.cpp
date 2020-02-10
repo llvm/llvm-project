@@ -82,13 +82,13 @@ SymbolicFile::createSymbolicFile(MemoryBufferRef Object, file_magic Type,
     Expected<std::unique_ptr<ObjectFile>> Obj =
         ObjectFile::createObjectFile(Object, Type);
     if (!Obj || !Context)
-      return std::move(Obj);
+      return Obj;
 
     Expected<MemoryBufferRef> BCData =
         IRObjectFile::findBitcodeInObject(*Obj->get());
     if (!BCData) {
       consumeError(BCData.takeError());
-      return std::move(Obj);
+      return Obj;
     }
 
     return IRObjectFile::create(

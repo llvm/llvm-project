@@ -1455,7 +1455,7 @@ JITDylib::lookupFlags(LookupKind K, JITDylibLookupFlags JDLookupFlags,
 
       // Run this generator.
       if (auto Err = DG->tryToGenerate(K, *this, JDLookupFlags, LookupSet))
-        return std::move(Err);
+        return Err;
 
       // Re-try the search.
       lookupFlagsImpl(Result, K, JDLookupFlags, LookupSet);
@@ -1613,7 +1613,7 @@ JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   });
 
   if (Err)
-    return std::move(Err);
+    return Err;
 
   assert((MUs.empty() || !QueryComplete) &&
          "If action flags are set, there should be no work to do (so no MUs)");
@@ -1970,12 +1970,12 @@ Expected<SymbolMap> ExecutionSession::legacyLookup(
   auto ResultFuture = PromisedResult.get_future();
   auto Result = ResultFuture.get();
   if (ResolutionError)
-    return std::move(ResolutionError);
-  return std::move(Result);
+    return ResolutionError;
+  return Result;
 
 #else
   if (ResolutionError)
-    return std::move(ResolutionError);
+    return ResolutionError;
 
   return Result;
 #endif
@@ -2125,13 +2125,13 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
   auto Result = ResultFuture.get();
 
   if (ResolutionError)
-    return std::move(ResolutionError);
+    return ResolutionError;
 
-  return std::move(Result);
+  return Result;
 
 #else
   if (ResolutionError)
-    return std::move(ResolutionError);
+    return ResolutionError;
 
   return Result;
 #endif

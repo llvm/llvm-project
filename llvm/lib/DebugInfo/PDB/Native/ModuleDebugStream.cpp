@@ -137,7 +137,7 @@ ModuleDebugStreamRef::findChecksumsSubsection() const {
       continue;
 
     if (auto EC = Result.initialize(SS.getRecordData()))
-      return std::move(EC);
+      return EC;
     return Result;
   }
   return Result;

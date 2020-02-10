@@ -183,7 +183,7 @@ Expected<uint32_t> MSFBuilder::addStream(uint32_t Size) {
   std::vector<uint32_t> NewBlocks;
   NewBlocks.resize(ReqBlocks);
   if (auto EC = allocateBlocks(ReqBlocks, NewBlocks))
-    return std::move(EC);
+    return EC;
   StreamData.push_back(std::make_pair(Size, NewBlocks));
   return StreamData.size() - 1;
 }
@@ -267,7 +267,7 @@ Expected<MSFLayout> MSFBuilder::generateLayout() {
     uint32_t NumExtraBlocks = NumDirectoryBlocks - DirectoryBlocks.size();
     ExtraBlocks.resize(NumExtraBlocks);
     if (auto EC = allocateBlocks(NumExtraBlocks, ExtraBlocks))
-      return std::move(EC);
+      return EC;
     DirectoryBlocks.insert(DirectoryBlocks.end(), ExtraBlocks.begin(),
                            ExtraBlocks.end());
   } else if (NumDirectoryBlocks < DirectoryBlocks.size()) {
@@ -346,14 +346,14 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
   uint64_t FileSize = Layout.SB->BlockSize * Layout.SB->NumBlocks;
   auto OutFileOrError = FileOutputBuffer::create(Path, FileSize);
   if (auto EC = OutFileOrError.takeError())
-    return std::move(EC);
+    return EC;
 
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
                               llvm::support::little);
   BinaryStreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))
-    return std::move(EC);
+    return EC;
 
   commitFpm(Buffer, Layout, Allocator);
 
@@ -361,21 +361,21 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
       msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
   Writer.setOffset(BlockMapOffset);
   if (auto EC = Writer.writeArray(Layout.DirectoryBlocks))
-    return std::move(EC);
+    return EC;
 
   auto DirStream = WritableMappedBlockStream::createDirectoryStream(
       Layout, Buffer, Allocator);
   BinaryStreamWriter DW(*DirStream);
   if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
-    return std::move(EC);
+    return EC;
 
   if (auto EC = DW.writeArray(Layout.StreamSizes))
-    return std::move(EC);
+    return EC;
 
   for (const auto &Blocks : Layout.StreamMap) {
     if (auto EC = DW.writeArray(Blocks))
-      return std::move(EC);
+      return EC;
   }
 
-  return std::move(Buffer);
+  return Buffer;
 }

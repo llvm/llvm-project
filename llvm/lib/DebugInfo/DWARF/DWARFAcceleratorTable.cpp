@@ -481,7 +481,7 @@ DWARFDebugNames::NameIndex::extractAttributeEncodings(uint64_t *Offset) {
     if (!AttrEncOr)
       return AttrEncOr.takeError();
     if (isSentinel(*AttrEncOr))
-      return std::move(Result);
+      return Result;
 
     Result.emplace_back(*AttrEncOr);
   }
@@ -649,7 +649,7 @@ DWARFDebugNames::NameIndex::getEntry(uint64_t *Offset) const {
       return createStringError(errc::io_error,
                                "Error extracting index attribute values.");
   }
-  return std::move(E);
+  return E;
 }
 
 DWARFDebugNames::NameTableEntry

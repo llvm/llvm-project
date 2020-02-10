@@ -139,7 +139,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
   auto Measurements = runMeasurements(Executor);
   if (Error E = Measurements.takeError()) {
     if (!E.isA<SnippetCrash>())
-      return std::move(E);
+      return E;
     InstrBenchmark.Error = toString(std::move(E));
     return InstrBenchmark;
   }
@@ -163,7 +163,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
   SmallString<256> ResultPath;
   if (Error E = errorCodeToError(
           sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
-    return std::move(E);
+    return E;
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
                    BC.LiveIns, BC.Key.RegisterInitialValues, FillFunction, OFS);

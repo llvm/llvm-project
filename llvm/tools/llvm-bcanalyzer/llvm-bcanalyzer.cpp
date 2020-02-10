@@ -73,14 +73,14 @@ static Expected<std::unique_ptr<MemoryBuffer>> openBitcodeFile(StringRef Path) {
   Expected<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
       errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Path));
   if (Error E = MemBufOrErr.takeError())
-    return std::move(E);
+    return E;
 
   std::unique_ptr<MemoryBuffer> MemBuf = std::move(*MemBufOrErr);
 
   if (MemBuf->getBufferSize() & 3)
     return reportError(
         "Bitcode stream should be a multiple of 4 bytes in length");
-  return std::move(MemBuf);
+  return MemBuf;
 }
 
 int main(int argc, char **argv) {

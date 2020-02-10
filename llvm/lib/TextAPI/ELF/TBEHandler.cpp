@@ -149,7 +149,7 @@ Expected<std::unique_ptr<ELFStub>> elfabi::readTBEFromBuffer(StringRef Buf) {
   if (std::error_code Err = YamlIn.error())
     return createStringError(Err, "YAML failed reading as TBE");
 
-  return std::move(Stub);
+  return Stub;
 }
 
 Error elfabi::writeTBEToOutputStream(raw_ostream &OS, const ELFStub &Stub) {

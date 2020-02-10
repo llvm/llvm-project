@@ -26,7 +26,7 @@ Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
   Error Err = isGnuStyle(Name) ? D.consumeCompressedGnuHeader()
                                : D.consumeCompressedZLibHeader(Is64Bit, IsLE);
   if (Err)
-    return std::move(Err);
+    return Err;
   return D;
 }
 

@@ -55,7 +55,7 @@ InstrProfReader::create(const Twine &Path) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
   if (Error E = BufferOrError.takeError())
-    return std::move(E);
+    return E;
   return InstrProfReader::create(std::move(BufferOrError.get()));
 }
 
@@ -83,9 +83,9 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 
   // Initialize the reader and return the result.
   if (Error E = initializeReader(*Result))
-    return std::move(E);
+    return E;
 
-  return std::move(Result);
+  return Result;
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
@@ -93,7 +93,7 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
   if (Error E = BufferOrError.takeError())
-    return std::move(E);
+    return E;
 
   // Set up the remapping buffer if requested.
   std::unique_ptr<MemoryBuffer> RemappingBuffer;
@@ -101,7 +101,7 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
   if (!RemappingPathStr.empty()) {
     auto RemappingBufferOrError = setupMemoryBuffer(RemappingPathStr);
     if (Error E = RemappingBufferOrError.takeError())
-      return std::move(E);
+      return E;
     RemappingBuffer = std::move(RemappingBufferOrError.get());
   }
 
@@ -124,9 +124,9 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
 
   // Initialize the reader and return the result.
   if (Error E = initializeReader(*Result))
-    return std::move(E);
+    return E;
 
-  return std::move(Result);
+  return Result;
 }
 
 void InstrProfIterator::Increment() {
@@ -874,7 +874,7 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   ArrayRef<NamedInstrProfRecord> Data;
   Error Err = Remapper->getRecords(FuncName, Data);
   if (Err)
-    return std::move(Err);
+    return Err;
   // Found it. Look for counters with the right hash.
   for (unsigned I = 0, E = Data.size(); I < E; ++I) {
     // Check for a match and fill the vector if there is one.

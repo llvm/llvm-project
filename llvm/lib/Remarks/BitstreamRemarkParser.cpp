@@ -266,7 +266,7 @@ static Expected<bool> isBlock(BitstreamCursor &Stream, unsigned BlockID) {
     break;
   }
   if (Error E = Stream.JumpToBit(PreviousBitNo))
-    return std::move(E);
+    return E;
   return Result;
 }
 
@@ -316,7 +316,7 @@ remarks::createBitstreamParserFromMeta(
 
   if (Error E = validateMagicNumber(
           StringRef(MagicNumber->data(), MagicNumber->size())))
-    return std::move(E);
+    return E;
 
   auto Parser =
       StrTab ? std::make_unique<BitstreamRemarkParser>(Buf, std::move(*StrTab))
@@ -325,7 +325,7 @@ remarks::createBitstreamParserFromMeta(
   if (ExternalFilePrependPath)
     Parser->ExternalFilePrependPath = std::string(*ExternalFilePrependPath);
 
-  return std::move(Parser);
+  return Parser;
 }
 
 Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
@@ -334,7 +334,7 @@ Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
 
   if (!ReadyToParseRemarks) {
     if (Error E = parseMeta())
-      return std::move(E);
+      return E;
     ReadyToParseRemarks = true;
   }
 
@@ -491,7 +491,7 @@ Error BitstreamRemarkParser::processSeparateRemarksMetaMeta(
 Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::parseRemark() {
   BitstreamRemarkParserHelper RemarkHelper(ParserHelper.Stream);
   if (Error E = RemarkHelper.parse())
-    return std::move(E);
+    return E;
 
   return processRemark(RemarkHelper);
 }
@@ -562,7 +562,7 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
     R.Hotness = *Helper.Hotness;
 
   if (!Helper.Args)
-    return std::move(Result);
+    return Result;
 
   for (const BitstreamRemarkParserHelper::Argument &Arg : *Helper.Args) {
     if (!Arg.KeyIdx)
@@ -600,5 +600,5 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
     }
   }
 
-  return std::move(Result);
+  return Result;
 }

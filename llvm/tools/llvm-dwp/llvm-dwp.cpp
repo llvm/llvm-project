@@ -499,7 +499,7 @@ getDWOFilenames(StringRef ExecFilename) {
       DWOPaths.push_back(std::move(DWOName));
     }
   }
-  return std::move(DWOPaths);
+  return DWOPaths;
 }
 
 static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {

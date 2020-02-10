@@ -102,7 +102,7 @@ private:
 
 Optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileRequested(GlobalValueSet Requested) {
-  return std::move(Requested);
+  return Requested;
 }
 
 Optional<CompileOnDemandLayer::GlobalValueSet>
@@ -294,7 +294,7 @@ void CompileOnDemandLayer::emitPartition(
             SymbolFlags[Mangle(GV->getName())] =
                 JITSymbolFlags::fromGlobalValue(*GV);
           if (auto Err = R.defineMaterializing(SymbolFlags))
-            return std::move(Err);
+            return Err;
         }
 
         expandPartition(*GVsToExtract);

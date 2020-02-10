@@ -349,7 +349,7 @@ parseListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
   }
   ListTableType Table;
   if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
-    return std::move(E);
+    return E;
   return Table;
 }
 
@@ -621,7 +621,7 @@ DWARFUnit::findRnglistFromOffset(uint64_t Offset) {
   if (getVersion() <= 4) {
     DWARFDebugRangeList RangeList;
     if (Error E = extractRangeList(Offset, RangeList))
-      return std::move(E);
+      return E;
     return RangeList.getAbsoluteRanges(getBaseAddress());
   }
   if (RngListTable) {

@@ -342,7 +342,7 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
     // a literal if the error reporting is non-fatal.
     if (!GlobOrErr) {
       if (Error E = ErrorCallback(GlobOrErr.takeError()))
-        return std::move(E);
+        return E;
       return create(Pattern, MatchStyle::Literal, ErrorCallback);
     }
 
@@ -572,7 +572,7 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
     if (Error E = addSymbolsToRenameFromFile(Config.SymbolsToRename, DC.Alloc,
                                              Arg->getValue()))
-      return std::move(E);
+      return E;
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
     Expected<SectionRename> SR =
@@ -623,15 +623,15 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
     if (Error E = Config.ToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_only_section))
     if (Error E = Config.OnlySection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section)) {
     StringRef ArgValue(Arg->getValue());
     if (!ArgValue.contains('='))
@@ -671,67 +671,67 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     if (Error E = Config.SymbolsToLocalize.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToLocalize, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
     if (Error E = Config.SymbolsToKeepGlobal.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     if (Error E = Config.SymbolsToGlobalize.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToGlobalize, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
     if (Error E = Config.SymbolsToWeaken.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToWeaken, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
     if (Error E = Config.SymbolsToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
     if (Error E =
             Config.UnneededSymbolsToRemove.addMatcher(NameOrPattern::create(
                 Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
     if (Error E = addSymbolsFromFile(Config.UnneededSymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), SymbolMatchStyle,
                                      ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     if (Error E = Config.SymbolsToKeep.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
     if (Error E =
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
-      return std::move(E);
+      return E;
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol))
     Config.SymbolsToAdd.push_back(Arg->getValue());
 
@@ -788,7 +788,7 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              "--extract-main-partition");
 
   DC.CopyConfigs.push_back(std::move(Config));
-  return std::move(DC);
+  return DC;
 }
 
 // ParseInstallNameToolOptions returns the config and sets the input arguments.
@@ -839,7 +839,7 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   Config.OutputFilename = Positional[0];
 
   DC.CopyConfigs.push_back(std::move(Config));
-  return std::move(DC);
+  return DC;
 }
 
 // ParseStripOptions returns the config and sets the input arguments. If a
@@ -915,22 +915,22 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
     if (Error E = Config.ToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SectionMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
 
   for (auto Arg : InputArgs.filtered(STRIP_strip_symbol))
     if (Error E = Config.SymbolsToRemove.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
     if (Error E = Config.SymbolsToKeep.addMatcher(NameOrPattern::create(
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
-      return std::move(E);
+      return E;
 
   if (!InputArgs.hasArg(STRIP_no_strip_all) && !Config.StripDebug &&
       !Config.StripUnneeded && Config.DiscardMode == DiscardType::None &&
@@ -965,7 +965,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
         if (Error E = ErrorCallback(createStringError(
                 errc::invalid_argument, "'%s' was already specified",
                 Filename.str().c_str())))
-          return std::move(E);
+          return E;
       }
       Config.InputFilename = Filename;
       Config.OutputFilename = Filename;
@@ -978,7 +978,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
     return createStringError(errc::invalid_argument,
                              "--preserve-dates requires a file");
 
-  return std::move(DC);
+  return DC;
 }
 
 } // namespace objcopy

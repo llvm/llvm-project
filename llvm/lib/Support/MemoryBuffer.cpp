@@ -128,7 +128,7 @@ getMemBufferCopyImpl(StringRef InputData, const Twine &BufferName) {
   if (!Buf)
     return make_error_code(errc::not_enough_memory);
   memcpy(Buf->getBufferStart(), InputData.data(), InputData.size());
-  return std::move(Buf);
+  return Buf;
 }
 
 std::unique_ptr<MemoryBuffer>
@@ -398,7 +398,7 @@ getReadWriteFile(const Twine &Filename, uint64_t FileSize, uint64_t MapSize,
                                                          Offset, EC));
   if (EC)
     return EC;
-  return std::move(Result);
+  return Result;
 }
 
 ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
@@ -450,7 +450,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
             RequiresNullTerminator, FD, MapSize, Offset, EC));
     if (!EC)
-      return std::move(Result);
+      return Result;
   }
 
   auto Buf = WritableMemoryBuffer::getNewUninitMemBuffer(MapSize, Filename);
@@ -475,7 +475,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     Offset += *ReadBytes;
   }
 
-  return std::move(Buf);
+  return Buf;
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>

@@ -492,7 +492,7 @@ Expected<int> LLC::ExecuteProgram(const std::string &Bitcode,
       OutputCode(Bitcode, OutputAsmFile, Timeout, MemoryLimit);
   FileRemover OutFileRemover(OutputAsmFile, !SaveTemps);
   if (Error E = FileKind.takeError())
-    return std::move(E);
+    return E;
 
   std::vector<std::string> CCArgs(ArgsForCC);
   CCArgs.insert(CCArgs.end(), SharedLibs.begin(), SharedLibs.end());

@@ -276,7 +276,7 @@ private:
         // and its execution, so we need to double check.
         if (!this->Finalized)
           if (auto Err = this->finalize())
-            return std::move(Err);
+            return Err;
         return this->getSymbol(Name, false).getAddress();
       };
     }
@@ -430,7 +430,7 @@ public:
       if (auto Sym = KV.second->getSymbol(Name, ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
-        return std::move(Err);
+        return Err;
 
     return nullptr;
   }

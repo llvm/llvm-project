@@ -105,8 +105,8 @@ MachOUniversalBinary::create(MemoryBufferRef Source) {
   std::unique_ptr<MachOUniversalBinary> Ret(
       new MachOUniversalBinary(Source, Err));
   if (Err)
-    return std::move(Err);
-  return std::move(Ret);
+    return Err;
+  return Ret;
 }
 
 MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)

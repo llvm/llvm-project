@@ -513,7 +513,7 @@ Expected<Value> parse(StringRef JSON) {
   if (P.checkUTF8())
     if (P.parseValue(E))
       if (P.assertEnd())
-        return std::move(E);
+        return E;
   return P.takeError();
 }
 char ParseError::ID = 0;
