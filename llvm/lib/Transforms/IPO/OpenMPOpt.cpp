@@ -211,9 +211,9 @@ private:
                       << RFI.Name
                       << (ReplVal ? " with an existing value\n" : "\n")
                       << "\n");
-    assert(!ReplVal || (isa<Argument>(ReplVal) &&
-                        cast<Argument>(ReplVal)->getParent() == &F) &&
-                           "Unexpected replacement value!");
+    assert((!ReplVal || (isa<Argument>(ReplVal) &&
+                         cast<Argument>(ReplVal)->getParent() == &F)) &&
+           "Unexpected replacement value!");
     if (!ReplVal) {
       for (Use *U : Uses)
         if (CallInst *CI = getCallIfRegularCall(*U, &RFI)) {
