@@ -50,6 +50,76 @@ define void @test4(i32* %Q) {
   ret void
 }
 
+; PR8576 - Should delete store of 10 even though p/q are may aliases.
+define void @test2(i32 *%p, i32 *%q) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    store i32 20, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 30, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 10, i32* %p, align 4
+  store i32 20, i32* %q, align 4
+  store i32 30, i32* %p, align 4
+  ret void
+}
+
+; Should delete store of 10 even though memset is a may-store to P (P and Q may
+; alias).
+define void @test6(i32 *%p, i8 *%q) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[Q:%.*]], i8 42, i64 900, i1 false)
+; CHECK-NEXT:    store i32 30, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 10, i32* %p, align 4       ;; dead.
+  call void @llvm.memset.p0i8.i64(i8* %q, i8 42, i64 900, i1 false)
+  store i32 30, i32* %p, align 4
+  ret void
+}
+
+; Should delete store of 10 even though memset is a may-store to P (P and Q may
+; alias).
+define void @test6_atomic(i32* align 4 %p, i8* align 4 %q) {
+; CHECK-LABEL: @test6_atomic(
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[Q:%.*]], i8 42, i64 900, i32 4)
+; CHECK-NEXT:    store atomic i32 30, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 10, i32* %p unordered, align 4       ;; dead.
+  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 %q, i8 42, i64 900, i32 4)
+  store atomic i32 30, i32* %p unordered, align 4
+  ret void
+}
+
+; Should delete store of 10 even though memcpy is a may-store to P (P and Q may
+; alias).
+define void @test7(i32 *%p, i8 *%q, i8* noalias %r) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[Q:%.*]], i8* [[R:%.*]], i64 900, i1 false)
+; CHECK-NEXT:    store i32 30, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 10, i32* %p, align 4       ;; dead.
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %r, i64 900, i1 false)
+  store i32 30, i32* %p, align 4
+  ret void
+}
+
+; Should delete store of 10 even though memcpy is a may-store to P (P and Q may
+; alias).
+define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %r) {
+; CHECK-LABEL: @test7_atomic(
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 4 [[Q:%.*]], i8* align 4 [[R:%.*]], i64 900, i32 4)
+; CHECK-NEXT:    store atomic i32 30, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 10, i32* %p unordered, align 4       ;; dead.
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 4 %q, i8* align 4 %r, i64 900, i32 4)
+  store atomic i32 30, i32* %p unordered, align 4
+  ret void
+}
+
+
 ; va_arg has fuzzy dependence, the store shouldn't be zapped.
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
@@ -62,6 +132,46 @@ define double @test10(i8* %X) {
   store i8* %X, i8** %X_addr
   %tmp.0 = va_arg i8** %X_addr, double
   ret double %tmp.0
+}
+
+; %P doesn't escape, the DEAD instructions should be removed.
+declare void @test13f()
+define i32* @test13() {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 4)
+; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
+; CHECK-NEXT:    call void @test13f()
+; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    ret i32* [[P]]
+;
+  %ptr = tail call i8* @malloc(i32 4)
+  %P = bitcast i8* %ptr to i32*
+  %DEAD = load i32, i32* %P
+  %DEAD2 = add i32 %DEAD, 1
+  store i32 %DEAD2, i32* %P
+  call void @test13f( )
+  store i32 0, i32* %P
+  ret i32* %P
+}
+
+define i32 addrspace(1)* @test13_addrspacecast() {
+; CHECK-LABEL: @test13_addrspacecast(
+; CHECK-NEXT:    [[P:%.*]] = tail call i8* @malloc(i32 4)
+; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
+; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
+; CHECK-NEXT:    call void @test13f()
+; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]]
+; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
+;
+  %p = tail call i8* @malloc(i32 4)
+  %p.bc = bitcast i8* %p to i32*
+  %P = addrspacecast i32* %p.bc to i32 addrspace(1)*
+  %DEAD = load i32, i32 addrspace(1)* %P
+  %DEAD2 = add i32 %DEAD, 1
+  store i32 %DEAD2, i32 addrspace(1)* %P
+  call void @test13f( )
+  store i32 0, i32 addrspace(1)* %P
+  ret i32 addrspace(1)* %P
 }
 
 
@@ -106,6 +216,26 @@ define noalias i8* @test23() nounwind uwtable ssp {
   store i8 0, i8* %arrayidx1, align 1
   %call = call i8* @strdup(i8* %arrayidx) nounwind
   ret i8* %call
+}
+
+; Make sure same sized store to later element is deleted
+define void @test24([2 x i32]* %a, i32 %b, i32 %c) nounwind {
+; CHECK-LABEL: @test24(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[A:%.*]], i64 0, i64 0
+; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[A]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[C:%.*]], i32* [[TMP2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %1 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 0
+  store i32 0, i32* %1, align 4
+  %2 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 1
+  store i32 0, i32* %2, align 4
+  %3 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 0
+  store i32 %b, i32* %3, align 4
+  %4 = getelementptr inbounds [2 x i32], [2 x i32]* %a, i64 0, i64 1
+  store i32 %c, i32* %4, align 4
+  ret void
 }
 
 ; Check another case like PR13547 where strdup is not like malloc.
@@ -186,6 +316,35 @@ bb3:
 }
 
 declare void @unknown_func()
+
+; Don't remove redundant store because of unknown call.
+define i32 @test30(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test30(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @unknown_func()
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %v = load i32, i32* %p, align 4
+  br i1 %c, label %bb1, label %bb2
+bb1:
+  br label %bb3
+bb2:
+  ; Might overwrite value at %p
+  call void @unknown_func()
+  br label %bb3
+bb3:
+  store i32 %v, i32* %p, align 4
+  ret i32 0
+}
 
 ; Don't remove redundant store in a loop with a may-alias store.
 define i32 @test32(i1 %c, i32* %p, i32 %i) {
