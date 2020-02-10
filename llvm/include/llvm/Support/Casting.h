@@ -382,8 +382,7 @@ LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &Val)
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val)
-    -> decltype(cast<X>(Val)) {
+LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast<X, Y>(Val);
 }
 
@@ -398,8 +397,7 @@ LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &Val)
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val)
-    -> decltype(cast<X>(Val)) {
+LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast_or_null<X, Y>(Val);
 }
 

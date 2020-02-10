@@ -177,8 +177,7 @@ size_t randomIndex(size_t Max) {
   return Distribution(randomGenerator());
 }
 
-template <typename C>
-static auto randomElement(const C &Container) -> decltype(Container[0]) {
+template <typename C> static decltype(auto) randomElement(const C &Container) {
   assert(!Container.empty() &&
          "Can't pick a random element from an empty container)");
   return Container[randomIndex(Container.size() - 1)];

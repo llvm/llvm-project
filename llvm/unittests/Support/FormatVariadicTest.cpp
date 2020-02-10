@@ -487,9 +487,7 @@ struct format_tuple {
   const char *Fmt;
   explicit format_tuple(const char *Fmt) : Fmt(Fmt) {}
 
-  template <typename... Ts>
-  auto operator()(Ts &&... Values) const
-      -> decltype(formatv(Fmt, std::forward<Ts>(Values)...)) {
+  template <typename... Ts> auto operator()(Ts &&... Values) const {
     return formatv(Fmt, std::forward<Ts>(Values)...);
   }
 };
