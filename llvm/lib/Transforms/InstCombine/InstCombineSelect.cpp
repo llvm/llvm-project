@@ -1073,10 +1073,11 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   if (CmpCanonicalized && RHSCanonicalized)
     return nullptr;
 
-  // If RHS is used by other instructions except compare and select, don't
-  // canonicalize it to not increase the instruction count.
-  if (!(RHS->hasOneUse() || (RHS->hasNUses(2) && CmpUsesNegatedOp)))
-    return nullptr;
+  // If RHS is not canonical but is used by other instructions, don't
+  // canonicalize it and potentially increase the instruction count.
+  if (!RHSCanonicalized)
+    if (!(RHS->hasOneUse() || (RHS->hasNUses(2) && CmpUsesNegatedOp)))
+      return nullptr;
 
   // Create the canonical compare: icmp slt LHS 0.
   if (!CmpCanonicalized) {
