@@ -329,9 +329,6 @@ def AMDGPUfdot2 : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
-def AMDGPUkill : SDNode<"AMDGPUISD::KILL", AMDGPUKillSDT,
-  [SDNPHasChain, SDNPSideEffect]>;
-
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt

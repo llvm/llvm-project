@@ -3690,8 +3690,9 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   }
 
   AggValueSlot ArgSlot = AggValueSlot::ignored();
+  Address ArgSlotAlloca = Address::invalid();
   if (hasAggregateEvaluationKind(E->getType())) {
-    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp");
+    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
 
     // Emit a lifetime start/end for this temporary. If the type has a
     // destructor, then we need to keep it alive. FIXME: We should still be able
@@ -3699,8 +3700,9 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     if (!E->getType().isDestructedType()) {
       uint64_t size =
           CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(E->getType()));
-      if (auto *lifetimeSize = EmitLifetimeStart(size, ArgSlot.getPointer()))
-        args.addLifetimeCleanup({ArgSlot.getPointer(), lifetimeSize});
+      if (auto *lifetimeSize =
+              EmitLifetimeStart(size, ArgSlotAlloca.getPointer()))
+        args.addLifetimeCleanup({ArgSlotAlloca.getPointer(), lifetimeSize});
     }
   }
 
