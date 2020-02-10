@@ -1182,61 +1182,61 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   case X86::VMOVUPSZ128rmk:   case X86::VMOVAPSZ128rmk:
   case X86::VMOVUPSZ256rmk:   case X86::VMOVAPSZ256rmk:
   case X86::VMOVUPSZrmk:      case X86::VMOVAPSZrmk:
-  case X86::VBROADCASTSDZ256mk:
-  case X86::VBROADCASTSDZmk:
-  case X86::VBROADCASTSSZ128mk:
-  case X86::VBROADCASTSSZ256mk:
-  case X86::VBROADCASTSSZmk:
-  case X86::VPBROADCASTDZ128mk:
-  case X86::VPBROADCASTDZ256mk:
-  case X86::VPBROADCASTDZmk:
-  case X86::VPBROADCASTQZ128mk:
-  case X86::VPBROADCASTQZ256mk:
-  case X86::VPBROADCASTQZmk: {
+  case X86::VBROADCASTSDZ256rmk:
+  case X86::VBROADCASTSDZrmk:
+  case X86::VBROADCASTSSZ128rmk:
+  case X86::VBROADCASTSSZ256rmk:
+  case X86::VBROADCASTSSZrmk:
+  case X86::VPBROADCASTDZ128rmk:
+  case X86::VPBROADCASTDZ256rmk:
+  case X86::VPBROADCASTDZrmk:
+  case X86::VPBROADCASTQZ128rmk:
+  case X86::VPBROADCASTQZ256rmk:
+  case X86::VPBROADCASTQZrmk: {
     unsigned Opc;
     switch (MIOpc) {
     default: llvm_unreachable("Unreachable!");
-    case X86::VMOVDQU8Z128rmk:    Opc = X86::VPBLENDMBZ128rmk; break;
-    case X86::VMOVDQU8Z256rmk:    Opc = X86::VPBLENDMBZ256rmk; break;
-    case X86::VMOVDQU8Zrmk:       Opc = X86::VPBLENDMBZrmk;    break;
-    case X86::VMOVDQU16Z128rmk:   Opc = X86::VPBLENDMWZ128rmk; break;
-    case X86::VMOVDQU16Z256rmk:   Opc = X86::VPBLENDMWZ256rmk; break;
-    case X86::VMOVDQU16Zrmk:      Opc = X86::VPBLENDMWZrmk;    break;
-    case X86::VMOVDQU32Z128rmk:   Opc = X86::VPBLENDMDZ128rmk; break;
-    case X86::VMOVDQU32Z256rmk:   Opc = X86::VPBLENDMDZ256rmk; break;
-    case X86::VMOVDQU32Zrmk:      Opc = X86::VPBLENDMDZrmk;    break;
-    case X86::VMOVDQU64Z128rmk:   Opc = X86::VPBLENDMQZ128rmk; break;
-    case X86::VMOVDQU64Z256rmk:   Opc = X86::VPBLENDMQZ256rmk; break;
-    case X86::VMOVDQU64Zrmk:      Opc = X86::VPBLENDMQZrmk;    break;
-    case X86::VMOVUPDZ128rmk:     Opc = X86::VBLENDMPDZ128rmk; break;
-    case X86::VMOVUPDZ256rmk:     Opc = X86::VBLENDMPDZ256rmk; break;
-    case X86::VMOVUPDZrmk:        Opc = X86::VBLENDMPDZrmk;    break;
-    case X86::VMOVUPSZ128rmk:     Opc = X86::VBLENDMPSZ128rmk; break;
-    case X86::VMOVUPSZ256rmk:     Opc = X86::VBLENDMPSZ256rmk; break;
-    case X86::VMOVUPSZrmk:        Opc = X86::VBLENDMPSZrmk;    break;
-    case X86::VMOVDQA32Z128rmk:   Opc = X86::VPBLENDMDZ128rmk; break;
-    case X86::VMOVDQA32Z256rmk:   Opc = X86::VPBLENDMDZ256rmk; break;
-    case X86::VMOVDQA32Zrmk:      Opc = X86::VPBLENDMDZrmk;    break;
-    case X86::VMOVDQA64Z128rmk:   Opc = X86::VPBLENDMQZ128rmk; break;
-    case X86::VMOVDQA64Z256rmk:   Opc = X86::VPBLENDMQZ256rmk; break;
-    case X86::VMOVDQA64Zrmk:      Opc = X86::VPBLENDMQZrmk;    break;
-    case X86::VMOVAPDZ128rmk:     Opc = X86::VBLENDMPDZ128rmk; break;
-    case X86::VMOVAPDZ256rmk:     Opc = X86::VBLENDMPDZ256rmk; break;
-    case X86::VMOVAPDZrmk:        Opc = X86::VBLENDMPDZrmk;    break;
-    case X86::VMOVAPSZ128rmk:     Opc = X86::VBLENDMPSZ128rmk; break;
-    case X86::VMOVAPSZ256rmk:     Opc = X86::VBLENDMPSZ256rmk; break;
-    case X86::VMOVAPSZrmk:        Opc = X86::VBLENDMPSZrmk;    break;
-    case X86::VBROADCASTSDZ256mk: Opc = X86::VBLENDMPDZ256rmbk; break;
-    case X86::VBROADCASTSDZmk:    Opc = X86::VBLENDMPDZrmbk;    break;
-    case X86::VBROADCASTSSZ128mk: Opc = X86::VBLENDMPSZ128rmbk; break;
-    case X86::VBROADCASTSSZ256mk: Opc = X86::VBLENDMPSZ256rmbk; break;
-    case X86::VBROADCASTSSZmk:    Opc = X86::VBLENDMPSZrmbk;    break;
-    case X86::VPBROADCASTDZ128mk: Opc = X86::VPBLENDMDZ128rmbk; break;
-    case X86::VPBROADCASTDZ256mk: Opc = X86::VPBLENDMDZ256rmbk; break;
-    case X86::VPBROADCASTDZmk:    Opc = X86::VPBLENDMDZrmbk;    break;
-    case X86::VPBROADCASTQZ128mk: Opc = X86::VPBLENDMQZ128rmbk; break;
-    case X86::VPBROADCASTQZ256mk: Opc = X86::VPBLENDMQZ256rmbk; break;
-    case X86::VPBROADCASTQZmk:    Opc = X86::VPBLENDMQZrmbk;    break;
+    case X86::VMOVDQU8Z128rmk:     Opc = X86::VPBLENDMBZ128rmk; break;
+    case X86::VMOVDQU8Z256rmk:     Opc = X86::VPBLENDMBZ256rmk; break;
+    case X86::VMOVDQU8Zrmk:        Opc = X86::VPBLENDMBZrmk;    break;
+    case X86::VMOVDQU16Z128rmk:    Opc = X86::VPBLENDMWZ128rmk; break;
+    case X86::VMOVDQU16Z256rmk:    Opc = X86::VPBLENDMWZ256rmk; break;
+    case X86::VMOVDQU16Zrmk:       Opc = X86::VPBLENDMWZrmk;    break;
+    case X86::VMOVDQU32Z128rmk:    Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQU32Z256rmk:    Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQU32Zrmk:       Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQU64Z128rmk:    Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQU64Z256rmk:    Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQU64Zrmk:       Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVUPDZ128rmk:      Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVUPDZ256rmk:      Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVUPDZrmk:         Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVUPSZ128rmk:      Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVUPSZ256rmk:      Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVUPSZrmk:         Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VMOVDQA32Z128rmk:    Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQA32Z256rmk:    Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQA32Zrmk:       Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQA64Z128rmk:    Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQA64Z256rmk:    Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQA64Zrmk:       Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVAPDZ128rmk:      Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVAPDZ256rmk:      Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVAPDZrmk:         Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVAPSZ128rmk:      Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVAPSZ256rmk:      Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVAPSZrmk:         Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VBROADCASTSDZ256rmk: Opc = X86::VBLENDMPDZ256rmbk; break;
+    case X86::VBROADCASTSDZrmk:    Opc = X86::VBLENDMPDZrmbk;    break;
+    case X86::VBROADCASTSSZ128rmk: Opc = X86::VBLENDMPSZ128rmbk; break;
+    case X86::VBROADCASTSSZ256rmk: Opc = X86::VBLENDMPSZ256rmbk; break;
+    case X86::VBROADCASTSSZrmk:    Opc = X86::VBLENDMPSZrmbk;    break;
+    case X86::VPBROADCASTDZ128rmk: Opc = X86::VPBLENDMDZ128rmbk; break;
+    case X86::VPBROADCASTDZ256rmk: Opc = X86::VPBLENDMDZ256rmbk; break;
+    case X86::VPBROADCASTDZrmk:    Opc = X86::VPBLENDMDZrmbk;    break;
+    case X86::VPBROADCASTQZ128rmk: Opc = X86::VPBLENDMQZ128rmbk; break;
+    case X86::VPBROADCASTQZ256rmk: Opc = X86::VPBLENDMQZ256rmbk; break;
+    case X86::VPBROADCASTQZrmk:    Opc = X86::VPBLENDMQZrmbk;    break;
     }
 
     NewMI = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -5414,33 +5414,33 @@ static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
   case TB_BCAST_D:
     switch (SpillSize) {
     default: llvm_unreachable("Unknown spill size");
-    case 16: return X86::VPBROADCASTDZ128m;
-    case 32: return X86::VPBROADCASTDZ256m;
-    case 64: return X86::VPBROADCASTDZm;
+    case 16: return X86::VPBROADCASTDZ128rm;
+    case 32: return X86::VPBROADCASTDZ256rm;
+    case 64: return X86::VPBROADCASTDZrm;
     }
     break;
   case TB_BCAST_Q:
     switch (SpillSize) {
     default: llvm_unreachable("Unknown spill size");
-    case 16: return X86::VPBROADCASTQZ128m;
-    case 32: return X86::VPBROADCASTQZ256m;
-    case 64: return X86::VPBROADCASTQZm;
+    case 16: return X86::VPBROADCASTQZ128rm;
+    case 32: return X86::VPBROADCASTQZ256rm;
+    case 64: return X86::VPBROADCASTQZrm;
     }
     break;
   case TB_BCAST_SS:
     switch (SpillSize) {
     default: llvm_unreachable("Unknown spill size");
-    case 16: return X86::VBROADCASTSSZ128m;
-    case 32: return X86::VBROADCASTSSZ256m;
-    case 64: return X86::VBROADCASTSSZm;
+    case 16: return X86::VBROADCASTSSZ128rm;
+    case 32: return X86::VBROADCASTSSZ256rm;
+    case 64: return X86::VBROADCASTSSZrm;
     }
     break;
   case TB_BCAST_SD:
     switch (SpillSize) {
     default: llvm_unreachable("Unknown spill size");
     case 16: return X86::VMOVDDUPZ128rm;
-    case 32: return X86::VBROADCASTSDZ256m;
-    case 64: return X86::VBROADCASTSDZm;
+    case 32: return X86::VBROADCASTSDZ256rm;
+    case 64: return X86::VBROADCASTSDZrm;
     }
     break;
   }
@@ -6120,18 +6120,18 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VMOVSDZrm_alt,  X86::VMOVSDZrm_alt,  X86::VMOVQI2PQIZrm  },
   { X86::VMOVSSZrm,      X86::VMOVSSZrm,      X86::VMOVDI2PDIZrm  },
   { X86::VMOVSSZrm_alt,  X86::VMOVSSZrm_alt,  X86::VMOVDI2PDIZrm  },
-  { X86::VBROADCASTSSZ128r, X86::VBROADCASTSSZ128r, X86::VPBROADCASTDZ128r },
-  { X86::VBROADCASTSSZ128m, X86::VBROADCASTSSZ128m, X86::VPBROADCASTDZ128m },
-  { X86::VBROADCASTSSZ256r, X86::VBROADCASTSSZ256r, X86::VPBROADCASTDZ256r },
-  { X86::VBROADCASTSSZ256m, X86::VBROADCASTSSZ256m, X86::VPBROADCASTDZ256m },
-  { X86::VBROADCASTSSZr,    X86::VBROADCASTSSZr,    X86::VPBROADCASTDZr },
-  { X86::VBROADCASTSSZm,    X86::VBROADCASTSSZm,    X86::VPBROADCASTDZm },
-  { X86::VMOVDDUPZ128rr,    X86::VMOVDDUPZ128rr,    X86::VPBROADCASTQZ128r },
-  { X86::VMOVDDUPZ128rm,    X86::VMOVDDUPZ128rm,    X86::VPBROADCASTQZ128m },
-  { X86::VBROADCASTSDZ256r, X86::VBROADCASTSDZ256r, X86::VPBROADCASTQZ256r },
-  { X86::VBROADCASTSDZ256m, X86::VBROADCASTSDZ256m, X86::VPBROADCASTQZ256m },
-  { X86::VBROADCASTSDZr,    X86::VBROADCASTSDZr,    X86::VPBROADCASTQZr },
-  { X86::VBROADCASTSDZm,    X86::VBROADCASTSDZm,    X86::VPBROADCASTQZm },
+  { X86::VBROADCASTSSZ128rr,X86::VBROADCASTSSZ128rr,X86::VPBROADCASTDZ128rr },
+  { X86::VBROADCASTSSZ128rm,X86::VBROADCASTSSZ128rm,X86::VPBROADCASTDZ128rm },
+  { X86::VBROADCASTSSZ256rr,X86::VBROADCASTSSZ256rr,X86::VPBROADCASTDZ256rr },
+  { X86::VBROADCASTSSZ256rm,X86::VBROADCASTSSZ256rm,X86::VPBROADCASTDZ256rm },
+  { X86::VBROADCASTSSZrr,   X86::VBROADCASTSSZrr,   X86::VPBROADCASTDZrr },
+  { X86::VBROADCASTSSZrm,   X86::VBROADCASTSSZrm,   X86::VPBROADCASTDZrm },
+  { X86::VMOVDDUPZ128rr,    X86::VMOVDDUPZ128rr,    X86::VPBROADCASTQZ128rr },
+  { X86::VMOVDDUPZ128rm,    X86::VMOVDDUPZ128rm,    X86::VPBROADCASTQZ128rm },
+  { X86::VBROADCASTSDZ256rr,X86::VBROADCASTSDZ256rr,X86::VPBROADCASTQZ256rr },
+  { X86::VBROADCASTSDZ256rm,X86::VBROADCASTSDZ256rm,X86::VPBROADCASTQZ256rm },
+  { X86::VBROADCASTSDZrr,   X86::VBROADCASTSDZrr,   X86::VPBROADCASTQZrr },
+  { X86::VBROADCASTSDZrm,   X86::VBROADCASTSDZrm,   X86::VPBROADCASTQZrm },
   { X86::VINSERTF32x4Zrr,   X86::VINSERTF32x4Zrr,   X86::VINSERTI32x4Zrr },
   { X86::VINSERTF32x4Zrm,   X86::VINSERTF32x4Zrm,   X86::VINSERTI32x4Zrm },
   { X86::VINSERTF32x8Zrr,   X86::VINSERTF32x8Zrr,   X86::VINSERTI32x8Zrr },

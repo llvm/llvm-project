@@ -2559,32 +2559,32 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::VMOVDDUPZ128rm:
   case X86::VBROADCASTSSrm:
   case X86::VBROADCASTSSYrm:
-  case X86::VBROADCASTSSZ128m:
-  case X86::VBROADCASTSSZ256m:
-  case X86::VBROADCASTSSZm:
+  case X86::VBROADCASTSSZ128rm:
+  case X86::VBROADCASTSSZ256rm:
+  case X86::VBROADCASTSSZrm:
   case X86::VBROADCASTSDYrm:
-  case X86::VBROADCASTSDZ256m:
-  case X86::VBROADCASTSDZm:
+  case X86::VBROADCASTSDZ256rm:
+  case X86::VBROADCASTSDZrm:
   case X86::VPBROADCASTBrm:
   case X86::VPBROADCASTBYrm:
-  case X86::VPBROADCASTBZ128m:
-  case X86::VPBROADCASTBZ256m:
-  case X86::VPBROADCASTBZm:
+  case X86::VPBROADCASTBZ128rm:
+  case X86::VPBROADCASTBZ256rm:
+  case X86::VPBROADCASTBZrm:
   case X86::VPBROADCASTDrm:
   case X86::VPBROADCASTDYrm:
-  case X86::VPBROADCASTDZ128m:
-  case X86::VPBROADCASTDZ256m:
-  case X86::VPBROADCASTDZm:
+  case X86::VPBROADCASTDZ128rm:
+  case X86::VPBROADCASTDZ256rm:
+  case X86::VPBROADCASTDZrm:
   case X86::VPBROADCASTQrm:
   case X86::VPBROADCASTQYrm:
-  case X86::VPBROADCASTQZ128m:
-  case X86::VPBROADCASTQZ256m:
-  case X86::VPBROADCASTQZm:
+  case X86::VPBROADCASTQZ128rm:
+  case X86::VPBROADCASTQZ256rm:
+  case X86::VPBROADCASTQZrm:
   case X86::VPBROADCASTWrm:
   case X86::VPBROADCASTWYrm:
-  case X86::VPBROADCASTWZ128m:
-  case X86::VPBROADCASTWZ256m:
-  case X86::VPBROADCASTWZm:
+  case X86::VPBROADCASTWZ128rm:
+  case X86::VPBROADCASTWZ256rm:
+  case X86::VPBROADCASTWZrm:
     if (!OutStreamer->isVerboseAsm())
       break;
     if (MI->getNumOperands() <= 4)
@@ -2593,37 +2593,37 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       int NumElts;
       switch (MI->getOpcode()) {
       default: llvm_unreachable("Invalid opcode");
-      case X86::MOVDDUPrm:         NumElts = 2;  break;
-      case X86::VMOVDDUPrm:        NumElts = 2;  break;
-      case X86::VMOVDDUPZ128rm:    NumElts = 2;  break;
-      case X86::VBROADCASTSSrm:    NumElts = 4;  break;
-      case X86::VBROADCASTSSYrm:   NumElts = 8;  break;
-      case X86::VBROADCASTSSZ128m: NumElts = 4;  break;
-      case X86::VBROADCASTSSZ256m: NumElts = 8;  break;
-      case X86::VBROADCASTSSZm:    NumElts = 16; break;
-      case X86::VBROADCASTSDYrm:   NumElts = 4;  break;
-      case X86::VBROADCASTSDZ256m: NumElts = 4;  break;
-      case X86::VBROADCASTSDZm:    NumElts = 8;  break;
-      case X86::VPBROADCASTBrm:    NumElts = 16; break;
-      case X86::VPBROADCASTBYrm:   NumElts = 32; break;
-      case X86::VPBROADCASTBZ128m: NumElts = 16; break;
-      case X86::VPBROADCASTBZ256m: NumElts = 32; break;
-      case X86::VPBROADCASTBZm:    NumElts = 64; break;
-      case X86::VPBROADCASTDrm:    NumElts = 4;  break;
-      case X86::VPBROADCASTDYrm:   NumElts = 8;  break;
-      case X86::VPBROADCASTDZ128m: NumElts = 4;  break;
-      case X86::VPBROADCASTDZ256m: NumElts = 8;  break;
-      case X86::VPBROADCASTDZm:    NumElts = 16; break;
-      case X86::VPBROADCASTQrm:    NumElts = 2;  break;
-      case X86::VPBROADCASTQYrm:   NumElts = 4;  break;
-      case X86::VPBROADCASTQZ128m: NumElts = 2;  break;
-      case X86::VPBROADCASTQZ256m: NumElts = 4;  break;
-      case X86::VPBROADCASTQZm:    NumElts = 8;  break;
-      case X86::VPBROADCASTWrm:    NumElts = 8;  break;
-      case X86::VPBROADCASTWYrm:   NumElts = 16; break;
-      case X86::VPBROADCASTWZ128m: NumElts = 8;  break;
-      case X86::VPBROADCASTWZ256m: NumElts = 16; break;
-      case X86::VPBROADCASTWZm:    NumElts = 32; break;
+      case X86::MOVDDUPrm:          NumElts = 2;  break;
+      case X86::VMOVDDUPrm:         NumElts = 2;  break;
+      case X86::VMOVDDUPZ128rm:     NumElts = 2;  break;
+      case X86::VBROADCASTSSrm:     NumElts = 4;  break;
+      case X86::VBROADCASTSSYrm:    NumElts = 8;  break;
+      case X86::VBROADCASTSSZ128rm: NumElts = 4;  break;
+      case X86::VBROADCASTSSZ256rm: NumElts = 8;  break;
+      case X86::VBROADCASTSSZrm:    NumElts = 16; break;
+      case X86::VBROADCASTSDYrm:    NumElts = 4;  break;
+      case X86::VBROADCASTSDZ256rm: NumElts = 4;  break;
+      case X86::VBROADCASTSDZrm:    NumElts = 8;  break;
+      case X86::VPBROADCASTBrm:     NumElts = 16; break;
+      case X86::VPBROADCASTBYrm:    NumElts = 32; break;
+      case X86::VPBROADCASTBZ128rm: NumElts = 16; break;
+      case X86::VPBROADCASTBZ256rm: NumElts = 32; break;
+      case X86::VPBROADCASTBZrm:    NumElts = 64; break;
+      case X86::VPBROADCASTDrm:     NumElts = 4;  break;
+      case X86::VPBROADCASTDYrm:    NumElts = 8;  break;
+      case X86::VPBROADCASTDZ128rm: NumElts = 4;  break;
+      case X86::VPBROADCASTDZ256rm: NumElts = 8;  break;
+      case X86::VPBROADCASTDZrm:    NumElts = 16; break;
+      case X86::VPBROADCASTQrm:     NumElts = 2;  break;
+      case X86::VPBROADCASTQYrm:    NumElts = 4;  break;
+      case X86::VPBROADCASTQZ128rm: NumElts = 2;  break;
+      case X86::VPBROADCASTQZ256rm: NumElts = 4;  break;
+      case X86::VPBROADCASTQZrm:    NumElts = 8;  break;
+      case X86::VPBROADCASTWrm:     NumElts = 8;  break;
+      case X86::VPBROADCASTWYrm:    NumElts = 16; break;
+      case X86::VPBROADCASTWZ128rm: NumElts = 8;  break;
+      case X86::VPBROADCASTWZ256rm: NumElts = 16; break;
+      case X86::VPBROADCASTWZrm:    NumElts = 32; break;
       }
 
       std::string Comment;
