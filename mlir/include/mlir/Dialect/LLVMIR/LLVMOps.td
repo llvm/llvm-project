@@ -780,6 +780,29 @@ def LLVM_Prefetch : LLVM_ZeroResultOp<"intr.prefetch">,
   }];
 }
 
+//
+// Vector Reductions.
+//
+
+def LLVM_experimental_vector_reduce_add : LLVM_VectorReduction<"add">;
+def LLVM_experimental_vector_reduce_and : LLVM_VectorReduction<"and">;
+def LLVM_experimental_vector_reduce_mul : LLVM_VectorReduction<"mul">;
+def LLVM_experimental_vector_reduce_fmax : LLVM_VectorReduction<"fmax">;
+def LLVM_experimental_vector_reduce_fmin : LLVM_VectorReduction<"fmin">;
+def LLVM_experimental_vector_reduce_or : LLVM_VectorReduction<"or">;
+def LLVM_experimental_vector_reduce_smax : LLVM_VectorReduction<"smax">;
+def LLVM_experimental_vector_reduce_smin : LLVM_VectorReduction<"smin">;
+def LLVM_experimental_vector_reduce_umax : LLVM_VectorReduction<"umax">;
+def LLVM_experimental_vector_reduce_umin : LLVM_VectorReduction<"umin">;
+def LLVM_experimental_vector_reduce_xor : LLVM_VectorReduction<"xor">;
+
+def LLVM_experimental_vector_reduce_v2_fadd : LLVM_VectorReductionV2<"fadd">;
+def LLVM_experimental_vector_reduce_v2_fmul : LLVM_VectorReductionV2<"fmul">;
+
+//
+// Atomic operations.
+//
+
 def AtomicBinOpXchg : I64EnumAttrCase<"xchg", 0>;
 def AtomicBinOpAdd  : I64EnumAttrCase<"add", 1>;
 def AtomicBinOpSub  : I64EnumAttrCase<"sub", 2>;

@@ -96,4 +96,42 @@ class LLVM_EnumAttr<string name, string llvmName, string description,
   string llvmClassName = llvmName;
 }
 
+// LLVM vector reduction over a single vector.
+class LLVM_VectorReduction<string mnem> :
+  LLVM_IntrOp<"experimental.vector.reduce." # mnem, []>,
+  Arguments<(ins LLVM_Type)>, Results<(outs LLVM_Type:$res)> {
+    let llvmBuilder = [{
+      llvm::Module *module = builder.GetInsertBlock()->getModule();
+      llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+        module,
+        llvm::Intrinsic::experimental_vector_reduce_}] #
+        !subst(".","_", mnem) # [{, {
+          opInst.getOperand(0).getType().cast<LLVM::LLVMType>()
+          .getUnderlyingType(),
+        });
+      auto operands = lookupValues(opInst.getOperands());
+      $res = builder.CreateCall(fn, operands);
+    }];
+}
+
+// LLVM vector reduction over a single vector, with an initial value.
+class LLVM_VectorReductionV2<string mnem> :
+  LLVM_IntrOp<"experimental.vector.reduce.v2." # mnem, []>,
+  Arguments<(ins LLVM_Type, LLVM_Type)>, Results<(outs LLVM_Type:$res)> {
+    let llvmBuilder = [{
+      llvm::Module *module = builder.GetInsertBlock()->getModule();
+      llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+        module,
+        llvm::Intrinsic::experimental_vector_reduce_v2_}] #
+        !subst(".","_", mnem) # [{, {
+          opInst.getResult(0).getType().cast<LLVM::LLVMType>()
+          .getUnderlyingType(),
+          opInst.getOperand(1).getType().cast<LLVM::LLVMType>()
+          .getUnderlyingType(),
+        });
+      auto operands = lookupValues(opInst.getOperands());
+      $res = builder.CreateCall(fn, operands);
+    }];
+}
+
 #endif  // LLVMIR_OP_BASE
