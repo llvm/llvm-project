@@ -604,33 +604,36 @@ define <4 x double> @merge_4f64_f64_34uz_volatile(double* %ptr) nounwind uwtable
 define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind uwtable noinline ssp {
 ; AVX1-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzwl (%rdi), %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    movzwl (%rdi), %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
 ; AVX2-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movzwl (%rdi), %eax
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
 ; AVX512F-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %eax, %xmm1
 ; AVX512F-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
@@ -638,11 +641,12 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; X32-AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    movzwl (%eax), %ecx
 ; X32-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X32-AVX-NEXT:    vpinsrw $0, (%eax), %xmm0, %xmm1
 ; X32-AVX-NEXT:    vpinsrw $4, 24(%eax), %xmm0, %xmm0
 ; X32-AVX-NEXT:    vpinsrw $6, 28(%eax), %xmm0, %xmm0
 ; X32-AVX-NEXT:    vpinsrw $7, 30(%eax), %xmm0, %xmm0
+; X32-AVX-NEXT:    vmovd %ecx, %xmm1
 ; X32-AVX-NEXT:    vpinsrw $3, 6(%eax), %xmm1, %xmm1
 ; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X32-AVX-NEXT:    retl

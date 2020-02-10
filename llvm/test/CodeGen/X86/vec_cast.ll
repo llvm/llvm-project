@@ -87,8 +87,8 @@ define <8 x i32> @d(<8 x i16> %a) nounwind {
 define <3 x i32> @e(<3 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: e:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    pxor %xmm0, %xmm0
-; CHECK-LIN-NEXT:    pinsrw $0, %edi, %xmm0
+; CHECK-LIN-NEXT:    movzwl %di, %eax
+; CHECK-LIN-NEXT:    movd %eax, %xmm0
 ; CHECK-LIN-NEXT:    pinsrw $2, %esi, %xmm0
 ; CHECK-LIN-NEXT:    pinsrw $4, %edx, %xmm0
 ; CHECK-LIN-NEXT:    retq
@@ -97,9 +97,8 @@ define <3 x i32> @e(<3 x i16> %a) nounwind {
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    # kill: def $r8w killed $r8w def $r8d
 ; CHECK-WIN-NEXT:    # kill: def $dx killed $dx def $edx
-; CHECK-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
-; CHECK-WIN-NEXT:    pxor %xmm0, %xmm0
-; CHECK-WIN-NEXT:    pinsrw $0, %ecx, %xmm0
+; CHECK-WIN-NEXT:    movzwl %cx, %eax
+; CHECK-WIN-NEXT:    movd %eax, %xmm0
 ; CHECK-WIN-NEXT:    pinsrw $2, %edx, %xmm0
 ; CHECK-WIN-NEXT:    pinsrw $4, %r8d, %xmm0
 ; CHECK-WIN-NEXT:    retq
