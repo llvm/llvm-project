@@ -87,6 +87,11 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
   cl::init(true), cl::Hidden,
   cl::desc("Enable partial store merging in DSE"));
 
+// Temporary dummy option for tests.
+static cl::opt<bool>
+    EnableMemorySSA("enable-dse-memoryssa", cl::init(false), cl::Hidden,
+                    cl::desc("Use the new MemorySSA-backed DSE."));
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
