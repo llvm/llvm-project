@@ -23,8 +23,7 @@ DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
 
 llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVM() const {
   return llvm::DWARFDataExtractor(
-      llvm::StringRef(reinterpret_cast<const char *>(GetDataStart()),
-                      GetByteSize()),
+      llvm::makeArrayRef(GetDataStart(), GetByteSize()),
       GetByteOrder() == lldb::eByteOrderLittle, GetAddressByteSize());
 }
 } // namespace lldb_private
