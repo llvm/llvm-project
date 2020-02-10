@@ -550,22 +550,22 @@ define amdgpu_kernel void @s_test_sdiv25_64(i64 addrspace(1)* %out, i64 %x, i64 
 define amdgpu_kernel void @s_test_sdiv24_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> %x, <2 x i64> %y) {
 ; GCN-LABEL: s_test_sdiv24_v2i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0xd
-; GCN-NEXT:    s_load_dwordx4 s[12:15], s[0:1], 0x11
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
+; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x11
+; GCN-NEXT:    s_mov_b32 s15, 0xf000
+; GCN-NEXT:    s_mov_b32 s14, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_ashr_i64 s[0:1], s[8:9], 40
-; GCN-NEXT:    s_ashr_i64 s[2:3], s[10:11], 40
-; GCN-NEXT:    s_ashr_i64 s[8:9], s[12:13], 40
-; GCN-NEXT:    s_ashr_i64 s[10:11], s[14:15], 40
-; GCN-NEXT:    s_xor_b32 s1, s2, s10
+; GCN-NEXT:    s_ashr_i64 s[0:1], s[4:5], 40
+; GCN-NEXT:    s_ashr_i64 s[2:3], s[6:7], 40
+; GCN-NEXT:    s_ashr_i64 s[4:5], s[8:9], 40
+; GCN-NEXT:    s_ashr_i64 s[6:7], s[10:11], 40
+; GCN-NEXT:    s_xor_b32 s1, s2, s6
 ; GCN-NEXT:    v_cvt_f32_i32_e32 v0, s2
-; GCN-NEXT:    v_cvt_f32_i32_e32 v1, s10
-; GCN-NEXT:    s_xor_b32 s2, s0, s8
+; GCN-NEXT:    v_cvt_f32_i32_e32 v1, s6
+; GCN-NEXT:    s_xor_b32 s2, s0, s4
 ; GCN-NEXT:    v_cvt_f32_i32_e32 v2, s0
-; GCN-NEXT:    v_cvt_f32_i32_e32 v3, s8
+; GCN-NEXT:    v_cvt_f32_i32_e32 v3, s4
 ; GCN-NEXT:    s_ashr_i32 s0, s1, 30
 ; GCN-NEXT:    v_rcp_iflag_f32_e32 v4, v1
 ; GCN-NEXT:    s_ashr_i32 s1, s2, 30
@@ -592,7 +592,7 @@ define amdgpu_kernel void @s_test_sdiv24_v2i64(<2 x i64> addrspace(1)* %out, <2 
 ; GCN-NEXT:    v_bfe_i32 v0, v1, 0, 24
 ; GCN-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
 ; GCN-NEXT:    s_endpgm
   %1 = ashr <2 x i64> %x, <i64 40, i64 40>
   %2 = ashr <2 x i64> %y, <i64 40, i64 40>
