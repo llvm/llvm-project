@@ -353,9 +353,9 @@ Symbols: []
 ## overflows the section name string table.
 
 # RUN: yaml2obj %s --docnum=17 -o %t17
-# RUN: not llvm-readobj --sections %t17 2>&1 | FileCheck -DFILE=%t17 --check-prefix=BROKEN-SECNAME %s
+# RUN: llvm-readobj --sections %t17 2>&1 | FileCheck -DFILE=%t17 --check-prefix=BROKEN-SECNAME %s
 
-## BROKEN-SECNAME: error: '[[FILE]]': a section [index 1] has an invalid sh_name (0x1) offset which goes past the end of the section name string table
+## BROKEN-SECNAME: warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0xb) offset which goes past the end of the section name string table
 
 --- !ELF
 FileHeader:
