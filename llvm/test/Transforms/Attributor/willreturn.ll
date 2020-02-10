@@ -1,4 +1,4 @@
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_MODULE
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_MODULE
 ; RUN: opt -passes=attributor-cgscc --attributor-disable=false -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_CGSCC
 
 

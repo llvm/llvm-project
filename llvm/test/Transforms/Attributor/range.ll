@@ -543,61 +543,30 @@ declare dso_local i32 @foo(i32)
 
 ; FIXME: All but the return is not needed anymore
 define dso_local zeroext i1 @phi(i32 %arg) {
-; OLD_PM-LABEL: define {{[^@]+}}@phi
-; OLD_PM-SAME: (i32 [[ARG:%.*]])
-; OLD_PM-NEXT:  bb:
-; OLD_PM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[ARG]], 5
-; OLD_PM-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
-; OLD_PM:       bb1:
-; OLD_PM-NEXT:    br label [[BB3:%.*]]
-; OLD_PM:       bb2:
-; OLD_PM-NEXT:    br label [[BB3]]
-; OLD_PM:       bb3:
-; OLD_PM-NEXT:    [[DOT02:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; OLD_PM-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; OLD_PM-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
-; OLD_PM:       bb5:
-; OLD_PM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[DOT02]], 1
-; OLD_PM-NEXT:    br label [[BB9:%.*]]
-; OLD_PM:       bb7:
-; OLD_PM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOT02]], 2
-; OLD_PM-NEXT:    br label [[BB9]]
-; OLD_PM:       bb9:
-; OLD_PM-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TMP6]], [[BB5]] ], [ [[TMP8]], [[BB7]] ]
-; OLD_PM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[DOT01]], 5
-; OLD_PM-NEXT:    br i1 [[TMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
-; OLD_PM:       bb11:
-; OLD_PM-NEXT:    br label [[BB13:%.*]]
-; OLD_PM:       bb12:
-; OLD_PM-NEXT:    br label [[BB13]]
-; OLD_PM:       bb13:
-; OLD_PM-NEXT:    [[DOT0:%.*]] = phi i1 [ true, [[BB11]] ], [ false, [[BB12]] ]
-; OLD_PM-NEXT:    ret i1 [[DOT0]]
-;
-; NEW_PM-LABEL: define {{[^@]+}}@phi
-; NEW_PM-SAME: (i32 [[ARG:%.*]])
-; NEW_PM-NEXT:  bb:
-; NEW_PM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[ARG]], 5
-; NEW_PM-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
-; NEW_PM:       bb1:
-; NEW_PM-NEXT:    br label [[BB3:%.*]]
-; NEW_PM:       bb2:
-; NEW_PM-NEXT:    br label [[BB3]]
-; NEW_PM:       bb3:
-; NEW_PM-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; NEW_PM-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
-; NEW_PM:       bb5:
-; NEW_PM-NEXT:    br label [[BB9:%.*]]
-; NEW_PM:       bb7:
-; NEW_PM-NEXT:    br label [[BB9]]
-; NEW_PM:       bb9:
-; NEW_PM-NEXT:    br label [[BB12:%.*]]
-; NEW_PM:       bb11:
-; NEW_PM-NEXT:    unreachable
-; NEW_PM:       bb12:
-; NEW_PM-NEXT:    br label [[BB13:%.*]]
-; NEW_PM:       bb13:
-; NEW_PM-NEXT:    ret i1 false
+; CHECK-LABEL: define {{[^@]+}}@phi
+; CHECK-SAME: (i32 [[ARG:%.*]])
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[ARG]], 5
+; CHECK-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    br label [[BB9:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    br label [[BB9]]
+; CHECK:       bb9:
+; CHECK-NEXT:    br label [[BB12:%.*]]
+; CHECK:       bb11:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb12:
+; CHECK-NEXT:    br label [[BB13:%.*]]
+; CHECK:       bb13:
+; CHECK-NEXT:    ret i1 false
 ;
 bb:
   %tmp = icmp sgt i32 %arg, 5
