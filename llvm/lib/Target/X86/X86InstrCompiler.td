@@ -334,22 +334,6 @@ def SETB_C32r : I<0, Pseudo, (outs GR32:$dst), (ins), "", []>;
 def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "", []>;
 } // isCodeGenOnly
 
-
-// Patterns to give priority when both inputs are zero so that we don't use
-// an immediate for the RHS.
-// TODO: Should we use a 32-bit sbb for 8/16 to push the extract_subreg out?
-def : Pat<(X86sbb_flag (i8 0), (i8 0), EFLAGS),
-          (SBB8rr (EXTRACT_SUBREG (MOV32r0), sub_8bit),
-                  (EXTRACT_SUBREG (MOV32r0), sub_8bit))>;
-def : Pat<(X86sbb_flag (i16 0), (i16 0), EFLAGS),
-          (SBB16rr (EXTRACT_SUBREG (MOV32r0), sub_16bit),
-                   (EXTRACT_SUBREG (MOV32r0), sub_16bit))>;
-def : Pat<(X86sbb_flag (i32 0), (i32 0), EFLAGS),
-          (SBB32rr (MOV32r0), (MOV32r0))>;
-def : Pat<(X86sbb_flag (i64 0), (i64 0), EFLAGS),
-          (SBB64rr (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit),
-                   (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit))>;
-
 //===----------------------------------------------------------------------===//
 // String Pseudo Instructions
 //

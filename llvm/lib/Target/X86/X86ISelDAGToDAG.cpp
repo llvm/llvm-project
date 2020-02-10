@@ -5343,12 +5343,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // We have to do this manually because tblgen will put the eflags copy in
     // the wrong place if we use an extract_subreg in the pattern.
     MVT VT = Node->getSimpleValueType(0);
-    SDValue Chain = CurDAG->getEntryNode();
 
     // Copy flags to the EFLAGS register and glue it to next node.
-    SDValue EFLAGS = CurDAG->getCopyToReg(Chain, dl, X86::EFLAGS,
-                                          Node->getOperand(1), SDValue());
-    Chain = EFLAGS;
+    SDValue EFLAGS =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::EFLAGS,
+                             Node->getOperand(1), SDValue());
 
     // Create a 64-bit instruction if the result is 64-bits otherwise use the
     // 32-bit version.
@@ -5366,6 +5365,56 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     ReplaceUses(SDValue(Node, 0), Result);
     CurDAG->RemoveDeadNode(Node);
     return;
+  }
+  case X86ISD::SBB: {
+    if (isNullConstant(Node->getOperand(0)) &&
+        isNullConstant(Node->getOperand(1))) {
+      MVT VT = Node->getSimpleValueType(0);
+
+      // Create zero.
+      SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
+      SDValue Zero =
+          SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, None), 0);
+      if (VT == MVT::i64) {
+        Zero = SDValue(
+            CurDAG->getMachineNode(
+                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
+                CurDAG->getTargetConstant(0, dl, MVT::i64), Zero,
+                CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
+            0);
+      }
+
+      // Copy flags to the EFLAGS register and glue it to next node.
+      SDValue EFLAGS =
+          CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::EFLAGS,
+                               Node->getOperand(2), SDValue());
+
+      // Create a 64-bit instruction if the result is 64-bits otherwise use the
+      // 32-bit version.
+      unsigned Opc = VT == MVT::i64 ? X86::SBB64rr : X86::SBB32rr;
+      MVT SBBVT = VT == MVT::i64 ? MVT::i64 : MVT::i32;
+      VTs = CurDAG->getVTList(SBBVT, MVT::i32);
+      SDValue Result =
+          SDValue(CurDAG->getMachineNode(Opc, dl, VTs, {Zero, Zero, EFLAGS,
+                                         EFLAGS.getValue(1)}),
+                  0);
+
+      // Replace the flag use.
+      ReplaceUses(SDValue(Node, 1), Result.getValue(1));
+
+      // Replace the result use.
+      if (!SDValue(Node, 0).use_empty()) {
+        // For less than 32-bits we need to extract from the 32-bit node.
+        if (VT == MVT::i8 || VT == MVT::i16) {
+          int SubIndex = VT == MVT::i16 ? X86::sub_16bit : X86::sub_8bit;
+          Result = CurDAG->getTargetExtractSubreg(SubIndex, dl, VT, Result);
+        }
+        ReplaceUses(SDValue(Node, 0), Result);
+      }
+
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
   }
   }
 
