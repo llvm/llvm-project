@@ -2195,11 +2195,11 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; AVX512-LABEL: fptosi_2f16_to_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movswl %di, %eax
+; AVX512-NEXT:    movzwl %di, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; AVX512-NEXT:    movswl %si, %ecx
+; AVX512-NEXT:    movzwl %si, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2si %xmm0, %ecx
