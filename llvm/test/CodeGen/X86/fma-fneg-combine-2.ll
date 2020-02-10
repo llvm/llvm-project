@@ -86,6 +86,28 @@ entry:
   ret float %1
 }
 
+define <4 x float> @test_fma_rcp_fneg_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z)  {
+; FMA3-LABEL: test_fma_rcp_fneg_v4f32:
+; FMA3:       # %bb.0: # %entry
+; FMA3-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
+; FMA3-NEXT:    vrcpps %xmm2, %xmm2
+; FMA3-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: test_fma_rcp_fneg_v4f32:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
+; FMA4-NEXT:    vrcpps %xmm2, %xmm2
+; FMA4-NEXT:    vfmaddps %xmm2, %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+entry:
+  %0 = fneg <4 x float> %z
+  %1 = tail call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %0)
+  %2 = tail call nsz <4 x float> @llvm.fma.v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %1)
+  ret <4 x float> %2
+}
+declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>)
+
 ; This would crash while trying getNegatedExpression().
 
 define float @negated_constant(float %x) {
@@ -107,3 +129,4 @@ define float @negated_constant(float %x) {
 }
 
 declare float @llvm.fma.f32(float, float, float)
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
