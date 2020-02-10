@@ -18,6 +18,7 @@ T tmain(T argc) {
 #pragma omp flush
 #pragma omp flush acq_rel
 #pragma omp flush acquire
+#pragma omp flush release
 #pragma omp flush(a)
   return a + argc;
 }
@@ -25,16 +26,19 @@ T tmain(T argc) {
 // CHECK-NEXT: #pragma omp flush{{$}}
 // CHECK-NEXT: #pragma omp flush acq_rel{{$}}
 // CHECK-NEXT: #pragma omp flush acquire{{$}}
+// CHECK-NEXT: #pragma omp flush release{{$}}
 // CHECK-NEXT: #pragma omp flush (a)
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp flush
 // CHECK-NEXT: #pragma omp flush acq_rel{{$}}
 // CHECK-NEXT: #pragma omp flush acquire{{$}}
+// CHECK-NEXT: #pragma omp flush release{{$}}
 // CHECK-NEXT: #pragma omp flush (a)
 // CHECK:      static char a;
 // CHECK-NEXT: #pragma omp flush
 // CHECK-NEXT: #pragma omp flush acq_rel{{$}}
 // CHECK-NEXT: #pragma omp flush acquire{{$}}
+// CHECK-NEXT: #pragma omp flush release{{$}}
 // CHECK-NEXT: #pragma omp flush (a)
 
 int main(int argc, char **argv) {
@@ -43,10 +47,12 @@ int main(int argc, char **argv) {
 #pragma omp flush
 #pragma omp flush acq_rel
 #pragma omp flush acquire
+#pragma omp flush release
 #pragma omp flush(a)
 // CHECK-NEXT: #pragma omp flush
 // CHECK-NEXT: #pragma omp flush acq_rel
 // CHECK-NEXT: #pragma omp flush acquire{{$}}
+// CHECK-NEXT: #pragma omp flush release
 // CHECK-NEXT: #pragma omp flush (a)
   return tmain(argc) + tmain(argv[0][0]) + a;
 }

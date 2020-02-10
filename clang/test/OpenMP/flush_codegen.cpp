@@ -19,6 +19,7 @@ T tmain(T argc) {
 #pragma omp flush
 #pragma omp flush acq_rel
 #pragma omp flush acquire
+#pragma omp flush release
 #pragma omp flush(a)
   return a + argc;
 }
@@ -29,7 +30,9 @@ int main() {
 #pragma omp flush
 #pragma omp flush acq_rel
 #pragma omp flush acquire
+#pragma omp flush release
 #pragma omp flush(a)
+  // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
   // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
   // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
   // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
@@ -40,6 +43,7 @@ int main() {
 }
 
 // CHECK: [[TMAIN]]
+// CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})
 // CHECK: call {{.*}}void @__kmpc_flush(%{{.+}}* {{(@|%).+}})

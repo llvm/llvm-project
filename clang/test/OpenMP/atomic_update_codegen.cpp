@@ -529,12 +529,13 @@ int main() {
 // CHECK: [[DESIRED:%.+]] = zext i1 [[BOOL_DESIRED]] to i8
 // CHECK: store i8 [[DESIRED]], i8* [[TEMP:%.+]]
 // CHECK: [[DESIRED:%.+]] = load i8, i8* [[TEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg i8* [[X_ADDR]], i8 [[EXPECTED]], i8 [[DESIRED]] monotonic monotonic
+// CHECK: [[RES:%.+]] = cmpxchg i8* [[X_ADDR]], i8 [[EXPECTED]], i8 [[DESIRED]] release monotonic
 // CHECK: [[OLD_XI8:%.+]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic update
+// CHECK: call{{.*}} @__kmpc_flush(
+#pragma omp atomic update release
   bx = ldv * bx;
 // CHECK: [[EXPR_RE:%.+]] = load i32, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* [[CIV_ADDR:@.+]], i32 0, i32 0),
 // CHECK: [[EXPR_IM:%.+]] = load i32, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* [[CIV_ADDR]], i32 0, i32 1),
