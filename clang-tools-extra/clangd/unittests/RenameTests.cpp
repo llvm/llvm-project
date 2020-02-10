@@ -440,6 +440,35 @@ TEST(RenameTest, WithinFileRename) {
         template <template<typename> class Z> struct Bar { };
         template <> struct Bar<[[Foo]]> {};
       )cpp",
+
+      // Designated initializer.
+      R"cpp(
+        struct Bar {
+          int [[Fo^o]];
+        };
+        Bar bar { .[[^Foo]] = 42 };
+      )cpp",
+
+      // Nested designated initializer.
+      R"cpp(
+        struct Baz {
+          int Field;
+        };
+        struct Bar {
+          Baz [[Fo^o]];
+        };
+        // FIXME:    v selecting here results in renaming Field.
+        Bar bar { .[[Foo]].Field = 42 };
+      )cpp",
+      R"cpp(
+        struct Baz {
+          int [[Fiel^d]];
+        };
+        struct Bar {
+          Baz Foo;
+        };
+        Bar bar { .Foo.[[^Field]] = 42 };
+      )cpp",
   };
   for (llvm::StringRef T : Tests) {
     SCOPED_TRACE(T);
