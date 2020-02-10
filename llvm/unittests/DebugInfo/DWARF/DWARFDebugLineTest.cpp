@@ -354,6 +354,21 @@ TEST_F(DebugLineBasicFixture, ErrorForLowVersion) {
       "0x01");
 }
 
+TEST_F(DebugLineBasicFixture, ErrorForHighVersion) {
+  if (!setupGenerator())
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  LT.setCustomPrologue(
+      {{LineTable::Half, LineTable::Long}, {6, LineTable::Half}});
+
+  generate();
+
+  checkGetOrParseLineTableEmitsFatalError(
+      "parsing line table prologue at offset 0x00000000 found unsupported "
+      "version 0x06");
+}
+
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   if (!setupGenerator(5))
     return;
