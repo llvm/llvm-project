@@ -672,6 +672,17 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
           // Select the getter, setter, or @property depending on the call.
           explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
+
+    void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
+      for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
+        if (!D.isFieldDesignator())
+          continue;
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    D.getFieldLoc(),
+                                    /*IsDecl=*/false,
+                                    {D.getField()}});
+      }
+    }
   };
 
   Visitor V;
