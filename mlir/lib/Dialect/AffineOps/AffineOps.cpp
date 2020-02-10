@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Dialect/AffineOps/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
@@ -233,6 +235,10 @@ void AffineApplyOp::build(Builder *builder, OperationState &result,
   result.addOperands(operands);
   result.types.append(map.getNumResults(), builder->getIndexType());
   result.addAttribute("map", AffineMapAttr::get(map));
+}
+
+AffineValueMap AffineApplyOp::getAffineValueMap() {
+  return AffineValueMap(getAffineMap(), getOperands(), getResult());
 }
 
 ParseResult AffineApplyOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1332,7 +1338,7 @@ static void printBound(AffineMapAttr boundMap,
 }
 
 static void print(OpAsmPrinter &p, AffineForOp op) {
-  p << "affine.for ";
+  p << op.getOperationName() << ' ';
   p.printOperand(op.getBody()->getArgument(0));
   p << " = ";
   printBound(op.getLowerBoundMapAttr(), op.getLowerBoundOperands(), "max", p);
