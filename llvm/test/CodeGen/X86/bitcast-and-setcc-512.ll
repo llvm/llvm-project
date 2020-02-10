@@ -282,19 +282,15 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ; AVX2-LABEL: v32i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpacksswb %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpgtw %ymm7, %ymm5, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm4, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpacksswb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vzeroupper
