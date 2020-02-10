@@ -195,12 +195,7 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
 bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-
-  // If there's only one exit, we don't need to do anything, unless this is a
-  // pixel shader and that exit is an infinite loop, since we still have to
-  // insert an export in that case.
-  if (PDT.getRoots().size() <= 1 &&
-      F.getCallingConv() != CallingConv::AMDGPU_PS)
+  if (PDT.getRoots().size() <= 1)
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
@@ -326,7 +321,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (ReturningBlocks.empty())
     return false; // No blocks return
 
-  if (ReturningBlocks.size() == 1 && !InsertExport)
+  if (ReturningBlocks.size() == 1)
     return false; // Already has a single return block
 
   const TargetTransformInfo &TTI
