@@ -328,9 +328,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       goto FloatingIntegralConversion;
     if (FromType->isIntegralOrUnscopedEnumerationType())
       goto IntegralConversion;
-    // Boolean conversions can be from pointers and pointers to members
-    // [conv.bool], and those aren't considered narrowing conversions.
-    return NK_Not_Narrowing;
+    // -- from a pointer type or pointer-to-member type to bool, or
+    return NK_Type_Narrowing;
 
   // -- from a floating-point type to an integer type, or
   //
