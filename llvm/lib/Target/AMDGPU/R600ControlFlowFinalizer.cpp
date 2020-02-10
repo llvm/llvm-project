@@ -308,7 +308,7 @@ private:
           DstMI = Reg;
         else
           DstMI = TRI->getMatchingSuperReg(Reg,
-              AMDGPURegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
+              R600RegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &R600::R600_Reg128RegClass);
       }
       if (MO.isUse()) {
@@ -317,7 +317,7 @@ private:
           SrcMI = Reg;
         else
           SrcMI = TRI->getMatchingSuperReg(Reg,
-              AMDGPURegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
+              R600RegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &R600::R600_Reg128RegClass);
       }
     }
