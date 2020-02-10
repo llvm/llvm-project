@@ -72,7 +72,6 @@ LLVM_MONOREPO_SVN_MAPPING = {
         'libunwind',
         'lld',
         'lldb',
-        'llgo',
         'llvm',
         'openmp',
         'parallel-libs',
