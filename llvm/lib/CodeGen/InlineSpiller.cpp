@@ -864,7 +864,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
   LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
-  if (MI->isCall())
+  // Update the call site info.
+  if (MI->isCandidateForCallSiteEntry())
     MI->getMF()->moveCallSiteInfo(MI, FoldMI);
   MI->eraseFromParent();
 
