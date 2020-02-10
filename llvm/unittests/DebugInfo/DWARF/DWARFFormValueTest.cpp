@@ -121,7 +121,7 @@ TEST(DWARFFormValue, SignedConstantForms) {
 }
 
 using ParamType = std::tuple<Form, uint16_t, uint8_t, DwarfFormat,
-                             ArrayRef<uint8_t>, uint32_t, bool>;
+                             ArrayRef<uint8_t>, uint64_t, bool>;
 
 struct FormSkipValueFixtureBase : public testing::TestWithParam<ParamType> {
   void SetUp() {
@@ -154,13 +154,13 @@ struct FormSkipValueFixtureBase : public testing::TestWithParam<ParamType> {
   uint8_t AddrSize;
   DwarfFormat Dwarf;
   ArrayRef<uint8_t> InitialData;
-  uint32_t ExpectedSkipped;
+  uint64_t ExpectedSkipped;
   bool ExpectedResult;
 };
 
 const uint8_t LEBData[] = {0x80, 0x1};
 ArrayRef<uint8_t> SampleLEB(LEBData, sizeof(LEBData));
-const uint32_t SampleLength = 0x80;
+const uint64_t SampleLength = 0x80;
 ArrayRef<uint8_t>
 SampleUnsigned(reinterpret_cast<const uint8_t *>(&SampleLength),
                sizeof(SampleLength));
