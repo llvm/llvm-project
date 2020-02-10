@@ -16,26 +16,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-/// Checkes if the module containing a symbol has debug info.
-///
-/// \param[in] target
-///    The target containing the module.
-/// \param[in] module_spec
-///    The module spec that should contain the symbol.
-/// \param[in] symbol_name
-///    The symbol's name that should be contained in the debug info.
-/// \return
-///    If  \b true the symbol was found, \b false otherwise.
-bool ModuleHasDebugInfo(Target &target, FileSpec &module_spec,
-                        StringRef symbol_name) {
-  ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec);
-
-  if (!module_sp)
-    return false;
-
-  return module_sp->FindFirstSymbolWithNameAndType(ConstString(symbol_name));
-}
-
 /// Fetches the abort frame location depending on the current platform.
 ///
 /// \param[in] process_sp
@@ -43,14 +23,15 @@ bool ModuleHasDebugInfo(Target &target, FileSpec &module_spec,
 ///    the target and the platform.
 /// \return
 ///    If the platform is supported, returns an optional tuple containing
-///    the abort module as a \a FileSpec and the symbol name as a \a StringRef.
+///    the abort module as a \a FileSpec and two symbol names as two \a
+///    StringRef. The second \a StringRef may be empty.
 ///    Otherwise, returns \a llvm::None.
-llvm::Optional<std::tuple<FileSpec, StringRef>>
+llvm::Optional<std::tuple<FileSpec, StringRef, StringRef>>
 GetAbortLocation(Process *process) {
   Target &target = process->GetTarget();
 
   FileSpec module_spec;
-  StringRef symbol_name;
+  StringRef symbol_name, alternate_symbol_name;
 
   switch (target.GetArchitecture().GetTriple().getOS()) {
   case llvm::Triple::Darwin:
@@ -60,9 +41,8 @@ GetAbortLocation(Process *process) {
     break;
   case llvm::Triple::Linux:
     module_spec = FileSpec("libc.so.6");
-    symbol_name = "__GI_raise";
-    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
-      symbol_name = "raise";
+    symbol_name = "raise";
+    alternate_symbol_name = "__GI_raise";
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -70,7 +50,7 @@ GetAbortLocation(Process *process) {
     return llvm::None;
   }
 
-  return std::make_tuple(module_spec, symbol_name);
+  return std::make_tuple(module_spec, symbol_name, alternate_symbol_name);
 }
 
 /// Fetches the assert frame location depending on the current platform.
@@ -80,15 +60,15 @@ GetAbortLocation(Process *process) {
 ///    the target and the platform.
 /// \return
 ///    If the platform is supported, returns an optional tuple containing
-///    the asserting frame module as  a \a FileSpec and the symbol name as a \a
-///    StringRef.
+///    the asserting frame module as a \a FileSpec and two possible symbol
+///    names as two \a StringRef. The second \a StringRef may be empty.
 ///    Otherwise, returns \a llvm::None.
-llvm::Optional<std::tuple<FileSpec, StringRef>>
+llvm::Optional<std::tuple<FileSpec, StringRef, StringRef>>
 GetAssertLocation(Process *process) {
   Target &target = process->GetTarget();
 
   FileSpec module_spec;
-  StringRef symbol_name;
+  StringRef symbol_name, alternate_symbol_name;
 
   switch (target.GetArchitecture().GetTriple().getOS()) {
   case llvm::Triple::Darwin:
@@ -98,9 +78,8 @@ GetAssertLocation(Process *process) {
     break;
   case llvm::Triple::Linux:
     module_spec = FileSpec("libc.so.6");
-    symbol_name = "__GI___assert_fail";
-    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
-      symbol_name = "__assert_fail";
+    symbol_name = "__assert_fail";
+    alternate_symbol_name = "__GI___assert_fail";
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -108,7 +87,7 @@ GetAssertLocation(Process *process) {
     return llvm::None;
   }
 
-  return std::make_tuple(module_spec, symbol_name);
+  return std::make_tuple(module_spec, symbol_name, alternate_symbol_name);
 }
 
 void RegisterAssertFrameRecognizer(Process *process) {
@@ -120,12 +99,14 @@ void RegisterAssertFrameRecognizer(Process *process) {
       return;
 
     FileSpec module_spec;
-    StringRef function_name;
-    std::tie(module_spec, function_name) = *abort_location;
+    StringRef function_name, alternate_function_name;
+    std::tie(module_spec, function_name, alternate_function_name) =
+        *abort_location;
 
     StackFrameRecognizerManager::AddRecognizer(
         StackFrameRecognizerSP(new AssertFrameRecognizer()),
-        module_spec.GetFilename(), ConstString(function_name), false);
+        module_spec.GetFilename(), ConstString(function_name),
+        ConstString(alternate_function_name), /*first_instruction_only*/ false);
   });
 }
 
@@ -142,8 +123,9 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     return RecognizedStackFrameSP();
 
   FileSpec module_spec;
-  StringRef function_name;
-  std::tie(module_spec, function_name) = *assert_location;
+  StringRef function_name, alternate_function_name;
+  std::tie(module_spec, function_name, alternate_function_name) =
+      *assert_location;
 
   const uint32_t frames_to_fetch = 5;
   const uint32_t last_frame_index = frames_to_fetch - 1;
@@ -163,8 +145,13 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     SymbolContext sym_ctx =
         prev_frame_sp->GetSymbolContext(eSymbolContextEverything);
 
-    if (sym_ctx.module_sp->GetFileSpec().FileEquals(module_spec) &&
-        sym_ctx.GetFunctionName() == ConstString(function_name)) {
+    if (!sym_ctx.module_sp->GetFileSpec().FileEquals(module_spec))
+      continue;
+
+    ConstString func_name = sym_ctx.GetFunctionName();
+    if (func_name == ConstString(function_name) ||
+        alternate_function_name.empty() ||
+        func_name == ConstString(alternate_function_name)) {
 
       // We go a frame beyond the assert location because the most relevant
       // frame for the user is the one in which the assert function was called.
