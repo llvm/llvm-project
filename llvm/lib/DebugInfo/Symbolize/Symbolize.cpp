@@ -62,7 +62,7 @@ Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
                               object::SectionedAddress ModuleOffset) {
   StringRef ModuleName = Obj.getFileName();
-  auto I = Modules.find(std::string(ModuleName));
+  auto I = Modules.find(ModuleName);
   if (I != Modules.end())
     return symbolizeCodeCommon(I->second.get(), ModuleOffset);
 

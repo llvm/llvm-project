@@ -959,7 +959,8 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo> TypeIdCompatibleVtableMap;
+  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+      TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
@@ -1361,8 +1362,7 @@ public:
             TypeId));
   }
 
-  const std::map<std::string, TypeIdCompatibleVtableInfo> &
-  typeIdCompatibleVtableMap() const {
+  const auto &typeIdCompatibleVtableMap() const {
     return TypeIdCompatibleVtableMap;
   }
 
@@ -1378,7 +1378,7 @@ public:
   /// entry if present in the summary map. This may be used when importing.
   Optional<TypeIdCompatibleVtableInfo>
   getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
-    auto I = TypeIdCompatibleVtableMap.find(std::string(TypeId));
+    auto I = TypeIdCompatibleVtableMap.find(TypeId);
     if (I == TypeIdCompatibleVtableMap.end())
       return None;
     return I->second;
