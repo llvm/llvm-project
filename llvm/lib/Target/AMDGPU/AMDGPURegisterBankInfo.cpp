@@ -2084,7 +2084,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MI.eraseFromParent();
     return;
   }
-  case AMDGPU::G_CTPOP: {
+  case AMDGPU::G_CTPOP:
+  case AMDGPU::G_CTLZ_ZERO_UNDEF:
+  case AMDGPU::G_CTTZ_ZERO_UNDEF: {
     MachineIRBuilder B(MI);
     MachineFunction &MF = B.getMF();
 
@@ -2104,7 +2106,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LegalizerHelper Helper(MF, Observer, B);
 
     if (Helper.narrowScalar(MI, 1, S32) != LegalizerHelper::Legalized)
-      llvm_unreachable("widenScalar should have succeeded");
+      llvm_unreachable("narrowScalar should have succeeded");
     return;
   }
   case AMDGPU::G_SEXT:
@@ -3204,9 +3206,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[1] = AMDGPU::getValueMapping(BankID, Size);
     break;
   }
-  case AMDGPU::G_CTLZ:
   case AMDGPU::G_CTLZ_ZERO_UNDEF:
-  case AMDGPU::G_CTTZ:
   case AMDGPU::G_CTTZ_ZERO_UNDEF:
   case AMDGPU::G_CTPOP: {
     unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
