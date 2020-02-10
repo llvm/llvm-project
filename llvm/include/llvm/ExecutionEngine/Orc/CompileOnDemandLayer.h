@@ -233,7 +233,7 @@ private:
         if (auto Sym = BaseLayer.findSymbolIn(BLK, Name, ExportedSymbolsOnly))
           return Sym;
         else if (auto Err = Sym.takeError())
-          return Err;
+          return std::move(Err);
       return nullptr;
     }
 
@@ -342,7 +342,7 @@ public:
               findSymbolIn(KV.first, std::string(Name), ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
-        return Err;
+        return std::move(Err);
     }
     return BaseLayer.findSymbol(std::string(Name), ExportedSymbolsOnly);
   }
@@ -518,7 +518,7 @@ private:
       if (auto Sym = LD.findSymbol(BaseLayer, std::string(Name), false))
         return Sym;
       else if (auto Err = Sym.takeError())
-        return Err;
+        return std::move(Err);
 
       return nullptr;
     };
@@ -611,7 +611,7 @@ private:
           } else
             return FnBodyAddrOrErr.takeError();
         } else if (auto Err = FnBodySym.takeError())
-          return Err;
+          return std::move(Err);
         else
           llvm_unreachable("Function not emitted for partition");
       }
@@ -729,7 +729,7 @@ private:
     SetSymbolResolver(K, std::move(Resolver));
 
     if (auto Err = BaseLayer.addModule(std::move(K), std::move(M)))
-      return Err;
+      return std::move(Err);
 
     return K;
   }

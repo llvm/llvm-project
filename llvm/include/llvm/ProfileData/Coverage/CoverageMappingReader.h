@@ -77,7 +77,7 @@ public:
     if (ReadErr != coveragemap_error::success) {
       auto E = make_error<CoverageMapError>(ReadErr);
       ReadErr = coveragemap_error::success;
-      return E;
+      return std::move(E);
     }
     return Record;
   }
@@ -85,7 +85,7 @@ public:
     if (ReadErr != coveragemap_error::success) {
       auto E = make_error<CoverageMapError>(ReadErr);
       ReadErr = coveragemap_error::success;
-      return E;
+      return std::move(E);
     }
     return &Record;
   }

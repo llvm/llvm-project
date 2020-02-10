@@ -54,8 +54,8 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
   GsymReader GR(std::move(MemBuffer));
   llvm::Error Err = GR.parse();
   if (Err)
-    return Err;
-  return GR;
+    return std::move(Err);
+  return std::move(GR);
 }
 
 llvm::Error

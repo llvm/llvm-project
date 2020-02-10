@@ -1251,8 +1251,8 @@ MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                           Is64Bits, Err, UniversalCputype,
                           UniversalIndex));
   if (Err)
-    return Err;
-  return Obj;
+    return std::move(Err);
+  return std::move(Obj);
 }
 
 MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,

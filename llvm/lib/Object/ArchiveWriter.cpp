@@ -70,7 +70,7 @@ NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
       return AccessModeOrErr.takeError();
     M.Perms = AccessModeOrErr.get();
   }
-  return M;
+  return std::move(M);
 }
 
 Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
@@ -109,7 +109,7 @@ Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
     M.GID = Status.getGroup();
     M.Perms = Status.permissions();
   }
-  return M;
+  return std::move(M);
 }
 
 template <typename T>
@@ -379,7 +379,7 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
       continue;
     Ret.push_back(SymNames.tell());
     if (Error E = S.printName(SymNames))
-      return E;
+      return std::move(E);
     SymNames << '\0';
   }
   return Ret;
@@ -492,7 +492,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     Expected<std::vector<unsigned>> Symbols =
         getSymbols(Buf, SymNames, HasObject);
     if (auto E = Symbols.takeError())
-      return E;
+      return std::move(E);
 
     Pos += Header.size() + Data.size() + Padding.size();
     Ret.push_back({std::move(*Symbols), std::move(Header), Data, Padding});

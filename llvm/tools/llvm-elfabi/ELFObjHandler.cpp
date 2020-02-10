@@ -309,7 +309,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   // Collect relevant .dynamic entries.
   DynamicEntries DynEnt;
   if (Error Err = populateDynamic<ELFT>(DynEnt, *DynTable))
-    return Err;
+    return std::move(Err);
 
     // Get pointer to in-memory location of .dynstr section.
   Expected<const uint8_t *> DynStrPtr =
@@ -364,7 +364,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
                            "when reading dynamic symbols");
   }
 
-  return DestStub;
+  return std::move(DestStub);
 }
 
 Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {

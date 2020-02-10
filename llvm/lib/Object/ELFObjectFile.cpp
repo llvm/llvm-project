@@ -62,7 +62,7 @@ static Expected<std::unique_ptr<ELFObjectFile<ELFT>>>
 createPtr(MemoryBufferRef Object) {
   auto Ret = ELFObjectFile<ELFT>::create(Object);
   if (Error E = Ret.takeError())
-    return E;
+    return std::move(E);
   return std::make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
 }
 

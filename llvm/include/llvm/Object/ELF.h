@@ -601,7 +601,7 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section,
                               ": expected SHT_STRTAB, but got " +
                               object::getELFSectionTypeName(
                                   getHeader()->e_machine, Section->sh_type)))
-      return E;
+      return std::move(E);
 
   auto V = getSectionContentsAsArray<char>(Section);
   if (!V)

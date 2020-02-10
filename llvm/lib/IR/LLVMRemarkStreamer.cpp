@@ -133,7 +133,7 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     if (Error E = Context.getMainRemarkStreamer()->setFilter(RemarksPasses))
       return make_error<LLVMRemarkSetupPatternError>(std::move(E));
 
-  return RemarksFile;
+  return std::move(RemarksFile);
 }
 
 Error llvm::setupLLVMOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,

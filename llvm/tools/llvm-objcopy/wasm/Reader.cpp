@@ -25,7 +25,7 @@ Expected<std::unique_ptr<Object>> Reader::create() const {
     Obj->Sections.push_back(
         {static_cast<uint8_t>(WS.Type), WS.Name, WS.Content});
   }
-  return Obj;
+  return std::move(Obj);
 }
 
 } // end namespace wasm

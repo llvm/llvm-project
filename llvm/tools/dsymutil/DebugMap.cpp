@@ -142,7 +142,7 @@ DebugMap::parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath,
     return EC;
   std::vector<std::unique_ptr<DebugMap>> Result;
   Result.push_back(std::move(Res));
-  return Result;
+  return std::move(Result);
 }
 
 } // end namespace dsymutil

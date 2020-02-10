@@ -123,7 +123,7 @@ getResponsibilitySetWithLegacyFn(const SymbolNameSet &Symbols,
       if (!Sym.getFlags().isStrong())
         Result.insert(S);
     } else if (auto Err = Sym.takeError())
-      return Err;
+      return std::move(Err);
   }
 
   return Result;

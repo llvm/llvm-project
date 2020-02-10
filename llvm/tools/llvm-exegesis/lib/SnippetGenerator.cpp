@@ -73,7 +73,7 @@ Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
           if (auto error = randomizeUnsetVariables(State, ForbiddenRegs, IT))
-            return error;
+            return std::move(error);
           BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
@@ -152,7 +152,7 @@ generateSelfAliasingCodeTemplates(const Instruction &Instr) {
     setRandomAliasing(SelfAliasing, IT, IT);
   }
   CT.Instructions.push_back(std::move(IT));
-  return Result;
+  return std::move(Result);
 }
 
 Expected<std::vector<CodeTemplate>>
@@ -163,7 +163,7 @@ generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
   CT.Info =
       std::string(formatv("{0}, repeating an unconstrained assignment", Msg));
   CT.Instructions.emplace_back(&Instr);
-  return Result;
+  return std::move(Result);
 }
 
 std::mt19937 &randomGenerator() {

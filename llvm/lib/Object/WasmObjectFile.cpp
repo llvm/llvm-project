@@ -58,9 +58,9 @@ ObjectFile::createWasmObjectFile(MemoryBufferRef Buffer) {
   Error Err = Error::success();
   auto ObjectFile = std::make_unique<WasmObjectFile>(Buffer, Err);
   if (Err)
-    return Err;
+    return std::move(Err);
 
-  return ObjectFile;
+  return std::move(ObjectFile);
 }
 
 #define VARINT7_MAX ((1 << 7) - 1)

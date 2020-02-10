@@ -215,7 +215,7 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
   if (std::error_code Err = YamlIn.error())
     return createStringError(Err, "Failed reading Interface Stub File.");
 
-  return Stub;
+  return std::move(Stub);
 }
 
 int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,

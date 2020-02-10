@@ -66,7 +66,7 @@ Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
   // Manually advance the offset pointer 16 bytes, after getting a raw memcpy
   // from the underlying data.
   OffsetPtr += 16;
-  return FileHeader;
+  return std::move(FileHeader);
 }
 
 } // namespace xray

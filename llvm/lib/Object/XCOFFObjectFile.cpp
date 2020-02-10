@@ -604,7 +604,7 @@ XCOFFObjectFile::relocations(const XCOFFSectionHeader32 &Sec) const {
                                       Sec.FileOffsetToRelocationInfo);
   auto NumRelocEntriesOrErr = getLogicalNumberOfRelocationEntries(Sec);
   if (Error E = NumRelocEntriesOrErr.takeError())
-    return E;
+    return std::move(E);
 
   uint32_t NumRelocEntries = NumRelocEntriesOrErr.get();
 
@@ -613,7 +613,7 @@ XCOFFObjectFile::relocations(const XCOFFSectionHeader32 &Sec) const {
       getObject<XCOFFRelocation32>(Data, reinterpret_cast<void *>(RelocAddr),
                                    NumRelocEntries * sizeof(XCOFFRelocation32));
   if (Error E = RelocationOrErr.takeError())
-    return E;
+    return std::move(E);
 
   const XCOFFRelocation32 *StartReloc = RelocationOrErr.get();
 
@@ -639,7 +639,7 @@ XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
   auto StringTableOrErr =
       getObject<char>(Obj->Data, Obj->base() + Offset, Size);
   if (Error E = StringTableOrErr.takeError())
-    return E;
+    return std::move(E);
 
   const char *StringTablePtr = StringTableOrErr.get();
   if (StringTablePtr[Size - 1] != '\0')
@@ -662,7 +662,7 @@ XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
   auto FileHeaderOrErr =
       getObject<void>(Data, Base + CurOffset, Obj->getFileHeaderSize());
   if (Error E = FileHeaderOrErr.takeError())
-    return E;
+    return std::move(E);
   Obj->FileHeader = FileHeaderOrErr.get();
 
   CurOffset += Obj->getFileHeaderSize();
@@ -676,17 +676,17 @@ XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
                                            Obj->getNumberOfSections() *
                                                Obj->getSectionHeaderSize());
     if (Error E = SecHeadersOrErr.takeError())
-      return E;
+      return std::move(E);
     Obj->SectionHeaderTable = SecHeadersOrErr.get();
   }
 
   // 64-bit object supports only file header and section headers for now.
   if (Obj->is64Bit())
-    return Obj;
+    return std::move(Obj);
 
   // If there is no symbol table we are done parsing the memory buffer.
   if (Obj->getLogicalNumberOfSymbolTableEntries32() == 0)
-    return Obj;
+    return std::move(Obj);
 
   // Parse symbol table.
   CurOffset = Obj->fileHeader32()->SymbolTableOffset;
@@ -695,7 +695,7 @@ XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
   auto SymTableOrErr =
       getObject<XCOFFSymbolEntry>(Data, Base + CurOffset, SymbolTableSize);
   if (Error E = SymTableOrErr.takeError())
-    return E;
+    return std::move(E);
   Obj->SymbolTblPtr = SymTableOrErr.get();
   CurOffset += SymbolTableSize;
 
@@ -703,10 +703,10 @@ XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
   Expected<XCOFFStringTable> StringTableOrErr =
       parseStringTable(Obj.get(), CurOffset);
   if (Error E = StringTableOrErr.takeError())
-    return E;
+    return std::move(E);
   Obj->StringTable = StringTableOrErr.get();
 
-  return Obj;
+  return std::move(Obj);
 }
 
 Expected<std::unique_ptr<ObjectFile>>

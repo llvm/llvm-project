@@ -198,8 +198,8 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
 
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   if (auto Err = dwarf2yaml(*DICtx, Y->DWARF))
-    return Err;
-  return Y;
+    return std::move(Err);
+  return std::move(Y);
 }
 
 void MachODumper::dumpHeader(std::unique_ptr<MachOYAML::Object> &Y) {

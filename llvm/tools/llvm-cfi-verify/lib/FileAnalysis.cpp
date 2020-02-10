@@ -100,15 +100,15 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
 
   // Init the rest of the object.
   if (auto InitResponse = Analysis.initialiseDisassemblyMembers())
-    return InitResponse;
+    return std::move(InitResponse);
 
   if (auto SectionParseResponse = Analysis.parseCodeSections())
-    return SectionParseResponse;
+    return std::move(SectionParseResponse);
 
   if (auto SymbolTableParseResponse = Analysis.parseSymbolTable())
-    return SymbolTableParseResponse;
+    return std::move(SymbolTableParseResponse);
 
-  return Analysis;
+  return std::move(Analysis);
 }
 
 FileAnalysis::FileAnalysis(object::OwningBinary<object::Binary> Binary)

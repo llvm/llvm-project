@@ -234,7 +234,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   Ret->parseSymbols();
   Ret->parseMetadata();
 
-  return Ret;
+  return std::move(Ret);
 }
 
 /// Create a MemoryBuffer from a memory range with an optional name.

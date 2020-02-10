@@ -57,13 +57,13 @@ private:
             else if (this->EmitState == NotEmitted) {
               this->EmitState = Emitting;
               if (auto Err = this->emitToBaseLayer(B))
-                return Err;
+                return std::move(Err);
               this->EmitState = Emitted;
             }
             if (auto Sym = B.findSymbolIn(K, Name, ExportedSymbolsOnly))
               return Sym.getAddress();
             else if (auto Err = Sym.takeError())
-              return Err;
+              return std::move(Err);
             else
               llvm_unreachable("Successful symbol lookup should return "
                                "definition address here");
