@@ -1,4 +1,4 @@
-; REQUIRES: object-emission
+; REQUIRES: x86
 
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s

@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s -dwarf-inlined-strings=Enable -o - | llvm-dwarfdump -show-form - | FileCheck %s
 
 ; Also test that the null streamer doesn't crash with debug info.
