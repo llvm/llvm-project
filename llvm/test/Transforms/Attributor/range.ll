@@ -525,6 +525,164 @@ return:                                           ; preds = %if.end3, %if.then
 }
 declare dso_local i32 @foo(i32)
 
+
+; Examples taken from https://llvm.discourse.group/t/impossible-condition-optimization/461/1
+;
+; The important part is that we return a constant (false)
+;
+; {
+
+; FIXME: All but the return is not needed anymore
+define dso_local zeroext i1 @phi(i32 %arg) {
+; OLD_PM-LABEL: define {{[^@]+}}@phi
+; OLD_PM-SAME: (i32 [[ARG:%.*]])
+; OLD_PM-NEXT:  bb:
+; OLD_PM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[ARG]], 5
+; OLD_PM-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; OLD_PM:       bb1:
+; OLD_PM-NEXT:    br label [[BB3:%.*]]
+; OLD_PM:       bb2:
+; OLD_PM-NEXT:    br label [[BB3]]
+; OLD_PM:       bb3:
+; OLD_PM-NEXT:    [[DOT02:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB2]] ]
+; OLD_PM-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; OLD_PM-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; OLD_PM:       bb5:
+; OLD_PM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[DOT02]], 1
+; OLD_PM-NEXT:    br label [[BB9:%.*]]
+; OLD_PM:       bb7:
+; OLD_PM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOT02]], 2
+; OLD_PM-NEXT:    br label [[BB9]]
+; OLD_PM:       bb9:
+; OLD_PM-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TMP6]], [[BB5]] ], [ [[TMP8]], [[BB7]] ]
+; OLD_PM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[DOT01]], 5
+; OLD_PM-NEXT:    br i1 [[TMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
+; OLD_PM:       bb11:
+; OLD_PM-NEXT:    br label [[BB13:%.*]]
+; OLD_PM:       bb12:
+; OLD_PM-NEXT:    br label [[BB13]]
+; OLD_PM:       bb13:
+; OLD_PM-NEXT:    [[DOT0:%.*]] = phi i1 [ true, [[BB11]] ], [ false, [[BB12]] ]
+; OLD_PM-NEXT:    ret i1 [[DOT0]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@phi
+; NEW_PM-SAME: (i32 [[ARG:%.*]])
+; NEW_PM-NEXT:  bb:
+; NEW_PM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[ARG]], 5
+; NEW_PM-NEXT:    br i1 [[TMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; NEW_PM:       bb1:
+; NEW_PM-NEXT:    br label [[BB3:%.*]]
+; NEW_PM:       bb2:
+; NEW_PM-NEXT:    br label [[BB3]]
+; NEW_PM:       bb3:
+; NEW_PM-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; NEW_PM-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; NEW_PM:       bb5:
+; NEW_PM-NEXT:    br label [[BB9:%.*]]
+; NEW_PM:       bb7:
+; NEW_PM-NEXT:    br label [[BB9]]
+; NEW_PM:       bb9:
+; NEW_PM-NEXT:    br label [[BB12:%.*]]
+; NEW_PM:       bb11:
+; NEW_PM-NEXT:    unreachable
+; NEW_PM:       bb12:
+; NEW_PM-NEXT:    br label [[BB13:%.*]]
+; NEW_PM:       bb13:
+; NEW_PM-NEXT:    ret i1 false
+;
+bb:
+  %tmp = icmp sgt i32 %arg, 5
+  br i1 %tmp, label %bb1, label %bb2
+
+bb1:                                              ; preds = %bb
+  br label %bb3
+
+bb2:                                              ; preds = %bb
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1
+  %.02 = phi i32 [ 1, %bb1 ], [ 2, %bb2 ]
+  %tmp4 = icmp sgt i32 %arg, 10
+  br i1 %tmp4, label %bb5, label %bb7
+
+bb5:                                              ; preds = %bb3
+  %tmp6 = add nsw i32 %.02, 1
+  br label %bb9
+
+bb7:                                              ; preds = %bb3
+  %tmp8 = add nsw i32 %.02, 2
+  br label %bb9
+
+bb9:                                              ; preds = %bb7, %bb5
+  %.01 = phi i32 [ %tmp6, %bb5 ], [ %tmp8, %bb7 ]
+  %tmp10 = icmp eq i32 %.01, 5
+  br i1 %tmp10, label %bb11, label %bb12
+
+bb11:                                             ; preds = %bb9
+  br label %bb13
+
+bb12:                                             ; preds = %bb9
+  br label %bb13
+
+bb13:                                             ; preds = %bb12, %bb11
+  %.0 = phi i1 [ true, %bb11 ], [ false, %bb12 ]
+  ret i1 %.0
+}
+
+define dso_local i1 @select(i32 %a) local_unnamed_addr #0 {
+; OLD_PM-LABEL: define {{[^@]+}}@select
+; OLD_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; OLD_PM-NEXT:  entry:
+; OLD_PM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
+; OLD_PM-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
+; OLD_PM-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
+; OLD_PM-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
+; OLD_PM-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
+; OLD_PM-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
+; OLD_PM-NEXT:    ret i1 [[CMP6]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@select
+; NEW_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; NEW_PM-NEXT:  entry:
+; NEW_PM-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  %. = select i1 %cmp, i32 1, i32 2
+  %cmp1 = icmp sgt i32 %a, 10
+  %y.0.v = select i1 %cmp1, i32 1, i32 2
+  %y.0 = add nuw nsw i32 %., %y.0.v
+  %cmp6 = icmp eq i32 %y.0, 5
+  ret i1 %cmp6
+}
+
+; FIXME: We do not look through the zext here.
+define dso_local i32 @select_zext(i32 %a) local_unnamed_addr #0 {
+; CHECK-LABEL: define {{[^@]+}}@select_zext
+; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
+; CHECK-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
+; CHECK-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
+; CHECK-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
+; CHECK-NEXT:    ret i32 [[DOT13]]
+;
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  %. = select i1 %cmp, i32 1, i32 2
+  %cmp1 = icmp sgt i32 %a, 10
+  %y.0.v = select i1 %cmp1, i32 1, i32 2
+  %y.0 = add nuw nsw i32 %., %y.0.v
+  %cmp6 = icmp eq i32 %y.0, 5
+  %.13 = zext i1 %cmp6 to i32
+  ret i32 %.13
+}
+
+; }
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 ;CHECK: !0 = !{i32 0, i32 10}
