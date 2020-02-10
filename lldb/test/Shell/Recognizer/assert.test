@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-linux
+# UNSUPPORTED: system-windows
 # RUN: %clang_host -g -O0 %S/Inputs/assert.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 run

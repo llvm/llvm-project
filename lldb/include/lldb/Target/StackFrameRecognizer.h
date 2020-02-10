@@ -101,8 +101,8 @@ private:
 class StackFrameRecognizerManager {
 public:
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
-                            ConstString module,
-                            ConstString symbol,
+                            ConstString module, ConstString symbol,
+                            ConstString alternate_symbol,
                             bool first_instruction_only = true);
 
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
@@ -113,7 +113,8 @@ public:
   static void ForEach(
       std::function<void(uint32_t recognizer_id, std::string recognizer_name,
                          std::string module, std::string symbol,
-                         bool regexp)> const &callback);
+                         std::string alternate_symbol, bool regexp)> const
+          &callback);
 
   static bool RemoveRecognizerWithID(uint32_t recognizer_id);
 
