@@ -45,6 +45,7 @@ static_library("IPO") {
     "LoopExtractor.cpp",
     "LowerTypeTests.cpp",
     "MergeFunctions.cpp",
+    "OpenMPOpt.cpp",
     "PartialInlining.cpp",
     "PassManagerBuilder.cpp",
     "PruneEH.cpp",
