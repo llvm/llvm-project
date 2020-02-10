@@ -665,19 +665,23 @@ entry:
   ret i1 %cmp6
 }
 
-; FIXME: We do not look through the zext here.
 define dso_local i32 @select_zext(i32 %a) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@select_zext
-; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; CHECK-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; CHECK-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; CHECK-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
-; CHECK-NEXT:    ret i32 [[DOT13]]
+; OLD_PM-LABEL: define {{[^@]+}}@select_zext
+; OLD_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; OLD_PM-NEXT:  entry:
+; OLD_PM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
+; OLD_PM-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
+; OLD_PM-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
+; OLD_PM-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
+; OLD_PM-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
+; OLD_PM-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
+; OLD_PM-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
+; OLD_PM-NEXT:    ret i32 [[DOT13]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@select_zext
+; NEW_PM-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; NEW_PM-NEXT:  entry:
+; NEW_PM-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
@@ -688,6 +692,35 @@ entry:
   %cmp6 = icmp eq i32 %y.0, 5
   %.13 = zext i1 %cmp6 to i32
   ret i32 %.13
+}
+
+; FIXME: We do not look through the ptr casts here.
+define dso_local i64 @select_int2ptr_bitcast_ptr2int(i32 %a) local_unnamed_addr #0 {
+; CHECK-LABEL: define {{[^@]+}}@select_int2ptr_bitcast_ptr2int
+; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
+; CHECK-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
+; CHECK-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
+; CHECK-NEXT:    [[I2P:%.*]] = inttoptr i1 [[CMP6]] to i1*
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i1* [[I2P]] to i32*
+; CHECK-NEXT:    [[P2I:%.*]] = ptrtoint i32* [[BC]] to i64
+; CHECK-NEXT:    ret i64 [[P2I]]
+;
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  %. = select i1 %cmp, i32 1, i32 2
+  %cmp1 = icmp sgt i32 %a, 10
+  %y.0.v = select i1 %cmp1, i32 1, i32 2
+  %y.0 = add nuw nsw i32 %., %y.0.v
+  %cmp6 = icmp eq i32 %y.0, 5
+  %i2p = inttoptr i1 %cmp6 to i1*
+  %bc = bitcast i1* %i2p to i32*
+  %p2i = ptrtoint i32* %bc to i64
+  ret i64 %p2i
 }
 
 ; }
