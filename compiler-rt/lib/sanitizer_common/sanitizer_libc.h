@@ -72,8 +72,6 @@ unsigned int internal_sleep(unsigned int seconds);
 uptr internal_getpid();
 uptr internal_getppid();
 
-int internal_dlinfo(void *handle, int request, void *p);
-
 // Threading
 uptr internal_sched_yield();
 

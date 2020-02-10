@@ -20,15 +20,15 @@
 #include "sanitizer_platform.h"
 #include "sanitizer_platform_limits_posix.h"
 
+// FreeBSD's dlopen() returns a pointer to an Obj_Entry structure that
+// incorporates the map structure.
+#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
+  ((link_map *)((handle) == nullptr ? nullptr : ((char *)(handle) + 560)))
 // Get sys/_types.h, because that tells us whether 64-bit inodes are
 // used in struct dirent below.
 #include <sys/_types.h>
 
 namespace __sanitizer {
-void *__sanitizer_get_link_map_by_dlopen_handle(void *handle);
-#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  (link_map *)__sanitizer_get_link_map_by_dlopen_handle(handle)
-
 extern unsigned struct_utsname_sz;
 extern unsigned struct_stat_sz;
 #if defined(__powerpc64__)

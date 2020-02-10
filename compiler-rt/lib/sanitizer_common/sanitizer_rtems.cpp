@@ -49,10 +49,6 @@ uptr internal_getpid() {
   return getpid();
 }
 
-int internal_dlinfo(void *handle, int request, void *p) {
-  UNIMPLEMENTED();
-}
-
 bool FileExists(const char *filename) {
   struct stat st;
   if (stat(filename, &st))
