@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/LoopOps/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/VectorOps/EDSC/Intrinsics.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
@@ -977,6 +978,36 @@ TEST_FUNC(linalg_tensors_test) {
   Value o1 = linalg_matmul(A, B, tensorType)->getResult(0);
   linalg_matmul(A, B, ValueHandle(o1), tensorType);
 
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// CHECK-LABEL: func @vector_matmul_test(
+//  CHECK-SAME:   %[[A:.*]]: vector<4x16xf32>,
+//  CHECK-SAME:   %[[B:.*]]: vector<16x8xf32>,
+//  CHECK-SAME:   %[[C:.*]]: vector<4x8xf32>)
+//  CHECK:   vector.contract {{.*}}[affine_map<(d0, d1, d2) -> (d0, d2)>,
+//  CHECK-SAME:                     affine_map<(d0, d1, d2) -> (d2, d1)>,
+//  CHECK-SAME:                     affine_map<(d0, d1, d2) -> (d0, d1)>],
+//  CHECK-SAME:              {{.*}}["parallel", "parallel", "reduction"]
+//  CHECK-SAME: %[[A]], %[[B]], %[[C]]
+//  CHECK-SAME:   vector<4x16xf32>, vector<16x8xf32> into vector<4x8xf32>
+TEST_FUNC(vector_matmul_test) {
+  using namespace edsc;
+  using namespace edsc::ops;
+
+  int64_t M = 4, N = 8, K = 16;
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto mkVectorType = VectorType::get({M, K}, f32Type);
+  auto knVectorType = VectorType::get({K, N}, f32Type);
+  auto mnVectorType = VectorType::get({M, N}, f32Type);
+  auto f = makeFunction("vector_matmul_test", {},
+                        {mkVectorType, knVectorType, mnVectorType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
+  vector_matmul(A, B, C);
   f.print(llvm::outs());
   f.erase();
 }

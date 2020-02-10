@@ -141,7 +141,11 @@ def Vector_ContractionOp :
   }];
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value lhs, Value rhs, "
-    "Value acc, ArrayAttr indexingMaps, ArrayAttr iteratorTypes">];
+    "Value acc, ArrayAttr indexingMaps, ArrayAttr iteratorTypes">,
+    OpBuilder<
+      "Builder *builder, OperationState &result, Value lhs, Value rhs, "
+      "Value acc, ArrayRef<ArrayRef<AffineExpr>> indexingExprs, "
+      "ArrayRef<StringRef> iteratorTypes">];
   let extraClassDeclaration = [{
     VectorType getLhsType() {
       return lhs().getType().cast<VectorType>();
