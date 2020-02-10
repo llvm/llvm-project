@@ -2885,7 +2885,8 @@ bool JoinVals::resolveConflicts(JoinVals &Other) {
     if (V.Resolution != CR_Unresolved)
       continue;
     LLVM_DEBUG(dbgs() << "\t\tconflict at " << printReg(Reg) << ':' << i << '@'
-                      << LR.getValNumInfo(i)->def << '\n');
+                      << LR.getValNumInfo(i)->def
+                      << ' ' << PrintLaneMask(LaneMask) << '\n');
     if (SubRangeJoin)
       return false;
 
