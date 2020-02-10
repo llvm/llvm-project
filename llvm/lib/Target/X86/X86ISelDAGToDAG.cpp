@@ -581,12 +581,6 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
   if (!N.hasOneUse())
     return false;
 
-  // FIXME: Temporary hack to prevent strict floating point nodes from
-  // folding into masked operations illegally.
-  if (U == Root && Root->getOpcode() == ISD::VSELECT &&
-      N.getOpcode() != ISD::LOAD && N.getOpcode() != X86ISD::VBROADCAST_LOAD)
-    return false;
-
   if (N.getOpcode() != ISD::LOAD)
     return true;
 
