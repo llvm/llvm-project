@@ -758,7 +758,7 @@ def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
     static bool areCastCompatible(Type a, Type b);
   }];
 
-  let hasFolder = 0;
+  let hasFolder = 1;
 }
 
 def FPExtOp : CastOp<"fpext">, Arguments<(ins AnyType:$in)> {
