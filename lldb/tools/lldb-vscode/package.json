@@ -109,11 +109,6 @@
 								"description": "Detach from the program.",
 								"default": false
 							},
-							"trace": {
-								"type": "boolean",
-								"description": "Enable logging of the Debug Adapter Protocol.",
-								"default": true
-							},
 							"sourcePath": {
 								"type": "string",
 								"description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
@@ -165,11 +160,6 @@
 							"waitFor": {
 								"type": "boolean",
 								"description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
-								"default": true
-							},
-							"trace": {
-								"type": "boolean",
-								"description": "Enable logging of the Debug Adapter Protocol.",
 								"default": true
 							},
 							"sourcePath": {
