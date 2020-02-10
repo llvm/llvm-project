@@ -647,7 +647,7 @@ void ClangdLSPServer::onDocumentDidChange(
     return;
   }
 
-  Server->addDocument(File, *Contents, WantDiags);
+  Server->addDocument(File, *Contents, WantDiags, Params.forceRebuild);
 }
 
 void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

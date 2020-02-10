@@ -170,7 +170,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 }
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
-                               WantDiagnostics WantDiags) {
+                               WantDiagnostics WantDiags, bool ForceRebuild) {
   auto FS = FSProvider.getFileSystem();
 
   ParseOptions Opts;
@@ -184,6 +184,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   ParseInputs Inputs;
   Inputs.FS = FS;
   Inputs.Contents = std::string(Contents);
+  Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
   bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);

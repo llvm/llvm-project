@@ -172,7 +172,8 @@ public:
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
   void addDocument(PathRef File, StringRef Contents,
-                   WantDiagnostics WD = WantDiagnostics::Auto);
+                   WantDiagnostics WD = WantDiagnostics::Auto,
+                   bool ForceRebuild = false);
 
   /// Get the contents of \p File, which should have been added.
   llvm::StringRef getDocument(PathRef File) const;
