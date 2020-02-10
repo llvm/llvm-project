@@ -68,6 +68,19 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// This is separate because in Vulkan workgroup size is exposed to shaders via
+/// a constant with WorkgroupSize decoration. So here we cannot generate a
+/// builtin variable; instead the infromation in the `spv.entry_point_abi`
+/// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
+class WorkGroupSizeConversion : public SPIRVOpLowering<gpu::BlockDimOp> {
+public:
+  using SPIRVOpLowering<gpu::BlockDimOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(gpu::BlockDimOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Pattern to convert a kernel function in GPU dialect within a spv.module.
 class KernelFnConversion final : public SPIRVOpLowering<gpu::GPUFuncOp> {
 public:
@@ -240,32 +253,52 @@ IfOpConversion::matchAndRewrite(loop::IfOp ifOp, ArrayRef<Value> operands,
 // Builtins.
 //===----------------------------------------------------------------------===//
 
+static Optional<int32_t> getLaunchConfigIndex(Operation *op) {
+  auto dimAttr = op->getAttrOfType<StringAttr>("dimension");
+  if (!dimAttr) {
+    return {};
+  }
+  if (dimAttr.getValue() == "x") {
+    return 0;
+  } else if (dimAttr.getValue() == "y") {
+    return 1;
+  } else if (dimAttr.getValue() == "z") {
+    return 2;
+  }
+  return {};
+}
+
 template <typename SourceOp, spirv::BuiltIn builtin>
 PatternMatchResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  auto dimAttr =
-      op.getOperation()->template getAttrOfType<StringAttr>("dimension");
-  if (!dimAttr) {
+  auto index = getLaunchConfigIndex(op);
+  if (!index)
     return this->matchFailure();
-  }
-  int32_t index = 0;
-  if (dimAttr.getValue() == "x") {
-    index = 0;
-  } else if (dimAttr.getValue() == "y") {
-    index = 1;
-  } else if (dimAttr.getValue() == "z") {
-    index = 2;
-  } else {
-    return this->matchFailure();
-  }
 
   // SPIR-V invocation builtin variables are a vector of type <3xi32>
   auto spirvBuiltin = spirv::getBuiltinVariableValue(op, builtin, rewriter);
   rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
       op, rewriter.getIntegerType(32), spirvBuiltin,
-      rewriter.getI32ArrayAttr({index}));
+      rewriter.getI32ArrayAttr({index.getValue()}));
   return this->matchSuccess();
+}
+
+PatternMatchResult WorkGroupSizeConversion::matchAndRewrite(
+    gpu::BlockDimOp op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  auto index = getLaunchConfigIndex(op);
+  if (!index)
+    return matchFailure();
+
+  auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
+  auto val = workGroupSizeAttr.getValue<int32_t>(index.getValue());
+  auto convertedType = typeConverter.convertType(op.getResult().getType());
+  if (!convertedType)
+    return matchFailure();
+  rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+      op, convertedType, IntegerAttr::get(convertedType, val));
+  return matchSuccess();
 }
 
 //===----------------------------------------------------------------------===//
@@ -401,13 +434,11 @@ void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
   populateWithGenerated(context, &patterns);
   patterns.insert<KernelFnConversion>(context, typeConverter, workGroupSize);
   patterns.insert<
-      ForOpConversion, GPUReturnOpConversion, IfOpConversion,
-      GPUModuleConversion,
-      GPUReturnOpConversion, ForOpConversion, GPUModuleConversion,
-      LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
+      ForOpConversion, GPUModuleConversion, GPUReturnOpConversion,
+      IfOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
                              spirv::BuiltIn::LocalInvocationId>,
-      TerminatorOpConversion>(context, typeConverter);
+      TerminatorOpConversion, WorkGroupSizeConversion>(context, typeConverter);
 }
