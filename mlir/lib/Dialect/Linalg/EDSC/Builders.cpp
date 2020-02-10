@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/EDSC/Builders.h"
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
-#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Dialect/AffineOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/Functional.h"
 
 using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
-using namespace mlir::edsc::ops;
 using namespace mlir::linalg;
 using namespace mlir::loop;
 
@@ -261,8 +259,8 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
 
 Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
                                                   StructuredIndexed O) {
-  using edsc::intrinsics::tanh;
-  UnaryPointwiseOpBuilder unOp([](ValueHandle a) -> Value { return tanh(a); });
+  UnaryPointwiseOpBuilder unOp(
+      [](ValueHandle a) -> Value { return std_tanh(a); });
   return linalg_pointwise(unOp, I, O);
 }
 
@@ -302,9 +300,8 @@ Operation *mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
                                                  StructuredIndexed I2,
                                                  StructuredIndexed O) {
   BinaryPointwiseOpBuilder binOp([](ValueHandle a, ValueHandle b) -> Value {
-    using edsc::intrinsics::select;
     using edsc::op::operator>;
-    return select(a > b, a, b).getValue();
+    return std_select(a > b, a, b).getValue();
   });
   return linalg_pointwise(binOp, I1, I2, O);
 }

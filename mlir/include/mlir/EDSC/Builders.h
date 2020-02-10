@@ -14,23 +14,15 @@
 #ifndef MLIR_EDSC_BUILDERS_H_
 #define MLIR_EDSC_BUILDERS_H_
 
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/FoldUtils.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Types.h"
 
 namespace mlir {
+class OperationFolder;
 
 namespace edsc {
-
-struct index_type {
-  explicit index_type(int64_t v) : v(v) {}
-  explicit operator int64_t() { return v; }
-  int64_t v;
-};
-
 class BlockHandle;
 class CapturableHandle;
 class NestedBuilder;
@@ -150,24 +142,6 @@ private:
 /// the name LoopBuilder (as opposed to say ForBuilder or AffineForBuilder).
 class LoopBuilder : public NestedBuilder {
 public:
-  /// Constructs a new AffineForOp and captures the associated induction
-  /// variable. A ValueHandle pointer is passed as the first argument and is the
-  /// *only* way to capture the loop induction variable.
-  static LoopBuilder makeAffine(ValueHandle *iv,
-                                ArrayRef<ValueHandle> lbHandles,
-                                ArrayRef<ValueHandle> ubHandles, int64_t step);
-  /// Constructs a new loop::ParallelOp and captures the associated induction
-  /// variables. An array of ValueHandle pointers is passed as the first
-  /// argument and is the *only* way to capture loop induction variables.
-  static LoopBuilder makeParallel(ArrayRef<ValueHandle *> ivs,
-                                  ArrayRef<ValueHandle> lbHandles,
-                                  ArrayRef<ValueHandle> ubHandles,
-                                  ArrayRef<ValueHandle> steps);
-  /// Constructs a new loop::ForOp and captures the associated induction
-  /// variable. A ValueHandle pointer is passed as the first argument and is the
-  /// *only* way to capture the loop induction variable.
-  static LoopBuilder makeLoop(ValueHandle *iv, ValueHandle lbHandle,
-                              ValueHandle ubHandle, ValueHandle stepHandle);
   LoopBuilder(const LoopBuilder &) = delete;
   LoopBuilder(LoopBuilder &&) = default;
 
@@ -181,72 +155,18 @@ public:
 
 private:
   LoopBuilder() = default;
-};
 
-/// Explicit nested LoopBuilder. Offers a compressed multi-loop builder to avoid
-/// explicitly writing all the loops in a nest. This simple functionality is
-/// also useful to write rank-agnostic custom ops.
-///
-/// Usage:
-///
-/// ```c++
-///    AffineLoopNestBuilder({&i, &j, &k}, {lb, lb, lb}, {ub, ub, ub}, {1, 1,
-///    1})(
-///      [&](){
-///        ...
-///      });
-/// ```
-///
-/// ```c++
-///    AffineLoopNestBuilder({&i}, {lb}, {ub}, {1})([&](){
-///      AffineLoopNestBuilder({&j}, {lb}, {ub}, {1})([&](){
-///        AffineLoopNestBuilder({&k}, {lb}, {ub}, {1})([&](){
-///          ...
-///        }),
-///      }),
-///    });
-/// ```
-class AffineLoopNestBuilder {
-public:
-  // This entry point accommodates the fact that AffineForOp implicitly uses
-  // multiple `lbs` and `ubs` with one single `iv` and `step` to encode `max`
-  // and and `min` constraints respectively.
-  AffineLoopNestBuilder(ValueHandle *iv, ArrayRef<ValueHandle> lbs,
-                        ArrayRef<ValueHandle> ubs, int64_t step);
-  AffineLoopNestBuilder(ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
-                        ArrayRef<ValueHandle> ubs, ArrayRef<int64_t> steps);
-
-  void operator()(function_ref<void(void)> fun = nullptr);
-
-private:
-  SmallVector<LoopBuilder, 4> loops;
-};
-
-/// Helper class to sugar building loop.parallel loop nests from lower/upper
-/// bounds and step sizes.
-class ParallelLoopNestBuilder {
-public:
-  ParallelLoopNestBuilder(ArrayRef<ValueHandle *> ivs,
-                          ArrayRef<ValueHandle> lbs, ArrayRef<ValueHandle> ubs,
-                          ArrayRef<ValueHandle> steps);
-
-  void operator()(function_ref<void(void)> fun = nullptr);
-
-private:
-  SmallVector<LoopBuilder, 4> loops;
-};
-
-/// Helper class to sugar building loop.for loop nests from ranges.
-/// This is similar to edsc::AffineLoopNestBuilder except it operates on
-/// loop.for.
-class LoopNestBuilder {
-public:
-  LoopNestBuilder(ArrayRef<edsc::ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
-                  ArrayRef<ValueHandle> ubs, ArrayRef<ValueHandle> steps);
-  void operator()(std::function<void(void)> fun = nullptr);
-
-private:
-  SmallVector<LoopBuilder, 4> loops;
+  friend LoopBuilder makeAffineLoopBuilder(ValueHandle *iv,
+                                           ArrayRef<ValueHandle> lbHandles,
+                                           ArrayRef<ValueHandle> ubHandles,
+                                           int64_t step);
+  friend LoopBuilder makeParallelLoopBuilder(ArrayRef<ValueHandle *> ivs,
+                                             ArrayRef<ValueHandle> lbHandles,
+                                             ArrayRef<ValueHandle> ubHandles,
+                                             ArrayRef<ValueHandle> steps);
+  friend LoopBuilder makeLoopBuilder(ValueHandle *iv, ValueHandle lbHandle,
+                                     ValueHandle ubHandle,
+                                     ValueHandle stepHandle);
 };
 
 // This class exists solely to handle the C++ vexing parse case when
@@ -337,13 +257,6 @@ public:
   /// been constructed in the past and that is captured "now" in the program.
   explicit ValueHandle(Value v) : t(v.getType()), v(v) {}
 
-  /// Builds a ConstantIndexOp of value `cst`. The constant is created at the
-  /// current insertion point.
-  /// This implicit constructor is provided to each build an eager Value for a
-  /// constant at the current insertion point in the IR. An implicit constructor
-  /// allows idiomatic expressions mixing ValueHandle and literals.
-  ValueHandle(index_type cst);
-
   /// ValueHandle is a value type, use the default copy constructor.
   ValueHandle(const ValueHandle &other) = default;
 
@@ -377,11 +290,6 @@ public:
   template <typename Op, typename... Args>
   static ValueHandle create(OperationFolder *folder, Args... args);
 
-  /// Special case to build composed AffineApply operations.
-  // TODO: createOrFold when available and move inside of the `create` method.
-  static ValueHandle createComposedAffineApply(AffineMap map,
-                                               ArrayRef<Value> operands);
-
   /// Generic create for a named operation producing a single value.
   static ValueHandle create(StringRef name, ArrayRef<ValueHandle> operands,
                             ArrayRef<Type> resultTypes,
@@ -399,6 +307,12 @@ public:
     if (!v)
       return nullptr;
     return v.getDefiningOp();
+  }
+
+  // Return a vector of fresh ValueHandles that have not captured.
+  static SmallVector<ValueHandle, 8> makeIndexHandles(unsigned count) {
+    auto indexType = IndexType::get(ScopedContext::getContext());
+    return SmallVector<ValueHandle, 8>(count, ValueHandle(indexType));
   }
 
 protected:
@@ -555,47 +469,10 @@ ValueHandle ValueHandle::create(Args... args) {
   Operation *op = ScopedContext::getBuilder()
                       .create<Op>(ScopedContext::getLocation(), args...)
                       .getOperation();
-  if (op->getNumResults() == 1) {
+  if (op->getNumResults() == 1)
     return ValueHandle(op->getResult(0));
-  } else if (op->getNumResults() == 0) {
-    if (auto f = dyn_cast<AffineForOp>(op)) {
-      return ValueHandle(f.getInductionVar());
-    }
-  }
   llvm_unreachable("unsupported operation, use an OperationHandle instead");
 }
-
-template <typename Op, typename... Args>
-ValueHandle ValueHandle::create(OperationFolder *folder, Args... args) {
-  return folder ? ValueHandle(folder->create<Op>(ScopedContext::getBuilder(),
-                                                 ScopedContext::getLocation(),
-                                                 args...))
-                : ValueHandle(ScopedContext::getBuilder().create<Op>(
-                      ScopedContext::getLocation(), args...));
-}
-
-namespace op {
-
-ValueHandle operator+(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator-(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator*(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator/(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator%(ValueHandle lhs, ValueHandle rhs);
-ValueHandle floorDiv(ValueHandle lhs, ValueHandle rhs);
-ValueHandle ceilDiv(ValueHandle lhs, ValueHandle rhs);
-
-ValueHandle operator!(ValueHandle value);
-ValueHandle operator&&(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator||(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator^(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator==(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator!=(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator<(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator<=(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator>(ValueHandle lhs, ValueHandle rhs);
-ValueHandle operator>=(ValueHandle lhs, ValueHandle rhs);
-
-} // namespace op
 
 /// Entry point to build multiple ValueHandle from a `Container` of Value or
 /// Type.
@@ -607,6 +484,105 @@ inline SmallVector<ValueHandle, 8> makeValueHandles(Container values) {
     res.push_back(ValueHandle(v));
   return res;
 }
+
+/// A TemplatedIndexedValue brings an index notation over the template Load and
+/// Store parameters. Assigning to an IndexedValue emits an actual `Store`
+/// operation, while converting an IndexedValue to a ValueHandle emits an actual
+/// `Load` operation.
+template <typename Load, typename Store> class TemplatedIndexedValue {
+public:
+  explicit TemplatedIndexedValue(Type t) : base(t) {}
+  explicit TemplatedIndexedValue(Value v)
+      : TemplatedIndexedValue(ValueHandle(v)) {}
+  explicit TemplatedIndexedValue(ValueHandle v) : base(v) {}
+
+  TemplatedIndexedValue(const TemplatedIndexedValue &rhs) = default;
+
+  TemplatedIndexedValue operator()() { return *this; }
+  /// Returns a new `TemplatedIndexedValue`.
+  TemplatedIndexedValue operator()(ValueHandle index) {
+    TemplatedIndexedValue res(base);
+    res.indices.push_back(index);
+    return res;
+  }
+  template <typename... Args>
+  TemplatedIndexedValue operator()(ValueHandle index, Args... indices) {
+    return TemplatedIndexedValue(base, index).append(indices...);
+  }
+  TemplatedIndexedValue operator()(ArrayRef<ValueHandle> indices) {
+    return TemplatedIndexedValue(base, indices);
+  }
+
+  /// Emits a `store`.
+  OperationHandle operator=(const TemplatedIndexedValue &rhs) {
+    ValueHandle rrhs(rhs);
+    return Store(rrhs, getBase(), {indices.begin(), indices.end()});
+  }
+  OperationHandle operator=(ValueHandle rhs) {
+    return Store(rhs, getBase(), {indices.begin(), indices.end()});
+  }
+
+  /// Emits a `load` when converting to a ValueHandle.
+  operator ValueHandle() const {
+    return Load(getBase(), {indices.begin(), indices.end()});
+  }
+
+  /// Emits a `load` when converting to a Value.
+  Value operator*(void) const {
+    return Load(getBase(), {indices.begin(), indices.end()}).getValue();
+  }
+
+  ValueHandle getBase() const { return base; }
+
+  /// Operator overloadings.
+  ValueHandle operator+(ValueHandle e);
+  ValueHandle operator-(ValueHandle e);
+  ValueHandle operator*(ValueHandle e);
+  ValueHandle operator/(ValueHandle e);
+  OperationHandle operator+=(ValueHandle e);
+  OperationHandle operator-=(ValueHandle e);
+  OperationHandle operator*=(ValueHandle e);
+  OperationHandle operator/=(ValueHandle e);
+  ValueHandle operator+(TemplatedIndexedValue e) {
+    return *this + static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator-(TemplatedIndexedValue e) {
+    return *this - static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator*(TemplatedIndexedValue e) {
+    return *this * static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator/(TemplatedIndexedValue e) {
+    return *this / static_cast<ValueHandle>(e);
+  }
+  OperationHandle operator+=(TemplatedIndexedValue e) {
+    return this->operator+=(static_cast<ValueHandle>(e));
+  }
+  OperationHandle operator-=(TemplatedIndexedValue e) {
+    return this->operator-=(static_cast<ValueHandle>(e));
+  }
+  OperationHandle operator*=(TemplatedIndexedValue e) {
+    return this->operator*=(static_cast<ValueHandle>(e));
+  }
+  OperationHandle operator/=(TemplatedIndexedValue e) {
+    return this->operator/=(static_cast<ValueHandle>(e));
+  }
+
+private:
+  TemplatedIndexedValue(ValueHandle base, ArrayRef<ValueHandle> indices)
+      : base(base), indices(indices.begin(), indices.end()) {}
+
+  TemplatedIndexedValue &append() { return *this; }
+
+  template <typename T, typename... Args>
+  TemplatedIndexedValue &append(T index, Args... indices) {
+    this->indices.push_back(static_cast<ValueHandle>(index));
+    append(indices...);
+    return *this;
+  }
+  ValueHandle base;
+  SmallVector<ValueHandle, 8> indices;
+};
 
 } // namespace edsc
 } // namespace mlir
