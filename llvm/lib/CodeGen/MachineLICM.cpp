@@ -1367,6 +1367,11 @@ MachineInstr *MachineLICMBase::ExtractHoistableLoad(MachineInstr *MI) {
   UpdateRegPressure(NewMIs[1]);
 
   // Otherwise we successfully unfolded a load that we can hoist.
+
+  // Update the call site info.
+  if (MI->isCandidateForCallSiteEntry())
+    MF.eraseCallSiteInfo(MI);
+
   MI->eraseFromParent();
   return NewMIs[0];
 }
