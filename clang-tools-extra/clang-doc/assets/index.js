@@ -31,7 +31,11 @@ function computeRelativePath(FilePath, CurrentDirectory) {
 
 function genLink(Ref, CurrentDirectory) {
   var Path = computeRelativePath(Ref.Path, CurrentDirectory);
-  Path = append(Path, Ref.Name + ".html")
+  if (Ref.RefType == "namespace")
+    Path = append(Path, "index.html");
+  else
+    Path = append(Path, Ref.Name + ".html")
+
   ANode = document.createElement("a");
   ANode.setAttribute("href", Path);
   var TextNode = document.createTextNode(Ref.Name);
