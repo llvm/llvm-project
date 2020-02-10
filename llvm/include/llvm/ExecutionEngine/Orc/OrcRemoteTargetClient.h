@@ -457,7 +457,7 @@ public:
       std::lock_guard<std::mutex> Lock(RTPMutex);
       if (AvailableTrampolines.empty()) {
         if (auto Err = grow())
-          return std::move(Err);
+          return Err;
       }
       assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
       auto TrampolineAddr = AvailableTrampolines.back();
@@ -506,8 +506,8 @@ public:
     auto Client = std::unique_ptr<OrcRemoteTargetClient>(
         new OrcRemoteTargetClient(Channel, ES, Err));
     if (Err)
-      return std::move(Err);
-    return std::move(Client);
+      return Err;
+    return Client;
   }
 
   /// Call the int(void) function at the given address in the target and return
@@ -541,7 +541,7 @@ public:
   createRemoteMemoryManager() {
     auto Id = AllocatorIds.getNext();
     if (auto Err = callB<mem::CreateRemoteAllocator>(Id))
-      return std::move(Err);
+      return Err;
     return std::unique_ptr<RemoteRTDyldMemoryManager>(
         new RemoteRTDyldMemoryManager(*this, Id));
   }
@@ -552,7 +552,7 @@ public:
   createIndirectStubsManager() {
     auto Id = IndirectStubOwnerIds.getNext();
     if (auto Err = callB<stubs::CreateIndirectStubsOwner>(Id))
-      return std::move(Err);
+      return Err;
     return std::make_unique<RemoteIndirectStubsManager>(*this, Id);
   }
 
@@ -562,7 +562,7 @@ public:
 
     // Emit the resolver block on the JIT server.
     if (auto Err = callB<stubs::EmitResolverBlock>())
-      return std::move(Err);
+      return Err;
 
     // Create the callback manager.
     CallbackManager.emplace(*this, ES, ErrorHandlerAddress);

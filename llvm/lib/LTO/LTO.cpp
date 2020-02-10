@@ -456,7 +456,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 
   File->Mods = FOrErr->Mods;
   File->Strtab = std::move(FOrErr->Strtab);
-  return std::move(File);
+  return File;
 }
 
 StringRef InputFile::getName() const {
@@ -676,7 +676,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   Mod.M = std::move(*MOrErr);
 
   if (Error Err = M.materializeMetadata())
-    return std::move(Err);
+    return Err;
   UpgradeDebugInfo(M);
 
   ModuleSymbolTable SymTab;
@@ -776,7 +776,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     for (GlobalValue &GV : M.global_values())
       handleNonPrevailingComdat(GV, NonPrevailingComdats);
   assert(MsymI == MsymE);
-  return std::move(Mod);
+  return Mod;
 }
 
 Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
@@ -1429,7 +1429,7 @@ Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
   auto ResultOrErr = llvm::setupLLVMOptimizationRemarks(
       Context, Filename, RemarksPasses, RemarksFormat, RemarksWithHotness);
   if (Error E = ResultOrErr.takeError())
-    return std::move(E);
+    return E;
 
   if (*ResultOrErr)
     (*ResultOrErr)->keep();
@@ -1451,5 +1451,5 @@ lto::setupStatsFile(StringRef StatsFilename) {
     return errorCodeToError(EC);
 
   StatsFile->keep();
-  return std::move(StatsFile);
+  return StatsFile;
 }

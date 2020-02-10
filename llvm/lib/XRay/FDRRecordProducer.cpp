@@ -101,8 +101,8 @@ FileBasedRecordProducer::findNextBufferExtent() {
         R = std::move(MetadataRecordOrErr.get());
         RecordInitializer RI(E, OffsetPtr);
         if (auto Err = R->apply(RI))
-          return std::move(Err);
-        return std::move(R);
+          return Err;
+        return R;
       }
     }
   }
@@ -132,7 +132,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
     assert(isa<BufferExtents>(R.get()));
     auto BE = cast<BufferExtents>(R.get());
     CurrentBufferBytes = BE->size();
-    return std::move(R);
+    return R;
   }
 
   //
@@ -172,7 +172,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
   RecordInitializer RI(E, OffsetPtr);
 
   if (auto Err = R->apply(RI))
-    return std::move(Err);
+    return Err;
 
   // If we encountered a BufferExtents record, we should record the remaining
   // bytes for the current buffer, to determine when we should start ignoring
@@ -191,7 +191,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
     CurrentBufferBytes -= OffsetPtr - PreReadOffset;
   }
   assert(R != nullptr);
-  return std::move(R);
+  return R;
 }
 
 } // namespace xray

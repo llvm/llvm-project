@@ -80,8 +80,8 @@ public:
         new LocalTrampolinePool(std::move(GetTrampolineLanding), Err));
 
     if (Err)
-      return std::move(Err);
-    return std::move(LTP);
+      return Err;
+    return LTP;
   }
 
   /// Get a free trampoline. Returns an error if one can not be provided (e.g.
@@ -90,7 +90,7 @@ public:
     std::lock_guard<std::mutex> Lock(LTPMutex);
     if (AvailableTrampolines.empty()) {
       if (auto Err = grow())
-        return std::move(Err);
+        return Err;
     }
     assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
     auto TrampolineAddr = AvailableTrampolines.back();
@@ -229,8 +229,8 @@ public:
     auto CCMgr = std::unique_ptr<LocalJITCompileCallbackManager>(
         new LocalJITCompileCallbackManager(ES, ErrorHandlerAddress, Err));
     if (Err)
-      return std::move(Err);
-    return std::move(CCMgr);
+      return Err;
+    return CCMgr;
   }
 
 private:

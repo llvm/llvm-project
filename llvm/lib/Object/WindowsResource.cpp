@@ -63,7 +63,7 @@ WindowsResource::createWindowsResource(MemoryBufferRef Source) {
         Source.getBufferIdentifier() + ": too small to be a resource file",
         object_error::invalid_file_type);
   std::unique_ptr<WindowsResource> Ret(new WindowsResource(Source));
-  return std::move(Ret);
+  return Ret;
 }
 
 Expected<ResourceEntryRef> WindowsResource::getHeadEntry() {
@@ -81,7 +81,7 @@ Expected<ResourceEntryRef>
 ResourceEntryRef::create(BinaryStreamRef BSR, const WindowsResource *Owner) {
   auto Ref = ResourceEntryRef(BSR, Owner);
   if (auto E = Ref.loadNext())
-    return std::move(E);
+    return E;
   return Ref;
 }
 
@@ -1005,7 +1005,7 @@ writeWindowsResourceCOFF(COFF::MachineTypes MachineType,
   Error E = Error::success();
   WindowsResourceCOFFWriter Writer(MachineType, Parser, E);
   if (E)
-    return std::move(E);
+    return E;
   return Writer.write(TimeDateStamp);
 }
 

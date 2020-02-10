@@ -170,7 +170,7 @@ Expected<std::vector<RCToken>> Tokenizer::run() {
 
     const size_t TokenStart = Pos;
     if (Error TokenError = consumeToken(TokenKind))
-      return std::move(TokenError);
+      return TokenError;
 
     // Comments are just deleted, don't bother saving them.
     if (TokenKind == Kind::LineComment || TokenKind == Kind::StartComment)

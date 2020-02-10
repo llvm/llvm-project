@@ -28,19 +28,19 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
     return make_error<JITLinkError>("Object is not a relocatable MachO");
 
   if (auto Err = createNormalizedSections())
-    return std::move(Err);
+    return Err;
 
   if (auto Err = createNormalizedSymbols())
-    return std::move(Err);
+    return Err;
 
   if (auto Err = graphifyRegularSymbols())
-    return std::move(Err);
+    return Err;
 
   if (auto Err = graphifySectionsWithCustomParsers())
-    return std::move(Err);
+    return Err;
 
   if (auto Err = addRelocations())
-    return std::move(Err);
+    return Err;
 
   return std::move(G);
 }

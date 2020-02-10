@@ -209,7 +209,7 @@ public:
     unsigned BitsLeft = NumBits - BitsInCurWord;
 
     if (Error fillResult = fillCurWord())
-      return std::move(fillResult);
+      return fillResult;
 
     // If we run out of data, abort.
     if (BitsLeft > BitsInCurWord)
@@ -425,7 +425,7 @@ public:
         // We read and accumulate abbrev's, the client can't do anything with
         // them anyway.
         if (Error Err = ReadAbbrevRecord())
-          return std::move(Err);
+          return Err;
         continue;
       }
 
@@ -448,7 +448,7 @@ public:
 
       // If we found a sub-block, just skip over it and check the next entry.
       if (Error Err = SkipBlock())
-        return std::move(Err);
+        return Err;
     }
   }
 

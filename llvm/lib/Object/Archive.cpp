@@ -481,7 +481,7 @@ Expected<Archive::Child> Archive::Child::getNext() const {
   Error Err = Error::success();
   Child Ret(Parent, NextLoc, &Err);
   if (Err)
-    return std::move(Err);
+    return Err;
   return Ret;
 }
 
@@ -531,8 +531,8 @@ Expected<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
   Error Err = Error::success();
   std::unique_ptr<Archive> Ret(new Archive(Source, Err));
   if (Err)
-    return std::move(Err);
-  return std::move(Ret);
+    return Err;
+  return Ret;
 }
 
 void Archive::setFirstRegular(const Child &C) {
@@ -852,7 +852,7 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
   Error Err = Error::success();
   Child C(Parent, Loc, &Err);
   if (Err)
-    return std::move(Err);
+    return Err;
   return C;
 }
 

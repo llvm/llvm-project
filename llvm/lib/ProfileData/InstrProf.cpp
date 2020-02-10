@@ -891,9 +891,9 @@ ValueProfData::getValueProfData(const unsigned char *D,
 
   Error E = VPD->checkIntegrity();
   if (E)
-    return std::move(E);
+    return E;
 
-  return std::move(VPD);
+  return VPD;
 }
 
 void ValueProfData::swapBytesToHost(support::endianness Endianness) {

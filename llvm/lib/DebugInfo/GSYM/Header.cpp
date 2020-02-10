@@ -78,7 +78,7 @@ llvm::Expected<Header> Header::decode(DataExtractor &Data) {
   H.StrtabSize = Data.getU32(&Offset);
   Data.getU8(&Offset, H.UUID, GSYM_MAX_UUID_SIZE);
   if (llvm::Error Err = H.checkForError())
-    return std::move(Err);
+    return Err;
   return H;
 }
 

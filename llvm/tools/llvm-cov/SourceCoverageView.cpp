@@ -69,7 +69,7 @@ CoveragePrinter::createOutputStream(StringRef Path, StringRef Extension,
   auto OS = CoveragePrinter::OwnedStream(RawStream);
   if (E)
     return errorCodeToError(E);
-  return std::move(OS);
+  return OS;
 }
 
 std::unique_ptr<CoveragePrinter>

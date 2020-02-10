@@ -274,6 +274,6 @@ Expected<StringRef> DbiModuleList::getFileName(uint32_t Index) const {
   Names.setOffset(FileOffset);
   StringRef Name;
   if (auto EC = Names.readCString(Name))
-    return std::move(EC);
+    return EC;
   return Name;
 }

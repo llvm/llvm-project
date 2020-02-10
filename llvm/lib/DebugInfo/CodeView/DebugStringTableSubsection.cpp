@@ -37,7 +37,7 @@ DebugStringTableSubsectionRef::getString(uint32_t Offset) const {
   Reader.setOffset(Offset);
   StringRef Result;
   if (auto EC = Reader.readCString(Result))
-    return std::move(EC);
+    return EC;
   return Result;
 }
 

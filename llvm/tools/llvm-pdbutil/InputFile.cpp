@@ -60,7 +60,7 @@ getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid module stream");
 
-  return std::move(ModS);
+  return ModS;
 }
 
 static inline bool isCodeViewDebugSubsection(object::SectionRef Section,
@@ -269,18 +269,18 @@ Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
 
     IF.CoffObject = std::move(*BinaryOrErr);
     IF.PdbOrObj = llvm::cast<COFFObjectFile>(IF.CoffObject.getBinary());
-    return std::move(IF);
+    return IF;
   }
 
   if (Magic == file_magic::pdb) {
     std::unique_ptr<IPDBSession> Session;
     if (auto Err = loadDataForPDB(PDB_ReaderType::Native, Path, Session))
-      return std::move(Err);
+      return Err;
 
     IF.PdbSession.reset(static_cast<NativeSession *>(Session.release()));
     IF.PdbOrObj = &IF.PdbSession->getPDBFile();
 
-    return std::move(IF);
+    return IF;
   }
 
   if (!AllowUnknownFile)
@@ -295,7 +295,7 @@ Expected<InputFile> InputFile::open(StringRef Path, bool AllowUnknownFile) {
 
   IF.UnknownFile = std::move(*Result);
   IF.PdbOrObj = IF.UnknownFile.get();
-  return std::move(IF);
+  return IF;
 }
 
 PDBFile &InputFile::pdb() {

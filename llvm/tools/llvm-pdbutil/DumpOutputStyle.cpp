@@ -429,7 +429,7 @@ static Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid module stream");
 
-  return std::move(ModS);
+  return ModS;
 }
 
 template <typename CallbackT>

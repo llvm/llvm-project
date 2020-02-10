@@ -2518,7 +2518,7 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
   /* Scan the text.  */
   StringRef::iterator p = str.begin();
   if (Error Err = interpretDecimal(p, str.end(), &D))
-    return std::move(Err);
+    return Err;
 
   /* Handle the quick cases.  First the case of no significant digits,
      i.e. zero, and then exponents that are obviously too large or too

@@ -197,7 +197,7 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
       }
     }
     if (Err)
-      return std::move(Err);
+      return Err;
   }
 
   if (OE.Objects.empty())
@@ -243,7 +243,7 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
     auto Err = OE.load(Filename, Verbose);
     if (Err) {
       ObjectCache.erase(Filename);
-      return std::move(Err);
+      return Err;
     }
   }
 

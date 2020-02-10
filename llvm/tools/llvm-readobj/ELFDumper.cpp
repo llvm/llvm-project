@@ -1087,7 +1087,7 @@ ELFDumper<ELFT>::getSymbolVersionByIndex(uint32_t SymbolVersionIndex,
 
   // Lookup this symbol in the version table.
   if (Error E = LoadVersionMap())
-    return std::move(E);
+    return E;
   if (VersionIndex >= VersionMap.size() || !VersionMap[VersionIndex])
     return createError("SHT_GNU_versym section refers to a version index " +
                        Twine(VersionIndex) + " which is missing");

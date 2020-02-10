@@ -151,7 +151,7 @@ public:
   Expected<COFFModuleDefinition> parse() {
     do {
       if (Error Err = parseOne())
-        return std::move(Err);
+        return Err;
     } while (Tok.K != Eof);
     return Info;
   }

@@ -284,14 +284,14 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   for (const auto &CoverageReader : CoverageReaders) {
     for (auto RecordOrErr : *CoverageReader) {
       if (Error E = RecordOrErr.takeError())
-        return std::move(E);
+        return E;
       const auto &Record = *RecordOrErr;
       if (Error E = Coverage->loadFunctionRecord(Record, ProfileReader))
-        return std::move(E);
+        return E;
     }
   }
 
-  return std::move(Coverage);
+  return Coverage;
 }
 
 // If E is a no_data_found error, returns success. Otherwise returns E.
@@ -309,7 +309,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
                       StringRef ProfileFilename, ArrayRef<StringRef> Arches) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
   if (Error E = ProfileReaderOrErr.takeError())
-    return std::move(E);
+    return E;
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
 
   SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
@@ -326,7 +326,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
     if (Error E = CoverageReadersOrErr.takeError()) {
       E = handleMaybeNoDataFoundError(std::move(E));
       if (E)
-        return std::move(E);
+        return E;
       // E == success (originally a no_data_found error).
       continue;
     }

@@ -265,7 +265,7 @@ private:
     typename TargetT::IndirectStubsInfo IS;
     if (auto Err =
             TargetT::emitIndirectStubsBlock(IS, NumStubsRequired, nullptr))
-      return std::move(Err);
+      return Err;
 
     JITTargetAddress StubsBase = static_cast<JITTargetAddress>(
         reinterpret_cast<uintptr_t>(IS.getStub(0)));
@@ -382,7 +382,7 @@ private:
     auto &Allocator = I->second;
     void *LocalAllocAddr = nullptr;
     if (auto Err = Allocator.allocate(LocalAllocAddr, Size, Align))
-      return std::move(Err);
+      return Err;
 
     LLVM_DEBUG(dbgs() << "  Allocator " << Id << " reserved " << LocalAllocAddr
                       << " (" << Size << " bytes, alignment " << Align

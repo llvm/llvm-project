@@ -240,7 +240,7 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
   auto Out =
       std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_Text);
   if (!EC)
-    return std::move(Out);
+    return Out;
   return EC;
 }
 } // end of anonymous namespace

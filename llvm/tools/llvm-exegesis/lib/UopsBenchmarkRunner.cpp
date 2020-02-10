@@ -39,7 +39,7 @@ UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
     Result.push_back(
         BenchmarkMeasure::Create("NumMicroOps", *ExpectedCounterValue));
   }
-  return std::move(Result);
+  return Result;
 }
 
 } // namespace exegesis
