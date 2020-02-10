@@ -11665,6 +11665,68 @@ static SDValue lowerShuffleAsDecomposedShuffleBlend(
   return DAG.getVectorShuffle(VT, DL, V1, V2, BlendMask);
 }
 
+/// Try to lower a vector shuffle as a bit rotation.
+///
+/// Look for a repeated rotation pattern in each sub group.
+/// Returns a ISD::ROTL element rotation amount or -1 if failed.
+static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
+  int NumElts = Mask.size();
+  assert((NumElts % NumSubElts) == 0 && "Illegal shuffle mask");
+
+  int RotateAmt = -1;
+  for (int i = 0; i != NumElts; i += NumSubElts) {
+    for (int j = 0; j != NumSubElts; ++j) {
+      int M = Mask[i + j];
+      if (M < 0)
+        continue;
+      if (!isInRange(M, i, i + NumSubElts))
+        return -1;
+      int Offset = (NumSubElts - (M - (i + j))) % NumSubElts;
+      if (0 <= RotateAmt && Offset != RotateAmt)
+        return -1;
+      RotateAmt = Offset;
+    }
+  }
+  return RotateAmt;
+}
+
+/// Lower shuffle using ISD::ROTL rotations.
+static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
+                                       ArrayRef<int> Mask,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  assert(!isNoopShuffleMask(Mask) && "We shouldn't lower no-op shuffles!");
+
+  MVT SVT = VT.getScalarType();
+  int EltSizeInBits = SVT.getScalarSizeInBits();
+  assert(EltSizeInBits < 64 && "Can't rotate 64-bit integers");
+
+  // Only XOP + AVX512 targets have bit rotation instructions.
+  bool IsLegal =
+      (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
+  if (!IsLegal)
+    return SDValue();
+
+  // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
+  int MinSubElts = Subtarget.hasXOP() ? 2 : std::max(32 / EltSizeInBits, 2);
+  int MaxSubElts = 64 / EltSizeInBits;
+  for (int NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
+    int RotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
+    if (RotateAmt < 0)
+      continue;
+    int RotateAmtInBits = RotateAmt * EltSizeInBits;
+    int NumElts = VT.getVectorNumElements();
+    MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
+    MVT RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
+    SDValue Rot =
+        DAG.getNode(ISD::ROTL, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
+                    DAG.getConstant(RotateAmtInBits, DL, RotateVT));
+    return DAG.getBitcast(VT, Rot);
+  }
+
+  return SDValue();
+}
+
 /// Try to lower a vector shuffle as a byte rotation.
 ///
 /// This is used for support PALIGNR for SSSE3 or VALIGND/Q for AVX512.
@@ -14220,6 +14282,11 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                     Mask, Subtarget, DAG))
       return Broadcast;
 
+    // Try to use bit rotation instructions.
+    if (SDValue Rotate = lowerShuffleAsBitRotate(DL, MVT::v8i16, V1, Mask,
+                                                 Subtarget, DAG))
+      return Rotate;
+
     // Use dedicated unpack instructions for masks that match their pattern.
     if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v8i16, Mask, V1, V2, DAG))
       return V;
@@ -14443,6 +14510,11 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue Broadcast = lowerShuffleAsBroadcast(DL, MVT::v16i8, V1, V2,
                                                     Mask, Subtarget, DAG))
       return Broadcast;
+
+    // Try to use bit rotation instructions.
+    if (SDValue Rotate = lowerShuffleAsBitRotate(DL, MVT::v16i8, V1, Mask,
+                                                 Subtarget, DAG))
+      return Rotate;
 
     if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v16i8, Mask, V1, V2, DAG))
       return V;
@@ -16334,6 +16406,11 @@ static SDValue lowerV16I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return V;
 
   if (V2.isUndef()) {
+    // Try to use bit rotation instructions.
+    if (SDValue Rotate =
+            lowerShuffleAsBitRotate(DL, MVT::v16i16, V1, Mask, Subtarget, DAG))
+      return Rotate;
+
     // Try to produce a fixed cross-128-bit lane permute followed by unpack
     // because that should be faster than the variable permute alternatives.
     if (SDValue V = lowerShuffleWithUNPCK256(DL, MVT::v16i16, Mask, V1, V2, DAG))
@@ -16431,6 +16508,12 @@ static SDValue lowerV32I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v32i8, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use bit rotation instructions.
+  if (V2.isUndef())
+    if (SDValue Rotate =
+            lowerShuffleAsBitRotate(DL, MVT::v32i8, V1, Mask, Subtarget, DAG))
+      return Rotate;
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
@@ -16926,6 +17009,11 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Rotate;
 
   if (V2.isUndef()) {
+    // Try to use bit rotation instructions.
+    if (SDValue Rotate =
+            lowerShuffleAsBitRotate(DL, MVT::v32i16, V1, Mask, Subtarget, DAG))
+      return Rotate;
+
     SmallVector<int, 8> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v32i16, Mask, RepeatedMask)) {
       // As this is a single-input shuffle, the repeated mask should be
@@ -16982,6 +17070,12 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v64i8, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use bit rotation instructions.
+  if (V2.isUndef())
+    if (SDValue Rotate =
+            lowerShuffleAsBitRotate(DL, MVT::v64i8, V1, Mask, Subtarget, DAG))
+      return Rotate;
 
   if (SDValue PSHUFB = lowerShuffleWithPSHUFB(DL, MVT::v64i8, Mask, V1, V2,
                                               Zeroable, Subtarget, DAG))
