@@ -2304,7 +2304,8 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
     // Currently, only rank > 0 and full or no operands are supported. Fail to
     // convert otherwise.
     unsigned rank = sourceMemRefType.getRank();
-    if (viewMemRefType.getRank() == 0 || (rank != dynamicOffsets.size()) ||
+    if (viewMemRefType.getRank() == 0 ||
+        (!dynamicOffsets.empty() && rank != dynamicOffsets.size()) ||
         (!dynamicSizes.empty() && rank != dynamicSizes.size()) ||
         (!dynamicStrides.empty() && rank != dynamicStrides.size()))
       return matchFailure();
@@ -2313,6 +2314,11 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
     SmallVector<int64_t, 4> strides;
     auto successStrides = getStridesAndOffset(viewMemRefType, strides, offset);
     if (failed(successStrides))
+      return matchFailure();
+
+    // Fail to convert if neither a dynamic nor static offset is available.
+    if (dynamicOffsets.empty() &&
+        offset == MemRefType::getDynamicStrideOrOffset())
       return matchFailure();
 
     // Create the descriptor.
@@ -2348,14 +2354,18 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
     }
 
     // Offset.
-    Value baseOffset = sourceMemRef.offset(rewriter, loc);
-    for (int i = 0, e = viewMemRefType.getRank(); i < e; ++i) {
-      Value min = dynamicOffsets[i];
-      baseOffset = rewriter.create<LLVM::AddOp>(
-          loc, baseOffset,
-          rewriter.create<LLVM::MulOp>(loc, min, strideValues[i]));
+    if (dynamicOffsets.empty()) {
+      targetMemRef.setConstantOffset(rewriter, loc, offset);
+    } else {
+      Value baseOffset = sourceMemRef.offset(rewriter, loc);
+      for (int i = 0, e = viewMemRefType.getRank(); i < e; ++i) {
+        Value min = dynamicOffsets[i];
+        baseOffset = rewriter.create<LLVM::AddOp>(
+            loc, baseOffset,
+            rewriter.create<LLVM::MulOp>(loc, min, strideValues[i]));
+      }
+      targetMemRef.setOffset(rewriter, loc, baseOffset);
     }
-    targetMemRef.setOffset(rewriter, loc, baseOffset);
 
     // Update sizes and strides.
     for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
