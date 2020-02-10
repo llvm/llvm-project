@@ -4408,9 +4408,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       else
         return false;
     } else {
-      // FIXME: It should be llvm::None but if you set llvm::None,
-      //        values are mistakenly infered as `undef` now.
-      SimplifiedAssociatedValue = &getAssociatedValue();
+      SimplifiedAssociatedValue = llvm::None;
     }
     return true;
   }
