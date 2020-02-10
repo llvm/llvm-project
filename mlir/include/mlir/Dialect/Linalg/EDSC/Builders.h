@@ -13,17 +13,24 @@
 #ifndef MLIR_DIALECT_LINALG_EDSC_BUILDERS_H_
 #define MLIR_DIALECT_LINALG_EDSC_BUILDERS_H_
 
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+// TODO(ntv): Needed for SubViewOp::Range, clean this up.
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/Builders.h"
 
 namespace mlir {
+class AffineForOp;
 class BlockArgument;
+class SubViewOp;
+
+namespace loop {
+class ParallelOp;
+} // namespace loop
 
 namespace edsc {
+class AffineLoopNestBuilder;
+class ParallelLoopNestBuilder;
 
 /// A LoopRangeBuilder is a generic NestedBuilder for loop.for operations.
 /// More specifically it is meant to be used as a temporary object for
@@ -115,7 +122,6 @@ Operation *makeGenericLinalgOp(
 namespace ops {
 using edsc::StructuredIndexed;
 using edsc::ValueHandle;
-using edsc::intrinsics::linalg_yield;
 
 //===----------------------------------------------------------------------===//
 // EDSC builders for linalg generic operations.

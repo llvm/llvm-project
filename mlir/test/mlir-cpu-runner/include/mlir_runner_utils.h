@@ -261,23 +261,27 @@ template <typename T> void printMemRef(StridedMemRefType<T, 0> &M) {
 // Currently exposed C API.
 ////////////////////////////////////////////////////////////////////////////////
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_i8(UnrankedMemRefType<int8_t> *M);
+_mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_f32(UnrankedMemRefType<float> *M);
+_mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M);
+
+extern "C" MLIR_RUNNER_UTILS_EXPORT void print_memref_f32(int64_t rank,
+                                                          void *ptr);
 
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_0d_f32(StridedMemRefType<float, 0> *M);
+_mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_1d_f32(StridedMemRefType<float, 1> *M);
+_mlir_ciface_print_memref_1d_f32(StridedMemRefType<float, 1> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_2d_f32(StridedMemRefType<float, 2> *M);
+_mlir_ciface_print_memref_2d_f32(StridedMemRefType<float, 2> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_3d_f32(StridedMemRefType<float, 3> *M);
+_mlir_ciface_print_memref_3d_f32(StridedMemRefType<float, 3> *M);
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_4d_f32(StridedMemRefType<float, 4> *M);
+_mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M);
 
 extern "C" MLIR_RUNNER_UTILS_EXPORT void
-print_memref_vector_4x4xf32(StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
+_mlir_ciface_print_memref_vector_4x4xf32(
+    StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
 
 // Small runtime support "lib" for vector.print lowering.
 extern "C" MLIR_RUNNER_UTILS_EXPORT void print_f32(float f);

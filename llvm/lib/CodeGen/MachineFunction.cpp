@@ -863,7 +863,8 @@ try_next:;
 
 MachineFunction::CallSiteInfoMap::iterator
 MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->isCall() && "Call site info refers only to call instructions!");
+  assert(MI->isCandidateForCallSiteEntry() &&
+         "Call site info refers only to call (MI) candidates");
 
   if (!Target.Options.EnableDebugEntryValues)
     return CallSitesInfo.end();
@@ -872,7 +873,11 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
 
 void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
                                        const MachineInstr *New) {
-  assert(New->isCall() && "Call site info refers only to call instructions!");
+  assert(Old->isCandidateForCallSiteEntry() &&
+         "Call site info refers only to call (MI) candidates");
+
+  if (!New->isCandidateForCallSiteEntry())
+    return eraseCallSiteInfo(Old);
 
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
   if (CSIt == CallSitesInfo.end())
@@ -884,6 +889,8 @@ void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
 }
 
 void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
+  assert(MI->isCandidateForCallSiteEntry() &&
+         "Call site info refers only to call (MI) candidates");
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(MI);
   if (CSIt == CallSitesInfo.end())
     return;
@@ -892,7 +899,11 @@ void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
 
 void MachineFunction::copyCallSiteInfo(const MachineInstr *Old,
                                        const MachineInstr *New) {
-  assert(New->isCall() && "Call site info refers only to call instructions!");
+  assert(Old->isCandidateForCallSiteEntry() &&
+         "Call site info refers only to call (MI) candidates");
+
+  if (!New->isCandidateForCallSiteEntry())
+    return eraseCallSiteInfo(Old);
 
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
   if (CSIt == CallSitesInfo.end())

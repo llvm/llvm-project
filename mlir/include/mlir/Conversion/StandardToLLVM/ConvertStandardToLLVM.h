@@ -36,8 +36,8 @@ class LLVMType;
 
 /// Set of callbacks that allows the customization of LLVMTypeConverter.
 struct LLVMTypeConverterCustomization {
-  using CustomCallback =
-      std::function<LLVM::LLVMType(LLVMTypeConverter &, Type)>;
+  using CustomCallback = std::function<LogicalResult(LLVMTypeConverter &, Type,
+                                                     SmallVectorImpl<Type> &)>;
 
   /// Customize the type conversion of function arguments.
   CustomCallback funcArgConverter;
@@ -47,19 +47,26 @@ struct LLVMTypeConverterCustomization {
 };
 
 /// Callback to convert function argument types. It converts a MemRef function
-/// argument to a struct that contains the descriptor information. Converted
-/// types are promoted to a pointer to the converted type.
-LLVM::LLVMType structFuncArgTypeConverter(LLVMTypeConverter &converter,
-                                          Type type);
+/// argument to a list of non-aggregate types containing descriptor
+/// information, and an UnrankedmemRef function argument to a list containing
+/// the rank and a pointer to a descriptor struct.
+LogicalResult structFuncArgTypeConverter(LLVMTypeConverter &converter,
+                                         Type type,
+                                         SmallVectorImpl<Type> &result);
 
 /// Callback to convert function argument types. It converts MemRef function
-/// arguments to bare pointers to the MemRef element type. Converted types are
-/// not promoted to pointers.
-LLVM::LLVMType barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
-                                           Type type);
+/// arguments to bare pointers to the MemRef element type.
+LogicalResult barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
+                                          Type type,
+                                          SmallVectorImpl<Type> &result);
 
 /// Conversion from types in the Standard dialect to the LLVM IR dialect.
 class LLVMTypeConverter : public TypeConverter {
+  /// Give structFuncArgTypeConverter access to memref-specific functions.
+  friend LogicalResult
+  structFuncArgTypeConverter(LLVMTypeConverter &converter, Type type,
+                             SmallVectorImpl<Type> &result);
+
 public:
   using TypeConverter::convertType;
 
@@ -107,6 +114,15 @@ public:
   Value promoteOneMemRefDescriptor(Location loc, Value operand,
                                    OpBuilder &builder);
 
+  /// Converts the function type to a C-compatible format, in particular using
+  /// pointers to memref descriptors for arguments.
+  LLVM::LLVMType convertFunctionTypeCWrapper(FunctionType type);
+
+  /// Creates descriptor structs from individual values constituting them.
+  Operation *materializeConversion(PatternRewriter &rewriter, Type type,
+                                   ArrayRef<Value> values,
+                                   Location loc) override;
+
 protected:
   /// LLVM IR module used to parse/create types.
   llvm::Module *module;
@@ -133,13 +149,33 @@ private:
   // by LLVM.
   Type convertFloatType(FloatType type);
 
-  // Convert a memref type into an LLVM type that captures the relevant data.
-  // For statically-shaped memrefs, the resulting type is a pointer to the
-  // (converted) memref element type. For dynamically-shaped memrefs, the
-  // resulting type is an LLVM structure type that contains:
-  //   1. a pointer to the (converted) memref element type
-  //   2. as many index types as memref has dynamic dimensions.
+  /// Convert a memref type into an LLVM type that captures the relevant data.
   Type convertMemRefType(MemRefType type);
+
+  /// Convert a memref type into a list of non-aggregate LLVM IR types that
+  /// contain all the relevant data. In particular, the list will contain:
+  /// - two pointers to the memref element type, followed by
+  /// - an integer offset, followed by
+  /// - one integer size per dimension of the memref, followed by
+  /// - one integer stride per dimension of the memref.
+  /// For example, memref<?x?xf32> is converted to the following list:
+  /// - `!llvm<"float*">` (allocated pointer),
+  /// - `!llvm<"float*">` (aligned pointer),
+  /// - `!llvm.i64` (offset),
+  /// - `!llvm.i64`, `!llvm.i64` (sizes),
+  /// - `!llvm.i64`, `!llvm.i64` (strides).
+  /// These types can be recomposed to a memref descriptor struct.
+  SmallVector<Type, 5> convertMemRefSignature(MemRefType type);
+
+  /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
+  /// that contain all the relevant data. In particular, this list contains:
+  /// - an integer rank, followed by
+  /// - a pointer to the memref descriptor struct.
+  /// For example, memref<*xf32> is converted to the following list:
+  /// !llvm.i64 (rank)
+  /// !llvm<"i8*"> (type-erased pointer).
+  /// These types can be recomposed to a unranked memref descriptor struct.
+  SmallVector<Type, 2> convertUnrankedMemRefSignature();
 
   // Convert an unranked memref type to an LLVM type that captures the
   // runtime rank and a pointer to the static ranked memref desc
@@ -180,6 +216,7 @@ protected:
   /// Builds IR to set a value in the struct at position pos
   void setPtr(OpBuilder &builder, Location loc, unsigned pos, Value ptr);
 };
+
 /// Helper class to produce LLVM dialect operations extracting or inserting
 /// elements of a MemRef descriptor. Wraps a Value pointing to the descriptor.
 /// The Value may be null, in which case none of the operations are valid.
@@ -234,9 +271,61 @@ public:
   /// Returns the (LLVM) type this descriptor points to.
   LLVM::LLVMType getElementType();
 
+  /// Builds IR populating a MemRef descriptor structure from a list of
+  /// individual values composing that descriptor, in the following order:
+  /// - allocated pointer;
+  /// - aligned pointer;
+  /// - offset;
+  /// - <rank> sizes;
+  /// - <rank> shapes;
+  /// where <rank> is the MemRef rank as provided in `type`.
+  static Value pack(OpBuilder &builder, Location loc,
+                    LLVMTypeConverter &converter, MemRefType type,
+                    ValueRange values);
+
+  /// Builds IR extracting individual elements of a MemRef descriptor structure
+  /// and returning them as `results` list.
+  static void unpack(OpBuilder &builder, Location loc, Value packed,
+                     MemRefType type, SmallVectorImpl<Value> &results);
+
+  /// Returns the number of non-aggregate values that would be produced by
+  /// `unpack`.
+  static unsigned getNumUnpackedValues(MemRefType type);
+
 private:
   // Cached index type.
   Type indexType;
+};
+
+/// Helper class allowing the user to access a range of Values that correspond
+/// to an unpacked memref descriptor using named accessors. This does not own
+/// the values.
+class MemRefDescriptorView {
+public:
+  /// Constructs the view from a range of values. Infers the rank from the size
+  /// of the range.
+  explicit MemRefDescriptorView(ValueRange range);
+
+  /// Returns the allocated pointer Value.
+  Value allocatedPtr();
+
+  /// Returns the aligned pointer Value.
+  Value alignedPtr();
+
+  /// Returns the offset Value.
+  Value offset();
+
+  /// Returns the pos-th size Value.
+  Value size(unsigned pos);
+
+  /// Returns the pos-th stride Value.
+  Value stride(unsigned pos);
+
+private:
+  /// Rank of the memref the descriptor is pointing to.
+  int rank;
+  /// Underlying range of Values.
+  ValueRange elements;
 };
 
 class UnrankedMemRefDescriptor : public StructBuilder {
@@ -255,6 +344,23 @@ public:
   Value memRefDescPtr(OpBuilder &builder, Location loc);
   /// Builds IR setting ranked memref descriptor ptr
   void setMemRefDescPtr(OpBuilder &builder, Location loc, Value value);
+
+  /// Builds IR populating an unranked MemRef descriptor structure from a list
+  /// of individual constituent values in the following order:
+  /// - rank of the memref;
+  /// - pointer to the memref descriptor.
+  static Value pack(OpBuilder &builder, Location loc,
+                    LLVMTypeConverter &converter, UnrankedMemRefType type,
+                    ValueRange values);
+
+  /// Builds IR extracting individual elements that compose an unranked memref
+  /// descriptor and returns them as `results` list.
+  static void unpack(OpBuilder &builder, Location loc, Value packed,
+                     SmallVectorImpl<Value> &results);
+
+  /// Returns the number of non-aggregate values that would be produced by
+  /// `unpack`.
+  static unsigned getNumUnpackedValues() { return 2; }
 };
 /// Base class for operation conversions targeting the LLVM IR dialect. Provides
 /// conversion patterns with an access to the containing LLVMLowering for the

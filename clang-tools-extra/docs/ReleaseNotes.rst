@@ -81,12 +81,17 @@ New checks
   <clang-tidy/checks/bugprone-reserved-identifier>` check.
 
   Checks for usages of identifiers reserved for use by the implementation.
-  
+
 - New :doc:`cert-oop57-cpp
   <clang-tidy/checks/cert-oop57-cpp>` check.
-  
+
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
+
+- New :doc:`objc-dealloc-in-category
+  <clang-tidy/checks/objc-dealloc-in-category>` check.
+
+  Finds implementations of -dealloc in Objective-C categories.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -111,8 +116,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-redundant-string-init
   <clang-tidy/checks/readability-redundant-string-init>` check now supports a
-  `StringNames` option enabling its application to custom string classes. The 
-  check now detects in class initializers and constructor initializers which 
+  `StringNames` option enabling its application to custom string classes. The
+  check now detects in class initializers and constructor initializers which
   are deemed to be redundant.
 
 Renamed checks

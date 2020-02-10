@@ -163,6 +163,7 @@ public:
     ImmTyUNorm,
     ImmTyDA,
     ImmTyR128A16,
+    ImmTyA16,
     ImmTyLWE,
     ImmTyExpTgt,
     ImmTyExpCompr,
@@ -315,6 +316,7 @@ public:
   bool isUNorm() const { return isImmTy(ImmTyUNorm); }
   bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
+  bool isGFX10A16() const { return isImmTy(ImmTyA16); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
   bool isOff() const { return isImmTy(ImmTyOff); }
   bool isExpTgt() const { return isImmTy(ImmTyExpTgt); }
@@ -847,6 +849,7 @@ public:
     case ImmTyUNorm: OS << "UNorm"; break;
     case ImmTyDA: OS << "DA"; break;
     case ImmTyR128A16: OS << "R128A16"; break;
+    case ImmTyA16: OS << "A16"; break;
     case ImmTyLWE: OS << "LWE"; break;
     case ImmTyOff: OS << "Off"; break;
     case ImmTyExpTgt: OS << "ExpTgt"; break;
@@ -1155,6 +1158,10 @@ public:
 
   bool hasPackedD16() const {
     return AMDGPU::hasPackedD16(getSTI());
+  }
+
+  bool hasGFX10A16() const {
+    return AMDGPU::hasGFX10A16(getSTI());
   }
 
   bool isSI() const {
@@ -4650,9 +4657,9 @@ AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
       case AsmToken::Identifier: {
         StringRef Tok = Parser.getTok().getString();
         if (Tok == Name) {
-          if (Tok == "r128" && isGFX9())
+          if (Tok == "r128" && !hasMIMG_R128())
             Error(S, "r128 modifier is not supported on this GPU");
-          if (Tok == "a16" && !isGFX9() && !isGFX10())
+          if (Tok == "a16" && !isGFX9() && !hasGFX10A16())
             Error(S, "a16 modifier is not supported on this GPU");
           Bit = 1;
           Parser.Lex();
@@ -4671,6 +4678,9 @@ AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
 
   if (!isGFX10() && ImmTy == AMDGPUOperand::ImmTyDLC)
     return MatchOperand_ParseFail;
+
+  if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
+    ImmTy = AMDGPUOperand::ImmTyR128A16;
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Bit, S, ImmTy));
   return MatchOperand_Success;
@@ -5987,6 +5997,8 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
+  if (IsGFX10)
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyA16);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
   if (!IsGFX10)
@@ -6096,7 +6108,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"unorm",   AMDGPUOperand::ImmTyUNorm, true, nullptr},
   {"da",      AMDGPUOperand::ImmTyDA,    true, nullptr},
   {"r128",    AMDGPUOperand::ImmTyR128A16,  true, nullptr},
-  {"a16",     AMDGPUOperand::ImmTyR128A16,  true, nullptr},
+  {"a16",     AMDGPUOperand::ImmTyA16,  true, nullptr},
   {"lwe",     AMDGPUOperand::ImmTyLWE,   true, nullptr},
   {"d16",     AMDGPUOperand::ImmTyD16,   true, nullptr},
   {"dmask",   AMDGPUOperand::ImmTyDMask, false, nullptr},

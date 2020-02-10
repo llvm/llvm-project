@@ -51,8 +51,8 @@ built with a custom version of clang, do:
 
 ::
 
-   > cmake -DLLDB_TEST_USER_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
-   > ninja check-lldb
+   $ cmake -DLLDB_TEST_USER_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
+   $ ninja check-lldb
 
 Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
@@ -82,7 +82,7 @@ run as part of a test suite.
 
 ::
 
-   > ./bin/llvm-lit -sv tools/lldb/test --filter <test>
+   $ ./bin/llvm-lit -sv tools/lldb/test --filter <test>
 
 
 Because lit automatically scans a directory for tests, it's also possible to
@@ -90,7 +90,7 @@ pass a subdirectory to run a specific subset of the tests.
 
 ::
 
-   > ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
+   $ ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
 
 
 For the SB API tests it is possible to forward arguments to ``dotest.py`` by
@@ -98,7 +98,7 @@ passing ``--param`` to lit and setting a value for ``dotest-args``.
 
 ::
 
-   > ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
+   $ ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
 
 
 Below is an overview of running individual test in the unit and API test suites
@@ -119,12 +119,12 @@ For example, to run the test cases defined in TestInferiorCrashing.py, run:
 
 ::
 
-   > ./bin/lldb-dotest -p TestInferiorCrashing.py
+   $ ./bin/lldb-dotest -p TestInferiorCrashing.py
 
 ::
 
-   > cd $lldb/test
-   > python dotest.py --executable <path-to-lldb> -p TestInferiorCrashing.py ../packages/Python/lldbsuite/test
+   $ cd $lldb/test
+   $ python dotest.py --executable <path-to-lldb> -p TestInferiorCrashing.py ../packages/Python/lldbsuite/test
 
 If the test is not specified by name (e.g. if you leave the ``-p`` argument
 off),  all tests in that directory will be executed:
@@ -132,17 +132,17 @@ off),  all tests in that directory will be executed:
 
 ::
 
-   > ./bin/lldb-dotest functionalities/data-formatter
+   $ ./bin/lldb-dotest functionalities/data-formatter
 
 ::
 
-   > python dotest.py --executable <path-to-lldb> functionalities/data-formatter
+   $ python dotest.py --executable <path-to-lldb> functionalities/data-formatter
 
 Many more options that are available. To see a list of all of them, run:
 
 ::
 
-   > python dotest.py -h
+   $ python dotest.py -h
 
 
 Running a Specific Test or Set of Tests: Unit Tests
@@ -154,14 +154,14 @@ To run them, just run the test binary, for example, to run all the Host tests:
 
 ::
 
-   > ./tools/lldb/unittests/Host/HostTests
+   $ ./tools/lldb/unittests/Host/HostTests
 
 
 To run a specific test, pass a filter, for example:
 
 ::
 
-   > ./tools/lldb/unittests/Host/HostTests --gtest_filter=SocketTest.DomainListenConnectAccept
+   $ ./tools/lldb/unittests/Host/HostTests --gtest_filter=SocketTest.DomainListenConnectAccept
 
 
 Running the Test Suite Remotely

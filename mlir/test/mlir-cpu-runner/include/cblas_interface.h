@@ -25,33 +25,34 @@
 #endif // _WIN32
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_fill_viewf32_f32(StridedMemRefType<float, 0> *X, float f);
+_mlir_ciface_linalg_fill_viewf32_f32(StridedMemRefType<float, 0> *X, float f);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_fill_viewsxf32_f32(StridedMemRefType<float, 1> *X, float f);
+_mlir_ciface_linalg_fill_viewsxf32_f32(StridedMemRefType<float, 1> *X, float f);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_fill_viewsxsxf32_f32(StridedMemRefType<float, 2> *X, float f);
+_mlir_ciface_linalg_fill_viewsxsxf32_f32(StridedMemRefType<float, 2> *X,
+                                         float f);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_copy_viewf32_viewf32(StridedMemRefType<float, 0> *I,
-                            StridedMemRefType<float, 0> *O);
+_mlir_ciface_linalg_copy_viewf32_viewf32(StridedMemRefType<float, 0> *I,
+                                         StridedMemRefType<float, 0> *O);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_copy_viewsxf32_viewsxf32(StridedMemRefType<float, 1> *I,
-                                StridedMemRefType<float, 1> *O);
+_mlir_ciface_linalg_copy_viewsxf32_viewsxf32(StridedMemRefType<float, 1> *I,
+                                             StridedMemRefType<float, 1> *O);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_copy_viewsxsxf32_viewsxsxf32(StridedMemRefType<float, 2> *I,
-                                    StridedMemRefType<float, 2> *O);
+_mlir_ciface_linalg_copy_viewsxsxf32_viewsxsxf32(
+    StridedMemRefType<float, 2> *I, StridedMemRefType<float, 2> *O);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_dot_viewsxf32_viewsxf32_viewf32(StridedMemRefType<float, 1> *X,
-                                       StridedMemRefType<float, 1> *Y,
-                                       StridedMemRefType<float, 0> *Z);
+_mlir_ciface_linalg_dot_viewsxf32_viewsxf32_viewf32(
+    StridedMemRefType<float, 1> *X, StridedMemRefType<float, 1> *Y,
+    StridedMemRefType<float, 0> *Z);
 
 extern "C" MLIR_CBLAS_INTERFACE_EXPORT void
-linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
+_mlir_ciface_linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
     StridedMemRefType<float, 2> *A, StridedMemRefType<float, 2> *B,
     StridedMemRefType<float, 2> *C);
 

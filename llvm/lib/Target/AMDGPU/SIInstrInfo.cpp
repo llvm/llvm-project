@@ -3742,11 +3742,34 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
 
+      bool IsA16 = false;
+      if (ST.hasR128A16()) {
+        const MachineOperand *R128A16 = getNamedOperand(MI, AMDGPU::OpName::r128);
+        IsA16 = R128A16->getImm() != 0;
+      } else if (ST.hasGFX10A16()) {
+        const MachineOperand *A16 = getNamedOperand(MI, AMDGPU::OpName::a16);
+        IsA16 = A16->getImm() != 0;
+      }
+
+      bool PackDerivatives = IsA16; // Either A16 or G16
       bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
-      unsigned AddrWords = BaseOpcode->NumExtraArgs +
-                           (BaseOpcode->Gradients ? Dim->NumGradients : 0) +
-                           (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
-                           (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+
+      unsigned AddrWords = BaseOpcode->NumExtraArgs;
+      unsigned AddrComponents = (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
+                                (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+      if (IsA16)
+        AddrWords += (AddrComponents + 1) / 2;
+      else
+        AddrWords += AddrComponents;
+
+      if (BaseOpcode->Gradients) {
+        if (PackDerivatives)
+          // There are two gradients per coordinate, we pack them separately.
+          // For the 3d case, we get (dy/du, dx/du) (-, dz/du) (dy/dv, dx/dv) (-, dz/dv)
+          AddrWords += (Dim->NumGradients / 2 + 1) / 2 * 2;
+        else
+          AddrWords += Dim->NumGradients;
+      }
 
       unsigned VAddrWords;
       if (IsNSA) {
@@ -3758,11 +3781,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
           AddrWords = 16;
         else if (AddrWords > 4)
           AddrWords = 8;
-        else if (AddrWords == 3 && VAddrWords == 4) {
-          // CodeGen uses the V4 variant of instructions for three addresses,
-          // because the selection DAG does not support non-power-of-two types.
+        else if (AddrWords == 4)
           AddrWords = 4;
-        }
+        else if (AddrWords == 3)
+          AddrWords = 3;
       }
 
       if (VAddrWords != AddrWords) {

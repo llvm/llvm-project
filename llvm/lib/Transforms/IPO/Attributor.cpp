@@ -2496,13 +2496,29 @@ struct AANoAliasFloating final : AANoAliasImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoAliasImpl::initialize(A);
-    Value &Val = getAssociatedValue();
+    Value *Val = &getAssociatedValue();
+    do {
+      CastInst *CI = dyn_cast<CastInst>(Val);
+      if (!CI)
+        break;
+      Value *Base = CI->getOperand(0);
+      if (Base->getNumUses() != 1)
+        break;
+      Val = Base;
+    } while (true);
+
     if (isa<AllocaInst>(Val))
       indicateOptimisticFixpoint();
     else if (isa<ConstantPointerNull>(Val) &&
              !NullPointerIsDefined(getAnchorScope(),
-                                   Val.getType()->getPointerAddressSpace()))
+                                   Val->getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
+    else if (Val != &getAssociatedValue()) {
+      const auto &ValNoAliasAA =
+          A.getAAFor<AANoAlias>(*this, IRPosition::value(*Val));
+      if (ValNoAliasAA.isKnownNoAlias())
+        indicateOptimisticFixpoint();
+    }
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -4408,9 +4424,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       else
         return false;
     } else {
-      // FIXME: It should be llvm::None but if you set llvm::None,
-      //        values are mistakenly infered as `undef` now.
-      SimplifiedAssociatedValue = &getAssociatedValue();
+      SimplifiedAssociatedValue = llvm::None;
     }
     return true;
   }
@@ -6153,7 +6167,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    AAValueConstantRange::initialize(A);
+    AAValueConstantRangeImpl::initialize(A);
     Value &V = getAssociatedValue();
 
     if (auto *C = dyn_cast<ConstantInt>(&V)) {
@@ -6183,6 +6197,17 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         return;
       }
 
+    // We handle casts in the updateImpl.
+    // TODO: Allow non integers as well.
+    if (CastInst *CI = dyn_cast<CastInst>(&V))
+      if (CI->getOperand(0)->getType()->isIntegerTy())
+        return;
+
+    // We can work with PHI and select instruction as we traverse their operands
+    // during update.
+    if (isa<SelectInst>(V) || isa<PHINode>(V))
+      return;
+
     // Otherwise we give up.
     indicatePessimisticFixpoint();
 
@@ -6190,17 +6215,21 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
                       << getAssociatedValue() << "\n");
   }
 
-  bool calculateBinaryOperator(Attributor &A, BinaryOperator *BinOp,
-                               IntegerRangeState &T, Instruction *CtxI) {
+  bool calculateBinaryOperator(
+      Attributor &A, BinaryOperator *BinOp, IntegerRangeState &T,
+      Instruction *CtxI,
+      SmallVectorImpl<const AAValueConstantRange *> &QuerriedAAs) {
     Value *LHS = BinOp->getOperand(0);
     Value *RHS = BinOp->getOperand(1);
 
     auto &LHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));
+    QuerriedAAs.push_back(&LHSAA);
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
 
     auto &RHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*RHS));
+    QuerriedAAs.push_back(&RHSAA);
     auto RHSAARange = RHSAA.getAssumedConstantRange(A, CtxI);
 
     auto AssumedRange = LHSAARange.binaryOp(BinOp->getOpcode(), RHSAARange);
@@ -6212,15 +6241,35 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     return T.isValidState();
   }
 
-  bool calculateCmpInst(Attributor &A, CmpInst *CmpI, IntegerRangeState &T,
-                        Instruction *CtxI) {
+  bool calculateCastInst(
+      Attributor &A, CastInst *CastI, IntegerRangeState &T, Instruction *CtxI,
+      SmallVectorImpl<const AAValueConstantRange *> &QuerriedAAs) {
+    assert(CastI->getNumOperands() == 1 && "Expected cast to be unary!");
+    // TODO: Allow non integers as well.
+    Value &OpV = *CastI->getOperand(0);
+    assert(OpV.getType()->isIntegerTy() && "Expected integer cast");
+
+    auto &OpAA =
+        A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV));
+    QuerriedAAs.push_back(&OpAA);
+    T.unionAssumed(
+        OpAA.getAssumed().castOp(CastI->getOpcode(), getState().getBitWidth()));
+    return T.isValidState();
+  }
+
+  bool
+  calculateCmpInst(Attributor &A, CmpInst *CmpI, IntegerRangeState &T,
+                   Instruction *CtxI,
+                   SmallVectorImpl<const AAValueConstantRange *> &QuerriedAAs) {
     Value *LHS = CmpI->getOperand(0);
     Value *RHS = CmpI->getOperand(1);
 
     auto &LHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));
+    QuerriedAAs.push_back(&LHSAA);
     auto &RHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*RHS));
+    QuerriedAAs.push_back(&RHSAA);
 
     auto LHSAARange = LHSAA.getAssumedConstantRange(A, CtxI);
     auto RHSAARange = RHSAA.getAssumedConstantRange(A, CtxI);
@@ -6278,17 +6327,37 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
         return T.isValidState();
       }
 
-      if (auto *BinOp = dyn_cast<BinaryOperator>(I))
-        return calculateBinaryOperator(A, BinOp, T, CtxI);
-      else if (auto *CmpI = dyn_cast<CmpInst>(I))
-        return calculateCmpInst(A, CmpI, T, CtxI);
-      else {
+      SmallVector<const AAValueConstantRange *, 4> QuerriedAAs;
+      if (auto *BinOp = dyn_cast<BinaryOperator>(I)) {
+        if (!calculateBinaryOperator(A, BinOp, T, CtxI, QuerriedAAs))
+          return false;
+      } else if (auto *CmpI = dyn_cast<CmpInst>(I)) {
+        if (!calculateCmpInst(A, CmpI, T, CtxI, QuerriedAAs))
+          return false;
+      } else if (auto *CastI = dyn_cast<CastInst>(I)) {
+        if (!calculateCastInst(A, CastI, T, CtxI, QuerriedAAs))
+          return false;
+      } else {
         // Give up with other instructions.
         // TODO: Add other instructions
 
         T.indicatePessimisticFixpoint();
         return false;
       }
+
+      // Catch circular reasoning in a pessimistic way for now.
+      // TODO: Check how the range evolves and if we stripped anything, see also
+      //       AADereferenceable or AAAlign for similar situations.
+      for (const AAValueConstantRange *QueriedAA : QuerriedAAs) {
+        if (QueriedAA != this)
+          continue;
+        // If we are in a stady state we do not need to worry.
+        if (T.getAssumed() == getState().getAssumed())
+          continue;
+        T.indicatePessimisticFixpoint();
+      }
+
+      return T.isValidState();
     };
 
     IntegerRangeState T(getBitWidth());

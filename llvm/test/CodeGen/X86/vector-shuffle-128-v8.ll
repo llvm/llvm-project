@@ -2501,12 +2501,12 @@ define <8 x i16> @shuffle_v8i16_12305674(<8 x i16> %a) {
 ;
 ; AVX512VL-LABEL: shuffle_v8i16_12305674:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vprolq $16, %xmm0, %xmm0
+; AVX512VL-NEXT:    vprolq $48, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_12305674:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vprotq $16, %xmm0, %xmm0
+; XOP-NEXT:    vprotq $48, %xmm0, %xmm0
 ; XOP-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4>
   ret <8 x i16> %shuffle

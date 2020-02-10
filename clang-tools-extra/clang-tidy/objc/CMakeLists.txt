@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyObjCModule
   AvoidNSErrorInitCheck.cpp
+  DeallocInCategoryCheck.cpp
   ForbiddenSubclassingCheck.cpp
   MissingHashCheck.cpp
   ObjCTidyModule.cpp

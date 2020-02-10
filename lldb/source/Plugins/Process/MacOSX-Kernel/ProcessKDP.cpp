@@ -50,7 +50,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ProcessKDP);
+LLDB_PLUGIN(ProcessKDP)
 
 namespace {
 

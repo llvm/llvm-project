@@ -29,7 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(InstrumentationRuntimeMainThreadChecker);
+LLDB_PLUGIN(InstrumentationRuntimeMainThreadChecker)
 
 InstrumentationRuntimeMainThreadChecker::
     ~InstrumentationRuntimeMainThreadChecker() {

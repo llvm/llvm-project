@@ -36,7 +36,7 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x2ec %t-malformed.o 2> %t-malformed-off-last.err \
+# RUN: llvm-dwarfdump -debug-line=0x332 %t-malformed.o 2> %t-malformed-off-last.err \
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
@@ -143,14 +143,22 @@
 
 ## Case 12: V5 invalid MD5 hash form when data beyond the prologue length has
 ## been read before the MD5 problem is identified.
-# NONFATAL: debug_line[0x000002ae]
+# NONFATAL:      debug_line[0x000002ae]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
 # NONFATAL:      0x0000000000000000 {{.*}} epilogue_begin
 # NONFATAL:      0x4321432143214321 {{.*}} is_stmt end_sequence
 
-# LAST:          debug_line[0x000002ec]
+## Case 13: V5 invalid directory content description has unsupported form.
+# NONFATAL:      debug_line[0x000002ec]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL:      include_directories[  0] = "/foo"
+# NONFATAL-NOT:  include_directories
+# NONFATAL-NOT:  file_names
+# NONFATAL:      0xaaaabbbbccccdddd {{.*}} is_stmt end_sequence
+
+# LAST:          debug_line[0x00000332]
 # LAST:          0x00000000cafebabe {{.*}} end_sequence
 
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
@@ -173,4 +181,6 @@
 # ALL-NEXT: warning: parsing line table prologue at 0x000002ae found an invalid directory or file table description at 0x000002e0
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 # ALL-NEXT: warning: parsing line table prologue at 0x000002ae should have ended at 0x000002d9 but it ended at 0x000002e0
+# ALL-NEXT: warning: parsing line table prologue at 0x000002ec found an invalid directory or file table description at 0x00000315
+# ALL-NEXT: warning: failed to parse directory entry because skipping the form value failed.
 # ALL-NOT:  warning:

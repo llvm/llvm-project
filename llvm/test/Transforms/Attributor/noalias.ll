@@ -40,6 +40,13 @@ define i8* @return_noalias_looks_like_capture(){
   ret i8* %1
 }
 
+; CHECK: define noalias i16* @return_noalias_casted()
+define i16* @return_noalias_casted(){
+  %1 = tail call noalias i8* @malloc(i64 4)
+  %c = bitcast i8* %1 to i16*
+  ret i16* %c
+}
+
 declare i8* @alias()
 
 ; TEST 3
@@ -294,3 +301,31 @@ define void @test12_4(){
   tail call void @two_args(i8* %A_0, i8* %B_0)
   ret void
 }
+
+; TEST 13
+define void @use_i8_internal(i8* %a) {
+  call void @use_i8(i8* %a)
+  ret void
+}
+
+define void @test13_use_noalias(){
+  %m1 = tail call noalias i8* @malloc(i64 4)
+  %c1 = bitcast i8* %m1 to i16*
+  %c2 = bitcast i16* %c1 to i8*
+; CHECK: call void @use_i8_internal(i8* noalias nocapture %c2)
+  call void @use_i8_internal(i8* %c2)
+  ret void
+}
+
+define void @test13_use_alias(){
+  %m1 = tail call noalias i8* @malloc(i64 4)
+  %c1 = bitcast i8* %m1 to i16*
+  %c2a = bitcast i16* %c1 to i8*
+  %c2b = bitcast i16* %c1 to i8*
+; CHECK: call void @use_i8_internal(i8* nocapture %c2a)
+; CHECK: call void @use_i8_internal(i8* nocapture %c2b)
+  call void @use_i8_internal(i8* %c2a)
+  call void @use_i8_internal(i8* %c2b)
+  ret void
+}
+

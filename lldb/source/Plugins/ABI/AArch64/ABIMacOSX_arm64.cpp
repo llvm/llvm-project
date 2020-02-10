@@ -33,7 +33,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABIMacOSX_arm64);
+LLDB_PLUGIN(ABIMacOSX_arm64)
 
 static const char *pluginDesc = "Mac OS X ABI for arm64 targets";
 

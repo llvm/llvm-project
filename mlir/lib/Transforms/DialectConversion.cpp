@@ -401,8 +401,7 @@ Block *ArgConverter::applySignatureConversion(
     auto replArgs = newArgs.slice(inputMap->inputNo, inputMap->size);
     Operation *cast = typeConverter->materializeConversion(
         rewriter, origArg.getType(), replArgs, loc);
-    assert(cast->getNumResults() == 1 &&
-           cast->getNumOperands() == replArgs.size());
+    assert(cast->getNumResults() == 1);
     mapping.map(origArg, cast->getResult(0));
     info.argInfo[i] =
         ConvertedArgInfo(inputMap->inputNo, inputMap->size, cast->getResult(0));

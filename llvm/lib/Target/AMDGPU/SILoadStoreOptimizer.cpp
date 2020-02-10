@@ -686,7 +686,8 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   // Check other optional immediate operands for equality.
   unsigned OperandsToMatch[] = {AMDGPU::OpName::glc, AMDGPU::OpName::slc,
                                 AMDGPU::OpName::d16, AMDGPU::OpName::unorm,
-                                AMDGPU::OpName::da,  AMDGPU::OpName::r128};
+                                AMDGPU::OpName::da,  AMDGPU::OpName::r128,
+                                AMDGPU::OpName::a16};
 
   for (auto op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);

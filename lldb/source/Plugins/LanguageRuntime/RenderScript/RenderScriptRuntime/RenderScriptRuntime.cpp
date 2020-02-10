@@ -46,7 +46,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_renderscript;
 
-LLDB_PLUGIN(RenderScriptRuntime);
+LLDB_PLUGIN(RenderScriptRuntime)
 
 #define FMT_COORD "(%" PRIu32 ", %" PRIu32 ", %" PRIu32 ")"
 

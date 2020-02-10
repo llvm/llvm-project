@@ -42,6 +42,10 @@ private:
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
 
+  /// \returns the sub reg enum value for the given \p Channel
+  /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
+  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
+
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
   }

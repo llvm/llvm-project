@@ -11681,7 +11681,7 @@ static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
         continue;
       if (!isInRange(M, i, i + NumSubElts))
         return -1;
-      int Offset = ((M - i) + (NumSubElts - j)) % NumSubElts;
+      int Offset = (NumSubElts - (M - (i + j))) % NumSubElts;
       if (0 <= RotateAmt && Offset != RotateAmt)
         return -1;
       RotateAmt = Offset;
@@ -11702,7 +11702,9 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   assert(EltSizeInBits < 64 && "Can't rotate 64-bit integers");
 
   // Only XOP + AVX512 targets have bit rotation instructions.
-  if (!((VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512()))
+  bool IsLegal =
+      (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
+  if (!IsLegal)
     return SDValue();
 
   // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
@@ -11712,10 +11714,10 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
     int RotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
     if (RotateAmt < 0)
       continue;
+    int RotateAmtInBits = RotateAmt * EltSizeInBits;
     int NumElts = VT.getVectorNumElements();
     MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
     MVT RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
-    int RotateAmtInBits = RotateAmt * EltSizeInBits;
     SDValue Rot =
         DAG.getNode(ISD::ROTL, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
                     DAG.getConstant(RotateAmtInBits, DL, RotateVT));
@@ -45878,6 +45880,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                       TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget) {
   assert(Subtarget.hasAVX() && "AVX assumed for concat_vectors");
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   if (llvm::all_of(Ops, [](SDValue Op) { return Op.isUndef(); }))
     return DAG.getUNDEF(VT);
@@ -45922,7 +45925,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // concat_vectors(scalar_to_vector(x),scalar_to_vector(x)) -> broadcast(x)
     if (Op0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
         (Subtarget.hasAVX2() ||
-         (VT.getScalarSizeInBits() >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
+         (EltSizeInBits >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
   }
@@ -45963,6 +45966,24 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getBitcast(VT, Res);
       }
       break;
+    case X86ISD::VSHLI:
+    case X86ISD::VSRAI:
+    case X86ISD::VSRLI:
+      if (((VT.is256BitVector() && Subtarget.hasInt256()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(1) == Op.getOperand(1);
+          })) {
+        SmallVector<SDValue, 2> Src;
+        for (unsigned i = 0; i != NumOps; ++i)
+          Src.push_back(Ops[i].getOperand(0));
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src),
+                           Op0.getOperand(1));
+      }
+      break;
+    case X86ISD::VPERMI:
     case X86ISD::VROTLI:
     case X86ISD::VROTRI:
       if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
@@ -45977,8 +45998,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            Op0.getOperand(1));
       }
       break;
+    case X86ISD::PACKSS:
     case X86ISD::PACKUS:
-      if (NumOps == 2 && VT.is256BitVector() && Subtarget.hasInt256()) {
+      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
+          Subtarget.hasInt256()) {
         SmallVector<SDValue, 2> LHS, RHS;
         for (unsigned i = 0; i != NumOps; ++i) {
           LHS.push_back(Ops[i].getOperand(0));

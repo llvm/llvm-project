@@ -90,26 +90,27 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
       return launchOp.emitOpError("kernel function is missing the '")
              << GPUDialect::getKernelFuncAttrName() << "' attribute";
 
+    // TODO(ntv,zinenko,herhut): if the kernel function has been converted to
+    // the LLVM dialect but the caller hasn't (which happens during the
+    // separate compilation), do not check type correspondance as it would
+    // require the verifier to be aware of the LLVM type conversion.
+    if (kernelLLVMFunction)
+      return success();
+
     unsigned actualNumArguments = launchOp.getNumKernelOperands();
-    unsigned expectedNumArguments = kernelLLVMFunction
-                                        ? kernelLLVMFunction.getNumArguments()
-                                        : kernelGPUFunction.getNumArguments();
+    unsigned expectedNumArguments = kernelGPUFunction.getNumArguments();
     if (expectedNumArguments != actualNumArguments)
       return launchOp.emitOpError("got ")
              << actualNumArguments << " kernel operands but expected "
              << expectedNumArguments;
 
-    // Due to the ordering of the current impl of lowering and LLVMLowering,
-    // type checks need to be temporarily disabled.
-    // TODO(ntv,zinenko,herhut): reactivate checks once "changing gpu.launchFunc
-    // to encode target module" has landed.
-    // auto functionType = kernelFunc.getType();
-    // for (unsigned i = 0; i < numKernelFuncArgs; ++i) {
-    //   if (getKernelOperand(i).getType() != functionType.getInput(i)) {
-    //     return emitOpError("type of function argument ")
-    //            << i << " does not match";
-    //   }
-    // }
+    auto functionType = kernelGPUFunction.getType();
+    for (unsigned i = 0; i < expectedNumArguments; ++i) {
+      if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
+        return launchOp.emitOpError("type of function argument ")
+               << i << " does not match";
+      }
+    }
 
     return success();
   });

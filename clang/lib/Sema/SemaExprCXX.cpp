@@ -201,11 +201,9 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
 
     if (TypeDecl *Type = Found.getAsSingle<TypeDecl>()) {
       QualType T = Context.getTypeDeclType(Type);
-      MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-
       if (SearchType.isNull() || SearchType->isDependentType() ||
           Context.hasSameUnqualifiedType(T, SearchType)) {
-        // We found our type!
+        MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
         return CreateParsedType(T,
                                 Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
@@ -222,7 +220,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
 
     IsDependent |= SearchType->isDependentType();
 
-    LookupResult Found(*this, &II, NameLoc, LookupOrdinaryName);
+    LookupResult Found(*this, &II, NameLoc, LookupDestructorName);
     DeclContext *LookupCtx = computeDeclContext(SearchType);
     if (!LookupCtx)
       return nullptr;
@@ -239,7 +237,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
     if (!LookupCtx)
       return nullptr;
 
-    LookupResult Found(*this, &II, NameLoc, LookupOrdinaryName);
+    LookupResult Found(*this, &II, NameLoc, LookupDestructorName);
     if (RequireCompleteDeclContext(LookupSS, LookupCtx)) {
       Failed = true;
       return nullptr;
@@ -252,7 +250,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
     if (Failed || !S)
       return nullptr;
 
-    LookupResult Found(*this, &II, NameLoc, LookupOrdinaryName);
+    LookupResult Found(*this, &II, NameLoc, LookupDestructorName);
     LookupName(Found, S);
     return CheckLookupResult(Found);
   };

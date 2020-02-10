@@ -7100,14 +7100,14 @@ define <16 x i16> @shuffle_v16i16_03_00_01_02_07_04_05_06_11_08_09_10_15_12_13_1
 ;
 ; AVX512VL-LABEL: shuffle_v16i16_03_00_01_02_07_04_05_06_11_08_09_10_15_12_13_14:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vprolq $48, %ymm0, %ymm0
+; AVX512VL-NEXT:    vprolq $16, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: shuffle_v16i16_03_00_01_02_07_04_05_06_11_08_09_10_15_12_13_14:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vprotq $48, %xmm0, %xmm1
+; XOPAVX1-NEXT:    vprotq $16, %xmm0, %xmm1
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; XOPAVX1-NEXT:    vprotq $48, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vprotq $16, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;

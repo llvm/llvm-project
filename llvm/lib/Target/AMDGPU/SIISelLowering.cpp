@@ -3303,7 +3303,7 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
   if (Offset >= NumElts || Offset < 0)
     return std::make_pair(AMDGPU::sub0, Offset);
 
-  return std::make_pair(AMDGPURegisterInfo::getSubRegFromChannel(Offset), 0);
+  return std::make_pair(SIRegisterInfo::getSubRegFromChannel(Offset), 0);
 }
 
 // Return true if the index is an SGPR and was set.
@@ -5401,7 +5401,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const MVT VAddrScalarVT = VAddrVT.getScalarType();
   if (((VAddrScalarVT == MVT::f16) || (VAddrScalarVT == MVT::i16))) {
     // Illegal to use a16 images
-    if (!ST->hasFeature(AMDGPU::FeatureR128A16))
+    if (!ST->hasFeature(AMDGPU::FeatureR128A16) && !ST->hasFeature(AMDGPU::FeatureGFX10A16))
       return Op;
 
     IsA16 = true;
@@ -5546,10 +5546,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(DLC);
   Ops.push_back(GLC);
   Ops.push_back(SLC);
-  Ops.push_back(IsA16 &&  // a16 or r128
+  Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
-  Ops.push_back(TFE); // tfe
-  Ops.push_back(LWE); // lwe
+  if (IsGFX10)
+    Ops.push_back(IsA16 ? True : False);
+  Ops.push_back(TFE);
+  Ops.push_back(LWE);
   if (!IsGFX10)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
@@ -5805,29 +5807,23 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
-  case Intrinsic::r600_read_tgid_x:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
   case Intrinsic::amdgcn_workgroup_id_y:
-  case Intrinsic::r600_read_tgid_y:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_workgroup_id_z:
-  case Intrinsic::r600_read_tgid_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_workitem_id_x:
-  case Intrinsic::r600_read_tidig_x:
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDX);
   case Intrinsic::amdgcn_workitem_id_y:
-  case Intrinsic::r600_read_tidig_y:
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDY);
   case Intrinsic::amdgcn_workitem_id_z:
-  case Intrinsic::r600_read_tidig_z:
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
