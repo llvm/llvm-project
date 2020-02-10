@@ -2,6 +2,7 @@ set(LIBS
 
   MLIREDSC
   MLIRIR
+  MLIRAffineOps
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
