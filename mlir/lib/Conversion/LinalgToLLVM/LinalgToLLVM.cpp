@@ -16,8 +16,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -47,24 +46,22 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::LLVM;
 using namespace mlir::linalg;
 
-using add = ValueBuilder<mlir::LLVM::AddOp>;
-using addi = ValueBuilder<mlir::AddIOp>;
-using bitcast = ValueBuilder<mlir::LLVM::BitcastOp>;
-using cmpi = ValueBuilder<mlir::CmpIOp>;
-using constant = ValueBuilder<mlir::LLVM::ConstantOp>;
-using extractvalue = ValueBuilder<mlir::LLVM::ExtractValueOp>;
-using gep = ValueBuilder<mlir::LLVM::GEPOp>;
-using insertvalue = ValueBuilder<mlir::LLVM::InsertValueOp>;
-using llvm_call = OperationBuilder<mlir::LLVM::CallOp>;
+using llvm_add = ValueBuilder<LLVM::AddOp>;
+using llvm_bitcast = ValueBuilder<LLVM::BitcastOp>;
+using llvm_constant = ValueBuilder<LLVM::ConstantOp>;
+using llvm_extractvalue = ValueBuilder<LLVM::ExtractValueOp>;
+using llvm_gep = ValueBuilder<LLVM::GEPOp>;
+using llvm_insertvalue = ValueBuilder<LLVM::InsertValueOp>;
+using llvm_call = OperationBuilder<LLVM::CallOp>;
 using llvm_icmp = ValueBuilder<LLVM::ICmpOp>;
 using llvm_load = ValueBuilder<LLVM::LoadOp>;
 using llvm_store = OperationBuilder<LLVM::StoreOp>;
 using llvm_select = ValueBuilder<LLVM::SelectOp>;
-using mul = ValueBuilder<mlir::LLVM::MulOp>;
-using ptrtoint = ValueBuilder<mlir::LLVM::PtrToIntOp>;
-using sub = ValueBuilder<mlir::LLVM::SubOp>;
-using llvm_undef = ValueBuilder<mlir::LLVM::UndefOp>;
-using urem = ValueBuilder<mlir::LLVM::URemOp>;
+using llvm_mul = ValueBuilder<LLVM::MulOp>;
+using llvm_ptrtoint = ValueBuilder<LLVM::PtrToIntOp>;
+using llvm_sub = ValueBuilder<LLVM::SubOp>;
+using llvm_undef = ValueBuilder<LLVM::UndefOp>;
+using llvm_urem = ValueBuilder<LLVM::URemOp>;
 using llvm_alloca = ValueBuilder<LLVM::AllocaOp>;
 using llvm_return = OperationBuilder<LLVM::ReturnOp>;
 
@@ -156,9 +153,9 @@ public:
     // Fill in an aggregate value of the descriptor.
     RangeOpOperandAdaptor adaptor(operands);
     Value desc = llvm_undef(rangeDescriptorTy);
-    desc = insertvalue(desc, adaptor.min(), rewriter.getI64ArrayAttr(0));
-    desc = insertvalue(desc, adaptor.max(), rewriter.getI64ArrayAttr(1));
-    desc = insertvalue(desc, adaptor.step(), rewriter.getI64ArrayAttr(2));
+    desc = llvm_insertvalue(desc, adaptor.min(), rewriter.getI64ArrayAttr(0));
+    desc = llvm_insertvalue(desc, adaptor.max(), rewriter.getI64ArrayAttr(1));
+    desc = llvm_insertvalue(desc, adaptor.step(), rewriter.getI64ArrayAttr(2));
     rewriter.replaceOp(op, desc);
     return matchSuccess();
   }
@@ -249,8 +246,8 @@ public:
       Value indexing = adaptor.indexings()[i];
       Value min = indexing;
       if (sliceOp.indexing(i).getType().isa<RangeType>())
-        min = extractvalue(int64Ty, indexing, pos(0));
-      baseOffset = add(baseOffset, mul(min, strides[i]));
+        min = llvm_extractvalue(int64Ty, indexing, pos(0));
+      baseOffset = llvm_add(baseOffset, llvm_mul(min, strides[i]));
     }
 
     // Insert the base and aligned pointers.
@@ -264,8 +261,8 @@ public:
     if (sliceOp.getShapedType().getRank() == 0)
       return rewriter.replaceOp(op, {desc}), matchSuccess();
 
-    Value zero =
-        constant(int64Ty, rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
+    Value zero = llvm_constant(
+        int64Ty, rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
     // Compute and insert view sizes (max - min along the range) and strides.
     // Skip the non-range operands as they will be projected away from the view.
     int numNewDims = 0;
@@ -274,19 +271,19 @@ public:
       if (indexing.getType().isa<RangeType>()) {
         int rank = en.index();
         Value rangeDescriptor = adaptor.indexings()[rank];
-        Value min = extractvalue(int64Ty, rangeDescriptor, pos(0));
-        Value max = extractvalue(int64Ty, rangeDescriptor, pos(1));
-        Value step = extractvalue(int64Ty, rangeDescriptor, pos(2));
+        Value min = llvm_extractvalue(int64Ty, rangeDescriptor, pos(0));
+        Value max = llvm_extractvalue(int64Ty, rangeDescriptor, pos(1));
+        Value step = llvm_extractvalue(int64Ty, rangeDescriptor, pos(2));
         Value baseSize = baseDesc.size(rank);
 
         // Bound upper by base view upper bound.
         max = llvm_select(llvm_icmp(ICmpPredicate::slt, max, baseSize), max,
                           baseSize);
-        Value size = sub(max, min);
+        Value size = llvm_sub(max, min);
         // Bound lower by zero.
         size =
             llvm_select(llvm_icmp(ICmpPredicate::slt, size, zero), zero, size);
-        Value stride = mul(strides[rank], step);
+        Value stride = llvm_mul(strides[rank], step);
         desc.setSize(numNewDims, size);
         desc.setStride(numNewDims, stride);
         ++numNewDims;
@@ -450,8 +447,7 @@ public:
 
 /// Conversion pattern specialization for CopyOp. This kicks in when both input
 /// and output permutations are left unspecified or are the identity.
-template <>
-class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
+template <> class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
 public:
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 

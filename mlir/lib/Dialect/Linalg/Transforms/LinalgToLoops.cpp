@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/EDSC/Builders.h"
+#include "mlir/Dialect/AffineOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/LinalgTransforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
-#include "mlir/EDSC/Helpers.h"
+#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -30,9 +29,6 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-
-using IndexedStdValue = TemplatedIndexedValue<std_load, std_store>;
-using IndexedAffineValue = TemplatedIndexedValue<affine_load, affine_store>;
 
 using edsc::op::operator+;
 using edsc::op::operator==;
@@ -77,7 +73,7 @@ SmallVector<Value, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   SmallVector<Value, 4> res;
   for (unsigned idx = 0, e = map.getNumResults(); idx < e; ++idx) {
     res.push_back(
-        linalg_range(constant_index(0), sizes[idx], constant_index(1)));
+        linalg_range(std_constant_index(0), sizes[idx], std_constant_index(1)));
   }
   return res;
 }
@@ -98,8 +94,8 @@ public:
         permuteIvs(allIvs.take_front(nPar), copyOp.inputPermutation());
     auto outputIvs =
         permuteIvs(allIvs.take_front(nPar), copyOp.outputPermutation());
-    SmallVector<IndexHandle, 8> iivs(inputIvs.begin(), inputIvs.end());
-    SmallVector<IndexHandle, 8> oivs(outputIvs.begin(), outputIvs.end());
+    SmallVector<ValueHandle, 8> iivs(inputIvs.begin(), inputIvs.end());
+    SmallVector<ValueHandle, 8> oivs(outputIvs.begin(), outputIvs.end());
     IndexedValueType O(copyOp.getOutputBuffer(0)), I(copyOp.getInput(0));
     // Emit the proper scalar assignment, whether we are dealing with a 0-D or
     // an n-D loop nest; with or without permutations.
@@ -119,7 +115,7 @@ public:
     auto nPar = fillOp.getNumParallelLoops();
     assert(nPar == allIvs.size());
     auto ivs =
-        SmallVector<IndexHandle, 4>(allIvs.begin(), allIvs.begin() + nPar);
+        SmallVector<ValueHandle, 4>(allIvs.begin(), allIvs.begin() + nPar);
     IndexedValueType O(fillOp.getOutputBuffer(0));
     // Emit the proper scalar assignment, whether we are dealing with a 0-D or
     // an n-D loop nest; with or without permutations.
@@ -135,7 +131,7 @@ public:
     assert(dotOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 1);
-    IndexHandle r_i(allIvs[0]);
+    ValueHandle r_i(allIvs[0]);
     IndexedValueType A(dotOp.getInput(0)), B(dotOp.getInput(1)),
         C(dotOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -151,7 +147,7 @@ public:
     assert(matvecOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 2);
-    IndexHandle i(allIvs[0]), r_j(allIvs[1]);
+    ValueHandle i(allIvs[0]), r_j(allIvs[1]);
     IndexedValueType A(matvecOp.getInput(0)), B(matvecOp.getInput(1)),
         C(matvecOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -167,7 +163,7 @@ public:
     assert(matmulOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
     assert(allIvs.size() == 3);
-    IndexHandle i(allIvs[0]), j(allIvs[1]), r_k(allIvs[2]);
+    ValueHandle i(allIvs[0]), j(allIvs[1]), r_k(allIvs[2]);
     IndexedValueType A(matmulOp.getInput(0)), B(matmulOp.getInput(1)),
         C(matmulOp.getOutputBuffer(0));
     // Emit scalar form.
@@ -258,7 +254,7 @@ public:
     auto funcOp = genericOp.getFunction();
     if (funcOp) {
       // 2. Emit call.
-      Operation *callOp = call(funcOp, indexedValues);
+      Operation *callOp = std_call(funcOp, indexedValues);
       assert(callOp->getNumResults() == genericOp.getNumOutputs());
 
       // 3. Emit std_store.
@@ -359,7 +355,7 @@ public:
 
     if (auto funcOp = indexedGenericOp.getFunction()) {
       // 2. Emit call.
-      Operation *callOp = call(funcOp, indexedValues);
+      Operation *callOp = std_call(funcOp, indexedValues);
       assert(callOp->getNumResults() == indexedGenericOp.getNumOutputs());
 
       // 3. Emit std_store.
@@ -442,15 +438,15 @@ LogicalResult LinalgOpToLoopsImpl<LoopTy, IndexedValueTy, ConcreteOpTy>::doit(
     return success();
   }
 
-  SmallVector<IndexHandle, 4> allIvs(nLoops);
+  SmallVector<ValueHandle, 4> allIvs(nLoops, ValueHandle(b.getIndexType()));
   SmallVector<ValueHandle *, 4> allPIvs =
-      makeHandlePointers(MutableArrayRef<IndexHandle>(allIvs));
+      makeHandlePointers(MutableArrayRef<ValueHandle>(allIvs));
   auto loopRanges = emitLoopRanges(scope.getBuilder(), scope.getLocation(),
                                    invertedMap, getViewSizes(b, linalgOp));
   assert(loopRanges.size() == allIvs.size());
 
   GenericLoopNestRangeBuilder<LoopTy>(allPIvs, loopRanges)([&] {
-    auto allIvValues = extractValues(allIvs);
+    SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(
         allIvValues, linalgOp);
   });
@@ -568,26 +564,26 @@ void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
 
 std::unique_ptr<OpPassBase<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<
-      LowerLinalgToLoopsPass<loop::ForOp, IndexedStdValue>>();
+      LowerLinalgToLoopsPass<loop::ForOp, StdIndexedValue>>();
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createConvertLinalgToParallelLoopsPass() {
   return std::make_unique<
-      LowerLinalgToLoopsPass<loop::ParallelOp, IndexedStdValue>>();
+      LowerLinalgToLoopsPass<loop::ParallelOp, StdIndexedValue>>();
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
 mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<
-      LowerLinalgToLoopsPass<AffineForOp, IndexedAffineValue>>();
+      LowerLinalgToLoopsPass<AffineForOp, AffineIndexedValue>>();
 }
 
 /// Emits a loop nest of `loop.for` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult mlir::linalg::linalgOpToLoops(PatternRewriter &rewriter,
                                             Operation *op) {
-  return LinalgOpToLoopsImpl<loop::ForOp, IndexedStdValue, ConcreteOp>::doit(
+  return LinalgOpToLoopsImpl<loop::ForOp, StdIndexedValue, ConcreteOp>::doit(
       op, rewriter);
 }
 
@@ -595,7 +591,7 @@ LogicalResult mlir::linalg::linalgOpToLoops(PatternRewriter &rewriter,
 template <typename ConcreteOp>
 LogicalResult mlir::linalg::linalgOpToAffineLoops(PatternRewriter &rewriter,
                                                   Operation *op) {
-  return LinalgOpToLoopsImpl<AffineForOp, IndexedAffineValue, ConcreteOp>::doit(
+  return LinalgOpToLoopsImpl<AffineForOp, AffineIndexedValue, ConcreteOp>::doit(
       op, rewriter);
 }
 
@@ -603,7 +599,7 @@ LogicalResult mlir::linalg::linalgOpToAffineLoops(PatternRewriter &rewriter,
 template <typename ConcreteOp>
 LogicalResult mlir::linalg::linalgOpToParallelLoops(PatternRewriter &rewriter,
                                                     Operation *op) {
-  return LinalgOpToLoopsImpl<loop::ParallelOp, IndexedStdValue,
+  return LinalgOpToLoopsImpl<loop::ParallelOp, StdIndexedValue,
                              ConcreteOp>::doit(op, rewriter);
 }
 
@@ -630,18 +626,18 @@ template LogicalResult
 mlir::linalg::linalgOpToParallelLoops<GenericOp>(PatternRewriter &rewriter,
                                                  Operation *op);
 
-static PassRegistration<LowerLinalgToLoopsPass<loop::ForOp, IndexedStdValue>>
+static PassRegistration<LowerLinalgToLoopsPass<loop::ForOp, StdIndexedValue>>
     structuredLoopsPass(
         "convert-linalg-to-loops",
         "Lower the operations from the linalg dialect into loops");
 
 static PassRegistration<
-    LowerLinalgToLoopsPass<loop::ParallelOp, IndexedStdValue>>
+    LowerLinalgToLoopsPass<loop::ParallelOp, StdIndexedValue>>
     parallelLoopsPass(
         "convert-linalg-to-parallel-loops",
         "Lower the operations from the linalg dialect into parallel loops");
 
-static PassRegistration<LowerLinalgToLoopsPass<AffineForOp, IndexedAffineValue>>
+static PassRegistration<LowerLinalgToLoopsPass<AffineForOp, AffineIndexedValue>>
     affineLoopsPass(
         "convert-linalg-to-affine-loops",
         "Lower the operations from the linalg dialect into affine loops");

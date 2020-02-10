@@ -21,7 +21,7 @@ IR snippets, as they are built, for programmatic manipulation. Intuitive
 operators are provided to allow concise and idiomatic expressions.
 
 ```c++
-ValueHandle zero = constant_index(0);
+ValueHandle zero = std_constant_index(0);
 IndexHandle i, j, k;
 ```
 
@@ -49,8 +49,8 @@ concise and structured loop nests.
               j(indexType),
               lb(f->getArgument(0)),
               ub(f->getArgument(1));
-  ValueHandle f7(constant_float(llvm::APFloat(7.0f), f32Type)),
-              f13(constant_float(llvm::APFloat(13.0f), f32Type)),
+  ValueHandle f7(std_constant_float(llvm::APFloat(7.0f), f32Type)),
+              f13(std_constant_float(llvm::APFloat(13.0f), f32Type)),
               i7(constant_int(7, 32)),
               i13(constant_int(13, 32));
   AffineLoopNestBuilder(&i, lb, ub, 3)([&]{

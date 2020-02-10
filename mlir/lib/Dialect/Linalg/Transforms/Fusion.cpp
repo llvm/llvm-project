@@ -12,11 +12,12 @@
 
 #include "mlir/Analysis/Dominance.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/EDSC/Helpers.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/OpImplementation.h"
@@ -35,6 +36,8 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
+
+using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
 
 using llvm::dbgs;
 
@@ -188,9 +191,11 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
                  << "existing LoopRange: " << loopRanges[i] << "\n");
     else {
       auto viewDim = getViewDefiningLoopRange(producer, i);
-      loopRanges[i] = SubViewOp::Range{constant_index(folder, 0),
-                                       dim(viewDim.view, viewDim.dimension),
-                                       constant_index(folder, 1)};
+      loopRanges[i] = SubViewOp::Range{
+          folded_std_constant_index(folder, 0),
+          std_dim(viewDim.view, viewDim.dimension),
+          folded_std_constant_index(folder, 1)
+      };
       LLVM_DEBUG(llvm::dbgs() << "new LoopRange: " << loopRanges[i] << "\n");
     }
   }
