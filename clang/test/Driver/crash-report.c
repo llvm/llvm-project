@@ -21,12 +21,20 @@
 // RUN: cat %t/crash-report-*.c | FileCheck --check-prefix=CHECKSRC %s
 // RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
 
+// RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
+// RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
+// RUN:  not %clang %s @%t.rsp -DFATAL 2>&1 | FileCheck %s
+// RUN: cat %t/crash-report-*.c | FileCheck --check-prefix=CHECKSRC %s
+// RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
+
 // REQUIRES: crash-recovery
 
 #ifdef PARSER
 #pragma clang __debug parser_crash
 #elif CRASH
 #pragma clang __debug crash
+#elif FATAL
+#pragma clang __debug llvm_fatal_error
 #endif
 
 // CHECK: Preprocessed source(s) and associated run script(s) are located at:

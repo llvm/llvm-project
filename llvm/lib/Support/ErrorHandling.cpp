@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WindowsError.h"
@@ -122,7 +123,7 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   // files registered with RemoveFileOnSignal.
   sys::RunInterruptHandlers();
 
-  exit(1);
+  sys::Process::Exit(1);
 }
 
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
