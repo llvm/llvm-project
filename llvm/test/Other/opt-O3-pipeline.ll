@@ -74,7 +74,6 @@
 ; CHECK-NEXT:         Memory SSA
 ; CHECK-NEXT:         Early CSE w/ MemorySSA
 ; CHECK-NEXT:         Speculatively execute instructions if target has divergent branches
-; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Lazy Value Information Analysis
 ; CHECK-NEXT:         Jump Threading
@@ -139,7 +138,6 @@
 ; CHECK-NEXT:           Unroll loops
 ; CHECK-NEXT:         MergedLoadStoreMotion
 ; CHECK-NEXT:         Phi Values Analysis
-; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory Dependence Analysis
 ; CHECK-NEXT:         Lazy Branch Probability Analysis
@@ -154,7 +152,6 @@
 ; CHECK-NEXT:         Sparse Conditional Constant Propagation
 ; CHECK-NEXT:         Demanded bits analysis
 ; CHECK-NEXT:         Bit-Tracking Dead Code Elimination
-; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Lazy Branch Probability Analysis
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
@@ -168,7 +165,6 @@
 ; CHECK-NEXT:         Phi Values Analysis
 ; CHECK-NEXT:         Memory Dependence Analysis
 ; CHECK-NEXT:         Dead Store Elimination
-; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory SSA
 ; CHECK-NEXT:         Natural Loop Information
@@ -236,7 +232,6 @@
 ; CHECK-NEXT:       Loop Vectorization
 ; CHECK-NEXT:       Canonicalize natural loops
 ; CHECK-NEXT:       Scalar Evolution Analysis
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Loop Access Analysis
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
@@ -261,7 +256,6 @@
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       SLP Vectorizer
 ; CHECK-NEXT:       Optimize scalar/vector ops
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Combine redundant instructions
