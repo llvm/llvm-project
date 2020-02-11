@@ -129,6 +129,38 @@ TEST_F(StreamTest, ChangingByteOrder) {
   EXPECT_EQ(lldb::eByteOrderPDP, s.GetByteOrder());
 }
 
+TEST_F(StreamTest, SetIndentLevel) {
+  s.Indent("a");
+  EXPECT_EQ("a", TakeValue());
+
+  s.SetIndentLevel(3);
+  s.Indent("a");
+  EXPECT_EQ("   a", TakeValue());
+
+  s.SetIndentLevel(2);
+  s.Indent("a");
+  EXPECT_EQ("  a", TakeValue());
+
+  s.SetIndentLevel(0);
+  s.Indent("a");
+  EXPECT_EQ("a", TakeValue());
+}
+
+TEST_F(StreamTest, Indent) {
+  s.SetIndentLevel(2);
+  s.Indent(nullptr);
+  EXPECT_EQ("  ", TakeValue());
+
+  s.Indent("");
+  EXPECT_EQ("  ", TakeValue());
+
+  s.Indent(" ");
+  EXPECT_EQ("   ", TakeValue());
+
+  s.Indent(" aa");
+  EXPECT_EQ("   aa", TakeValue());
+}
+
 TEST_F(StreamTest, PutChar) {
   s.PutChar('a');
   EXPECT_EQ(1U, s.GetWrittenBytes());
