@@ -312,7 +312,7 @@ int main() {
 // CHECK: [[SHL:%.+]] = shl i64 [[LD]], 40
 // CHECK: [[ASHR:%.+]] = ashr i64 [[SHL]], 57
 // CHECK: store x86_fp80
-#pragma omp atomic read release
+#pragma omp atomic read
   ldv = bfx4.b;
 // CHECK: [[LD:%.+]] = load atomic i8, i8* getelementptr inbounds (%struct.BitFields4_packed, %struct.BitFields4_packed* @bfx4_packed, i32 0, i32 0, i64 2) acquire
 // CHECK: store i8 [[LD]], i8* [[LDTEMP:%.+]]
@@ -323,14 +323,13 @@ int main() {
 // CHECK: store x86_fp80
 #pragma omp atomic read acquire
   ldv = bfx4_packed.b;
-// CHECK: [[LD:%.+]] = load atomic i64, i64* bitcast (<2 x float>* @{{.+}} to i64*) acquire
+// CHECK: [[LD:%.+]] = load atomic i64, i64* bitcast (<2 x float>* @{{.+}} to i64*) monotonic
 // CHECK: [[BITCAST:%.+]] = bitcast <2 x float>* [[LDTEMP:%.+]] to i64*
 // CHECK: store i64 [[LD]], i64* [[BITCAST]]
 // CHECK: [[LD:%.+]] = load <2 x float>, <2 x float>* [[LDTEMP]]
 // CHECK: extractelement <2 x float> [[LD]]
-// CHECK: call{{.*}} @__kmpc_flush(
 // CHECK: store i64
-#pragma omp atomic read acq_rel
+#pragma omp atomic read
   ulv = float2x.x;
 // CHECK: call{{.*}} i{{[0-9]+}} @llvm.read_register
 // CHECK: call{{.*}} @__kmpc_flush(
