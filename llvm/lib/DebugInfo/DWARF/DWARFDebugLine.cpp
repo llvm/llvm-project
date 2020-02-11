@@ -356,10 +356,21 @@ Error DWARFDebugLine::Prologue::parse(
   LineRange = DebugLineData.getU8(OffsetPtr);
   OpcodeBase = DebugLineData.getU8(OffsetPtr);
 
-  StandardOpcodeLengths.reserve(OpcodeBase - 1);
-  for (uint32_t I = 1; I < OpcodeBase; ++I) {
-    uint8_t OpLen = DebugLineData.getU8(OffsetPtr);
-    StandardOpcodeLengths.push_back(OpLen);
+  if (OpcodeBase == 0) {
+    // If the opcode base is 0, we cannot read the standard opcode lengths (of
+    // which there are supposed to be one fewer than the opcode base). Assume
+    // there are no standard opcodes and continue parsing.
+    RecoverableErrorHandler(createStringError(
+        errc::invalid_argument,
+        "parsing line table prologue at offset 0x%8.8" PRIx64
+        " found opcode base of 0. Assuming no standard opcodes",
+        PrologueOffset));
+  } else {
+    StandardOpcodeLengths.reserve(OpcodeBase - 1);
+    for (uint32_t I = 1; I < OpcodeBase; ++I) {
+      uint8_t OpLen = DebugLineData.getU8(OffsetPtr);
+      StandardOpcodeLengths.push_back(OpLen);
+    }
   }
 
   if (getVersion() >= 5) {

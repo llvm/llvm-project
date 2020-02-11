@@ -423,6 +423,30 @@
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_dir_form_end0:
 
+# Zero opcode base.
+.long   .Lzero_opcode_base_end - .Lzero_opcode_base_start # unit length
+.Lzero_opcode_base_start:
+.short  4               # version
+.long   .Lzero_opcode_base_prologue_end-.Lzero_opcode_base_prologue_start # Length of Prologue
+.Lzero_opcode_base_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   0               # Line Base
+.byte   1               # Line Range
+.byte   0               # Opcode Base
+.asciz "dir1"           # Include table
+.byte   0
+.asciz "file1"
+.byte   1, 2, 3
+.byte   0
+.Lzero_opcode_base_prologue_end:
+.byte   0, 9, 2        # DW_LNE_set_address
+.quad   0xffffeeeeddddcccc
+.byte   0x1            # Special opcode
+.byte   0, 1, 1        # DW_LNE_end_sequence
+.Lzero_opcode_base_end:
+
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)
 .Lunit_good_start:
