@@ -1260,7 +1260,7 @@ getBandNodeWithOriginDimOrder(isl::schedule_node Node) {
   auto Domain = Node.get_universe_domain();
   assert(isl_union_set_n_set(Domain.get()) == 1);
   if (Node.get_schedule_depth() != 0 ||
-      (isl::set(Domain).dim(isl::dim::set) !=
+      (static_cast<isl_size>(isl::set(Domain).dim(isl::dim::set)) !=
        isl_schedule_node_band_n_member(Node.get())))
     return Node;
   Node = isl::manage(isl_schedule_node_delete(Node.copy()));
