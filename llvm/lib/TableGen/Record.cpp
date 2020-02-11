@@ -1778,6 +1778,14 @@ Init *FieldInit::Fold(Record *CurRec) const {
   return const_cast<FieldInit *>(this);
 }
 
+bool FieldInit::isConcrete() const {
+  if (DefInit *DI = dyn_cast<DefInit>(Rec)) {
+    Init *FieldVal = DI->getDef()->getValue(FieldName)->getValue();
+    return FieldVal->isConcrete();
+  }
+  return false;
+}
+
 static void ProfileCondOpInit(FoldingSetNodeID &ID,
                              ArrayRef<Init *> CondRange,
                              ArrayRef<Init *> ValRange,
