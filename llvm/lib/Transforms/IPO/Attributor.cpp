@@ -374,7 +374,8 @@ static Value *constructPointer(Type *ResTy, Value *Ptr, int64_t Offset,
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
 /// further, the callback \p VisitValueCB is invoked and passed the current
-/// value, the \p State, and a flag to indicate if we stripped anything. To
+/// value, the \p State, and a flag to indicate if we stripped anything (=the
+/// value used for the callback is not the value associated with \p IRP). To
 /// limit how much effort is invested, we will never visit more values than
 /// specified by \p MaxValues.
 template <typename AAType, typename StateTy>
