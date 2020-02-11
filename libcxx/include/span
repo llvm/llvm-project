@@ -300,7 +300,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T,N>[] index out of bounds");
+        _LIBCPP_ASSERT(__idx < size(), "span<T,N>[] index out of bounds");
         return __data[__idx];
     }
 
@@ -469,7 +469,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T>[] index out of bounds");
+        _LIBCPP_ASSERT(__idx < size(), "span<T>[] index out of bounds");
         return __data[__idx];
     }
 
