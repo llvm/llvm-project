@@ -1,0 +1,38 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build_llvm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: tstellar/actions/setup-windows@master
+      with:
+        arch: amd64
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Install Ninja
+      uses: tstellar/actions/install-ninja@master
+      with:
+        os: ${{ runner.os }}
+    - name: Test LLVM / dynamic
+      if: startsWith(matrix.os, 'windows') == false
+      uses: tstellar/actions/build-test-llvm-project@master
+      with:
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_BUILD_LLVM_DYLIB=ON   -DCLANG_LINK_CLANG_DYLIB=ON  -DLLVM_ENABLE_PROJECTS='polly;clang' -DPOLLY_ENABLE_GPGPU_CODEGEN=OFF -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_POLLY_LINK_INTO_TOOLS=OFF
+        os: ${{ runner.os }}
+    - name: Test LLVM / static
+      uses: tstellar/actions/build-test-llvm-project@master
+      with:
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_BUILD_LLVM_DYLIB=ON   -DCLANG_LINK_CLANG_DYLIB=ON  -DLLVM_ENABLE_PROJECTS='polly;clang' -DPOLLY_ENABLE_GPGPU_CODEGEN=ON  -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_POLLY_LINK_INTO_TOOLS=ON
+        os: ${{ runner.os }}
