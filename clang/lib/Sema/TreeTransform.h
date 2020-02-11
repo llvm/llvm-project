@@ -8827,6 +8827,13 @@ TreeTransform<Derived>::TransformOMPReleaseClause(OMPReleaseClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPRelaxedClause(OMPRelaxedClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPThreadsClause(OMPThreadsClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
