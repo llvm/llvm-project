@@ -12,11 +12,19 @@ This script is used to continually test the back-deployment use case of libc++ a
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
   --arch              Architecture to build the tests for (32, 64).
   --deployment-target The deployment target to run the tests for. This should be a version number of MacOS (e.g. 10.12). All MacOS versions until and including 10.9 are supported.
-  --sdk-version       The version of the SDK to test with. This should be a version number of MacOS (e.g. 10.12). We'll link against the libc++ dylib in that SDK, but we'll run against the one on the given deployment target.
+  --sdk-version       The version of the SDK to test with. This should be a version number of MacOS (e.g. 10.12). We'll link against the libc++ dylib in that SDK, but we'll run against the one on the given deployment target. The SDK version must be no older than the deployment target.
   [--lit-args]        Additional arguments to pass to lit (optional). If there are multiple arguments, quote them to pass them as a single argument to this script.
   [--no-cleanup]      Do not cleanup the temporary directory that was used for testing at the end. This can be useful to debug failures. Make sure to clean up manually after.
   [-h, --help]        Print this help.
 EOM
+}
+
+function version-less-equal() {
+    [ "$1" = "$(echo -e "$1\n$2" | sort -V | head -n1)" ]
+}
+
+function version-less() {
+    [ "$1" = "$2" ] && return 1 || version-less-equal $1 $2
 }
 
 while [[ $# -gt 0 ]]; do
@@ -73,6 +81,11 @@ if [[ -z ${DEPLOYMENT_TARGET+x} ]]; then echo "--deployment-target is a required
 if [[ -z ${MACOS_SDK_VERSION+x} ]]; then echo "--sdk-version is a required parameter"; usage; exit 1; fi
 if [[ -z ${ADDITIONAL_LIT_ARGS+x} ]]; then ADDITIONAL_LIT_ARGS=""; fi
 
+if version-less "${MACOS_SDK_VERSION}" "${DEPLOYMENT_TARGET}"; then
+  echo "SDK version ${MACOS_SDK_VERSION} shouldn't be older than the deployment target (${DEPLOYMENT_TARGET})"
+  usage
+  exit 1
+fi
 
 TEMP_DIR="$(mktemp -d)"
 echo "Created temporary directory ${TEMP_DIR}"
