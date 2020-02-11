@@ -79,7 +79,7 @@ template <class Allocator, u32 MaxTSDCount> struct TSDRegistrySharedT {
   }
 
   void enable() {
-    for (s32 I = NumberOfTSDs - 1; I >= 0; I--)
+    for (s32 I = static_cast<s32>(NumberOfTSDs - 1); I >= 0; I--)
       TSDs[I].unlock();
     Mutex.unlock();
   }
