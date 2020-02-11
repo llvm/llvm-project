@@ -96,18 +96,19 @@ LiveDebugVariables::LiveDebugVariables() : MachineFunctionPass(ID) {
 
 enum : unsigned { UndefLocNo = ~0U };
 
-/// Describes a location by number along with some flags about the original
-/// usage of the location.
+/// Describes a debug variable value by location number and expression along
+/// with some flags about the original usage of the location.
 class DbgValueLocation {
 public:
-  DbgValueLocation(unsigned LocNo, bool WasIndirect)
-      : LocNo(LocNo), WasIndirect(WasIndirect) {
-    static_assert(sizeof(*this) == sizeof(unsigned), "bad bitfield packing");
+  DbgValueLocation(unsigned LocNo, bool WasIndirect,
+                   const DIExpression &Expression)
+      : LocNo(LocNo), WasIndirect(WasIndirect), Expression(&Expression) {
     assert(locNo() == LocNo && "location truncation");
   }
 
   DbgValueLocation() : LocNo(0), WasIndirect(0) {}
 
+  const DIExpression *getExpression() const { return Expression; }
   unsigned locNo() const {
     // Fix up the undef location number, which gets truncated.
     return LocNo == INT_MAX ? UndefLocNo : LocNo;
@@ -116,12 +117,13 @@ public:
   bool isUndef() const { return locNo() == UndefLocNo; }
 
   DbgValueLocation changeLocNo(unsigned NewLocNo) const {
-    return DbgValueLocation(NewLocNo, WasIndirect);
+    return DbgValueLocation(NewLocNo, WasIndirect, *Expression);
   }
 
   friend inline bool operator==(const DbgValueLocation &LHS,
                                 const DbgValueLocation &RHS) {
-    return LHS.LocNo == RHS.LocNo && LHS.WasIndirect == RHS.WasIndirect;
+    return LHS.LocNo == RHS.LocNo && LHS.WasIndirect == RHS.WasIndirect &&
+           LHS.Expression == RHS.Expression;
   }
 
   friend inline bool operator!=(const DbgValueLocation &LHS,
@@ -132,6 +134,7 @@ public:
 private:
   unsigned LocNo : 31;
   unsigned WasIndirect : 1;
+  const DIExpression *Expression = nullptr;
 };
 
 /// Map of where a user value is live, and its location.
@@ -156,6 +159,8 @@ class LDVImpl;
 /// closure of that relation.
 class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
+  // FIXME: This is only used to get the FragmentInfo that describes the part
+  // of the variable we are a part of. We should just store the FragmentInfo.
   const DIExpression *Expression; ///< Any complex address expression.
   DebugLoc dl;            ///< The debug location for the variable. This is
                           ///< used by dwarf writer to find lexical scope.
@@ -205,9 +210,19 @@ public:
   /// Does this UserValue match the parameters?
   bool match(const DILocalVariable *Var, const DIExpression *Expr,
              const DILocation *IA) const {
-    // FIXME: The fragment should be part of the equivalence class, but not
-    // other things in the expression like stack values.
-    return Var == Variable && Expr == Expression && dl->getInlinedAt() == IA;
+    // FIXME: Handle partially overlapping fragments.
+    // A DBG_VALUE with a fragment which overlaps a previous DBG_VALUE fragment
+    // for the same variable terminates the interval opened by the first.
+    // getUserValue() uses match() to filter DBG_VALUEs into interval maps to
+    // represent these intervals.
+    // Given two _partially_ overlapping fragments match() will always return
+    // false. The DBG_VALUEs will be filtered into separate interval maps and
+    // therefore we do not faithfully represent the original intervals.
+    // See D70121#1849741 for a more detailed explanation and further
+    // discussion.
+    return Var == Variable &&
+           Expr->getFragmentInfo() == Expression->getFragmentInfo() &&
+           dl->getInlinedAt() == IA;
   }
 
   /// Merge equivalence classes.
@@ -285,8 +300,9 @@ public:
   void mapVirtRegs(LDVImpl *LDV);
 
   /// Add a definition point to this value.
-  void addDef(SlotIndex Idx, const MachineOperand &LocMO, bool IsIndirect) {
-    DbgValueLocation Loc(getLocationNo(LocMO), IsIndirect);
+  void addDef(SlotIndex Idx, const MachineOperand &LocMO, bool IsIndirect,
+              const DIExpression &Expr) {
+    DbgValueLocation Loc(getLocationNo(LocMO), IsIndirect, Expr);
     // Add a singular (Idx,Idx) -> Loc mapping.
     LocMap::iterator I = locInts.find(Idx);
     if (!I.valid() || I.start() != Idx)
@@ -320,12 +336,11 @@ public:
   /// possible.
   ///
   /// \param LI Scan for copies of the value in LI->reg.
-  /// \param LocNo Location number of LI->reg.
-  /// \param WasIndirect Indicates if the original use of LI->reg was indirect
+  /// \param Loc Location number of LI->reg.
   /// \param Kills Points where the range of LocNo could be extended.
   /// \param [in,out] NewDefs Append (Idx, LocNo) of inserted defs here.
   void addDefsFromCopies(
-      LiveInterval *LI, unsigned LocNo, bool WasIndirect,
+      LiveInterval *LI, DbgValueLocation Loc,
       const SmallVectorImpl<SlotIndex> &Kills,
       SmallVectorImpl<std::pair<SlotIndex, DbgValueLocation>> &NewDefs,
       MachineRegisterInfo &MRI, LiveIntervals &LIS);
@@ -663,11 +678,11 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   UserValue *UV =
       getUserValue(Var, Expr, MI.getDebugLoc());
   if (!Discard)
-    UV->addDef(Idx, MI.getOperand(0), IsIndirect);
+    UV->addDef(Idx, MI.getOperand(0), IsIndirect, *Expr);
   else {
     MachineOperand MO = MachineOperand::CreateReg(0U, false);
     MO.setIsDebug();
-    UV->addDef(Idx, MO, false);
+    UV->addDef(Idx, MO, false, *Expr);
   }
   return true;
 }
@@ -775,7 +790,7 @@ void UserValue::extendDef(SlotIndex Idx, DbgValueLocation Loc, LiveRange *LR,
 }
 
 void UserValue::addDefsFromCopies(
-    LiveInterval *LI, unsigned LocNo, bool WasIndirect,
+    LiveInterval *LI, DbgValueLocation Loc,
     const SmallVectorImpl<SlotIndex> &Kills,
     SmallVectorImpl<std::pair<SlotIndex, DbgValueLocation>> &NewDefs,
     MachineRegisterInfo &MRI, LiveIntervals &LIS) {
@@ -805,7 +820,7 @@ void UserValue::addDefsFromCopies(
     // it, or we are looking at a wrong value of LI.
     SlotIndex Idx = LIS.getInstructionIndex(*MI);
     LocMap::iterator I = locInts.find(Idx.getRegSlot(true));
-    if (!I.valid() || I.value().locNo() != LocNo)
+    if (!I.valid() || I.value() != Loc)
       continue;
 
     if (!LIS.hasInterval(DstReg))
@@ -839,7 +854,7 @@ void UserValue::addDefsFromCopies(
       MachineInstr *CopyMI = LIS.getInstructionFromIndex(DstVNI->def);
       assert(CopyMI && CopyMI->isCopy() && "Bad copy value");
       unsigned LocNo = getLocationNo(CopyMI->getOperand(0));
-      DbgValueLocation NewLoc(LocNo, WasIndirect);
+      DbgValueLocation NewLoc = Loc.changeLocNo(LocNo);
       I.insert(Idx, Idx.getNextSlot(), NewLoc);
       NewDefs.push_back(std::make_pair(Idx, NewLoc));
       break;
@@ -887,8 +902,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
       // sub-register in that regclass). For now, simply skip handling copies if
       // a sub-register is involved.
       if (LI && !LocMO.getSubReg())
-        addDefsFromCopies(LI, Loc.locNo(), Loc.wasIndirect(), Kills, Defs, MRI,
-                          LIS);
+        addDefsFromCopies(LI, Loc, Kills, Defs, MRI, LIS);
       continue;
     }
 
@@ -1329,7 +1343,7 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   // original DBG_VALUE was indirect, we need to add DW_OP_deref to indicate
   // that the original virtual register was a pointer. Also, add the stack slot
   // offset for the spilled register to the expression.
-  const DIExpression *Expr = Expression;
+  const DIExpression *Expr = Loc.getExpression();
   uint8_t DIExprFlags = DIExpression::ApplyOffset;
   bool IsIndirect = Loc.wasIndirect();
   if (Spilled) {
