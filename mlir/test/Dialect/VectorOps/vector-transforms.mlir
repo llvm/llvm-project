@@ -346,3 +346,62 @@ func @vector_transfers_vector_element_type() {
 
   return
 }
+
+// Test that ShapeCastOp on tuple of vectors, decomposes to multiple
+// ShapeCastOps on vectors.
+// CHECK-LABEL: func @shape_cast_decomposition
+//       CHECK: %[[V0:.*]] = vector.shape_cast %{{.*}} : vector<5x4x2xf32> to vector<20x2xf32>
+//  CHECK-NEXT: %[[V1:.*]] = vector.shape_cast %{{.*}} : vector<3x4x2xf32> to vector<12x2xf32>
+//  CHECK-NEXT: return %[[V0]], %[[V1]] : vector<20x2xf32>, vector<12x2xf32>
+
+func @shape_cast_decomposition(%arg0 : vector<5x4x2xf32>,
+                               %arg1 : vector<3x4x2xf32>)
+  -> (vector<20x2xf32>, vector<12x2xf32>) {
+  %0 = vector.tuple %arg0, %arg1 : vector<5x4x2xf32>, vector<3x4x2xf32>
+  %1 = vector.shape_cast %0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                              tuple<vector<20x2xf32>, vector<12x2xf32>>
+  %2 = vector.tuple_get %1, 0 : tuple<vector<20x2xf32>, vector<12x2xf32>>
+  %3 = vector.tuple_get %1, 1 : tuple<vector<20x2xf32>, vector<12x2xf32>>
+  return %2, %3 : vector<20x2xf32>, vector<12x2xf32>
+}
+
+// Test that cancelling ShapeCastOps are canonicalized away.
+// EX:
+//
+//  The following MLIR with cancelling ShapeCastOps:
+//
+//   %0 = source : vector<5x4x2xf32>
+//   %1 = shape_cast %0 : vector<5x4x2xf32> to vector<20x2xf32>
+//   %2 = shape_cast %1 : vector<20x2xf32> to vector<5x4x2xf32>
+//   %3 = user %2 : vector<5x4x2xf32>
+//
+//  Should canonicalize to the following:
+//
+//
+//   %0 = source : vector<5x4x2xf32>
+//   %1 = user %0 : vector<5x4x2xf32>
+//
+
+// ShapeCastOps on vectors.
+// CHECK-LABEL: func @shape_cast_fold
+//       CHECK: return %{{.*}},  %{{.*}} : vector<5x4x2xf32>, vector<3x4x2xf32>
+
+func @shape_cast_fold(%arg0 : vector<5x4x2xf32>, %arg1 : vector<3x4x2xf32>)
+  -> (vector<5x4x2xf32>, vector<3x4x2xf32>) {
+  %0 = vector.tuple %arg0, %arg1 : vector<5x4x2xf32>, vector<3x4x2xf32>
+
+  %1 = vector.shape_cast %0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                              tuple<vector<20x2xf32>, vector<12x2xf32>>
+
+  %2 = vector.tuple_get %1, 0 : tuple<vector<20x2xf32>, vector<12x2xf32>>
+  %3 = vector.tuple_get %1, 1 : tuple<vector<20x2xf32>, vector<12x2xf32>>
+
+  %4 = vector.tuple %2, %3 : vector<20x2xf32>, vector<12x2xf32>
+  %5 = vector.shape_cast %4 : tuple<vector<20x2xf32>, vector<12x2xf32>> to
+                              tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>
+
+  %6 = vector.tuple_get %5, 0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>
+  %7 = vector.tuple_get %5, 1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>
+
+  return %6, %7 : vector<5x4x2xf32>, vector<3x4x2xf32>
+}
