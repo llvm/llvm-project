@@ -27,9 +27,9 @@
 // RUN:   | FileCheck --check-prefix=WARN5 %s
 // WARN5: warning: overriding '-ffp-model=strict' option with '-ffp-contract=fast' [-Woverriding-t-option]
 
-// RUN: %clang -### -ffp-model=strict -ffp-contract=fast -c %s 2>&1 \
+// RUN: %clang -### -ffp-model=strict -ffp-contract=off -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN6 %s
-// WARN6: warning: overriding '-ffp-model=strict' option with '-ffp-contract=fast' [-Woverriding-t-option]
+// WARN6: warning: overriding '-ffp-model=strict' option with '-ffp-contract=off' [-Woverriding-t-option]
 
 // RUN: %clang -### -ffp-model=strict -ffp-contract=on -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN7 %s
@@ -100,14 +100,13 @@
 // RUN: %clang -### -nostdinc -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-PRECISE %s
 // CHECK-FPM-PRECISE: "-cc1"
-// CHECK-FPM-PRECISE: "-ffp-contract=on"
+// CHECK-FPM-PRECISE: "-ffp-contract=fast"
 // CHECK-FPM-PRECISE: "-fno-rounding-math"
 
 // RUN: %clang -### -nostdinc -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-STRICT %s
 // CHECK-FPM-STRICT: "-cc1"
 // CHECK-FPM-STRICT: "-ftrapping-math"
-// CHECK-FPM-STRICT: "-ffp-contract=off"
 // CHECK-FPM-STRICT: "-frounding-math"
 // CHECK-FPM-STRICT: "-ffp-exception-behavior=strict"
 
