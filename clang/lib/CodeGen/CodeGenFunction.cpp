@@ -814,23 +814,25 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           if (ShouldXRayInstrumentFunction())
             Fn->addFnAttr("xray-log-args",
                           llvm::utostr(LogArgs->getArgumentCount()));
-        if (!CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
-                XRayInstrKind::FunctionExit)) {
-          Fn->addFnAttr("xray-skip-exit");
-        }
-        if (!CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
-                XRayInstrKind::FunctionEntry)) {
-          Fn->addFnAttr("xray-skip-entry");
-        }
       }
     } else {
       if (ShouldXRayInstrumentFunction() && !CGM.imbueXRayAttrs(Fn, Loc))
         Fn->addFnAttr(
             "xray-instruction-threshold",
             llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
-      if (CGM.getCodeGenOpts().XRayIgnoreLoops) {
+    }
+
+    if (ShouldXRayInstrumentFunction()) {
+      if (CGM.getCodeGenOpts().XRayIgnoreLoops)
         Fn->addFnAttr("xray-ignore-loops");
-      }
+
+      if (!CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
+              XRayInstrKind::FunctionExit))
+        Fn->addFnAttr("xray-skip-exit");
+
+      if (!CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
+              XRayInstrKind::FunctionEntry))
+        Fn->addFnAttr("xray-skip-entry");
     }
 
     unsigned Count, Offset;
