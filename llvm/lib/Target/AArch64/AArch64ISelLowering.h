@@ -218,6 +218,8 @@ enum NodeType : unsigned {
   DUP_PRED,
   INDEX_VECTOR,
 
+  REINTERPRET_CAST,
+
   LDNF1,
   LDNF1S,
   LDFF1,
