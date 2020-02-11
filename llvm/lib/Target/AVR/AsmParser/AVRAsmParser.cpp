@@ -53,6 +53,8 @@ class AVRAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -64,7 +66,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool parseOperand(OperandVector &Operands);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
   int parseRegisterName();
-  int parseRegister();
+  int parseRegister(bool RestoreOnFailure = false);
   bool tryParseRegisterOperand(OperandVector &Operands);
   bool tryParseExpression(OperandVector &Operands);
   bool tryParseRelocExpression(OperandVector &Operands);
@@ -359,18 +361,24 @@ int AVRAsmParser::parseRegisterName() {
   return RegNum;
 }
 
-int AVRAsmParser::parseRegister() {
+int AVRAsmParser::parseRegister(bool RestoreOnFailure) {
   int RegNum = AVR::NoRegister;
 
   if (Parser.getTok().is(AsmToken::Identifier)) {
     // Check for register pair syntax
     if (Parser.getLexer().peekTok().is(AsmToken::Colon)) {
+      AsmToken HighTok = Parser.getTok();
       Parser.Lex();
+      AsmToken ColonTok = Parser.getTok();
       Parser.Lex(); // Eat high (odd) register and colon
 
       if (Parser.getTok().is(AsmToken::Identifier)) {
         // Convert lower (even) register to DREG
         RegNum = toDREG(parseRegisterName());
+      }
+      if (RegNum == AVR::NoRegister && RestoreOnFailure) {
+        getLexer().UnLex(std::move(ColonTok));
+        getLexer().UnLex(std::move(HighTok));
       }
     } else {
       RegNum = parseRegisterName();
@@ -580,10 +588,22 @@ AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
 bool AVRAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister();
+  RegNo = parseRegister(/*RestoreOnFailure=*/false);
   EndLoc = Parser.getTok().getLoc();
 
   return (RegNo == AVR::NoRegister);
+}
+
+OperandMatchResultTy AVRAsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
+  StartLoc = Parser.getTok().getLoc();
+  RegNo = parseRegister(/*RestoreOnFailure=*/true);
+  EndLoc = Parser.getTok().getLoc();
+
+  if (RegNo == AVR::NoRegister)
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 void AVRAsmParser::eatComma() {

@@ -260,6 +260,8 @@ public:
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
   bool ParseDirective(AsmToken DirectiveID) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -2245,10 +2247,16 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
 
 bool AArch64AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
+  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+}
+
+OperandMatchResultTy AArch64AsmParser::tryParseRegister(unsigned &RegNo,
+                                                        SMLoc &StartLoc,
+                                                        SMLoc &EndLoc) {
   StartLoc = getLoc();
   auto Res = tryParseScalarRegister(RegNo);
   EndLoc = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-  return Res != MatchOperand_Success;
+  return Res;
 }
 
 // Matches a register name or register alias previously defined by '.req'
