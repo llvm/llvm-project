@@ -280,8 +280,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pminub	%mm0, %mm2
 # CHECK-NEXT:  2      6     1.00    *                   pminub	(%rax), %mm2
 # CHECK-NEXT:  1      2     1.00                        pmovmskb	%mm0, %ecx
-# CHECK-NEXT:  1      4     1.00                        pmulhuw	%mm0, %mm2
-# CHECK-NEXT:  2      9     1.00    *                   pmulhuw	(%rax), %mm2
+# CHECK-NEXT:  1      5     1.00                        pmulhuw	%mm0, %mm2
+# CHECK-NEXT:  2      10    1.00    *                   pmulhuw	(%rax), %mm2
 # CHECK-NEXT:  1      5     0.50    *      *            prefetcht0	(%rax)
 # CHECK-NEXT:  1      5     0.50    *      *            prefetcht1	(%rax)
 # CHECK-NEXT:  1      5     0.50    *      *            prefetcht2	(%rax)
