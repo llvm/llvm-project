@@ -66,8 +66,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
 void CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
                                      CompletionRequest &request,
                                      SearchFilter *searcher) {
-  // Find some way to switch "include support files..."
-  SourceFileCompleter completer(interpreter, false, request);
+  SourceFileCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
     lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
@@ -332,10 +331,8 @@ CommandCompletions::Completer::~Completer() = default;
 // SourceFileCompleter
 
 CommandCompletions::SourceFileCompleter::SourceFileCompleter(
-    CommandInterpreter &interpreter, bool include_support_files,
-    CompletionRequest &request)
-    : CommandCompletions::Completer(interpreter, request),
-      m_include_support_files(include_support_files), m_matching_files() {
+    CommandInterpreter &interpreter, CompletionRequest &request)
+    : CommandCompletions::Completer(interpreter, request), m_matching_files() {
   FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
   m_file_name = partial_spec.GetFilename().GetCString();
   m_dir_name = partial_spec.GetDirectory().GetCString();
@@ -350,43 +347,22 @@ CommandCompletions::SourceFileCompleter::SearchCallback(SearchFilter &filter,
                                                         SymbolContext &context,
                                                         Address *addr) {
   if (context.comp_unit != nullptr) {
-    if (m_include_support_files) {
-      FileSpecList supporting_files = context.comp_unit->GetSupportFiles();
-      for (size_t sfiles = 0; sfiles < supporting_files.GetSize(); sfiles++) {
-        const FileSpec &sfile_spec =
-            supporting_files.GetFileSpecAtIndex(sfiles);
-        const char *sfile_file_name = sfile_spec.GetFilename().GetCString();
-        const char *sfile_dir_name = sfile_spec.GetFilename().GetCString();
-        bool match = false;
-        if (m_file_name && sfile_file_name &&
-            strstr(sfile_file_name, m_file_name) == sfile_file_name)
-          match = true;
-        if (match && m_dir_name && sfile_dir_name &&
-            strstr(sfile_dir_name, m_dir_name) != sfile_dir_name)
-          match = false;
+    const char *cur_file_name =
+        context.comp_unit->GetPrimaryFile().GetFilename().GetCString();
+    const char *cur_dir_name =
+        context.comp_unit->GetPrimaryFile().GetDirectory().GetCString();
 
-        if (match) {
-          m_matching_files.AppendIfUnique(sfile_spec);
-        }
-      }
-    } else {
-      const char *cur_file_name =
-          context.comp_unit->GetPrimaryFile().GetFilename().GetCString();
-      const char *cur_dir_name =
-          context.comp_unit->GetPrimaryFile().GetDirectory().GetCString();
+    bool match = false;
+    if (m_file_name && cur_file_name &&
+        strstr(cur_file_name, m_file_name) == cur_file_name)
+      match = true;
 
-      bool match = false;
-      if (m_file_name && cur_file_name &&
-          strstr(cur_file_name, m_file_name) == cur_file_name)
-        match = true;
+    if (match && m_dir_name && cur_dir_name &&
+        strstr(cur_dir_name, m_dir_name) != cur_dir_name)
+      match = false;
 
-      if (match && m_dir_name && cur_dir_name &&
-          strstr(cur_dir_name, m_dir_name) != cur_dir_name)
-        match = false;
-
-      if (match) {
-        m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
-      }
+    if (match) {
+      m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
     }
   }
   return Searcher::eCallbackReturnContinue;
