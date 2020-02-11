@@ -9852,10 +9852,10 @@ def err_omp_requires_clause_redeclaration : Error <
   "Only one %0 clause can appear on a requires directive in a single translation unit">;
 def note_omp_requires_previous_clause : Note <
   "%0 clause previously used here">;
-def err_omp_target_before_requires : Error <
-  "target region encountered before requires directive with '%0' clause">;
-def note_omp_requires_encountered_target : Note <
-  "target previously encountered here">;
+def err_omp_directive_before_requires : Error <
+  "'%0' region encountered before requires directive with '%1' clause">;
+def note_omp_requires_encountered_directive : Note <
+  "'%0' previously encountered here">;
 def err_omp_invalid_scope : Error <
   "'#pragma omp %0' directive must appear only in file scope">;
 def note_omp_invalid_length_on_this_ptr_mapping : Note <

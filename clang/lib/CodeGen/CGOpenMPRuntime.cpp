@@ -21,6 +21,7 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetOperations.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -9784,14 +9786,31 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
          " Expected target-based directive.");
 }
 
-void CGOpenMPRuntime::checkArchForUnifiedAddressing(
-    const OMPRequiresDecl *D) {
+void CGOpenMPRuntime::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
       HasRequiresUnifiedSharedMemory = true;
-      break;
+    } else if (const auto *AC =
+                   dyn_cast<OMPAtomicDefaultMemOrderClause>(Clause)) {
+      switch (AC->getAtomicDefaultMemOrderKind()) {
+      case OMPC_ATOMIC_DEFAULT_MEM_ORDER_acq_rel:
+        RequiresAtomicOrdering = llvm::AtomicOrdering::AcquireRelease;
+        break;
+      case OMPC_ATOMIC_DEFAULT_MEM_ORDER_seq_cst:
+        RequiresAtomicOrdering = llvm::AtomicOrdering::SequentiallyConsistent;
+        break;
+      case OMPC_ATOMIC_DEFAULT_MEM_ORDER_relaxed:
+        RequiresAtomicOrdering = llvm::AtomicOrdering::Monotonic;
+        break;
+      case OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown:
+        break;
+      }
     }
   }
+}
+
+llvm::AtomicOrdering CGOpenMPRuntime::getDefaultMemoryOrdering() const {
+  return RequiresAtomicOrdering;
 }
 
 bool CGOpenMPRuntime::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
