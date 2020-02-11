@@ -1,5 +1,3 @@
-; XFAIL: *
-
 ; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
