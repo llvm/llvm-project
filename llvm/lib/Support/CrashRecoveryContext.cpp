@@ -41,7 +41,7 @@ struct CrashRecoveryContextImpl {
   unsigned ValidJumpBuffer : 1;
 
 public:
-  CrashRecoveryContextImpl(CrashRecoveryContext *CRC)
+  CrashRecoveryContextImpl(CrashRecoveryContext *CRC) noexcept
       : CRC(CRC), Failed(false), SwitchedThread(false), ValidJumpBuffer(false) {
     Next = CurrentContext->get();
     CurrentContext->set(this);
