@@ -3741,12 +3741,17 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
 // for debug permission by popping up a dialog box and attach
 // may fail outright).
 static bool login_session_has_gui_access () {
+  // I believe this API only works on macOS.
+#if TARGET_OS_OSX == 0
+  return true;
+#else
   auditinfo_addr_t info;
   getaudit_addr(&info, sizeof(info));
   if (info.ai_flags & AU_SESSION_FLAG_HAS_GRAPHIC_ACCESS)
     return true;
   else
     return false;
+#endif
 }
 
 // Checking for 
@@ -3766,6 +3771,7 @@ static bool login_session_has_gui_access () {
 // $ security authorizationdb read system.privilege.taskport.debug
 
 static bool developer_mode_enabled () {
+  // This API only exists on macOS.
 #if TARGET_OS_OSX == 0
   return true;
 #else
