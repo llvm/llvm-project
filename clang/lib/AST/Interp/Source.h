@@ -56,14 +56,14 @@ private:
 
   /// Helper to decode a value or a pointer.
   template <typename T>
-  static typename std::enable_if<!std::is_pointer<T>::value, T>::type
+  static std::enable_if_t<!std::is_pointer<T>::value, T>
   ReadHelper(const char *Ptr) {
     using namespace llvm::support;
     return endian::read<T, endianness::native, 1>(Ptr);
   }
 
   template <typename T>
-  static typename std::enable_if<std::is_pointer<T>::value, T>::type
+  static std::enable_if_t<std::is_pointer<T>::value, T>
   ReadHelper(const char *Ptr) {
     using namespace llvm::support;
     auto Punned = endian::read<uintptr_t, endianness::native, 1>(Ptr);

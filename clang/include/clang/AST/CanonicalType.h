@@ -74,7 +74,7 @@ public:
   /// canonical type pointers.
   template <typename U>
   CanQual(const CanQual<U> &Other,
-          typename std::enable_if<std::is_base_of<T, U>::value, int>::type = 0);
+          std::enable_if_t<std::is_base_of<T, U>::value, int> = 0);
 
   /// Retrieve the underlying type pointer, which refers to a
   /// canonical type.
