@@ -374,6 +374,32 @@ static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
   case StandardAttributes::CallSiteLocation:
     // Process the callee of a callsite location.
     return getFileLineColLoc(loc.cast<CallSiteLoc>().getCallee());
+  case StandardAttributes::FusedLocation:
+    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+      if (auto callLoc = getFileLineColLoc(subLoc)) {
+        return callLoc;
+      }
+    }
+    return llvm::None;
+  default:
+    return llvm::None;
+  }
+}
+
+/// Return a processable CallSiteLoc from the given location.
+static Optional<CallSiteLoc> getCallSiteLoc(Location loc) {
+  switch (loc->getKind()) {
+  case StandardAttributes::NameLocation:
+    return getCallSiteLoc(loc.cast<NameLoc>().getChildLoc());
+  case StandardAttributes::CallSiteLocation:
+    return loc.cast<CallSiteLoc>();
+  case StandardAttributes::FusedLocation:
+    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+      if (auto callLoc = getCallSiteLoc(subLoc)) {
+        return callLoc;
+      }
+    }
+    return llvm::None;
   default:
     return llvm::None;
   }
@@ -443,15 +469,15 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
 
   // If the diagnostic location was a call site location, then print the call
   // stack as well.
-  if (auto callLoc = loc.dyn_cast<CallSiteLoc>()) {
+  if (auto callLoc = getCallSiteLoc(loc)) {
     // Print the call stack while valid, or until the limit is reached.
-    Location callerLoc = callLoc.getCaller();
+    Location callerLoc = callLoc->getCaller();
     for (unsigned curDepth = 0; curDepth < callStackLimit; ++curDepth) {
       emitDiagnostic(callerLoc, "called from", DiagnosticSeverity::Note);
-      if ((callLoc = callerLoc.dyn_cast<CallSiteLoc>()))
-        callerLoc = callLoc.getCaller();
-      else
+      callLoc = getCallSiteLoc(callerLoc);
+      if (!callLoc)
         break;
+      callerLoc = callLoc->getCaller();
     }
   }
 
