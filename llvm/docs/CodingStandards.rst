@@ -70,19 +70,27 @@ Each toolchain provides a good reference for what it accepts:
 C++ Standard Library
 --------------------
 
-Use the C++ standard library facilities whenever they are available for
-a particular task. LLVM and related projects emphasize and rely on the standard
-library facilities as much as possible.
-
-We avoid some standard facilities, like the I/O streams, and instead use LLVM's
-streams library (raw_ostream_). More detailed information on these subjects is
-available in the :doc:`ProgrammersManual`.
+Instead of implementing custom data structures, we encourage the use of C++
+standard library facilities or LLVM support libraries whenever they are
+available for a particular task. LLVM and related projects emphasize and rely
+on the standard library facilities and the LLVM support libraries as much as
+possible.
 
 LLVM support libraries (for example, `ADT
 <https://github.com/llvm/llvm-project/tree/master/llvm/include/llvm/ADT>`_)
-implement functionality missing in the standard library. Such libraries are
-usually implemented in the ``llvm`` namespace and follow the expected standard
-interface, when there is one.
+implement specialized data structures or functionality missing in the standard
+library. Such libraries are usually implemented in the ``llvm`` namespace and
+follow the expected standard interface, when there is one.
+
+When both C++ and the LLVM support libraries provide similar functionality, and
+there isn't a specific reason to favor the C++ implementation, it is generally
+preferable to use the LLVM library. For example, ``llvm::DenseMap`` should
+almost always be used instead of ``std::map`` or ``std::unordered_map``, and
+``llvm::SmallVector`` should usually be used instead of ``std::vector``.
+
+We explicitly avoid some standard facilities, like the I/O streams, and instead
+use LLVM's streams library (raw_ostream_). More detailed information on these
+subjects is available in the :doc:`ProgrammersManual`.
 
 Guidelines for Go code
 ----------------------
