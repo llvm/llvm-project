@@ -61,6 +61,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -154,7 +155,7 @@ private:
   LiveIntervals *LIS;
 
   DenseMap<const MachineInstr *, InstrInfo> Instructions;
-  DenseMap<MachineBasicBlock *, BlockInfo> Blocks;
+  MapVector<MachineBasicBlock *, BlockInfo> Blocks;
   SmallVector<MachineInstr *, 1> LiveMaskQueries;
   SmallVector<MachineInstr *, 4> LowerToMovInstrs;
   SmallVector<MachineInstr *, 4> LowerToCopyInstrs;
