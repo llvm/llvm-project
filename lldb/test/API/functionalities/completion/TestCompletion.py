@@ -349,6 +349,14 @@ class CommandLineCompletionTestCase(TestBase):
                                'variable'])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_target_modules_dump_line_table(self):
+        """Tests source file completion by completing the line-table argument."""
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.complete_from_to('target modules dump line-table main.cp',
+                              ['main.cpp'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_target_create_dash_co(self):
         """Test that 'target create --co' completes to 'target variable --core '."""
         self.complete_from_to('target create --co', 'target create --core ')
