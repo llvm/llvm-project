@@ -131,10 +131,7 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   Data.setAddressSize(HeaderData.AddrSize);
   uint32_t AddrCount = DataSize / HeaderData.AddrSize;
   for (uint32_t I = 0; I < AddrCount; ++I)
-    if (HeaderData.AddrSize == 4)
-      Addrs.push_back(Data.getU32(OffsetPtr));
-    else
-      Addrs.push_back(Data.getU64(OffsetPtr));
+    Addrs.push_back(Data.getRelocatedAddress(OffsetPtr));
   return Error::success();
 }
 
