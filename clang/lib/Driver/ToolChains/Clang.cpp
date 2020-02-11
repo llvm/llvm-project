@@ -463,6 +463,11 @@ static void addExceptionArgs(const ArgList &Args, types::ID InputType,
     }
   }
 
+  // OPT_fignore_exceptions means exception could still be thrown,
+  // but no clean up or catch would happen in current module.
+  // So we do not set EH to false.
+  Args.AddLastArg(CmdArgs, options::OPT_fignore_exceptions);
+
   if (EH)
     CmdArgs.push_back("-fexceptions");
 }
