@@ -2691,6 +2691,7 @@ static void RegisterObjCExceptionRecognizer() {
     std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
     StackFrameRecognizerManager::AddRecognizer(
         StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-        module.GetFilename(), function, /*first_instruction_only*/ true);
+        module.GetFilename(), function, /*alternate_symbol*/ {},
+        /*first_instruction_only*/ true);
   });
 }

@@ -50,24 +50,28 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
 
 class StackFrameRecognizerManagerImpl {
 public:
-  void AddRecognizer(StackFrameRecognizerSP recognizer,
-                     ConstString module, ConstString symbol,
+  void AddRecognizer(StackFrameRecognizerSP recognizer, ConstString module,
+                     ConstString symbol, ConstString alternate_symbol,
                      bool first_instruction_only) {
-    m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer, false, module, RegularExpressionSP(),
-                              symbol, RegularExpressionSP(),
+    m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer,
+                              false, module, RegularExpressionSP(), symbol,
+                              alternate_symbol, RegularExpressionSP(),
                               first_instruction_only});
   }
 
   void AddRecognizer(StackFrameRecognizerSP recognizer,
                      RegularExpressionSP module, RegularExpressionSP symbol,
                      bool first_instruction_only) {
-    m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer, true, ConstString(), module,
+    m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer,
+                              true, ConstString(), module, ConstString(),
                               ConstString(), symbol, first_instruction_only});
   }
 
   void ForEach(
-      std::function<void(uint32_t recognized_id, std::string recognizer_name, std::string module,
-                         std::string symbol, bool regexp)> const &callback) {
+      std::function<void(uint32_t recognized_id, std::string recognizer_name,
+                         std::string module, std::string symbol,
+                         std::string alternate_symbol, bool regexp)> const
+          &callback) {
     for (auto entry : m_recognizers) {
       if (entry.is_regexp) {
         std::string module_name;
@@ -79,11 +83,16 @@ public:
           symbol_name = entry.symbol_regexp->GetText().str();
 
         callback(entry.recognizer_id, entry.recognizer->GetName(), module_name,
-                 symbol_name, true);
+                 symbol_name, {}, true);
 
       } else {
-        callback(entry.recognizer_id, entry.recognizer->GetName(), entry.module.GetCString(),
-                 entry.symbol.GetCString(), false);
+        std::string alternate_symbol;
+        if (!entry.alternate_symbol.IsEmpty())
+          alternate_symbol.append(entry.alternate_symbol.GetCString());
+
+        callback(entry.recognizer_id, entry.recognizer->GetName(),
+                 entry.module.GetCString(), entry.symbol.GetCString(),
+                 alternate_symbol, false);
       }
     }
   }
@@ -120,7 +129,10 @@ public:
         if (!entry.module_regexp->Execute(module_name.GetStringRef())) continue;
 
       if (entry.symbol)
-        if (entry.symbol != function_name) continue;
+        if (entry.symbol != function_name &&
+            (!entry.alternate_symbol ||
+             entry.alternate_symbol != function_name))
+          continue;
 
       if (entry.symbol_regexp)
         if (!entry.symbol_regexp->Execute(function_name.GetStringRef()))
@@ -149,6 +161,7 @@ public:
     ConstString module;
     RegularExpressionSP module_regexp;
     ConstString symbol;
+    ConstString alternate_symbol;
     RegularExpressionSP symbol_regexp;
     bool first_instruction_only;
   };
@@ -163,10 +176,10 @@ StackFrameRecognizerManagerImpl &GetStackFrameRecognizerManagerImpl() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, ConstString module,
-    ConstString symbol, bool first_instruction_only) {
-  GetStackFrameRecognizerManagerImpl().AddRecognizer(recognizer, module, symbol,
-                                                     first_instruction_only);
+    StackFrameRecognizerSP recognizer, ConstString module, ConstString symbol,
+    ConstString alternate_symbol, bool first_instruction_only) {
+  GetStackFrameRecognizerManagerImpl().AddRecognizer(
+      recognizer, module, symbol, alternate_symbol, first_instruction_only);
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
@@ -177,8 +190,10 @@ void StackFrameRecognizerManager::AddRecognizer(
 }
 
 void StackFrameRecognizerManager::ForEach(
-    std::function<void(uint32_t recognized_id, std::string recognizer_name, std::string module,
-                       std::string symbol, bool regexp)> const &callback) {
+    std::function<void(uint32_t recognized_id, std::string recognizer_name,
+                       std::string module, std::string symbol,
+                       std::string alternate_symbol, bool regexp)> const
+        &callback) {
   GetStackFrameRecognizerManagerImpl().ForEach(callback);
 }
 

@@ -16,116 +16,90 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-/// Checkes if the module containing a symbol has debug info.
-///
-/// \param[in] target
-///    The target containing the module.
-/// \param[in] module_spec
-///    The module spec that should contain the symbol.
-/// \param[in] symbol_name
-///    The symbol's name that should be contained in the debug info.
-/// \return
-///    If  \b true the symbol was found, \b false otherwise.
-bool ModuleHasDebugInfo(Target &target, FileSpec &module_spec,
-                        StringRef symbol_name) {
-  ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec);
 
-  if (!module_sp)
-    return false;
-
-  return module_sp->FindFirstSymbolWithNameAndType(ConstString(symbol_name));
-}
+/// Stores a function module spec, symbol name and possibly an alternate symbol
+/// name.
+struct SymbolLocation {
+  FileSpec module_spec;
+  ConstString symbol_name;
+  ConstString alternate_symbol_name;
+};
 
 /// Fetches the abort frame location depending on the current platform.
 ///
-/// \param[in] process_sp
-///    The process that is currently aborting. This will give us information on
-///    the target and the platform.
+/// \param[in] os
+///    The target's os type.
+/// \param[in,out] location
+///    The struct that will contain the abort module spec and symbol names.
 /// \return
-///    If the platform is supported, returns an optional tuple containing
-///    the abort module as a \a FileSpec and the symbol name as a \a StringRef.
-///    Otherwise, returns \a llvm::None.
-llvm::Optional<std::tuple<FileSpec, StringRef>>
-GetAbortLocation(Process *process) {
-  Target &target = process->GetTarget();
-
-  FileSpec module_spec;
-  StringRef symbol_name;
-
-  switch (target.GetArchitecture().GetTriple().getOS()) {
+///    \b true, if the platform is supported
+///    \b false, otherwise.
+bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
+  switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
-    module_spec = FileSpec("libsystem_kernel.dylib");
-    symbol_name = "__pthread_kill";
+    location.module_spec = FileSpec("libsystem_kernel.dylib");
+    location.symbol_name.SetString("__pthread_kill");
     break;
   case llvm::Triple::Linux:
-    module_spec = FileSpec("libc.so.6");
-    symbol_name = "__GI_raise";
-    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
-      symbol_name = "raise";
+    location.module_spec = FileSpec("libc.so.6");
+    location.symbol_name.SetString("raise");
+    location.alternate_symbol_name.SetString("__GI_raise");
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
     LLDB_LOG(log, "AssertFrameRecognizer::GetAbortLocation Unsupported OS");
-    return llvm::None;
+    return false;
   }
 
-  return std::make_tuple(module_spec, symbol_name);
+  return true;
 }
 
 /// Fetches the assert frame location depending on the current platform.
 ///
-/// \param[in] process_sp
-///    The process that is currently asserting. This will give us information on
-///    the target and the platform.
+/// \param[in] os
+///    The target's os type.
+/// \param[in,out] location
+///    The struct that will contain the assert module spec and symbol names.
 /// \return
-///    If the platform is supported, returns an optional tuple containing
-///    the asserting frame module as  a \a FileSpec and the symbol name as a \a
-///    StringRef.
-///    Otherwise, returns \a llvm::None.
-llvm::Optional<std::tuple<FileSpec, StringRef>>
-GetAssertLocation(Process *process) {
-  Target &target = process->GetTarget();
-
-  FileSpec module_spec;
-  StringRef symbol_name;
-
-  switch (target.GetArchitecture().GetTriple().getOS()) {
+///    \b true, if the platform is supported
+///    \b false, otherwise.
+bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
+  switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
-    module_spec = FileSpec("libsystem_c.dylib");
-    symbol_name = "__assert_rtn";
+    location.module_spec = FileSpec("libsystem_c.dylib");
+    location.symbol_name.SetString("__assert_rtn");
     break;
   case llvm::Triple::Linux:
-    module_spec = FileSpec("libc.so.6");
-    symbol_name = "__GI___assert_fail";
-    if (!ModuleHasDebugInfo(target, module_spec, symbol_name))
-      symbol_name = "__assert_fail";
+    location.module_spec = FileSpec("libc.so.6");
+    location.symbol_name.SetString("__assert_fail");
+    location.alternate_symbol_name.SetString("__GI___assert_fail");
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
     LLDB_LOG(log, "AssertFrameRecognizer::GetAssertLocation Unsupported OS");
-    return llvm::None;
+    return false;
   }
 
-  return std::make_tuple(module_spec, symbol_name);
+  return true;
 }
 
 void RegisterAssertFrameRecognizer(Process *process) {
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, [process]() {
-    auto abort_location = GetAbortLocation(process);
+    Target &target = process->GetTarget();
+    llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
+    SymbolLocation location;
 
-    if (!abort_location.hasValue())
+    if (!GetAbortLocation(os, location))
       return;
-
-    FileSpec module_spec;
-    StringRef function_name;
-    std::tie(module_spec, function_name) = *abort_location;
 
     StackFrameRecognizerManager::AddRecognizer(
         StackFrameRecognizerSP(new AssertFrameRecognizer()),
-        module_spec.GetFilename(), ConstString(function_name), false);
+        location.module_spec.GetFilename(), ConstString(location.symbol_name),
+        ConstString(location.alternate_symbol_name),
+        /*first_instruction_only*/ false);
   });
 }
 
@@ -135,15 +109,12 @@ lldb::RecognizedStackFrameSP
 AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   ThreadSP thread_sp = frame_sp->GetThread();
   ProcessSP process_sp = thread_sp->GetProcess();
+  Target &target = process_sp->GetTarget();
+  llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
+  SymbolLocation location;
 
-  auto assert_location = GetAssertLocation(process_sp.get());
-
-  if (!assert_location.hasValue())
+  if (!GetAssertLocation(os, location))
     return RecognizedStackFrameSP();
-
-  FileSpec module_spec;
-  StringRef function_name;
-  std::tie(module_spec, function_name) = *assert_location;
 
   const uint32_t frames_to_fetch = 5;
   const uint32_t last_frame_index = frames_to_fetch - 1;
@@ -163,8 +134,14 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     SymbolContext sym_ctx =
         prev_frame_sp->GetSymbolContext(eSymbolContextEverything);
 
-    if (sym_ctx.module_sp->GetFileSpec().FileEquals(module_spec) &&
-        sym_ctx.GetFunctionName() == ConstString(function_name)) {
+    if (!sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
+      continue;
+
+    ConstString func_name = sym_ctx.GetFunctionName();
+
+    if (func_name == location.symbol_name ||
+        (!location.alternate_symbol_name.IsEmpty() &&
+         func_name == location.alternate_symbol_name)) {
 
       // We go a frame beyond the assert location because the most relevant
       // frame for the user is the one in which the assert function was called.
