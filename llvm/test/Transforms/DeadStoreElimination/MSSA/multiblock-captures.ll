@@ -25,6 +25,7 @@ define i8* @test_return_captures_1() {
 define i8* @test_return_captures_2() {
 ; CHECK-LABEL: @test_return_captures_2(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
+; CHECK-NEXT:    store i8 0, i8* [[M]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store i8 1, i8* [[M]]
@@ -90,6 +91,7 @@ exit:
 define i8* @test_malloc_capture_3() {
 ; CHECK-LABEL: @test_malloc_capture_3(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
+; CHECK-NEXT:    store i8 0, i8* [[M]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store i8 1, i8* [[M]]
@@ -189,6 +191,7 @@ exit:
 define i8* @test_malloc_capture_7() {
 ; CHECK-LABEL: @test_malloc_capture_7(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
+; CHECK-NEXT:    store i8 0, i8* [[M]]
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -212,10 +215,10 @@ exit:
 define void @test_alloca_nocapture_1() {
 ; CHECK-LABEL: @test_alloca_nocapture_1(
 ; CHECK-NEXT:    [[M:%.*]] = alloca i8
+; CHECK-NEXT:    store i8 0, i8* [[M]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8
@@ -237,7 +240,6 @@ define void @test_alloca_capture_1() {
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8
@@ -260,7 +262,6 @@ define void @test_alloca_capture_2(%S1* %E) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_PTR:%.*]] = getelementptr [[S1:%.*]], %S1* [[E:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]]
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8

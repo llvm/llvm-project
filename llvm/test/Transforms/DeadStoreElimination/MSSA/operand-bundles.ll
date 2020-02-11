@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -S | FileCheck %s
 
 declare noalias i8* @malloc(i64) "malloc-like"
