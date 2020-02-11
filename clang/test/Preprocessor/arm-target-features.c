@@ -761,8 +761,9 @@
 // CHECK-V81M-MVEFP: #define __ARM_FEATURE_SIMD32 1
 // CHECK-V81M-MVEFP: #define __ARM_FPV5__ 1
 
-// nofp discards mve.fp, but not mve/dsp
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nofp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
+// fpu=none/nofp discards mve.fp, but not mve/dsp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nofp            -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp      -mfpu=none -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
 // CHECK-V81M-MVEFP-NOFP: #define __ARM_FEATURE_DSP 1
 // CHECK-V81M-MVEFP-NOFP: #define __ARM_FEATURE_MVE 1
 
