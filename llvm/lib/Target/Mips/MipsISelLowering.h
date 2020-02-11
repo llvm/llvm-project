@@ -706,6 +706,10 @@ class TargetRegisterClass;
                                         bool isFPCmp, unsigned Opc) const;
     MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitLDR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitLDR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitSTR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitSTR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
   };
 
   /// Create MipsTargetLowering objects.
