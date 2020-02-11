@@ -92,6 +92,10 @@ We explicitly avoid some standard facilities, like the I/O streams, and instead
 use LLVM's streams library (raw_ostream_). More detailed information on these
 subjects is available in the :doc:`ProgrammersManual`.
 
+For more information about LLVM's data structures and the tradeoffs they make,
+please consult [that section of the programmer's
+manual](https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task).
+
 Guidelines for Go code
 ----------------------
 
