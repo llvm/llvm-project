@@ -29,6 +29,17 @@ struct DerivedWithVirtDtorButNoBaseDtor : BaseWithoutVirtDtor {
   virtual int foo() { return 6; }
 };
 
+struct DerivedWithOverload : BaseWithVirtDtor {
+  virtual ~DerivedWithOverload() {}
+  virtual int foo(int i) { return 7; }
+};
+
+struct DerivedWithOverloadAndUsing : BaseWithVirtDtor {
+  virtual ~DerivedWithOverloadAndUsing() {}
+  using BaseWithVirtDtor::foo;
+  virtual int foo(int i) { return 8; }
+};
+
 int main() {
   // Declare base classes.
   BaseWithVirtDtor base_with_dtor;
@@ -39,6 +50,8 @@ int main() {
   DerivedWithoutVirtDtor derived_without_dtor;
   DerivedWithBaseVirtDtor derived_with_base_dtor;
   DerivedWithVirtDtorButNoBaseDtor derived_with_dtor_but_no_base_dtor;
+  DerivedWithOverload derived_with_overload;
+  DerivedWithOverloadAndUsing derived_with_overload_and_using;
 
   // The previous classes as their base class type.
   BaseWithVirtDtor &derived_with_dtor_as_base = derived_with_dtor;
@@ -49,7 +62,9 @@ int main() {
   // Call functions so that they are compiled.
   int i = base_with_dtor.foo() + base_without_dtor.foo() +
           derived_with_dtor.foo() + derived_without_dtor.foo() +
-          derived_with_base_dtor.foo();
+          derived_with_base_dtor.foo() + derived_with_overload.foo(1)
+          + derived_with_overload_and_using.foo(2)
+          + derived_with_overload_and_using.foo();
 
   return i; // break here
 }
