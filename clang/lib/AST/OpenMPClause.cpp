@@ -119,6 +119,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_acq_rel:
   case OMPC_acquire:
   case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -196,6 +197,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_acq_rel:
   case OMPC_acquire:
   case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -1350,6 +1352,10 @@ void OMPClausePrinter::VisitOMPAcquireClause(OMPAcquireClause *) {
 
 void OMPClausePrinter::VisitOMPReleaseClause(OMPReleaseClause *) {
   OS << "release";
+}
+
+void OMPClausePrinter::VisitOMPRelaxedClause(OMPRelaxedClause *) {
+  OS << "relaxed";
 }
 
 void OMPClausePrinter::VisitOMPThreadsClause(OMPThreadsClause *) {

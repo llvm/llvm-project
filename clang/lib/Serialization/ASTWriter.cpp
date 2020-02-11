@@ -6146,6 +6146,8 @@ void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}
 
+void OMPClauseWriter::VisitOMPRelaxedClause(OMPRelaxedClause *) {}
+
 void OMPClauseWriter::VisitOMPThreadsClause(OMPThreadsClause *) {}
 
 void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}

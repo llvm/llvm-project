@@ -809,7 +809,7 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic update
+#pragma omp atomic relaxed update
   bfx4_packed.a -= ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, x86_fp80* @{{.+}}
 // CHECK: [[PREV_VALUE:%.+]] = load atomic i64, i64* bitcast (%struct.BitFields4* @{{.+}} to i64*) monotonic
@@ -866,7 +866,7 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic update
+#pragma omp atomic update relaxed
   bfx4_packed.b += ldv;
 // CHECK: load i64, i64*
 // CHECK: [[EXPR:%.+]] = uitofp i64 %{{.+}} to float
@@ -890,7 +890,7 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i64, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic
+#pragma omp atomic relaxed
   float2x.x = ulv - float2x.x;
 // CHECK: [[EXPR:%.+]] = load double, double* @{{.+}},
 // CHECK: [[OLD_VAL:%.+]] = call i32 @llvm.read_register.i32([[REG:metadata ![0-9]+]])

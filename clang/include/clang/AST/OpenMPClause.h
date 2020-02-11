@@ -1995,6 +1995,46 @@ public:
   }
 };
 
+/// This represents 'relaxed' clause in the '#pragma omp atomic'
+/// directives.
+///
+/// \code
+/// #pragma omp atomic relaxed
+/// \endcode
+/// In this example directive '#pragma omp atomic' has 'relaxed' clause.
+class OMPRelaxedClause final : public OMPClause {
+public:
+  /// Build 'relaxed' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPRelaxedClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_relaxed, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPRelaxedClause()
+      : OMPClause(OMPC_relaxed, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_relaxed;
+  }
+};
+
 /// This represents clause 'private' in the '#pragma omp ...' directives.
 ///
 /// \code
