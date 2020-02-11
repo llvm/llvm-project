@@ -182,8 +182,8 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
 INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
   const scudo::uptr max_size =
       decltype(SCUDO_ALLOCATOR)::PrimaryT::SizeClassMap::MaxSize;
-  auto *sizes =
-      static_cast<scudo::uptr *>(calloc(max_size, sizeof(scudo::uptr)));
+  auto *sizes = static_cast<scudo::uptr *>(
+      SCUDO_PREFIX(calloc)(max_size, sizeof(scudo::uptr)));
   auto callback = [](uintptr_t, size_t size, void* arg) {
     auto *sizes = reinterpret_cast<scudo::uptr *>(arg);
     if (size < max_size)
@@ -196,7 +196,7 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
     if (sizes[i])
       fprintf(stream, "<alloc size=\"%lu\" count=\"%lu\"/>\n", i, sizes[i]);
   fputs("</malloc>\n", stream);
-  free(sizes);
+  SCUDO_PREFIX(free)(sizes);
   return 0;
 }
 
