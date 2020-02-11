@@ -56,14 +56,6 @@ void test_comparisons()
 #pragma clang diagnostic ignored "-Wnull-conversion"
 #endif
 void test_nullptr_conversions() {
-// GCC does not accept this due to CWG Defect #1423
-// http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1423
-#if defined(__clang__)
-    {
-        bool b = nullptr;
-        assert(!b);
-    }
-#endif
     {
         bool b(nullptr);
         assert(!b);
