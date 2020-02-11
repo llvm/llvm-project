@@ -282,7 +282,7 @@ void Options::OutputFormattedUsageText(Stream &strm,
   if (static_cast<uint32_t>(actual_text.length() + strm.GetIndentLevel()) <
       output_max_columns) {
     // Output it as a single line.
-    strm.Indent(actual_text.c_str());
+    strm.Indent(actual_text);
     strm.EOL();
   } else {
     // We need to break it up into multiple lines.
