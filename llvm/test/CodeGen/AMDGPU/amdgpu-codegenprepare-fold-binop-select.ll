@@ -121,18 +121,15 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP32:%.*]] = mul i32 [[TMP31]], [[TMP4]]
 ; IR-NEXT:    [[TMP33:%.*]] = sub i32 1000000, [[TMP32]]
 ; IR-NEXT:    [[TMP34:%.*]] = icmp uge i32 [[TMP33]], [[TMP4]]
-; IR-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], i32 -1, i32 0
-; IR-NEXT:    [[TMP36:%.*]] = icmp uge i32 1000000, [[TMP32]]
-; IR-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 -1, i32 0
-; IR-NEXT:    [[TMP38:%.*]] = and i32 [[TMP35]], [[TMP37]]
-; IR-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[TMP38]], 0
-; IR-NEXT:    [[TMP40:%.*]] = add i32 [[TMP31]], 1
-; IR-NEXT:    [[TMP41:%.*]] = sub i32 [[TMP31]], 1
-; IR-NEXT:    [[TMP42:%.*]] = select i1 [[TMP39]], i32 [[TMP31]], i32 [[TMP40]]
-; IR-NEXT:    [[TMP43:%.*]] = select i1 [[TMP36]], i32 [[TMP42]], i32 [[TMP41]]
-; IR-NEXT:    [[TMP44:%.*]] = xor i32 [[TMP43]], [[TMP2]]
-; IR-NEXT:    [[TMP45:%.*]] = sub i32 [[TMP44]], [[TMP2]]
-; IR-NEXT:    ret i32 [[TMP45]]
+; IR-NEXT:    [[TMP35:%.*]] = icmp uge i32 1000000, [[TMP32]]
+; IR-NEXT:    [[TMP36:%.*]] = and i1 [[TMP34]], [[TMP35]]
+; IR-NEXT:    [[TMP37:%.*]] = add i32 [[TMP31]], 1
+; IR-NEXT:    [[TMP38:%.*]] = sub i32 [[TMP31]], 1
+; IR-NEXT:    [[TMP39:%.*]] = select i1 [[TMP36]], i32 [[TMP37]], i32 [[TMP31]]
+; IR-NEXT:    [[TMP40:%.*]] = select i1 [[TMP35]], i32 [[TMP39]], i32 [[TMP38]]
+; IR-NEXT:    [[TMP41:%.*]] = xor i32 [[TMP40]], [[TMP2]]
+; IR-NEXT:    [[TMP42:%.*]] = sub i32 [[TMP41]], [[TMP2]]
+; IR-NEXT:    ret i32 [[TMP42]]
 ;
 ; GCN-LABEL: select_sdiv_lhs_opaque_const0_i32:
 ; GCN:       ; %bb.0:
@@ -219,18 +216,15 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP32:%.*]] = mul i32 [[TMP31]], [[TMP4]]
 ; IR-NEXT:    [[TMP33:%.*]] = sub i32 1000000, [[TMP32]]
 ; IR-NEXT:    [[TMP34:%.*]] = icmp uge i32 [[TMP33]], [[TMP4]]
-; IR-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], i32 -1, i32 0
-; IR-NEXT:    [[TMP36:%.*]] = icmp uge i32 1000000, [[TMP32]]
-; IR-NEXT:    [[TMP37:%.*]] = select i1 [[TMP36]], i32 -1, i32 0
-; IR-NEXT:    [[TMP38:%.*]] = and i32 [[TMP35]], [[TMP37]]
-; IR-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[TMP38]], 0
-; IR-NEXT:    [[TMP40:%.*]] = add i32 [[TMP31]], 1
-; IR-NEXT:    [[TMP41:%.*]] = sub i32 [[TMP31]], 1
-; IR-NEXT:    [[TMP42:%.*]] = select i1 [[TMP39]], i32 [[TMP31]], i32 [[TMP40]]
-; IR-NEXT:    [[TMP43:%.*]] = select i1 [[TMP36]], i32 [[TMP42]], i32 [[TMP41]]
-; IR-NEXT:    [[TMP44:%.*]] = xor i32 [[TMP43]], [[TMP2]]
-; IR-NEXT:    [[TMP45:%.*]] = sub i32 [[TMP44]], [[TMP2]]
-; IR-NEXT:    ret i32 [[TMP45]]
+; IR-NEXT:    [[TMP35:%.*]] = icmp uge i32 1000000, [[TMP32]]
+; IR-NEXT:    [[TMP36:%.*]] = and i1 [[TMP34]], [[TMP35]]
+; IR-NEXT:    [[TMP37:%.*]] = add i32 [[TMP31]], 1
+; IR-NEXT:    [[TMP38:%.*]] = sub i32 [[TMP31]], 1
+; IR-NEXT:    [[TMP39:%.*]] = select i1 [[TMP36]], i32 [[TMP37]], i32 [[TMP31]]
+; IR-NEXT:    [[TMP40:%.*]] = select i1 [[TMP35]], i32 [[TMP39]], i32 [[TMP38]]
+; IR-NEXT:    [[TMP41:%.*]] = xor i32 [[TMP40]], [[TMP2]]
+; IR-NEXT:    [[TMP42:%.*]] = sub i32 [[TMP41]], [[TMP2]]
+; IR-NEXT:    ret i32 [[TMP42]]
 ;
 ; GCN-LABEL: select_sdiv_lhs_opaque_const1_i32:
 ; GCN:       ; %bb.0:
