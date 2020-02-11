@@ -2525,9 +2525,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
   llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
-  StringRef FPContract = "";
+  StringRef FPContract = "on";
   bool StrictFPModel = false;
-
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2551,7 +2550,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = DefaultDenormalFPMath;
-      FPContract = "";
       StringRef Val = A->getValue();
       if (OFastEnabled && !Val.equals("fast")) {
           // Only -ffp-model=fast is compatible with OFast, ignore.
@@ -2565,12 +2563,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // ffp-model= is a Driver option, it is entirely rewritten into more
       // granular options before being passed into cc1.
       // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val)) {
+      if (!FPModel.empty() && !FPModel.equals(Val))
         D.Diag(clang::diag::warn_drv_overriding_flag_option)
           << Args.MakeArgString("-ffp-model=" + FPModel)
           << Args.MakeArgString("-ffp-model=" + Val);
-        FPContract = "";
-      }
       if (Val.equals("fast")) {
         optID = options::OPT_ffast_math;
         FPModel = Val;
@@ -2578,13 +2574,14 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       } else if (Val.equals("precise")) {
         optID = options::OPT_ffp_contract;
         FPModel = Val;
-        FPContract = "fast";
+        FPContract = "on";
         PreciseFPModel = true;
       } else if (Val.equals("strict")) {
         StrictFPModel = true;
         optID = options::OPT_frounding_math;
         FPExceptionBehavior = "strict";
         FPModel = Val;
+        FPContract = "off";
         TrappingMath = true;
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -2663,9 +2660,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
       if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=fast as a side effect
-        // the FPContract value has already been set to a string literal
-        // and the Val string isn't a pertinent value.
+        // When -ffp-model=precise is seen on the command line,
+        // the boolean PreciseFPModel is set to true which indicates
+        // "the current option is actually PreciseFPModel". The optID
+        // is changed to OPT_ffp_contract and FPContract is set to "on".
+        // the argument Val string is "precise": it shouldn't be checked.
         ;
       } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off"))
         FPContract = Val;
@@ -2762,7 +2761,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = DefaultDenormalFPMath;
       DenormalFP32Math = DefaultDenormalFP32Math;
-      FPContract = "";
+      FPContract = "on";
       break;
     }
     if (StrictFPModel) {
@@ -2773,7 +2772,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
         DenormalFPMath != llvm::DenormalMode::getIEEE() &&
-        FPContract.empty())
+        FPContract.equals("off"))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
