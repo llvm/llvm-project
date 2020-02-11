@@ -736,8 +736,7 @@ uptr internal_getppid() {
 }
 
 int internal_dlinfo(void *handle, int request, void *p) {
-#if SANITIZER_FREEBSD || (SANITIZER_LINUX && !SANITIZER_ANDROID) || \
-    SANITIZER_SOLARIS
+#if SANITIZER_FREEBSD
   return dlinfo(handle, request, p);
 #else
   UNIMPLEMENTED();
