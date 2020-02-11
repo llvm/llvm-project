@@ -3280,13 +3280,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
   }
 
-  // Put multiple C# attributes on a new line.
-  if (Style.isCSharp() &&
-      ((Left.is(TT_AttributeSquare) && Left.is(tok::r_square)) ||
-       (Left.is(tok::r_square) && Right.is(TT_AttributeSquare) &&
-        Right.is(tok::l_square))))
-    return true;
-
   // Put multiple Java annotation on a new line.
   if ((Style.Language == FormatStyle::LK_Java ||
        Style.Language == FormatStyle::LK_JavaScript) &&
