@@ -81,18 +81,10 @@ public:
     return BinaryOperator::CreateExactUDiv(LHS, RHS);
   }
 
-  Instruction *CreateExactUDiv(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateExactUDiv(LHS, RHS);
-  }
-
   Instruction *CreateSDiv(Constant *LHS, Constant *RHS,
                           bool isExact = false) const {
     if (!isExact)
       return BinaryOperator::CreateSDiv(LHS, RHS);
-    return BinaryOperator::CreateExactSDiv(LHS, RHS);
-  }
-
-  Instruction *CreateExactSDiv(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateExactSDiv(LHS, RHS);
   }
 
@@ -161,14 +153,6 @@ public:
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
-  }
-
-  Instruction *CreateNSWNeg(Constant *C) const {
-    return BinaryOperator::CreateNSWNeg(C);
-  }
-
-  Instruction *CreateNUWNeg(Constant *C) const {
-    return BinaryOperator::CreateNUWNeg(C);
   }
 
   Instruction *CreateFNeg(Constant *C) const {
