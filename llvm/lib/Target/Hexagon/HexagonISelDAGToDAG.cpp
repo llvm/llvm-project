@@ -1187,7 +1187,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
         Ops[i] = U->getOperand(i);
       EVT BVT = Ops[I1N].getValueType();
 
-      SDLoc dl(U);
+      const SDLoc &dl(U);
       SDValue C0 = DAG.getConstant(0, dl, BVT);
       SDValue C1 = DAG.getConstant(1, dl, BVT);
       SDValue If0, If1;
@@ -1205,8 +1205,15 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
         Ops[I1N] = C1;
         If1 = DAG.getNode(UseOpc, dl, UVT, Ops);
       }
-      SDValue Sel = DAG.getNode(ISD::SELECT, dl, UVT, OpI1, If1, If0);
-      DAG.ReplaceAllUsesWith(U, Sel.getNode());
+      // We're generating a SELECT way after legalization, so keep the types
+      // simple.
+      unsigned UW = UVT.getSizeInBits();
+      EVT SVT = (UW == 32 || UW == 64) ? MVT::getIntegerVT(UW) : UVT;
+      SDValue Sel = DAG.getNode(ISD::SELECT, dl, SVT, OpI1,
+                                DAG.getBitcast(SVT, If1),
+                                DAG.getBitcast(SVT, If0));
+      SDValue Ret = DAG.getBitcast(UVT, Sel);
+      DAG.ReplaceAllUsesWith(U, Ret.getNode());
     }
   }
 }
