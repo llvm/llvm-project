@@ -21,7 +21,7 @@ define dso_local i32 @test() local_unnamed_addr #0 !dbg !14 {
   ret i32 %3, !dbg !24
 }
 
-; CHECK-RELOC: file format ELF64-BPF
+; CHECK-RELOC: file format elf64-bpf
 ; CHECK-RELOC: RELOCATION RECORDS FOR [.BTF]:
 ; CHECK-RELOC: R_BPF_NONE .bss
 ; CHECK-RELOC: R_BPF_NONE g
