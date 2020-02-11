@@ -46,7 +46,6 @@ LLDB_PLUGIN_DECLARE(PlatformNetBSD);
 LLDB_PLUGIN_DECLARE(PlatformOpenBSD);
 LLDB_PLUGIN_DECLARE(PlatformWindows);
 LLDB_PLUGIN_DECLARE(PlatformAndroid);
-LLDB_PLUGIN_DECLARE(PlatformRemoteiOS);
 LLDB_PLUGIN_DECLARE(PlatformMacOSX);
 LLDB_PLUGIN_DECLARE(TypeSystemClang);
 LLDB_PLUGIN_DECLARE(ArchitectureArm);
@@ -162,7 +161,6 @@ llvm::Error SystemInitializerTest::Initialize() {
   LLDB_PLUGIN_INITIALIZE(PlatformOpenBSD);
   LLDB_PLUGIN_INITIALIZE(PlatformWindows);
   LLDB_PLUGIN_INITIALIZE(PlatformAndroid);
-  LLDB_PLUGIN_INITIALIZE(PlatformRemoteiOS);
   LLDB_PLUGIN_INITIALIZE(PlatformMacOSX);
 
   // Initialize LLVM and Clang
@@ -338,7 +336,6 @@ void SystemInitializerTest::Terminate() {
   LLDB_PLUGIN_TERMINATE(PlatformOpenBSD);
   LLDB_PLUGIN_TERMINATE(PlatformWindows);
   LLDB_PLUGIN_TERMINATE(PlatformAndroid);
-  LLDB_PLUGIN_TERMINATE(PlatformRemoteiOS);
   LLDB_PLUGIN_TERMINATE(PlatformMacOSX);
 
   LLDB_PLUGIN_TERMINATE(ObjectFileBreakpad);
