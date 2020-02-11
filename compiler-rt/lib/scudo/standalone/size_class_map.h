@@ -24,7 +24,6 @@ inline uptr scaledLog2(uptr Size, uptr ZeroLog, uptr LogBits) {
 
 template <typename Config> struct SizeClassMapBase {
   static u32 getMaxCachedHint(uptr Size) {
-    DCHECK_LE(Size, (1UL << Config::MaxSizeLog) + Chunk::getHeaderSize());
     DCHECK_NE(Size, 0);
     u32 N;
     // Force a 32-bit division if the template parameters allow for it.
@@ -95,10 +94,17 @@ public:
       return (Size + MinSize - 1) >> Config::MinSizeLog;
     return MidClass + 1 + scaledLog2(Size - 1, Config::MidSizeLog, S);
   }
+
+  static u32 getMaxCachedHint(uptr Size) {
+    DCHECK_LE(Size, MaxSize);
+    return Base::getMaxCachedHint(Size);
+  }
 };
 
 template <typename Config>
 class TableSizeClassMap : public SizeClassMapBase<Config> {
+  typedef SizeClassMapBase<Config> Base;
+
   static const u8 S = Config::NumBits - 1;
   static const uptr M = (1UL << S) - 1;
   static const uptr ClassesSize =
@@ -156,8 +162,10 @@ public:
     return Table.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
-  static void print() {}
-  static void validate() {}
+  static u32 getMaxCachedHint(uptr Size) {
+    DCHECK_LE(Size, MaxSize);
+    return Base::getMaxCachedHint(Size);
+  }
 };
 
 struct AndroidSizeClassConfig {
