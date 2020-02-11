@@ -1109,6 +1109,15 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<3>]>;
 
+  class AdvSIMD_SVE_CDOT_LANE_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide4VectorType<0>,
+                 LLVMSubdivide4VectorType<0>,
+                 llvm_i32_ty,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<3>, ImmArg<4>]>;
+
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
   class AdvSIMD_SVE_LOGB_Intrinsic  : AdvSIMD_SVE_CNT_Intrinsic;
@@ -1796,6 +1805,13 @@ def int_aarch64_sve_sqrdcmlah_lane_x : AdvSIMD_SVE_CMLA_LANE_Intrinsic;
 def int_aarch64_sve_saddlbt   : SVE2_2VectorArg_Long_Intrinsic;
 def int_aarch64_sve_ssublbt   : SVE2_2VectorArg_Long_Intrinsic;
 def int_aarch64_sve_ssubltb   : SVE2_2VectorArg_Long_Intrinsic;
+
+//
+// SVE2 - Widening complex integer dot product
+//
+
+def int_aarch64_sve_cdot      : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
+def int_aarch64_sve_cdot_lane : AdvSIMD_SVE_CDOT_LANE_Intrinsic;
 
 //
 // SVE2 - Floating-point widening multiply-accumulate

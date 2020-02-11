@@ -1442,10 +1442,10 @@ let Predicates = [HasSVE2] in {
   def : Pat<(nxv2i64 (int_aarch64_sve_umulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
             (UMULH_ZZZ_D $Op1, $Op2)>;
   // SVE2 complex integer dot product (indexed)
-  defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot">;
+  defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot", int_aarch64_sve_cdot_lane>;
 
   // SVE2 complex integer dot product
-  defm CDOT_ZZZ : sve2_cintx_dot<"cdot">;
+  defm CDOT_ZZZ : sve2_cintx_dot<"cdot", int_aarch64_sve_cdot>;
 
   // SVE2 complex integer multiply-add (indexed)
   defm CMLA_ZZZI      : sve2_cmla_by_indexed_elem<0b0, "cmla", int_aarch64_sve_cmla_lane_x>;
