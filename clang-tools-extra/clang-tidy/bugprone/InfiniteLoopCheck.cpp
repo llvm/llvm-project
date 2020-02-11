@@ -152,6 +152,13 @@ static std::string getCondVarNames(const Stmt *Cond) {
   return Result;
 }
 
+static bool isKnownFalse(const Expr &Cond, const ASTContext &Ctx) {
+  bool Result = false;
+  if (Cond.EvaluateAsBooleanCondition(Result, Ctx))
+    return !Result;
+  return false;
+}
+
 void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
   const auto LoopCondition = allOf(
       hasCondition(
@@ -169,6 +176,9 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Cond = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *LoopStmt = Result.Nodes.getNodeAs<Stmt>("loop-stmt");
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
+
+  if (isKnownFalse(*Cond, *Result.Context))
+    return;
 
   bool ShouldHaveConditionVariables = true;
   if (const auto *While = dyn_cast<WhileStmt>(LoopStmt)) {
