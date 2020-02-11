@@ -1695,7 +1695,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         static
         typename enable_if
         <
-            is_trivially_move_constructible<_DestTp>::value &&
+            is_trivially_copy_constructible<_DestTp>::value &&
             is_same<_RawSourceTp, _RawDestTp>::value &&
             (__is_default_allocator<allocator_type>::value ||
              !__has_construct<allocator_type, _DestTp*, _SourceTp&>::value),
