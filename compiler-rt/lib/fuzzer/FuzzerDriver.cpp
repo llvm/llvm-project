@@ -306,8 +306,7 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
-static std::string GetDedupTokenFromFile(const std::string &Path) {
-  auto S = FileToString(Path);
+static std::string GetDedupTokenFromCmdOutput(const std::string &S) {
   auto Beg = S.find("DEDUP_TOKEN:");
   if (Beg == std::string::npos)
     return "";
@@ -315,6 +314,20 @@ static std::string GetDedupTokenFromFile(const std::string &Path) {
   if (End == std::string::npos)
     return "";
   return S.substr(Beg, End - Beg);
+}
+
+// Return true on success, false otherwise.
+static bool ExecuteCommandWithPopen(const Command &Cmd, std::string *CmdOutput) {
+  FILE *Pipe = OpenProcessPipe(Cmd.toString().c_str(), "r");
+  if (!Pipe)
+    return false;
+
+  if (CmdOutput) {
+    char TmpBuffer[128];
+    while (fgets(TmpBuffer, sizeof(TmpBuffer), Pipe))
+      CmdOutput->append(TmpBuffer);
+  }
+  return CloseProcessPipe(Pipe) == 0;
 }
 
 int CleanseCrashInput(const Vector<std::string> &Args,
@@ -332,10 +345,9 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   assert(Cmd.hasArgument(InputFilePath));
   Cmd.removeArgument(InputFilePath);
 
-  auto LogFilePath = TempPath(".txt");
   auto TmpFilePath = TempPath(".repro");
   Cmd.addArgument(TmpFilePath);
-  Cmd.setOutputFile(LogFilePath);
+  Cmd.setOutputFile(getDevNull());
   Cmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
@@ -370,7 +382,6 @@ int CleanseCrashInput(const Vector<std::string> &Args,
     }
     if (!Changed) break;
   }
-  RemoveFile(LogFilePath);
   return 0;
 }
 
@@ -393,8 +404,6 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     BaseCmd.addFlag("max_total_time", "600");
   }
 
-  auto LogFilePath = TempPath(".txt");
-  BaseCmd.setOutputFile(LogFilePath);
   BaseCmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
@@ -406,17 +415,17 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     Command Cmd(BaseCmd);
     Cmd.addArgument(CurrentFilePath);
 
-    std::string CommandLine = Cmd.toString();
-    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
-    int ExitCode = ExecuteCommand(Cmd);
-    if (ExitCode == 0) {
+    Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
+    std::string CmdOutput;
+    bool Success = ExecuteCommandWithPopen(Cmd, &CmdOutput);
+    if (Success) {
       Printf("ERROR: the input %s did not crash\n", CurrentFilePath.c_str());
       exit(1);
     }
     Printf("CRASH_MIN: '%s' (%zd bytes) caused a crash. Will try to minimize "
            "it further\n",
            CurrentFilePath.c_str(), U.size());
-    auto DedupToken1 = GetDedupTokenFromFile(LogFilePath);
+    auto DedupToken1 = GetDedupTokenFromCmdOutput(CmdOutput);
     if (!DedupToken1.empty())
       Printf("CRASH_MIN: DedupToken1: %s\n", DedupToken1.c_str());
 
@@ -426,11 +435,11 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
             : Options.ArtifactPrefix + "minimized-from-" + Hash(U);
     Cmd.addFlag("minimize_crash_internal_step", "1");
     Cmd.addFlag("exact_artifact_path", ArtifactPath);
-    CommandLine = Cmd.toString();
-    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
-    ExitCode = ExecuteCommand(Cmd);
-    CopyFileToErr(LogFilePath);
-    if (ExitCode == 0) {
+    Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
+    CmdOutput.clear();
+    Success = ExecuteCommandWithPopen(Cmd, &CmdOutput);
+    Printf("%s", CmdOutput.c_str());
+    if (Success) {
       if (Flags.exact_artifact_path) {
         CurrentFilePath = Flags.exact_artifact_path;
         WriteToFile(U, CurrentFilePath);
@@ -439,7 +448,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
              CurrentFilePath.c_str(), U.size());
       break;
     }
-    auto DedupToken2 = GetDedupTokenFromFile(LogFilePath);
+    auto DedupToken2 = GetDedupTokenFromCmdOutput(CmdOutput);
     if (!DedupToken2.empty())
       Printf("CRASH_MIN: DedupToken2: %s\n", DedupToken2.c_str());
 
@@ -456,7 +465,6 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     CurrentFilePath = ArtifactPath;
     Printf("*********************************\n");
   }
-  RemoveFile(LogFilePath);
   return 0;
 }
 
