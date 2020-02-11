@@ -45931,6 +45931,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     return getZeroVector(VT, Subtarget, DAG, DL);
 
   SDValue Op0 = Ops[0];
+  bool IsSplat = llvm::all_of(Ops, [&Op0](SDValue Op) { return Op == Op0; });
 
   // Fold subvector loads into one.
   // If needed, look through bitcasts to get to the load.
@@ -45947,7 +45948,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   }
 
   // Repeated subvectors.
-  if (llvm::all_of(Ops, [Op0](SDValue Op) { return Op == Op0; })) {
+  if (IsSplat) {
     // If this broadcast/subv_broadcast is inserted into both halves, use a
     // larger broadcast/subv_broadcast.
     if (Op0.getOpcode() == X86ISD::VBROADCAST ||
@@ -45969,8 +45970,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
   }
-
-  bool IsSplat = llvm::all_of(Ops, [&Op0](SDValue Op) { return Op == Op0; });
 
   // Repeated opcode.
   // TODO - combineX86ShufflesRecursively should handle shuffle concatenation
