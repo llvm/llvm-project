@@ -328,9 +328,6 @@ private:
   /// section index 0 is never valid).
   lldb::user_id_t GetSectionIndexByName(const char *name);
 
-  // Returns the ID of the first section that has the given type.
-  lldb::user_id_t GetSectionIndexByType(unsigned type);
-
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);
 
