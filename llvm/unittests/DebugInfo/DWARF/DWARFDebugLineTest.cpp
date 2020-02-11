@@ -917,4 +917,51 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
 }
 
+TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
+  if (!setupGenerator(5))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  DWARFDebugLine::Prologue P = LT.createBasicPrologue();
+  P.IncludeDirectories.push_back(
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b dir"));
+  P.FileNames.push_back(DWARFDebugLine::FileNameEntry());
+  P.FileNames.back().Name =
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b file");
+  P.FileNames.back().DirIdx = 1;
+  P.PrologueLength += 14;
+  LT.setPrologue(P);
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  EXPECT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  std::string Result;
+  // DWARF 5 stores the compilation directory in two places: the Compilation
+  // Unit and the directory table entry 0, and implementations are free to use
+  // one or the other. This copy serves as the one stored in the CU.
+  StringRef CompDir = "a dir";
+  EXPECT_FALSE(
+      (*ExpectedLineTable)
+          ->Prologue.getFileNameByIndex(
+              1, CompDir, DILineInfoSpecifier::FileLineInfoKind::None, Result));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::Default, Result));
+  EXPECT_STREQ(Result.c_str(), "b file");
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+                      Result));
+  EXPECT_STREQ(Result.c_str(), "b dir/b file");
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                      Result));
+  EXPECT_STREQ(Result.c_str(), "a dir/b dir/b file");
+}
+
 } // end anonymous namespace

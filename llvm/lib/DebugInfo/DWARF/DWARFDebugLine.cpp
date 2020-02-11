@@ -1082,7 +1082,7 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   if (!Name)
     return false;
   StringRef FileName = *Name;
-  if (Kind != FileLineInfoKind::AbsoluteFilePath ||
+  if (Kind == FileLineInfoKind::Default ||
       isPathAbsoluteOnWindowsOrPosix(FileName)) {
     Result = std::string(FileName);
     return true;
@@ -1099,11 +1099,16 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
       IncludeDir =
           IncludeDirectories[Entry.DirIdx - 1].getAsCString().getValue();
   }
-  // We may still need to append compilation directory of compile unit.
-  // We know that FileName is not absolute, the only way to have an
-  // absolute path at this point would be if IncludeDir is absolute.
-  if (!CompDir.empty() && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
+  // For absolute paths only, include the compilation directory of compile unit.
+  // We know that FileName is not absolute, the only way to have an absolute
+  // path at this point would be if IncludeDir is absolute.
+  if (Kind == FileLineInfoKind::AbsoluteFilePath && !CompDir.empty() &&
+      !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
     sys::path::append(FilePath, Style, CompDir);
+
+  assert((Kind == FileLineInfoKind::AbsoluteFilePath ||
+          Kind == FileLineInfoKind::RelativeFilePath) &&
+         "invalid FileLineInfo Kind");
 
   // sys::path::append skips empty strings.
   sys::path::append(FilePath, Style, IncludeDir, FileName);
