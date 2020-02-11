@@ -374,10 +374,11 @@ static Value *constructPointer(Type *ResTy, Value *Ptr, int64_t Offset,
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
 /// further, the callback \p VisitValueCB is invoked and passed the current
-/// value, the \p State, and a flag to indicate if we stripped anything (=the
-/// value used for the callback is not the value associated with \p IRP). To
-/// limit how much effort is invested, we will never visit more values than
-/// specified by \p MaxValues.
+/// value, the \p State, and a flag to indicate if we stripped anything.
+/// Stripped means that we unpacked the value associated with \p IRP at least
+/// once. Note that the value used for the callback may still be the value
+/// associated with \p IRP (due to PHIs). To limit how much effort is invested,
+/// we will never visit more values than specified by \p MaxValues.
 template <typename AAType, typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
