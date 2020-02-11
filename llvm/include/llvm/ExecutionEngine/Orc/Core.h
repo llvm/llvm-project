@@ -1079,7 +1079,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() const { return SSP; }
 
   /// Run the given lambda with the session mutex locked.
-  template <typename Func> auto runSessionLocked(Func &&F) -> decltype(F()) {
+  template <typename Func> decltype(auto) runSessionLocked(Func &&F) {
     std::lock_guard<std::recursive_mutex> Lock(SessionMutex);
     return F();
   }
