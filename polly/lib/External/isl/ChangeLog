@@ -1,3 +1,26 @@
+version: 0.22.1
+date: Sun Jan 12 10:48:18 CET 2020
+changes:
+	- fix error handling
+---
+version: 0.22
+date: Fri Nov  1 18:39:30 CET 2019
+changes:
+	- improved bindings
+	- scheduler fix involving fixed dimensions
+	- accept ranges in tuples during parsing
+	- add some convenience functions
+---
+version: 0.21
+date: Sat Mar  9 15:25:29 CET 2019
+changes:
+	- preliminary C++ bindings
+	- use incremental scheduler by default
+	- introduce isl_size type
+	- rename isl_ast_op_type to isl_ast_expr_op_type
+	- fix coalescing bugs
+	- use isl_bool to return extra boolean argument
+---
 version: 0.20
 date: Sat Jul 21 18:10:08 CEST 2018
 changes:

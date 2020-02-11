@@ -22,7 +22,7 @@ struct isl_ast_expr {
 		isl_val *v;
 		isl_id *id;
 		struct {
-			enum isl_ast_op_type op;
+			enum isl_ast_expr_op_type op;
 			unsigned n_arg;
 			isl_ast_expr **args;
 		} op;
@@ -36,8 +36,9 @@ struct isl_ast_expr {
 
 __isl_give isl_ast_expr *isl_ast_expr_alloc_int_si(isl_ctx *ctx, int i);
 __isl_give isl_ast_expr *isl_ast_expr_alloc_op(isl_ctx *ctx,
-	enum isl_ast_op_type op, int n_arg);
-__isl_give isl_ast_expr *isl_ast_expr_alloc_binary(enum isl_ast_op_type type,
+	enum isl_ast_expr_op_type op, int n_arg);
+__isl_give isl_ast_expr *isl_ast_expr_alloc_binary(
+	enum isl_ast_expr_op_type type,
 	__isl_take isl_ast_expr *expr1, __isl_take isl_ast_expr *expr2);
 
 #undef EL

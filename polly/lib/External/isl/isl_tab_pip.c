@@ -184,7 +184,7 @@ struct isl_sol {
 	int rational;
 	int level;
 	int max;
-	int n_out;
+	isl_size n_out;
 	isl_space *space;
 	struct isl_context *context;
 	struct isl_partial_sol *partial;
@@ -250,12 +250,13 @@ static isl_stat check_final_columns_are_zero(__isl_keep isl_mat *M,
 	unsigned first)
 {
 	int i;
-	unsigned rows, cols, n;
+	isl_size rows, cols;
+	unsigned n;
 
-	if (!M)
-		return isl_stat_error;
 	rows = isl_mat_rows(M);
 	cols = isl_mat_cols(M);
+	if (rows < 0 || cols < 0)
+		return isl_stat_error;
 	n = cols - first;
 	for (i = 0; i < rows; ++i)
 		if (isl_seq_first_non_zero(M->row[i] + first, n) != -1)
@@ -274,13 +275,14 @@ static __isl_give isl_multi_aff *set_from_affine_matrix(
 	__isl_take isl_multi_aff *ma, __isl_take isl_local_space *ls,
 	__isl_take isl_mat *M)
 {
-	int i, dim;
+	int i;
+	isl_size dim;
 	isl_aff *aff;
 
-	if (!ma || !ls || !M)
+	dim = isl_local_space_dim(ls, isl_dim_all);
+	if (!ma || dim < 0 || !M)
 		goto error;
 
-	dim = isl_local_space_dim(ls, isl_dim_all);
 	if (check_final_columns_are_zero(M, 1 + dim) < 0)
 		goto error;
 	for (i = 1; i < M->n_row; ++i) {
@@ -328,9 +330,12 @@ static void sol_push_sol_mat(struct isl_sol *sol,
 {
 	isl_local_space *ls;
 	isl_multi_aff *ma;
-	int n_div, n_known;
+	isl_size n_div;
+	int n_known;
 
 	n_div = isl_basic_set_dim(dom, isl_dim_div);
+	if (n_div < 0)
+		goto error;
 	n_known = n_div - sol->context->n_unknown;
 
 	ma = isl_multi_aff_alloc(isl_space_copy(sol->space));
@@ -342,6 +347,11 @@ static void sol_push_sol_mat(struct isl_sol *sol,
 	if (!ma)
 		dom = isl_basic_set_free(dom);
 	sol_push_sol(sol, dom, ma);
+	return;
+error:
+	isl_basic_set_free(dom);
+	isl_mat_free(M);
+	sol_push_sol(sol, NULL, NULL);
 }
 
 /* Pop one partial solution from the partial solution stack and
@@ -999,14 +1009,14 @@ static struct isl_vec *get_row_split_div(struct isl_tab *tab, int row)
 static __isl_give isl_vec *ineq_for_div(__isl_keep isl_basic_set *bset,
 	unsigned div)
 {
-	unsigned total;
+	isl_size total;
 	unsigned div_pos;
 	struct isl_vec *ineq;
 
-	if (!bset)
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (total < 0)
 		return NULL;
 
-	total = isl_basic_set_total_dim(bset);
 	div_pos = 1 + total - bset->n_div + div;
 
 	ineq = isl_vec_alloc(bset->ctx, 1 + total);
@@ -2063,7 +2073,7 @@ static isl_bool context_tab_insert_div(struct isl_tab *tab, int pos,
 	if (!tab->samples)
 		return isl_bool_error;
 
-	return nonneg;
+	return isl_bool_ok(nonneg);
 }
 
 /* Add a div specified by "div" to both the main tableau and
@@ -2112,19 +2122,26 @@ error:
 	return -1;
 }
 
+/* Return the position of the integer division that is equal to div/denom
+ * if there is one.  Otherwise, return a position beyond the integer divisions.
+ */
 static int find_div(struct isl_tab *tab, isl_int *div, isl_int denom)
 {
 	int i;
-	unsigned total = isl_basic_map_total_dim(tab->bmap);
+	isl_size total = isl_basic_map_dim(tab->bmap, isl_dim_all);
+	isl_size n_div;
 
-	for (i = 0; i < tab->bmap->n_div; ++i) {
+	n_div = isl_basic_map_dim(tab->bmap, isl_dim_div);
+	if (total < 0 || n_div < 0)
+		return -1;
+	for (i = 0; i < n_div; ++i) {
 		if (isl_int_ne(tab->bmap->div[i][0], denom))
 			continue;
 		if (!isl_seq_eq(tab->bmap->div[i] + 1, div, 1 + total))
 			continue;
 		return i;
 	}
-	return -1;
+	return n_div;
 }
 
 /* Return the index of a div that corresponds to "div".
@@ -2135,12 +2152,16 @@ static int get_div(struct isl_tab *tab, struct isl_context *context,
 {
 	int d;
 	struct isl_tab *context_tab = context->op->peek_tab(context);
+	unsigned n_div;
 
 	if (!context_tab)
 		return -1;
 
+	n_div = isl_basic_map_dim(context_tab->bmap, isl_dim_div);
 	d = find_div(context_tab, div->el + 1, div->el[0]);
-	if (d != -1)
+	if (d < 0)
+		return -1;
+	if (d < n_div)
 		return d;
 
 	return add_div(tab, context, div);
@@ -2283,15 +2304,23 @@ static __isl_give struct isl_tab *tab_for_lexmin(__isl_keep isl_basic_map *bmap,
 	struct isl_tab *tab;
 	unsigned n_var;
 	unsigned o_var;
+	isl_size total;
 
+	total = isl_basic_map_dim(bmap, isl_dim_all);
+	if (total < 0)
+		return NULL;
 	tab = isl_tab_alloc(bmap->ctx, 2 * bmap->n_eq + bmap->n_ineq + 1,
-			    isl_basic_map_total_dim(bmap), M);
+			    total, M);
 	if (!tab)
 		return NULL;
 
 	tab->rational = ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
 	if (dom) {
-		tab->n_param = isl_basic_set_total_dim(dom) - dom->n_div;
+		isl_size dom_total;
+		dom_total = isl_basic_set_dim(dom, isl_dim_all);
+		if (dom_total < 0)
+			goto error;
+		tab->n_param = dom_total - dom->n_div;
 		tab->n_div = dom->n_div;
 		tab->row_sign = isl_calloc_array(bmap->ctx,
 					enum isl_tab_row_sign, tab->mat->n_row);
@@ -2890,8 +2919,10 @@ static void gbr_init_shifted(struct isl_context_gbr *cgbr)
 	int i, j;
 	struct isl_vec *cst;
 	struct isl_basic_set *bset = isl_tab_peek_bset(cgbr->tab);
-	unsigned dim = isl_basic_set_total_dim(bset);
+	isl_size dim = isl_basic_set_dim(bset, isl_dim_all);
 
+	if (dim < 0)
+		return;
 	cst = isl_vec_alloc(cgbr->tab->mat->ctx, bset->n_ineq);
 	if (!cst)
 		return;
@@ -3131,8 +3162,10 @@ static void add_gbr_ineq(struct isl_context_gbr *cgbr, isl_int *ineq)
 
 	if (cgbr->shifted && !cgbr->shifted->empty && use_shifted(cgbr)) {
 		int i;
-		unsigned dim;
-		dim = isl_basic_map_total_dim(cgbr->tab->bmap);
+		isl_size dim;
+		dim = isl_basic_map_dim(cgbr->tab->bmap, isl_dim_all);
+		if (dim < 0)
+			goto error;
 
 		if (isl_tab_extend_cons(cgbr->shifted, 1) < 0)
 			goto error;
@@ -3402,9 +3435,12 @@ static isl_bool context_gbr_insert_div(struct isl_context *context, int pos,
 {
 	struct isl_context_gbr *cgbr = (struct isl_context_gbr *)context;
 	if (cgbr->cone) {
-		int r, n_div, o_div;
+		int r, o_div;
+		isl_size n_div;
 
 		n_div = isl_basic_map_dim(cgbr->cone->bmap, isl_dim_div);
+		if (n_div < 0)
+			return isl_bool_error;
 		o_div = cgbr->cone->n_var - n_div;
 
 		if (isl_tab_extend_cons(cgbr->cone, 3) < 0)
@@ -3611,6 +3647,7 @@ static struct isl_context *isl_context_alloc(__isl_keep isl_basic_set *dom)
 {
 	struct isl_context *context;
 	int first;
+	isl_size n_div;
 
 	if (!dom)
 		return NULL;
@@ -3624,9 +3661,10 @@ static struct isl_context *isl_context_alloc(__isl_keep isl_basic_set *dom)
 		return NULL;
 
 	first = isl_basic_set_first_unknown_div(dom);
-	if (first < 0)
+	n_div = isl_basic_set_dim(dom, isl_dim_div);
+	if (first < 0 || n_div < 0)
 		return context->op->free(context);
-	context->n_unknown = isl_basic_set_dim(dom, isl_dim_div) - first;
+	context->n_unknown = n_div - first;
 
 	return context;
 }
@@ -3649,7 +3687,7 @@ static isl_stat sol_init(struct isl_sol *sol, __isl_keep isl_basic_map *bmap,
 	sol->space = isl_basic_map_get_space(bmap);
 
 	sol->context = isl_context_alloc(dom);
-	if (!sol->space || !sol->context)
+	if (sol->n_out < 0 || !sol->space || !sol->context)
 		return isl_stat_error;
 
 	return isl_stat_ok;
@@ -4273,30 +4311,37 @@ error:
 
 /* Check if integer division "div" of "dom" also occurs in "bmap".
  * If so, return its position within the divs.
- * If not, return -1.
+ * Otherwise, return a position beyond the integer divisions.
  */
-static int find_context_div(struct isl_basic_map *bmap,
-	struct isl_basic_set *dom, unsigned div)
+static int find_context_div(__isl_keep isl_basic_map *bmap,
+	__isl_keep isl_basic_set *dom, unsigned div)
 {
 	int i;
-	unsigned b_dim = isl_space_dim(bmap->dim, isl_dim_all);
-	unsigned d_dim = isl_space_dim(dom->dim, isl_dim_all);
+	isl_size b_v_div, d_v_div;
+	isl_size n_div;
+
+	b_v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
+	d_v_div = isl_basic_set_var_offset(dom, isl_dim_div);
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	if (b_v_div < 0 || d_v_div < 0 || n_div < 0)
+		return -1;
 
 	if (isl_int_is_zero(dom->div[div][0]))
-		return -1;
-	if (isl_seq_first_non_zero(dom->div[div] + 2 + d_dim, dom->n_div) != -1)
-		return -1;
+		return n_div;
+	if (isl_seq_first_non_zero(dom->div[div] + 2 + d_v_div,
+				    dom->n_div) != -1)
+		return n_div;
 
-	for (i = 0; i < bmap->n_div; ++i) {
+	for (i = 0; i < n_div; ++i) {
 		if (isl_int_is_zero(bmap->div[i][0]))
 			continue;
-		if (isl_seq_first_non_zero(bmap->div[i] + 2 + d_dim,
-					   (b_dim - d_dim) + bmap->n_div) != -1)
+		if (isl_seq_first_non_zero(bmap->div[i] + 2 + d_v_div,
+					   (b_v_div - d_v_div) + n_div) != -1)
 			continue;
-		if (isl_seq_eq(bmap->div[i], dom->div[div], 2 + d_dim))
+		if (isl_seq_eq(bmap->div[i], dom->div[div], 2 + d_v_div))
 			return i;
 	}
-	return -1;
+	return n_div;
 }
 
 /* The correspondence between the variables in the main tableau,
@@ -4319,27 +4364,38 @@ static __isl_give isl_basic_map *align_context_divs(
 	int i;
 	int common = 0;
 	int other;
+	unsigned bmap_n_div;
 
-	for (i = 0; i < dom->n_div; ++i)
-		if (find_context_div(bmap, dom, i) != -1)
+	bmap_n_div = isl_basic_map_dim(bmap, isl_dim_div);
+
+	for (i = 0; i < dom->n_div; ++i) {
+		int pos;
+
+		pos = find_context_div(bmap, dom, i);
+		if (pos < 0)
+			return isl_basic_map_free(bmap);
+		if (pos < bmap_n_div)
 			common++;
-	other = bmap->n_div - common;
+	}
+	other = bmap_n_div - common;
 	if (dom->n_div - common > 0) {
-		bmap = isl_basic_map_extend_space(bmap, isl_space_copy(bmap->dim),
-				dom->n_div - common, 0, 0);
+		bmap = isl_basic_map_extend(bmap, dom->n_div - common, 0, 0);
 		if (!bmap)
 			return NULL;
 	}
 	for (i = 0; i < dom->n_div; ++i) {
 		int pos = find_context_div(bmap, dom, i);
-		if (pos < 0) {
+		if (pos < 0)
+			bmap = isl_basic_map_free(bmap);
+		if (pos >= bmap_n_div) {
 			pos = isl_basic_map_alloc_div(bmap);
 			if (pos < 0)
 				goto error;
 			isl_int_set_si(bmap->div[pos][0], 0);
+			bmap_n_div++;
 		}
 		if (pos != other + i)
-			isl_basic_map_swap_div(bmap, pos, other + i);
+			bmap = isl_basic_map_swap_div(bmap, pos, other + i);
 	}
 	return bmap;
 error:
@@ -4509,12 +4565,14 @@ struct isl_constraint_equal_info {
 /* Check whether the coefficients of the output variables
  * of the constraint in "entry" are equal to info->val.
  */
-static int constraint_equal(const void *entry, const void *val)
+static isl_bool constraint_equal(const void *entry, const void *val)
 {
 	isl_int **row = (isl_int **)entry;
 	const struct isl_constraint_equal_info *info = val;
+	int eq;
 
-	return isl_seq_eq((*row) + 1 + info->n_in, info->val, info->n_out);
+	eq = isl_seq_eq((*row) + 1 + info->n_in, info->val, info->n_out);
+	return isl_bool_ok(eq);
 }
 
 /* Check whether "bmap" has a pair of constraints that have
@@ -4536,21 +4594,23 @@ static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 	struct isl_hash_table *table = NULL;
 	struct isl_hash_table_entry *entry;
 	struct isl_constraint_equal_info info;
-	unsigned n_out;
-	unsigned n_div;
+	isl_size nparam, n_in, n_out, n_div;
 
 	ctx = isl_basic_map_get_ctx(bmap);
 	table = isl_hash_table_alloc(ctx, bmap->n_ineq);
 	if (!table)
 		goto error;
 
-	info.n_in = isl_basic_map_dim(bmap, isl_dim_param) +
-		    isl_basic_map_dim(bmap, isl_dim_in);
+	nparam = isl_basic_map_dim(bmap, isl_dim_param);
+	n_in = isl_basic_map_dim(bmap, isl_dim_in);
+	n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	if (nparam < 0 || n_in < 0 || n_out < 0 || n_div < 0)
+		goto error;
+	info.n_in = nparam + n_in;
 	occurrences = count_occurrences(bmap, info.n_in);
 	if (info.n_in && !occurrences)
 		goto error;
-	n_out = isl_basic_map_dim(bmap, isl_dim_out);
-	n_div = isl_basic_map_dim(bmap, isl_dim_div);
 	info.n_out = n_out + n_div;
 	for (i = 0; i < bmap->n_ineq; ++i) {
 		uint32_t hash;
@@ -4581,7 +4641,7 @@ static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 	isl_hash_table_free(ctx, table);
 	free(occurrences);
 
-	return i < bmap->n_ineq;
+	return isl_bool_ok(i < bmap->n_ineq);
 error:
 	isl_hash_table_free(ctx, table);
 	free(occurrences);
@@ -4638,21 +4698,21 @@ error:
  *	b_i <= b_j	for j > i
  *	b_i <  b_j	for j < i
  */
-static __isl_give isl_set *set_minimum(__isl_take isl_space *dim,
+static __isl_give isl_set *set_minimum(__isl_take isl_space *space,
 	__isl_take isl_mat *var)
 {
 	int i, k;
 	isl_basic_set *bset = NULL;
 	isl_set *set = NULL;
 
-	if (!dim || !var)
+	if (!space || !var)
 		goto error;
 
-	set = isl_set_alloc_space(isl_space_copy(dim),
+	set = isl_set_alloc_space(isl_space_copy(space),
 				var->n_row, ISL_SET_DISJOINT);
 
 	for (i = 0; i < var->n_row; ++i) {
-		bset = isl_basic_set_alloc_space(isl_space_copy(dim), 0,
+		bset = isl_basic_set_alloc_space(isl_space_copy(space), 0,
 					       1, var->n_row - 1);
 		k = isl_basic_set_alloc_equality(bset);
 		if (k < 0)
@@ -4663,13 +4723,13 @@ static __isl_give isl_set *set_minimum(__isl_take isl_space *dim,
 		set = isl_set_add_basic_set(set, bset);
 	}
 
-	isl_space_free(dim);
+	isl_space_free(space);
 	isl_mat_free(var);
 	return set;
 error:
 	isl_basic_set_free(bset);
 	isl_set_free(set);
-	isl_space_free(dim);
+	isl_space_free(space);
 	isl_mat_free(var);
 	return NULL;
 }
@@ -4687,11 +4747,13 @@ static isl_bool need_split_basic_map(__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_mat *cst)
 {
 	int i, j;
-	unsigned total;
+	isl_size total;
 	unsigned pos;
 
 	pos = cst->n_col - 1;
 	total = isl_basic_map_dim(bmap, isl_dim_all);
+	if (total < 0)
+		return isl_bool_error;
 
 	for (i = 0; i < bmap->n_div; ++i)
 		if (!isl_int_is_zero(bmap->div[i][2 + pos]))
@@ -4753,7 +4815,7 @@ static isl_bool need_split_set(__isl_keep isl_set *set, __isl_keep isl_mat *cst)
 	return isl_bool_false;
 }
 
-/* Given a set of which the last set variable is the minimum
+/* Given a map of which the last input variable is the minimum
  * of the bounds in "cst", split each basic set in the set
  * in pieces where one of the bounds is (strictly) smaller than the others.
  * This subdivision is given in "min_expr".
@@ -4766,71 +4828,21 @@ static isl_bool need_split_set(__isl_keep isl_set *set, __isl_keep isl_mat *cst)
  * to obtain l <= a and l <= b, without having to split on whether
  * m is equal to a or b.
  */
-static __isl_give isl_set *split(__isl_take isl_set *empty,
-	__isl_take isl_set *min_expr, __isl_take isl_mat *cst)
-{
-	int n_in;
-	int i;
-	isl_space *dim;
-	isl_set *res;
-
-	if (!empty || !min_expr || !cst)
-		goto error;
-
-	n_in = isl_set_dim(empty, isl_dim_set);
-	dim = isl_set_get_space(empty);
-	dim = isl_space_drop_dims(dim, isl_dim_set, n_in - 1, 1);
-	res = isl_set_empty(dim);
-
-	for (i = 0; i < empty->n; ++i) {
-		isl_bool split;
-		isl_set *set;
-
-		set = isl_set_from_basic_set(isl_basic_set_copy(empty->p[i]));
-		split = need_split_basic_set(empty->p[i], cst);
-		if (split < 0)
-			set = isl_set_free(set);
-		else if (split)
-			set = isl_set_intersect(set, isl_set_copy(min_expr));
-		set = isl_set_remove_dims(set, isl_dim_set, n_in - 1, 1);
-
-		res = isl_set_union_disjoint(res, set);
-	}
-
-	isl_set_free(empty);
-	isl_set_free(min_expr);
-	isl_mat_free(cst);
-	return res;
-error:
-	isl_set_free(empty);
-	isl_set_free(min_expr);
-	isl_mat_free(cst);
-	return NULL;
-}
-
-/* Given a map of which the last input variable is the minimum
- * of the bounds in "cst", split each basic set in the set
- * in pieces where one of the bounds is (strictly) smaller than the others.
- * This subdivision is given in "min_expr".
- * The variable is subsequently projected out.
- *
- * The implementation is essentially the same as that of "split".
- */
 static __isl_give isl_map *split_domain(__isl_take isl_map *opt,
 	__isl_take isl_set *min_expr, __isl_take isl_mat *cst)
 {
-	int n_in;
+	isl_size n_in;
 	int i;
-	isl_space *dim;
+	isl_space *space;
 	isl_map *res;
 
-	if (!opt || !min_expr || !cst)
+	n_in = isl_map_dim(opt, isl_dim_in);
+	if (n_in < 0 || !min_expr || !cst)
 		goto error;
 
-	n_in = isl_map_dim(opt, isl_dim_in);
-	dim = isl_map_get_space(opt);
-	dim = isl_space_drop_dims(dim, isl_dim_in, n_in - 1, 1);
-	res = isl_map_empty(dim);
+	space = isl_map_get_space(opt);
+	space = isl_space_drop_dims(space, isl_dim_in, n_in - 1, 1);
+	res = isl_map_empty(space);
 
 	for (i = 0; i < opt->n; ++i) {
 		isl_map *map;
@@ -4857,6 +4869,24 @@ error:
 	isl_set_free(min_expr);
 	isl_mat_free(cst);
 	return NULL;
+}
+
+/* Given a set of which the last set variable is the minimum
+ * of the bounds in "cst", split each basic set in the set
+ * in pieces where one of the bounds is (strictly) smaller than the others.
+ * This subdivision is given in "min_expr".
+ * The variable is subsequently projected out.
+ */
+static __isl_give isl_set *split(__isl_take isl_set *empty,
+	__isl_take isl_set *min_expr, __isl_take isl_mat *cst)
+{
+	isl_map *map;
+
+	map = isl_map_from_domain(empty);
+	map = split_domain(map, min_expr, cst);
+	empty = isl_map_domain(map);
+
+	return empty;
 }
 
 static __isl_give isl_map *basic_map_partial_lexopt(
@@ -4921,11 +4951,13 @@ static __isl_give isl_map *basic_map_partial_lexopt_symm_core(
 static __isl_give isl_basic_set *extract_domain(__isl_keep isl_basic_map *bmap,
 	unsigned flags)
 {
-	int n_div;
-	int n_out;
+	isl_size n_div;
+	isl_size n_out;
 
 	n_div = isl_basic_map_dim(bmap, isl_dim_div);
 	n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	if (n_div < 0 || n_out < 0)
+		return NULL;
 	bmap = isl_basic_map_copy(bmap);
 	if (ISL_FL_ISSET(flags, ISL_OPT_QE)) {
 		bmap = isl_basic_map_drop_constraints_involving_dims(bmap,
@@ -4979,18 +5011,20 @@ static __isl_give isl_vec *extract_sample_sequence(struct isl_tab *tab,
 static isl_bool region_is_trivial(struct isl_tab *tab, int pos,
 	__isl_keep isl_mat *trivial)
 {
-	int n, len;
+	isl_size n, len;
 	isl_vec *v;
 	isl_bool is_trivial;
 
-	if (!trivial)
+	n = isl_mat_rows(trivial);
+	if (n < 0)
 		return isl_bool_error;
 
-	n = isl_mat_rows(trivial);
 	if (n == 0)
 		return isl_bool_false;
 
 	len = isl_mat_cols(trivial);
+	if (len < 0)
+		return isl_bool_error;
 	v = extract_sample_sequence(tab, pos, len);
 	v = isl_mat_vec_product(isl_mat_copy(trivial), v);
 	is_trivial = isl_vec_is_zero(v);
@@ -5123,12 +5157,14 @@ error:
 static isl_stat fix_zero(struct isl_tab *tab, struct isl_trivial_region *region,
 	int dir, struct isl_lexmin_data *data)
 {
-	int len;
+	isl_size len;
 
 	data->v = isl_vec_clr(data->v);
 	if (!data->v)
 		return isl_stat_error;
 	len = isl_mat_cols(region->trivial);
+	if (len < 0)
+		return isl_stat_error;
 	isl_seq_cpy(data->v->el + 1 + region->pos, region->trivial->row[dir],
 		    len);
 	if (add_lexmin_eq(tab, data->v->el) < 0)
@@ -5149,13 +5185,15 @@ static struct isl_tab *pos_neg(struct isl_tab *tab,
 	struct isl_trivial_region *region,
 	int side, struct isl_lexmin_data *data)
 {
-	int len;
+	isl_size len;
 
 	data->v = isl_vec_clr(data->v);
 	if (!data->v)
 		goto error;
 	isl_int_set_si(data->v->el[0], -1);
 	len = isl_mat_cols(region->trivial);
+	if (len < 0)
+		goto error;
 	if (side % 2 == 0)
 		isl_seq_cpy(data->v->el + 1 + region->pos,
 			    region->trivial->row[side / 2], len);
@@ -5232,14 +5270,20 @@ static void update_outer_levels(struct isl_lexmin_data *data, int level)
 /* Initialize "local" to refer to region "region" and
  * to initiate processing at this level.
  */
-static void init_local_region(struct isl_local_region *local, int region,
+static isl_stat init_local_region(struct isl_local_region *local, int region,
 	struct isl_lexmin_data *data)
 {
-	local->n = isl_mat_rows(data->region[region].trivial);
+	isl_size n = isl_mat_rows(data->region[region].trivial);
+
+	if (n < 0)
+		return isl_stat_error;
+	local->n = n;
 	local->region = region;
 	local->side = 0;
 	local->update = 0;
 	local->n_zero = 0;
+
+	return isl_stat_ok;
 }
 
 /* What to do next after entering a level of the backtracking procedure.
@@ -5322,7 +5366,8 @@ static enum isl_next enter_level(int level, int init,
 			isl_die(isl_vec_get_ctx(data->v), isl_error_internal,
 				"nesting level too deep",
 				return isl_next_error);
-		init_local_region(local, r, data);
+		if (init_local_region(local, r, data) < 0)
+			return isl_next_error;
 		if (isl_tab_extend_cons(data->tab,
 				    2 * local->n + 2 * data->n_op) < 0)
 			return isl_next_error;
@@ -5757,18 +5802,27 @@ static __isl_give isl_pw_multi_aff *basic_map_partial_lexopt_base_pw_multi_aff(
  * In particular, check if the last input variable appears in any
  * of the expressions in "maff".
  */
-static int need_substitution(__isl_keep isl_multi_aff *maff)
+static isl_bool need_substitution(__isl_keep isl_multi_aff *maff)
 {
 	int i;
+	isl_size n_in;
 	unsigned pos;
 
-	pos = isl_multi_aff_dim(maff, isl_dim_in) - 1;
+	n_in = isl_multi_aff_dim(maff, isl_dim_in);
+	if (n_in < 0)
+		return isl_bool_error;
+	pos = n_in - 1;
 
-	for (i = 0; i < maff->n; ++i)
-		if (isl_aff_involves_dims(maff->u.p[i], isl_dim_in, pos, 1))
-			return 1;
+	for (i = 0; i < maff->n; ++i) {
+		isl_bool involves;
 
-	return 0;
+		involves = isl_aff_involves_dims(maff->u.p[i],
+						isl_dim_in, pos, 1);
+		if (involves < 0 || involves)
+			return involves;
+	}
+
+	return isl_bool_false;
 }
 
 /* Given a set of upper bounds on the last "input" variable m,
@@ -5853,7 +5907,7 @@ static __isl_give isl_pw_multi_aff *split_domain_pma(
 	__isl_take isl_pw_multi_aff *opt, __isl_take isl_pw_aff *min_expr_pa,
 	__isl_take isl_set *min_expr, __isl_take isl_mat *cst)
 {
-	int n_in;
+	isl_size n_in;
 	int i;
 	isl_space *space;
 	isl_pw_multi_aff *res;
@@ -5862,19 +5916,25 @@ static __isl_give isl_pw_multi_aff *split_domain_pma(
 		goto error;
 
 	n_in = isl_pw_multi_aff_dim(opt, isl_dim_in);
+	if (n_in < 0)
+		goto error;
 	space = isl_pw_multi_aff_get_space(opt);
 	space = isl_space_drop_dims(space, isl_dim_in, n_in - 1, 1);
 	res = isl_pw_multi_aff_empty(space);
 
 	for (i = 0; i < opt->n; ++i) {
+		isl_bool subs;
 		isl_pw_multi_aff *pma;
 
 		pma = isl_pw_multi_aff_alloc(isl_set_copy(opt->p[i].set),
 					 isl_multi_aff_copy(opt->p[i].maff));
-		if (need_substitution(opt->p[i].maff))
+		subs = need_substitution(opt->p[i].maff);
+		if (subs < 0) {
+			pma = isl_pw_multi_aff_free(pma);
+		} else if (subs) {
 			pma = isl_pw_multi_aff_substitute(pma,
 					isl_dim_in, n_in - 1, min_expr_pa);
-		else {
+		} else {
 			isl_bool split;
 			split = need_split_set(opt->p[i].set, cst);
 			if (split < 0)

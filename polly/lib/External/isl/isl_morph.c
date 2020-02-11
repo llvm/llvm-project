@@ -103,17 +103,20 @@ __isl_null isl_morph *isl_morph_free(__isl_take isl_morph *morph)
 
 /* Is "morph" an identity on the parameters?
  */
-static int identity_on_parameters(__isl_keep isl_morph *morph)
+static isl_bool identity_on_parameters(__isl_keep isl_morph *morph)
 {
-	int is_identity;
-	unsigned nparam;
+	isl_bool is_identity;
+	isl_size nparam, nparam_ran;
 	isl_mat *sub;
 
 	nparam = isl_morph_dom_dim(morph, isl_dim_param);
-	if (nparam != isl_morph_ran_dim(morph, isl_dim_param))
-		return 0;
+	nparam_ran = isl_morph_ran_dim(morph, isl_dim_param);
+	if (nparam < 0 || nparam_ran < 0)
+		return isl_bool_error;
+	if (nparam != nparam_ran)
+		return isl_bool_false;
 	if (nparam == 0)
-		return 1;
+		return isl_bool_true;
 	sub = isl_mat_sub_alloc(morph->map, 0, 1 + nparam, 0, 1 + nparam);
 	is_identity = isl_mat_is_scaled_identity(sub);
 	isl_mat_free(sub);
@@ -133,9 +136,9 @@ __isl_give isl_multi_aff *isl_morph_get_var_multi_aff(
 	isl_space *dom, *ran, *space;
 	isl_local_space *ls;
 	isl_multi_aff *ma;
-	unsigned nparam, nvar;
+	isl_size nparam, nvar;
 	int i;
-	int is_identity;
+	isl_bool is_identity;
 
 	if (!morph)
 		return NULL;
@@ -155,6 +158,8 @@ __isl_give isl_multi_aff *isl_morph_get_var_multi_aff(
 
 	nparam = isl_multi_aff_dim(ma, isl_dim_param);
 	nvar = isl_multi_aff_dim(ma, isl_dim_out);
+	if (nparam < 0 || nvar < 0)
+		ma = isl_multi_aff_free(ma);
 	for (i = 0; i < nvar; ++i) {
 		isl_val *val;
 		isl_vec *v;
@@ -190,18 +195,18 @@ __isl_give isl_space *isl_morph_get_ran_space(__isl_keep isl_morph *morph)
 	return isl_space_copy(morph->ran->dim);
 }
 
-unsigned isl_morph_dom_dim(__isl_keep isl_morph *morph, enum isl_dim_type type)
+isl_size isl_morph_dom_dim(__isl_keep isl_morph *morph, enum isl_dim_type type)
 {
 	if (!morph)
-		return 0;
+		return isl_size_error;
 
 	return isl_basic_set_dim(morph->dom, type);
 }
 
-unsigned isl_morph_ran_dim(__isl_keep isl_morph *morph, enum isl_dim_type type)
+isl_size isl_morph_ran_dim(__isl_keep isl_morph *morph, enum isl_dim_type type)
 {
 	if (!morph)
-		return 0;
+		return isl_size_error;
 
 	return isl_basic_set_dim(morph->ran, type);
 }
@@ -264,12 +269,14 @@ __isl_give isl_morph *isl_morph_remove_ran_dims(__isl_take isl_morph *morph,
  */
 __isl_give isl_morph *isl_morph_dom_params(__isl_take isl_morph *morph)
 {
-	unsigned n;
+	isl_size n;
 
 	morph = isl_morph_cow(morph);
 	if (!morph)
 		return NULL;
 	n = isl_basic_set_dim(morph->dom, isl_dim_set);
+	if (n < 0)
+		return isl_morph_free(morph);
 	morph = isl_morph_remove_dom_dims(morph, isl_dim_set, 0, n);
 	if (!morph)
 		return NULL;
@@ -285,12 +292,14 @@ __isl_give isl_morph *isl_morph_dom_params(__isl_take isl_morph *morph)
  */
 __isl_give isl_morph *isl_morph_ran_params(__isl_take isl_morph *morph)
 {
-	unsigned n;
+	isl_size n;
 
 	morph = isl_morph_cow(morph);
 	if (!morph)
 		return NULL;
 	n = isl_basic_set_dim(morph->ran, isl_dim_set);
+	if (n < 0)
+		return isl_morph_free(morph);
 	morph = isl_morph_remove_ran_dims(morph, isl_dim_set, 0, n);
 	if (!morph)
 		return NULL;
@@ -300,6 +309,20 @@ __isl_give isl_morph *isl_morph_ran_params(__isl_take isl_morph *morph)
 
 	isl_morph_free(morph);
 	return NULL;
+}
+
+/* Replace the identifier of the tuple of the range of the morph by "id".
+ */
+static __isl_give isl_morph *isl_morph_set_ran_tuple_id(
+	__isl_take isl_morph *morph, __isl_keep isl_id *id)
+{
+	morph = isl_morph_cow(morph);
+	if (!morph)
+		return NULL;
+	morph->ran = isl_basic_set_set_tuple_id(morph->ran, isl_id_copy(id));
+	if (!morph->ran)
+		return isl_morph_free(morph);
+	return morph;
 }
 
 void isl_morph_print_internal(__isl_take isl_morph *morph, FILE *out)
@@ -322,12 +345,12 @@ __isl_give isl_morph *isl_morph_identity(__isl_keep isl_basic_set *bset)
 {
 	isl_mat *id;
 	isl_basic_set *universe;
-	unsigned total;
+	isl_size total;
 
-	if (!bset)
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (total < 0)
 		return NULL;
 
-	total = isl_basic_set_total_dim(bset);
 	id = isl_mat_identity(bset->ctx, 1 + total);
 	universe = isl_basic_set_universe(isl_space_copy(bset->dim));
 
@@ -342,12 +365,12 @@ __isl_give isl_morph *isl_morph_empty(__isl_keep isl_basic_set *bset)
 {
 	isl_mat *id;
 	isl_basic_set *empty;
-	unsigned total;
+	isl_size total;
 
-	if (!bset)
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (total < 0)
 		return NULL;
 
-	total = isl_basic_set_total_dim(bset);
 	id = isl_mat_identity(bset->ctx, 1 + total);
 	empty = isl_basic_set_empty(isl_space_copy(bset->dim));
 
@@ -363,12 +386,13 @@ static __isl_give isl_basic_set *copy_equalities(__isl_keep isl_basic_set *bset,
 {
 	int i, k;
 	isl_basic_set *eq;
-	unsigned total;
+	isl_size total;
 
-	isl_assert(bset->ctx, bset->n_div == 0, return NULL);
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (total < 0 || isl_basic_set_check_no_locals(bset) < 0)
+		return NULL;
 
-	total = isl_basic_set_total_dim(bset);
-	eq = isl_basic_set_alloc_space(isl_space_copy(bset->dim), 0, n, 0);
+	eq = isl_basic_set_alloc_space(isl_basic_set_get_space(bset), 0, n, 0);
 	if (!eq)
 		return NULL;
 	for (i = 0; i < n; ++i) {
@@ -385,8 +409,7 @@ error:
 }
 
 /* Given a basic set, exploit the equalities in the basic set to construct
- * a morphism that maps the basic set to a lower-dimensional space
- * with identifier "id".
+ * a morphism that maps the basic set to a lower-dimensional space.
  * Specifically, the morphism reduces the number of dimensions of type "type".
  *
  * We first select the equalities of interest, that is those that involve
@@ -410,14 +433,14 @@ error:
  * Both matrices are extended to map the full original space to the full
  * compressed space.
  */
-__isl_give isl_morph *isl_basic_set_variable_compression_with_id(
-	__isl_keep isl_basic_set *bset, enum isl_dim_type type,
-	__isl_keep isl_id *id)
+__isl_give isl_morph *isl_basic_set_variable_compression(
+	__isl_keep isl_basic_set *bset, enum isl_dim_type type)
 {
 	unsigned otype;
-	unsigned ntype;
+	isl_size ntype;
 	unsigned orest;
 	unsigned nrest;
+	isl_size total;
 	int f_eq, n_eq;
 	isl_space *space;
 	isl_mat *E, *Q, *C;
@@ -429,12 +452,16 @@ __isl_give isl_morph *isl_basic_set_variable_compression_with_id(
 	if (isl_basic_set_plain_is_empty(bset))
 		return isl_morph_empty(bset);
 
-	isl_assert(bset->ctx, bset->n_div == 0, return NULL);
+	if (isl_basic_set_check_no_locals(bset) < 0)
+		return NULL;
 
-	otype = 1 + isl_space_offset(bset->dim, type);
 	ntype = isl_basic_set_dim(bset, type);
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (ntype < 0 || total < 0)
+		return NULL;
+	otype = isl_basic_set_offset(bset, type);
 	orest = otype + ntype;
-	nrest = isl_basic_set_total_dim(bset) - (orest - 1);
+	nrest = total - (orest - 1);
 
 	for (f_eq = 0; f_eq < bset->n_eq; ++f_eq)
 		if (isl_seq_first_non_zero(bset->eq[f_eq] + orest, nrest) == -1)
@@ -461,7 +488,6 @@ __isl_give isl_morph *isl_basic_set_variable_compression_with_id(
 	space = isl_space_copy(bset->dim);
 	space = isl_space_drop_dims(space, type, 0, ntype);
 	space = isl_space_add_dims(space, type, ntype - n_eq);
-	space = isl_space_set_tuple_id(space, isl_dim_set, isl_id_copy(id));
 	ran = isl_basic_set_universe(space);
 	dom = copy_equalities(bset, f_eq, n_eq);
 
@@ -469,14 +495,18 @@ __isl_give isl_morph *isl_basic_set_variable_compression_with_id(
 }
 
 /* Given a basic set, exploit the equalities in the basic set to construct
- * a morphism that maps the basic set to a lower-dimensional space.
- * Specifically, the morphism reduces the number of dimensions of type "type".
+ * a morphism that maps the basic set to a lower-dimensional space
+ * with identifier "id".
+ * Specifically, the morphism reduces the number of set dimensions.
  */
-__isl_give isl_morph *isl_basic_set_variable_compression(
-	__isl_keep isl_basic_set *bset, enum isl_dim_type type)
+__isl_give isl_morph *isl_basic_set_variable_compression_with_id(
+	__isl_keep isl_basic_set *bset, __isl_keep isl_id *id)
 {
-	return isl_basic_set_variable_compression_with_id(bset, type,
-							&isl_id_none);
+	isl_morph *morph;
+
+	morph = isl_basic_set_variable_compression(bset, isl_dim_set);
+	morph = isl_morph_set_ran_tuple_id(morph, id);
+	return morph;
 }
 
 /* Construct a parameter compression for "bset".
@@ -498,9 +528,9 @@ __isl_give isl_morph *isl_basic_set_variable_compression(
 __isl_give isl_morph *isl_basic_set_parameter_compression(
 	__isl_keep isl_basic_set *bset)
 {
-	unsigned nparam;
-	unsigned nvar;
-	unsigned n_div;
+	isl_size nparam;
+	isl_size nvar;
+	isl_size n_div;
 	int n_eq;
 	isl_mat *H, *B;
 	isl_mat *map, *inv;
@@ -518,6 +548,8 @@ __isl_give isl_morph *isl_basic_set_parameter_compression(
 	nparam = isl_basic_set_dim(bset, isl_dim_param);
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
 	n_div = isl_basic_set_dim(bset, isl_dim_div);
+	if (nparam < 0 || nvar < 0 || n_div < 0)
+		return NULL;
 
 	if (isl_seq_first_non_zero(bset->eq[bset->n_eq - 1] + 1 + nparam,
 				    nvar + n_div) == -1)
@@ -617,11 +649,8 @@ __isl_give isl_basic_set *isl_morph_basic_set(__isl_take isl_morph *morph,
 	int i, k;
 	int max_stride;
 
-	if (!morph || !bset)
+	if (!morph || isl_basic_set_check_equal_space(bset, morph->dom) < 0)
 		goto error;
-
-	isl_assert(bset->ctx, isl_space_is_equal(bset->dim, morph->dom->dim),
-		    goto error);
 
 	max_stride = morph->inv->n_row - 1;
 	if (isl_int_is_one(morph->inv->row[0][0]))
@@ -707,10 +736,8 @@ __isl_give isl_set *isl_morph_set(__isl_take isl_morph *morph,
 {
 	int i;
 
-	if (!morph || !set)
+	if (!morph || isl_set_basic_set_check_equal_space(set, morph->dom) < 0)
 		goto error;
-
-	isl_assert(set->ctx, isl_space_is_equal(set->dim, morph->dom->dim), goto error);
 
 	set = isl_set_cow(set);
 	if (!set)

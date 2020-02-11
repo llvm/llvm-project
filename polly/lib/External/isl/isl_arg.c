@@ -21,7 +21,7 @@ ISL_ARG_PHANTOM_BOOL('h', "help", NULL, "print this help, then exit")
 
 static void set_default_choice(struct isl_arg *arg, void *opt)
 {
-	if (arg->offset == (size_t) -1)
+	if (arg->offset == ISL_ARG_OFFSET_NONE)
 		return;
 	*(unsigned *)(((char *)opt) + arg->offset) = arg->u.choice.default_value;
 }
@@ -33,7 +33,7 @@ static void set_default_flags(struct isl_arg *arg, void *opt)
 
 static void set_default_bool(struct isl_arg *arg, void *opt)
 {
-	if (arg->offset == (size_t) -1)
+	if (arg->offset == ISL_ARG_OFFSET_NONE)
 		return;
 	*(unsigned *)(((char *)opt) + arg->offset) = arg->u.b.default_value;
 }
@@ -42,7 +42,7 @@ static void set_default_child(struct isl_arg *arg, void *opt)
 {
 	void *child;
 
-	if (arg->offset == (size_t) -1)
+	if (arg->offset == ISL_ARG_OFFSET_NONE)
 		child = opt;
 	else {
 		child = calloc(1, arg->u.child.child->options_size);
@@ -137,7 +137,7 @@ static void free_args(struct isl_arg *arg, void *opt);
 
 static void free_child(struct isl_arg *arg, void *opt)
 {
-	if (arg->offset == (size_t) -1)
+	if (arg->offset == ISL_ARG_OFFSET_NONE)
 		free_args(arg->u.child.child->args, opt);
 	else
 		isl_args_free(arg->u.child.child,
@@ -520,7 +520,7 @@ static void print_bool_help(struct isl_arg *decl,
 	int no = p ? *p == 1 : 0;
 	pos = print_arg_help(decl, prefixes, no);
 	pos = print_help_msg(decl, pos);
-	if (decl->offset != (size_t) -1)
+	if (decl->offset != ISL_ARG_OFFSET_NONE)
 		print_default(decl, no ? "yes" : "no", pos);
 	printf("\n");
 }
@@ -667,7 +667,7 @@ static void print_help(struct isl_arg *arg,
 			printf("\n");
 		if (arg[i].help_msg)
 			printf(" %s\n", arg[i].help_msg);
-		if (arg[i].offset == (size_t) -1)
+		if (arg[i].offset == ISL_ARG_OFFSET_NONE)
 			child = opt;
 		else
 			child = *(void **)(((char *) opt) + arg[i].offset);
@@ -812,7 +812,7 @@ static int parse_choice_option(struct isl_arg *decl, char **arg,
 
 	if (!has_argument && (!arg[1] || arg[1][0] == '-')) {
 		unsigned u = decl->u.choice.default_selected;
-		if (decl->offset != (size_t) -1)
+		if (decl->offset != ISL_ARG_OFFSET_NONE)
 			*(unsigned *)(((char *)opt) + decl->offset) = u;
 		if (decl->u.choice.set)
 			decl->u.choice.set(opt, u);
@@ -830,7 +830,7 @@ static int parse_choice_option(struct isl_arg *decl, char **arg,
 			continue;
 
 		u = decl->u.choice.choice[i].value;
-		if (decl->offset != (size_t) -1)
+		if (decl->offset != ISL_ARG_OFFSET_NONE)
 			*(unsigned *)(((char *)opt) + decl->offset) = u;
 		if (decl->u.choice.set)
 			decl->u.choice.set(opt, u);
@@ -904,14 +904,14 @@ static int parse_bool_option(struct isl_arg *decl, char **arg,
 			char *endptr;
 			int val = strtol(arg[1], &endptr, 0);
 			if (*endptr == '\0' && (val == 0 || val == 1)) {
-				if (decl->offset != (size_t) -1)
+				if (decl->offset != ISL_ARG_OFFSET_NONE)
 					*p = val;
 				if (decl->u.b.set)
 					decl->u.b.set(opt, val);
 				return 2;
 			}
 		}
-		if (decl->offset != (size_t) -1)
+		if (decl->offset != ISL_ARG_OFFSET_NONE)
 			*p = 1;
 		if (decl->u.b.set)
 			decl->u.b.set(opt, 1);
@@ -936,7 +936,7 @@ static int parse_bool_option(struct isl_arg *decl, char **arg,
 	name = skip_prefixes(name, prefixes, &next_prefix);
 
 	if (match_long_name(decl, name, name + strlen(name))) {
-		if (decl->offset != (size_t) -1)
+		if (decl->offset != ISL_ARG_OFFSET_NONE)
 			*p = 0;
 		if (decl->u.b.set)
 			decl->u.b.set(opt, 0);
@@ -1116,7 +1116,7 @@ static int parse_child_option(struct isl_arg *decl, char **arg,
 	void *child;
 	int first, parsed;
 
-	if (decl->offset == (size_t) -1)
+	if (decl->offset == ISL_ARG_OFFSET_NONE)
 		child = opt;
 	else
 		child = *(void **)(((char *)opt) + decl->offset);
@@ -1240,7 +1240,7 @@ static int next_arg(struct isl_arg *arg, int a)
 }
 
 /* Unless ISL_ARG_SKIP_HELP is set, check if "arg" is
- * equal to "--help" and if so call print_help_and_exit.
+ * equal to "--help" or "-h" and if so call print_help_and_exit.
  */
 static void check_help(struct isl_args *args, char *arg, char *prog, void *opt,
 	unsigned flags)
@@ -1248,7 +1248,7 @@ static void check_help(struct isl_args *args, char *arg, char *prog, void *opt,
 	if (ISL_FL_ISSET(flags, ISL_ARG_SKIP_HELP))
 		return;
 
-	if (strcmp(arg, "--help") == 0)
+	if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0)
 		print_help_and_exit(args->args, prog, opt);
 }
 

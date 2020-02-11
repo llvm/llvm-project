@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 	struct isl_map *map;
 	struct isl_options *options;
 	isl_printer *p;
-	int exact;
+	isl_bool exact;
 
 	options = isl_options_new_with_defaults();
 	assert(options);
