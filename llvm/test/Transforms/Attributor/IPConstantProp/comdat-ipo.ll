@@ -15,7 +15,6 @@ define i32 @baz() {
 
 define linkonce_odr i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @baz()
 ; CHECK-NEXT:    ret i32 10
 ;
 
