@@ -148,7 +148,8 @@ TEST_F(StreamTest, SetIndentLevel) {
 
 TEST_F(StreamTest, Indent) {
   s.SetIndentLevel(2);
-  s.Indent(nullptr);
+  const char *nullptr_cstring = nullptr;
+  s.Indent(nullptr_cstring);
   EXPECT_EQ("  ", TakeValue());
 
   s.Indent("");
