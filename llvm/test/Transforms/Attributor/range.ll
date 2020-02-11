@@ -705,22 +705,6 @@ define internal i32 @r1(i32) local_unnamed_addr {
 ; OLD_PM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 100
 ; OLD_PM-NEXT:    br i1 [[TMP9]], label [[TMP1:%.*]], label [[TMP4]]
 ;
-; NEW_PM-LABEL: define {{[^@]+}}@r1() local_unnamed_addr
-; NEW_PM-NEXT:    br label [[TMP3:%.*]]
-; NEW_PM:       1:
-; NEW_PM-NEXT:    br label [[F:%.*]]
-; NEW_PM:       2:
-; NEW_PM-NEXT:    unreachable
-; NEW_PM:       f:
-; NEW_PM-NEXT:    ret i32 10
-; NEW_PM:       3:
-; NEW_PM-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP7:%.*]], [[TMP3]] ]
-; NEW_PM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[TMP6:%.*]], [[TMP3]] ]
-; NEW_PM-NEXT:    [[TMP6]] = add nuw nsw i32 [[TMP4]], [[TMP5]]
-; NEW_PM-NEXT:    [[TMP7]] = add nuw nsw i32 [[TMP4]], 1
-; NEW_PM-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 100
-; NEW_PM-NEXT:    br i1 [[TMP8]], label [[TMP1:%.*]], label [[TMP3]]
-;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@r1
 ; CGSCC_OLD_PM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr
 ; CGSCC_OLD_PM-NEXT:    br label [[TMP5:%.*]]
@@ -738,23 +722,6 @@ define internal i32 @r1(i32) local_unnamed_addr {
 ; CGSCC_OLD_PM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
 ; CGSCC_OLD_PM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 100
 ; CGSCC_OLD_PM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP5]]
-;
-; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@r1
-; CGSCC_NEW_PM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr
-; CGSCC_NEW_PM-NEXT:    br label [[TMP4:%.*]]
-; CGSCC_NEW_PM:       2:
-; CGSCC_NEW_PM-NEXT:    br label [[F:%.*]]
-; CGSCC_NEW_PM:       3:
-; CGSCC_NEW_PM-NEXT:    unreachable
-; CGSCC_NEW_PM:       f:
-; CGSCC_NEW_PM-NEXT:    ret i32 10
-; CGSCC_NEW_PM:       4:
-; CGSCC_NEW_PM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP4]] ]
-; CGSCC_NEW_PM-NEXT:    [[TMP6:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP7:%.*]], [[TMP4]] ]
-; CGSCC_NEW_PM-NEXT:    [[TMP7]] = add nuw nsw i32 [[TMP5]], [[TMP6]]
-; CGSCC_NEW_PM-NEXT:    [[TMP8]] = add nuw nsw i32 [[TMP5]], 1
-; CGSCC_NEW_PM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 100
-; CGSCC_NEW_PM-NEXT:    br i1 [[TMP9]], label [[TMP2:%.*]], label [[TMP4]]
 ;
   br label %5
 
@@ -788,11 +755,10 @@ define void @f1(i32){
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@f1
 ; NEW_PM-SAME: (i32 [[TMP0:%.*]])
-; NEW_PM-NEXT:    [[TMP2:%.*]] = tail call i32 @r1()
-; NEW_PM-NEXT:    br label [[TMP4:%.*]]
-; NEW_PM:       3:
+; NEW_PM-NEXT:    br label [[TMP3:%.*]]
+; NEW_PM:       2:
 ; NEW_PM-NEXT:    unreachable
-; NEW_PM:       4:
+; NEW_PM:       3:
 ; NEW_PM-NEXT:    ret void
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@f1
@@ -808,11 +774,10 @@ define void @f1(i32){
 ;
 ; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@f1
 ; CGSCC_NEW_PM-SAME: (i32 [[TMP0:%.*]])
-; CGSCC_NEW_PM-NEXT:    [[TMP2:%.*]] = tail call i32 @r1(i32 [[TMP0]])
-; CGSCC_NEW_PM-NEXT:    br label [[TMP4:%.*]]
-; CGSCC_NEW_PM:       3:
+; CGSCC_NEW_PM-NEXT:    br label [[TMP3:%.*]]
+; CGSCC_NEW_PM:       2:
 ; CGSCC_NEW_PM-NEXT:    unreachable
-; CGSCC_NEW_PM:       4:
+; CGSCC_NEW_PM:       3:
 ; CGSCC_NEW_PM-NEXT:    ret void
 ;
   %2 = tail call i32 @r1(i32 %0)

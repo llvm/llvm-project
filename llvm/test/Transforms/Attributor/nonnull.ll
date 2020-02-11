@@ -525,12 +525,14 @@ define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
   ret i32 addrspace(3)* %p
 }
 
-; ATTRIBUTOR: define internal nonnull align 4 i32* @g2()
+; ATTRIBUTOR-NOT: @g2()
 define internal i32* @g2() {
   ret i32* inttoptr (i64 4 to i32*)
 }
 
-define  i32* @g1() {
+; ATTRIBUTOR: define nonnull align 4 i32* @g1()
+; ATTRIBUTOR:   ret i32* inttoptr (i64 4 to i32*)
+define i32* @g1() {
  %c = call i32* @g2()
   ret i32* %c
 }

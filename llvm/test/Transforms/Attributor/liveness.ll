@@ -544,6 +544,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
   ret i8* %6
 }
 
+declare void @sink() nofree nosync nounwind willreturn
 define void @test_unreachable() {
 ; CHECK:       define void @test_unreachable()
 ; CHECK-NEXT:    call void @test_unreachable()
@@ -906,10 +907,35 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; CHECK-NEXT:    i64 10, label [[RETURN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
+; CHECK-NEXT:    call void @sink()
 ; CHECK-NEXT:    ret i32 123
 ; CHECK:       return:
 ; CHECK-NEXT:    unreachable
 ;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 3, label %return
+  i64 10, label %return
+  ]
+
+sw.default:
+  call void @sink()
+  ret i32 123
+
+return:
+  ret i32 0
+}
+
+define i32 @switch_default_caller() {
+; CGSCC-LABEL: define {{[^@]+}}@switch_default_caller()
+; CGSCC-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default(i64 0)
+; CGSCC-NEXT:    ret i32 123
+;
+  %call2 = tail call i32 @switch_default(i64 0)
+  ret i32 %call2
+}
+
+define internal i32 @switch_default_dead(i64 %i) nounwind {
 entry:
   switch i64 %i, label %sw.default [
   i64 3, label %return
@@ -923,12 +949,11 @@ return:
   ret i32 0
 }
 
-define i32 @switch_default_caller() {
-; CHECK-LABEL: define {{[^@]+}}@switch_default_caller()
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default(i64 0)
+define i32 @switch_default_dead_caller() {
+; CHECK-LABEL: define {{[^@]+}}@switch_default_dead_caller()
 ; CHECK-NEXT:    ret i32 123
 ;
-  %call2 = tail call i32 @switch_default(i64 0)
+  %call2 = tail call i32 @switch_default_dead(i64 0)
   ret i32 %call2
 }
 ; UTC_ARGS: --turn off

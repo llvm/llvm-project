@@ -10,7 +10,6 @@
 define i32 @main() noreturn nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@main()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @wwrite(i64 0)
 ; CHECK-NEXT:    ret i32 123
 ;
 entry:
@@ -19,18 +18,6 @@ entry:
 }
 
 define internal i32 @wwrite(i64 %i) nounwind readnone {
-; CHECK-LABEL: define {{[^@]+}}@wwrite
-; CHECK-SAME: (i64 [[I:%.*]])
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 3, label [[RETURN:%.*]]
-; CHECK-NEXT:    i64 10, label [[RETURN]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.default:
-; CHECK-NEXT:    ret i32 123
-; CHECK:       return:
-; CHECK-NEXT:    unreachable
-;
 entry:
   switch i64 %i, label %sw.default [
   i64 3, label %return
