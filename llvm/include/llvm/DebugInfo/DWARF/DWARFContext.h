@@ -91,6 +91,9 @@ class DWARFContext : public DIContext {
 
   std::unique_ptr<MCRegisterInfo> RegInfo;
 
+  std::function<void(Error)> RecoverableErrorHandler = defaultErrorHandler;
+  std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
+
   /// Read compile units from the debug_info section (if necessary)
   /// and type units from the debug_types sections (if necessary)
   /// and store them in NormalUnits.
@@ -343,9 +346,16 @@ public:
 
   const MCRegisterInfo *getRegisterInfo() const { return RegInfo.get(); }
 
+  function_ref<void(Error)> getRecoverableErrorHandler() {
+    return RecoverableErrorHandler;
+  }
+
+  function_ref<void(Error)> getWarningHandler() { return WarningHandler; }
+
   /// Function used to handle default error reporting policy. Prints a error
   /// message and returns Continue, so DWARF context ignores the error.
   static ErrorPolicy defaultErrorHandler(Error E);
+
   static std::unique_ptr<DWARFContext>
   create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
          function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler,
@@ -363,9 +373,6 @@ public:
   /// Get address size from CUs.
   /// TODO: refactor compile_units() to make this const.
   uint8_t getCUAddrSize();
-
-  /// Dump Error as warning message to stderr.
-  static void dumpWarning(Error Warning);
 
   Triple::ArchType getArch() const {
     return getDWARFObj().getFile()->getArch();
