@@ -3119,10 +3119,20 @@ void FunctionStackPoisoner::processStaticAllocas() {
     LocalStackBaseAlloca = LocalStackBase;
   }
 
+  // It shouldn't matter whether we pass an `alloca` or a `ptrtoint` as the
+  // dbg.declare address opereand, but passing a `ptrtoint` seems to confuse
+  // later passes and can result in dropped variable coverage in debug info.
+  Value *LocalStackBaseAllocaPtr =
+      isa<PtrToIntInst>(LocalStackBaseAlloca)
+          ? cast<PtrToIntInst>(LocalStackBaseAlloca)->getPointerOperand()
+          : LocalStackBaseAlloca;
+  assert(isa<AllocaInst>(LocalStackBaseAllocaPtr) &&
+         "Variable descriptions relative to ASan stack base will be dropped");
+
   // Replace Alloca instructions with base+offset.
   for (const auto &Desc : SVD) {
     AllocaInst *AI = Desc.AI;
-    replaceDbgDeclareForAlloca(AI, LocalStackBaseAlloca, DIB, DIExprFlags,
+    replaceDbgDeclareForAlloca(AI, LocalStackBaseAllocaPtr, DIB, DIExprFlags,
                                Desc.Offset);
     Value *NewAllocaPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset)),
