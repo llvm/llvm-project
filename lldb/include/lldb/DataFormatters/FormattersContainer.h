@@ -266,7 +266,7 @@ protected:
     ConstString key = m_format_map.GetKeyAtIndex(index);
     if (key)
       return lldb::TypeNameSpecifierImplSP(
-          new TypeNameSpecifierImpl(key.AsCString(), false));
+          new TypeNameSpecifierImpl(key.GetStringRef(), false));
     else
       return lldb::TypeNameSpecifierImplSP();
   }

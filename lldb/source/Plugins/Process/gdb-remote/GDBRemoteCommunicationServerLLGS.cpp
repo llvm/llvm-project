@@ -2510,7 +2510,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     ConstString name = region_info.GetName();
     if (name) {
       response.PutCString("name:");
-      response.PutStringAsRawHex8(name.AsCString());
+      response.PutStringAsRawHex8(name.GetStringRef());
       response.PutChar(';');
     }
   }

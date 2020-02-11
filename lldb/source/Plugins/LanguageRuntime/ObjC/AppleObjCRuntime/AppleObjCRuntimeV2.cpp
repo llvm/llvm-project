@@ -895,12 +895,12 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
                                                 const char *ivar_name) {
   uint32_t ivar_offset = LLDB_INVALID_IVAR_OFFSET;
 
-  const char *class_name = parent_ast_type.GetConstTypeName().AsCString();
-  if (class_name && class_name[0] && ivar_name && ivar_name[0]) {
+  ConstString class_name = parent_ast_type.GetConstTypeName();
+  if (!class_name.IsEmpty() && ivar_name && ivar_name[0]) {
     // Make the objective C V2 mangled name for the ivar offset from the class
     // name and ivar name
     std::string buffer("OBJC_IVAR_$_");
-    buffer.append(class_name);
+    buffer.append(class_name.AsCString());
     buffer.push_back('.');
     buffer.append(ivar_name);
     ConstString ivar_const_str(buffer.c_str());

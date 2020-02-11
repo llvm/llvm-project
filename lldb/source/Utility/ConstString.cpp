@@ -335,5 +335,5 @@ size_t ConstString::StaticMemorySize() {
 void llvm::format_provider<ConstString>::format(const ConstString &CS,
                                                 llvm::raw_ostream &OS,
                                                 llvm::StringRef Options) {
-  format_provider<StringRef>::format(CS.AsCString(), OS, Options);
+  format_provider<StringRef>::format(CS.GetStringRef(), OS, Options);
 }

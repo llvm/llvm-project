@@ -71,7 +71,7 @@ public:
   llvm::Module *GetModule() { return m_module; }
 
   llvm::Function *GetFunction() {
-    return ((m_module != nullptr) ? m_module->getFunction(m_name.AsCString())
+    return ((m_module != nullptr) ? m_module->getFunction(m_name.GetStringRef())
                                   : nullptr);
   }
 

@@ -126,7 +126,7 @@ ValueObjectRegisterSet::GetChildMemberWithName(ConstString name,
   ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
+        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
     if (reg_info != nullptr)
       valobj = new ValueObjectRegister(*this, m_reg_ctx_sp,
                                        reg_info->kinds[eRegisterKindLLDB]);
@@ -141,7 +141,7 @@ size_t
 ValueObjectRegisterSet::GetIndexOfChildWithName(ConstString name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
+        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
