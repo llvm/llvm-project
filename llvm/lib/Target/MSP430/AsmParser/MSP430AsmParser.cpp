@@ -46,6 +46,8 @@ class MSP430AsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -288,13 +290,28 @@ static unsigned MatchRegisterAltName(StringRef Name);
 
 bool MSP430AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                     SMLoc &EndLoc) {
+  switch (tryParseRegister(RegNo, StartLoc, EndLoc)) {
+  case MatchOperand_ParseFail:
+    return Error(StartLoc, "invalid register name");
+  case MatchOperand_Success:
+    return false;
+  case MatchOperand_NoMatch:
+    return true;
+  }
+
+  llvm_unreachable("unknown match result type");
+}
+
+OperandMatchResultTy MSP430AsmParser::tryParseRegister(unsigned &RegNo,
+                                                       SMLoc &StartLoc,
+                                                       SMLoc &EndLoc) {
   if (getLexer().getKind() == AsmToken::Identifier) {
     auto Name = getLexer().getTok().getIdentifier().lower();
     RegNo = MatchRegisterName(Name);
     if (RegNo == MSP430::NoRegister) {
       RegNo = MatchRegisterAltName(Name);
       if (RegNo == MSP430::NoRegister)
-        return true;
+        return MatchOperand_NoMatch;
     }
 
     AsmToken const &T = getParser().getTok();
@@ -302,10 +319,10 @@ bool MSP430AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
     EndLoc = T.getEndLoc();
     getLexer().Lex(); // eat register token
 
-    return false;
+    return MatchOperand_Success;
   }
 
-  return Error(StartLoc, "invalid register name");
+  return MatchOperand_ParseFail;
 }
 
 bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,

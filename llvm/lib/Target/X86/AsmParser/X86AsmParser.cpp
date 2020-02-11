@@ -858,6 +858,9 @@ private:
     return nullptr;
   }
 
+  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+                     bool RestoreOnFailure);
+
   std::unique_ptr<X86Operand> DefaultMemSIOperand(SMLoc Loc);
   std::unique_ptr<X86Operand> DefaultMemDIOperand(SMLoc Loc);
   bool IsSIReg(unsigned Reg);
@@ -1023,6 +1026,8 @@ public:
   }
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
@@ -1129,22 +1134,36 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   return checkScale(Scale, ErrMsg);
 }
 
-bool X86AsmParser::ParseRegister(unsigned &RegNo,
-                                 SMLoc &StartLoc, SMLoc &EndLoc) {
+bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                 SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
+  MCAsmLexer &Lexer = getLexer();
   RegNo = 0;
+
+  SmallVector<AsmToken, 5> Tokens;
+  auto OnFailure = [RestoreOnFailure, &Lexer, &Tokens]() {
+    if (RestoreOnFailure) {
+      while (!Tokens.empty()) {
+        Lexer.UnLex(Tokens.pop_back_val());
+      }
+    }
+  };
+
   const AsmToken &PercentTok = Parser.getTok();
   StartLoc = PercentTok.getLoc();
 
   // If we encounter a %, ignore it. This code handles registers with and
   // without the prefix, unprefixed registers can occur in cfi directives.
-  if (!isParsingIntelSyntax() && PercentTok.is(AsmToken::Percent))
+  if (!isParsingIntelSyntax() && PercentTok.is(AsmToken::Percent)) {
+    Tokens.push_back(PercentTok);
     Parser.Lex(); // Eat percent token.
+  }
 
   const AsmToken &Tok = Parser.getTok();
   EndLoc = Tok.getEndLoc();
 
   if (Tok.isNot(AsmToken::Identifier)) {
+    OnFailure();
     if (isParsingIntelSyntax()) return true;
     return Error(StartLoc, "invalid register name",
                  SMRange(StartLoc, EndLoc));
@@ -1173,7 +1192,10 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
         X86II::isX86_64NonExtLowByteReg(RegNo) ||
         X86II::isX86_64ExtendedReg(RegNo)) {
       StringRef RegName = Tok.getString();
-      Parser.Lex(); // Eat register name.
+      OnFailure();
+      if (!RestoreOnFailure) {
+        Parser.Lex(); // Eat register name.
+      }
       return Error(StartLoc,
                    "register %" + RegName + " is only available in 64-bit mode",
                    SMRange(StartLoc, EndLoc));
@@ -1182,17 +1204,21 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
 
   // Parse "%st" as "%st(0)" and "%st(1)", which is multiple tokens.
   if (RegNo == X86::ST0) {
+    Tokens.push_back(Tok);
     Parser.Lex(); // Eat 'st'
 
     // Check to see if we have '(4)' after %st.
-    if (getLexer().isNot(AsmToken::LParen))
+    if (Lexer.isNot(AsmToken::LParen))
       return false;
     // Lex the paren.
-    getParser().Lex();
+    Tokens.push_back(Parser.getTok());
+    Parser.Lex();
 
     const AsmToken &IntTok = Parser.getTok();
-    if (IntTok.isNot(AsmToken::Integer))
+    if (IntTok.isNot(AsmToken::Integer)) {
+      OnFailure();
       return Error(IntTok.getLoc(), "expected stack index");
+    }
     switch (IntTok.getIntVal()) {
     case 0: RegNo = X86::ST0; break;
     case 1: RegNo = X86::ST1; break;
@@ -1202,11 +1228,18 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
     case 5: RegNo = X86::ST5; break;
     case 6: RegNo = X86::ST6; break;
     case 7: RegNo = X86::ST7; break;
-    default: return Error(IntTok.getLoc(), "invalid stack index");
+    default:
+      OnFailure();
+      return Error(IntTok.getLoc(), "invalid stack index");
     }
 
-    if (getParser().Lex().isNot(AsmToken::RParen))
+    // Lex IntTok
+    Tokens.push_back(IntTok);
+    Parser.Lex();
+    if (Lexer.isNot(AsmToken::RParen)) {
+      OnFailure();
       return Error(Parser.getTok().getLoc(), "expected ')'");
+    }
 
     EndLoc = Parser.getTok().getEndLoc();
     Parser.Lex(); // Eat ')'
@@ -1250,6 +1283,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
   }
 
   if (RegNo == 0) {
+    OnFailure();
     if (isParsingIntelSyntax()) return true;
     return Error(StartLoc, "invalid register name",
                  SMRange(StartLoc, EndLoc));
@@ -1257,6 +1291,25 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
 
   Parser.Lex(); // Eat identifier token.
   return false;
+}
+
+bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                 SMLoc &EndLoc) {
+  return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
+}
+
+OperandMatchResultTy X86AsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
+  bool Result =
+      ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/true);
+  bool PendingErrors = getParser().hasPendingError();
+  getParser().clearPendingErrors();
+  if (PendingErrors)
+    return MatchOperand_ParseFail;
+  if (Result)
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::DefaultMemSIOperand(SMLoc Loc) {

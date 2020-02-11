@@ -109,6 +109,8 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   const MCExpr *ExtractModifierFromExpr(const MCExpr *E,
                                         PPCMCExpr::VariantKind &Variant);
@@ -1221,14 +1223,22 @@ bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
 
 bool PPCAsmParser::
 ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
+  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
+    return TokError("invalid register name");
+  return false;
+}
+
+OperandMatchResultTy PPCAsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   RegNo = 0;
   int64_t IntVal;
   if (MatchRegisterName(RegNo, IntVal))
-    return TokError("invalid register name");
-  return false;
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 /// Extract \code @l/@ha \endcode modifier from expression.  Recursively scan

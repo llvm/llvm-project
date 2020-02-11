@@ -628,6 +628,8 @@ public:
 
   // Implementation of the MCTargetAsmParser interface:
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -3883,6 +3885,14 @@ bool ARMAsmParser::ParseRegister(unsigned &RegNo,
   RegNo = tryParseRegister();
 
   return (RegNo == (unsigned)-1);
+}
+
+OperandMatchResultTy ARMAsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
+  if (ParseRegister(RegNo, StartLoc, EndLoc))
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 /// Try to parse a register name.  The token must be an Identifier when called,

@@ -1065,17 +1065,20 @@ private:
 
   bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth,
                              RegisterKind RegKind, unsigned Reg1);
-  bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg,
-                           unsigned& RegNum, unsigned& RegWidth);
-  unsigned ParseRegularReg(RegisterKind &RegKind,
-                           unsigned &RegNum,
-                           unsigned &RegWidth);
-  unsigned ParseSpecialReg(RegisterKind &RegKind,
-                           unsigned &RegNum,
-                           unsigned &RegWidth);
-  unsigned ParseRegList(RegisterKind &RegKind,
-                        unsigned &RegNum,
-                        unsigned &RegWidth);
+  bool ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+                           unsigned &RegNum, unsigned &RegWidth,
+                           bool RestoreOnFailure = false);
+  bool ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+                           unsigned &RegNum, unsigned &RegWidth,
+                           SmallVectorImpl<AsmToken> &Tokens);
+  unsigned ParseRegularReg(RegisterKind &RegKind, unsigned &RegNum,
+                           unsigned &RegWidth,
+                           SmallVectorImpl<AsmToken> &Tokens);
+  unsigned ParseSpecialReg(RegisterKind &RegKind, unsigned &RegNum,
+                           unsigned &RegWidth,
+                           SmallVectorImpl<AsmToken> &Tokens);
+  unsigned ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
+                        unsigned &RegWidth, SmallVectorImpl<AsmToken> &Tokens);
   bool ParseRegRange(unsigned& Num, unsigned& Width);
   unsigned getRegularReg(RegisterKind RegKind,
                          unsigned RegNum,
@@ -1233,8 +1236,12 @@ public:
   bool isForcedSDWA() const { return ForcedSDWA; }
   ArrayRef<unsigned> getMatchedVariants() const;
 
-  std::unique_ptr<AMDGPUOperand> parseRegister();
+  std::unique_ptr<AMDGPUOperand> parseRegister(bool RestoreOnFailure = false);
+  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+                     bool RestoreOnFailure);
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -1987,7 +1994,7 @@ static unsigned getSpecialRegForName(StringRef RegName) {
 }
 
 bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                    SMLoc &EndLoc) {
+                                    SMLoc &EndLoc, bool RestoreOnFailure) {
   auto R = parseRegister();
   if (!R) return true;
   assert(R->isReg());
@@ -1995,6 +2002,25 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   StartLoc = R->getStartLoc();
   EndLoc = R->getEndLoc();
   return false;
+}
+
+bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                    SMLoc &EndLoc) {
+  return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
+}
+
+OperandMatchResultTy AMDGPUAsmParser::tryParseRegister(unsigned &RegNo,
+                                                       SMLoc &StartLoc,
+                                                       SMLoc &EndLoc) {
+  bool Result =
+      ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/true);
+  bool PendingErrors = getParser().hasPendingError();
+  getParser().clearPendingErrors();
+  if (PendingErrors)
+    return MatchOperand_ParseFail;
+  if (Result)
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
@@ -2173,31 +2199,31 @@ AMDGPUAsmParser::ParseRegRange(unsigned& Num, unsigned& Width) {
   return true;
 }
 
-unsigned
-AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
-                                 unsigned &RegNum,
-                                 unsigned &RegWidth) {
+unsigned AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
+                                          unsigned &RegNum, unsigned &RegWidth,
+                                          SmallVectorImpl<AsmToken> &Tokens) {
   assert(isToken(AsmToken::Identifier));
   unsigned Reg = getSpecialRegForName(getTokenStr());
   if (Reg) {
     RegNum = 0;
     RegWidth = 1;
     RegKind = IS_SPECIAL;
+    Tokens.push_back(getToken());
     lex(); // skip register name
   }
   return Reg;
 }
 
-unsigned
-AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
-                                 unsigned &RegNum,
-                                 unsigned &RegWidth) {
+unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
+                                          unsigned &RegNum, unsigned &RegWidth,
+                                          SmallVectorImpl<AsmToken> &Tokens) {
   assert(isToken(AsmToken::Identifier));
   StringRef RegName = getTokenStr();
 
   const RegInfo *RI = getRegularRegInfo(RegName);
   if (!RI)
     return AMDGPU::NoRegister;
+  Tokens.push_back(getToken());
   lex(); // skip register name
 
   RegKind = RI->Kind;
@@ -2216,10 +2242,9 @@ AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   return getRegularReg(RegKind, RegNum, RegWidth);
 }
 
-unsigned
-AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
-                              unsigned &RegNum,
-                              unsigned &RegWidth) {
+unsigned AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
+                                       unsigned &RegWidth,
+                                       SmallVectorImpl<AsmToken> &Tokens) {
   unsigned Reg = AMDGPU::NoRegister;
 
   if (!trySkipToken(AsmToken::LBrac))
@@ -2236,7 +2261,8 @@ AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
     RegisterKind NextRegKind;
     unsigned NextReg, NextRegNum, NextRegWidth;
 
-    if (!ParseAMDGPURegister(NextRegKind, NextReg, NextRegNum, NextRegWidth))
+    if (!ParseAMDGPURegister(NextRegKind, NextReg, NextRegNum, NextRegWidth,
+                             Tokens))
       return AMDGPU::NoRegister;
     if (NextRegWidth != 1)
       return AMDGPU::NoRegister;
@@ -2255,22 +2281,38 @@ AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
   return Reg;
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind,
-                                          unsigned &Reg,
-                                          unsigned &RegNum,
-                                          unsigned &RegWidth) {
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+                                          unsigned &RegNum, unsigned &RegWidth,
+                                          SmallVectorImpl<AsmToken> &Tokens) {
   Reg = AMDGPU::NoRegister;
 
   if (isToken(AsmToken::Identifier)) {
-    Reg = ParseSpecialReg(RegKind, RegNum, RegWidth);
+    Reg = ParseSpecialReg(RegKind, RegNum, RegWidth, Tokens);
     if (Reg == AMDGPU::NoRegister)
-      Reg = ParseRegularReg(RegKind, RegNum, RegWidth);
+      Reg = ParseRegularReg(RegKind, RegNum, RegWidth, Tokens);
   } else {
-    Reg = ParseRegList(RegKind, RegNum, RegWidth);
+    Reg = ParseRegList(RegKind, RegNum, RegWidth, Tokens);
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   return Reg != AMDGPU::NoRegister && subtargetHasRegister(*TRI, Reg);
+}
+
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+                                          unsigned &RegNum, unsigned &RegWidth,
+                                          bool RestoreOnFailure) {
+  Reg = AMDGPU::NoRegister;
+
+  SmallVector<AsmToken, 1> Tokens;
+  if (ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, Tokens)) {
+    if (RestoreOnFailure) {
+      while (!Tokens.empty()) {
+        getLexer().UnLex(Tokens.pop_back_val());
+      }
+    }
+    return true;
+  }
+  return false;
 }
 
 Optional<StringRef>
@@ -2321,7 +2363,8 @@ bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
   return true;
 }
 
-std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
+std::unique_ptr<AMDGPUOperand>
+AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
   const auto &Tok = Parser.getTok();
   SMLoc StartLoc = Tok.getLoc();
   SMLoc EndLoc = Tok.getEndLoc();
