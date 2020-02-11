@@ -47,31 +47,32 @@
 # NOLATER-NOT: debug_line[{{.*}}]
 # NOLATER-NOT: end_sequence
 
-## For fatal issues, the following table(s) should not be dumped.
+## For fatal issues, the following table(s) should not be dumped:
 # FATAL:      debug_line[0x00000048]
 # FATAL-NEXT: Line table prologue
 # FATAL-NEXT: total_length: 0xfffffffe
 # FATAL-NOT:  debug_line
 
-## For non-fatal issues, the table data should be dumped.
-## Case 1: Version 0 table.
+## For non-fatal issues, the table data should be dumped:
+
+## Version 0 table.
 # NONFATAL:      debug_line[0x00000048]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL-NOT:  Address
 
-## Case 2: Version 1 table.
+## Version 1 table.
 # NONFATAL:      debug_line[0x0000004e]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL-NOT:  Address
 
-## Case 3: Malformed directory format with no path component.
+## Malformed directory format with no path component.
 # NONFATAL:      debug_line[0x00000054]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL-NOT:  include_directories
 # NONFATAL-NOT:  file_names
 # NONFATAL:      0x8877665544332211 {{.*}} end_sequence
 
-## Case 4: Prologue with length shorter than parsed.
+## Prologue with length shorter than parsed.
 # NONFATAL:      debug_line[0x00000081]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      file_names[  2]:
@@ -81,7 +82,7 @@
 # NONFATAL-NEXT:          length: 0x00000006
 # NONFATAL:      0x1122334455667788 {{.*}} 0 end_sequence{{$}}
 
-## Case 5: Prologue with length longer than parsed.
+## Prologue with length longer than parsed.
 # NONFATAL:      debug_line[0x000000c8]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      file_names[  2]:
@@ -92,19 +93,19 @@
 # NONFATAL-NOT:  file_names
 # NONFATAL:      0x1111222233334444 {{.*}} is_stmt end_sequence
 
-## Case 6: Extended opcode with incorrect length versus expected.
+## Extended opcode with incorrect length versus expected.
 # NONFATAL:      debug_line[0x00000111]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL: 0x00000000abbadaba {{.*}} end_sequence
 # NONFATAL: 0x00000000babb1e45 {{.*}} 10 is_stmt prologue_end end_sequence{{$}}
 
-## Case 7: No end of sequence.
+## No end of sequence.
 # NONFATAL:      debug_line[0x0000016c]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      0x00000000deadfade {{.*}} is_stmt
 # NONFATAL-NOT:  end_sequence
 
-## Case 8: Very short prologue length for V5 (ends during parameters).
+## Very short prologue length for V5 (ends during parameters).
 # NONFATAL:      debug_line[0x000001b2]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      standard_opcode_lengths[DW_LNS_set_isa] = 1
@@ -114,7 +115,7 @@
 # NONFATAL:      0x0000000000000000 1 0 1 0 0 is_stmt end_sequence
 # NONFATAL:      0x0000babb1ebabb1e {{.*}} end_sequence
 
-## Case 9: V5 prologue ends during file table.
+## V5 prologue ends during file table.
 # NONFATAL:      debug_line[0x000001ee]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
@@ -124,7 +125,7 @@
 # NONFATAL:      0x0000000000000000 {{.*}} epilogue_begin
 # NONFATAL:      0x00000ab4acadab4a {{.*}} end_sequence
 
-## Case 10: V5 prologue ends during directory table.
+## V5 prologue ends during directory table.
 # NONFATAL:      debug_line[0x0000022f]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
@@ -133,7 +134,7 @@
 # NONFATAL:      0x0000000000000002 2 0 1 0 0 is_stmt{{$}}
 # NONFATAL:      0x4444333322221111 {{.*}} end_sequence
 
-## Case 11: V5 invalid MD5 hash form when there is still data to be read.
+## V5 invalid MD5 hash form when there is still data to be read.
 # NONFATAL:      debug_line[0x0000026b]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
@@ -141,7 +142,7 @@
 # NONFATAL-NOT:  is_stmt
 # NONFATAL:      0x1234123412341234 {{.*}} end_sequence
 
-## Case 12: V5 invalid MD5 hash form when data beyond the prologue length has
+## V5 invalid MD5 hash form when data beyond the prologue length has
 ## been read before the MD5 problem is identified.
 # NONFATAL:      debug_line[0x000002ae]
 # NONFATAL-NEXT: Line table prologue
@@ -150,7 +151,7 @@
 # NONFATAL:      0x0000000000000000 {{.*}} epilogue_begin
 # NONFATAL:      0x4321432143214321 {{.*}} is_stmt end_sequence
 
-## Case 13: V5 invalid directory content description has unsupported form.
+## V5 invalid directory content description has unsupported form.
 # NONFATAL:      debug_line[0x000002ec]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/foo"
