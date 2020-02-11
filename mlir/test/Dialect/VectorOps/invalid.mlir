@@ -990,3 +990,31 @@ func @shape_cast_different_tuple_sizes(
   %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
                                  tuple<vector<20x2xf32>>
 }
+
+// -----
+
+func @reduce_unknown_kind(%arg0: vector<16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.reduction' op unknown reduction kind: joho}}
+  %0 = vector.reduction "joho", %arg0 : vector<16xf32> into f32
+}
+
+// -----
+
+func @reduce_elt_type_mismatch(%arg0: vector<16xf32>) -> i32 {
+  // expected-error@+1 {{'vector.reduction' op failed to verify that source operand and result have same element type}}
+  %0 = vector.reduction "add", %arg0 : vector<16xf32> into i32
+}
+
+// -----
+
+func @reduce_unsupported_type(%arg0: vector<16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.reduction' op unsupported reduction type}}
+  %0 = vector.reduction "xor", %arg0 : vector<16xf32> into f32
+}
+
+// -----
+
+func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.reduction' op unsupported reduction rank: 2}}
+  %0 = vector.reduction "add", %arg0 : vector<4x16xf32> into f32
+}
