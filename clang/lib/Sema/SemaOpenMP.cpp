@@ -8968,6 +8968,28 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       }
     }
   }
+  // OpenMP 5.0, 2.17.7 atomic Construct, Restrictions
+  // If atomic-clause is read then memory-order-clause must not be acq_rel or
+  // release.
+  // If atomic-clause is write then memory-order-clause must not be acq_rel or
+  // acquire.
+  // If atomic-clause is update or not present then memory-order-clause must not
+  // be acq_rel or acquire.
+  if ((AtomicKind == OMPC_read &&
+       (MemOrderKind == OMPC_acq_rel || MemOrderKind == OMPC_release)) ||
+      ((AtomicKind == OMPC_write || AtomicKind == OMPC_update ||
+        AtomicKind == OMPC_unknown) &&
+       (MemOrderKind == OMPC_acq_rel || MemOrderKind == OMPC_acquire))) {
+    SourceLocation Loc = AtomicKindLoc;
+    if (AtomicKind == OMPC_unknown)
+      Loc = StartLoc;
+    Diag(Loc, diag::err_omp_atomic_incompatible_mem_order_clause)
+        << getOpenMPClauseName(AtomicKind)
+        << (AtomicKind == OMPC_unknown ? 1 : 0)
+        << getOpenMPClauseName(MemOrderKind);
+    Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
+        << getOpenMPClauseName(MemOrderKind);
+  }
 
   Stmt *Body = CS->getCapturedStmt();
   if (auto *EWC = dyn_cast<ExprWithCleanups>(Body))
