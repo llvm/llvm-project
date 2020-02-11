@@ -36,25 +36,6 @@ using namespace mlir;
 
 #define PASS_NAME "convert-std-to-llvm"
 
-static llvm::cl::OptionCategory
-    clOptionsCategory("Standard to LLVM lowering options");
-
-static llvm::cl::opt<bool>
-    clUseAlloca(PASS_NAME "-use-alloca",
-                llvm::cl::desc("Replace emission of malloc/free by alloca"),
-                llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-    clEmitCWrappers(PASS_NAME "-emit-c-wrappers",
-                    llvm::cl::desc("Emit C-compatible wrapper functions"),
-                    llvm::cl::init(false));
-
-static llvm::cl::opt<bool> clUseBarePtrCallConv(
-    PASS_NAME "-use-bare-ptr-memref-call-conv",
-    llvm::cl::desc("Replace FuncOp's MemRef arguments with "
-                   "bare pointers to the MemRef element types"),
-    llvm::cl::init(false));
-
 // Extract an LLVM IR type from the LLVM IR dialect type.
 static LLVM::LLVMType unwrap(Type type) {
   if (!type)
@@ -2730,11 +2711,14 @@ namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   /// Creates an LLVM lowering pass.
-  explicit LLVMLoweringPass(bool useAlloca = false,
-                            bool useBarePtrCallConv = false,
-                            bool emitCWrappers = false)
-      : useAlloca(useAlloca), useBarePtrCallConv(useBarePtrCallConv),
-        emitCWrappers(emitCWrappers) {}
+  explicit LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv,
+                            bool emitCWrappers) {
+    this->useAlloca = useAlloca;
+    this->useBarePtrCallConv = useBarePtrCallConv;
+    this->emitCWrappers = emitCWrappers;
+  }
+  explicit LLVMLoweringPass() {}
+  LLVMLoweringPass(const LLVMLoweringPass &pass) {}
 
   /// Run the dialect converter on the module.
   void runOnModule() override {
@@ -2769,27 +2753,33 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   }
 
   /// Use `alloca` instead of `call @malloc` for converting std.alloc.
-  bool useAlloca;
+  Option<bool> useAlloca{
+      *this, "use-alloca",
+      llvm::cl::desc("Replace emission of malloc/free by alloca"),
+      llvm::cl::init(false)};
 
   /// Convert memrefs to bare pointers in function signatures.
-  bool useBarePtrCallConv;
+  Option<bool> useBarePtrCallConv{
+      *this, "use-bare-ptr-memref-call-conv",
+      llvm::cl::desc("Replace FuncOp's MemRef arguments with "
+                     "bare pointers to the MemRef element types"),
+      llvm::cl::init(false)};
 
   /// Emit wrappers for C-compatible pointer-to-struct memref descriptors.
-  bool emitCWrappers;
+  Option<bool> emitCWrappers{
+      *this, "emit-c-wrappers",
+      llvm::cl::desc("Emit C-compatible wrapper functions"),
+      llvm::cl::init(false)};
 };
 } // end namespace
 
 std::unique_ptr<OpPassBase<ModuleOp>>
-mlir::createLowerToLLVMPass(bool useAlloca, bool emitCWrappers) {
-  return std::make_unique<LLVMLoweringPass>(useAlloca, emitCWrappers);
+mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
+                            bool emitCWrappers) {
+  return std::make_unique<LLVMLoweringPass>(useAlloca, useBarePtrCallConv,
+                                            emitCWrappers);
 }
 
 static PassRegistration<LLVMLoweringPass>
-    pass(PASS_NAME,
-         "Convert scalar and vector operations from the "
-         "Standard to the LLVM dialect",
-         [] {
-           return std::make_unique<LLVMLoweringPass>(
-               clUseAlloca.getValue(), clUseBarePtrCallConv.getValue(),
-               clEmitCWrappers.getValue());
-         });
+    pass(PASS_NAME, "Convert scalar and vector operations from the "
+                    "Standard to the LLVM dialect");

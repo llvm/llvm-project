@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm -convert-std-to-llvm-emit-c-wrappers %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm='emit-c-wrappers=1' %s | FileCheck %s
 
 // This tests the default memref calling convention and the emission of C
 // wrappers. We don't need to separate runs because the wrapper-emission
