@@ -11706,19 +11706,27 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   assert(EltSizeInBits < 64 && "Can't rotate 64-bit integers");
 
   // Only XOP + AVX512 targets have bit rotation instructions.
+  // If we at least have SSSE3 (PSHUFB) then we shouldn't attempt to use this.
   bool IsLegal =
       (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
-  if (!IsLegal)
+  if (!IsLegal && Subtarget.hasSSE3())
     return SDValue();
 
   // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
-  int MinSubElts = Subtarget.hasXOP() ? 2 : std::max(32 / EltSizeInBits, 2);
+  int MinSubElts = Subtarget.hasAVX512() ? std::max(32 / EltSizeInBits, 2) : 2;
   int MaxSubElts = 64 / EltSizeInBits;
   for (int NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
     int RotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
     if (RotateAmt < 0)
       continue;
+
+    // For pre-SSSE3 targets, if we are shuffling vXi8 elts then ISD::ROTL,
+    // expanded to OR(SRL,SHL), will be more efficient, but if they can
+    // widen to vXi16 or more then existing lowering should will be better.
     int RotateAmtInBits = RotateAmt * EltSizeInBits;
+    if (!IsLegal && (RotateAmtInBits % 16) == 0)
+      return SDValue();
+
     int NumElts = VT.getVectorNumElements();
     MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
     MVT RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
