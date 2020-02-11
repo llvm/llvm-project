@@ -1473,7 +1473,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Actions.EndOpenMPClause();
     }
     // Consume final annot_pragma_openmp_end
-    if (Clauses.size() == 0) {
+    if (Clauses.empty()) {
       Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
       ConsumeAnnotationToken();
