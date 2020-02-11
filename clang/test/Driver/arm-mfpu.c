@@ -419,6 +419,21 @@
 // CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-mve.fp"
 // CHECK-MVEFP-FPUNONE-NOT: "-target-feature" "-fpregs"
 
+// RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve.fp+nomve -mfpu=none -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MVEFP-NOMVE-FPUNONE %s
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp2sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp3d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp4d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fp-armv8d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fp64"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-d32"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-neon"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-crypto"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "+dsp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-mve"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-mve.fp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fpregs"
+
 // RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve -mfpu=none -### -c 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MVEI-FPUNONE %s
 // CHECK-MVEI-FPUNONE-DAG: "-target-feature" "-mve.fp"

@@ -278,6 +278,13 @@ arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
   return ABI;
 }
 
+static bool hasIntegerMVE(const std::vector<StringRef> &F) {
+  auto MVE = llvm::find(llvm::reverse(F), "+mve");
+  auto NoMVE = llvm::find(llvm::reverse(F), "-mve");
+  return MVE != F.rend() &&
+         (NoMVE == F.rend() || std::distance(MVE, NoMVE) > 0);
+}
+
 void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args, ArgStringList &CmdArgs,
                                std::vector<StringRef> &Features, bool ForAS) {
@@ -456,18 +463,13 @@ fp16_fml_fallthrough:
 
     // Disable all features relating to hardware FP, not already disabled by the
     // above call.
-    Features.insert(Features.end(), {"-neon", "-crypto", "-dotprod", "-fp16fml",
-                                     "-mve", "-mve.fp", "-fpregs"});
+    Features.insert(Features.end(),
+                    {"-dotprod", "-fp16fml", "-mve", "-mve.fp", "-fpregs"});
   } else if (FPUID == llvm::ARM::FK_NONE) {
     // -mfpu=none is *very* similar to -mfloat-abi=soft, only that it should not
     // disable MVE-I.
-    Features.insert(Features.end(),
-                    {"-neon", "-crypto", "-dotprod", "-fp16fml", "-mve.fp"});
-    // Even though we remove MVE-FP, we still need to check if it was originally
-    // present among the requested extensions, because it implies MVE-I, which
-    // should not be disabled by -mfpu-none.
-    if (!llvm::is_contained(Features, "+mve") &&
-        !llvm::is_contained(Features, "+mve.fp"))
+    Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-mve.fp"});
+    if (!hasIntegerMVE(Features))
       Features.emplace_back("-fpregs");
   }
 
