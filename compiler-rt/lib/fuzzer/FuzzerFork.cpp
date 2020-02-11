@@ -297,7 +297,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   for (auto &Dir : CorpusDirs)
     GetSizedFilesFromDir(Dir, &SeedFiles);
   std::sort(SeedFiles.begin(), SeedFiles.end());
-  Env.TempDir = TempPath("FuzzWithFork", ".dir");
+  Env.TempDir = TempPath(".dir");
   Env.DFTDir = DirPlusFile(Env.TempDir, "DFT");
   RmDirRecursive(Env.TempDir);  // in case there is a leftover from old runs.
   MkDir(Env.TempDir);
