@@ -45,7 +45,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Scalar.h"
-#include "lldb/Utility/SharingPtr.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
@@ -105,12 +104,13 @@ ValueObject::ValueObject(ValueObject &parent)
 
 // ValueObject constructor
 ValueObject::ValueObject(ExecutionContextScope *exe_scope,
+                         ValueObjectManager &manager,
                          AddressType child_ptr_or_ref_addr_type)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
       m_parent(nullptr), m_root(nullptr), m_update_point(exe_scope), m_name(),
       m_data(), m_value(), m_error(), m_value_str(), m_old_value_str(),
       m_location_str(), m_summary_str(), m_object_desc_str(),
-      m_manager(), m_children(), m_synthetic_children(),
+      m_manager(&manager), m_children(), m_synthetic_children(),
       m_dynamic_value(nullptr), m_synthetic_value(nullptr),
       m_deref_valobj(nullptr), m_format(eFormatDefault),
       m_last_format(eFormatDefault), m_last_format_mgr_revision(0),
@@ -134,7 +134,6 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
       m_data.SetAddressByteSize(arch.GetAddressByteSize());
     }
   }
-  m_manager = new ValueObjectManager();
   m_manager->ManageObject(this);
 }
 

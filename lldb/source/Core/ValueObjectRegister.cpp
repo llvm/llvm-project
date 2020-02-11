@@ -41,14 +41,18 @@ ValueObjectSP
 ValueObjectRegisterSet::Create(ExecutionContextScope *exe_scope,
                                lldb::RegisterContextSP &reg_ctx_sp,
                                uint32_t set_idx) {
-  return (new ValueObjectRegisterSet(exe_scope, reg_ctx_sp, set_idx))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectRegisterSet(exe_scope, *manager_sp, reg_ctx_sp,
+                                     set_idx))
+      ->GetSP();
 }
 
 ValueObjectRegisterSet::ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
+                                               ValueObjectManager &manager,
                                                lldb::RegisterContextSP &reg_ctx,
                                                uint32_t reg_set_idx)
-    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_set(nullptr),
-      m_reg_set_idx(reg_set_idx) {
+    : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx),
+      m_reg_set(nullptr), m_reg_set_idx(reg_set_idx) {
   assert(reg_ctx);
   m_reg_set = reg_ctx->GetRegisterSet(m_reg_set_idx);
   if (m_reg_set) {
@@ -174,13 +178,16 @@ ValueObjectRegister::ValueObjectRegister(ValueObject &parent,
 ValueObjectSP ValueObjectRegister::Create(ExecutionContextScope *exe_scope,
                                           lldb::RegisterContextSP &reg_ctx_sp,
                                           uint32_t reg_num) {
-  return (new ValueObjectRegister(exe_scope, reg_ctx_sp, reg_num))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectRegister(exe_scope, *manager_sp, reg_ctx_sp, reg_num))
+      ->GetSP();
 }
 
 ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
+                                         ValueObjectManager &manager,
                                          lldb::RegisterContextSP &reg_ctx,
                                          uint32_t reg_num)
-    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_info(),
+    : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx), m_reg_info(),
       m_reg_value(), m_type_name(), m_compiler_type() {
   assert(reg_ctx);
   ConstructObject(reg_num);

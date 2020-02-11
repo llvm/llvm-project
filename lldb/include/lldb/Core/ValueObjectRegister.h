@@ -69,6 +69,7 @@ private:
   friend class ValueObjectRegisterContext;
 
   ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
+                         ValueObjectManager &manager,
                          lldb::RegisterContextSP &reg_ctx_sp, uint32_t set_idx);
 
   // For ValueObject only
@@ -123,6 +124,7 @@ private:
   ValueObjectRegister(ValueObject &parent, lldb::RegisterContextSP &reg_ctx_sp,
                       uint32_t reg_num);
   ValueObjectRegister(ExecutionContextScope *exe_scope,
+                      ValueObjectManager &manager,
                       lldb::RegisterContextSP &reg_ctx_sp, uint32_t reg_num);
 
   // For ValueObject only

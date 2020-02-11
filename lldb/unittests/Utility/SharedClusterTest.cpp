@@ -25,30 +25,33 @@ public:
 
 TEST(SharedCluster, ClusterManager) {
   std::vector<int> Queue;
-  auto *CM = new ClusterManager<DestructNotifier>();
-  auto *One = new DestructNotifier(Queue, 1);
-  auto *Two = new DestructNotifier(Queue, 2);
-  CM->ManageObject(One);
-  CM->ManageObject(Two);
-
-  ASSERT_THAT(Queue, testing::IsEmpty());
   {
-    SharingPtr<DestructNotifier> OnePtr = CM->GetSharedPointer(One);
-    ASSERT_EQ(OnePtr->Key, 1);
+    auto CM = ClusterManager<DestructNotifier>::Create();
+    auto *One = new DestructNotifier(Queue, 1);
+    auto *Two = new DestructNotifier(Queue, 2);
+    CM->ManageObject(One);
+    CM->ManageObject(Two);
+
     ASSERT_THAT(Queue, testing::IsEmpty());
-
     {
-      SharingPtr<DestructNotifier> OnePtrCopy = OnePtr;
-      ASSERT_EQ(OnePtrCopy->Key, 1);
+      std::shared_ptr<DestructNotifier> OnePtr = CM->GetSharedPointer(One);
+      ASSERT_EQ(OnePtr->Key, 1);
+      ASSERT_THAT(Queue, testing::IsEmpty());
+
+      {
+        std::shared_ptr<DestructNotifier> OnePtrCopy = OnePtr;
+        ASSERT_EQ(OnePtrCopy->Key, 1);
+        ASSERT_THAT(Queue, testing::IsEmpty());
+      }
+
+      {
+        std::shared_ptr<DestructNotifier> TwoPtr = CM->GetSharedPointer(Two);
+        ASSERT_EQ(TwoPtr->Key, 2);
+        ASSERT_THAT(Queue, testing::IsEmpty());
+      }
+
       ASSERT_THAT(Queue, testing::IsEmpty());
     }
-
-    {
-      SharingPtr<DestructNotifier> TwoPtr = CM->GetSharedPointer(Two);
-      ASSERT_EQ(TwoPtr->Key, 2);
-      ASSERT_THAT(Queue, testing::IsEmpty());
-    }
-
     ASSERT_THAT(Queue, testing::IsEmpty());
   }
   ASSERT_THAT(Queue, testing::ElementsAre(1, 2));
