@@ -159,9 +159,8 @@ class LDVImpl;
 /// closure of that relation.
 class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
-  // FIXME: This is only used to get the FragmentInfo that describes the part
-  // of the variable we are a part of. We should just store the FragmentInfo.
-  const DIExpression *Expression; ///< Any complex address expression.
+  /// The part of the variable we describe.
+  const Optional<DIExpression::FragmentInfo> Fragment;
   DebugLoc dl;            ///< The debug location for the variable. This is
                           ///< used by dwarf writer to find lexical scope.
   UserValue *leader;      ///< Equivalence class leader.
@@ -191,9 +190,10 @@ class UserValue {
 
 public:
   /// Create a new UserValue.
-  UserValue(const DILocalVariable *var, const DIExpression *expr, DebugLoc L,
+  UserValue(const DILocalVariable *var,
+            Optional<DIExpression::FragmentInfo> Fragment, DebugLoc L,
             LocMap::Allocator &alloc)
-      : Variable(var), Expression(expr), dl(std::move(L)), leader(this),
+      : Variable(var), Fragment(Fragment), dl(std::move(L)), leader(this),
         locInts(alloc) {}
 
   /// Get the leader of this value's equivalence class.
@@ -208,20 +208,20 @@ public:
   UserValue *getNext() const { return next; }
 
   /// Does this UserValue match the parameters?
-  bool match(const DILocalVariable *Var, const DIExpression *Expr,
+  bool matches(const DILocalVariable *Var,
+             Optional<DIExpression::FragmentInfo> OtherFragment,
              const DILocation *IA) const {
     // FIXME: Handle partially overlapping fragments.
     // A DBG_VALUE with a fragment which overlaps a previous DBG_VALUE fragment
     // for the same variable terminates the interval opened by the first.
-    // getUserValue() uses match() to filter DBG_VALUEs into interval maps to
+    // getUserValue() uses matches() to filter DBG_VALUEs into interval maps to
     // represent these intervals.
-    // Given two _partially_ overlapping fragments match() will always return
+    // Given two _partially_ overlapping fragments matches() will always return
     // false. The DBG_VALUEs will be filtered into separate interval maps and
     // therefore we do not faithfully represent the original intervals.
     // See D70121#1849741 for a more detailed explanation and further
     // discussion.
-    return Var == Variable &&
-           Expr->getFragmentInfo() == Expression->getFragmentInfo() &&
+    return Var == Variable && OtherFragment == Fragment &&
            dl->getInlinedAt() == IA;
   }
 
@@ -391,7 +391,7 @@ public:
       : Label(label), dl(std::move(L)), loc(Idx) {}
 
   /// Does this UserLabel match the parameters?
-  bool match(const DILabel *L, const DILocation *IA,
+  bool matches(const DILabel *L, const DILocation *IA,
              const SlotIndex Index) const {
     return Label == L && dl->getInlinedAt() == IA && loc == Index;
   }
@@ -434,7 +434,8 @@ class LDVImpl {
   UVMap userVarMap;
 
   /// Find or create a UserValue.
-  UserValue *getUserValue(const DILocalVariable *Var, const DIExpression *Expr,
+  UserValue *getUserValue(const DILocalVariable *Var,
+                          Optional<DIExpression::FragmentInfo> Fragment,
                           const DebugLoc &DL);
 
   /// Find the EC leader for VirtReg or null.
@@ -597,18 +598,19 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
 }
 
 UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
-                                 const DIExpression *Expr, const DebugLoc &DL) {
+                                 Optional<DIExpression::FragmentInfo> Fragment,
+                                 const DebugLoc &DL) {
   UserValue *&Leader = userVarMap[Var];
   if (Leader) {
     UserValue *UV = Leader->getLeader();
     Leader = UV;
     for (; UV; UV = UV->getNext())
-      if (UV->match(Var, Expr, DL->getInlinedAt()))
+      if (UV->matches(Var, Fragment, DL->getInlinedAt()))
         return UV;
   }
 
   userValues.push_back(
-      std::make_unique<UserValue>(Var, Expr, DL, allocator));
+      std::make_unique<UserValue>(Var, Fragment, DL, allocator));
   UserValue *UV = userValues.back().get();
   Leader = UserValue::merge(Leader, UV);
   return UV;
@@ -674,8 +676,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
     assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
-  UserValue *UV =
-      getUserValue(Var, Expr, MI.getDebugLoc());
+  UserValue *UV = getUserValue(Var, Expr->getFragmentInfo(), MI.getDebugLoc());
   if (!Discard)
     UV->addDef(Idx, MI.getOperand(0), IsIndirect, *Expr);
   else {
@@ -698,7 +699,7 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
   const DebugLoc &DL = MI.getDebugLoc();
   bool Found = false;
   for (auto const &L : userLabels) {
-    if (L->match(Label, DL->getInlinedAt(), Idx)) {
+    if (L->matches(Label, DL->getInlinedAt(), Idx)) {
       Found = true;
       break;
     }
