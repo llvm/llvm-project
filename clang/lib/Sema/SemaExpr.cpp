@@ -16488,6 +16488,20 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     if (funcHasParameterSizeMangling(*this, Func))
       CheckCompleteParameterTypesForMangler(*this, Func, Loc);
 
+    // In the MS C++ ABI, the compiler emits destructor variants where they are
+    // used. If the destructor is used here but defined elsewhere, mark the
+    // virtual base destructors referenced. If those virtual base destructors
+    // are inline, this will ensure they are defined when emitting the complete
+    // destructor variant. This checking may be redundant if the destructor is
+    // provided later in this TU.
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+      if (auto *Dtor = dyn_cast<CXXDestructorDecl>(Func)) {
+        CXXRecordDecl *Parent = Dtor->getParent();
+        if (Parent->getNumVBases() > 0 && !Dtor->getBody())
+          CheckCompleteDestructorVariant(Loc, Dtor);
+      }
+    }
+
     Func->markUsed(Context);
   }
 }

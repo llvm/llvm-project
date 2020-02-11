@@ -6667,6 +6667,22 @@ public:
   void MarkBaseAndMemberDestructorsReferenced(SourceLocation Loc,
                                               CXXRecordDecl *Record);
 
+  /// Mark destructors of virtual bases of this class referenced. In the Itanium
+  /// C++ ABI, this is done when emitting a destructor for any non-abstract
+  /// class. In the Microsoft C++ ABI, this is done any time a class's
+  /// destructor is referenced.
+  void MarkVirtualBaseDestructorsReferenced(
+      SourceLocation Location, CXXRecordDecl *ClassDecl,
+      llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases = nullptr);
+
+  /// Do semantic checks to allow the complete destructor variant to be emitted
+  /// when the destructor is defined in another translation unit. In the Itanium
+  /// C++ ABI, destructor variants are emitted together. In the MS C++ ABI, they
+  /// can be emitted in separate TUs. To emit the complete variant, run a subset
+  /// of the checks performed when emitting a regular destructor.
+  void CheckCompleteDestructorVariant(SourceLocation CurrentLocation,
+                                      CXXDestructorDecl *Dtor);
+
   /// The list of classes whose vtables have been used within
   /// this translation unit, and the source locations at which the
   /// first use occurred.
