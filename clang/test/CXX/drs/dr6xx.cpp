@@ -585,10 +585,10 @@ namespace dr652 { // dr652: yes
 // dr653 FIXME: add codegen test
 
 #if __cplusplus >= 201103L
-namespace dr654 { // dr654: yes
+namespace dr654 { // dr654: sup 1423
   void f() {
     if (nullptr) {} // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
-    bool b = nullptr; // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+    bool b = nullptr; // expected-error {{cannot initialize a variable of type 'bool' with an rvalue of type 'nullptr_t'}}
     if (nullptr == 0) {}
     if (nullptr != 0) {}
     if (nullptr <= 0) {} // expected-error {{invalid operands}}

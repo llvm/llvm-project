@@ -677,6 +677,24 @@ class Sema;
       StdInitializerListElement = V;
     }
 
+    /// Form an "implicit" conversion sequence from nullptr_t to bool, for a
+    /// direct-initialization of a bool object from nullptr_t.
+    static ImplicitConversionSequence getNullptrToBool(QualType SourceType,
+                                                       QualType DestType,
+                                                       bool NeedLValToRVal) {
+      ImplicitConversionSequence ICS;
+      ICS.setStandard();
+      ICS.Standard.setAsIdentityConversion();
+      ICS.Standard.setFromType(SourceType);
+      if (NeedLValToRVal)
+        ICS.Standard.First = ICK_Lvalue_To_Rvalue;
+      ICS.Standard.setToType(0, SourceType);
+      ICS.Standard.Second = ICK_Boolean_Conversion;
+      ICS.Standard.setToType(1, DestType);
+      ICS.Standard.setToType(2, DestType);
+      return ICS;
+    }
+
     // The result of a comparison between implicit conversion
     // sequences. Use Sema::CompareImplicitConversionSequences to
     // actually perform the comparison.
