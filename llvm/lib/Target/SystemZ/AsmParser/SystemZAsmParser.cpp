@@ -405,7 +405,7 @@ private:
     SMLoc StartLoc, EndLoc;
   };
 
-  bool parseRegister(Register &Reg);
+  bool parseRegister(Register &Reg, bool RestoreOnFailure = false);
 
   bool parseRegister(Register &Reg, RegisterGroup Group, const unsigned *Regs,
                      bool IsAddress = false);
@@ -449,6 +449,10 @@ public:
   // Override MCTargetAsmParser.
   bool ParseDirective(AsmToken DirectiveID) override;
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+                     bool RestoreOnFailure);
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -691,27 +695,37 @@ void SystemZOperand::print(raw_ostream &OS) const {
 }
 
 // Parse one register of the form %<prefix><number>.
-bool SystemZAsmParser::parseRegister(Register &Reg) {
+bool SystemZAsmParser::parseRegister(Register &Reg, bool RestoreOnFailure) {
   Reg.StartLoc = Parser.getTok().getLoc();
 
   // Eat the % prefix.
   if (Parser.getTok().isNot(AsmToken::Percent))
     return Error(Parser.getTok().getLoc(), "register expected");
+  const AsmToken &PercentTok = Parser.getTok();
   Parser.Lex();
 
   // Expect a register name.
-  if (Parser.getTok().isNot(AsmToken::Identifier))
+  if (Parser.getTok().isNot(AsmToken::Identifier)) {
+    if (RestoreOnFailure)
+      getLexer().UnLex(PercentTok);
     return Error(Reg.StartLoc, "invalid register");
+  }
 
   // Check that there's a prefix.
   StringRef Name = Parser.getTok().getString();
-  if (Name.size() < 2)
+  if (Name.size() < 2) {
+    if (RestoreOnFailure)
+      getLexer().UnLex(PercentTok);
     return Error(Reg.StartLoc, "invalid register");
+  }
   char Prefix = Name[0];
 
   // Treat the rest of the register name as a register number.
-  if (Name.substr(1).getAsInteger(10, Reg.Num))
+  if (Name.substr(1).getAsInteger(10, Reg.Num)) {
+    if (RestoreOnFailure)
+      getLexer().UnLex(PercentTok);
     return Error(Reg.StartLoc, "invalid register");
+  }
 
   // Look for valid combinations of prefix and number.
   if (Prefix == 'r' && Reg.Num < 16)
@@ -724,8 +738,11 @@ bool SystemZAsmParser::parseRegister(Register &Reg) {
     Reg.Group = RegAR;
   else if (Prefix == 'c' && Reg.Num < 16)
     Reg.Group = RegCR;
-  else
+  else {
+    if (RestoreOnFailure)
+      getLexer().UnLex(PercentTok);
     return Error(Reg.StartLoc, "invalid register");
+  }
 
   Reg.EndLoc = Parser.getTok().getLoc();
   Parser.Lex();
@@ -1124,9 +1141,9 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
 }
 
 bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                     SMLoc &EndLoc) {
+                                     SMLoc &EndLoc, bool RestoreOnFailure) {
   Register Reg;
-  if (parseRegister(Reg))
+  if (parseRegister(Reg, RestoreOnFailure))
     return true;
   if (Reg.Group == RegGR)
     RegNo = SystemZMC::GR64Regs[Reg.Num];
@@ -1141,6 +1158,25 @@ bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   StartLoc = Reg.StartLoc;
   EndLoc = Reg.EndLoc;
   return false;
+}
+
+bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                     SMLoc &EndLoc) {
+  return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
+}
+
+OperandMatchResultTy SystemZAsmParser::tryParseRegister(unsigned &RegNo,
+                                                        SMLoc &StartLoc,
+                                                        SMLoc &EndLoc) {
+  bool Result =
+      ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/true);
+  bool PendingErrors = getParser().hasPendingError();
+  getParser().clearPendingErrors();
+  if (PendingErrors)
+    return MatchOperand_ParseFail;
+  if (Result)
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
