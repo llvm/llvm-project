@@ -103,7 +103,7 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI = nullptr;
 
-  /// This is a pointer to the current MachineLoopInfo.
+  /// This is a pointer to the current MachineDominatorTree.
   MachineDominatorTree *MDT = nullptr;
 
   /// This is a pointer to the current MachineLoopInfo.
