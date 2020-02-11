@@ -364,6 +364,78 @@ TEST(TBDv3, Platform_zippered) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv3, Platform_iOSSim) {
+  static const char tbd_v3_platform_iossim[] = "--- !tapi-tbd-v3\n"
+                                               "archs: [ x86_64 ]\n"
+                                               "platform: ios\n"
+                                               "install-name: Test.dylib\n"
+                                               "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v3_platform_iossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::iOSSimulator;
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_iossim),
+            stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv3, Platform_watchOSSim) {
+  static const char tbd_v3_platform_watchossim[] = "--- !tapi-tbd-v3\n"
+                                                   "archs: [ x86_64 ]\n"
+                                                   "platform: watchos\n"
+                                                   "install-name: Test.dylib\n"
+                                                   "...\n";
+
+  auto Result = TextAPIReader::get(
+      MemoryBufferRef(tbd_v3_platform_watchossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::watchOSSimulator;
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_watchossim),
+            stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv3, Platform_tvOSSim) {
+  static const char tbd_v3_platform_tvossim[] = "--- !tapi-tbd-v3\n"
+                                                "archs: [ x86_64 ]\n"
+                                                "platform: tvos\n"
+                                                "install-name: Test.dylib\n"
+                                                "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v3_platform_tvossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  auto Platform = PlatformKind::tvOSSimulator;
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_tvossim),
+            stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv3, Swift_1_0) {
   static const char tbd_v3_swift_1_0[] = "--- !tapi-tbd-v3\n"
                                          "archs: [ arm64 ]\n"
