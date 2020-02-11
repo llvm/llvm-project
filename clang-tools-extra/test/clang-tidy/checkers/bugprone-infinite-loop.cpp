@@ -354,3 +354,12 @@ void lambda_capture() {
     (*p)++;
   } while (i < Limit);
 }
+
+void evaluatable(bool CondVar) {
+  for (; false && CondVar;) {
+  }
+  while (false && CondVar) {
+  }
+  do {
+  } while (false && CondVar);
+}
