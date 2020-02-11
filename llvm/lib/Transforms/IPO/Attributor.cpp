@@ -6489,14 +6489,27 @@ bool Attributor::checkForAllUses(
     const Use *U = Worklist.pop_back_val();
     if (!Visited.insert(U).second)
       continue;
-    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << "\n");
-    if (Instruction *UserI = dyn_cast<Instruction>(U->getUser()))
-      if (LivenessAA && LivenessAA->isAssumedDead(UserI)) {
-        LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
-                          << *LivenessAA << "\n");
-        AnyDead = true;
-        continue;
+    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << " [" << LivenessAA
+                      << "]\n");
+    if (LivenessAA) {
+      if (Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
+        if (LivenessAA->isAssumedDead(UserI)) {
+          LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
+                            << *LivenessAA << "\n");
+          AnyDead = true;
+          continue;
+        }
+        if (PHINode *PHI = dyn_cast<PHINode>(UserI)) {
+          BasicBlock *IncomingBB = PHI->getIncomingBlock(*U);
+          if (LivenessAA->isAssumedDead(IncomingBB->getTerminator())) {
+            LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
+                              << *LivenessAA << "\n");
+            AnyDead = true;
+            continue;
+          }
+        }
       }
+    }
 
     bool Follow = false;
     if (!Pred(*U, Follow))
