@@ -362,10 +362,10 @@ defm : SKXWriteResPair<WriteVecLogicZ,[SKXPort05], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVecTest,  [SKXPort0,SKXPort5], 3, [1,1], 2, 6>; // Vector integer TEST instructions.
 defm : SKXWriteResPair<WriteVecTestY, [SKXPort0,SKXPort5], 3, [1,1], 2, 7>;
 defm : SKXWriteResPair<WriteVecTestZ, [SKXPort0,SKXPort5], 3, [1,1], 2, 7>;
-defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],    4, [1], 1, 5>; // Vector integer multiply.
-defm : SKXWriteResPair<WriteVecIMulX, [SKXPort01],  4, [1], 1, 6>;
-defm : SKXWriteResPair<WriteVecIMulY, [SKXPort01],  4, [1], 1, 7>;
-defm : SKXWriteResPair<WriteVecIMulZ, [SKXPort05],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],   5, [1], 1, 5>; // Vector integer multiply.
+defm : SKXWriteResPair<WriteVecIMulX, [SKXPort01],  5, [1], 1, 6>;
+defm : SKXWriteResPair<WriteVecIMulY, [SKXPort01],  5, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecIMulZ, [SKXPort05],  5, [1], 1, 7>;
 defm : SKXWriteResPair<WritePMULLD,   [SKXPort01], 10, [2], 2, 6>; // Vector PMULLD.
 defm : SKXWriteResPair<WritePMULLDY,  [SKXPort01], 10, [2], 2, 7>;
 defm : SKXWriteResPair<WritePMULLDZ,  [SKXPort05], 10, [2], 2, 7>;
