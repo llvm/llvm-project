@@ -151,9 +151,8 @@ void RmDirRecursive(const std::string &Dir) {
       [](const std::string &Path) { RemoveFile(Path); });
 }
 
-std::string TempPath(const char *Extension) {
-  return DirPlusFile(TmpDir(),
-                     "libFuzzerTemp." + std::to_string(GetPid()) + Extension);
+std::string TempPath(const char *Prefix, const char *Extension) {
+  return DirPlusFile(TmpDir(), Prefix + std::to_string(GetPid()) + Extension);
 }
 
 }  // namespace fuzzer
