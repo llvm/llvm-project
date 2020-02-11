@@ -1,6 +1,6 @@
 // RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
-// RUN: mlir-opt -convert-std-to-llvm -convert-std-to-llvm-use-alloca=1 %s | FileCheck %s --check-prefix=ALLOCA
-// RUN: mlir-opt -convert-std-to-llvm -split-input-file -convert-std-to-llvm-use-bare-ptr-memref-call-conv=1 %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -convert-std-to-llvm='use-alloca=1' %s | FileCheck %s --check-prefix=ALLOCA
+// RUN: mlir-opt -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // BAREPTR-LABEL: func @check_noalias
 // BAREPTR-SAME: %{{.*}}: !llvm<"float*"> {llvm.noalias = true}
