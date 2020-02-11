@@ -720,10 +720,10 @@ private:
   // These sorts of call expressions don't have a common superclass,
   // hence strict duck-typing.
   template <typename CallLikeExpr,
-            typename = typename std::enable_if<
-                std::is_same<CallLikeExpr, CallExpr>::value ||
-                std::is_same<CallLikeExpr, CXXConstructExpr>::value ||
-                std::is_same<CallLikeExpr, ObjCMessageExpr>::value>>
+            typename = std::enable_if_t<
+                std::is_base_of<CallExpr, CallLikeExpr>::value ||
+                std::is_base_of<CXXConstructExpr, CallLikeExpr>::value ||
+                std::is_base_of<ObjCMessageExpr, CallLikeExpr>::value>>
   void findConstructionContextsForArguments(CallLikeExpr *E) {
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
       Expr *Arg = E->getArg(i);
