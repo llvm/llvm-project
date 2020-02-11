@@ -879,7 +879,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
 }
 
 Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
-    DWARFUnit *U, function_ref<void(Error)> RecoverableErrorCallback) {
+    DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) {
   if (!Line)
     Line.reset(new DWARFDebugLine);
 
@@ -904,7 +904,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
                               U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset, *this, U,
-                                   RecoverableErrorCallback);
+                                   RecoverableErrorHandler);
 }
 
 void DWARFContext::parseNormalUnits() {

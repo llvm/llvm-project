@@ -309,7 +309,7 @@ uint64_t DWARFDebugLine::Prologue::getLength() const {
 
 Error DWARFDebugLine::Prologue::parse(
     const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-    function_ref<void(Error)> RecoverableErrorCallback, const DWARFContext &Ctx,
+    function_ref<void(Error)> RecoverableErrorHandler, const DWARFContext &Ctx,
     const DWARFUnit *U) {
   const uint64_t PrologueOffset = *OffsetPtr;
 
@@ -365,7 +365,7 @@ Error DWARFDebugLine::Prologue::parse(
     if (Error E =
             parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
                                  ContentTypes, IncludeDirectories, FileNames)) {
-      RecoverableErrorCallback(joinErrors(
+      RecoverableErrorHandler(joinErrors(
           createStringError(
               errc::invalid_argument,
               "parsing line table prologue at 0x%8.8" PRIx64
@@ -384,7 +384,7 @@ Error DWARFDebugLine::Prologue::parse(
                          ContentTypes, IncludeDirectories, FileNames);
 
   if (*OffsetPtr != EndPrologueOffset) {
-    RecoverableErrorCallback(createStringError(
+    RecoverableErrorHandler(createStringError(
         errc::invalid_argument,
         "parsing line table prologue at 0x%8.8" PRIx64
         " should have ended at 0x%8.8" PRIx64 " but it ended at 0x%8.8" PRIx64,
@@ -510,7 +510,7 @@ DWARFDebugLine::getLineTable(uint64_t Offset) const {
 
 Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint64_t Offset, const DWARFContext &Ctx,
-    const DWARFUnit *U, function_ref<void(Error)> RecoverableErrorCallback) {
+    const DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) {
   if (!DebugLineData.isValidOffset(Offset))
     return createStringError(errc::invalid_argument, "offset 0x%8.8" PRIx64
                        " is not a valid debug line section offset",
@@ -521,7 +521,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
   LineTable *LT = &Pos.first->second;
   if (Pos.second) {
     if (Error Err =
-            LT->parse(DebugLineData, &Offset, Ctx, U, RecoverableErrorCallback))
+            LT->parse(DebugLineData, &Offset, Ctx, U, RecoverableErrorHandler))
       return std::move(Err);
     return LT;
   }
@@ -531,13 +531,13 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
 Error DWARFDebugLine::LineTable::parse(
     DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
     const DWARFContext &Ctx, const DWARFUnit *U,
-    function_ref<void(Error)> RecoverableErrorCallback, raw_ostream *OS) {
+    function_ref<void(Error)> RecoverableErrorHandler, raw_ostream *OS) {
   const uint64_t DebugLineOffset = *OffsetPtr;
 
   clear();
 
-  Error PrologueErr = Prologue.parse(DebugLineData, OffsetPtr,
-                                     RecoverableErrorCallback, Ctx, U);
+  Error PrologueErr =
+      Prologue.parse(DebugLineData, OffsetPtr, RecoverableErrorHandler, Ctx, U);
 
   if (OS) {
     // The presence of OS signals verbose dumping.
@@ -555,7 +555,7 @@ Error DWARFDebugLine::LineTable::parse(
     assert(DebugLineData.size() > DebugLineOffset &&
            "prologue parsing should handle invalid offset");
     uint64_t BytesRemaining = DebugLineData.size() - DebugLineOffset;
-    RecoverableErrorCallback(
+    RecoverableErrorHandler(
         createStringError(errc::invalid_argument,
                           "line table program with offset 0x%8.8" PRIx64
                           " has length 0x%8.8" PRIx64 " but only 0x%8.8" PRIx64
@@ -633,7 +633,7 @@ Error DWARFDebugLine::LineTable::parse(
         {
           uint8_t ExtractorAddressSize = DebugLineData.getAddressSize();
           if (ExtractorAddressSize != Len - 1 && ExtractorAddressSize != 0)
-            RecoverableErrorCallback(createStringError(
+            RecoverableErrorHandler(createStringError(
                 errc::invalid_argument,
                 "mismatching address size at offset 0x%8.8" PRIx64
                 " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64,
@@ -711,7 +711,7 @@ Error DWARFDebugLine::LineTable::parse(
       // by the table.
       uint64_t End = ExtOffset + Len;
       if (*OffsetPtr != End) {
-        RecoverableErrorCallback(createStringError(
+        RecoverableErrorHandler(createStringError(
             errc::illegal_byte_sequence,
             "unexpected line op length at offset 0x%8.8" PRIx64
             " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx64,
@@ -918,7 +918,7 @@ Error DWARFDebugLine::LineTable::parse(
   }
 
   if (!State.Sequence.Empty)
-    RecoverableErrorCallback(createStringError(
+    RecoverableErrorHandler(createStringError(
         errc::illegal_byte_sequence,
         "last sequence in debug line table at offset 0x%8.8" PRIx64
         " is not terminated",
@@ -1163,31 +1163,31 @@ bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
 }
 
 DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(
-    function_ref<void(Error)> RecoverableErrorCallback,
-    function_ref<void(Error)> UnrecoverableErrorCallback, raw_ostream *OS) {
+    function_ref<void(Error)> RecoverableErrorHandler,
+    function_ref<void(Error)> UnrecoverableErrorHandler, raw_ostream *OS) {
   assert(DebugLineData.isValidOffset(Offset) &&
          "parsing should have terminated");
   DWARFUnit *U = prepareToParse(Offset);
   uint64_t OldOffset = Offset;
   LineTable LT;
   if (Error Err = LT.parse(DebugLineData, &Offset, Context, U,
-                           RecoverableErrorCallback, OS))
-    UnrecoverableErrorCallback(std::move(Err));
+                           RecoverableErrorHandler, OS))
+    UnrecoverableErrorHandler(std::move(Err));
   moveToNextTable(OldOffset, LT.Prologue);
   return LT;
 }
 
 void DWARFDebugLine::SectionParser::skip(
-    function_ref<void(Error)> RecoverableErrorCallback,
-    function_ref<void(Error)> UnrecoverableErrorCallback) {
+    function_ref<void(Error)> RecoverableErrorHandler,
+    function_ref<void(Error)> UnrecoverableErrorHandler) {
   assert(DebugLineData.isValidOffset(Offset) &&
          "parsing should have terminated");
   DWARFUnit *U = prepareToParse(Offset);
   uint64_t OldOffset = Offset;
   LineTable LT;
   if (Error Err = LT.Prologue.parse(DebugLineData, &Offset,
-                                    RecoverableErrorCallback, Context, U))
-    UnrecoverableErrorCallback(std::move(Err));
+                                    RecoverableErrorHandler, Context, U))
+    UnrecoverableErrorHandler(std::move(Err));
   moveToNextTable(OldOffset, LT.Prologue);
 }
 
