@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUFrameLowering.h"
-#include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
