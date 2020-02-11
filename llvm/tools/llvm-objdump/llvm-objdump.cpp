@@ -341,16 +341,6 @@ static StringSet<> DisasmFuncsSet;
 StringSet<> FoundSectionSet;
 static StringRef ToolName;
 
-static bool operator<(const SymbolInfoTy& P1 ,const SymbolInfoTy& P2) {
-  if (P1.Addr < P2.Addr)
-    return true;
-
-  if (P1.Addr == P2.Addr)
-    return P1.Name < P2.Name;
-
-  return false;
-}
-
 namespace {
 struct FilterResult {
   // True if the section should not be skipped.

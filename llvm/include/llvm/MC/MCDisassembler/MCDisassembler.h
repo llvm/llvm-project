@@ -22,15 +22,19 @@ struct SymbolInfoTy {
 	StringRef Name;
 	uint8_t   Type;
 
-       SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type):
-        Addr(Addr),Name(Name),Type(Type) {};
+        SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
+            : Addr(Addr), Name(Name), Type(Type){};
+
+        friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
+          return std::tie(P1.Addr, P1.Name, P1.Type) <
+                 std::tie(P2.Addr, P2.Name, P2.Type);
+        }
 };
 
 using SectionSymbolsTy = std::vector<SymbolInfoTy>;
 
 
 template <typename T> class ArrayRef;
-class StringRef;
 class MCContext;
 class MCInst;
 class MCSubtargetInfo;
