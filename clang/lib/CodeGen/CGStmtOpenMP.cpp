@@ -4494,6 +4494,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_acq_rel:
   case OMPC_acquire:
   case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_shared:
   case OMPC_linear:
   case OMPC_aligned:
@@ -4549,14 +4550,17 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     AO = llvm::AtomicOrdering::Acquire;
   else if (S.getSingleClause<OMPReleaseClause>())
     AO = llvm::AtomicOrdering::Release;
+  else if (S.getSingleClause<OMPRelaxedClause>())
+    AO = llvm::AtomicOrdering::Monotonic;
   OpenMPClauseKind Kind = OMPC_unknown;
   for (const OMPClause *C : S.clauses()) {
-    // Find first clause (skip seq_cst|acq_rel|aqcuire|release clause, if it is
-    // first).
+    // Find first clause (skip seq_cst|acq_rel|aqcuire|release|relaxed clause,
+    // if it is first).
     if (C->getClauseKind() != OMPC_seq_cst &&
         C->getClauseKind() != OMPC_acq_rel &&
         C->getClauseKind() != OMPC_acquire &&
-        C->getClauseKind() != OMPC_release) {
+        C->getClauseKind() != OMPC_release &&
+        C->getClauseKind() != OMPC_relaxed) {
       Kind = C->getClauseKind();
       break;
     }

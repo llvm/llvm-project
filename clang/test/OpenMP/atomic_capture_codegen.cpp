@@ -843,7 +843,7 @@ int main() {
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[NEW_VAL]], i32* @{{.+}},
-#pragma omp atomic capture
+#pragma omp atomic relaxed capture
   iv = bfx4.a = bfx4.a * ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, x86_fp80* @{{.+}}
 // CHECK: [[PREV_VALUE:%.+]] = load atomic i8, i8* getelementptr inbounds (%struct.BitFields4_packed, %struct.BitFields4_packed* @{{.+}}, i32 0, i32 0, i64 2) monotonic
@@ -874,7 +874,7 @@ int main() {
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[CAST]], i32* @{{.+}},
-#pragma omp atomic capture
+#pragma omp atomic capture relaxed
   {iv = bfx4_packed.a; bfx4_packed.a -= ldv;}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, x86_fp80* @{{.+}}
 // CHECK: [[PREV_VALUE:%.+]] = load atomic i64, i64* bitcast (%struct.BitFields4* @{{.+}} to i64*) monotonic

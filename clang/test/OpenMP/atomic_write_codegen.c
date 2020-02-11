@@ -486,7 +486,7 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic write
+#pragma omp atomic relaxed write
   bfx4_packed.b = ldv;
 // CHECK: load i64, i64*
 // CHECK: [[VEC_ITEM_VAL:%.+]] = uitofp i64 %{{.+}} to float
@@ -505,7 +505,7 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i64, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic write
+#pragma omp atomic write relaxed
   float2x.x = ulv;
 // CHECK: call i32 @llvm.read_register.i32(
 // CHECK: sitofp i32 %{{.+}} to double
