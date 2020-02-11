@@ -10,7 +10,6 @@
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/SharingPtr.h"
 
 #include <utility>
 

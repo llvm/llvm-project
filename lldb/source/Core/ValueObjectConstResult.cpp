@@ -29,16 +29,18 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              ByteOrder byte_order,
                                              uint32_t addr_byte_size,
                                              lldb::addr_t address) {
-  return (new ValueObjectConstResult(exe_scope, byte_order, addr_byte_size,
-                                     address))
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, byte_order,
+                                     addr_byte_size, address))
       ->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
+                                               ValueObjectManager &manager,
                                                ByteOrder byte_order,
                                                uint32_t addr_byte_size,
                                                lldb::addr_t address)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
   SetIsConstant();
   SetValueIsValid(true);
@@ -52,15 +54,17 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              ConstString name,
                                              const DataExtractor &data,
                                              lldb::addr_t address) {
-  return (new ValueObjectConstResult(exe_scope, compiler_type, name, data,
-                                     address))
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, compiler_type,
+                                     name, data, address))
       ->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(
-    ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    ConstString name, const DataExtractor &data, lldb::addr_t address)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
+    ExecutionContextScope *exe_scope, ValueObjectManager &manager,
+    const CompilerType &compiler_type, ConstString name,
+    const DataExtractor &data, lldb::addr_t address)
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
   m_data = data;
 
@@ -86,8 +90,10 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              lldb::ByteOrder data_byte_order,
                                              uint32_t data_addr_size,
                                              lldb::addr_t address) {
-  return (new ValueObjectConstResult(exe_scope, compiler_type, name, data_sp,
-                                     data_byte_order, data_addr_size, address))
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, compiler_type,
+                                     name, data_sp, data_byte_order,
+                                     data_addr_size, address))
       ->GetSP();
 }
 
@@ -95,15 +101,18 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              Value &value,
                                              ConstString name,
                                              Module *module) {
-  return (new ValueObjectConstResult(exe_scope, value, name, module))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, value, name,
+                                     module))
+      ->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(
-    ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    ConstString name, const lldb::DataBufferSP &data_sp,
-    lldb::ByteOrder data_byte_order, uint32_t data_addr_size,
-    lldb::addr_t address)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
+    ExecutionContextScope *exe_scope, ValueObjectManager &manager,
+    const CompilerType &compiler_type, ConstString name,
+    const lldb::DataBufferSP &data_sp, lldb::ByteOrder data_byte_order,
+    uint32_t data_addr_size, lldb::addr_t address)
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
   m_data.SetByteOrder(data_byte_order);
   m_data.SetAddressByteSize(data_addr_size);
@@ -123,16 +132,18 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              lldb::addr_t address,
                                              AddressType address_type,
                                              uint32_t addr_byte_size) {
-  return (new ValueObjectConstResult(exe_scope, compiler_type, name, address,
-                                     address_type, addr_byte_size))
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, compiler_type,
+                                     name, address, address_type,
+                                     addr_byte_size))
       ->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(
-    ExecutionContextScope *exe_scope, const CompilerType &compiler_type,
-    ConstString name, lldb::addr_t address, AddressType address_type,
-    uint32_t addr_byte_size)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0),
+    ExecutionContextScope *exe_scope, ValueObjectManager &manager,
+    const CompilerType &compiler_type, ConstString name, lldb::addr_t address,
+    AddressType address_type, uint32_t addr_byte_size)
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
       m_impl(this, address) {
   m_value.GetScalar() = address;
   m_data.SetAddressByteSize(addr_byte_size);
@@ -161,21 +172,25 @@ ValueObjectConstResult::ValueObjectConstResult(
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              const Status &error) {
-  return (new ValueObjectConstResult(exe_scope, error))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, error))->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
+                                               ValueObjectManager &manager,
                                                const Status &error)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0), m_impl(this) {
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
+      m_impl(this) {
   m_error = error;
   SetIsConstant();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
+                                               ValueObjectManager &manager,
                                                const Value &value,
-                                               ConstString name,
-                                               Module *module)
-    : ValueObject(exe_scope), m_type_name(), m_byte_size(0), m_impl(this) {
+                                               ConstString name, Module *module)
+    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
+      m_impl(this) {
   m_value = value;
   m_name = name;
   ExecutionContext exe_ctx;

@@ -77,6 +77,7 @@ protected:
 
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,
+                      ValueObjectManager &manager,
                       const lldb::VariableSP &var_sp);
   // For ValueObject only
   DISALLOW_COPY_AND_ASSIGN(ValueObjectVariable);
