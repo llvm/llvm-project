@@ -341,7 +341,15 @@ static StringSet<> DisasmFuncsSet;
 StringSet<> FoundSectionSet;
 static StringRef ToolName;
 
-typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
+static bool operator<(const SymbolInfoTy& P1 ,const SymbolInfoTy& P2) {
+  if (P1.Addr < P2.Addr)
+    return true;
+
+  if (P1.Addr == P2.Addr)
+    return P1.Name < P2.Name;
+
+  return false;
+}
 
 namespace {
 struct FilterResult {
@@ -1229,8 +1237,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     std::vector<MappingSymbolPair> MappingSymbols;
     if (hasMappingSymbols(Obj)) {
       for (const auto &Symb : Symbols) {
-        uint64_t Address = std::get<0>(Symb);
-        StringRef Name = std::get<1>(Symb);
+        uint64_t Address = Symb.Addr;
+        StringRef Name = Symb.Name;
         if (Name.startswith("$d"))
           MappingSymbols.emplace_back(Address - SectionAddr, 'd');
         if (Name.startswith("$x"))
@@ -1264,10 +1272,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     StringRef SectionName = unwrapOrError(Section.getName(), Obj->getFileName());
     // If the section has no symbol at the start, just insert a dummy one.
-    if (Symbols.empty() || std::get<0>(Symbols[0]) != 0) {
+    if (Symbols.empty() || Symbols[0].Addr != 0) {
       Symbols.insert(
           Symbols.begin(),
-          std::make_tuple(SectionAddr, SectionName,
+           SymbolInfoTy(SectionAddr, SectionName,
                           Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT));
     }
 
@@ -1289,7 +1297,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
     // Disassemble symbol by symbol.
     for (unsigned SI = 0, SE = Symbols.size(); SI != SE; ++SI) {
-      std::string SymbolName = std::get<1>(Symbols[SI]).str();
+      std::string SymbolName = Symbols[SI].Name.str();
       if (Demangle)
         SymbolName = demangle(SymbolName);
 
@@ -1298,7 +1306,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       if (!DisasmFuncsSet.empty() && !DisasmFuncsSet.count(SymbolName))
         continue;
 
-      uint64_t Start = std::get<0>(Symbols[SI]);
+      uint64_t Start = Symbols[SI].Addr;
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
       else
@@ -1308,7 +1316,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       // --stop-address.
       uint64_t End = std::min<uint64_t>(SectionAddr + SectSize, StopAddress);
       if (SI + 1 < SE)
-        End = std::min(End, std::get<0>(Symbols[SI + 1]));
+        End = std::min(End, Symbols[SI + 1].Addr);
       if (Start >= End || End <= StartAddress)
         continue;
       Start -= SectionAddr;
@@ -1323,12 +1331,12 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       }
 
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
-        if (std::get<2>(Symbols[SI]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+        if (Symbols[SI].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
           // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
           Start += 256;
         }
         if (SI == SE - 1 ||
-            std::get<2>(Symbols[SI + 1]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+            Symbols[SI + 1].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
           // cut trailing zeroes at the end of kernel
           // cut up to 256 bytes
           const uint64_t EndAlign = 256;
@@ -1367,7 +1375,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       // only disassembling text (applicable all architectures), we are in a
       // situation where we must print the data and not disassemble it.
       if (Obj->isELF() && !DisassembleAll && Section.isText()) {
-        uint8_t SymTy = std::get<2>(Symbols[SI]);
+        uint8_t SymTy = Symbols[SI].Type;
         if (SymTy == ELF::STT_OBJECT || SymTy == ELF::STT_COMMON) {
           dumpELFData(SectionAddr, Index, End, Bytes);
           Index = End;
@@ -1375,7 +1383,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       }
 
       bool CheckARMELFData = hasMappingSymbols(Obj) &&
-                             std::get<2>(Symbols[SI]) != ELF::STT_OBJECT &&
+                             Symbols[SI].Type != ELF::STT_OBJECT &&
                              !DisassembleAll;
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
@@ -1472,21 +1480,21 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // the target, find the nearest preceding absolute symbol.
             auto TargetSym = partition_point(
                 *TargetSectionSymbols,
-                [=](const std::tuple<uint64_t, StringRef, uint8_t> &O) {
-                  return std::get<0>(O) <= Target;
+                [=](const SymbolInfoTy &O) {
+                  return O.Addr <= Target;
                 });
             if (TargetSym == TargetSectionSymbols->begin()) {
               TargetSectionSymbols = &AbsoluteSymbols;
               TargetSym = partition_point(
                   AbsoluteSymbols,
-                  [=](const std::tuple<uint64_t, StringRef, uint8_t> &O) {
-                    return std::get<0>(O) <= Target;
+                  [=](const SymbolInfoTy &O) {
+                    return O.Addr <= Target;
                   });
             }
             if (TargetSym != TargetSectionSymbols->begin()) {
               --TargetSym;
-              uint64_t TargetAddress = std::get<0>(*TargetSym);
-              StringRef TargetName = std::get<1>(*TargetSym);
+              uint64_t TargetAddress = TargetSym->Addr;
+              StringRef TargetName = TargetSym->Name;
               outs() << " <" << TargetName;
               uint64_t Disp = Target - TargetAddress;
               if (Disp)

@@ -1202,8 +1202,6 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
                                 raw_ostream &/*cStream*/, int64_t Value,
                                 uint64_t /*Address*/, bool IsBranch,
                                 uint64_t /*Offset*/, uint64_t /*InstSize*/) {
-  using SymbolInfoTy = std::tuple<uint64_t, StringRef, uint8_t>;
-  using SectionSymbolsTy = std::vector<SymbolInfoTy>;
 
   if (!IsBranch) {
     return false;
@@ -1215,11 +1213,11 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
 
   auto Result = std::find_if(Symbols->begin(), Symbols->end(),
                              [Value](const SymbolInfoTy& Val) {
-                                return std::get<0>(Val) == static_cast<uint64_t>(Value)
-                                    && std::get<2>(Val) == ELF::STT_NOTYPE;
+                                return Val.Addr == static_cast<uint64_t>(Value)
+                                    && Val.Type == ELF::STT_NOTYPE;
                              });
   if (Result != Symbols->end()) {
-    auto *Sym = Ctx.getOrCreateSymbol(std::get<1>(*Result));
+    auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
     const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);
     Inst.addOperand(MCOperand::createExpr(Add));
     return true;
