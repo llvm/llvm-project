@@ -140,6 +140,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   DataExtractor InfoData(Info, true, 0);
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
   uint64_t Length = InfoData.getU32(&Offset);
+  CompileUnitIdentifiers ID;
+  Optional<uint64_t> Signature = None;
   // If the length is 0xffffffff, then this indictes that this is a DWARF 64
   // stream and the length is actually encoded into a 64 bit value that follows.
   if (Length == 0xffffffffU) {
@@ -147,9 +149,18 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
     Length = InfoData.getU64(&Offset);
   }
   uint16_t Version = InfoData.getU16(&Offset);
+  if (Version >= 5) {
+    auto UnitType = InfoData.getU8(&Offset);
+    if (UnitType != dwarf::DW_UT_split_compile)
+      return make_error<DWPError>(
+          std::string("unit type DW_UT_split_compile type not found in "
+                      "debug_info header. Unexpected unit type 0x" +
+                      utostr(UnitType) + " found!"));
+  }
   InfoData.getU32(&Offset); // Abbrev offset (should be zero)
   uint8_t AddrSize = InfoData.getU8(&Offset);
-
+  if (Version >= 5)
+    Signature = InfoData.getU64(&Offset);
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
 
   DataExtractor AbbrevData(Abbrev, true, 0);
@@ -161,8 +172,6 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   AbbrevData.getU8(&AbbrevOffset);
   uint32_t Name;
   dwarf::Form Form;
-  CompileUnitIdentifiers ID;
-  Optional<uint64_t> Signature = None;
   while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
          (Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset))) &&
          (Name != 0 || Form != 0)) {
@@ -175,7 +184,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       ID.Name = *EName;
       break;
     }
-    case dwarf::DW_AT_GNU_dwo_name: {
+    case dwarf::DW_AT_GNU_dwo_name:
+    case dwarf::DW_AT_dwo_name: {
       Expected<const char *> EName =
           getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
       if (!EName)
