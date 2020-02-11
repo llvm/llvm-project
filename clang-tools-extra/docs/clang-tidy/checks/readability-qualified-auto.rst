@@ -36,19 +36,19 @@ Note ``const`` ``volatile`` qualified types will retain their ``const`` and
 
 .. code-block:: c++
 
-   const auto Foo = cast<int *>(Baz1);
-   const auto Bar = cast<const int *>(Baz2);
-   volatile auto FooBar = cast<int *>(Baz3);
-   auto BarFoo = cast<int **>(Baz4);
+  const auto Foo = cast<int *>(Baz1);
+  const auto Bar = cast<const int *>(Baz2);
+  volatile auto FooBar = cast<int *>(Baz3);
+  auto BarFoo = cast<int **>(Baz4);
 
 Would be transformed into:
 
 .. code-block:: c++
 
-   auto *const Foo = cast<int *>(Baz1);
-   const auto *const Bar = cast<const int *>(Baz2);
-   auto *volatile FooBar = cast<int *>(Baz3);
-   auto *BarFoo = cast<int **>(Baz4);
+  auto *const Foo = cast<int *>(Baz1);
+  const auto *const Bar = cast<const int *>(Baz2);
+  auto *volatile FooBar = cast<int *>(Baz3);
+  auto *BarFoo = cast<int **>(Baz4);
 
 Options
 -------
@@ -65,7 +65,7 @@ Options
    auto *Foo2 = cast<const int *>(Bar2);
    auto &Foo3 = cast<const int &>(Bar3);
 
-   If AddConstToQualified is set to `0`,  it will be transformed into:
+If AddConstToQualified is set to `0`,  it will be transformed into:
 
 .. code-block:: c++
 
@@ -73,7 +73,7 @@ Options
    auto *Foo2 = cast<const int *>(Bar2);
    auto &Foo3 = cast<const int &>(Bar3);
 
-   Otherwise it will be transformed into:
+Otherwise it will be transformed into:
 
 .. code-block:: c++
 
@@ -81,4 +81,4 @@ Options
    const auto *Foo2 = cast<const int *>(Bar2);
    const auto &Foo3 = cast<const int &>(Bar3);
 
-   Note in the LLVM alias, the default value is `0`.
+Note in the LLVM alias, the default value is `0`.
