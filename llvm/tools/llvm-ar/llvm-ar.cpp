@@ -21,6 +21,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -518,8 +519,8 @@ static bool comparePaths(StringRef Path1, StringRef Path2) {
 // binary equivalence and allows for case insensitivity.
 #ifdef _WIN32
   SmallVector<wchar_t, 128> WPath1, WPath2;
-  failIfError(sys::path::widenPath(normalizePath(Path1), WPath1));
-  failIfError(sys::path::widenPath(normalizePath(Path2), WPath2));
+  failIfError(sys::windows::UTF8ToUTF16(normalizePath(Path1), WPath1));
+  failIfError(sys::windows::UTF8ToUTF16(normalizePath(Path2), WPath2));
 
   return CompareStringOrdinal(WPath1.data(), WPath1.size(), WPath2.data(),
                               WPath2.size(), true) == CSTR_EQUAL;
