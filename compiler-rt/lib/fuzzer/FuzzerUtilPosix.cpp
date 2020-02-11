@@ -149,6 +149,10 @@ FILE *OpenProcessPipe(const char *Command, const char *Mode) {
   return popen(Command, Mode);
 }
 
+int CloseProcessPipe(FILE *F) {
+  return pclose(F);
+}
+
 const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
                          size_t PattLen) {
   return memmem(Data, DataLen, Patt, PattLen);
