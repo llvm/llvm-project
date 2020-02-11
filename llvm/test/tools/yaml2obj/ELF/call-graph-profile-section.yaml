@@ -2,14 +2,14 @@
 
 ## Test that the content of SHT_LLVM_CALL_GRAPH_PROFILE sections
 ## for 32/64-bit little/big endian targets is correct.
-# RUN: yaml2obj --docnum=1 %s -o %t.le64
-# RUN: llvm-readobj --elf-cg-profile  --sections --section-data %t.le64 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
-# RUN: yaml2obj --docnum=2 %s -o %t.be64
-# RUN: llvm-readobj --elf-cg-profile  --sections --section-data %t.be64 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
-# RUN: yaml2obj --docnum=3 %s -o %t.le32
-# RUN: llvm-readobj --elf-cg-profile  --sections --section-data %t.le32 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
-# RUN: yaml2obj --docnum=4 %s -o %t.be32
-# RUN: llvm-readobj --elf-cg-profile  --sections --section-data %t.be32 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=LSB %s -o %t.le64
+# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.le64 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=MSB %s -o %t.be64                      
+# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.be64 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=LSB %s -o %t.le32                      
+# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.le32 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=MSB %s -o %t.be32                      
+# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.be32 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
 
 # BASIC:        Name: .llvm.call-graph-profile
 # BASIC-NEXT:   Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -48,75 +48,12 @@
 # BASIC-NEXT:   }
 # BASIC-NEXT: ]
 
-## TODO: we should really improve yaml2obj somehow to be able to collapse
-##       the following four YAML descriptions into a single one.
-
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2[[ENCODE]]
   Type:    ET_DYN
   Machine: EM_X86_64
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_386
 Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -133,7 +70,7 @@ Symbols:
 
 ## Check we can set arbitrary sh_link and sh_entsize values.
 ## Check we can specify neither "Content" nor "Entries" tags.
-# RUN: yaml2obj --docnum=5 %s -o %t.link
+# RUN: yaml2obj --docnum=2 %s -o %t.link
 # RUN: llvm-readelf --sections %t.link | FileCheck %s --check-prefix=LINK
 
 # LINK: [Nr] Name      Type                    Address          Off    Size   ES Flg Lk
@@ -157,7 +94,7 @@ Sections:
     EntSize: 0xFF
 
 ## Check we can't specify both "Content" and "Entries" tags.
-# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=BOTH
 # BOTH: error: "Entries" and "Content" can't be used together
 
 --- !ELF
@@ -173,7 +110,7 @@ Sections:
     Entries: []
 
 ## Check we can refer to symbols by name.
-# RUN: yaml2obj --docnum=7 %s -o %t.sym
+# RUN: yaml2obj --docnum=4 %s -o %t.sym
 # RUN: llvm-readobj --elf-cg-profile %t.sym | FileCheck %s --check-prefix=SYMBOL-NAMES
 
 # SYMBOL-NAMES:      CGProfile [
@@ -213,7 +150,7 @@ Symbols:
   - Name: 'foo [1]'
 
 ## Check we can describe SHT_LLVM_CALL_GRAPH_PROFILE sections using the "Content" tag.
-# RUN: yaml2obj --docnum=8 %s -o %t.content
+# RUN: yaml2obj --docnum=5 %s -o %t.content
 # RUN: llvm-readobj --sections --section-data %t.content | FileCheck %s --check-prefix=CONTENT
 
 # CONTENT:      Name: .llvm.call-graph-profile
@@ -233,8 +170,8 @@ Sections:
     Content: "11223344"
 
 ## Check we can't reference unknown symbols by name.
-# RUN: not yaml2obj --docnum=9 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
-# RUN: not yaml2obj --docnum=10 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
 # UNKNOWN-NAME: error: unknown symbol referenced: 'bar' by YAML section '.llvm.call-graph-profile'
 
 --- !ELF
@@ -272,7 +209,7 @@ Symbols:
   - Name: foo
 
 ## Check we can specify arbitrary symbol indexes for an SHT_LLVM_CALL_GRAPH_PROFILE section entry.
-# RUN: yaml2obj --docnum=11 %s -o %t.unk
+# RUN: yaml2obj --docnum=8 %s -o %t.unk
 # RUN: llvm-readobj --sections --section-data %t.unk | FileCheck %s --check-prefix=UNKNOWN-INDEX
 
 # UNKNOWN-INDEX:      Name: .llvm.call-graph-profile
