@@ -305,7 +305,7 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     // that stores the reference to the ScopStmt this schedule belongs to.
     Map = isl_map_set_tuple_id(Map, isl_dim_in,
                                isl_space_get_tuple_id(Space, isl_dim_set));
-    for (unsigned i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
+    for (isl_size i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
       isl_id *Id = isl_space_get_dim_id(Space, isl_dim_param, i);
       Map = isl_map_set_dim_id(Map, isl_dim_param, i, Id);
     }
@@ -479,7 +479,7 @@ importAccesses(Scop &S, const json::Object &JScop, const DataLayout &DL,
       // We need to copy the isl_ids for the parameter dimensions to the new
       // map. Without doing this the current map would have different
       // ids then the new one, even though both are named identically.
-      for (unsigned i = 0; i < isl_map_dim(CurrentAccessMap, isl_dim_param);
+      for (isl_size i = 0; i < isl_map_dim(CurrentAccessMap, isl_dim_param);
            i++) {
         isl_id *Id = isl_map_get_dim_id(CurrentAccessMap, isl_dim_param, i);
         NewAccessMap = isl_map_set_dim_id(NewAccessMap, isl_dim_param, i, Id);
