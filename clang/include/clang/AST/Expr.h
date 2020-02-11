@@ -5282,10 +5282,9 @@ class GenericSelectionExpr final
   template <bool Const> class AssociationTy {
     friend class GenericSelectionExpr;
     template <bool OtherConst> friend class AssociationIteratorTy;
-    using ExprPtrTy =
-        typename std::conditional<Const, const Expr *, Expr *>::type;
-    using TSIPtrTy = typename std::conditional<Const, const TypeSourceInfo *,
-                                               TypeSourceInfo *>::type;
+    using ExprPtrTy = std::conditional_t<Const, const Expr *, Expr *>;
+    using TSIPtrTy =
+        std::conditional_t<Const, const TypeSourceInfo *, TypeSourceInfo *>;
     ExprPtrTy E;
     TSIPtrTy TSI;
     bool Selected;
@@ -5327,10 +5326,9 @@ class GenericSelectionExpr final
     //    const Association &Assoc = *It++; // Oops, Assoc is dangling.
     using BaseTy = typename AssociationIteratorTy::iterator_facade_base;
     using StmtPtrPtrTy =
-        typename std::conditional<Const, const Stmt *const *, Stmt **>::type;
-    using TSIPtrPtrTy =
-        typename std::conditional<Const, const TypeSourceInfo *const *,
-                                  TypeSourceInfo **>::type;
+        std::conditional_t<Const, const Stmt *const *, Stmt **>;
+    using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
+                                           TypeSourceInfo **>;
     StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;

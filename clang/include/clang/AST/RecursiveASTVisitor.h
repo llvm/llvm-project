@@ -340,11 +340,11 @@ private:
   (has_same_member_pointer_type<decltype(                                      \
                                     &RecursiveASTVisitor::Traverse##NAME),     \
                                 decltype(&Derived::Traverse##NAME)>::value     \
-       ? static_cast<typename std::conditional<                                \
+       ? static_cast<std::conditional_t<                                       \
              has_same_member_pointer_type<                                     \
                  decltype(&RecursiveASTVisitor::Traverse##NAME),               \
                  decltype(&Derived::Traverse##NAME)>::value,                   \
-             Derived &, RecursiveASTVisitor &>::type>(*this)                   \
+             Derived &, RecursiveASTVisitor &>>(*this)                         \
              .Traverse##NAME(static_cast<CLASS *>(VAR), QUEUE)                 \
        : getDerived().Traverse##NAME(static_cast<CLASS *>(VAR)))
 

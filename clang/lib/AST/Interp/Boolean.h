@@ -85,14 +85,13 @@ class Boolean {
   static Boolean max(unsigned NumBits) { return Boolean(true); }
 
   template <typename T>
-  static typename std::enable_if<std::is_integral<T>::value, Boolean>::type
-  from(T Value) {
+  static std::enable_if_t<std::is_integral<T>::value, Boolean> from(T Value) {
     return Boolean(Value != 0);
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static typename std::enable_if<SrcBits != 0, Boolean>::type from(
-      Integral<SrcBits, SrcSign> Value) {
+  static std::enable_if_t<SrcBits != 0, Boolean>
+  from(Integral<SrcBits, SrcSign> Value) {
     return Boolean(!Value.isZero());
   }
 

@@ -650,7 +650,7 @@ namespace clang {
 
     template<typename IIter, typename OIter>
     Error ImportArrayChecked(IIter Ibegin, IIter Iend, OIter Obegin) {
-      using ItemT = typename std::remove_reference<decltype(*Obegin)>::type;
+      using ItemT = std::remove_reference_t<decltype(*Obegin)>;
       for (; Ibegin != Iend; ++Ibegin, ++Obegin) {
         Expected<ItemT> ToOrErr = import(*Ibegin);
         if (!ToOrErr)

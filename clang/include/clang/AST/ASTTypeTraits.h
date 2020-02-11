@@ -465,22 +465,22 @@ private:
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, typename std::enable_if<std::is_base_of<Decl, T>::value>::type>
+    T, std::enable_if_t<std::is_base_of<Decl, T>::value>>
     : public DynCastPtrConverter<T, Decl> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, typename std::enable_if<std::is_base_of<Stmt, T>::value>::type>
+    T, std::enable_if_t<std::is_base_of<Stmt, T>::value>>
     : public DynCastPtrConverter<T, Stmt> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, typename std::enable_if<std::is_base_of<Type, T>::value>::type>
+    T, std::enable_if_t<std::is_base_of<Type, T>::value>>
     : public DynCastPtrConverter<T, Type> {};
 
 template <typename T>
 struct DynTypedNode::BaseConverter<
-    T, typename std::enable_if<std::is_base_of<OMPClause, T>::value>::type>
+    T, std::enable_if_t<std::is_base_of<OMPClause, T>::value>>
     : public DynCastPtrConverter<T, OMPClause> {};
 
 template <>
