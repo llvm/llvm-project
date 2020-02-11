@@ -270,10 +270,8 @@ public:
   /// optional string following the indentation spaces.
   ///
   /// \param[in] s
-  ///     A C string to print following the indentation. If nullptr, just
-  ///     output the indentation characters.
-  size_t Indent(const char *s = nullptr);
-  size_t Indent(llvm::StringRef s);
+  ///     A string to print following the indentation.
+  size_t Indent(llvm::StringRef s = "");
 
   /// Decrement the current indentation level.
   void IndentLess(unsigned amount = 2);
