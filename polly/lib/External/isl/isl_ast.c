@@ -13,13 +13,13 @@
 #include <isl/val.h>
 #include <isl_ast_private.h>
 
-#undef BASE
-#define BASE ast_expr
+#undef EL_BASE
+#define EL_BASE ast_expr
 
 #include <isl_list_templ.c>
 
-#undef BASE
-#define BASE ast_node
+#undef EL_BASE
+#define EL_BASE ast_node
 
 #include <isl_list_templ.c>
 
@@ -105,7 +105,7 @@ __isl_null isl_ast_print_options *isl_ast_print_options_free(
 
 /* Set the print_user callback of "options" to "print_user".
  *
- * If this callback is set, then it used to print user nodes in the AST.
+ * If this callback is set, then it is used to print user nodes in the AST.
  * Otherwise, the expression associated to the user node is printed.
  */
 __isl_give isl_ast_print_options *isl_ast_print_options_set_print_user(
@@ -247,7 +247,7 @@ enum isl_ast_expr_type isl_ast_expr_get_type(__isl_keep isl_ast_expr *expr)
 
 /* Return the integer value represented by "expr".
  */
-__isl_give isl_val *isl_ast_expr_get_val(__isl_keep isl_ast_expr *expr)
+__isl_give isl_val *isl_ast_expr_int_get_val(__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
 		return NULL;
@@ -257,7 +257,14 @@ __isl_give isl_val *isl_ast_expr_get_val(__isl_keep isl_ast_expr *expr)
 	return isl_val_copy(expr->u.v);
 }
 
-__isl_give isl_id *isl_ast_expr_get_id(__isl_keep isl_ast_expr *expr)
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_val *isl_ast_expr_get_val(__isl_keep isl_ast_expr *expr)
+{
+	return isl_ast_expr_int_get_val(expr);
+}
+
+__isl_give isl_id *isl_ast_expr_id_get_id(__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
 		return NULL;
@@ -268,27 +275,57 @@ __isl_give isl_id *isl_ast_expr_get_id(__isl_keep isl_ast_expr *expr)
 	return isl_id_copy(expr->u.id);
 }
 
-enum isl_ast_op_type isl_ast_expr_get_op_type(__isl_keep isl_ast_expr *expr)
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_id *isl_ast_expr_get_id(__isl_keep isl_ast_expr *expr)
+{
+	return isl_ast_expr_id_get_id(expr);
+}
+
+/* Return the type of operation represented by "expr".
+ */
+enum isl_ast_expr_op_type isl_ast_expr_op_get_type(
+	__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
-		return isl_ast_op_error;
+		return isl_ast_expr_op_error;
 	if (expr->type != isl_ast_expr_op)
 		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation", return isl_ast_op_error);
+			"expression not an operation",
+			return isl_ast_expr_op_error);
 	return expr->u.op.op;
 }
 
-int isl_ast_expr_get_op_n_arg(__isl_keep isl_ast_expr *expr)
+/* This is an alternative name for the function above.
+ */
+enum isl_ast_expr_op_type isl_ast_expr_get_op_type(
+	__isl_keep isl_ast_expr *expr)
+{
+	return isl_ast_expr_op_get_type(expr);
+}
+
+/* Return the number of arguments of the operation represented by "expr".
+ */
+isl_size isl_ast_expr_op_get_n_arg(__isl_keep isl_ast_expr *expr)
 {
 	if (!expr)
-		return -1;
+		return isl_size_error;
 	if (expr->type != isl_ast_expr_op)
 		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
-			"expression not an operation", return -1);
+			"expression not an operation", return isl_size_error);
 	return expr->u.op.n_arg;
 }
 
-__isl_give isl_ast_expr *isl_ast_expr_get_op_arg(__isl_keep isl_ast_expr *expr,
+/* This is an alternative name for the function above.
+ */
+isl_size isl_ast_expr_get_op_n_arg(__isl_keep isl_ast_expr *expr)
+{
+	return isl_ast_expr_op_get_n_arg(expr);
+}
+
+/* Return the argument at position "pos" of the operation represented by "expr".
+ */
+__isl_give isl_ast_expr *isl_ast_expr_op_get_arg(__isl_keep isl_ast_expr *expr,
 	int pos)
 {
 	if (!expr)
@@ -301,6 +338,14 @@ __isl_give isl_ast_expr *isl_ast_expr_get_op_arg(__isl_keep isl_ast_expr *expr,
 			"index out of bounds", return NULL);
 
 	return isl_ast_expr_copy(expr->u.op.args[pos]);
+}
+
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_ast_expr *isl_ast_expr_get_op_arg(__isl_keep isl_ast_expr *expr,
+	int pos)
+{
+	return isl_ast_expr_op_get_arg(expr, pos);
 }
 
 /* Replace the argument at position "pos" of "expr" by "arg".
@@ -345,7 +390,7 @@ isl_bool isl_ast_expr_is_equal(__isl_keep isl_ast_expr *expr1,
 	case isl_ast_expr_int:
 		return isl_val_eq(expr1->u.v, expr2->u.v);
 	case isl_ast_expr_id:
-		return expr1->u.id == expr2->u.id;
+		return isl_bool_ok(expr1->u.id == expr2->u.id);
 	case isl_ast_expr_op:
 		if (expr1->u.op.op != expr2->u.op.op)
 			return isl_bool_false;
@@ -371,7 +416,7 @@ isl_bool isl_ast_expr_is_equal(__isl_keep isl_ast_expr *expr1,
  * with "n_arg" as yet unspecified arguments.
  */
 __isl_give isl_ast_expr *isl_ast_expr_alloc_op(isl_ctx *ctx,
-	enum isl_ast_op_type op, int n_arg)
+	enum isl_ast_expr_op_type op, int n_arg)
 {
 	isl_ast_expr *expr;
 
@@ -474,8 +519,8 @@ error:
 /* Create an expression representing the unary operation "type" applied to
  * "arg".
  */
-__isl_give isl_ast_expr *isl_ast_expr_alloc_unary(enum isl_ast_op_type type,
-	__isl_take isl_ast_expr *arg)
+__isl_give isl_ast_expr *isl_ast_expr_alloc_unary(
+	enum isl_ast_expr_op_type type, __isl_take isl_ast_expr *arg)
 {
 	isl_ctx *ctx;
 	isl_ast_expr *expr = NULL;
@@ -500,7 +545,7 @@ error:
  */
 __isl_give isl_ast_expr *isl_ast_expr_neg(__isl_take isl_ast_expr *arg)
 {
-	return isl_ast_expr_alloc_unary(isl_ast_op_minus, arg);
+	return isl_ast_expr_alloc_unary(isl_ast_expr_op_minus, arg);
 }
 
 /* Create an expression representing the address of "expr".
@@ -511,18 +556,19 @@ __isl_give isl_ast_expr *isl_ast_expr_address_of(__isl_take isl_ast_expr *expr)
 		return NULL;
 
 	if (isl_ast_expr_get_type(expr) != isl_ast_expr_op ||
-	    isl_ast_expr_get_op_type(expr) != isl_ast_op_access)
+	    isl_ast_expr_get_op_type(expr) != isl_ast_expr_op_access)
 		isl_die(isl_ast_expr_get_ctx(expr), isl_error_invalid,
 			"can only take address of access expressions",
 			return isl_ast_expr_free(expr));
 
-	return isl_ast_expr_alloc_unary(isl_ast_op_address_of, expr);
+	return isl_ast_expr_alloc_unary(isl_ast_expr_op_address_of, expr);
 }
 
 /* Create an expression representing the binary operation "type"
  * applied to "expr1" and "expr2".
  */
-__isl_give isl_ast_expr *isl_ast_expr_alloc_binary(enum isl_ast_op_type type,
+__isl_give isl_ast_expr *isl_ast_expr_alloc_binary(
+	enum isl_ast_expr_op_type type,
 	__isl_take isl_ast_expr *expr1, __isl_take isl_ast_expr *expr2)
 {
 	isl_ctx *ctx;
@@ -551,7 +597,7 @@ error:
 __isl_give isl_ast_expr *isl_ast_expr_add(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_add, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_add, expr1, expr2);
 }
 
 /* Create an expression representing the difference of "expr1" and "expr2".
@@ -559,7 +605,7 @@ __isl_give isl_ast_expr *isl_ast_expr_add(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_sub(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_sub, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_sub, expr1, expr2);
 }
 
 /* Create an expression representing the product of "expr1" and "expr2".
@@ -567,7 +613,7 @@ __isl_give isl_ast_expr *isl_ast_expr_sub(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_mul(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_mul, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_mul, expr1, expr2);
 }
 
 /* Create an expression representing the quotient of "expr1" and "expr2".
@@ -575,7 +621,7 @@ __isl_give isl_ast_expr *isl_ast_expr_mul(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_div(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_div, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_div, expr1, expr2);
 }
 
 /* Create an expression representing the quotient of the integer
@@ -585,7 +631,7 @@ __isl_give isl_ast_expr *isl_ast_expr_div(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_pdiv_q(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_pdiv_q, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_pdiv_q, expr1, expr2);
 }
 
 /* Create an expression representing the remainder of the integer
@@ -595,7 +641,7 @@ __isl_give isl_ast_expr *isl_ast_expr_pdiv_q(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_pdiv_r(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_pdiv_r, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_pdiv_r, expr1, expr2);
 }
 
 /* Create an expression representing the conjunction of "expr1" and "expr2".
@@ -603,7 +649,7 @@ __isl_give isl_ast_expr *isl_ast_expr_pdiv_r(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_and(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_and, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_and, expr1, expr2);
 }
 
 /* Create an expression representing the conjunction of "expr1" and "expr2",
@@ -612,7 +658,7 @@ __isl_give isl_ast_expr *isl_ast_expr_and(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_and_then(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_and_then, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_and_then, expr1, expr2);
 }
 
 /* Create an expression representing the disjunction of "expr1" and "expr2".
@@ -620,7 +666,7 @@ __isl_give isl_ast_expr *isl_ast_expr_and_then(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_or(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_or, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_or, expr1, expr2);
 }
 
 /* Create an expression representing the disjunction of "expr1" and "expr2",
@@ -629,7 +675,7 @@ __isl_give isl_ast_expr *isl_ast_expr_or(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_or_else(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_or_else, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_or_else, expr1, expr2);
 }
 
 /* Create an expression representing "expr1" less than or equal to "expr2".
@@ -637,7 +683,7 @@ __isl_give isl_ast_expr *isl_ast_expr_or_else(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_le(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_le, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_le, expr1, expr2);
 }
 
 /* Create an expression representing "expr1" less than "expr2".
@@ -645,7 +691,7 @@ __isl_give isl_ast_expr *isl_ast_expr_le(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_lt(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_lt, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_lt, expr1, expr2);
 }
 
 /* Create an expression representing "expr1" greater than or equal to "expr2".
@@ -653,7 +699,7 @@ __isl_give isl_ast_expr *isl_ast_expr_lt(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_ge(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_ge, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_ge, expr1, expr2);
 }
 
 /* Create an expression representing "expr1" greater than "expr2".
@@ -661,7 +707,7 @@ __isl_give isl_ast_expr *isl_ast_expr_ge(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_gt(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_gt, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_gt, expr1, expr2);
 }
 
 /* Create an expression representing "expr1" equal to "expr2".
@@ -669,17 +715,18 @@ __isl_give isl_ast_expr *isl_ast_expr_gt(__isl_take isl_ast_expr *expr1,
 __isl_give isl_ast_expr *isl_ast_expr_eq(__isl_take isl_ast_expr *expr1,
 	__isl_take isl_ast_expr *expr2)
 {
-	return isl_ast_expr_alloc_binary(isl_ast_op_eq, expr1, expr2);
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_eq, expr1, expr2);
 }
 
 /* Create an expression of type "type" with as arguments "arg0" followed
  * by "arguments".
  */
 static __isl_give isl_ast_expr *ast_expr_with_arguments(
-	enum isl_ast_op_type type, __isl_take isl_ast_expr *arg0,
+	enum isl_ast_expr_op_type type, __isl_take isl_ast_expr *arg0,
 	__isl_take isl_ast_expr_list *arguments)
 {
-	int i, n;
+	int i;
+	isl_size n;
 	isl_ctx *ctx;
 	isl_ast_expr *res = NULL;
 
@@ -688,6 +735,8 @@ static __isl_give isl_ast_expr *ast_expr_with_arguments(
 
 	ctx = isl_ast_expr_get_ctx(arg0);
 	n = isl_ast_expr_list_n_ast_expr(arguments);
+	if (n < 0)
+		goto error;
 	res = isl_ast_expr_alloc_op(ctx, type, 1 + n);
 	if (!res)
 		goto error;
@@ -715,7 +764,7 @@ error:
 __isl_give isl_ast_expr *isl_ast_expr_access(__isl_take isl_ast_expr *array,
 	__isl_take isl_ast_expr_list *indices)
 {
-	return ast_expr_with_arguments(isl_ast_op_access, array, indices);
+	return ast_expr_with_arguments(isl_ast_expr_op_access, array, indices);
 }
 
 /* Create an expression representing a call to "function" with argument
@@ -724,7 +773,7 @@ __isl_give isl_ast_expr *isl_ast_expr_access(__isl_take isl_ast_expr *array,
 __isl_give isl_ast_expr *isl_ast_expr_call(__isl_take isl_ast_expr *function,
 	__isl_take isl_ast_expr_list *arguments)
 {
-	return ast_expr_with_arguments(isl_ast_op_call, function, arguments);
+	return ast_expr_with_arguments(isl_ast_expr_op_call, function, arguments);
 }
 
 /* For each subexpression of "expr" of type isl_ast_expr_id,
@@ -942,15 +991,22 @@ error:
 __isl_give isl_ast_node *isl_ast_node_from_ast_node_list(
 	__isl_take isl_ast_node_list *list)
 {
+	isl_size n;
 	isl_ast_node *node;
 
-	if (isl_ast_node_list_n_ast_node(list) != 1)
+	n = isl_ast_node_list_n_ast_node(list);
+	if (n < 0)
+		goto error;
+	if (n != 1)
 		return isl_ast_node_alloc_block(list);
 
 	node = isl_ast_node_list_get_ast_node(list, 0);
 	isl_ast_node_list_free(list);
 
 	return node;
+error:
+	isl_ast_node_list_free(list);
+	return NULL;
 }
 
 __isl_give isl_ast_node *isl_ast_node_copy(__isl_keep isl_ast_node *node)
@@ -1120,7 +1176,7 @@ isl_bool isl_ast_node_for_is_degenerate(__isl_keep isl_ast_node *node)
 	if (node->type != isl_ast_node_for)
 		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
 			"not a for node", return isl_bool_error);
-	return node->u.f.degenerate;
+	return isl_bool_ok(node->u.f.degenerate);
 }
 
 __isl_give isl_ast_expr *isl_ast_node_for_get_iterator(
@@ -1163,7 +1219,7 @@ __isl_give isl_ast_expr *isl_ast_node_for_get_cond(
 	if (!node->u.f.degenerate)
 		return isl_ast_expr_copy(node->u.f.cond);
 
-	return isl_ast_expr_alloc_binary(isl_ast_op_le,
+	return isl_ast_expr_alloc_binary(isl_ast_expr_op_le,
 				isl_ast_expr_copy(node->u.f.iterator),
 				isl_ast_expr_copy(node->u.f.init));
 }
@@ -1208,7 +1264,9 @@ error:
 	return NULL;
 }
 
-__isl_give isl_ast_node *isl_ast_node_if_get_then(
+/* Return the then-node of the given if-node.
+ */
+__isl_give isl_ast_node *isl_ast_node_if_get_then_node(
 	__isl_keep isl_ast_node *node)
 {
 	if (!node)
@@ -1219,18 +1277,37 @@ __isl_give isl_ast_node *isl_ast_node_if_get_then(
 	return isl_ast_node_copy(node->u.i.then);
 }
 
-isl_bool isl_ast_node_if_has_else(
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_ast_node *isl_ast_node_if_get_then(
 	__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_if_get_then_node(node);
+}
+
+/* Does the given if-node have an else-node?
+ */
+isl_bool isl_ast_node_if_has_else_node(__isl_keep isl_ast_node *node)
 {
 	if (!node)
 		return isl_bool_error;
 	if (node->type != isl_ast_node_if)
 		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
 			"not an if node", return isl_bool_error);
-	return node->u.i.else_node != NULL;
+	return isl_bool_ok(node->u.i.else_node != NULL);
 }
 
-__isl_give isl_ast_node *isl_ast_node_if_get_else(
+/* This is an alternative name for the function above.
+ */
+isl_bool isl_ast_node_if_has_else(__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_if_has_else_node(node);
+}
+
+/* Return the else-node of the given if-node,
+ * assuming there is one.
+ */
+__isl_give isl_ast_node *isl_ast_node_if_get_else_node(
 	__isl_keep isl_ast_node *node)
 {
 	if (!node)
@@ -1239,6 +1316,14 @@ __isl_give isl_ast_node *isl_ast_node_if_get_else(
 		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
 			"not an if node", return NULL);
 	return isl_ast_node_copy(node->u.i.else_node);
+}
+
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_ast_node *isl_ast_node_if_get_else(
+	__isl_keep isl_ast_node *node)
+{
+	return isl_ast_node_if_get_else_node(node);
 }
 
 __isl_give isl_ast_expr *isl_ast_node_if_get_cond(
@@ -1406,28 +1491,28 @@ isl_stat isl_ast_node_foreach_descendant_top_down(
 /* Textual C representation of the various operators.
  */
 static char *op_str_c[] = {
-	[isl_ast_op_and] = "&&",
-	[isl_ast_op_and_then] = "&&",
-	[isl_ast_op_or] = "||",
-	[isl_ast_op_or_else] = "||",
-	[isl_ast_op_max] = "max",
-	[isl_ast_op_min] = "min",
-	[isl_ast_op_minus] = "-",
-	[isl_ast_op_add] = "+",
-	[isl_ast_op_sub] = "-",
-	[isl_ast_op_mul] = "*",
-	[isl_ast_op_fdiv_q] = "floord",
-	[isl_ast_op_pdiv_q] = "/",
-	[isl_ast_op_pdiv_r] = "%",
-	[isl_ast_op_zdiv_r] = "%",
-	[isl_ast_op_div] = "/",
-	[isl_ast_op_eq] = "==",
-	[isl_ast_op_le] = "<=",
-	[isl_ast_op_ge] = ">=",
-	[isl_ast_op_lt] = "<",
-	[isl_ast_op_gt] = ">",
-	[isl_ast_op_member] = ".",
-	[isl_ast_op_address_of] = "&"
+	[isl_ast_expr_op_and] = "&&",
+	[isl_ast_expr_op_and_then] = "&&",
+	[isl_ast_expr_op_or] = "||",
+	[isl_ast_expr_op_or_else] = "||",
+	[isl_ast_expr_op_max] = "max",
+	[isl_ast_expr_op_min] = "min",
+	[isl_ast_expr_op_minus] = "-",
+	[isl_ast_expr_op_add] = "+",
+	[isl_ast_expr_op_sub] = "-",
+	[isl_ast_expr_op_mul] = "*",
+	[isl_ast_expr_op_fdiv_q] = "floord",
+	[isl_ast_expr_op_pdiv_q] = "/",
+	[isl_ast_expr_op_pdiv_r] = "%",
+	[isl_ast_expr_op_zdiv_r] = "%",
+	[isl_ast_expr_op_div] = "/",
+	[isl_ast_expr_op_eq] = "==",
+	[isl_ast_expr_op_le] = "<=",
+	[isl_ast_expr_op_ge] = ">=",
+	[isl_ast_expr_op_lt] = "<",
+	[isl_ast_expr_op_gt] = ">",
+	[isl_ast_expr_op_member] = ".",
+	[isl_ast_expr_op_address_of] = "&"
 };
 
 /* Precedence in C of the various operators.
@@ -1435,85 +1520,85 @@ static char *op_str_c[] = {
  * Lowest value means highest precedence.
  */
 static int op_prec[] = {
-	[isl_ast_op_and] = 13,
-	[isl_ast_op_and_then] = 13,
-	[isl_ast_op_or] = 14,
-	[isl_ast_op_or_else] = 14,
-	[isl_ast_op_max] = 2,
-	[isl_ast_op_min] = 2,
-	[isl_ast_op_minus] = 3,
-	[isl_ast_op_add] = 6,
-	[isl_ast_op_sub] = 6,
-	[isl_ast_op_mul] = 5,
-	[isl_ast_op_div] = 5,
-	[isl_ast_op_fdiv_q] = 2,
-	[isl_ast_op_pdiv_q] = 5,
-	[isl_ast_op_pdiv_r] = 5,
-	[isl_ast_op_zdiv_r] = 5,
-	[isl_ast_op_cond] = 15,
-	[isl_ast_op_select] = 15,
-	[isl_ast_op_eq] = 9,
-	[isl_ast_op_le] = 8,
-	[isl_ast_op_ge] = 8,
-	[isl_ast_op_lt] = 8,
-	[isl_ast_op_gt] = 8,
-	[isl_ast_op_call] = 2,
-	[isl_ast_op_access] = 2,
-	[isl_ast_op_member] = 2,
-	[isl_ast_op_address_of] = 3
+	[isl_ast_expr_op_and] = 13,
+	[isl_ast_expr_op_and_then] = 13,
+	[isl_ast_expr_op_or] = 14,
+	[isl_ast_expr_op_or_else] = 14,
+	[isl_ast_expr_op_max] = 2,
+	[isl_ast_expr_op_min] = 2,
+	[isl_ast_expr_op_minus] = 3,
+	[isl_ast_expr_op_add] = 6,
+	[isl_ast_expr_op_sub] = 6,
+	[isl_ast_expr_op_mul] = 5,
+	[isl_ast_expr_op_div] = 5,
+	[isl_ast_expr_op_fdiv_q] = 2,
+	[isl_ast_expr_op_pdiv_q] = 5,
+	[isl_ast_expr_op_pdiv_r] = 5,
+	[isl_ast_expr_op_zdiv_r] = 5,
+	[isl_ast_expr_op_cond] = 15,
+	[isl_ast_expr_op_select] = 15,
+	[isl_ast_expr_op_eq] = 9,
+	[isl_ast_expr_op_le] = 8,
+	[isl_ast_expr_op_ge] = 8,
+	[isl_ast_expr_op_lt] = 8,
+	[isl_ast_expr_op_gt] = 8,
+	[isl_ast_expr_op_call] = 2,
+	[isl_ast_expr_op_access] = 2,
+	[isl_ast_expr_op_member] = 2,
+	[isl_ast_expr_op_address_of] = 3
 };
 
 /* Is the operator left-to-right associative?
  */
 static int op_left[] = {
-	[isl_ast_op_and] = 1,
-	[isl_ast_op_and_then] = 1,
-	[isl_ast_op_or] = 1,
-	[isl_ast_op_or_else] = 1,
-	[isl_ast_op_max] = 1,
-	[isl_ast_op_min] = 1,
-	[isl_ast_op_minus] = 0,
-	[isl_ast_op_add] = 1,
-	[isl_ast_op_sub] = 1,
-	[isl_ast_op_mul] = 1,
-	[isl_ast_op_div] = 1,
-	[isl_ast_op_fdiv_q] = 1,
-	[isl_ast_op_pdiv_q] = 1,
-	[isl_ast_op_pdiv_r] = 1,
-	[isl_ast_op_zdiv_r] = 1,
-	[isl_ast_op_cond] = 0,
-	[isl_ast_op_select] = 0,
-	[isl_ast_op_eq] = 1,
-	[isl_ast_op_le] = 1,
-	[isl_ast_op_ge] = 1,
-	[isl_ast_op_lt] = 1,
-	[isl_ast_op_gt] = 1,
-	[isl_ast_op_call] = 1,
-	[isl_ast_op_access] = 1,
-	[isl_ast_op_member] = 1,
-	[isl_ast_op_address_of] = 0
+	[isl_ast_expr_op_and] = 1,
+	[isl_ast_expr_op_and_then] = 1,
+	[isl_ast_expr_op_or] = 1,
+	[isl_ast_expr_op_or_else] = 1,
+	[isl_ast_expr_op_max] = 1,
+	[isl_ast_expr_op_min] = 1,
+	[isl_ast_expr_op_minus] = 0,
+	[isl_ast_expr_op_add] = 1,
+	[isl_ast_expr_op_sub] = 1,
+	[isl_ast_expr_op_mul] = 1,
+	[isl_ast_expr_op_div] = 1,
+	[isl_ast_expr_op_fdiv_q] = 1,
+	[isl_ast_expr_op_pdiv_q] = 1,
+	[isl_ast_expr_op_pdiv_r] = 1,
+	[isl_ast_expr_op_zdiv_r] = 1,
+	[isl_ast_expr_op_cond] = 0,
+	[isl_ast_expr_op_select] = 0,
+	[isl_ast_expr_op_eq] = 1,
+	[isl_ast_expr_op_le] = 1,
+	[isl_ast_expr_op_ge] = 1,
+	[isl_ast_expr_op_lt] = 1,
+	[isl_ast_expr_op_gt] = 1,
+	[isl_ast_expr_op_call] = 1,
+	[isl_ast_expr_op_access] = 1,
+	[isl_ast_expr_op_member] = 1,
+	[isl_ast_expr_op_address_of] = 0
 };
 
-static int is_and(enum isl_ast_op_type op)
+static int is_and(enum isl_ast_expr_op_type op)
 {
-	return op == isl_ast_op_and || op == isl_ast_op_and_then;
+	return op == isl_ast_expr_op_and || op == isl_ast_expr_op_and_then;
 }
 
-static int is_or(enum isl_ast_op_type op)
+static int is_or(enum isl_ast_expr_op_type op)
 {
-	return op == isl_ast_op_or || op == isl_ast_op_or_else;
+	return op == isl_ast_expr_op_or || op == isl_ast_expr_op_or_else;
 }
 
-static int is_add_sub(enum isl_ast_op_type op)
+static int is_add_sub(enum isl_ast_expr_op_type op)
 {
-	return op == isl_ast_op_add || op == isl_ast_op_sub;
+	return op == isl_ast_expr_op_add || op == isl_ast_expr_op_sub;
 }
 
-static int is_div_mod(enum isl_ast_op_type op)
+static int is_div_mod(enum isl_ast_expr_op_type op)
 {
-	return op == isl_ast_op_div ||
-	       op == isl_ast_op_pdiv_r ||
-	       op == isl_ast_op_zdiv_r;
+	return op == isl_ast_expr_op_div ||
+	       op == isl_ast_expr_op_pdiv_r ||
+	       op == isl_ast_expr_op_zdiv_r;
 }
 
 static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
@@ -1537,7 +1622,7 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
  * Computations such as "a / b * c" and "a % b + c" can be somewhat
  * difficult to read, so we add parentheses for those as well.
  */
-static int sub_expr_need_parens(enum isl_ast_op_type op,
+static int sub_expr_need_parens(enum isl_ast_expr_op_type op,
 	__isl_keep isl_ast_expr *expr, int left)
 {
 	if (expr->type != isl_ast_expr_op)
@@ -1550,7 +1635,7 @@ static int sub_expr_need_parens(enum isl_ast_op_type op,
 
 	if (is_or(op) && is_and(expr->u.op.op))
 		return 1;
-	if (op == isl_ast_op_mul && expr->u.op.op != isl_ast_op_mul &&
+	if (op == isl_ast_expr_op_mul && expr->u.op.op != isl_ast_expr_op_mul &&
 	    op_prec[expr->u.op.op] == op_prec[op])
 		return 1;
 	if (is_add_sub(op) && is_div_mod(expr->u.op.op))
@@ -1563,7 +1648,7 @@ static int sub_expr_need_parens(enum isl_ast_op_type op,
  * If "left" is set, then "expr" is the left-most operand.
  */
 static __isl_give isl_printer *print_sub_expr_c(__isl_take isl_printer *p,
-	enum isl_ast_op_type op, __isl_keep isl_ast_expr *expr, int left)
+	enum isl_ast_expr_op_type op, __isl_keep isl_ast_expr *expr, int left)
 {
 	int need_parens;
 
@@ -1577,46 +1662,46 @@ static __isl_give isl_printer *print_sub_expr_c(__isl_take isl_printer *p,
 	return p;
 }
 
-#define isl_ast_op_last	isl_ast_op_address_of
+#define isl_ast_expr_op_last	isl_ast_expr_op_address_of
 
 /* Data structure that holds the user-specified textual
  * representations for the operators in C format.
  * The entries are either NULL or copies of strings.
  * A NULL entry means that the default name should be used.
  */
-struct isl_ast_op_names {
-	char *op_str[isl_ast_op_last + 1];
+struct isl_ast_expr_op_names {
+	char *op_str[isl_ast_expr_op_last + 1];
 };
 
-/* Create an empty struct isl_ast_op_names.
+/* Create an empty struct isl_ast_expr_op_names.
  */
 static void *create_names(isl_ctx *ctx)
 {
-	return isl_calloc_type(ctx, struct isl_ast_op_names);
+	return isl_calloc_type(ctx, struct isl_ast_expr_op_names);
 }
 
-/* Free a struct isl_ast_op_names along with all memory
+/* Free a struct isl_ast_expr_op_names along with all memory
  * owned by the struct.
  */
 static void free_names(void *user)
 {
 	int i;
-	struct isl_ast_op_names *names = user;
+	struct isl_ast_expr_op_names *names = user;
 
 	if (!user)
 		return;
 
-	for (i = 0; i <= isl_ast_op_last; ++i)
+	for (i = 0; i <= isl_ast_expr_op_last; ++i)
 		free(names->op_str[i]);
 	free(user);
 }
 
 /* Create an identifier that is used to store
- * an isl_ast_op_names note.
+ * an isl_ast_expr_op_names note.
  */
 static __isl_give isl_id *names_id(isl_ctx *ctx)
 {
-	return isl_id_alloc(ctx, "isl_ast_op_type_names", NULL);
+	return isl_id_alloc(ctx, "isl_ast_expr_op_type_names", NULL);
 }
 
 /* Ensure that "p" has a note identified by "id".
@@ -1653,7 +1738,7 @@ static __isl_give isl_printer *alloc_note(__isl_take isl_printer *p,
 	return p;
 }
 
-/* Ensure that "p" has an isl_ast_op_names note identified by "id".
+/* Ensure that "p" has an isl_ast_expr_op_names note identified by "id".
  */
 static __isl_give isl_printer *alloc_names(__isl_take isl_printer *p,
 	__isl_keep isl_id *id)
@@ -1677,19 +1762,19 @@ static void *get_note(__isl_keep isl_printer *p, __isl_keep isl_id *id)
 
 /* Use "name" to print operations of type "type" to "p".
  *
- * Store the name in an isl_ast_op_names note attached to "p", such that
+ * Store the name in an isl_ast_expr_op_names note attached to "p", such that
  * it can be retrieved by get_op_str.
  */
-__isl_give isl_printer *isl_ast_op_type_set_print_name(
-	__isl_take isl_printer *p, enum isl_ast_op_type type,
+__isl_give isl_printer *isl_ast_expr_op_type_set_print_name(
+	__isl_take isl_printer *p, enum isl_ast_expr_op_type type,
 	__isl_keep const char *name)
 {
 	isl_id *id;
-	struct isl_ast_op_names *names;
+	struct isl_ast_expr_op_names *names;
 
 	if (!p)
 		return NULL;
-	if (type > isl_ast_op_last)
+	if (type > isl_ast_expr_op_last)
 		isl_die(isl_printer_get_ctx(p), isl_error_invalid,
 			"invalid type", return isl_printer_free(p));
 
@@ -1705,18 +1790,27 @@ __isl_give isl_printer *isl_ast_op_type_set_print_name(
 	return p;
 }
 
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_printer *isl_ast_op_type_set_print_name(
+	__isl_take isl_printer *p, enum isl_ast_expr_op_type type,
+	__isl_keep const char *name)
+{
+	return isl_ast_expr_op_type_set_print_name(p, type, name);
+}
+
 /* Return the textual representation of "type" in C format.
  *
- * If there is a user-specified name in an isl_ast_op_names note
+ * If there is a user-specified name in an isl_ast_expr_op_names note
  * associated to "p", then return that.
- * Otherwise, return the default name in op_str.
+ * Otherwise, return the default name in op_str_c.
  */
 static const char *get_op_str_c(__isl_keep isl_printer *p,
-	enum isl_ast_op_type type)
+	enum isl_ast_expr_op_type type)
 {
 	isl_id *id;
 	isl_bool has_names;
-	struct isl_ast_op_names *names = NULL;
+	struct isl_ast_expr_op_names *names = NULL;
 
 	id = names_id(isl_printer_get_ctx(p));
 	has_names = isl_printer_has_note(p, id);
@@ -1801,11 +1895,11 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 
 	switch (expr->type) {
 	case isl_ast_expr_op:
-		if (expr->u.op.op == isl_ast_op_call) {
+		if (expr->u.op.op == isl_ast_expr_op_call) {
 			p = print_call_c(p, expr);
 			break;
 		}
-		if (expr->u.op.op == isl_ast_op_access) {
+		if (expr->u.op.op == isl_ast_expr_op_access) {
 			p = print_access_c(p, expr);
 			break;
 		}
@@ -1816,8 +1910,10 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 						expr->u.op.args[0], 0);
 			break;
 		}
-		if (expr->u.op.op == isl_ast_op_fdiv_q) {
-			const char *name = get_op_str_c(p, isl_ast_op_fdiv_q);
+		if (expr->u.op.op == isl_ast_expr_op_fdiv_q) {
+			const char *name;
+
+			name = get_op_str_c(p, isl_ast_expr_op_fdiv_q);
 			p = isl_printer_print_str(p, name);
 			p = isl_printer_print_str(p, "(");
 			p = print_ast_expr_c(p, expr->u.op.args[0]);
@@ -1826,13 +1922,13 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 			p = isl_printer_print_str(p, ")");
 			break;
 		}
-		if (expr->u.op.op == isl_ast_op_max ||
-		    expr->u.op.op == isl_ast_op_min) {
+		if (expr->u.op.op == isl_ast_expr_op_max ||
+		    expr->u.op.op == isl_ast_expr_op_min) {
 			p = print_min_max_c(p, expr);
 			break;
 		}
-		if (expr->u.op.op == isl_ast_op_cond ||
-		    expr->u.op.op == isl_ast_op_select) {
+		if (expr->u.op.op == isl_ast_expr_op_cond ||
+		    expr->u.op.op == isl_ast_expr_op_select) {
 			p = print_ast_expr_c(p, expr->u.op.args[0]);
 			p = isl_printer_print_str(p, " ? ");
 			p = print_ast_expr_c(p, expr->u.op.args[1]);
@@ -1845,10 +1941,10 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 				"operation should have two arguments",
 				return isl_printer_free(p));
 		p = print_sub_expr_c(p, expr->u.op.op, expr->u.op.args[0], 1);
-		if (expr->u.op.op != isl_ast_op_member)
+		if (expr->u.op.op != isl_ast_expr_op_member)
 			p = isl_printer_print_str(p, " ");
 		p = isl_printer_print_str(p, get_op_str_c(p, expr->u.op.op));
-		if (expr->u.op.op != isl_ast_op_member)
+		if (expr->u.op.op != isl_ast_expr_op_member)
 			p = isl_printer_print_str(p, " ");
 		p = print_sub_expr_c(p, expr->u.op.op, expr->u.op.args[1], 0);
 		break;
@@ -1865,36 +1961,36 @@ static __isl_give isl_printer *print_ast_expr_c(__isl_take isl_printer *p,
 	return p;
 }
 
-/* Textual representation of the isl_ast_op_type elements
+/* Textual representation of the isl_ast_expr_op_type elements
  * for use in a YAML representation of an isl_ast_expr.
  */
 static char *op_str[] = {
-	[isl_ast_op_and] = "and",
-	[isl_ast_op_and_then] = "and_then",
-	[isl_ast_op_or] = "or",
-	[isl_ast_op_or_else] = "or_else",
-	[isl_ast_op_max] = "max",
-	[isl_ast_op_min] = "min",
-	[isl_ast_op_minus] = "minus",
-	[isl_ast_op_add] = "add",
-	[isl_ast_op_sub] = "sub",
-	[isl_ast_op_mul] = "mul",
-	[isl_ast_op_div] = "div",
-	[isl_ast_op_fdiv_q] = "fdiv_q",
-	[isl_ast_op_pdiv_q] = "pdiv_q",
-	[isl_ast_op_pdiv_r] = "pdiv_r",
-	[isl_ast_op_zdiv_r] = "zdiv_r",
-	[isl_ast_op_cond] = "cond",
-	[isl_ast_op_select] = "select",
-	[isl_ast_op_eq] = "eq",
-	[isl_ast_op_le] = "le",
-	[isl_ast_op_lt] = "lt",
-	[isl_ast_op_ge] = "ge",
-	[isl_ast_op_gt] = "gt",
-	[isl_ast_op_call] = "call",
-	[isl_ast_op_access] = "access",
-	[isl_ast_op_member] = "member",
-	[isl_ast_op_address_of] = "address_of"
+	[isl_ast_expr_op_and] = "and",
+	[isl_ast_expr_op_and_then] = "and_then",
+	[isl_ast_expr_op_or] = "or",
+	[isl_ast_expr_op_or_else] = "or_else",
+	[isl_ast_expr_op_max] = "max",
+	[isl_ast_expr_op_min] = "min",
+	[isl_ast_expr_op_minus] = "minus",
+	[isl_ast_expr_op_add] = "add",
+	[isl_ast_expr_op_sub] = "sub",
+	[isl_ast_expr_op_mul] = "mul",
+	[isl_ast_expr_op_div] = "div",
+	[isl_ast_expr_op_fdiv_q] = "fdiv_q",
+	[isl_ast_expr_op_pdiv_q] = "pdiv_q",
+	[isl_ast_expr_op_pdiv_r] = "pdiv_r",
+	[isl_ast_expr_op_zdiv_r] = "zdiv_r",
+	[isl_ast_expr_op_cond] = "cond",
+	[isl_ast_expr_op_select] = "select",
+	[isl_ast_expr_op_eq] = "eq",
+	[isl_ast_expr_op_le] = "le",
+	[isl_ast_expr_op_lt] = "lt",
+	[isl_ast_expr_op_ge] = "ge",
+	[isl_ast_expr_op_gt] = "gt",
+	[isl_ast_expr_op_call] = "call",
+	[isl_ast_expr_op_access] = "access",
+	[isl_ast_expr_op_member] = "member",
+	[isl_ast_expr_op_address_of] = "address_of"
 };
 
 static __isl_give isl_printer *print_ast_expr_isl(__isl_take isl_printer *p,
@@ -1909,7 +2005,8 @@ static __isl_give isl_printer *print_ast_expr_isl(__isl_take isl_printer *p,
 static __isl_give isl_printer *print_arguments(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
-	int i, n;
+	int i;
+	isl_size n;
 
 	n = isl_ast_expr_get_op_n_arg(expr);
 	if (n < 0)
@@ -1941,7 +2038,7 @@ static __isl_give isl_printer *print_ast_expr_isl(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr)
 {
 	enum isl_ast_expr_type type;
-	enum isl_ast_op_type op;
+	enum isl_ast_expr_op_type op;
 	isl_id *id;
 	isl_val *v;
 
@@ -1955,7 +2052,7 @@ static __isl_give isl_printer *print_ast_expr_isl(__isl_take isl_printer *p,
 		return isl_printer_free(p);
 	case isl_ast_expr_op:
 		op = isl_ast_expr_get_op_type(expr);
-		if (op == isl_ast_op_error)
+		if (op == isl_ast_expr_op_error)
 			return isl_printer_free(p);
 		p = isl_printer_print_str(p, "op");
 		p = isl_printer_yaml_next(p);
@@ -2020,7 +2117,8 @@ static __isl_give isl_printer *print_ast_node_isl(__isl_take isl_printer *p,
 static __isl_give isl_printer *print_ast_node_list(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node_list *list)
 {
-	int i, n;
+	int i;
+	isl_size n;
 
 	n = isl_ast_node_list_n_ast_node(list);
 	if (n < 0)
@@ -2490,15 +2588,15 @@ __isl_give isl_printer *isl_ast_node_list_print(
 	return p;
 }
 
-#define ISL_AST_MACRO_FLOORD	(1 << 0)
+#define ISL_AST_MACRO_FDIV_Q	(1 << 0)
 #define ISL_AST_MACRO_MIN	(1 << 1)
 #define ISL_AST_MACRO_MAX	(1 << 2)
-#define ISL_AST_MACRO_ALL	(ISL_AST_MACRO_FLOORD | \
+#define ISL_AST_MACRO_ALL	(ISL_AST_MACRO_FDIV_Q | \
 				 ISL_AST_MACRO_MIN | \
 				 ISL_AST_MACRO_MAX)
 
-/* If "expr" contains an isl_ast_op_min, isl_ast_op_max or isl_ast_op_fdiv_q
- * then set the corresponding bit in "macros".
+/* If "expr" contains an isl_ast_expr_op_min, isl_ast_expr_op_max or
+ * isl_ast_expr_op_fdiv_q then set the corresponding bit in "macros".
  */
 static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros)
 {
@@ -2510,12 +2608,12 @@ static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros)
 	if (expr->type != isl_ast_expr_op)
 		return macros;
 
-	if (expr->u.op.op == isl_ast_op_min)
+	if (expr->u.op.op == isl_ast_expr_op_min)
 		macros |= ISL_AST_MACRO_MIN;
-	if (expr->u.op.op == isl_ast_op_max)
+	if (expr->u.op.op == isl_ast_expr_op_max)
 		macros |= ISL_AST_MACRO_MAX;
-	if (expr->u.op.op == isl_ast_op_fdiv_q)
-		macros |= ISL_AST_MACRO_FLOORD;
+	if (expr->u.op.op == isl_ast_expr_op_fdiv_q)
+		macros |= ISL_AST_MACRO_FDIV_Q;
 
 	for (i = 0; i < expr->u.op.n_arg; ++i)
 		macros = ast_expr_required_macros(expr->u.op.args[i], macros);
@@ -2526,8 +2624,8 @@ static int ast_expr_required_macros(__isl_keep isl_ast_expr *expr, int macros)
 static int ast_node_list_required_macros(__isl_keep isl_ast_node_list *list,
 	int macros);
 
-/* If "node" contains an isl_ast_op_min, isl_ast_op_max or isl_ast_op_fdiv_q
- * then set the corresponding bit in "macros".
+/* If "node" contains an isl_ast_expr_op_min, isl_ast_expr_op_max or
+ * isl_ast_expr_op_fdiv_q then set the corresponding bit in "macros".
  */
 static int ast_node_required_macros(__isl_keep isl_ast_node *node, int macros)
 {
@@ -2569,8 +2667,8 @@ static int ast_node_required_macros(__isl_keep isl_ast_node *node, int macros)
 	return macros;
 }
 
-/* If "list" contains an isl_ast_op_min, isl_ast_op_max or isl_ast_op_fdiv_q
- * then set the corresponding bit in "macros".
+/* If "list" contains an isl_ast_expr_op_min, isl_ast_expr_op_max or
+ * isl_ast_expr_op_fdiv_q then set the corresponding bit in "macros".
  */
 static int ast_node_list_required_macros(__isl_keep isl_ast_node_list *list,
 	int macros)
@@ -2587,25 +2685,25 @@ static int ast_node_list_required_macros(__isl_keep isl_ast_node_list *list,
  * for a given type has already been printed.
  * The value is zero if no definition has been printed and non-zero otherwise.
  */
-struct isl_ast_op_printed {
-	char printed[isl_ast_op_last + 1];
+struct isl_ast_expr_op_printed {
+	char printed[isl_ast_expr_op_last + 1];
 };
 
-/* Create an empty struct isl_ast_op_printed.
+/* Create an empty struct isl_ast_expr_op_printed.
  */
 static void *create_printed(isl_ctx *ctx)
 {
-	return isl_calloc_type(ctx, struct isl_ast_op_printed);
+	return isl_calloc_type(ctx, struct isl_ast_expr_op_printed);
 }
 
-/* Free a struct isl_ast_op_printed.
+/* Free a struct isl_ast_expr_op_printed.
  */
 static void free_printed(void *user)
 {
 	free(user);
 }
 
-/* Ensure that "p" has an isl_ast_op_printed note identified by "id".
+/* Ensure that "p" has an isl_ast_expr_op_printed note identified by "id".
  */
 static __isl_give isl_printer *alloc_printed(__isl_take isl_printer *p,
 	__isl_keep isl_id *id)
@@ -2614,11 +2712,11 @@ static __isl_give isl_printer *alloc_printed(__isl_take isl_printer *p,
 }
 
 /* Create an identifier that is used to store
- * an isl_ast_op_printed note.
+ * an isl_ast_expr_op_printed note.
  */
 static __isl_give isl_id *printed_id(isl_ctx *ctx)
 {
-	return isl_id_alloc(ctx, "isl_ast_op_type_printed", NULL);
+	return isl_id_alloc(ctx, "isl_ast_expr_op_type_printed", NULL);
 }
 
 /* Did the user specify that a macro definition should only be
@@ -2630,11 +2728,11 @@ static __isl_give isl_id *printed_id(isl_ctx *ctx)
  * The actual printing is taken care of by the caller.
  */
 static isl_bool already_printed_once(__isl_keep isl_printer *p,
-	enum isl_ast_op_type type)
+	enum isl_ast_expr_op_type type)
 {
 	isl_ctx *ctx;
 	isl_id *id;
-	struct isl_ast_op_printed *printed;
+	struct isl_ast_expr_op_printed *printed;
 
 	if (!p)
 		return isl_bool_error;
@@ -2643,7 +2741,7 @@ static isl_bool already_printed_once(__isl_keep isl_printer *p,
 	if (!isl_options_get_ast_print_macro_once(ctx))
 		return isl_bool_false;
 
-	if (type > isl_ast_op_last)
+	if (type > isl_ast_expr_op_last)
 		isl_die(isl_printer_get_ctx(p), isl_error_invalid,
 			"invalid type", return isl_bool_error);
 
@@ -2667,8 +2765,8 @@ static isl_bool already_printed_once(__isl_keep isl_printer *p,
  * only be printed once to any given printer and if the macro definition
  * has already been printed to "p", then do not print the definition.
  */
-__isl_give isl_printer *isl_ast_op_type_print_macro(
-	enum isl_ast_op_type type, __isl_take isl_printer *p)
+__isl_give isl_printer *isl_ast_expr_op_type_print_macro(
+	enum isl_ast_expr_op_type type, __isl_take isl_printer *p)
 {
 	isl_bool skip;
 
@@ -2679,7 +2777,7 @@ __isl_give isl_printer *isl_ast_op_type_print_macro(
 		return p;
 
 	switch (type) {
-	case isl_ast_op_min:
+	case isl_ast_expr_op_min:
 		p = isl_printer_start_line(p);
 		p = isl_printer_print_str(p, "#define ");
 		p = isl_printer_print_str(p, get_op_str_c(p, type));
@@ -2687,7 +2785,7 @@ __isl_give isl_printer *isl_ast_op_type_print_macro(
 			"(x,y)    ((x) < (y) ? (x) : (y))");
 		p = isl_printer_end_line(p);
 		break;
-	case isl_ast_op_max:
+	case isl_ast_expr_op_max:
 		p = isl_printer_start_line(p);
 		p = isl_printer_print_str(p, "#define ");
 		p = isl_printer_print_str(p, get_op_str_c(p, type));
@@ -2695,7 +2793,7 @@ __isl_give isl_printer *isl_ast_op_type_print_macro(
 			"(x,y)    ((x) > (y) ? (x) : (y))");
 		p = isl_printer_end_line(p);
 		break;
-	case isl_ast_op_fdiv_q:
+	case isl_ast_expr_op_fdiv_q:
 		p = isl_printer_start_line(p);
 		p = isl_printer_print_str(p, "#define ");
 		p = isl_printer_print_str(p, get_op_str_c(p, type));
@@ -2711,17 +2809,26 @@ __isl_give isl_printer *isl_ast_op_type_print_macro(
 	return p;
 }
 
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_printer *isl_ast_op_type_print_macro(
+	enum isl_ast_expr_op_type type, __isl_take isl_printer *p)
+{
+	return isl_ast_expr_op_type_print_macro(type, p);
+}
+
 /* Call "fn" for each type of operation represented in the "macros"
  * bit vector.
  */
-static isl_stat foreach_ast_op_type(int macros,
-	isl_stat (*fn)(enum isl_ast_op_type type, void *user), void *user)
+static isl_stat foreach_ast_expr_op_type(int macros,
+	isl_stat (*fn)(enum isl_ast_expr_op_type type, void *user), void *user)
 {
-	if (macros & ISL_AST_MACRO_MIN && fn(isl_ast_op_min, user) < 0)
+	if (macros & ISL_AST_MACRO_MIN && fn(isl_ast_expr_op_min, user) < 0)
 		return isl_stat_error;
-	if (macros & ISL_AST_MACRO_MAX && fn(isl_ast_op_max, user) < 0)
+	if (macros & ISL_AST_MACRO_MAX && fn(isl_ast_expr_op_max, user) < 0)
 		return isl_stat_error;
-	if (macros & ISL_AST_MACRO_FLOORD && fn(isl_ast_op_fdiv_q, user) < 0)
+	if (macros & ISL_AST_MACRO_FDIV_Q &&
+	    fn(isl_ast_expr_op_fdiv_q, user) < 0)
 		return isl_stat_error;
 
 	return isl_stat_ok;
@@ -2730,8 +2837,8 @@ static isl_stat foreach_ast_op_type(int macros,
 /* Call "fn" for each type of operation that appears in "expr"
  * and that requires a macro definition.
  */
-isl_stat isl_ast_expr_foreach_ast_op_type(__isl_keep isl_ast_expr *expr,
-	isl_stat (*fn)(enum isl_ast_op_type type, void *user), void *user)
+isl_stat isl_ast_expr_foreach_ast_expr_op_type(__isl_keep isl_ast_expr *expr,
+	isl_stat (*fn)(enum isl_ast_expr_op_type type, void *user), void *user)
 {
 	int macros;
 
@@ -2739,14 +2846,22 @@ isl_stat isl_ast_expr_foreach_ast_op_type(__isl_keep isl_ast_expr *expr,
 		return isl_stat_error;
 
 	macros = ast_expr_required_macros(expr, 0);
-	return foreach_ast_op_type(macros, fn, user);
+	return foreach_ast_expr_op_type(macros, fn, user);
+}
+
+/* This is an alternative name for the function above.
+ */
+isl_stat isl_ast_expr_foreach_ast_op_type(__isl_keep isl_ast_expr *expr,
+	isl_stat (*fn)(enum isl_ast_expr_op_type type, void *user), void *user)
+{
+	return isl_ast_expr_foreach_ast_expr_op_type(expr, fn, user);
 }
 
 /* Call "fn" for each type of operation that appears in "node"
  * and that requires a macro definition.
  */
-isl_stat isl_ast_node_foreach_ast_op_type(__isl_keep isl_ast_node *node,
-	isl_stat (*fn)(enum isl_ast_op_type type, void *user), void *user)
+isl_stat isl_ast_node_foreach_ast_expr_op_type(__isl_keep isl_ast_node *node,
+	isl_stat (*fn)(enum isl_ast_expr_op_type type, void *user), void *user)
 {
 	int macros;
 
@@ -2754,14 +2869,23 @@ isl_stat isl_ast_node_foreach_ast_op_type(__isl_keep isl_ast_node *node,
 		return isl_stat_error;
 
 	macros = ast_node_required_macros(node, 0);
-	return foreach_ast_op_type(macros, fn, user);
+	return foreach_ast_expr_op_type(macros, fn, user);
 }
 
-static isl_stat ast_op_type_print_macro(enum isl_ast_op_type type, void *user)
+/* This is an alternative name for the function above.
+ */
+isl_stat isl_ast_node_foreach_ast_op_type(__isl_keep isl_ast_node *node,
+	isl_stat (*fn)(enum isl_ast_expr_op_type type, void *user), void *user)
+{
+	return isl_ast_node_foreach_ast_expr_op_type(node, fn, user);
+}
+
+static isl_stat ast_op_type_print_macro(enum isl_ast_expr_op_type type,
+	void *user)
 {
 	isl_printer **p = user;
 
-	*p = isl_ast_op_type_print_macro(type, *p);
+	*p = isl_ast_expr_op_type_print_macro(type, *p);
 
 	return isl_stat_ok;
 }
@@ -2772,7 +2896,7 @@ static isl_stat ast_op_type_print_macro(enum isl_ast_op_type type, void *user)
 __isl_give isl_printer *isl_ast_expr_print_macros(
 	__isl_keep isl_ast_expr *expr, __isl_take isl_printer *p)
 {
-	if (isl_ast_expr_foreach_ast_op_type(expr,
+	if (isl_ast_expr_foreach_ast_expr_op_type(expr,
 					    &ast_op_type_print_macro, &p) < 0)
 		return isl_printer_free(p);
 	return p;
@@ -2784,7 +2908,7 @@ __isl_give isl_printer *isl_ast_expr_print_macros(
 __isl_give isl_printer *isl_ast_node_print_macros(
 	__isl_keep isl_ast_node *node, __isl_take isl_printer *p)
 {
-	if (isl_ast_node_foreach_ast_op_type(node,
+	if (isl_ast_node_foreach_ast_expr_op_type(node,
 					    &ast_op_type_print_macro, &p) < 0)
 		return isl_printer_free(p);
 	return p;

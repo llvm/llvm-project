@@ -18,6 +18,9 @@
 /* Define if TargetInfo::CreateTargetInfo takes shared_ptr */
 #undef CREATETARGETINFO_TAKES_SHARED_PTR
 
+/* Define if CompilerInvocation::CreateFromArgs takes ArrayRef */
+#undef CREATE_FROM_ARGS_TAKES_ARRAYREF
+
 /* Define if Driver constructor takes default image name */
 #undef DRIVER_CTOR_TAKES_DEFAULTIMAGENAME
 
@@ -94,6 +97,9 @@
 /* Define to 1 if you have the `gmp' library (-lgmp). */
 #undef HAVE_LIBGMP
 
+/* Define if llvm/Option/Arg.h exists */
+#undef HAVE_LLVM_OPTION_ARG_H
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -130,7 +136,7 @@
 /* Return type of HandleTopLevelDeclReturn */
 #undef HandleTopLevelDeclReturn
 
-/* Define to InputKind::C for newer versions of clang */
+/* Define to Language::C or InputKind::C for newer versions of clang */
 #undef IK_C
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */

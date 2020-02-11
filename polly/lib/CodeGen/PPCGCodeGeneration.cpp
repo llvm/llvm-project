@@ -37,6 +37,7 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "isl/union_map.h"
+#include <algorithm>
 
 extern "C" {
 #include "ppcg/cuda.h"
@@ -1780,11 +1781,11 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_ast_node_free(KernelStmt);
 
   if (Kernel->n_grid > 1)
-    DeepestParallel =
-        std::max(DeepestParallel, isl_space_dim(Kernel->space, isl_dim_set));
+    DeepestParallel = std::max(
+        DeepestParallel, (unsigned)isl_space_dim(Kernel->space, isl_dim_set));
   else
-    DeepestSequential =
-        std::max(DeepestSequential, isl_space_dim(Kernel->space, isl_dim_set));
+    DeepestSequential = std::max(
+        DeepestSequential, (unsigned)isl_space_dim(Kernel->space, isl_dim_set));
 
   Value *BlockDimX, *BlockDimY, *BlockDimZ;
   std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);

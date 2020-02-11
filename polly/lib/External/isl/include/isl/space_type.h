@@ -1,11 +1,13 @@
 #ifndef ISL_SPACE_TYPE_H
 #define ISL_SPACE_TYPE_H
 
+#include <isl/ctx.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-struct isl_space;
+struct __isl_export isl_space;
 typedef struct isl_space isl_space;
 
 enum isl_dim_type {

@@ -167,7 +167,7 @@ ISL_ARG_BOOL(struct isl_options, schedule_separate_components, 0,
 	"schedule-separate-components", 1,
 	"separate components in dependence graph")
 ISL_ARG_BOOL(struct isl_options, schedule_whole_component, 0,
-	"schedule-whole-component", 1,
+	"schedule-whole-component", 0,
 	"try and compute schedule for entire component first")
 ISL_ARG_CHOICE(struct isl_options, schedule_algorithm, 0,
 	"schedule-algorithm", isl_schedule_algorithm_choice,

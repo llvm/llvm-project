@@ -99,6 +99,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11_no_override.m4 \
 	$(top_srcdir)/m4/ax_detect_clang.m4 \
 	$(top_srcdir)/m4/ax_detect_git_head.m4 \
 	$(top_srcdir)/m4/ax_detect_gmp.m4 \
@@ -230,13 +231,15 @@ CFLAGS = @CFLAGS@
 CLANG_CXXFLAGS = @CLANG_CXXFLAGS@
 CLANG_LDFLAGS = @CLANG_LDFLAGS@
 CLANG_LIBS = @CLANG_LIBS@
+CLANG_RFLAG = @CLANG_RFLAG@
+CONFIG_STATUS_DEPENDENCIES = @CONFIG_STATUS_DEPENDENCIES@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
-CXX11FLAGS = @CXX11FLAGS@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
+CYGPATH = @CYGPATH@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -266,12 +269,14 @@ LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIB_CLANG_EDIT = @LIB_CLANG_EDIT@
 LIPO = @LIPO@
+LLVM_CONFIG = @LLVM_CONFIG@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MP_CFLAGS = @MP_CFLAGS@
 MP_CPPFLAGS = @MP_CPPFLAGS@
 MP_LDFLAGS = @MP_LDFLAGS@
 MP_LIBS = @MP_LIBS@
@@ -279,6 +284,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OS_SRCDIR = @OS_SRCDIR@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -341,7 +347,6 @@ infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
-llvm_config_found = @llvm_config_found@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -385,7 +390,7 @@ extract_interface_SOURCES = \
 	extract_interface.h \
 	extract_interface.cc
 
-extract_interface_LDFLAGS = $(CLANG_LDFLAGS)
+extract_interface_LDFLAGS = $(CLANG_LDFLAGS) $(CLANG_RFLAG)
 extract_interface_LDADD = \
 	-lclangFrontend -lclangSerialization -lclangParse -lclangSema \
 	$(LIB_CLANG_EDIT) \

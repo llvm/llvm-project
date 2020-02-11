@@ -634,15 +634,15 @@ static __isl_give isl_basic_set *return_with_identity(
 	__isl_take isl_basic_set *bset, __isl_give isl_mat **T,
 	__isl_give isl_mat **T2)
 {
-	unsigned dim;
+	isl_size dim;
 	isl_mat *id;
 
-	if (!bset)
-		return NULL;
+	dim = isl_basic_set_dim(bset, isl_dim_set);
+	if (dim < 0)
+		return isl_basic_set_free(bset);
 	if (!T && !T2)
 		return bset;
 
-	dim = isl_basic_set_dim(bset, isl_dim_set);
 	id = isl_mat_identity(isl_basic_map_get_ctx(bset), 1 + dim);
 	if (T)
 		*T = isl_mat_copy(id);
@@ -660,21 +660,23 @@ static __isl_give isl_basic_set *return_with_identity(
  * the new variables x2' back to the original variables x, while T2
  * maps the original variables to the new variables.
  */
-static struct isl_basic_set *compress_variables(
-	struct isl_basic_set *bset, struct isl_mat **T, struct isl_mat **T2)
+static __isl_give isl_basic_set *compress_variables(
+	__isl_take isl_basic_set *bset,
+	__isl_give isl_mat **T, __isl_give isl_mat **T2)
 {
 	struct isl_mat *B, *TC;
-	unsigned dim;
+	isl_size dim;
 
 	if (T)
 		*T = NULL;
 	if (T2)
 		*T2 = NULL;
-	if (!bset)
-		goto error;
-	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0, goto error);
-	isl_assert(bset->ctx, bset->n_div == 0, goto error);
-	dim = isl_basic_set_n_dim(bset);
+	if (isl_basic_set_check_no_params(bset) < 0 ||
+	    isl_basic_set_check_no_locals(bset) < 0)
+		return isl_basic_set_free(bset);
+	dim = isl_basic_set_dim(bset, isl_dim_set);
+	if (dim < 0)
+		return isl_basic_set_free(bset);
 	isl_assert(bset->ctx, bset->n_eq <= dim, goto error);
 	if (bset->n_eq == 0)
 		return return_with_identity(bset, T, T2);
@@ -709,18 +711,13 @@ struct isl_basic_set *isl_basic_set_remove_equalities(
 		*T = NULL;
 	if (T2)
 		*T2 = NULL;
-	if (!bset)
-		return NULL;
-	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0, goto error);
+	if (isl_basic_set_check_no_params(bset) < 0)
+		return isl_basic_set_free(bset);
 	bset = isl_basic_set_gauss(bset, NULL);
 	if (ISL_F_ISSET(bset, ISL_BASIC_SET_EMPTY))
 		return return_with_identity(bset, T, T2);
 	bset = compress_variables(bset, T, T2);
 	return bset;
-error:
-	isl_basic_set_free(bset);
-	*T = NULL;
-	return NULL;
 }
 
 /* Check if dimension dim belongs to a residue class
@@ -738,8 +735,8 @@ isl_stat isl_basic_set_dim_residue_class(__isl_keep isl_basic_set *bset,
 	isl_bool fixed;
 	struct isl_ctx *ctx;
 	struct isl_mat *H = NULL, *U = NULL, *C, *H1, *U1;
-	unsigned total;
-	unsigned nparam;
+	isl_size total;
+	isl_size nparam;
 
 	if (!bset || !modulo || !residue)
 		return isl_stat_error;
@@ -753,8 +750,10 @@ isl_stat isl_basic_set_dim_residue_class(__isl_keep isl_basic_set *bset,
 	}
 
 	ctx = isl_basic_set_get_ctx(bset);
-	total = isl_basic_set_total_dim(bset);
-	nparam = isl_basic_set_n_param(bset);
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	nparam = isl_basic_set_dim(bset, isl_dim_param);
+	if (total < 0 || nparam < 0)
+		return isl_stat_error;
 	H = isl_mat_sub_alloc6(ctx, bset->eq, 0, bset->n_eq, 1, total);
 	H = isl_mat_left_hermite(H, 0, &U, NULL);
 	if (!H)

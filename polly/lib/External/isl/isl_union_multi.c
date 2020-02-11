@@ -13,7 +13,7 @@
  * 78153 Le Chesnay Cedex France
  */
 
-#include <isl_hash_private.h>
+#include <isl/hash.h>
 #include <isl_union_macro.h>
 
 /* A group of expressions defined over the same domain space "domain_space".
@@ -93,13 +93,13 @@ static isl_stat FN(UNION,count_part)(__isl_keep S(UNION,group) *group,
 
 /* Return the number of base expressions in "u".
  */
-int FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
+isl_size FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
 {
 	int n;
 
 	n = 0;
 	if (FN(UNION,foreach_group)(u, &FN(UNION,count_part), &n) < 0)
-		n = -1;
+		return isl_size_error;
 	return n;
 }
 
@@ -160,7 +160,7 @@ error:
 
 /* Is the space of "entry" equal to "space"?
  */
-static int FN(UNION,has_space)(const void *entry, const void *val)
+static isl_bool FN(UNION,has_space)(const void *entry, const void *val)
 {
 	PART *part = (PART *) entry;
 	isl_space *space = (isl_space *) val;
@@ -221,9 +221,10 @@ isl_stat FN(FN(UNION,foreach),BASE)(__isl_keep UNION *u,
 }
 
 /* Is the domain space of the group of expressions at "entry"
- * equal to "space"?
+ * equal to that of "space"?
  */
-static int FN(UNION,group_has_domain_space)(const void *entry, const void *val)
+static isl_bool FN(UNION,group_has_same_domain_space)(const void *entry,
+	const void *val)
 {
 	S(UNION,group) *group = (S(UNION,group) *) entry;
 	isl_space *space = (isl_space *) val;
@@ -246,7 +247,7 @@ static struct isl_hash_table_entry *FN(UNION,find_part_entry)(
 {
 	isl_ctx *ctx;
 	uint32_t hash;
-	struct isl_hash_table_entry *group_entry, *part_entry;
+	struct isl_hash_table_entry *group_entry;
 	S(UNION,group) *group;
 
 	if (!u || !space)
@@ -255,9 +256,9 @@ static struct isl_hash_table_entry *FN(UNION,find_part_entry)(
 	ctx = FN(UNION,get_ctx)(u);
 	hash = isl_space_get_domain_hash(space);
 	group_entry = isl_hash_table_find(ctx, &u->table, hash,
-			    &FN(UNION,group_has_domain_space), space, reserve);
-	if (!group_entry)
-		return reserve ? NULL : isl_hash_table_entry_none;
+			&FN(UNION,group_has_same_domain_space), space, reserve);
+	if (!group_entry || group_entry == isl_hash_table_entry_none)
+		return group_entry;
 	if (reserve && !group_entry->data) {
 		isl_space *domain = isl_space_domain(isl_space_copy(space));
 		group = FN(UNION,group_alloc)(domain, 1);
@@ -270,11 +271,8 @@ static struct isl_hash_table_entry *FN(UNION,find_part_entry)(
 	if (!group)
 		return NULL;
 	hash = isl_space_get_hash(space);
-	part_entry = isl_hash_table_find(ctx, &group->part_table, hash,
+	return isl_hash_table_find(ctx, &group->part_table, hash,
 				&FN(UNION,has_space), space, reserve);
-	if (!reserve && !part_entry)
-		return isl_hash_table_entry_none;
-	return part_entry;
 }
 
 /* Remove "part_entry" from the hash table of "u".
@@ -288,6 +286,7 @@ static __isl_give UNION *FN(UNION,remove_part_entry)(__isl_take UNION *u,
 {
 	isl_ctx *ctx;
 	uint32_t hash;
+	isl_space *space;
 	PART *part;
 	struct isl_hash_table_entry *group_entry;
 	S(UNION,group) *group;
@@ -297,10 +296,13 @@ static __isl_give UNION *FN(UNION,remove_part_entry)(__isl_take UNION *u,
 
 	part = part_entry->data;
 	ctx = FN(UNION,get_ctx)(u);
-	hash = isl_space_get_domain_hash(part->dim);
+	space = FN(PART,peek_space)(part);
+	hash = isl_space_get_domain_hash(space);
 	group_entry = isl_hash_table_find(ctx, &u->table, hash,
-			    &FN(UNION,group_has_domain_space), part->dim, 0);
+			    &FN(UNION,group_has_same_domain_space), space, 0);
 	if (!group_entry)
+		return FN(UNION,free)(u);
+	if (group_entry == isl_hash_table_entry_none)
 		isl_die(ctx, isl_error_internal, "missing group",
 			return FN(UNION,free)(u));
 	group = group_entry->data;
@@ -373,16 +375,20 @@ static isl_stat FN(UNION,check_disjoint_domain_other)(__isl_keep UNION *u,
 {
 	isl_ctx *ctx;
 	uint32_t hash;
+	isl_space *space;
 	struct isl_hash_table_entry *group_entry;
 	S(UNION,group) *group;
 
 	if (!u || !part)
 		return isl_stat_error;
 	ctx = FN(UNION,get_ctx)(u);
-	hash = isl_space_get_domain_hash(part->dim);
+	space = FN(PART,peek_space)(part);
+	hash = isl_space_get_domain_hash(space);
 	group_entry = isl_hash_table_find(ctx, &u->table, hash,
-			    &FN(UNION,group_has_domain_space), part->dim, 0);
+			    &FN(UNION,group_has_same_domain_space), space, 0);
 	if (!group_entry)
+		return isl_stat_error;
+	if (group_entry == isl_hash_table_entry_none)
 		return isl_stat_ok;
 	group = group_entry->data;
 	return isl_hash_table_foreach(ctx, &group->part_table,
@@ -445,21 +451,87 @@ static isl_stat FN(UNION,foreach_inplace)(__isl_keep UNION *u,
 	return FN(UNION,foreach_group)(u, &FN(UNION,group_call_inplace), &data);
 }
 
-/* Does "u" have a single reference?
- * That is, can we change "u" inplace?
- */
-static isl_bool FN(UNION,has_single_reference)(__isl_keep UNION *u)
-{
-	if (!u)
-		return isl_bool_error;
-	return u->ref == 1;
-}
-
 static isl_stat FN(UNION,free_u_entry)(void **entry, void *user)
 {
 	S(UNION,group) *group = *entry;
 	FN(UNION,group_free)(group);
 	return isl_stat_ok;
+}
+
+/* Set "single" to true if this group of expressions
+ * contains an expression living in exactly one space.
+ */
+static isl_stat FN(UNION,group_single_space)(__isl_keep S(UNION,group) *group,
+	void *user)
+{
+	isl_bool *single = user;
+
+	if (!group)
+		return isl_stat_error;
+	*single = isl_bool_ok(group->part_table.n == 1);
+	return isl_stat_ok;
+}
+
+/* Can this union expression be converted to a single base expression?
+ * That is, does it contain a base expression in exactly one space?
+ * In particular, is only one domain space involved and
+ * is only a single expression associated to that domain?
+ */
+isl_bool FN(FN(UNION,isa),BASE)(__isl_take UNION *u)
+{
+	isl_bool single;
+
+	if (!u)
+		return isl_bool_error;
+	if (u->table.n != 1)
+		return isl_bool_false;
+	if (FN(UNION,foreach_group)(u,
+				&FN(UNION,group_single_space), &single) < 0)
+		return isl_bool_error;
+	return single;
+}
+
+/* Callback for isl_union_*_foreach_inplace call
+ * on a union expression with a single base expression.
+ * Store that base expression in "user".
+ * This callback should only be called once
+ * for any given isl_union_*_foreach_inplace call.
+ */
+static isl_stat FN(UNION,extract_part)(void **entry, void *user)
+{
+	PART **part_p = user;
+	PART *part = *entry;
+
+	if (*part_p)
+		isl_die(FN(PART,get_ctx)(part), isl_error_internal,
+			"more than one part", return isl_stat_error);
+	*part_p = FN(PART,copy)(part);
+	if (!*part_p)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Convert the union expression to its single base expression.
+ */
+__isl_give PART *FN(FN(UNION,as),BASE)(__isl_take UNION *u)
+{
+	isl_bool has_single_space;
+	PART *part = NULL;
+
+	has_single_space = FN(FN(UNION,isa),BASE)(u);
+	if (has_single_space < 0)
+		goto error;
+	if (!has_single_space)
+		isl_die(FN(UNION,get_ctx)(u), isl_error_invalid,
+			"expecting elements in exactly one space",
+			goto error);
+	if (FN(UNION,foreach_inplace)(u, &FN(UNION,extract_part), &part) < 0)
+		part = FN(PART,free)(part);
+	FN(UNION,free)(u);
+	return part;
+error:
+	FN(UNION,free)(u);
+	return NULL;
 }
 
 #include <isl_union_templ.c>
