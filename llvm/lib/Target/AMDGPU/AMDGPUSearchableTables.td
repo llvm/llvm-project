@@ -247,6 +247,7 @@ def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
+def : SourceOfDivergence<int_amdgcn_writelane>;
 
 def : SourceOfDivergence<int_amdgcn_mfma_f32_4x4x1f32>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_4x4x1f32>;
