@@ -30,7 +30,7 @@ Broadcaster::Broadcaster(BroadcasterManagerSP manager_sp, const char *name)
       m_manager_sp(std::move(manager_sp)), m_broadcaster_name(name) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   LLDB_LOG(log, "{0} Broadcaster::Broadcaster(\"{1}\")",
-           static_cast<void *>(this), GetBroadcasterName().AsCString());
+           static_cast<void *>(this), GetBroadcasterName());
 }
 
 Broadcaster::BroadcasterImpl::BroadcasterImpl(Broadcaster &broadcaster)
@@ -40,7 +40,7 @@ Broadcaster::BroadcasterImpl::BroadcasterImpl(Broadcaster &broadcaster)
 Broadcaster::~Broadcaster() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   LLDB_LOG(log, "{0} Broadcaster::~Broadcaster(\"{1}\")",
-           static_cast<void *>(this), GetBroadcasterName().AsCString());
+           static_cast<void *>(this), GetBroadcasterName());
 
   Clear();
 }
