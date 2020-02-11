@@ -24,7 +24,7 @@ inline uptr scaledLog2(uptr Size, uptr ZeroLog, uptr LogBits) {
 
 template <typename Config> struct SizeClassMapBase {
   static u32 getMaxCachedHint(uptr Size) {
-    DCHECK_LE(Size, MaxSize);
+    DCHECK_LE(Size, (1UL << Config::MaxSizeLog) + Chunk::getHeaderSize());
     DCHECK_NE(Size, 0);
     u32 N;
     // Force a 32-bit division if the template parameters allow for it.
@@ -119,9 +119,9 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
     constexpr static u8 computeClassId(uptr Size) {
       for (uptr i = 0; i != ClassesSize; ++i) {
         if (Size <= Config::Classes[i])
-          return i + 1;
+          return static_cast<u8>(i + 1);
       }
-      return -1;
+      return static_cast<u8>(-1);
     }
 
     constexpr static uptr getTableSize() {
