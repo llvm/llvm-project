@@ -121,7 +121,7 @@ public:
   class SourceFileCompleter : public Completer {
   public:
     SourceFileCompleter(CommandInterpreter &interpreter,
-                        bool include_support_files, CompletionRequest &request);
+                        CompletionRequest &request);
 
     lldb::SearchDepth GetDepth() override;
 
@@ -132,7 +132,6 @@ public:
     void DoCompletion(SearchFilter *filter) override;
 
   private:
-    bool m_include_support_files;
     FileSpecList m_matching_files;
     const char *m_file_name;
     const char *m_dir_name;
