@@ -2542,9 +2542,16 @@ class sve2_complex_int_arith<bits<2> sz, bits<4> opc, string asm,
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_cintx_dot<string asm> {
+multiclass sve2_cintx_dot<string asm, SDPatternOperator op> {
   def _S : sve2_complex_int_arith<0b10, 0b0001, asm, ZPR32, ZPR8>;
   def _D : sve2_complex_int_arith<0b11, 0b0001, asm, ZPR64, ZPR16>;
+
+  def : Pat<(nxv4i32 (op (nxv4i32 ZPR32:$Op1), (nxv16i8 ZPR8:$Op2), (nxv16i8 ZPR8:$Op3),
+                         (i32 complexrotateop:$imm))),
+            (!cast<Instruction>(NAME # "_S") ZPR32:$Op1, ZPR8:$Op2, ZPR8:$Op3, complexrotateop:$imm)>;
+  def : Pat<(nxv2i64 (op (nxv2i64 ZPR64:$Op1), (nxv8i16 ZPR16:$Op2), (nxv8i16 ZPR16:$Op3),
+                         (i32 complexrotateop:$imm))),
+            (!cast<Instruction>(NAME # "_D") ZPR64:$Op1, ZPR16:$Op2, ZPR16:$Op3, complexrotateop:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2589,19 +2596,26 @@ class sve2_complex_int_arith_indexed<bits<2> sz, bits<4> opc, string asm,
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_cintx_dot_by_indexed_elem<string asm> {
-  def _S : sve2_complex_int_arith_indexed<0b10, 0b0100, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS> {
+multiclass sve2_cintx_dot_by_indexed_elem<string asm, SDPatternOperator op> {
+  def _S : sve2_complex_int_arith_indexed<0b10, 0b0100, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS32b> {
     bits<2> iop;
     bits<3> Zm;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _D : sve2_complex_int_arith_indexed<0b11, 0b0100, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD> {
+  def _D : sve2_complex_int_arith_indexed<0b11, 0b0100, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD32b> {
     bit iop;
     bits<4> Zm;
     let Inst{20} = iop;
     let Inst{19-16} = Zm;
   }
+
+  def : Pat<(nxv4i32 (op (nxv4i32 ZPR32:$Op1), (nxv16i8 ZPR8:$Op2), (nxv16i8 ZPR8:$Op3),
+                         (i32 VectorIndexS32b_timm:$idx), (i32 complexrotateop:$imm))),
+            (!cast<Instruction>(NAME # "_S") ZPR32:$Op1, ZPR8:$Op2, ZPR8:$Op3, VectorIndexS32b_timm:$idx, complexrotateop:$imm)>;
+  def : Pat<(nxv2i64 (op (nxv2i64 ZPR64:$Op1), (nxv8i16 ZPR16:$Op2), (nxv8i16 ZPR16:$Op3),
+                         (i32 VectorIndexD32b_timm:$idx), (i32 complexrotateop:$imm))),
+            (!cast<Instruction>(NAME # "_D") ZPR64:$Op1, ZPR16:$Op2, ZPR16:$Op3, VectorIndexD32b_timm:$idx, complexrotateop:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
