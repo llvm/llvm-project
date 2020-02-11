@@ -29,24 +29,8 @@
 
 using namespace llvm;
 
-static bool hasPressureSet(const int *PSets, unsigned PSetID) {
-  for (unsigned i = 0; PSets[i] != -1; ++i) {
-    if (PSets[i] == (int)PSetID)
-      return true;
-  }
-  return false;
-}
-
-void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
-                                         BitVector &PressureSets) const {
-  for (MCRegUnitIterator U(Reg, this); U.isValid(); ++U) {
-    const int *PSets = getRegUnitPressureSets(*U);
-    if (hasPressureSet(PSets, PSetID)) {
-      PressureSets.set(PSetID);
-      break;
-    }
-  }
-}
+#define GET_REGINFO_TARGET_DESC
+#include "AMDGPUGenRegisterInfo.inc"
 
 static cl::opt<bool> EnableSpillSGPRToVGPR(
   "amdgpu-spill-sgpr-to-vgpr",
@@ -55,7 +39,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::init(true));
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
-  AMDGPURegisterInfo(),
+  AMDGPUGenRegisterInfo(0),
   ST(ST),
   SGPRPressureSets(getNumRegPressureSets()),
   VGPRPressureSets(getNumRegPressureSets()),
@@ -104,6 +88,83 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   assert(SGPRSetID < NumRegPressureSets &&
          VGPRSetID < NumRegPressureSets &&
          AGPRSetID < NumRegPressureSets);
+}
+
+void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
+                                           unsigned Reg) const {
+  MCRegAliasIterator R(Reg, this, true);
+
+  for (; R.isValid(); ++R)
+    Reserved.set(*R);
+}
+
+// Forced to be here by one .inc
+const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
+  const MachineFunction *MF) const {
+  CallingConv::ID CC = MF->getFunction().getCallingConv();
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+  case CallingConv::Cold:
+    return CSR_AMDGPU_HighRegs_SaveList;
+  default: {
+    // Dummy to not crash RegisterClassInfo.
+    static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
+    return &NoCalleeSavedReg;
+  }
+  }
+}
+
+const MCPhysReg *
+SIRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
+  return nullptr;
+}
+
+const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                                     CallingConv::ID CC) const {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+  case CallingConv::Cold:
+    return CSR_AMDGPU_HighRegs_RegMask;
+  default:
+    return nullptr;
+  }
+}
+
+Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+  const SIFrameLowering *TFI =
+      MF.getSubtarget<GCNSubtarget>().getFrameLowering();
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
+                        : FuncInfo->getStackPtrOffsetReg();
+}
+
+const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
+  return CSR_AMDGPU_AllVGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
+  return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
+}
+
+static bool hasPressureSet(const int *PSets, unsigned PSetID) {
+  for (unsigned i = 0; PSets[i] != -1; ++i) {
+    if (PSets[i] == (int)PSetID)
+      return true;
+  }
+  return false;
+}
+
+void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
+                                         BitVector &PressureSets) const {
+  for (MCRegUnitIterator U(Reg, this); U.isValid(); ++U) {
+    const int *PSets = getRegUnitPressureSets(*U);
+    if (hasPressureSet(PSets, PSetID)) {
+      PressureSets.set(PSetID);
+      break;
+    }
+  }
 }
 
 // FIXME: TableGen should generate something to make this manageable for all
@@ -1789,7 +1850,7 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                                        MF.getFunction());
   switch (RC->getID()) {
   default:
-    return AMDGPURegisterInfo::getRegPressureLimit(RC, MF);
+    return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
   case AMDGPU::VGPR_32RegClassID:
     return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
@@ -1807,7 +1868,7 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 
-  return AMDGPURegisterInfo::getRegPressureSetLimit(MF, Idx);
+  return AMDGPUGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
 }
 
 const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
@@ -1815,7 +1876,7 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
 
   if (hasRegUnit(AMDGPU::M0, RegUnit))
     return Empty;
-  return AMDGPURegisterInfo::getRegUnitPressureSets(RegUnit);
+  return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 
 unsigned SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
@@ -1899,7 +1960,7 @@ SIRegisterInfo::getRegClass(unsigned RCID) const {
   case -1:
     return nullptr;
   default:
-    return AMDGPURegisterInfo::getRegClass(RCID);
+    return AMDGPUGenRegisterInfo::getRegClass(RCID);
   }
 }
 

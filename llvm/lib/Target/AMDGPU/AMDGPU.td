@@ -1175,7 +1175,7 @@ def EnableLateCFGStructurize : Predicate<
 include "SISchedule.td"
 include "GCNProcessors.td"
 include "AMDGPUInstrInfo.td"
-include "AMDGPURegisterInfo.td"
+include "SIRegisterInfo.td"
 include "AMDGPURegisterBanks.td"
 include "AMDGPUInstructions.td"
 include "SIInstrInfo.td"
