@@ -768,6 +768,50 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
               testing::HasSubstr("too many occurrences"));
 }
 
+TEST(CrossFileRename, QueryCtorInIndex) {
+  const auto MainCode = Annotations("F^oo f;");
+  auto TU = TestTU::withCode(MainCode.code());
+  TU.HeaderCode = R"cpp(
+    class Foo {
+    public:
+      Foo() = default;
+    };
+  )cpp";
+  auto AST = TU.build();
+
+  RefsRequest Req;
+  class RecordIndex : public SymbolIndex {
+  public:
+    RecordIndex(RefsRequest *R) : Out(R) {}
+    bool refs(const RefsRequest &Req,
+              llvm::function_ref<void(const Ref &)> Callback) const override {
+      *Out = Req;
+      return false;
+    }
+
+    bool fuzzyFind(const FuzzyFindRequest &,
+                   llvm::function_ref<void(const Symbol &)>) const override {
+      return false;
+    }
+    void lookup(const LookupRequest &,
+                llvm::function_ref<void(const Symbol &)>) const override {}
+
+    void relations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+        const override {}
+    size_t estimateMemoryUsage() const override { return 0; }
+
+    RefsRequest *Out;
+  } RIndex(&Req);
+  auto Results =
+      rename({MainCode.point(), "NewName", AST, testPath("main.cc"), &RIndex,
+              /*CrossFile=*/true});
+  ASSERT_TRUE(bool(Results)) << Results.takeError();
+  const auto HeaderSymbols = TU.headerSymbols();
+  EXPECT_THAT(Req.IDs,
+              testing::Contains(findSymbol(HeaderSymbols, "Foo::Foo").ID));
+}
+
 TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
   auto MainCode = Annotations("int [[^x]] = 2;");
   auto MainFilePath = testPath("main.cc");
