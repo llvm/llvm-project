@@ -106,15 +106,13 @@ if (GPU_CODEGEN)
   llvm_map_components_to_libnames(nvptx_libs NVPTX)
 endif ()
 
-if (LLVM_LINK_LLVM_DYLIB)
-  # The shlib/dylib contains all the LLVM components
-  # (including NVPTX is enabled) already. Adding them to target_link_libraries
-  # would cause them being twice in the address space
-  # (their LLVM*.a/so and their copies in libLLVM.so)
-  # which results in errors when the two instances try to register the same
-  # command-line switches.
-  target_link_libraries(Polly PUBLIC LLVM)
-else ()
+# The shlib/dylib contains all the LLVM components
+# (including NVPTX is enabled) already. Adding them to target_link_libraries
+# would cause them being twice in the address space
+# (their LLVM*.a/so and their copies in libLLVM.so)
+# which results in errors when the two instances try to register the same
+# command-line switches.
+if (NOT LLVM_LINK_LLVM_DYLIB)
   target_link_libraries(Polly PUBLIC
     LLVMSupport
     LLVMCore
