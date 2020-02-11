@@ -155,8 +155,7 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; F16C-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
 ; F16C-NEXT:    movzwl %dx, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -165,8 +164,7 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; F16C-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
 ; F16C-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; F16C-NEXT:    vmovd %xmm0, %eax
 ; F16C-NEXT:    vpextrw $1, %xmm0, %edx
