@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: .debug_addr table at offset 0x0 has too small length (0x5) to contain a complete header
+# ERR: address table at offset 0x0 has too small length (0x5) to contain a complete header
 # ERR-NOT: {{.}}
 
 # too small length value

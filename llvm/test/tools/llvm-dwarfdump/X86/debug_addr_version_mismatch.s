@@ -2,7 +2,7 @@
 # RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
-# ERR: .debug_addr table at offset 0x0 has version 4 which is different from the version suggested by the DWARF unit header: 5
+# ERR: address table at offset 0x0 has version 4 which is different from the version suggested by the DWARF unit header: 5
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents

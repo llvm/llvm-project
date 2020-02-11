@@ -2,7 +2,7 @@
 # RUN: llvm-dwarfdump -debug-addr - 2> %t.warn | FileCheck %s
 # RUN: FileCheck %s -input-file %t.warn -check-prefix=WARN
 
-# WARN: .debug_addr table at offset 0x0 has address size 8 which is different from CU address size 4
+# WARN: address table at offset 0x0 has address size 8 which is different from CU address size 4
 # WARN-NOT: {{.}}
 
 # CHECK: .debug_addr contents
