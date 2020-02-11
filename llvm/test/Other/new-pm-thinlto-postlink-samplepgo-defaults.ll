@@ -60,6 +60,7 @@
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion
 ; CHECK-O-NEXT: Running pass: AttributorPass
+; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
