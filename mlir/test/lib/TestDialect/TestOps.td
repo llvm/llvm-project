@@ -204,6 +204,13 @@ def UpdateFloatElementsAttr : Pat<
     ConstantAttr<RankedF32ElementsAttr<[2]>, "{5.0f, 6.0f}">:$f32attr,
     $f64attr)>;
 
+def IntElementsAttrOp : TEST_Op<"int_elements_attr"> {
+  let arguments = (ins
+      RankedI32ElementsAttr<[2]>:$vector_i32_attr,
+      RankedI64ElementsAttr<[4, 8]>:$matrix_i64_attr
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // Test Attribute Constraints
 //===----------------------------------------------------------------------===//

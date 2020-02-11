@@ -243,3 +243,53 @@ func @fn() { return }
 
 // expected-error @+1 {{referencing to a 'FuncOp' symbol}}
 "test.symbol_ref_attr"() {symbol = @foo} : () -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test IntElementsAttr
+//===----------------------------------------------------------------------===//
+
+func @correct_type_pass() {
+  "test.int_elements_attr"() {
+    // CHECK: matrix_i64_attr = dense<6> : tensor<4x8xi64>
+    // CHECK: vector_i32_attr = dense<5> : tensor<2xi32>
+    matrix_i64_attr = dense<6> : tensor<4x8xi64>,
+    vector_i32_attr = dense<5> : tensor<2xi32>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_element_type_fail() {
+  // expected-error @+1 {{failed to satisfy constraint: 32-bit int elements attribute of shape [2]}}
+  "test.int_elements_attr"() {
+    matrix_i64_attr = dense<6> : tensor<4x8xi64>,
+    vector_i32_attr = dense<5> : tensor<2xi64>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_shape_fail() {
+  // expected-error @+1 {{failed to satisfy constraint: 64-bit int elements attribute of shape [4, 8]}}
+  "test.int_elements_attr"() {
+    matrix_i64_attr = dense<6> : tensor<4xi64>,
+    vector_i32_attr = dense<5> : tensor<2xi32>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_shape_fail() {
+  // expected-error @+1 {{failed to satisfy constraint: 32-bit int elements attribute of shape [2]}}
+  "test.int_elements_attr"() {
+    matrix_i64_attr = dense<6> : tensor<4x8xi64>,
+    vector_i32_attr = dense<5> : tensor<i32>
+  } : () -> ()
+  return
+}
+
