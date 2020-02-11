@@ -9697,6 +9697,8 @@ def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
 def err_omp_several_mem_order_clauses : Error<
   "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', |}1'acq_rel', 'acquire' or 'release' clause">;
+def err_omp_atomic_incompatible_mem_order_clause : Error<
+  "directive '#pragma omp atomic%select{ %0|}1' cannot be used with '%2' clause">;
 def note_omp_previous_mem_order_clause : Note<
   "'%0' clause used here">;
 def err_omp_target_contains_not_only_teams : Error<
