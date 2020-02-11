@@ -32,13 +32,14 @@ bb3:
 
 define void @second_store_bigger(i32* noalias %P) {
 ; CHECK-LABEL: @second_store_bigger(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[P_I64:%.*]] = bitcast i32* [[P:%.*]] to i64*
+; CHECK-NEXT:    [[P_I64:%.*]] = bitcast i32* [[P]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[P_I64]]
 ; CHECK-NEXT:    ret void
 ;
