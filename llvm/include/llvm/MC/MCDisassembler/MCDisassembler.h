@@ -9,11 +9,25 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace llvm {
+
+struct SymbolInfoTy {
+	uint64_t  Addr;
+	StringRef Name;
+	uint8_t   Type;
+
+       SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type):
+        Addr(Addr),Name(Name),Type(Type) {};
+};
+
+using SectionSymbolsTy = std::vector<SymbolInfoTy>;
+
 
 template <typename T> class ArrayRef;
 class StringRef;
