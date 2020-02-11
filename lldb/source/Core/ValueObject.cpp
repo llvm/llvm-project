@@ -2093,7 +2093,7 @@ void ValueObject::GetExpressionPath(Stream &s,
   // name ([%d]) to the expression path
   if (m_is_array_item_for_pointer &&
       epformat == eGetExpressionPathFormatHonorPointers)
-    s.PutCString(m_name.AsCString());
+    s.PutCString(m_name.GetStringRef());
 
   if (!IsBaseClass()) {
     if (!is_deref_of_parent) {

@@ -117,7 +117,7 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
   lldb::ValueObjectSP valobj_sp;
 
   valobj_sp = frame_sp->GetValueForVariableExpressionPath(
-      object_name.AsCString(), lldb::eNoDynamicValues,
+      object_name.GetStringRef(), lldb::eNoDynamicValues,
       StackFrame::eExpressionPathOptionCheckPtrVsMember |
           StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
           StackFrame::eExpressionPathOptionsNoSyntheticChildren |

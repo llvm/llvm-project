@@ -4003,7 +4003,7 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
   // Build command: Configure{type_name}: serialized config data.
   StreamGDBRemote stream;
   stream.PutCString("QConfigure");
-  stream.PutCString(type_name.AsCString());
+  stream.PutCString(type_name.GetStringRef());
   stream.PutChar(':');
   if (config_sp) {
     // Gather the plain-text version of the configuration data.

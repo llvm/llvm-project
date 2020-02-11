@@ -404,7 +404,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
         ss.PutCString("\n");
       emitNewLine = true;
       ss.PutCString("  ");
-      ss.PutCString(Mangled(failed_lookup).GetDemangledName().AsCString());
+      ss.PutCString(Mangled(failed_lookup).GetDemangledName().GetStringRef());
     }
 
     m_failed_lookups.clear();
