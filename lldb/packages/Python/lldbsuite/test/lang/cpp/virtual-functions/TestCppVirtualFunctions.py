@@ -29,3 +29,11 @@ class TestCase(TestBase):
         self.expect_expr("derived_without_as_base.foo()", result_type="int", result_value="4")
         self.expect_expr("derived_with_base_dtor_as_base.foo()", result_type="int", result_value="5")
         self.expect_expr("derived_with_dtor_but_no_base_dtor_as_base.foo()", result_type="int", result_value="6")
+
+    def test_call_overloaded(self):
+        self.common_setup()
+        self.expect("expr derived_with_overload.foo()", error=True, substrs=["too few arguments to function call, expected 1, have 0"])
+        self.expect_expr("derived_with_overload.foo(1)", result_type="int", result_value="7")
+        self.expect_expr("derived_with_overload_and_using.foo(1)", result_type="int", result_value="8")
+        # FIXME: It seems the using declaration doesn't import the overload from the base class.
+        self.expect("expr derived_with_overload_and_using.foo()", error=True, substrs=["too few arguments to function call, expected 1, have 0"])
