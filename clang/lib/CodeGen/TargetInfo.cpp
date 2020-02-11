@@ -7486,13 +7486,10 @@ void TCETargetCodeGenInfo::setTargetAttributes(
 namespace {
 
 class HexagonABIInfo : public ABIInfo {
-
-
 public:
   HexagonABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
 
 private:
-
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy) const;
 
@@ -7505,14 +7502,14 @@ private:
 class HexagonTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   HexagonTargetCodeGenInfo(CodeGenTypes &CGT)
-    :TargetCodeGenInfo(new HexagonABIInfo(CGT)) {}
+    : TargetCodeGenInfo(new HexagonABIInfo(CGT)) {}
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     return 29;
   }
 };
 
-}
+} // namespace
 
 void HexagonABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
@@ -7527,8 +7524,8 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty) const {
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                          : ABIArgInfo::getDirect());
+    return Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
+                                         : ABIArgInfo::getDirect();
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -7539,53 +7536,56 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty) const {
     return ABIArgInfo::getIgnore();
 
   uint64_t Size = getContext().getTypeSize(Ty);
-  if (Size > 64)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+  if (Size <= 64) {
     // Pass in the smallest viable integer type.
-  else if (Size > 32)
-      return ABIArgInfo::getDirect(llvm::Type::getInt64Ty(getVMContext()));
-  else if (Size > 16)
-      return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-  else if (Size > 8)
-      return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
-  else
-      return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
+    if (!llvm::isPowerOf2_64(Size))
+      Size = llvm::NextPowerOf2(Size);
+    return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
+  }
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 }
 
 ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  // Large vector types should be returned via memory.
-  if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 64)
-    return getNaturalAlignIndirect(RetTy);
+  const TargetInfo &T = CGT.getTarget();
+  uint64_t Size = getContext().getTypeSize(RetTy);
+
+  if (const auto *VecTy = RetTy->getAs<VectorType>()) {
+    // HVX vectors are returned in vector registers or register pairs.
+    if (T.hasFeature("hvx")) {
+      assert(T.hasFeature("hvx-length64b") || T.hasFeature("hvx-length128b"));
+      uint64_t VecSize = T.hasFeature("hvx-length64b") ? 64*8 : 128*8;
+      if (Size == VecSize || Size == 2*VecSize)
+        return ABIArgInfo::getDirectInReg();
+    }
+
+    // Large vector types should be returned via memory.
+    if (Size > 64)
+      return getNaturalAlignIndirect(RetTy);
+  }
 
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
       RetTy = EnumTy->getDecl()->getIntegerType();
 
-    return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                             : ABIArgInfo::getDirect());
+    return RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
+                                            : ABIArgInfo::getDirect();
   }
 
   if (isEmptyRecord(getContext(), RetTy, true))
     return ABIArgInfo::getIgnore();
 
-  // Aggregates <= 8 bytes are returned in r0; other aggregates
+  // Aggregates <= 8 bytes are returned in registers, other aggregates
   // are returned indirectly.
-  uint64_t Size = getContext().getTypeSize(RetTy);
   if (Size <= 64) {
     // Return in the smallest viable integer type.
-    if (Size <= 8)
-      return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
-    if (Size <= 16)
-      return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
-    if (Size <= 32)
-      return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-    return ABIArgInfo::getDirect(llvm::Type::getInt64Ty(getVMContext()));
+    if (!llvm::isPowerOf2_64(Size))
+      Size = llvm::NextPowerOf2(Size);
+    return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
   }
-
   return getNaturalAlignIndirect(RetTy, /*ByVal=*/true);
 }
 
