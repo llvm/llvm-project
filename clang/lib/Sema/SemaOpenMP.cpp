@@ -271,6 +271,7 @@ private:
       nullptr};
   /// Vector of previously encountered target directives
   SmallVector<SourceLocation, 2> TargetLocations;
+  SourceLocation AtomicLocation;
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -555,7 +556,7 @@ public:
 
   /// Checks if the defined 'requires' directive has specified type of clause.
   template <typename ClauseType>
-  bool hasRequiresDeclWithClause() {
+  bool hasRequiresDeclWithClause() const {
     return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
       return llvm::any_of(D->clauselists(), [](const OMPClause *C) {
         return isa<ClauseType>(C);
@@ -588,6 +589,18 @@ public:
   /// Add location of previously encountered target to internal vector
   void addTargetDirLocation(SourceLocation LocStart) {
     TargetLocations.push_back(LocStart);
+  }
+
+  /// Add location for the first encountered atomicc directive.
+  void addAtomicDirectiveLoc(SourceLocation Loc) {
+    if (AtomicLocation.isInvalid())
+      AtomicLocation = Loc;
+  }
+
+  /// Returns the location of the first encountered atomic directive in the
+  /// module.
+  SourceLocation getAtomicDirectiveLoc() const {
+    return AtomicLocation;
   }
 
   // Return previously encountered target region locations.
@@ -2830,18 +2843,26 @@ OMPRequiresDecl *Sema::CheckOMPRequiresDecl(SourceLocation Loc,
   /// current compilation unit.
   ArrayRef<SourceLocation> TargetLocations =
       DSAStack->getEncounteredTargetLocs();
-  if (!TargetLocations.empty()) {
+  SourceLocation AtomicLoc = DSAStack->getAtomicDirectiveLoc();
+  if (!TargetLocations.empty() || !AtomicLoc.isInvalid()) {
     for (const OMPClause *CNew : ClauseList) {
       // Check if any of the requires clauses affect target regions.
       if (isa<OMPUnifiedSharedMemoryClause>(CNew) ||
           isa<OMPUnifiedAddressClause>(CNew) ||
           isa<OMPReverseOffloadClause>(CNew) ||
           isa<OMPDynamicAllocatorsClause>(CNew)) {
-        Diag(Loc, diag::err_omp_target_before_requires)
-            << getOpenMPClauseName(CNew->getClauseKind());
+        Diag(Loc, diag::err_omp_directive_before_requires)
+            << "target" << getOpenMPClauseName(CNew->getClauseKind());
         for (SourceLocation TargetLoc : TargetLocations) {
-          Diag(TargetLoc, diag::note_omp_requires_encountered_target);
+          Diag(TargetLoc, diag::note_omp_requires_encountered_directive)
+              << "target";
         }
+      } else if (!AtomicLoc.isInvalid() &&
+                 isa<OMPAtomicDefaultMemOrderClause>(CNew)) {
+        Diag(Loc, diag::err_omp_directive_before_requires)
+            << "atomic" << getOpenMPClauseName(CNew->getClauseKind());
+        Diag(AtomicLoc, diag::note_omp_requires_encountered_directive)
+            << "atomic";
       }
     }
   }
@@ -8926,6 +8947,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
                                             Stmt *AStmt,
                                             SourceLocation StartLoc,
                                             SourceLocation EndLoc) {
+  // Register location of the first atomic directive.
+  DSAStack->addAtomicDirectiveLoc(StartLoc);
   if (!AStmt)
     return StmtError();
 

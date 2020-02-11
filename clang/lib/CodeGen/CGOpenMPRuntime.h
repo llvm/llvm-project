@@ -26,6 +26,7 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
 class ArrayType;
@@ -703,6 +704,9 @@ private:
   /// Flag for keeping track of weather a requires unified_shared_memory
   /// directive is present.
   bool HasRequiresUnifiedSharedMemory = false;
+
+  /// Atomic ordering from the omp requires directive.
+  llvm::AtomicOrdering RequiresAtomicOrdering = llvm::AtomicOrdering::Monotonic;
 
   /// Flag for keeping track of weather a target region has been emitted.
   bool HasEmittedTargetRegion = false;
@@ -1700,7 +1704,10 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  virtual void checkArchForUnifiedAddressing(const OMPRequiresDecl *D);
+  virtual void processRequiresDirective(const OMPRequiresDecl *D);
+
+  /// Gets default memory ordering as specified in requires directive.
+  llvm::AtomicOrdering getDefaultMemoryOrdering() const;
 
   /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
   /// the predefined allocator and translates it into the corresponding address
