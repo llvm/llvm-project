@@ -345,7 +345,7 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   assert(Cmd.hasArgument(InputFilePath));
   Cmd.removeArgument(InputFilePath);
 
-  auto TmpFilePath = TempPath(".repro");
+  auto TmpFilePath = TempPath("CleanseCrashInput", ".repro");
   Cmd.addArgument(TmpFilePath);
   Cmd.setOutputFile(getDevNull());
   Cmd.combineOutAndErr();
@@ -499,7 +499,7 @@ void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
   std::sort(OldCorpus.begin(), OldCorpus.end());
   std::sort(NewCorpus.begin(), NewCorpus.end());
 
-  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath(".txt");
+  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath("Merge", ".txt");
   Vector<std::string> NewFiles;
   Set<uint32_t> NewFeatures, NewCov;
   CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
