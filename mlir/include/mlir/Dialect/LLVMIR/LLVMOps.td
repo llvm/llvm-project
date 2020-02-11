@@ -870,4 +870,14 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg">,
   let verifier = "return ::verify(*this);";
 }
 
+def LLVM_AssumeOp : LLVM_Op<"intr.assume", []>,
+                    Arguments<(ins LLVM_Type:$cond)> {
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *fn =
+        llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::assume, {});
+    builder.CreateCall(fn, {$cond});
+  }];
+}
+
 #endif // LLVMIR_OPS
