@@ -103,28 +103,31 @@ Function *ParallelLoopGeneratorKMP::prepareSubFnDefinition(Function *F) const {
 
 // Create a subfunction of the following (preliminary) structure:
 //
-//    PrevBB
-//       |
-//       v
-//    HeaderBB
-//       |   _____
-//       v  v    |
-//   CheckNextBB  PreHeaderBB
-//       |\       |
-//       | \______/
-//       |
-//       v
-//     ExitBB
+//        PrevBB
+//           |
+//           v
+//        HeaderBB
+//       /   |    _____
+//      /    v   v     |
+//     / PreHeaderBB   |
+//    |      |         |
+//    |      v         |
+//    |  CheckNextBB   |
+//     \     |   \_____/
+//      \    |
+//       v   v
+//       ExitBB
 //
 // HeaderBB will hold allocations, loading of variables and kmp-init calls.
-// CheckNextBB will check for more work (dynamic) or will be "empty" (static).
+// CheckNextBB will check for more work (dynamic / static chunked) or will be
+// empty (static non chunked).
 // If there is more work to do: go to PreHeaderBB, otherwise go to ExitBB.
 // PreHeaderBB loads the new boundaries (& will lead to the loop body later on).
-// Just like CheckNextBB: PreHeaderBB is empty in the static scheduling case.
-// ExitBB marks the end of the parallel execution.
+// Just like CheckNextBB: PreHeaderBB is (preliminary) empty in the static non
+// chunked scheduling case. ExitBB marks the end of the parallel execution.
 // The possibly empty BasicBlocks will automatically be removed.
 std::tuple<Value *, Function *>
-ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
+ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
                                       AllocaInst *StructData,
                                       SetVector<Value *> Data, ValueMapT &Map) {
   Function *SubFn = createSubFnDefinition();
@@ -193,7 +196,10 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   Value *ChunkSize =
       ConstantInt::get(LongType, std::max<int>(PollyChunkSize, 1));
 
-  switch (PollyScheduling) {
+  OMPGeneralSchedulingType Scheduling =
+      getSchedType(PollyChunkSize, PollyScheduling);
+
+  switch (Scheduling) {
   case OMPGeneralSchedulingType::Dynamic:
   case OMPGeneralSchedulingType::Guided:
   case OMPGeneralSchedulingType::Runtime:
@@ -224,24 +230,56 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   case OMPGeneralSchedulingType::StaticNonChunked:
     // "STATIC" scheduling types are handled below
     {
+      Builder.CreateAlignedStore(AdjustedUB, UBPtr, Alignment);
       createCallStaticInit(ID, IsLastPtr, LBPtr, UBPtr, StridePtr, ChunkSize);
 
+      Value *ChunkedStride =
+          Builder.CreateAlignedLoad(StridePtr, Alignment, "polly.kmpc.stride");
+
       LB = Builder.CreateAlignedLoad(LBPtr, Alignment, "polly.indvar.LB");
-      UB = Builder.CreateAlignedLoad(UBPtr, Alignment, "polly.indvar.UB");
+      UB = Builder.CreateAlignedLoad(UBPtr, Alignment, "polly.indvar.UB.temp");
 
-      Value *AdjUBOutOfBounds =
-          Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLT, UB, AdjustedUB,
-                             "polly.adjustedUBOutOfBounds");
-
-      UB = Builder.CreateSelect(AdjUBOutOfBounds, UB, AdjustedUB);
+      Value *UBInRange =
+          Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLE, UB, AdjustedUB,
+                             "polly.indvar.UB.inRange");
+      UB = Builder.CreateSelect(UBInRange, UB, AdjustedUB, "polly.indvar.UB");
       Builder.CreateAlignedStore(UB, UBPtr, Alignment);
 
       Value *HasIteration = Builder.CreateICmp(
           llvm::CmpInst::Predicate::ICMP_SLE, LB, UB, "polly.hasIteration");
       Builder.CreateCondBr(HasIteration, PreHeaderBB, ExitBB);
 
+      if (Scheduling == OMPGeneralSchedulingType::StaticChunked) {
+        Builder.SetInsertPoint(PreHeaderBB);
+        LB = Builder.CreateAlignedLoad(LBPtr, Alignment,
+                                       "polly.indvar.LB.entry");
+        UB = Builder.CreateAlignedLoad(UBPtr, Alignment,
+                                       "polly.indvar.UB.entry");
+      }
+
       Builder.SetInsertPoint(CheckNextBB);
-      Builder.CreateBr(ExitBB);
+
+      if (Scheduling == OMPGeneralSchedulingType::StaticChunked) {
+        Value *NextLB =
+            Builder.CreateAdd(LB, ChunkedStride, "polly.indvar.nextLB");
+        Value *NextUB = Builder.CreateAdd(UB, ChunkedStride);
+
+        Value *NextUBOutOfBounds =
+            Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SGT, NextUB,
+                               AdjustedUB, "polly.indvar.nextUB.outOfBounds");
+        NextUB = Builder.CreateSelect(NextUBOutOfBounds, AdjustedUB, NextUB,
+                                      "polly.indvar.nextUB");
+
+        Builder.CreateAlignedStore(NextLB, LBPtr, Alignment);
+        Builder.CreateAlignedStore(NextUB, UBPtr, Alignment);
+
+        Value *HasWork =
+            Builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SLE, NextLB,
+                               AdjustedUB, "polly.hasWork");
+        Builder.CreateCondBr(HasWork, PreHeaderBB, ExitBB);
+      } else {
+        Builder.CreateBr(ExitBB);
+      }
 
       Builder.SetInsertPoint(PreHeaderBB);
     }
@@ -251,7 +289,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   Builder.CreateBr(CheckNextBB);
   Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
   BasicBlock *AfterBB;
-  Value *IV = createLoop(LB, UB, Stride, Builder, LI, DT, AfterBB,
+  Value *IV = createLoop(LB, UB, SequentialLoopStride, Builder, LI, DT, AfterBB,
                          ICmpInst::ICMP_SLE, nullptr, true,
                          /* UseGuard */ false);
 
@@ -260,7 +298,8 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   // Add code to terminate this subfunction.
   Builder.SetInsertPoint(ExitBB);
   // Static (i.e. non-dynamic) scheduling types, are terminated with a fini-call
-  if (PollyScheduling == OMPGeneralSchedulingType::StaticChunked) {
+  if (Scheduling == OMPGeneralSchedulingType::StaticChunked ||
+      Scheduling == OMPGeneralSchedulingType::StaticNonChunked) {
     createCallStaticFini(ID);
   }
   Builder.CreateRetVoid();
