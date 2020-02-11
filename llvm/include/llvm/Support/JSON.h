@@ -354,7 +354,7 @@ public:
   }
   // Serializable types: with a toJSON(const T&)->Value function, found by ADL.
   template <typename T,
-            typename = typename std::enable_if<std::is_same<
+            typename = std::enable_if_t<std::is_same<
                 Value, decltype(toJSON(*(const T *)nullptr))>::value>,
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
