@@ -767,6 +767,11 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (!MI.isCandidateForCallSiteEntry())
         continue;
 
+      // Skip instructions marked as frame setup, as they are not interesting to
+      // the user.
+      if (MI.getFlag(MachineInstr::FrameSetup))
+        continue;
+
       // TODO: Add support for targets with delay slots (see: beginInstruction).
       if (MI.hasDelaySlot())
         return;
