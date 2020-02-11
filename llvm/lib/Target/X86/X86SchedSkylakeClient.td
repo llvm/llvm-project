@@ -362,9 +362,9 @@ defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : SKLWriteResPair<WriteVecTest,  [SKLPort0,SKLPort5], 3, [1,1], 2, 6>; // Vector integer TEST instructions.
 defm : SKLWriteResPair<WriteVecTestY, [SKLPort0,SKLPort5], 3, [1,1], 2, 7>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
-defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0] ,  4, [1], 1, 5>; // Vector integer multiply.
-defm : SKLWriteResPair<WriteVecIMulX, [SKLPort01],  4, [1], 1, 6>;
-defm : SKLWriteResPair<WriteVecIMulY, [SKLPort01],  4, [1], 1, 7>;
+defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0] ,  5, [1], 1, 5>; // Vector integer multiply.
+defm : SKLWriteResPair<WriteVecIMulX, [SKLPort01],  5, [1], 1, 6>;
+defm : SKLWriteResPair<WriteVecIMulY, [SKLPort01],  5, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : SKLWriteResPair<WritePMULLD,   [SKLPort01], 10, [2], 2, 6>; // Vector PMULLD.
 defm : SKLWriteResPair<WritePMULLDY,  [SKLPort01], 10, [2], 2, 7>;
