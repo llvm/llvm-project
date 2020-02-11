@@ -6030,14 +6030,11 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
-    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, &TLI)) {
-      I.setOperand(0, ConstantFP::getNullValue(OpType));
-      return &I;
-    }
-    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, &TLI)) {
-      I.setOperand(1, ConstantFP::getNullValue(OpType));
-      return &I;
-    }
+    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, &TLI))
+      return replaceOperand(I, 0, ConstantFP::getNullValue(OpType));
+
+    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, &TLI))
+      return replaceOperand(I, 1, ConstantFP::getNullValue(OpType));
   }
 
   // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
@@ -6062,10 +6059,8 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
 
   // The sign of 0.0 is ignored by fcmp, so canonicalize to +0.0:
   // fcmp Pred X, -0.0 --> fcmp Pred X, 0.0
-  if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP())) {
-    I.setOperand(1, ConstantFP::getNullValue(OpType));
-    return &I;
-  }
+  if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP()))
+    return replaceOperand(I, 1, ConstantFP::getNullValue(OpType));
 
   // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;

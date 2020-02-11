@@ -388,8 +388,7 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
     // demand the sign bit (and many others) here??
     Value *Rem = Builder.CreateAnd(A, ConstantInt::get(I.getType(), *B - 1),
                                    Op1->getName());
-    I.setOperand(1, Rem);
-    return &I;
+    return replaceOperand(I, 1, Rem);
   }
 
   if (Instruction *Logic = foldShiftOfShiftedLogic(I, Builder))
