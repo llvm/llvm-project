@@ -329,25 +329,21 @@ public:
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
-  template <
-      typename T,
-      typename = typename std::enable_if<std::is_same<T, bool>::value>::type,
-      bool = false>
+  template <typename T,
+            typename = std::enable_if_t<std::is_same<T, bool>::value>,
+            bool = false>
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
   }
   // Integers (except boolean). Must be non-narrowing convertible to int64_t.
-  template <
-      typename T,
-      typename = typename std::enable_if<std::is_integral<T>::value>::type,
-      typename = typename std::enable_if<!std::is_same<T, bool>::value>::type>
+  template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>,
+            typename = std::enable_if_t<!std::is_same<T, bool>::value>>
   Value(T I) : Type(T_Integer) {
     create<int64_t>(int64_t{I});
   }
   // Floating point. Must be non-narrowing convertible to double.
   template <typename T,
-            typename =
-                typename std::enable_if<std::is_floating_point<T>::value>::type,
+            typename = std::enable_if_t<std::is_floating_point<T>::value>,
             double * = nullptr>
   Value(T D) : Type(T_Double) {
     create<double>(double{D});

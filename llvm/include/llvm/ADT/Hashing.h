@@ -101,8 +101,7 @@ public:
 /// differing argument types even if they would implicit promote to a common
 /// type without changing the value.
 template <typename T>
-typename std::enable_if<is_integral_or_enum<T>::value, hash_code>::type
-hash_value(T value);
+std::enable_if_t<is_integral_or_enum<T>::value, hash_code> hash_value(T value);
 
 /// Compute a hash_code for a pointer's address.
 ///
@@ -360,7 +359,7 @@ template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
 /// Helper to get the hashable data representation for a type.
 /// This variant is enabled when the type itself can be used.
 template <typename T>
-typename std::enable_if<is_hashable_data<T>::value, T>::type
+std::enable_if_t<is_hashable_data<T>::value, T>
 get_hashable_data(const T &value) {
   return value;
 }
@@ -368,7 +367,7 @@ get_hashable_data(const T &value) {
 /// This variant is enabled when we must first call hash_value and use the
 /// result as our data.
 template <typename T>
-typename std::enable_if<!is_hashable_data<T>::value, size_t>::type
+std::enable_if_t<!is_hashable_data<T>::value, size_t>
 get_hashable_data(const T &value) {
   using ::llvm::hash_value;
   return hash_value(value);
@@ -442,7 +441,7 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
 /// are stored in contiguous memory, this routine avoids copying each value
 /// and directly reads from the underlying memory.
 template <typename ValueT>
-typename std::enable_if<is_hashable_data<ValueT>::value, hash_code>::type
+std::enable_if_t<is_hashable_data<ValueT>::value, hash_code>
 hash_combine_range_impl(ValueT *first, ValueT *last) {
   const uint64_t seed = get_execution_seed();
   const char *s_begin = reinterpret_cast<const char *>(first);
@@ -627,8 +626,7 @@ inline hash_code hash_integer_value(uint64_t value) {
 // Declared and documented above, but defined here so that any of the hashing
 // infrastructure is available.
 template <typename T>
-typename std::enable_if<is_integral_or_enum<T>::value, hash_code>::type
-hash_value(T value) {
+std::enable_if_t<is_integral_or_enum<T>::value, hash_code> hash_value(T value) {
   return ::llvm::hashing::detail::hash_integer_value(
       static_cast<uint64_t>(value));
 }

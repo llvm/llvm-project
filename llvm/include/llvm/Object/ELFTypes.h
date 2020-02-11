@@ -53,7 +53,7 @@ public:
   static const endianness TargetEndianness = E;
   static const bool Is64Bits = Is64;
 
-  using uint = typename std::conditional<Is64, uint64_t, uint32_t>::type;
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
   using Ehdr = Elf_Ehdr_Impl<ELFType<E, Is64>>;
   using Shdr = Elf_Shdr_Impl<ELFType<E, Is64>>;
   using Sym = Elf_Sym_Impl<ELFType<E, Is64>>;
@@ -346,10 +346,8 @@ template <class ELFT>
 struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   using Elf_Dyn_Base<ELFT>::d_tag;
   using Elf_Dyn_Base<ELFT>::d_un;
-  using intX_t = typename std::conditional<ELFT::Is64Bits,
-                                           int64_t, int32_t>::type;
-  using uintX_t = typename std::conditional<ELFT::Is64Bits,
-                                            uint64_t, uint32_t>::type;
+  using intX_t = std::conditional_t<ELFT::Is64Bits, int64_t, int32_t>;
+  using uintX_t = std::conditional_t<ELFT::Is64Bits, uint64_t, uint32_t>;
   intX_t getTag() const { return d_tag; }
   uintX_t getVal() const { return d_un.d_val; }
   uintX_t getPtr() const { return d_un.d_ptr; }

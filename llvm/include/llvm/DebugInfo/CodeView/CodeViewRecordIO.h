@@ -114,7 +114,7 @@ public:
     if (!isStreaming() && sizeof(Value) > maxFieldLength())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
 
-    using U = typename std::underlying_type<T>::type;
+    using U = std::underlying_type_t<T>;
     U X;
 
     if (isWriting() || isStreaming())
