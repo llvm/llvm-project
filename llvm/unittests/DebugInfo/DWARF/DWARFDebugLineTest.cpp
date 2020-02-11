@@ -955,13 +955,13 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
                       1, CompDir,
                       DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
                       Result));
-  EXPECT_STREQ(Result.c_str(), "b dir/b file");
+  EXPECT_THAT(Result.c_str(), MatchesRegex("b dir.b file"));
   EXPECT_TRUE((*ExpectedLineTable)
                   ->Prologue.getFileNameByIndex(
                       1, CompDir,
                       DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                       Result));
-  EXPECT_STREQ(Result.c_str(), "a dir/b dir/b file");
+  EXPECT_THAT(Result.c_str(), MatchesRegex("a dir.b dir.b file"));
 }
 
 } // end anonymous namespace
