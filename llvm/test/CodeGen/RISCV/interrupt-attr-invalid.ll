@@ -1,6 +1,6 @@
-; RUN: not llc -mtriple riscv32-unknown-elf -o - %s \
+; RUN: not --crash llc -mtriple riscv32-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s
-; RUN: not llc -mtriple riscv64-unknown-elf -o - %s \
+; RUN: not --crash llc -mtriple riscv64-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Function interrupt attribute argument not supported!
