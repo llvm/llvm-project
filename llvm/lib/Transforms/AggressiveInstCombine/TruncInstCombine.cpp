@@ -36,24 +36,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-// This function returns true if Value V is a constant or if it's a type
-// extension node.
-static bool isConstOrExt(Value *V) {
-  if (isa<Constant>(V))
-    return true;
-
-  if (Instruction *I = dyn_cast<Instruction>(V)) {
-    switch(I->getOpcode()) {
-    case Instruction::ZExt:
-    case Instruction::SExt:
-      return true;
-    default:
-      return false;
-    }
-  }
-  return false;
-}
-
 /// Given an instruction and a container, it fills all the relevant operands of
 /// that instruction, with respect to the Trunc expression dag optimizaton.
 static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
@@ -71,20 +53,12 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::ICmp:
     Ops.push_back(I->getOperand(0));
     Ops.push_back(I->getOperand(1));
     break;
   case Instruction::Select:
-    Value *Op0 = I->getOperand(0);
     Ops.push_back(I->getOperand(1));
     Ops.push_back(I->getOperand(2));
-    // In case the condition is a compare instruction, that both of its operands
-    // are a type extension/truncate or a constant, that can be shrinked without
-    // loosing information in the compare instruction, add them as well.
-    if (CmpInst *C = dyn_cast<CmpInst>(Op0))
-      if (isConstOrExt(C->getOperand(0)) && isConstOrExt(C->getOperand(1)))
-        Ops.push_back(Op0);
     break;
   default:
     llvm_unreachable("Unreachable!");
@@ -145,8 +119,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor:
-    case Instruction::Select:
-    case Instruction::ICmp: {
+    case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
       for (Value *Operand : Operands)
@@ -164,21 +137,6 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     }
   }
   return true;
-}
-
-// Get the minimum number of bits needed for the given constant.
-static unsigned getConstMinBitWidth(bool IsSigned, ConstantInt *C) {
-  // If the const value is signed and negative, count the leading ones.
-  if (IsSigned) {
-    int64_t Val = C->getSExtValue();
-    uint64_t UVal = (uint64_t)Val;
-    if (Val < 0)
-      return sizeof(UVal)*8 - countLeadingOnes(UVal) + 1;
-  }
-  // Otherwise, count leading zeroes.
-  uint64_t Val = C->getZExtValue();
-  auto MinBits = sizeof(Val)*8 - countLeadingZeros(Val);
-  return IsSigned ? MinBits + 1 : MinBits;
 }
 
 unsigned TruncInstCombine::getMinBitWidth() {
@@ -222,13 +180,6 @@ unsigned TruncInstCombine::getMinBitWidth() {
         if (auto *IOp = dyn_cast<Instruction>(Operand))
           Info.MinBitWidth =
               std::max(Info.MinBitWidth, InstInfoMap[IOp].MinBitWidth);
-        else if (auto *C = dyn_cast<ConstantInt>(Operand)) {
-          // In case of Cmp instruction, make sure the constant can be truncated
-          // without losing information.
-          if (CmpInst *Cmp = dyn_cast<CmpInst>(I))
-            Info.MinBitWidth = std::max(
-                Info.MinBitWidth, getConstMinBitWidth(Cmp->isSigned(), C));
-        }
       continue;
     }
 
@@ -242,27 +193,14 @@ unsigned TruncInstCombine::getMinBitWidth() {
 
     for (auto *Operand : Operands)
       if (auto *IOp = dyn_cast<Instruction>(Operand)) {
-        if (isa<CmpInst>(I)) {
-          // Cmp instructions kind of resets the valid bits analysis for its
-          // operands, as it does not continue with the same calculation chain
-          // but rather creates a new chain of its own.
-          switch (IOp->getOpcode()) {
-          case Instruction::SExt:
-          case Instruction::ZExt:
-            InstInfoMap[IOp].ValidBitWidth =
-                cast<CastInst>(IOp)->getSrcTy()->getScalarSizeInBits();
-            break;
-          }
-        } else {
-          // If we already calculated the minimum bit-width for this valid
-          // bit-width, or for a smaller valid bit-width, then just keep the
-          // answer we already calculated.
-          unsigned IOpBitwidth = InstInfoMap.lookup(IOp).ValidBitWidth;
-          if (IOpBitwidth >= ValidBitWidth)
-            continue;
-          InstInfoMap[IOp].ValidBitWidth = ValidBitWidth;
-          Worklist.push_back(IOp);
-        }
+        // If we already calculated the minimum bit-width for this valid
+        // bit-width, or for a smaller valid bit-width, then just keep the
+        // answer we already calculated.
+        unsigned IOpBitwidth = InstInfoMap.lookup(IOp).ValidBitWidth;
+        if (IOpBitwidth >= ValidBitWidth)
+          continue;
+        InstInfoMap[IOp].ValidBitWidth = ValidBitWidth;
+        Worklist.push_back(IOp);
       }
   }
   unsigned MinBitWidth = InstInfoMap.lookup(cast<Instruction>(Src)).MinBitWidth;
@@ -423,13 +361,6 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
       Res = Builder.CreateSelect(Op0, LHS, RHS);
-      break;
-    }
-    case Instruction::ICmp: {
-      auto ICmp = cast<ICmpInst>(I);
-      Value *LHS = getReducedOperand(ICmp->getOperand(0), SclTy);
-      Value *RHS = getReducedOperand(ICmp->getOperand(1), SclTy);
-      Res = Builder.CreateICmp(ICmp->getPredicate(), LHS, RHS);
       break;
     }
     default:
