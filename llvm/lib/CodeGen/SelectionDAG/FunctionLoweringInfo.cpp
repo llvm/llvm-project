@@ -407,7 +407,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
 
   if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->Known = LOI->Known.zext(BitWidth, false /* => any extend */);
+    LOI->Known = LOI->Known.anyext(BitWidth);
   }
 
   return LOI;
