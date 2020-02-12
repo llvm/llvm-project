@@ -34,7 +34,7 @@ protected:
 private:
   static T getTestGraph() {
     using std::make_pair;
-    typename std::remove_const<T>::type G;
+    std::remove_const_t<T> G;
     G.insert(make_pair(1u, VAttr({3u})));
     G.insert(make_pair(2u, VAttr({5u})));
     G.insert(make_pair(3u, VAttr({7u})));

@@ -133,8 +133,8 @@ public:
     /// ``CheckOptions``. If the corresponding key is not present, returns
     /// \p Default.
     template <typename T>
-    typename std::enable_if<std::is_integral<T>::value, T>::type
-    get(StringRef LocalName, T Default) const {
+    std::enable_if_t<std::is_integral<T>::value, T> get(StringRef LocalName,
+                                                        T Default) const {
       std::string Value = get(LocalName, "");
       T Result = Default;
       if (!Value.empty())
@@ -150,7 +150,7 @@ public:
     /// present, falls back to get global option. If global option is not
     /// present either, returns Default.
     template <typename T>
-    typename std::enable_if<std::is_integral<T>::value, T>::type
+    std::enable_if_t<std::is_integral<T>::value, T>
     getLocalOrGlobal(StringRef LocalName, T Default) const {
       std::string Value = getLocalOrGlobal(LocalName, "");
       T Result = Default;

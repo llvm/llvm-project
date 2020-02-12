@@ -30,9 +30,8 @@ struct FoldingSetNodeIDBuilder {
   void operator()(StringView Str) {
     ID.AddString(llvm::StringRef(Str.begin(), Str.size()));
   }
-  template<typename T>
-  typename std::enable_if<std::is_integral<T>::value ||
-                          std::is_enum<T>::value>::type
+  template <typename T>
+  std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>
   operator()(T V) {
     ID.AddInteger((unsigned long long)V);
   }

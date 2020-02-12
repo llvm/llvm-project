@@ -52,7 +52,7 @@ protected:
 
 private:
   static T GetTestSet() {
-    typename std::remove_const<T>::type Set;
+    std::remove_const_t<T> Set;
     Set.insert(0);
     Set.insert(1);
     Set.insert(2);

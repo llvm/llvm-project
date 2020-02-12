@@ -194,14 +194,14 @@ template <
     typename T = typename std::iterator_traits<WrappedIteratorT>::value_type,
     typename DifferenceTypeT =
         typename std::iterator_traits<WrappedIteratorT>::difference_type,
-    typename PointerT = typename std::conditional<
+    typename PointerT = std::conditional_t<
         std::is_same<T, typename std::iterator_traits<
                             WrappedIteratorT>::value_type>::value,
-        typename std::iterator_traits<WrappedIteratorT>::pointer, T *>::type,
-    typename ReferenceT = typename std::conditional<
+        typename std::iterator_traits<WrappedIteratorT>::pointer, T *>,
+    typename ReferenceT = std::conditional_t<
         std::is_same<T, typename std::iterator_traits<
                             WrappedIteratorT>::value_type>::value,
-        typename std::iterator_traits<WrappedIteratorT>::reference, T &>::type>
+        typename std::iterator_traits<WrappedIteratorT>::reference, T &>>
 class iterator_adaptor_base
     : public iterator_facade_base<DerivedT, IteratorCategoryT, T,
                                   DifferenceTypeT, PointerT, ReferenceT> {
@@ -281,8 +281,8 @@ public:
 ///   using iterator = pointee_iterator<SmallVectorImpl<T *>::iterator>;
 /// \endcode
 template <typename WrappedIteratorT,
-          typename T = typename std::remove_reference<
-              decltype(**std::declval<WrappedIteratorT>())>::type>
+          typename T = std::remove_reference_t<decltype(
+              **std::declval<WrappedIteratorT>())>>
 struct pointee_iterator
     : iterator_adaptor_base<
           pointee_iterator<WrappedIteratorT, T>, WrappedIteratorT,
@@ -334,9 +334,11 @@ make_pointer_range(RangeT &&Range) {
 }
 
 template <typename WrappedIteratorT,
-          typename T1 = typename std::remove_reference<decltype(**std::declval<WrappedIteratorT>())>::type,
-          typename T2 = typename std::add_pointer<T1>::type>
-using raw_pointer_iterator = pointer_iterator<pointee_iterator<WrappedIteratorT, T1>, T2>;
+          typename T1 = std::remove_reference_t<decltype(
+              **std::declval<WrappedIteratorT>())>,
+          typename T2 = std::add_pointer_t<T1>>
+using raw_pointer_iterator =
+    pointer_iterator<pointee_iterator<WrappedIteratorT, T1>, T2>;
 
 // Wrapper iterator over iterator ItType, adding DataRef to the type of ItType,
 // to create NodeRef = std::pair<InnerTypeOfItType, DataRef>.

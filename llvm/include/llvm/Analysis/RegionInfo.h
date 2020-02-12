@@ -574,10 +574,9 @@ public:
   template <bool IsConst>
   class block_iterator_wrapper
       : public df_iterator<
-            typename std::conditional<IsConst, const BlockT, BlockT>::type *> {
+            std::conditional_t<IsConst, const BlockT, BlockT> *> {
     using super =
-        df_iterator<
-            typename std::conditional<IsConst, const BlockT, BlockT>::type *>;
+        df_iterator<std::conditional_t<IsConst, const BlockT, BlockT> *>;
 
   public:
     using Self = block_iterator_wrapper<IsConst>;

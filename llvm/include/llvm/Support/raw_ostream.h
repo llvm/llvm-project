@@ -358,9 +358,9 @@ private:
 /// Call the appropriate insertion operator, given an rvalue reference to a
 /// raw_ostream object and return a stream of the same type as the argument.
 template <typename OStream, typename T>
-typename std::enable_if<!std::is_reference<OStream>::value &&
-                            std::is_base_of<raw_ostream, OStream>::value,
-                        OStream &&>::type
+std::enable_if_t<!std::is_reference<OStream>::value &&
+                     std::is_base_of<raw_ostream, OStream>::value,
+                 OStream &&>
 operator<<(OStream &&OS, const T &Value) {
   OS << Value;
   return std::move(OS);

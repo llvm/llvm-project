@@ -225,7 +225,7 @@ class DominatorTreeBase {
   using ParentPtr = decltype(std::declval<NodeT *>()->getParent());
   static_assert(std::is_pointer<ParentPtr>::value,
                 "Currently NodeT's parent must be a pointer type");
-  using ParentType = typename std::remove_pointer<ParentPtr>::type;
+  using ParentType = std::remove_pointer_t<ParentPtr>;
   static constexpr bool IsPostDominator = IsPostDom;
 
   using UpdateType = cfg::Update<NodePtr>;
