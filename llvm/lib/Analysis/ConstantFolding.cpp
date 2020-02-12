@@ -2400,6 +2400,11 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = VTy->getElementType();
 
+  // Do not iterate on scalable vector. The number of elements is unknown at
+  // compile-time.
+  if (VTy->getVectorIsScalable())
+    return nullptr;
+
   if (IntrinsicID == Intrinsic::masked_load) {
     auto *SrcPtr = Operands[0];
     auto *Mask = Operands[2];
