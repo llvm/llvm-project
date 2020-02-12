@@ -308,7 +308,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // FIXME: Not really legal. Placeholder for custom lowering.
   getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
-    .legalFor({S32, S64})
+    .customFor({S32, S64})
     .clampScalar(0, S32, S64)
     .widenScalarToNextPow2(0, 32)
     .scalarize(0);
@@ -1350,6 +1350,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
     return legalizeFDIV(MI, MRI, B);
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_UREM:
+    return legalizeUDIV_UREM(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
@@ -2312,6 +2315,122 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   if (DstTy == S64)
     return legalizeFDIV64(MI, MRI, B);
 
+  return false;
+}
+
+static Register buildDivRCP(MachineIRBuilder &B, Register Src) {
+  const LLT S32 = LLT::scalar(32);
+
+  auto Cvt0 = B.buildUITOFP(S32, Src);
+  auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Cvt0});
+  auto FPUIntMaxPlus1 = B.buildFConstant(S32, BitsToFloat(0x4f800000));
+  auto Mul = B.buildFMul(S32, RcpIFlag, FPUIntMaxPlus1);
+  return B.buildFPTOUI(S32, Mul).getReg(0);
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
+
+  const LLT S1 = LLT::scalar(1);
+  const LLT S32 = LLT::scalar(32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Num = MI.getOperand(1).getReg();
+  Register Den = MI.getOperand(2).getReg();
+
+  // RCP =  URECIP(Den) = 2^32 / Den + e
+  // e is rounding error.
+  auto RCP = buildDivRCP(B, Den);
+
+  // RCP_LO = mul(RCP, Den)
+  auto RCP_LO = B.buildMul(S32, RCP, Den);
+
+  // RCP_HI = mulhu (RCP, Den) */
+  auto RCP_HI = B.buildUMulH(S32, RCP, Den);
+
+  // NEG_RCP_LO = -RCP_LO
+  auto Zero = B.buildConstant(S32, 0);
+  auto NEG_RCP_LO = B.buildSub(S32, Zero, RCP_LO);
+
+  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
+  auto CmpRcpHiZero = B.buildICmp(CmpInst::ICMP_EQ, S1, RCP_HI, Zero);
+  auto ABS_RCP_LO = B.buildSelect(S32, CmpRcpHiZero, NEG_RCP_LO, RCP_LO);
+
+  // Calculate the rounding error from the URECIP instruction
+  // E = mulhu(ABS_RCP_LO, RCP)
+  auto E = B.buildUMulH(S32, ABS_RCP_LO, RCP);
+
+  // RCP_A_E = RCP + E
+  auto RCP_A_E = B.buildAdd(S32, RCP, E);
+
+  // RCP_S_E = RCP - E
+  auto RCP_S_E = B.buildSub(S32, RCP, E);
+
+  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
+  auto Tmp0 = B.buildSelect(S32, CmpRcpHiZero, RCP_A_E, RCP_S_E);
+
+  // Quotient = mulhu(Tmp0, Num)stmp
+  auto Quotient = B.buildUMulH(S32, Tmp0, Num);
+
+  // Num_S_Remainder = Quotient * Den
+  auto Num_S_Remainder = B.buildMul(S32, Quotient, Den);
+
+  // Remainder = Num - Num_S_Remainder
+  auto Remainder = B.buildSub(S32, Num, Num_S_Remainder);
+
+  // Remainder_GE_Den = Remainder >= Den
+  auto Remainder_GE_Den = B.buildICmp(CmpInst::ICMP_UGE, S1, Remainder, Den);
+
+  // Remainder_GE_Zero = Num >= Num_S_Remainder;
+  auto Remainder_GE_Zero = B.buildICmp(CmpInst::ICMP_UGE, S1,
+                                       Num, Num_S_Remainder);
+
+  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
+  auto Tmp1 = B.buildAnd(S1, Remainder_GE_Den, Remainder_GE_Zero);
+
+  // Calculate Division result:
+
+  // Quotient_A_One = Quotient + 1
+  auto One = B.buildConstant(S32, 1);
+  auto Quotient_A_One = B.buildAdd(S32, Quotient, One);
+
+  // Quotient_S_One = Quotient - 1
+  auto Quotient_S_One = B.buildSub(S32, Quotient, One);
+
+  // Div = (Tmp1 == 0 ? Quotient_A_One : Quotient)
+  auto Div = B.buildSelect(S32, Tmp1, Quotient, Quotient_A_One);
+
+  // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
+  if (IsRem) {
+    Div = B.buildSelect(S32, Remainder_GE_Zero, Div, Quotient_S_One);
+
+    // Calculate Rem result:
+    auto Remainder_S_Den = B.buildSub(S32, Remainder, Den);
+
+    // Remainder_A_Den = Remainder + Den
+    auto Remainder_A_Den = B.buildAdd(S32, Remainder, Den);
+
+    // Rem = (Tmp1 ? Remainder_S_Den : Remainder)
+    auto Rem = B.buildSelect(S32, Tmp1, Remainder_S_Den, Remainder);
+
+    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
+    B.buildSelect(DstReg, Remainder_GE_Zero, Rem, Remainder_A_Den);
+  } else {
+    B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+    return legalizeUDIV_UREM32(MI, MRI, B);
   return false;
 }
 
