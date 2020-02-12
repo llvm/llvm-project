@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-openmp %s
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-source-uses-openmp %s
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp45,omp45warn %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45,omp45warn %s
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
@@ -5581,6 +5581,36 @@ void foo() {
 #pragma omp target teams distribute simd // OK
   for (int j = 0; j < 10; ++j)
     ++a;
+  }
+#pragma omp taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{region cannot be closely nested inside 'taskloop' region}}
+#pragma omp cancellation point taskgroup // omp45-error {{region cannot be closely nested inside 'taskloop' region}}
+  }
+#pragma omp taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'taskloop' region}}
+#pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'taskloop' region}}
+  }
+#pragma omp master taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{region cannot be closely nested inside 'master taskloop' region}}
+#pragma omp cancellation point taskgroup // omp45-error {{region cannot be closely nested inside 'master taskloop' region}}
+  }
+#pragma omp master taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'master taskloop' region}}
+#pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'master taskloop' region}}
+  }
+#pragma omp parallel master taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup // omp45-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
+#pragma omp cancellation point taskgroup // omp45-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
+  }
+#pragma omp parallel master taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel parallel // expected-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
+#pragma omp cancellation point parallel // expected-error {{region cannot be closely nested inside 'parallel master taskloop' region}}
   }
 
 // DISTRIBUTE DIRECTIVE
