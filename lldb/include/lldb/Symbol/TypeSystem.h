@@ -199,6 +199,8 @@ public:
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
+
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
               CompilerType *pointee_or_element_compiler_type) = 0;
