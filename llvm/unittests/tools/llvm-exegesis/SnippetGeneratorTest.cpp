@@ -20,13 +20,12 @@ TEST(CombinationGenerator, Square) {
   const std::vector<std::vector<int>> Choices{{0, 1}, {2, 3}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 2},
@@ -42,13 +41,12 @@ TEST(CombinationGenerator, MiddleColumn) {
   const std::vector<std::vector<int>> Choices{{0}, {1, 2}, {3}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 1, 3},
@@ -62,13 +60,12 @@ TEST(CombinationGenerator, SideColumns) {
   const std::vector<std::vector<int>> Choices{{0, 1}, {2}, {3, 4}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 2, 3},
@@ -84,13 +81,12 @@ TEST(CombinationGenerator, LeftColumn) {
   const std::vector<std::vector<int>> Choices{{0, 1}, {2}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 2},
@@ -104,13 +100,12 @@ TEST(CombinationGenerator, RightColumn) {
   const std::vector<std::vector<int>> Choices{{0}, {1, 2}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 1},
@@ -124,13 +119,12 @@ TEST(CombinationGenerator, Column) {
   const std::vector<std::vector<int>> Choices{{0, 1}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0},
@@ -144,13 +138,12 @@ TEST(CombinationGenerator, Row) {
   const std::vector<std::vector<int>> Choices{{0}, {1}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0, 1},
@@ -163,13 +156,12 @@ TEST(CombinationGenerator, Singleton) {
   const std::vector<std::vector<int>> Choices{{0}};
 
   std::vector<std::vector<int>> Variants;
-  CombinationGenerator<int, std::vector<int>, 4> G(
-      Choices, [&](ArrayRef<int> State) -> bool {
-        Variants.emplace_back(State);
-        return false; // keep going
-      });
+  CombinationGenerator<int, std::vector<int>, 4> G(Choices);
   const size_t NumVariants = G.numCombinations();
-  G.generate();
+  G.generate([&](ArrayRef<int> State) -> bool {
+    Variants.emplace_back(State);
+    return false; // keep going
+  });
 
   const std::vector<std::vector<int>> ExpectedVariants{
       {0},
