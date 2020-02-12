@@ -205,13 +205,6 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   return op;
 }
 
-static void mulRegionBuilder(ArrayRef<BlockArgument> args) {
-  using edsc::op::operator*;
-  assert(args.size() == 2 && "expected 2 block arguments");
-  ValueHandle a(args[0]), b(args[1]);
-  linalg_yield((a * b).getValue());
-}
-
 void mlir::edsc::ops::mulRegionBuilder(ArrayRef<BlockArgument> args) {
   using edsc::op::operator+;
   using edsc::op::operator*;
