@@ -2771,8 +2771,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (HonorINFs && HonorNaNs &&
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
-        // FIXME: This should check for IEEE when it's the default.
-        DenormalFPMath != llvm::DenormalMode::getInvalid() &&
         FPContract.equals("off"))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
