@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
@@ -214,6 +215,103 @@ public:
   //==========================================================================//
   // Other interface methods.
   //==========================================================================//
+
+  // Get or build the indexing_maps ArrayAttr.
+  ArrayAttr iterator_types() {
+    // Return the attribute if it is present.
+    if (auto attr = this->getOperation()->getAttr("iterator_types"))
+      return attr.template cast<ArrayAttr>();
+
+    // If not, form the attribute using the reference iterator types for the
+    // ConcreteType.
+    auto maybeReferenceIteratorTypes =
+        cast<ConcreteType>(this->getOperation()).referenceIterators();
+
+    // If there is no reference, this must be a generic op.
+    // TODO(ntv): Traits are used to define ops. Split into cpp to avoid
+    // cyclic dependency.
+    auto name = this->getOperation()->getName().getStringRef();
+    if (!maybeReferenceIteratorTypes && name != "generic" &&
+        name != "indexed_generic") {
+      this->getOperation()->dump();
+      llvm_unreachable("Op missing ");
+    }
+
+    // If we have a reference, build the reference attribute.
+    auto *ctx = this->getOperation()->getContext();
+    auto attrRange = llvm::map_range(*maybeReferenceIteratorTypes,
+                                     [ctx](StringRef str) -> Attribute {
+                                       return StringAttr::get(str, ctx);
+                                     });
+    auto attr = ArrayAttr::get(llvm::to_vector<4>(attrRange), ctx);
+    // TODO(ntv): Need to memoize this. Can't just store as an attribute atm as
+    // it will impact parser, printer and tests.
+    // this->getOperation()->setAttr("iterator_types", attr);
+    return attr;
+  }
+
+  // Get or build the indexing_maps ArrayAttr.
+  ArrayAttr indexing_maps() {
+    // Return the attribute if it is present.
+    if (auto attr = this->getOperation()->getAttr("indexing_maps"))
+      return attr.template cast<ArrayAttr>();
+
+    // If not, form the attribute using the reference indexing map for the
+    // ConcreteType.
+    auto maybeReferenceIndexingMaps =
+        cast<ConcreteType>(this->getOperation()).referenceIndexingMaps();
+
+    // If there is no reference, this must be a generic op.
+    auto name = this->getOperation()->getName().getStringRef();
+    if (!maybeReferenceIndexingMaps && name != "generic" &&
+        name != "indexed_generic") {
+      this->getOperation()->dump();
+      llvm_unreachable("Op missing referenceIndexingMaps");
+    }
+
+    // If we have a reference, build the reference attribute and set it in the
+    // op before returning.
+    auto *ctx = this->getOperation()->getContext();
+    auto attrRange =
+        llvm::map_range(*maybeReferenceIndexingMaps, [ctx](AffineMap map) {
+          // 0-D corner case because there is no such thing as a concrete empty
+          // map type.
+          if (!map)
+            map = AffineMap::get(0, 0, getAffineConstantExpr(0, ctx));
+          return AffineMapAttr::get(map);
+        });
+    SmallVector<Attribute, 4> attrs{attrRange.begin(), attrRange.end()};
+    auto attr = ArrayAttr::get(attrs, ctx);
+    // TODO(ntv): Need to memoize this. Can't just store as an attribute atm as
+    // it will impact parser, printer and tests.
+    // this->getOperation()->setAttr("indexing_maps", attr);
+    return attr;
+  }
+
+  AffineMap getIndexingMap(unsigned i) {
+    assert(i < getNumInputsAndOutputs());
+    return indexing_maps()
+        .getValue()[i]
+        .template cast<AffineMapAttr>()
+        .getValue();
+  }
+
+  AffineMap getInputIndexingMap(unsigned i) {
+    assert(i < nInputs());
+    return indexing_maps()
+        .getValue()[i]
+        .template cast<AffineMapAttr>()
+        .getValue();
+  }
+
+  AffineMap getOutputIndexingMap(unsigned i) {
+    assert(i < nOutputs());
+    return indexing_maps()
+        .getValue()[i + nInputs()]
+        .template cast<AffineMapAttr>()
+        .getValue();
+  }
+
   /// Query whether the op has only buffer inputs and no returns.
   bool hasBufferSemantics() {
     return this->getOperation()->getNumResults() == 0 &&
