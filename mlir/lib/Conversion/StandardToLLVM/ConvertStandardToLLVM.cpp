@@ -385,7 +385,8 @@ LLVMOpLowering::LLVMOpLowering(StringRef rootOpName, MLIRContext *context,
 /*============================================================================*/
 StructBuilder::StructBuilder(Value v) : value(v) {
   assert(value != nullptr && "value cannot be null");
-  structType = value.getType().cast<LLVM::LLVMType>();
+  structType = value.getType().dyn_cast<LLVM::LLVMType>();
+  assert(structType && "expected llvm type");
 }
 
 Value StructBuilder::extractPtr(OpBuilder &builder, Location loc,
@@ -2303,6 +2304,8 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
       return matchFailure();
 
     // Create the descriptor.
+    if (!operands.front().getType().isa<LLVM::LLVMType>())
+      return matchFailure();
     MemRefDescriptor sourceMemRef(operands.front());
     auto targetMemRef = MemRefDescriptor::undef(rewriter, loc, targetDescTy);
 
