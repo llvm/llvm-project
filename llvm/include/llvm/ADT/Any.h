@@ -74,7 +74,7 @@ public:
                     // adopting it to work-around usage of `Any` with types that
                     // need to be implicitly convertible from an `Any`.
                     llvm::negation<std::is_convertible<Any, std::decay_t<T>>>,
-                    std::is_copy_constructible<std::decay<T>>>::value,
+                    std::is_copy_constructible<std::decay_t<T>>>::value,
                 int> = 0>
   Any(T &&Value) {
     Storage =
