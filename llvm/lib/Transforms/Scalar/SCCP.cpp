@@ -85,13 +85,19 @@ class LatticeVal {
     /// constant - This LLVM Value has a specific constant value.
     constant,
 
+    /// forcedconstant - This LLVM Value was thought to be undef until
+    /// ResolvedUndefsIn.  This is treated just like 'constant', but if merged
+    /// with another (different) constant, it goes to overdefined, instead of
+    /// asserting.
+    forcedconstant,
+
     /// overdefined - This instruction is not known to be constant, and we know
     /// it has a value.
     overdefined
   };
 
   /// Val: This stores the current lattice value along with the Constant* for
-  /// the constant if this is a 'constant' value.
+  /// the constant if this is a 'constant' or 'forcedconstant' value.
   PointerIntPair<Constant *, 2, LatticeValueTy> Val;
 
   LatticeValueTy getLatticeValue() const {
@@ -103,7 +109,9 @@ public:
 
   bool isUnknown() const { return getLatticeValue() == unknown; }
 
-  bool isConstant() const { return getLatticeValue() == constant; }
+  bool isConstant() const {
+    return getLatticeValue() == constant || getLatticeValue() == forcedconstant;
+  }
 
   bool isOverdefined() const { return getLatticeValue() == overdefined; }
 
@@ -123,15 +131,26 @@ public:
 
   /// markConstant - Return true if this is a change in status.
   bool markConstant(Constant *V) {
-    if (getLatticeValue() == constant) { // Constant
+    if (getLatticeValue() == constant) { // Constant but not forcedconstant.
       assert(getConstant() == V && "Marking constant with different value");
       return false;
     }
 
-    assert(isUnknown());
-    Val.setInt(constant);
-    assert(V && "Marking constant with NULL");
-    Val.setPointer(V);
+    if (isUnknown()) {
+      Val.setInt(constant);
+      assert(V && "Marking constant with NULL");
+      Val.setPointer(V);
+    } else {
+      assert(getLatticeValue() == forcedconstant &&
+             "Cannot move from overdefined to constant!");
+      // Stay at forcedconstant if the constant is the same.
+      if (V == getConstant()) return false;
+
+      // Otherwise, we go to overdefined.  Assumptions made based on the
+      // forced value are possibly wrong.  Assuming this is another constant
+      // could expose a contradiction.
+      Val.setInt(overdefined);
+    }
     return true;
   }
 
@@ -149,6 +168,12 @@ public:
     if (isConstant())
       return dyn_cast<BlockAddress>(getConstant());
     return nullptr;
+  }
+
+  void markForcedConstant(Constant *V) {
+    assert(isUnknown() && "Can't force a defined value!");
+    Val.setInt(forcedconstant);
+    Val.setPointer(V);
   }
 
   ValueLatticeElement toValueLattice() const {
@@ -396,7 +421,7 @@ public:
   }
 
 private:
-  // pushToWorkList - Helper for markConstant/markOverdefined
+  // pushToWorkList - Helper for markConstant/markForcedConstant/markOverdefined
   void pushToWorkList(LatticeVal &IV, Value *V) {
     if (IV.isOverdefined())
       return OverdefinedInstWorkList.push_back(V);
@@ -416,6 +441,14 @@ private:
   bool markConstant(Value *V, Constant *C) {
     assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
     return markConstant(ValueState[V], V, C);
+  }
+
+  void markForcedConstant(Value *V, Constant *C) {
+    assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
+    LatticeVal &IV = ValueState[V];
+    IV.markForcedConstant(C);
+    LLVM_DEBUG(dbgs() << "markForcedConstant: " << *C << ": " << *V << '\n');
+    pushToWorkList(IV, V);
   }
 
   // markOverdefined - Make a value be marked as "overdefined". If the
@@ -999,10 +1032,8 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
   }
 
   // If something is undef, wait for it to resolve.
-  if (!V1State.isOverdefined() && !V2State.isOverdefined()) {
-
+  if (!V1State.isOverdefined() && !V2State.isOverdefined())
     return;
-  }
 
   // Otherwise, one of our operands is overdefined.  Try to produce something
   // better than overdefined with some tricks.
@@ -1418,8 +1449,10 @@ void SCCPSolver::Solve() {
 /// constraints on the condition of the branch, as that would impact other users
 /// of the value.
 ///
-/// This scan also checks for values that use undefs. It conservatively marks
-/// them as overdefined.
+/// This scan also checks for values that use undefs, whose results are actually
+/// defined.  For example, 'zext i8 undef to i32' should produce all zeros
+/// conservatively, as "(zext i8 X -> i32) & 0xFF00" must always return zero,
+/// even if X isn't defined.
 bool SCCPSolver::ResolvedUndefsIn(Function &F) {
   for (BasicBlock &BB : F) {
     if (!BBExecutable.count(&BB))
@@ -1442,6 +1475,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         // tracked as precisely as their operands.
         if (isa<ExtractValueInst>(I) || isa<InsertValueInst>(I))
           continue;
+
         // Send the results of everything else to overdefined.  We could be
         // more precise than this but it isn't worth bothering.
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
@@ -1461,13 +1495,195 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // 2. It could be constant-foldable.
       // Because of the way we solve return values, tracked calls must
       // never be marked overdefined in ResolvedUndefsIn.
-      if (CallSite CS = CallSite(&I))
+      if (CallSite CS = CallSite(&I)) {
         if (Function *F = CS.getCalledFunction())
           if (TrackedRetVals.count(F))
             continue;
 
-      markOverdefined(&I);
-      return true;
+        // If the call is constant-foldable, we mark it overdefined because
+        // we do not know what return values are valid.
+        markOverdefined(&I);
+        return true;
+      }
+
+      // extractvalue is safe; check here because the argument is a struct.
+      if (isa<ExtractValueInst>(I))
+        continue;
+
+      // Compute the operand LatticeVals, for convenience below.
+      // Anything taking a struct is conservatively assumed to require
+      // overdefined markings.
+      if (I.getOperand(0)->getType()->isStructTy()) {
+        markOverdefined(&I);
+        return true;
+      }
+      LatticeVal Op0LV = getValueState(I.getOperand(0));
+      LatticeVal Op1LV;
+      if (I.getNumOperands() == 2) {
+        if (I.getOperand(1)->getType()->isStructTy()) {
+          markOverdefined(&I);
+          return true;
+        }
+
+        Op1LV = getValueState(I.getOperand(1));
+      }
+      // If this is an instructions whose result is defined even if the input is
+      // not fully defined, propagate the information.
+      Type *ITy = I.getType();
+      switch (I.getOpcode()) {
+      case Instruction::Add:
+      case Instruction::Sub:
+      case Instruction::Trunc:
+      case Instruction::FPTrunc:
+      case Instruction::BitCast:
+        break; // Any undef -> undef
+      case Instruction::FSub:
+      case Instruction::FAdd:
+      case Instruction::FMul:
+      case Instruction::FDiv:
+      case Instruction::FRem:
+        // Floating-point binary operation: be conservative.
+        if (Op0LV.isUnknown() && Op1LV.isUnknown())
+          markForcedConstant(&I, Constant::getNullValue(ITy));
+        else
+          markOverdefined(&I);
+        return true;
+      case Instruction::FNeg:
+        break; // fneg undef -> undef
+      case Instruction::ZExt:
+      case Instruction::SExt:
+      case Instruction::FPToUI:
+      case Instruction::FPToSI:
+      case Instruction::FPExt:
+      case Instruction::PtrToInt:
+      case Instruction::IntToPtr:
+      case Instruction::SIToFP:
+      case Instruction::UIToFP:
+        // undef -> 0; some outputs are impossible
+        markForcedConstant(&I, Constant::getNullValue(ITy));
+        return true;
+      case Instruction::Mul:
+      case Instruction::And:
+        // Both operands undef -> undef
+        if (Op0LV.isUnknown() && Op1LV.isUnknown())
+          break;
+        // undef * X -> 0.   X could be zero.
+        // undef & X -> 0.   X could be zero.
+        markForcedConstant(&I, Constant::getNullValue(ITy));
+        return true;
+      case Instruction::Or:
+        // Both operands undef -> undef
+        if (Op0LV.isUnknown() && Op1LV.isUnknown())
+          break;
+        // undef | X -> -1.   X could be -1.
+        markForcedConstant(&I, Constant::getAllOnesValue(ITy));
+        return true;
+      case Instruction::Xor:
+        // undef ^ undef -> 0; strictly speaking, this is not strictly
+        // necessary, but we try to be nice to people who expect this
+        // behavior in simple cases
+        if (Op0LV.isUnknown() && Op1LV.isUnknown()) {
+          markForcedConstant(&I, Constant::getNullValue(ITy));
+          return true;
+        }
+        // undef ^ X -> undef
+        break;
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+        // X / undef -> undef.  No change.
+        // X % undef -> undef.  No change.
+        if (Op1LV.isUnknown()) break;
+
+        // X / 0 -> undef.  No change.
+        // X % 0 -> undef.  No change.
+        if (Op1LV.isConstant() && Op1LV.getConstant()->isZeroValue())
+          break;
+
+        // undef / X -> 0.   X could be maxint.
+        // undef % X -> 0.   X could be 1.
+        markForcedConstant(&I, Constant::getNullValue(ITy));
+        return true;
+      case Instruction::AShr:
+        // X >>a undef -> undef.
+        if (Op1LV.isUnknown()) break;
+
+        // Shifting by the bitwidth or more is undefined.
+        if (Op1LV.isConstant()) {
+          if (auto *ShiftAmt = Op1LV.getConstantInt())
+            if (ShiftAmt->getLimitedValue() >=
+                ShiftAmt->getType()->getScalarSizeInBits())
+              break;
+        }
+
+        // undef >>a X -> 0
+        markForcedConstant(&I, Constant::getNullValue(ITy));
+        return true;
+      case Instruction::LShr:
+      case Instruction::Shl:
+        // X << undef -> undef.
+        // X >> undef -> undef.
+        if (Op1LV.isUnknown()) break;
+
+        // Shifting by the bitwidth or more is undefined.
+        if (Op1LV.isConstant()) {
+          if (auto *ShiftAmt = Op1LV.getConstantInt())
+            if (ShiftAmt->getLimitedValue() >=
+                ShiftAmt->getType()->getScalarSizeInBits())
+              break;
+        }
+
+        // undef << X -> 0
+        // undef >> X -> 0
+        markForcedConstant(&I, Constant::getNullValue(ITy));
+        return true;
+      case Instruction::Select:
+        Op1LV = getValueState(I.getOperand(1));
+        // undef ? X : Y  -> X or Y.  There could be commonality between X/Y.
+        if (Op0LV.isUnknown()) {
+          if (!Op1LV.isConstant())  // Pick the constant one if there is any.
+            Op1LV = getValueState(I.getOperand(2));
+        } else if (Op1LV.isUnknown()) {
+          // c ? undef : undef -> undef.  No change.
+          Op1LV = getValueState(I.getOperand(2));
+          if (Op1LV.isUnknown())
+            break;
+          // Otherwise, c ? undef : x -> x.
+        } else {
+          // Leave Op1LV as Operand(1)'s LatticeValue.
+        }
+
+        if (Op1LV.isConstant())
+          markForcedConstant(&I, Op1LV.getConstant());
+        else
+          markOverdefined(&I);
+        return true;
+      case Instruction::Load:
+        // A load here means one of two things: a load of undef from a global,
+        // a load from an unknown pointer.  Either way, having it return undef
+        // is okay.
+        break;
+      case Instruction::ICmp:
+        // X == undef -> undef.  Other comparisons get more complicated.
+        Op0LV = getValueState(I.getOperand(0));
+        Op1LV = getValueState(I.getOperand(1));
+
+        if ((Op0LV.isUnknown() || Op1LV.isUnknown()) &&
+            cast<ICmpInst>(&I)->isEquality())
+          break;
+        markOverdefined(&I);
+        return true;
+      case Instruction::Call:
+      case Instruction::Invoke:
+      case Instruction::CallBr:
+        llvm_unreachable("Call-like instructions should have be handled early");
+      default:
+        // If we don't know what should happen here, conservatively mark it
+        // overdefined.
+        markOverdefined(&I);
+        return true;
+      }
     }
 
     // Check to see if we have a branch or switch on an undefined value.  If so
