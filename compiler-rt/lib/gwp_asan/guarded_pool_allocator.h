@@ -149,11 +149,6 @@ private:
   // Unreserve the guarded slot.
   void freeSlot(size_t SlotIndex);
 
-  // Returns the offset (in bytes) between the start of a guarded slot and where
-  // the start of the allocation should take place. Determined using the size of
-  // the allocation and the options provided at init-time.
-  uintptr_t allocationSlotOffset(size_t AllocationSize) const;
-
   // Raise a SEGV and set the corresponding fields in the Allocator's State in
   // order to tell the crash handler what happened. Used when errors are
   // detected internally (Double Free, Invalid Free).
