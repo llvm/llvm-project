@@ -990,17 +990,20 @@ TEST_FUNC(linalg_tensors_test) {
   f.erase();
 }
 
-// CHECK-LABEL: func @vector_matmul_test(
-//  CHECK-SAME:   %[[A:.*]]: vector<4x16xf32>,
-//  CHECK-SAME:   %[[B:.*]]: vector<16x8xf32>,
-//  CHECK-SAME:   %[[C:.*]]: vector<4x8xf32>)
-//  CHECK:   vector.contract {{.*}}[affine_map<(d0, d1, d2) -> (d0, d2)>,
-//  CHECK-SAME:                     affine_map<(d0, d1, d2) -> (d2, d1)>,
-//  CHECK-SAME:                     affine_map<(d0, d1, d2) -> (d0, d1)>],
-//  CHECK-SAME:              {{.*}}["parallel", "parallel", "reduction"]
-//  CHECK-SAME: %[[A]], %[[B]], %[[C]]
-//  CHECK-SAME:   vector<4x16xf32>, vector<16x8xf32> into vector<4x8xf32>
-TEST_FUNC(vector_matmul_test) {
+// CHECK-LABEL: func @memref_vector_matmul_test(
+//  CHECK-SAME:   %[[A:.*]]: memref<?x?xvector<4x16xf32>>,
+//  CHECK-SAME:   %[[B:.*]]: memref<?x?xvector<16x8xf32>>,
+//  CHECK-SAME:   %[[C:.*]]: memref<?x?xvector<4x8xf32>>)
+//       CHECK:   linalg.generic {{.*}} %[[A]], %[[B]], %[[C]]
+//       CHECK:     vector.contract{{.*}}[affine_map<(d0, d1, d2) -> (d0,
+//  d2)>,
+//  CHECK-SAME:                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+//  CHECK-SAME:                       affine_map<(d0, d1, d2) -> (d0, d1)>],
+//  CHECK-SAME:                {{.*}}["parallel", "parallel", "reduction"]
+//  CHECK-SAME:     vector<4x16xf32>, vector<16x8xf32> into vector<4x8xf32>
+//       CHECK:   memref<?x?xvector<4x16xf32>>, memref<?x?xvector<16x8xf32>>,
+//  CHECK-SAME:   memref<?x?xvector<4x8xf32>>
+TEST_FUNC(memref_vector_matmul_test) {
   using namespace edsc;
   using namespace edsc::ops;
 
@@ -1009,13 +1012,26 @@ TEST_FUNC(vector_matmul_test) {
   auto mkVectorType = VectorType::get({M, K}, f32Type);
   auto knVectorType = VectorType::get({K, N}, f32Type);
   auto mnVectorType = VectorType::get({M, N}, f32Type);
-  auto f = makeFunction("vector_matmul_test", {},
-                        {mkVectorType, knVectorType, mnVectorType});
+  auto typeA =
+      MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize},
+                      mkVectorType, {}, 0);
+  auto typeB =
+      MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize},
+                      knVectorType, {}, 0);
+  auto typeC =
+      MemRefType::get({ShapedType::kDynamicSize, ShapedType::kDynamicSize},
+                      mnVectorType, {}, 0);
+  auto f = makeFunction("memref_vector_matmul_test", {}, {typeA, typeB, typeC});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   ValueHandle A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
-  vector_matmul(A, B, C);
+  auto contractionBuilder = [](ArrayRef<BlockArgument> args) {
+    assert(args.size() == 3 && "expected 3 block arguments");
+    (linalg_yield(vector_matmul(args[0], args[1], args[2])));
+  };
+  linalg_matmul(A, B, C, contractionBuilder);
+
   f.print(llvm::outs());
   f.erase();
 }
