@@ -1028,8 +1028,10 @@ bool Vectorizer::vectorizeStoreChain(
     unsigned NewAlign = getOrEnforceKnownAlignment(S0->getPointerOperand(),
                                                    StackAdjustedAlignment,
                                                    DL, S0, nullptr, &DT);
-    if (NewAlign != 0)
+    if (NewAlign >= Alignment.value())
       Alignment = Align(NewAlign);
+    else
+      return false;
   }
 
   if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment.value(), AS)) {
@@ -1168,8 +1170,12 @@ bool Vectorizer::vectorizeLoadChain(
              vectorizeLoadChain(Chains.second, InstructionsProcessed);
     }
 
-    Alignment = getOrEnforceKnownAlignment(
-        L0->getPointerOperand(), StackAdjustedAlignment, DL, L0, nullptr, &DT);
+    unsigned NewAlign = getOrEnforceKnownAlignment(
+      L0->getPointerOperand(), StackAdjustedAlignment, DL, L0, nullptr, &DT);
+    if (NewAlign >= Alignment)
+      Alignment = NewAlign;
+    else
+      return false;
   }
 
   if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
