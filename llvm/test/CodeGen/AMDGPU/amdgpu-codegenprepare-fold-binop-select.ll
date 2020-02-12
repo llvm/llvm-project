@@ -92,7 +92,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP3:%.*]] = add i32 [[SELECT]], [[TMP1]]
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
-; IR-NEXT:    [[TMP6:%.*]] = fdiv fast float 1.000000e+00, [[TMP5]]
+; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41F0000000000000
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
@@ -190,7 +190,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; IR-NEXT:    [[TMP3:%.*]] = add i32 [[SELECT]], [[TMP1]]
 ; IR-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; IR-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP4]] to float
-; IR-NEXT:    [[TMP6:%.*]] = fdiv fast float 1.000000e+00, [[TMP5]]
+; IR-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; IR-NEXT:    [[TMP7:%.*]] = fmul fast float [[TMP6]], 0x41F0000000000000
 ; IR-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP7]] to i32
 ; IR-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
