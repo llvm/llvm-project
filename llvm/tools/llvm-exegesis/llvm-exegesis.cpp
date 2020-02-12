@@ -238,6 +238,10 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   if (InstrDesc.isCall() || InstrDesc.isReturn())
     return make_error<Failure>("Unsupported opcode: isCall/isReturn");
 
+  const std::vector<InstructionTemplate> InstructionVariants =
+      State.getExegesisTarget().generateInstructionVariants(
+          Instr, MaxConfigsPerOpcode);
+
   SnippetGenerator::Options SnippetOptions;
   SnippetOptions.MaxConfigsPerOpcode = MaxConfigsPerOpcode;
   const std::unique_ptr<SnippetGenerator> Generator =
@@ -245,7 +249,16 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
                                                        SnippetOptions);
   if (!Generator)
     ExitWithError("cannot create snippet generator");
-  return Generator->generateConfigurations(Instr, ForbiddenRegs);
+
+  std::vector<BenchmarkCode> Benchmarks;
+  for (const InstructionTemplate &Variant : InstructionVariants) {
+    if (Benchmarks.size() >= MaxConfigsPerOpcode)
+      break;
+    if (auto Err = Generator->generateConfigurations(Variant, Benchmarks,
+                                                     ForbiddenRegs))
+      return std::move(Err);
+  }
+  return Benchmarks;
 }
 
 void benchmarkMain() {

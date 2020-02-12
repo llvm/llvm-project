@@ -8,14 +8,15 @@
 #include "../Target.h"
 
 #include "../Error.h"
+#include "../ParallelSnippetGenerator.h"
 #include "../SerialSnippetGenerator.h"
 #include "../SnippetGenerator.h"
-#include "../ParallelSnippetGenerator.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -256,14 +257,16 @@ public:
   using SerialSnippetGenerator::SerialSnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr,
+  generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const override;
 };
 } // namespace
 
 Expected<std::vector<CodeTemplate>>
 X86SerialSnippetGenerator::generateCodeTemplates(
-    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
+    InstructionTemplate Variant, const BitVector &ForbiddenRegisters) const {
+  const Instruction &Instr = Variant.getInstr();
+
   if (const auto reason = isInvalidOpcode(Instr))
     return make_error<Failure>(reason);
 
@@ -287,8 +290,8 @@ X86SerialSnippetGenerator::generateCodeTemplates(
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return SerialSnippetGenerator::generateCodeTemplates(Instr,
-                                                          ForbiddenRegisters);
+    return SerialSnippetGenerator::generateCodeTemplates(Variant,
+                                                         ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
   case X86II::SpecialFP:
@@ -301,7 +304,7 @@ X86SerialSnippetGenerator::generateCodeTemplates(
     //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
     //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
     // They are intrinsically serial and do not modify the state of the stack.
-    return generateSelfAliasingCodeTemplates(Instr);
+    return generateSelfAliasingCodeTemplates(Variant);
   default:
     llvm_unreachable("Unknown FP Type!");
   }
@@ -313,7 +316,7 @@ public:
   using ParallelSnippetGenerator::ParallelSnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr,
+  generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const override;
 };
 
@@ -321,7 +324,9 @@ public:
 
 Expected<std::vector<CodeTemplate>>
 X86ParallelSnippetGenerator::generateCodeTemplates(
-    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
+    InstructionTemplate Variant, const BitVector &ForbiddenRegisters) const {
+  const Instruction &Instr = Variant.getInstr();
+
   if (const auto reason = isInvalidOpcode(Instr))
     return make_error<Failure>(reason);
 
@@ -342,8 +347,8 @@ X86ParallelSnippetGenerator::generateCodeTemplates(
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return ParallelSnippetGenerator::generateCodeTemplates(Instr,
-                                                       ForbiddenRegisters);
+    return ParallelSnippetGenerator::generateCodeTemplates(Variant,
+                                                           ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
   case X86II::SpecialFP:
@@ -355,13 +360,13 @@ X86ParallelSnippetGenerator::generateCodeTemplates(
     //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
     // They are intrinsically serial and do not modify the state of the stack.
     // We generate the same code for latency and uops.
-    return generateSelfAliasingCodeTemplates(Instr);
+    return generateSelfAliasingCodeTemplates(Variant);
   case X86II::CompareFP:
   case X86II::CondMovFP:
     // We can compute uops for any FP instruction that does not grow or shrink
     // the stack (either do not touch the stack or push as much as they pop).
     return generateUnconstrainedCodeTemplates(
-        Instr, "instruction does not grow/shrink the FP stack");
+        Variant, "instruction does not grow/shrink the FP stack");
   default:
     llvm_unreachable("Unknown FP Type!");
   }
@@ -592,6 +597,10 @@ private:
            Opcode != X86::LEA64_32r && Opcode != X86::LEA16r;
   }
 
+  std::vector<InstructionTemplate>
+  generateInstructionVariants(const Instruction &Instr,
+                              unsigned MaxConfigsPerOpcode) const override;
+
   std::unique_ptr<SnippetGenerator> createSerialSnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
@@ -652,10 +661,6 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
-    return Error::success();
-  case X86::OperandType::OPERAND_COND_CODE:
-    AssignedValue =
-        MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
     return Error::success();
   default:
     break;
@@ -739,6 +744,63 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.
+}
+
+// Instruction can have some variable operands, and we may want to see how
+// different operands affect performance. So for each operand position,
+// precompute all the possible choices we might care about,
+// and greedily generate all the possible combinations of choices.
+std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
+    const Instruction &Instr, unsigned MaxConfigsPerOpcode) const {
+  bool Exploration = false;
+  SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
+  VariableChoices.resize(Instr.Variables.size());
+  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
+    const Variable &Var = std::get<0>(I);
+    SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
+
+    switch (Instr.getPrimaryOperand(Var).getExplicitOperandInfo().OperandType) {
+    default:
+      // We don't wish to explicitly explore this variable.
+      Choices.emplace_back(); // But add invalid MCOperand to simplify logic.
+      continue;
+    case X86::OperandType::OPERAND_COND_CODE: {
+      Exploration = true;
+      auto CondCodes = seq((int)X86::CondCode::COND_O,
+                           1 + (int)X86::CondCode::LAST_VALID_COND);
+      Choices.reserve(std::distance(CondCodes.begin(), CondCodes.end()));
+      for (int CondCode : CondCodes)
+        Choices.emplace_back(MCOperand::createImm(CondCode));
+      break;
+    }
+    }
+  }
+
+  // If we don't wish to explore any variables, defer to the baseline method.
+  if (!Exploration)
+    return ExegesisTarget::generateInstructionVariants(Instr,
+                                                       MaxConfigsPerOpcode);
+
+  std::vector<InstructionTemplate> Variants;
+  size_t NumVariants;
+  CombinationGenerator<MCOperand, decltype(VariableChoices)::value_type, 4> G(
+      VariableChoices, [&](ArrayRef<MCOperand> State) -> bool {
+        Variants.emplace_back(&Instr);
+        Variants.back().setVariableValues(State);
+        // Did we run out of space for variants?
+        return Variants.size() >= NumVariants;
+      });
+
+  // How many operand combinations can we produce, within the limit?
+  NumVariants = std::min(G.numCombinations(), (size_t)MaxConfigsPerOpcode);
+  // And actually produce all the wanted operand combinations.
+  Variants.reserve(NumVariants);
+  G.generate();
+
+  assert(Variants.size() == NumVariants &&
+         Variants.size() <= MaxConfigsPerOpcode &&
+         "Should not produce too many variants");
+  return Variants;
 }
 
 static ExegesisTarget *getTheExegesisX86Target() {
