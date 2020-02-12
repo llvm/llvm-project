@@ -30,7 +30,7 @@ extern "C" {
    just before version string. */
 #define KMP_VERSION_MAGIC_STR "\x00@(#) "
 #define KMP_VERSION_MAGIC_LEN 6 // Length of KMP_VERSION_MAGIC_STR.
-#define KMP_VERSION_PREF_STR "Intel(R) OMP "
+#define KMP_VERSION_PREF_STR "LLVM OMP "
 #define KMP_VERSION_PREFIX KMP_VERSION_MAGIC_STR KMP_VERSION_PREF_STR
 
 /* declare all the version string constants for KMP_VERSION env. variable */
