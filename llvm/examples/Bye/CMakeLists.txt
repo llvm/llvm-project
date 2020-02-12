@@ -7,10 +7,6 @@ add_llvm_pass_plugin(Bye
   DEPENDS
   intrinsics_gen
   BUILDTREE_ONLY
-  LINK_COMPONENTS
-    ipo
-    Core
-    Support
  )
 
 install(TARGETS ${name} RUNTIME DESTINATION examples)
