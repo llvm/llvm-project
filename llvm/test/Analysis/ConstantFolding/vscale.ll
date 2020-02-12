@@ -210,3 +210,14 @@ define <vscale x 4 x i32> @select() {
   %r = select <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> undef
   ret <vscale x 4 x i32> %r
 }
+
+declare <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
+
+define <vscale x 16 x i8> @call() {
+; CHECK-LABEL: @call(
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+;
+  %r =  call <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+  ret <vscale x 16 x i8> %r
+}
