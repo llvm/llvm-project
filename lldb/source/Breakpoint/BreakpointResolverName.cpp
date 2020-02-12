@@ -249,13 +249,6 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
 Searcher::CallbackReturn
 BreakpointResolverName::SearchCallback(SearchFilter &filter,
                                        SymbolContext &context, Address *addr) {
-  SymbolContextList func_list;
-  // SymbolContextList sym_list;
-
-  uint32_t i;
-  bool new_location;
-  Address break_addr;
-
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
   if (m_class_name) {
@@ -264,6 +257,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     return Searcher::eCallbackReturnStop;
   }
 
+  SymbolContextList func_list;
   bool filter_by_cu =
       (filter.GetFilterRequiredItems() & eSymbolContextCompUnit) != 0;
   bool filter_by_language = (m_language != eLanguageTypeUnknown);
@@ -334,11 +328,12 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
 
   BreakpointSP breakpoint_sp = GetBreakpoint();
   Breakpoint &breakpoint = *breakpoint_sp;
+  Address break_addr;
 
   // Remove any duplicates between the function list and the symbol list
   SymbolContext sc;
   if (func_list.GetSize()) {
-    for (i = 0; i < func_list.GetSize(); i++) {
+    for (uint32_t i = 0; i < func_list.GetSize(); i++) {
       if (func_list.GetContextAtIndex(i, sc)) {
         bool is_reexported = false;
 
@@ -381,6 +376,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
 
         if (break_addr.IsValid()) {
           if (filter.AddressPasses(break_addr)) {
+            bool new_location;
             BreakpointLocationSP bp_loc_sp(
                 AddLocation(break_addr, &new_location));
             bp_loc_sp->SetIsReExported(is_reexported);
