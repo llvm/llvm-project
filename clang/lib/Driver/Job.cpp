@@ -371,14 +371,29 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
                                    /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
 }
 
+CC1Command::CC1Command(const Action &Source, const Tool &Creator,
+                       const char *Executable,
+                       const llvm::opt::ArgStringList &Arguments,
+                       ArrayRef<InputInfo> Inputs)
+    : Command(Source, Creator, Executable, Arguments, Inputs) {
+  InProcess = true;
+}
+
 void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                        CrashReportInfo *CrashInfo) const {
-  OS << " (in-process)\n";
+  if (InProcess)
+    OS << " (in-process)\n";
   Command::Print(OS, Terminator, Quote, CrashInfo);
 }
 
-int CC1Command::Execute(ArrayRef<llvm::Optional<StringRef>> /*Redirects*/,
+int CC1Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
                         std::string *ErrMsg, bool *ExecutionFailed) const {
+  // FIXME: Currently, if there're more than one job, we disable
+  // -fintegrate-cc1. If we're no longer a integrated-cc1 job, fallback to
+  // out-of-process execution. See discussion in https://reviews.llvm.org/D74447
+  if (!InProcess)
+    return Command::Execute(Redirects, ErrMsg, ExecutionFailed);
+
   PrintFileNames();
 
   SmallVector<const char *, 128> Argv;
