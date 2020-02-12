@@ -56,10 +56,10 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequiredID(BreakCriticalEdgesID);
-      AU.addRequiredID(LoopSimplifyID);
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
       AU.addPreserved<LoopInfoWrapperPass>();
+      AU.addRequiredID(LoopSimplifyID);
       AU.addUsedIfAvailable<AssumptionCacheTracker>();
     }
   };
@@ -69,9 +69,9 @@ char LoopExtractor::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopExtractor, "loop-extract",
                       "Extract loops into new functions", false, false)
 INITIALIZE_PASS_DEPENDENCY(BreakCriticalEdges)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_END(LoopExtractor, "loop-extract",
                     "Extract loops into new functions", false, false)
 
