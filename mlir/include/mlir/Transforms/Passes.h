@@ -41,10 +41,6 @@ createVectorizePass(ArrayRef<int64_t> virtualVectorSize);
 /// FileCheck.
 std::unique_ptr<OpPassBase<FuncOp>> createVectorizerTestPass();
 
-/// Creates a pass to lower super-vectors to target-dependent HW vectors.
-std::unique_ptr<OpPassBase<FuncOp>>
-createMaterializeVectorsPass(ArrayRef<int64_t> vectorSize);
-
 /// Creates a loop unrolling pass with the provided parameters.
 /// 'getUnrollFactor' is a function callback for clients to supply a function
 /// that computes an unroll factor - the callback takes precedence over unroll
