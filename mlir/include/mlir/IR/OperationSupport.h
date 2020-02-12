@@ -658,6 +658,8 @@ public:
       : ValueRange(OperandRange(values)) {}
   ValueRange(iterator_range<ResultRange::iterator> values)
       : ValueRange(ResultRange(values)) {}
+  ValueRange(ArrayRef<BlockArgument> values)
+      : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
   ValueRange(ArrayRef<Value> values = llvm::None);
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
