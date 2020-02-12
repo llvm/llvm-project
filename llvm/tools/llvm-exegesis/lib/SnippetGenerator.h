@@ -156,9 +156,9 @@ class CombinationGenerator {
   };
 
   const ArrayRef<choices_storage_type> VariablesChoices;
-  const function_ref<bool(ArrayRef<choice_type>)> &Callback;
 
-  void performGeneration() const {
+  void performGeneration(
+      const function_ref<bool(ArrayRef<choice_type>)> Callback) const {
     SmallVector<WrappingIterator<choice_type>, variable_smallsize>
         VariablesState;
 
@@ -200,9 +200,8 @@ class CombinationGenerator {
   };
 
 public:
-  CombinationGenerator(ArrayRef<choices_storage_type> VariablesChoices_,
-                       const function_ref<bool(ArrayRef<choice_type>)> &Cb_)
-      : VariablesChoices(VariablesChoices_), Callback(Cb_) {
+  CombinationGenerator(ArrayRef<choices_storage_type> VariablesChoices_)
+      : VariablesChoices(VariablesChoices_) {
 #ifndef NDEBUG
     assert(!VariablesChoices.empty() && "There should be some variables.");
     llvm::for_each(VariablesChoices, [](ArrayRef<choice_type> VariableChoices) {
@@ -225,7 +224,9 @@ public:
 
   // Actually perform exhaustive combination generation.
   // Each result will be passed into the callback.
-  void generate() { performGeneration(); }
+  void generate(const function_ref<bool(ArrayRef<choice_type>)> Callback) {
+    performGeneration(Callback);
+  }
 };
 
 } // namespace exegesis

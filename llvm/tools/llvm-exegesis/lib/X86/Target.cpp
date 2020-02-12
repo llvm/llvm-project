@@ -784,18 +784,18 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
   std::vector<InstructionTemplate> Variants;
   size_t NumVariants;
   CombinationGenerator<MCOperand, decltype(VariableChoices)::value_type, 4> G(
-      VariableChoices, [&](ArrayRef<MCOperand> State) -> bool {
-        Variants.emplace_back(&Instr);
-        Variants.back().setVariableValues(State);
-        // Did we run out of space for variants?
-        return Variants.size() >= NumVariants;
-      });
+      VariableChoices);
 
   // How many operand combinations can we produce, within the limit?
   NumVariants = std::min(G.numCombinations(), (size_t)MaxConfigsPerOpcode);
   // And actually produce all the wanted operand combinations.
   Variants.reserve(NumVariants);
-  G.generate();
+  G.generate([&](ArrayRef<MCOperand> State) -> bool {
+    Variants.emplace_back(&Instr);
+    Variants.back().setVariableValues(State);
+    // Did we run out of space for variants?
+    return Variants.size() >= NumVariants;
+  });
 
   assert(Variants.size() == NumVariants &&
          Variants.size() <= MaxConfigsPerOpcode &&
