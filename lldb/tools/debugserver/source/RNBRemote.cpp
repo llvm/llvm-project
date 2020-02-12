@@ -3741,12 +3741,17 @@ static bool process_is_already_being_debugged (nub_process_t pid) {
 // for debug permission by popping up a dialog box and attach
 // may fail outright).
 static bool login_session_has_gui_access () {
+  // I believe this API only works on macOS.
+#if TARGET_OS_OSX == 0
+  return true;
+#else
   auditinfo_addr_t info;
   getaudit_addr(&info, sizeof(info));
   if (info.ai_flags & AU_SESSION_FLAG_HAS_GRAPHIC_ACCESS)
     return true;
   else
     return false;
+#endif
 }
 
 // Checking for 
@@ -3766,6 +3771,7 @@ static bool login_session_has_gui_access () {
 // $ security authorizationdb read system.privilege.taskport.debug
 
 static bool developer_mode_enabled () {
+  // This API only exists on macOS.
 #if TARGET_OS_OSX == 0
   return true;
 #else
@@ -4070,6 +4076,16 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
 
       std::string error_explainer = "attach failed";
       if (err_str[0] != '\0') {
+        // This is not a super helpful message for end users
+        if (strcmp (err_str, "unable to start the exception thread") == 0) {
+          snprintf (err_str, sizeof (err_str) - 1,
+                    "Not allowed to attach to process.  Look in the console "
+                    "messages (Console.app), near the debugserver entries "
+                    "when the attached failed.  The subsystem that denied "
+                    "the attach permission will likely have logged an "
+                    "informative message about why it was denied.");
+          err_str[sizeof (err_str) - 1] = '\0';
+        }
         error_explainer += " (";
         error_explainer += err_str;
         error_explainer += ")";
