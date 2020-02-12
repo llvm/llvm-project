@@ -10,7 +10,7 @@ FileHeader:
   Machine:         EM_X86_64
   Entry:           0x123456789abcde
 
-# ELF64: [[FILE]]: file format ELF64-x86-64
+# ELF64: [[FILE]]: file format elf64-x86-64
 # ELF64: architecture: x86_64
 # ELF64: start address: 0x00123456789abcde
 
@@ -18,7 +18,7 @@ FileHeader:
 # RUN: llvm-objdump -f %t-i386 | FileCheck -DFILE=%t-i386 %s -check-prefix ELF32
 # RUN: llvm-objdump -file-headers %t-i386 | FileCheck %s -DFILE=%t-i386 -check-prefix ELF32
 
-# ELF32: [[FILE]]: file format ELF32-i386
+# ELF32: [[FILE]]: file format elf32-i386
 # ELF32: architecture: i386
 # ELF32: start address: 0x12345678
 

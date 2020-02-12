@@ -2,7 +2,7 @@
 # RUN: llvm-objdump -a %t | FileCheck %s
 
 # If this test has not crashed, then this test passed.
-# CHECK: file format ELF64-x86-64
+# CHECK: file format elf64-x86-64
 
 !ELF
 FileHeader:

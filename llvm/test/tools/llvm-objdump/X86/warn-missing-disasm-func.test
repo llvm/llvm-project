@@ -15,7 +15,7 @@ FileHeader:
 
 # CHECK: warning: {{.*}}: failed to disassemble missing function foo
 
-# MULTI: file format ELF64-x86-64
+# MULTI: file format elf64-x86-64
 # MULTI: warning: {{.*}}: failed to disassemble missing function foo
-# MULTI: file format ELF64-x86-64
+# MULTI: file format elf64-x86-64
 # MULTI: warning: {{.*}}: failed to disassemble missing function foo
