@@ -37359,10 +37359,7 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
       return SDValue();
     Movmsk = DAG.getZExtOrTrunc(Movmsk, DL, NumElts > 32 ? MVT::i64 : MVT::i32);
   } else {
-    // Bail with AVX512VL (which uses predicate registers).
-    if (Subtarget.hasVLX())
-      return SDValue();
-
+    // FIXME: Better handling of k-registers or 512-bit vectors?
     unsigned MatchSizeInBits = Match.getValueSizeInBits();
     if (!(MatchSizeInBits == 128 ||
           (MatchSizeInBits == 256 && Subtarget.hasAVX())))
