@@ -1,4 +1,4 @@
-; RUN: not llc -O1 -mtriple=armv4t-none-none-eabi %s -o - 2>&1 | FileCheck %s
+; RUN: not --crash llc -O1 -mtriple=armv4t-none-none-eabi %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: Cannot select: intrinsic %llvm.arm.ssat
 define i32 @ssat() nounwind {
