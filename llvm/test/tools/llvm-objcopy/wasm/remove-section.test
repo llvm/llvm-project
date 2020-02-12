@@ -6,7 +6,7 @@
 # CHECK: TYPE
 
 ## Requests to remove nonexistent sections are silently ignored.
-# RUN: llvm-objcopy --remove-section=nonexistent=%t.sec %t 2&>1 | count 0
+# RUN: llvm-objcopy --remove-section=nonexistent=%t.sec %t 2>&1 | count 0
 
 --- !WASM
 FileHeader:
