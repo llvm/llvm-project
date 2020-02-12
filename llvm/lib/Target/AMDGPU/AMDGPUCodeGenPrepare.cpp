@@ -67,6 +67,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const GCNSubtarget *ST = nullptr;
   AssumptionCache *AC = nullptr;
+  DominatorTree *DT = nullptr;
   LegacyDivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
@@ -156,6 +157,9 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// Perform same function as equivalently named function in DAGCombiner. Since
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
+
+  bool divHasSpecialOptimization(BinaryOperator &I,
+                                 Value *Num, Value *Den) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -909,6 +913,42 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   return Res;
 }
 
+// Try to recognize special cases the DAG will emit special, better expansions
+// than the general expansion we do here.
+
+// TODO: It would be better to just directly handle those optimizations here.
+bool AMDGPUCodeGenPrepare::divHasSpecialOptimization(
+  BinaryOperator &I, Value *Num, Value *Den) const {
+  if (Constant *C = dyn_cast<Constant>(Den)) {
+    // Arbitrary constants get a better expansion as long as a wider mulhi is
+    // legal.
+    if (C->getType()->getScalarSizeInBits() <= 32)
+      return true;
+
+    // TODO: Sdiv check for not exact for some reason.
+
+    // If there's no wider mulhi, there's only a better expansion for powers of
+    // two.
+    // TODO: Should really know for each vector element.
+    if (isKnownToBeAPowerOfTwo(C, *DL, true, 0, AC, &I, DT))
+      return true;
+
+    return false;
+  }
+
+  if (BinaryOperator *BinOpDen = dyn_cast<BinaryOperator>(Den)) {
+    // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
+    if (BinOpDen->getOpcode() == Instruction::Shl &&
+        isa<Constant>(BinOpDen->getOperand(0)) &&
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), *DL, true,
+                               0, AC, &I, DT)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
                                             BinaryOperator &I,
                                             Value *Num, Value *Den) const {
@@ -920,8 +960,8 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   FMF.setFast();
   Builder.setFastMathFlags(FMF);
 
-  if (isa<Constant>(Den))
-    return nullptr; // Keep it for optimization
+  if (divHasSpecialOptimization(I, Num, Den))
+    return nullptr;  // Keep it for later optimization.
 
   bool IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
   bool IsSigned = Opc == Instruction::SRem || Opc == Instruction::SDiv;
@@ -1211,6 +1251,10 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   ST = &TM.getSubtarget<GCNSubtarget>(F);
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   DA = &getAnalysis<LegacyDivergenceAnalysis>();
+
+  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+
   HasUnsafeFPMath = hasUnsafeFPMath(F);
   HasFP32Denormals = ST->hasFP32Denormals(F);
 

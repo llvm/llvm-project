@@ -4184,80 +4184,20 @@ define amdgpu_kernel void @udiv_i32_pow2k_denom(i32 addrspace(1)* %out, i32 %x) 
 define amdgpu_kernel void @udiv_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_i32_pow2_shl_denom(
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl i32 4096, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i32 [[SHL_Y]] to float
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], 0x41F0000000000000
-; CHECK-NEXT:    [[TMP4:%.*]] = fptoui float [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[SHL_Y]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP7]], 32
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i32 [[TMP11]], i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP16]], 32
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP4]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP4]], [[TMP19]]
-; CHECK-NEXT:    [[TMP22:%.*]] = select i1 [[TMP12]], i32 [[TMP20]], i32 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP23]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP25]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = lshr i64 [[TMP25]], 32
-; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
-; CHECK-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP28]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP30:%.*]] = sub i32 [[X]], [[TMP29]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[TMP30]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp uge i32 [[X]], [[TMP29]]
-; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP35:%.*]] = and i32 [[TMP32]], [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i32 [[TMP35]], 0
-; CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[TMP28]], 1
-; CHECK-NEXT:    [[TMP38:%.*]] = sub i32 [[TMP28]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = select i1 [[TMP36]], i32 [[TMP28]], i32 [[TMP37]]
-; CHECK-NEXT:    [[TMP40:%.*]] = select i1 [[TMP33]], i32 [[TMP39]], i32 [[TMP38]]
-; CHECK-NEXT:    store i32 [[TMP40]], i32 addrspace(1)* [[OUT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[SHL_Y]]
+; CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[OUT:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: udiv_i32_pow2_shl_denom:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s9, 0x1000, s9
-; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s9
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, 0x4f800000, v0
-; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
-; GCN-NEXT:    v_mul_hi_u32 v2, v0, s9
-; GCN-NEXT:    v_sub_i32_e32 v3, vcc, 0, v1
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s[2:3]
-; GCN-NEXT:    v_mul_hi_u32 v1, v1, v0
-; GCN-NEXT:    v_add_i32_e32 v2, vcc, v1, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, v1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[2:3]
-; GCN-NEXT:    v_mul_hi_u32 v0, v0, s8
-; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
-; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
-; GCN-NEXT:    v_add_i32_e32 v3, vcc, -1, v0
-; GCN-NEXT:    v_sub_i32_e32 v4, vcc, s8, v1
-; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, s8, v1
-; GCN-NEXT:    v_cmp_le_u32_e64 s[0:1], s9, v4
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
+; GCN-NEXT:    s_add_i32 s1, s1, 12
+; GCN-NEXT:    s_lshr_b32 s0, s0, s1
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
@@ -4540,80 +4480,21 @@ define amdgpu_kernel void @urem_i32_pow2k_denom(i32 addrspace(1)* %out, i32 %x) 
 define amdgpu_kernel void @urem_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @urem_i32_pow2_shl_denom(
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl i32 4096, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i32 [[SHL_Y]] to float
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], 0x41F0000000000000
-; CHECK-NEXT:    [[TMP4:%.*]] = fptoui float [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[SHL_Y]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP7]], 32
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i32 [[TMP11]], i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP16]], 32
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP4]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP4]], [[TMP19]]
-; CHECK-NEXT:    [[TMP22:%.*]] = select i1 [[TMP12]], i32 [[TMP20]], i32 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP23]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP25]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = lshr i64 [[TMP25]], 32
-; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
-; CHECK-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP28]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP30:%.*]] = sub i32 [[X]], [[TMP29]]
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[TMP30]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp uge i32 [[X]], [[TMP29]]
-; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP35:%.*]] = and i32 [[TMP32]], [[TMP34]]
-; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i32 [[TMP35]], 0
-; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP30]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP38:%.*]] = add i32 [[TMP30]], [[SHL_Y]]
-; CHECK-NEXT:    [[TMP39:%.*]] = select i1 [[TMP36]], i32 [[TMP30]], i32 [[TMP37]]
-; CHECK-NEXT:    [[TMP40:%.*]] = select i1 [[TMP33]], i32 [[TMP39]], i32 [[TMP38]]
-; CHECK-NEXT:    store i32 [[TMP40]], i32 addrspace(1)* [[OUT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], [[SHL_Y]]
+; CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[OUT:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: urem_i32_pow2_shl_denom:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s9, 0x1000, s9
-; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s9
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, 0x4f800000, v0
-; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
-; GCN-NEXT:    v_mul_hi_u32 v2, v0, s9
-; GCN-NEXT:    v_sub_i32_e32 v3, vcc, 0, v1
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[2:3], 0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s[2:3]
-; GCN-NEXT:    v_mul_hi_u32 v1, v1, v0
-; GCN-NEXT:    v_add_i32_e32 v2, vcc, v1, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, v1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[2:3]
-; GCN-NEXT:    v_mul_hi_u32 v0, v0, s8
-; GCN-NEXT:    v_mul_lo_u32 v0, v0, s9
-; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s8, v0
-; GCN-NEXT:    v_cmp_ge_u32_e64 s[2:3], s8, v0
-; GCN-NEXT:    v_cmp_le_u32_e64 s[0:1], s9, v1
-; GCN-NEXT:    v_add_i32_e32 v2, vcc, s9, v1
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s9, v1
-; GCN-NEXT:    s_and_b64 vcc, s[0:1], s[2:3]
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[2:3]
+; GCN-NEXT:    s_lshl_b32 s1, 0x1000, s1
+; GCN-NEXT:    s_add_i32 s1, s1, -1
+; GCN-NEXT:    s_and_b32 s0, s0, s1
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %shl.y = shl i32 4096, %y
@@ -4865,56 +4746,8 @@ define amdgpu_kernel void @sdiv_i32_pow2k_denom(i32 addrspace(1)* %out, i32 %x) 
 define amdgpu_kernel void @sdiv_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_i32_pow2_shl_denom(
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl i32 4096, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[SHL_Y]], 31
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SHL_Y]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = uitofp i32 [[TMP7]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast float [[TMP9]], 0x41F0000000000000
-; CHECK-NEXT:    [[TMP11:%.*]] = fptoui float [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP14]], 32
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i32 0, [[TMP15]]
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[TMP17]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32 [[TMP18]], i32 [[TMP15]]
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
-; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP21]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP23]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = lshr i64 [[TMP23]], 32
-; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP25]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP11]], [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = sub i32 [[TMP11]], [[TMP26]]
-; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP19]], i32 [[TMP27]], i32 [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP29]] to i64
-; CHECK-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP30]], [[TMP31]]
-; CHECK-NEXT:    [[TMP33:%.*]] = trunc i64 [[TMP32]] to i32
-; CHECK-NEXT:    [[TMP34:%.*]] = lshr i64 [[TMP32]], 32
-; CHECK-NEXT:    [[TMP35:%.*]] = trunc i64 [[TMP34]] to i32
-; CHECK-NEXT:    [[TMP36:%.*]] = mul i32 [[TMP35]], [[TMP7]]
-; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP6]], [[TMP36]]
-; CHECK-NEXT:    [[TMP38:%.*]] = icmp uge i32 [[TMP37]], [[TMP7]]
-; CHECK-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP40:%.*]] = icmp uge i32 [[TMP6]], [[TMP36]]
-; CHECK-NEXT:    [[TMP41:%.*]] = select i1 [[TMP40]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = and i32 [[TMP39]], [[TMP41]]
-; CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i32 [[TMP42]], 0
-; CHECK-NEXT:    [[TMP44:%.*]] = add i32 [[TMP35]], 1
-; CHECK-NEXT:    [[TMP45:%.*]] = sub i32 [[TMP35]], 1
-; CHECK-NEXT:    [[TMP46:%.*]] = select i1 [[TMP43]], i32 [[TMP35]], i32 [[TMP44]]
-; CHECK-NEXT:    [[TMP47:%.*]] = select i1 [[TMP40]], i32 [[TMP46]], i32 [[TMP45]]
-; CHECK-NEXT:    [[TMP48:%.*]] = xor i32 [[TMP47]], [[TMP3]]
-; CHECK-NEXT:    [[TMP49:%.*]] = sub i32 [[TMP48]], [[TMP3]]
-; CHECK-NEXT:    store i32 [[TMP49]], i32 addrspace(1)* [[OUT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[X:%.*]], [[SHL_Y]]
+; CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[OUT:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: sdiv_i32_pow2_shl_denom:
@@ -4949,12 +4782,12 @@ define amdgpu_kernel void @sdiv_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %
 ; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, -1, v0
-; GCN-NEXT:    v_sub_i32_e32 v4, vcc, s2, v1
-; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, s2, v1
-; GCN-NEXT:    v_cmp_le_u32_e64 s[0:1], s9, v4
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
+; GCN-NEXT:    v_cmp_ge_u32_e64 s[0:1], s2, v1
+; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s2, v1
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    s_and_b64 vcc, vcc, s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v3, v0, s[0:1]
 ; GCN-NEXT:    v_xor_b32_e32 v0, s3, v0
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -5287,55 +5120,8 @@ define amdgpu_kernel void @srem_i32_pow2k_denom(i32 addrspace(1)* %out, i32 %x) 
 define amdgpu_kernel void @srem_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @srem_i32_pow2_shl_denom(
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl i32 4096, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[SHL_Y]], 31
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SHL_Y]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = uitofp i32 [[TMP6]] to float
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP8]], 0x41F0000000000000
-; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP9]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP13]], 32
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 0, [[TMP14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP16]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP17]], i32 [[TMP14]]
-; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP20]], [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP22]] to i32
-; CHECK-NEXT:    [[TMP24:%.*]] = lshr i64 [[TMP22]], 32
-; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP10]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = sub i32 [[TMP10]], [[TMP25]]
-; CHECK-NEXT:    [[TMP28:%.*]] = select i1 [[TMP18]], i32 [[TMP26]], i32 [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP28]] to i64
-; CHECK-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP29]], [[TMP30]]
-; CHECK-NEXT:    [[TMP32:%.*]] = trunc i64 [[TMP31]] to i32
-; CHECK-NEXT:    [[TMP33:%.*]] = lshr i64 [[TMP31]], 32
-; CHECK-NEXT:    [[TMP34:%.*]] = trunc i64 [[TMP33]] to i32
-; CHECK-NEXT:    [[TMP35:%.*]] = mul i32 [[TMP34]], [[TMP6]]
-; CHECK-NEXT:    [[TMP36:%.*]] = sub i32 [[TMP5]], [[TMP35]]
-; CHECK-NEXT:    [[TMP37:%.*]] = icmp uge i32 [[TMP36]], [[TMP6]]
-; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP39:%.*]] = icmp uge i32 [[TMP5]], [[TMP35]]
-; CHECK-NEXT:    [[TMP40:%.*]] = select i1 [[TMP39]], i32 -1, i32 0
-; CHECK-NEXT:    [[TMP41:%.*]] = and i32 [[TMP38]], [[TMP40]]
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[TMP41]], 0
-; CHECK-NEXT:    [[TMP43:%.*]] = sub i32 [[TMP36]], [[TMP6]]
-; CHECK-NEXT:    [[TMP44:%.*]] = add i32 [[TMP36]], [[TMP6]]
-; CHECK-NEXT:    [[TMP45:%.*]] = select i1 [[TMP42]], i32 [[TMP36]], i32 [[TMP43]]
-; CHECK-NEXT:    [[TMP46:%.*]] = select i1 [[TMP39]], i32 [[TMP45]], i32 [[TMP44]]
-; CHECK-NEXT:    [[TMP47:%.*]] = xor i32 [[TMP46]], [[TMP1]]
-; CHECK-NEXT:    [[TMP48:%.*]] = sub i32 [[TMP47]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[TMP48]], i32 addrspace(1)* [[OUT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X:%.*]], [[SHL_Y]]
+; CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[OUT:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: srem_i32_pow2_shl_denom:
@@ -5368,13 +5154,13 @@ define amdgpu_kernel void @srem_i32_pow2_shl_denom(i32 addrspace(1)* %out, i32 %
 ; GCN-NEXT:    v_mul_hi_u32 v0, v0, s9
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, s10
 ; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s9, v0
-; GCN-NEXT:    v_cmp_ge_u32_e64 s[2:3], s9, v0
-; GCN-NEXT:    v_cmp_le_u32_e64 s[0:1], s10, v1
+; GCN-NEXT:    v_cmp_ge_u32_e64 s[0:1], s9, v0
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, s10, v1
+; GCN-NEXT:    v_cmp_le_u32_e64 s[2:3], s10, v1
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s10, v1
-; GCN-NEXT:    s_and_b64 vcc, s[0:1], s[2:3]
+; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[2:3]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[0:1]
 ; GCN-NEXT:    v_xor_b32_e32 v0, s8, v0
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s8, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
