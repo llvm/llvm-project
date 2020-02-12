@@ -866,6 +866,15 @@ static LogicalResult verify(ConvOp op) {
   return success();
 }
 
+static AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap,
+                                      unsigned rank, MLIRContext *context) {
+  if (maybeMap)
+    return maybeMap.getValue();
+  if (rank == 0)
+    return AffineMap();
+  return AffineMap::getMultiDimIdentityMap(rank, context);
+}
+
 namespace mlir {
 namespace linalg {
 
@@ -879,15 +888,6 @@ namespace linalg {
 
 } // namespace linalg
 } // namespace mlir
-
-static AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap,
-                                      unsigned rank, MLIRContext *context) {
-  if (maybeMap)
-    return maybeMap.getValue();
-  if (rank == 0)
-    return AffineMap();
-  return AffineMap::getMultiDimIdentityMap(rank, context);
-}
 
 // Returns `num` AffineDimExpr dimensions at positions [curIdx, curIdx + num)
 // and increments `curIdx` to `curIdx + num`.
@@ -997,23 +997,15 @@ SmallVector<AffineMap, 4> mlir::linalg::loopToOperandRangesMaps(Operation *op) {
         AffineMap::get(idx, 0, concat(concat(bs, ws), qs)),
         // output[b, x[0], ..., x[N-1], k]
         AffineMap::get(idx, 0, concat(concat(bs, xs), ks))};
-  } else if (auto genericOp = dyn_cast<GenericOp>(op)) {
-    SmallVector<AffineMap, 4> res;
-    unsigned nViews = genericOp.getNumInputsAndOutputs();
-    res.reserve(nViews);
-    for (unsigned i = 0, e = nViews; i < e; ++i) {
-      res.push_back(genericOp.getIndexingMap(i));
-    }
-    return res;
-  } else if (auto indexedGenericOp = dyn_cast<IndexedGenericOp>(op)) {
-    SmallVector<AffineMap, 4> res;
-    unsigned nViews = indexedGenericOp.getNumInputsAndOutputs();
-    res.reserve(nViews);
-    for (unsigned i = 0, e = nViews; i < e; ++i)
-      res.push_back(indexedGenericOp.getIndexingMap(i));
-    return res;
   }
-  llvm_unreachable("Missing loopToOperandRangesMaps for op");
+  SmallVector<AffineMap, 4> res;
+  auto linalgOp = cast<LinalgOp>(op);
+  unsigned nViews = linalgOp.getNumInputsAndOutputs();
+  res.reserve(nViews);
+  for (unsigned i = 0, e = nViews; i < e; ++i)
+    res.push_back(linalgOp.getIndexingMap(i));
+  assert(nViews == linalgOp.indexing_maps().size());
+  return res;
 }
 
 static void appendMangledType(llvm::raw_string_ostream &ss, Type t) {
