@@ -4169,7 +4169,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
-        if (Options.SupportsDebugEntryValues)
+        if (Options.EnableDebugEntryValues)
           CSInfo.emplace_back(VA.getLocReg(), i);
       }
     } else {
