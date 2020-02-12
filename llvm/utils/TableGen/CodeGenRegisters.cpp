@@ -1220,6 +1220,12 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(Record *Def) {
   return Idx;
 }
 
+const CodeGenSubRegIndex *
+CodeGenRegBank::findSubRegIdx(const Record* Def) const {
+  auto I = Def2SubRegIdx.find(Def);
+  return (I == Def2SubRegIdx.end()) ? nullptr : I->second;
+}
+
 CodeGenRegister *CodeGenRegBank::getReg(Record *Def) {
   CodeGenRegister *&Reg = Def2Reg[Def];
   if (Reg)
