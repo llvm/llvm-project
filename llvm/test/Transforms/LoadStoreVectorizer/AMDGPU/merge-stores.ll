@@ -49,7 +49,8 @@ define amdgpu_kernel void @merge_global_store_2_constants_0_i16(i16 addrspace(1)
 }
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i16_natural_align
-; CHECK: store <2 x i16>
+; CHECK: store i16
+; CHECK: store i16
 define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
 
@@ -58,13 +59,34 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(i16 
   ret void
 }
 
+; CHECK-LABEL: @merge_global_store_2_constants_i16_align_1
+; CHECK: store <2 x i16>
+define amdgpu_kernel void @merge_global_store_2_constants_i16_align_1(i16 addrspace(1)* %out) #0 {
+  %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
+
+  store i16 123, i16 addrspace(1)* %out.gep.1, align 1
+  store i16 456, i16 addrspace(1)* %out, align 1
+  ret void
+}
+
 ; CHECK-LABEL: @merge_global_store_2_constants_half_natural_align
-; CHECK: store <2 x half>
+; CHECK: store half
+; CHECK: store half
 define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(half addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
 
   store half 2.0, half addrspace(1)* %out.gep.1
   store half 1.0, half addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABEL: @merge_global_store_2_constants_half_align_1
+; CHECK: store <2 x half>
+define amdgpu_kernel void @merge_global_store_2_constants_half_align_1(half addrspace(1)* %out) #0 {
+  %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
+
+  store half 2.0, half addrspace(1)* %out.gep.1, align 1
+  store half 1.0, half addrspace(1)* %out, align 1
   ret void
 }
 
