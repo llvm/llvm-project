@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: .debug_addr table at offset 0x0 contains data of size 7 which is not a multiple of addr size 4
+# ERR: address table at offset 0x0 contains data of size 7 which is not a multiple of addr size 4
 # ERR-NOT: {{.}}
 
 # data size is not multiple of address_size
