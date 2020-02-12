@@ -35,6 +35,10 @@ class TestGpuMemoryPromotionPass
 };
 } // end namespace
 
-static PassRegistration<TestGpuMemoryPromotionPass> registration(
-    "test-gpu-memory-promotion",
-    "Promotes the annotated arguments of gpu.func to workgroup memory.");
+namespace mlir {
+void registerTestGpuMemoryPromotionPass() {
+  PassRegistration<TestGpuMemoryPromotionPass>(
+      "test-gpu-memory-promotion",
+      "Promotes the annotated arguments of gpu.func to workgroup memory.");
+}
+} // namespace mlir

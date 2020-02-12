@@ -1658,8 +1658,6 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
   return success();
 }
 
-static DialectRegistration<LLVMDialect> llvmDialect;
-
 //===----------------------------------------------------------------------===//
 // LLVMType.
 //===----------------------------------------------------------------------===//

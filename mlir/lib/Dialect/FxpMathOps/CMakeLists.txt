@@ -1,6 +1,5 @@
 add_llvm_library(MLIRFxpMathOps
   IR/FxpMathOps.cpp
-  IR/DialectRegistration.cpp
   Transforms/LowerUniformRealMath.cpp
 
   ADDITIONAL_HEADER_DIRS

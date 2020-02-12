@@ -50,7 +50,10 @@ public:
 };
 } // end namespace
 
-static PassRegistration<TestLoopMappingPass>
-    reg("test-mapping-to-processing-elements",
-        "test mapping a single loop on a virtual processor grid",
-        [] { return std::make_unique<TestLoopMappingPass>(); });
+namespace mlir {
+void registerTestLoopMappingPass() {
+  PassRegistration<TestLoopMappingPass>(
+      "test-mapping-to-processing-elements",
+      "test mapping a single loop on a virtual processor grid");
+}
+} // namespace mlir

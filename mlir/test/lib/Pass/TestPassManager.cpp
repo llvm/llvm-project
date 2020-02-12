@@ -88,40 +88,43 @@ static void testNestedPipelineTextual(OpPassManager &pm) {
   (void)parsePassPipeline("test-pm-nested-pipeline", pm);
 }
 
-static PassRegistration<TestOptionsPass>
-    reg("test-options-pass", "Test options parsing capabilities");
+namespace mlir {
+void registerPassManagerTestPass() {
+  PassRegistration<TestOptionsPass>("test-options-pass",
+                                    "Test options parsing capabilities");
 
-static PassRegistration<TestModulePass>
-    unusedMP("test-module-pass", "Test a module pass in the pass manager");
-static PassRegistration<TestFunctionPass>
-    unusedFP("test-function-pass", "Test a function pass in the pass manager");
+  PassRegistration<TestModulePass>("test-module-pass",
+                                   "Test a module pass in the pass manager");
 
-static PassRegistration<TestCrashRecoveryPass>
-    unusedCrashP("test-pass-crash",
-                 "Test a pass in the pass manager that always crashes");
+  PassRegistration<TestFunctionPass>(
+      "test-function-pass", "Test a function pass in the pass manager");
 
-static PassRegistration<TestStatisticPass> unusedStatP("test-stats-pass",
-                                                       "Test pass statistics");
+  PassRegistration<TestCrashRecoveryPass>(
+      "test-pass-crash", "Test a pass in the pass manager that always crashes");
 
-static PassPipelineRegistration<>
-    unused("test-pm-nested-pipeline",
-           "Test a nested pipeline in the pass manager", testNestedPipeline);
-static PassPipelineRegistration<>
-    unusedTextual("test-textual-pm-nested-pipeline",
-                  "Test a nested pipeline in the pass manager",
-                  testNestedPipelineTextual);
-static PassPipelineRegistration<>
-    unusedDump("test-dump-pipeline",
-               "Dumps the pipeline build so far for debugging purposes",
-               [](OpPassManager &pm) {
-                 pm.printAsTextualPipeline(llvm::errs());
-                 llvm::errs() << "\n";
-               });
+  PassRegistration<TestStatisticPass> unusedStatP("test-stats-pass",
+                                                  "Test pass statistics");
 
-static PassPipelineRegistration<TestOptionsPass::Options>
-    registerOptionsPassPipeline(
-        "test-options-pass-pipeline",
-        "Parses options using pass pipeline registration",
-        [](OpPassManager &pm, const TestOptionsPass::Options &options) {
-          pm.addPass(std::make_unique<TestOptionsPass>(options));
-        });
+  PassPipelineRegistration<>("test-pm-nested-pipeline",
+                             "Test a nested pipeline in the pass manager",
+                             testNestedPipeline);
+  PassPipelineRegistration<>("test-textual-pm-nested-pipeline",
+                             "Test a nested pipeline in the pass manager",
+                             testNestedPipelineTextual);
+  PassPipelineRegistration<>(
+      "test-dump-pipeline",
+      "Dumps the pipeline build so far for debugging purposes",
+      [](OpPassManager &pm) {
+        pm.printAsTextualPipeline(llvm::errs());
+        llvm::errs() << "\n";
+      });
+
+  PassPipelineRegistration<TestOptionsPass::Options>
+      registerOptionsPassPipeline(
+          "test-options-pass-pipeline",
+          "Parses options using pass pipeline registration",
+          [](OpPassManager &pm, const TestOptionsPass::Options &options) {
+            pm.addPass(std::make_unique<TestOptionsPass>(options));
+          });
+}
+} // namespace mlir

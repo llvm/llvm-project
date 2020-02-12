@@ -1,9 +1,8 @@
 add_llvm_library(MLIRAffineOps
   AffineOps.cpp
   AffineValueMap.cpp
-  DialectRegistration.cpp
   EDSC/Builders.cpp
-  
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/AffineOps
   )
