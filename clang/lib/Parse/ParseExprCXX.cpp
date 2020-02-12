@@ -3486,6 +3486,7 @@ ExprResult Parser::ParseRequiresExpression() {
           // We need to consume the typename to allow 'requires { typename a; }'
           SourceLocation TypenameKWLoc = ConsumeToken();
           if (TryAnnotateCXXScopeToken()) {
+            TPA.Commit();
             SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
             break;
           }
