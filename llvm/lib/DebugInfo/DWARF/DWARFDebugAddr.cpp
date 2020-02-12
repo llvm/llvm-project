@@ -51,22 +51,23 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
           HeaderOffset);
     }
     if (HeaderData.Length + sizeof(uint32_t) < sizeof(Header)) {
-      uint32_t TmpLength = getLength();
+      uint32_t TmpLength = HeaderData.Length;
       invalidateLength();
       return createStringError(errc::invalid_argument,
                          "address table at offset 0x%" PRIx64
-                         " has too small length (0x%" PRIx32
-                         ") to contain a complete header",
+                         " has a unit_length value of 0x%" PRIx32
+                         ", which is too small to contain a complete header",
                          HeaderOffset, TmpLength);
     }
     uint64_t End = HeaderOffset + getLength();
     if (!Data.isValidOffsetForDataOfSize(HeaderOffset, End - HeaderOffset)) {
-      uint32_t TmpLength = getLength();
+      uint32_t TmpLength = HeaderData.Length;
       invalidateLength();
-      return createStringError(errc::invalid_argument,
+      return createStringError(
+          errc::invalid_argument,
           "section is not large enough to contain an address table "
-          "of length 0x%" PRIx32 " at offset 0x%" PRIx64,
-          TmpLength, HeaderOffset);
+          "at offset 0x%" PRIx64 " with a unit_length value of 0x%" PRIx32,
+          HeaderOffset, TmpLength);
     }
 
     HeaderData.Version = Data.getU16(OffsetPtr);
@@ -87,9 +88,10 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   // implementations of .debug_addr table, which doesn't contain a header
   // and consists only of a series of addresses.
   if (HeaderData.Version > 5) {
-    return createStringError(errc::not_supported, "version %" PRIu16
-        " of .debug_addr section at offset 0x%" PRIx64 " is not supported",
-        HeaderData.Version, HeaderOffset);
+    return createStringError(errc::not_supported,
+                             "address table at offset 0x%" PRIx64
+                             " has unsupported version %" PRIu16,
+                             HeaderOffset, HeaderData.Version);
   }
   // FIXME: For now we just treat version mismatch as an error,
   // however the correct way to associate a .debug_addr table
@@ -105,7 +107,8 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
     return createStringError(errc::not_supported,
                        "address table at offset 0x%" PRIx64
-                       " has unsupported address size %" PRIu8,
+                       " has unsupported address size %" PRIu8
+                       " (4 and 8 are supported)",
                        HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.AddrSize != AddrSize && AddrSize != 0)
     WarnCallback(createStringError(
