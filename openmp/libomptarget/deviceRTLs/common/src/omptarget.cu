@@ -68,7 +68,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   // set number of threads and thread limit in team to started value
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
-  nThreads = GetNumberOfWorkersInTeam();
+  nThreads = GetNumberOfThreadsInBlock();
   threadLimit = ThreadLimit;
 }
 
