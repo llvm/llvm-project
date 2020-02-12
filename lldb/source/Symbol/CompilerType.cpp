@@ -288,7 +288,11 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString CompilerType::GetDisplayTypeName() const { return GetTypeName(); }
+ConstString CompilerType::GetDisplayTypeName() const {
+  if (IsValid())
+    return m_type_system->GetDisplayTypeName(m_type);
+  return ConstString("<invalid>");
+}
 
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
