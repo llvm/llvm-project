@@ -83,8 +83,6 @@
 .Lprologue_short_prologue_end:
 .byte   6               # Read as part of the prologue,
                         # then later again as DW_LNS_negate_stmt.
-# FIXME: There should be an additional 0 byte here, but the file name parsing
-#        code does not recognise a missing null terminator.
 # Header end
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x1122334455667788
@@ -446,6 +444,49 @@
 .byte   0x1            # Special opcode
 .byte   0, 1, 1        # DW_LNE_end_sequence
 .Lzero_opcode_base_end:
+
+# V4 table with unterminated include directory table.
+.long   .Lunterminated_include_end - .Lunterminated_include_start # unit length
+.Lunterminated_include_start:
+.short  4               # version
+.long   .Lunterminated_include_prologue_end-.Lunterminated_include_prologue_start # Length of Prologue
+.Lunterminated_include_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+.asciz  "dir1"          # Include table
+.Lunterminated_include_prologue_end:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xabcdef0123456789
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Lunterminated_include_end:
+
+# V4 table with unterminated file name table.
+.long   .Lunterminated_files_end - .Lunterminated_files_start # unit length
+.Lunterminated_files_start:
+.short  4               # version
+.long   .Lunterminated_files_prologue_end-.Lunterminated_files_prologue_start # Length of Prologue
+.Lunterminated_files_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+.asciz  "dir1"          # Include table
+.byte   0
+.asciz  "foo.c"         # File table
+.byte   1, 2, 3
+.Lunterminated_files_prologue_end:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xababcdcdefef0909
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Lunterminated_files_end:
 
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)
