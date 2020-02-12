@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
 namespace llvm {
@@ -30,6 +31,13 @@ struct Object {
   llvm::wasm::WasmObjectHeader Header;
   // For now don't discriminate between kinds of sections.
   std::vector<Section> Sections;
+
+  void addSectionWithOwnedContents(Section NewSection,
+                                   std::unique_ptr<MemoryBuffer> &&Content);
+  void removeSections(function_ref<bool(const Section &)> ToRemove);
+
+private:
+  std::vector<std::unique_ptr<MemoryBuffer>> OwnedContents;
 };
 
 } // end namespace wasm
