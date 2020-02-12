@@ -987,7 +987,6 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
 
   ConstantInt *Zero = Builder.getInt32(0);
   ConstantInt *One = Builder.getInt32(1);
-  ConstantInt *MinusOne = Builder.getInt32(~0);
 
   Value *Sign = nullptr;
   if (IsSigned) {
@@ -1048,18 +1047,14 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   // Remainder = Num - Num_S_Remainder
   Value *Remainder = Builder.CreateSub(Num, Num_S_Remainder);
 
-  // Remainder_GE_Den = (Remainder >= Den ? -1 : 0)
-  Value *Rem_GE_Den_CC = Builder.CreateICmpUGE(Remainder, Den);
-  Value *Remainder_GE_Den = Builder.CreateSelect(Rem_GE_Den_CC, MinusOne, Zero);
+  // Remainder_GE_Den = Remainder >= Den;
+  Value *Remainder_GE_Den = Builder.CreateICmpUGE(Remainder, Den);
 
-  // Remainder_GE_Zero = (Num >= Num_S_Remainder ? -1 : 0)
-  Value *Num_GE_Num_S_Rem_CC = Builder.CreateICmpUGE(Num, Num_S_Remainder);
-  Value *Remainder_GE_Zero = Builder.CreateSelect(Num_GE_Num_S_Rem_CC,
-                                                  MinusOne, Zero);
+  // Remainder_GE_Zero = Num >= Num_S_Remainder
+  Value *Remainder_GE_Zero = Builder.CreateICmpUGE(Num, Num_S_Remainder);
 
   // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
   Value *Tmp1 = Builder.CreateAnd(Remainder_GE_Den, Remainder_GE_Zero);
-  Value *Tmp1_0_CC = Builder.CreateICmpEQ(Tmp1, Zero);
 
   Value *Res;
   if (IsDiv) {
@@ -1069,11 +1064,11 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
     // Quotient_S_One = Quotient - 1
     Value *Quotient_S_One = Builder.CreateSub(Quotient, One);
 
-    // Div = (Tmp1 == 0 ? Quotient : Quotient_A_One)
-    Value *Div = Builder.CreateSelect(Tmp1_0_CC, Quotient, Quotient_A_One);
+    // Div = (Tmp1 ? Quotient_A_One : Quotient)
+    Value *Div = Builder.CreateSelect(Tmp1, Quotient_A_One, Quotient);
 
-    // Div = (Remainder_GE_Zero == 0 ? Quotient_S_One : Div)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Div, Quotient_S_One);
+    // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
+    Res = Builder.CreateSelect(Remainder_GE_Zero, Div, Quotient_S_One);
   } else {
     // Remainder_S_Den = Remainder - Den
     Value *Remainder_S_Den = Builder.CreateSub(Remainder, Den);
@@ -1081,11 +1076,11 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
     // Remainder_A_Den = Remainder + Den
     Value *Remainder_A_Den = Builder.CreateAdd(Remainder, Den);
 
-    // Rem = (Tmp1 == 0 ? Remainder : Remainder_S_Den)
-    Value *Rem = Builder.CreateSelect(Tmp1_0_CC, Remainder, Remainder_S_Den);
+    // Rem = (Tmp1 ?  Remainder_S_Den : Remainder)
+    Value *Rem = Builder.CreateSelect(Tmp1, Remainder_S_Den, Remainder);
 
-    // Rem = (Remainder_GE_Zero == 0 ? Remainder_A_Den : Rem)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Rem, Remainder_A_Den);
+    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
+    Res = Builder.CreateSelect(Remainder_GE_Zero, Rem, Remainder_A_Den);
   }
 
   if (IsSigned) {
