@@ -25,8 +25,11 @@ enum InfoType : uint32_t {
 };
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
-  OS << '[' << HEX64(FI.Range.Start) << '-' << HEX64(FI.Range.End) << "): "
-     << "Name=" << HEX32(FI.Name) << '\n' << FI.OptLineTable << FI.Inline;
+  OS << FI.Range << ": " << "Name=" << HEX32(FI.Name) << '\n';
+  if (FI.OptLineTable)
+    OS << FI.OptLineTable << '\n';
+  if (FI.Inline)
+    OS << FI.Inline << '\n';
   return OS;
 }
 

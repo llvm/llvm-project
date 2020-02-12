@@ -166,6 +166,24 @@ public:
   llvm::Error encode(FileWriter &O, uint64_t BaseAddr) const;
   bool empty() const { return Lines.empty(); }
   void clear() { Lines.clear(); }
+  /// Return the first line entry if the line table isn't empty.
+  ///
+  /// \returns An optional line entry with the first line entry if the line
+  /// table isn't empty, or llvm::None if the line table is emtpy.
+  Optional<LineEntry> first() const {
+    if (Lines.empty())
+      return llvm::None;
+    return Lines.front();
+  }
+  /// Return the last line entry if the line table isn't empty.
+  ///
+  /// \returns An optional line entry with the last line entry if the line
+  /// table isn't empty, or llvm::None if the line table is emtpy.
+  Optional<LineEntry> last() const {
+    if (Lines.empty())
+      return llvm::None;
+    return Lines.back();
+  }
   void push(const LineEntry &LE) {
     Lines.push_back(LE);
   }
