@@ -1420,8 +1420,14 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
         llvm::find_if(script->sectionCommands, isSection),
         llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
         compareSections);
+
+    // Process INSERT commands. From this point onwards the order of
+    // script->sectionCommands is fixed.
+    script->processInsertCommands();
     return;
   }
+
+  script->processInsertCommands();
 
   // Orphan sections are sections present in the input files which are
   // not explicitly placed into the output file by the linker script.
