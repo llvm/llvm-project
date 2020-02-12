@@ -627,6 +627,9 @@ namespace llvm {
       // Strict FMA nodes.
       STRICT_FNMADD, STRICT_FMSUB, STRICT_FNMSUB,
 
+      // Conversions between float and half-float.
+      STRICT_CVTPS2PH, STRICT_CVTPH2PS,
+
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LCMPXCHG8_DAG,

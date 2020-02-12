@@ -8568,14 +8568,15 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass avx512_cvtph2ps<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                            X86MemOperand x86memop, PatFrag ld_frag,
                            X86FoldableSchedWrite sched> {
-  defm rr : AVX512_maskable<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst),
+  defm rr : AVX512_maskable_split<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst),
                             (ins _src.RC:$src), "vcvtph2ps", "$src", "$src",
+                            (X86any_cvtph2ps (_src.VT _src.RC:$src)),
                             (X86cvtph2ps (_src.VT _src.RC:$src))>,
                             T8PD, Sched<[sched]>;
-  defm rm : AVX512_maskable<0x13, MRMSrcMem, _dest, (outs _dest.RC:$dst),
+  defm rm : AVX512_maskable_split<0x13, MRMSrcMem, _dest, (outs _dest.RC:$dst),
                             (ins x86memop:$src), "vcvtph2ps", "$src", "$src",
-                            (X86cvtph2ps (_src.VT
-                                          (ld_frag addr:$src)))>,
+                            (X86any_cvtph2ps (_src.VT (ld_frag addr:$src))),
+                            (X86cvtph2ps (_src.VT (ld_frag addr:$src)))>,
                             T8PD, Sched<[sched.Folded]>;
 }
 
@@ -8604,9 +8605,9 @@ let Predicates = [HasVLX] in {
                        EVEX_CD8<32, CD8VH>;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
-  def : Pat<(v4f32 (X86cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
+  def : Pat<(v4f32 (X86any_cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
             (VCVTPH2PSZ128rm addr:$src)>;
-  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (bitconvert
+  def : Pat<(v4f32 (X86any_cvtph2ps (v8i16 (bitconvert
               (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
             (VCVTPH2PSZ128rm addr:$src)>;
 }
@@ -8618,7 +8619,7 @@ let ExeDomain = GenericDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
              (ins _src.RC:$src1, i32u8imm:$src2),
              "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
              [(set _dest.RC:$dst,
-                   (X86cvtps2ph (_src.VT _src.RC:$src1), (i32 timm:$src2)))]>,
+                   (X86any_cvtps2ph (_src.VT _src.RC:$src1), (i32 timm:$src2)))]>,
              Sched<[RR]>;
   let Constraints = "$src0 = $dst" in
   def rrk : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
@@ -8673,16 +8674,16 @@ let Predicates = [HasAVX512] in {
   }
 
   def : Pat<(store (f64 (extractelt
-                         (bc_v2f64 (v8i16 (X86cvtps2ph VR128X:$src1, timm:$src2))),
+                         (bc_v2f64 (v8i16 (X86any_cvtps2ph VR128X:$src1, timm:$src2))),
                          (iPTR 0))), addr:$dst),
             (VCVTPS2PHZ128mr addr:$dst, VR128X:$src1, timm:$src2)>;
   def : Pat<(store (i64 (extractelt
-                         (bc_v2i64 (v8i16 (X86cvtps2ph VR128X:$src1, timm:$src2))),
+                         (bc_v2i64 (v8i16 (X86any_cvtps2ph VR128X:$src1, timm:$src2))),
                          (iPTR 0))), addr:$dst),
             (VCVTPS2PHZ128mr addr:$dst, VR128X:$src1, timm:$src2)>;
-  def : Pat<(store (v8i16 (X86cvtps2ph VR256X:$src1, timm:$src2)), addr:$dst),
+  def : Pat<(store (v8i16 (X86any_cvtps2ph VR256X:$src1, timm:$src2)), addr:$dst),
             (VCVTPS2PHZ256mr addr:$dst, VR256X:$src1, timm:$src2)>;
-  def : Pat<(store (v16i16 (X86cvtps2ph VR512:$src1, timm:$src2)), addr:$dst),
+  def : Pat<(store (v16i16 (X86any_cvtps2ph VR512:$src1, timm:$src2)), addr:$dst),
             (VCVTPS2PHZmr addr:$dst, VR512:$src1, timm:$src2)>;
 }
 
