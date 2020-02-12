@@ -66,6 +66,8 @@ public:
 
   bool isIrrLoopHeader(const MachineBasicBlock *MBB);
 
+  void setBlockFreq(const MachineBasicBlock *MBB, uint64_t Freq);
+
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;
   void view(const Twine &Name, bool isSimple = true) const;
