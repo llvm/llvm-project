@@ -1,3 +1,7 @@
+; Verify the call site info. If the call site info is not
+; in the valid state, an assert should be triggered.
+; RUN: llc < %s -debug-entry-values -mtriple=arm64-none-linux-gnu -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
+
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s

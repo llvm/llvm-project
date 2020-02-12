@@ -920,6 +920,11 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
         // Now stitch the new instructions into place and erase the old one.
         for (auto *NewMI : NewMIs)
           MBB.insert(MI.getIterator(), NewMI);
+
+        // Update the call site info.
+        if (MI.isCandidateForCallSiteEntry())
+          MF.eraseCallSiteInfo(&MI);
+
         MI.eraseFromParent();
         LLVM_DEBUG({
           dbgs() << "Unfolded load successfully into:\n";
