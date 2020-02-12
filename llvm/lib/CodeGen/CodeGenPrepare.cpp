@@ -6864,12 +6864,19 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
     Value *Addr = Builder.CreateBitCast(
         SI.getOperand(1),
         SplitStoreType->getPointerTo(SI.getPointerAddressSpace()));
-    if ((IsLE && Upper) || (!IsLE && !Upper))
+    const bool IsOffsetStore = (IsLE && Upper) || (!IsLE && !Upper);
+    if (IsOffsetStore)
       Addr = Builder.CreateGEP(
           SplitStoreType, Addr,
           ConstantInt::get(Type::getInt32Ty(SI.getContext()), 1));
-    Builder.CreateAlignedStore(V, Addr,
-                               Upper ? SI.getAlign() / 2 : SI.getAlign());
+    MaybeAlign Alignment = SI.getAlign();
+    if (IsOffsetStore && Alignment) {
+      // When splitting the store in half, naturally one half will retain the
+      // alignment of the original wider store, regardless of whether it was
+      // over-aligned or not, while the other will require adjustment.
+      Alignment = commonAlignment(Alignment, HalfValBitSize / 8);
+    }
+    Builder.CreateAlignedStore(V, Addr, Alignment);
   };
 
   CreateSplitStore(LValue, false);
