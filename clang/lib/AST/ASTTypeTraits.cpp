@@ -18,8 +18,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
 
-namespace clang {
-namespace ast_type_traits {
+using namespace clang;
 
 const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
   { NKI_None, "<None>" },
@@ -178,6 +177,3 @@ SourceRange DynTypedNode::getSourceRange() const {
     return SourceRange(C->getBeginLoc(), C->getEndLoc());
   return SourceRange();
 }
-
-} // end namespace ast_type_traits
-} // end namespace clang

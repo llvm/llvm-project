@@ -684,9 +684,7 @@ private:
   }
 };
 
-ast_type_traits::ASTNodeKind Node::getType() const {
-  return ASTNode.getNodeKind();
-}
+ASTNodeKind Node::getType() const { return ASTNode.getNodeKind(); }
 
 StringRef Node::getTypeLabel() const { return getType().asStringRef(); }
 

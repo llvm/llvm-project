@@ -23,8 +23,6 @@ using namespace clang;
 using namespace transformer;
 
 using ast_matchers::MatchFinder;
-using ast_type_traits::ASTNodeKind;
-using ast_type_traits::DynTypedNode;
 using llvm::Error;
 using llvm::StringError;
 

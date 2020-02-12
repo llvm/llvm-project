@@ -7381,11 +7381,11 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;T&gt;</td><td class="name" onclick="toggle('traverse1')"><a name="traverse1Anchor">traverse</a></td><td>ast_type_traits::TraversalKind TK, const BindableMatcher&lt;T&gt;  InnerMatcher</td></tr>
+<tr><td>Matcher&lt;T&gt;</td><td class="name" onclick="toggle('traverse1')"><a name="traverse1Anchor">traverse</a></td><td>TraversalKind TK, const BindableMatcher&lt;T&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="traverse1"><pre></pre></td></tr>
 
 
-<tr><td>Matcher&lt;T&gt;</td><td class="name" onclick="toggle('traverse0')"><a name="traverse0Anchor">traverse</a></td><td>ast_type_traits::TraversalKind TK, const Matcher&lt;T&gt;  InnerMatcher</td></tr>
+<tr><td>Matcher&lt;T&gt;</td><td class="name" onclick="toggle('traverse0')"><a name="traverse0Anchor">traverse</a></td><td>TraversalKind TK, const Matcher&lt;T&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="traverse0"><pre>Causes all nested matchers to be matched with the specified traversal kind.
 
 Given
@@ -7394,7 +7394,7 @@ Given
       int i = 3.0;
   }
 The matcher
-  traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
+  traverse(TK_IgnoreImplicitCastsAndParentheses,
     varDecl(hasInitializer(floatLiteral().bind("init")))
   )
 matches the variable declaration with "init" bound to the "3.0".

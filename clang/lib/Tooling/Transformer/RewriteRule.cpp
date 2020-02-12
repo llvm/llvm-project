@@ -25,7 +25,6 @@ using namespace transformer;
 
 using ast_matchers::MatchFinder;
 using ast_matchers::internal::DynTypedMatcher;
-using ast_type_traits::ASTNodeKind;
 
 using MatchResult = MatchFinder::MatchResult;
 
