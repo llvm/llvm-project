@@ -255,6 +255,13 @@ public:
                        // or custom.
   };
 
+  /// Enum that specifies when a float negation is beneficial.
+  enum class NegatibleCost {
+    Expensive = 0,  // Negated expression is more expensive.
+    Neutral = 1,    // Negated expression has the same cost.
+    Cheaper = 2     // Negated expression is cheaper.
+  };
+
   class ArgListEntry {
   public:
     Value *Val = nullptr;
@@ -3485,14 +3492,14 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
-  /// Return 1 if we can compute the negated form of the specified expression
-  /// for the same cost as the expression itself, or 2 if we can compute the
-  /// negated form more cheaply than the expression itself. Else return 0.
-  virtual char isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
-                                  bool LegalOperations, bool ForCodeSize,
-                                  unsigned Depth = 0) const;
+  /// Returns whether computing the negated form of the specified expression is
+  /// more expensive, the same cost or cheaper.
+  virtual NegatibleCost getNegatibleCost(SDValue Op, SelectionDAG &DAG,
+                                         bool LegalOperations, bool ForCodeSize,
+                                         unsigned Depth = 0) const;
 
-  /// If isNegatibleForFree returns true, return the newly negated expression.
+  /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
+  /// expression.
   virtual SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                        bool LegalOperations, bool ForCodeSize,
                                        unsigned Depth = 0) const;
