@@ -15,21 +15,47 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/ilist_iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -38,6 +64,17 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <assert.h>
+#include <type_traits>
+#include <vector>
+
+namespace llvm {
+class DataLayout;
+class Value;
+} // namespace llvm
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll"
