@@ -3,6 +3,7 @@
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
 # ERR: address table at offset 0x0 has unsupported version 6
+# ERR: address table at offset 0x20 has unsupported version 4
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents
@@ -40,3 +41,13 @@
   .byte 0  # segment_selector_size
   .long 0x00000002
   .long 0x00000003
+
+	.section	.debug_addr,"",@progbits
+.Ldebug_addr2:
+  .long 12 # unit_length = .short + .byte + .byte + .long + .long
+  .short 4 # version
+  .byte 4  # address_size
+  .byte 0  # segment_selector_size
+  .long 0x00000000
+  .long 0x00000001
+
