@@ -1009,6 +1009,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::STRICT_FP_TO_FP16:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_LRINT:
@@ -3272,6 +3273,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Res));
     }
     break;
+  case ISD::STRICT_FP16_TO_FP:
+    if (Node->getValueType(0) != MVT::f32) {
+      // We can extend to types bigger than f32 in two steps without changing
+      // the result. Since "f16 -> f32" is much more commonly available, give
+      // CodeGen the option of emitting that before resorting to a libcall.
+      SDValue Res =
+          DAG.getNode(ISD::STRICT_FP16_TO_FP, dl, {MVT::f32, MVT::Other},
+                      {Node->getOperand(0), Node->getOperand(1)});
+      Res = DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
+                        {Node->getValueType(0), MVT::Other},
+                        {Res.getValue(1), Res});
+      Results.push_back(Res);
+      Results.push_back(Res.getValue(1));
+    }
+    break;
   case ISD::FP_TO_FP16:
     LLVM_DEBUG(dbgs() << "Legalizing FP_TO_FP16\n");
     if (!TLI.useSoftFloat() && TM.Options.UnsafeFPMath) {
@@ -4234,11 +4250,35 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false));
     }
     break;
+  case ISD::STRICT_FP16_TO_FP: {
+    if (Node->getValueType(0) == MVT::f32) {
+      TargetLowering::MakeLibCallOptions CallOptions;
+      std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+          DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Node->getOperand(1), CallOptions,
+          SDLoc(Node), Node->getOperand(0));
+      Results.push_back(Tmp.first);
+      Results.push_back(Tmp.second);
+    }
+    break;
+  }
   case ISD::FP_TO_FP16: {
     RTLIB::Libcall LC =
         RTLIB::getFPROUND(Node->getOperand(0).getValueType(), MVT::f16);
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to expand fp_to_fp16");
     Results.push_back(ExpandLibCall(LC, Node, false));
+    break;
+  }
+  case ISD::STRICT_FP_TO_FP16: {
+    RTLIB::Libcall LC =
+        RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16);
+    assert(LC != RTLIB::UNKNOWN_LIBCALL &&
+           "Unable to expand strict_fp_to_fp16");
+    TargetLowering::MakeLibCallOptions CallOptions;
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, Node->getValueType(0), Node->getOperand(1),
+                        CallOptions, SDLoc(Node), Node->getOperand(0));
+    Results.push_back(Tmp.first);
+    Results.push_back(Tmp.second);
     break;
   }
   case ISD::FSUB:
