@@ -28,8 +28,8 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   // Read and verify the length field.
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, sizeof(uint32_t)))
     return createStringError(errc::invalid_argument,
-                       "section is not large enough to contain a "
-                       ".debug_addr table length at offset 0x%"
+                       "section is not large enough to contain an "
+                       "address table length at offset 0x%"
                        PRIx64, *OffsetPtr);
   uint16_t UnitVersion;
   if (Version == 0) {
@@ -54,7 +54,7 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
       uint32_t TmpLength = getLength();
       invalidateLength();
       return createStringError(errc::invalid_argument,
-                         ".debug_addr table at offset 0x%" PRIx64
+                         "address table at offset 0x%" PRIx64
                          " has too small length (0x%" PRIx32
                          ") to contain a complete header",
                          HeaderOffset, TmpLength);
@@ -64,7 +64,7 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
       uint32_t TmpLength = getLength();
       invalidateLength();
       return createStringError(errc::invalid_argument,
-          "section is not large enough to contain a .debug_addr table "
+          "section is not large enough to contain an address table "
           "of length 0x%" PRIx32 " at offset 0x%" PRIx64,
           TmpLength, HeaderOffset);
     }
@@ -97,33 +97,33 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   // attribute in the info table.
   if (HeaderData.Version != UnitVersion)
     return createStringError(errc::invalid_argument,
-                       ".debug_addr table at offset 0x%" PRIx64
+                       "address table at offset 0x%" PRIx64
                        " has version %" PRIu16
                        " which is different from the version suggested"
                        " by the DWARF unit header: %" PRIu16,
                        HeaderOffset, HeaderData.Version, UnitVersion);
   if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
     return createStringError(errc::not_supported,
-                       ".debug_addr table at offset 0x%" PRIx64
+                       "address table at offset 0x%" PRIx64
                        " has unsupported address size %" PRIu8,
                        HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.AddrSize != AddrSize && AddrSize != 0)
     WarnCallback(createStringError(
         errc::invalid_argument,
-        ".debug_addr table at offset 0x%" PRIx64 " has address size %" PRIu8
+        "address table at offset 0x%" PRIx64 " has address size %" PRIu8
         " which is different from CU address size %" PRIu8,
         HeaderOffset, HeaderData.AddrSize, AddrSize));
 
   // TODO: add support for non-zero segment selector size.
   if (HeaderData.SegSize != 0)
     return createStringError(errc::not_supported,
-                       ".debug_addr table at offset 0x%" PRIx64
+                       "address table at offset 0x%" PRIx64
                        " has unsupported segment selector size %" PRIu8,
                        HeaderOffset, HeaderData.SegSize);
   if (DataSize % HeaderData.AddrSize != 0) {
     invalidateLength();
     return createStringError(errc::invalid_argument,
-                       ".debug_addr table at offset 0x%" PRIx64
+                       "address table at offset 0x%" PRIx64
                        " contains data of size %" PRIu32
                        " which is not a multiple of addr size %" PRIu8,
                        HeaderOffset, DataSize, HeaderData.AddrSize);
@@ -159,8 +159,8 @@ Expected<uint64_t> DWARFDebugAddrTable::getAddrEntry(uint32_t Index) const {
   if (Index < Addrs.size())
     return Addrs[Index];
   return createStringError(errc::invalid_argument,
-                           "Index %" PRIu32 " is out of range of the "
-                           ".debug_addr table at offset 0x%" PRIx64,
+                           "Index %" PRIu32 " is out of range in the "
+                           "address table at offset 0x%" PRIx64,
                            Index, HeaderOffset);
 }
 

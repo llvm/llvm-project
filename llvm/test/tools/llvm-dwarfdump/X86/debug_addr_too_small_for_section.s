@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: section is not large enough to contain a .debug_addr table of length 0x10 at offset 0x0
+# ERR: section is not large enough to contain an address table of length 0x10 at offset 0x0
 # ERR-NOT: {{.}}
 
 # too small section to contain section of given length
