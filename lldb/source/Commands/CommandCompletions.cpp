@@ -27,18 +27,17 @@
 
 using namespace lldb_private;
 
-CommandCompletions::CommonCompletionElement
-    CommandCompletions::g_common_completions[] = {
-        {eSourceFileCompletion, CommandCompletions::SourceFiles},
-        {eDiskFileCompletion, CommandCompletions::DiskFiles},
-        {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
-        {eSymbolCompletion, CommandCompletions::Symbols},
-        {eModuleCompletion, CommandCompletions::Modules},
-        {eSettingsNameCompletion, CommandCompletions::SettingsNames},
-        {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
-        {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
-        {eVariablePathCompletion, CommandCompletions::VariablePath},
-        {eNoCompletion, nullptr} // This one has to be last in the list.
+// This is the command completion callback that is used to complete the
+// argument of the option it is bound to (in the OptionDefinition table
+// below).
+typedef void (*CompletionCallback)(CommandInterpreter &interpreter,
+                                   CompletionRequest &request,
+                                   // A search filter to limit the search...
+                                   lldb_private::SearchFilter *searcher);
+
+struct CommonCompletionElement {
+  uint32_t type;
+  CompletionCallback callback;
 };
 
 bool CommandCompletions::InvokeCommonCompletionCallbacks(
@@ -46,14 +45,27 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
     CompletionRequest &request, SearchFilter *searcher) {
   bool handled = false;
 
+  const CommonCompletionElement common_completions[] = {
+      {eSourceFileCompletion, CommandCompletions::SourceFiles},
+      {eDiskFileCompletion, CommandCompletions::DiskFiles},
+      {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
+      {eSymbolCompletion, CommandCompletions::Symbols},
+      {eModuleCompletion, CommandCompletions::Modules},
+      {eSettingsNameCompletion, CommandCompletions::SettingsNames},
+      {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
+      {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
+      {eVariablePathCompletion, CommandCompletions::VariablePath},
+      {eNoCompletion, nullptr} // This one has to be last in the list.
+  };
+
   for (int i = 0;; i++) {
-    if (g_common_completions[i].type == eNoCompletion)
+    if (common_completions[i].type == eNoCompletion)
       break;
-    else if ((g_common_completions[i].type & completion_mask) ==
-                 g_common_completions[i].type &&
-             g_common_completions[i].callback != nullptr) {
+    else if ((common_completions[i].type & completion_mask) ==
+                 common_completions[i].type &&
+             common_completions[i].callback != nullptr) {
       handled = true;
-      g_common_completions[i].callback(interpreter, request, searcher);
+      common_completions[i].callback(interpreter, request, searcher);
     }
   }
   return handled;

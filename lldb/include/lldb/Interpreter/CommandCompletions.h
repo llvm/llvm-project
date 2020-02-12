@@ -23,13 +23,6 @@ namespace lldb_private {
 class TildeExpressionResolver;
 class CommandCompletions {
 public:
-  // This is the command completion callback that is used to complete the
-  // argument of the option it is bound to (in the OptionDefinition table
-  // below).  Return the total number of matches.
-  typedef void (*CompletionCallback)(CommandInterpreter &interpreter,
-                                     CompletionRequest &request,
-                                     // A search filter to limit the search...
-                                     lldb_private::SearchFilter *searcher);
   enum CommonCompletionTypes {
     eNoCompletion = 0u,
     eSourceFileCompletion = (1u << 0),
@@ -45,11 +38,6 @@ public:
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
     eCustomCompletion = (1u << 9)
-  };
-
-  struct CommonCompletionElement {
-    uint32_t type;
-    CompletionCallback callback;
   };
 
   static bool InvokeCommonCompletionCallbacks(
@@ -93,9 +81,6 @@ public:
 
   static void VariablePath(CommandInterpreter &interpreter,
                            CompletionRequest &request, SearchFilter *searcher);
-
-private:
-  static CommonCompletionElement g_common_completions[];
 };
 
 } // namespace lldb_private
