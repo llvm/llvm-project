@@ -39,8 +39,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(SymbolFileDWARFDebugMap)
-
 char SymbolFileDWARFDebugMap::ID;
 
 // Subclass lldb_private::Module so we can intercept the

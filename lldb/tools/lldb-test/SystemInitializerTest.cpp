@@ -74,7 +74,6 @@ LLDB_PLUGIN_DECLARE(EmulateInstructionARM64)
 LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS)
 LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS64)
 LLDB_PLUGIN_DECLARE(EmulateInstructionPPC64)
-LLDB_PLUGIN_DECLARE(SymbolFileDWARFDebugMap)
 LLDB_PLUGIN_DECLARE(ItaniumABILanguageRuntime)
 LLDB_PLUGIN_DECLARE(AppleObjCRuntime)
 LLDB_PLUGIN_DECLARE(SystemRuntimeMacOSX)
@@ -205,7 +204,6 @@ llvm::Error SystemInitializerTest::Initialize() {
   LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS64);
   LLDB_PLUGIN_INITIALIZE(EmulateInstructionPPC64);
 
-  LLDB_PLUGIN_INITIALIZE(SymbolFileDWARFDebugMap);
   LLDB_PLUGIN_INITIALIZE(ItaniumABILanguageRuntime);
   LLDB_PLUGIN_INITIALIZE(AppleObjCRuntime);
   LLDB_PLUGIN_INITIALIZE(SystemRuntimeMacOSX);
@@ -299,7 +297,6 @@ void SystemInitializerTest::Terminate() {
   LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS64);
   LLDB_PLUGIN_TERMINATE(EmulateInstructionPPC64);
 
-  LLDB_PLUGIN_TERMINATE(SymbolFileDWARFDebugMap);
   LLDB_PLUGIN_TERMINATE(ItaniumABILanguageRuntime);
   LLDB_PLUGIN_TERMINATE(AppleObjCRuntime);
   LLDB_PLUGIN_TERMINATE(SystemRuntimeMacOSX);
