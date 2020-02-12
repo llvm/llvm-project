@@ -8664,14 +8664,18 @@ let Predicates = [HasAVX512] in {
                                     WriteCvtPS2PHZ, WriteCvtPS2PHZSt>,
                     avx512_cvtps2ph_sae<v16i16x_info, v16f32_info, WriteCvtPS2PHZ>,
                                         EVEX, EVEX_V512, EVEX_CD8<32, CD8VH>;
-  let Predicates = [HasVLX] in {
-    defm VCVTPS2PHZ256 : avx512_cvtps2ph<v8i16x_info, v8f32x_info, f128mem,
-                                         WriteCvtPS2PHY, WriteCvtPS2PHYSt>,
-                                         EVEX, EVEX_V256, EVEX_CD8<32, CD8VH>;
-    defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f64mem,
-                                         WriteCvtPS2PH, WriteCvtPS2PHSt>,
-                                         EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
-  }
+
+  def : Pat<(store (v16i16 (X86any_cvtps2ph VR512:$src1, timm:$src2)), addr:$dst),
+            (VCVTPS2PHZmr addr:$dst, VR512:$src1, timm:$src2)>;
+}
+
+let Predicates = [HasVLX] in {
+  defm VCVTPS2PHZ256 : avx512_cvtps2ph<v8i16x_info, v8f32x_info, f128mem,
+                                       WriteCvtPS2PHY, WriteCvtPS2PHYSt>,
+                                       EVEX, EVEX_V256, EVEX_CD8<32, CD8VH>;
+  defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f64mem,
+                                       WriteCvtPS2PH, WriteCvtPS2PHSt>,
+                                       EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
 
   def : Pat<(store (f64 (extractelt
                          (bc_v2f64 (v8i16 (X86any_cvtps2ph VR128X:$src1, timm:$src2))),
@@ -8683,8 +8687,6 @@ let Predicates = [HasAVX512] in {
             (VCVTPS2PHZ128mr addr:$dst, VR128X:$src1, timm:$src2)>;
   def : Pat<(store (v8i16 (X86any_cvtps2ph VR256X:$src1, timm:$src2)), addr:$dst),
             (VCVTPS2PHZ256mr addr:$dst, VR256X:$src1, timm:$src2)>;
-  def : Pat<(store (v16i16 (X86any_cvtps2ph VR512:$src1, timm:$src2)), addr:$dst),
-            (VCVTPS2PHZmr addr:$dst, VR512:$src1, timm:$src2)>;
 }
 
 //  Unordered/Ordered scalar fp compare with Sae and set EFLAGS
