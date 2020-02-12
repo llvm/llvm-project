@@ -438,6 +438,9 @@ namespace llvm {
     // Get a bit vector of TopoSigs present in this register class.
     const BitVector &getTopoSigs() const { return TopoSigs; }
 
+    // Get a weight of this register class.
+    unsigned getWeight(const CodeGenRegBank&) const;
+
     // Populate a unique sorted list of units from a register set.
     void buildRegUnitSet(const CodeGenRegBank &RegBank,
                          std::vector<unsigned> &RegUnits) const;

@@ -20,9 +20,7 @@
 namespace llvm {
 
 struct R600RegisterInfo final : public R600GenRegisterInfo {
-  RegClassWeight RCW;
-
-  R600RegisterInfo();
+  R600RegisterInfo() : R600GenRegisterInfo(0) {}
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> R600::sub0)
@@ -40,9 +38,6 @@ struct R600RegisterInfo final : public R600GenRegisterInfo {
   /// get the register class of the specified type to use in the
   /// CFGStructurizer
   const TargetRegisterClass *getCFGStructurizerRegClass(MVT VT) const;
-
-  const RegClassWeight &
-    getRegClassWeight(const TargetRegisterClass *RC) const override;
 
   bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override {
     return false;
