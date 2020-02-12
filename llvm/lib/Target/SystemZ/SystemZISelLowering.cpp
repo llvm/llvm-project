@@ -6607,7 +6607,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       APInt SrcDemE = getDemandedSrcElements(Op, DemandedElts, 0);
       Known = DAG.computeKnownBits(SrcOp, SrcDemE, Depth + 1);
       if (IsLogical) {
-        Known = Known.zext(BitWidth, true);
+        Known = Known.zext(BitWidth);
       } else
         Known = Known.sext(BitWidth);
       break;
@@ -6636,7 +6636,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   // Known has the width of the source operand(s). Adjust if needed to match
   // the passed bitwidth.
   if (Known.getBitWidth() != BitWidth)
-    Known = Known.zextOrTrunc(BitWidth, false);
+    Known = Known.anyextOrTrunc(BitWidth);
 }
 
 static unsigned computeNumSignBitsBinOp(SDValue Op, const APInt &DemandedElts,
