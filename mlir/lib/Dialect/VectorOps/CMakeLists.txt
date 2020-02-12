@@ -1,5 +1,4 @@
 add_llvm_library(MLIRVectorOps
-  DialectRegistration.cpp
   VectorOps.cpp
   VectorTransforms.cpp
   VectorUtils.cpp

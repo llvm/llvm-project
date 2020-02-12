@@ -54,10 +54,6 @@ struct TestLoopFusion : public FunctionPass<TestLoopFusion> {
 
 } // end anonymous namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createTestLoopFusionPass() {
-  return std::make_unique<TestLoopFusion>();
-}
-
 // Gathers all AffineForOps in 'block' at 'currLoopDepth' in 'depthToLoops'.
 static void
 gatherLoops(Block *block, unsigned currLoopDepth,
@@ -218,5 +214,9 @@ void TestLoopFusion::runOnFunction() {
     iterateLoops(depthToLoops, testSliceComputation);
 }
 
-static PassRegistration<TestLoopFusion>
-    pass("test-loop-fusion", "Tests loop fusion utility functions.");
+namespace mlir {
+void registerTestLoopFusion() {
+  PassRegistration<TestLoopFusion>("test-loop-fusion",
+                                   "Tests loop fusion utility functions.");
+}
+} // namespace mlir

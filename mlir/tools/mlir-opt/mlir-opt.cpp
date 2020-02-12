@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Passes.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/InitAllPasses.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
@@ -22,6 +24,34 @@
 
 using namespace llvm;
 using namespace mlir;
+
+namespace mlir {
+// Defined in the test directory, no public header.
+void registerConvertToTargetEnvPass();
+void registerInliner();
+void registerMemRefBoundCheck();
+void registerPassManagerTestPass();
+void registerPatternsTestPass();
+void registerSimpleParametricTilingPass();
+void registerSymbolTestPasses();
+void registerTestAllReduceLoweringPass();
+void registerTestCallGraphPass();
+void registerTestConstantFold();
+void registerTestFunc();
+void registerTestGpuMemoryPromotionPass();
+void registerTestLinalgTransforms();
+void registerTestLivenessPass();
+void registerTestLoopFusion();
+void registerTestLoopMappingPass();
+void registerTestMatchers();
+void registerTestMemRefDependenceCheck();
+void registerTestMemRefStrideCalculation();
+void registerTestOpaqueLoc();
+void registerTestParallelismDetection();
+void registerTestVectorConversions();
+void registerTestVectorToLoopsPass();
+void registerVectorizerTestPass();
+} // namespace mlir
 
 static cl::opt<std::string>
     inputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -47,7 +77,45 @@ static cl::opt<bool>
                  cl::desc("Run the verifier after each transformation pass"),
                  cl::init(true));
 
+void registerTestPasses() {
+  registerConvertToTargetEnvPass();
+  registerInliner();
+  registerMemRefBoundCheck();
+  registerPassManagerTestPass();
+  registerPatternsTestPass();
+  registerSimpleParametricTilingPass();
+  registerSymbolTestPasses();
+  registerTestAllReduceLoweringPass();
+  registerTestCallGraphPass();
+  registerTestConstantFold();
+  registerTestFunc();
+  registerTestGpuMemoryPromotionPass();
+  registerTestLinalgTransforms();
+  registerTestLivenessPass();
+  registerTestLoopFusion();
+  registerTestLoopMappingPass();
+  registerTestMatchers();
+  registerTestMemRefDependenceCheck();
+  registerTestMemRefStrideCalculation();
+  registerTestOpaqueLoc();
+  registerTestParallelismDetection();
+  registerTestVectorConversions();
+  registerTestVectorToLoopsPass();
+  registerVectorizerTestPass();
+
+  // The following passes are using global initializers, just link them in.
+  if (std::getenv("bar") != (char *)-1)
+    return;
+
+  // TODO: move these to the test folder.
+  createTestMemRefBoundCheckPass();
+  createTestMemRefDependenceCheckPass();
+}
+
 int main(int argc, char **argv) {
+  registerAllDialects();
+  registerAllPasses();
+  registerTestPasses();
   InitLLVM y(argc, argv);
 
   // Register any pass manager command line options.

@@ -28,9 +28,6 @@ std::unique_ptr<OpPassBase<FuncOp>> createTestMemRefBoundCheckPass();
 /// Creates a pass to check memref access dependences in a Function.
 std::unique_ptr<OpPassBase<FuncOp>> createTestMemRefDependenceCheckPass();
 
-/// Creates a pass to test parallelism detection; emits note for parallel loops.
-std::unique_ptr<OpPassBase<FuncOp>> createParallelismDetectionTestPass();
-
 } // end namespace mlir
 
 #endif // MLIR_ANALYSIS_PASSES_H

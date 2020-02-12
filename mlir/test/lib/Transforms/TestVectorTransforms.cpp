@@ -44,10 +44,14 @@ struct TestVectorSlicesConversion
 
 } // end anonymous namespace
 
-static PassRegistration<TestVectorToVectorConversion>
-    pass("test-vector-to-vector-conversion",
-         "Test conversion patterns between ops in the vector dialect");
+namespace mlir {
+void registerTestVectorConversions() {
+  PassRegistration<TestVectorToVectorConversion> pass(
+      "test-vector-to-vector-conversion",
+      "Test conversion patterns between ops in the vector dialect");
 
-static PassRegistration<TestVectorSlicesConversion> slices_pass(
-    "test-vector-slices-conversion",
-    "Test conversion patterns that lower slices ops in the vector dialect");
+  PassRegistration<TestVectorSlicesConversion> slices_pass(
+      "test-vector-slices-conversion",
+      "Test conversion patterns that lower slices ops in the vector dialect");
+}
+} // namespace mlir
