@@ -133,7 +133,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
   ret i8* %6
 }
 
-; UTC_ARGS: --turn=on
+; UTC_ARGS: --enable
 
 ; TEST 7
 ; Better than IR information
@@ -264,7 +264,7 @@ define align 4 i32* @test7b(i32* align 32 %p) #0 {
   ret i32* %p
 }
 
-; UTC_ARGS: --turn=off
+; UTC_ARGS: --disable
 
 ; TEST 8
 define void @test8_helper() {
