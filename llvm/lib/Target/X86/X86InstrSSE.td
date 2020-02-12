@@ -7337,12 +7337,12 @@ multiclass f16c_ph2ps<RegisterClass RC, X86MemOperand x86memop,
                       X86FoldableSchedWrite sched> {
   def rr : I<0x13, MRMSrcReg, (outs RC:$dst), (ins VR128:$src),
              "vcvtph2ps\t{$src, $dst|$dst, $src}",
-             [(set RC:$dst, (X86cvtph2ps VR128:$src))]>,
+             [(set RC:$dst, (X86any_cvtph2ps VR128:$src))]>,
              T8PD, VEX, Sched<[sched]>;
   let hasSideEffects = 0, mayLoad = 1 in
   def rm : I<0x13, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
              "vcvtph2ps\t{$src, $dst|$dst, $src}",
-             [(set RC:$dst, (X86cvtph2ps (loadv8i16 addr:$src)))]>,
+             [(set RC:$dst, (X86any_cvtph2ps (loadv8i16 addr:$src)))]>,
              T8PD, VEX, Sched<[sched.Folded]>;
 }
 
@@ -7351,7 +7351,7 @@ multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop,
   def rr : Ii8<0x1D, MRMDestReg, (outs VR128:$dst),
                (ins RC:$src1, i32u8imm:$src2),
                "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set VR128:$dst, (X86cvtps2ph RC:$src1, timm:$src2))]>,
+               [(set VR128:$dst, (X86any_cvtps2ph RC:$src1, timm:$src2))]>,
                TAPD, VEX, Sched<[RR]>;
   let hasSideEffects = 0, mayStore = 1 in
   def mr : Ii8<0x1D, MRMDestMem, (outs),
@@ -7369,21 +7369,21 @@ let Predicates = [HasF16C, NoVLX] in {
                                WriteCvtPS2PHYSt>, VEX_L, SIMD_EXC;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
-  def : Pat<(v4f32 (X86cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
+  def : Pat<(v4f32 (X86any_cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
             (VCVTPH2PSrm addr:$src)>;
-  def : Pat<(v4f32 (X86cvtph2ps (bc_v8i16
+  def : Pat<(v4f32 (X86any_cvtph2ps (bc_v8i16
               (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (VCVTPH2PSrm addr:$src)>;
 
   def : Pat<(store (f64 (extractelt
-                         (bc_v2f64 (v8i16 (X86cvtps2ph VR128:$src1, timm:$src2))),
+                         (bc_v2f64 (v8i16 (X86any_cvtps2ph VR128:$src1, timm:$src2))),
                          (iPTR 0))), addr:$dst),
             (VCVTPS2PHmr addr:$dst, VR128:$src1, timm:$src2)>;
   def : Pat<(store (i64 (extractelt
-                         (bc_v2i64 (v8i16 (X86cvtps2ph VR128:$src1, timm:$src2))),
+                         (bc_v2i64 (v8i16 (X86any_cvtps2ph VR128:$src1, timm:$src2))),
                          (iPTR 0))), addr:$dst),
             (VCVTPS2PHmr addr:$dst, VR128:$src1, timm:$src2)>;
-  def : Pat<(store (v8i16 (X86cvtps2ph VR256:$src1, timm:$src2)), addr:$dst),
+  def : Pat<(store (v8i16 (X86any_cvtps2ph VR256:$src1, timm:$src2)), addr:$dst),
             (VCVTPS2PHYmr addr:$dst, VR256:$src1, timm:$src2)>;
 }
 
