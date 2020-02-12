@@ -256,8 +256,6 @@ cl::opt<unsigned long long> StopAddress("stop-address",
                                         cl::init(UINT64_MAX));
 static StringRef ToolName = "DisassemblerAction";
 
-typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
-
 namespace {
 typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
 
@@ -1345,8 +1343,8 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
     std::vector<uint64_t> TextMappingSymsAddr;
     if (isArmElf(Obj)) {
       for (const auto &Symb : Symbols) {
-        uint64_t Address = std::get<0>(Symb);
-        StringRef Name = std::get<1>(Symb);
+        uint64_t Address = Symb.Addr;
+        StringRef Name = Symb.Name;
         if (Name.startswith("$d"))
           DataMappingSymsAddr.push_back(Address - SectionAddr);
         if (Name.startswith("$x"))
@@ -1401,11 +1399,11 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
     }
 
     // If the section has no symbol at the start, just insert a dummy one.
-    if (Symbols.empty() || std::get<0>(Symbols[0]) != 0) {
+    if (Symbols.empty() || Symbols[0].Addr != 0) {
       Symbols.insert(
           Symbols.begin(),
-          std::make_tuple(SectionAddr, name,
-                          Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT));
+          SymbolInfoTy(SectionAddr, name,
+                       Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT));
     }
 
     SmallString<40> Comments;
@@ -1428,12 +1426,12 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
     std::vector<RelocationRef>::const_iterator rel_end = Rels.end();
     // Disassemble symbol by symbol.
     for (unsigned si = 0, se = Symbols.size(); si != se; ++si) {
-      uint64_t Start = std::get<0>(Symbols[si]) - SectionAddr;
+      uint64_t Start = Symbols[si].Addr - SectionAddr;
       // The end is either the section end or the beginning of the next
       // symbol.
       uint64_t End = (si == se - 1)
                          ? SectSize
-                         : std::get<0>(Symbols[si + 1]) - SectionAddr;
+                         : Symbols[si + 1].Addr - SectionAddr;
       // Don't try to disassemble beyond the end of section contents.
       if (End > SectSize)
         End = SectSize;
@@ -1455,12 +1453,12 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
         // make size 4 bytes folded
         End = Start + ((End - Start) & ~0x3ull);
-        if (std::get<2>(Symbols[si]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+        if (Symbols[si].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
           // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
           Start += 256;
         }
         if (si == se - 1 ||
-            std::get<2>(Symbols[si + 1]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+            Symbols[si + 1].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
           // cut trailing zeroes at the end of kernel
           // cut up to 256 bytes
           const uint64_t EndAlign = 256;
@@ -1472,7 +1470,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
       }
 
       // COMGR TBD: Get rid of ".text:"??
-      OutS << '\n' << std::get<1>(Symbols[si]) << ":\n";
+      OutS << '\n' << Symbols[si].Name << ":\n";
 
       for (Index = Start; Index < End; Index += Size) {
         MCInst Inst;
@@ -1487,7 +1485,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
         // same section. We rely on the markers introduced to
         // understand what we need to dump. If the data marker is within a
         // function, it is denoted as a word/short etc
-        if (isArmElf(Obj) && std::get<2>(Symbols[si]) != ELF::STT_OBJECT &&
+        if (isArmElf(Obj) && Symbols[si].Type != ELF::STT_OBJECT &&
             !DisassembleAll) {
           uint64_t Stride = 0;
 
@@ -1551,7 +1549,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
         // disassembling text (applicable all architectures),
         // we are in a situation where we must print the data and not
         // disassemble it.
-        if (Obj->isELF() && std::get<2>(Symbols[si]) == ELF::STT_OBJECT &&
+        if (Obj->isELF() && Symbols[si].Type == ELF::STT_OBJECT &&
             !DisassembleAll && Section.isText()) {
           // print out data up to 8 bytes at a time in hex and ascii
           uint8_t AsciiData[9] = {'\0'};
@@ -1640,13 +1638,13 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
                   TargetSectionSymbols->begin(), TargetSectionSymbols->end(),
                   Target,
                   [](uint64_t LHS,
-                     const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                    return LHS < std::get<0>(RHS);
+                     const SymbolInfoTy &RHS) {
+                    return LHS < RHS.Addr;
                   });
               if (TargetSym != TargetSectionSymbols->begin()) {
                 --TargetSym;
-                uint64_t TargetAddress = std::get<0>(*TargetSym);
-                StringRef TargetName = std::get<1>(*TargetSym);
+                uint64_t TargetAddress = TargetSym->Addr;
+                StringRef TargetName = TargetSym->Name;
                 OutS << " <" << TargetName;
                 uint64_t Disp = Target - TargetAddress;
                 if (Disp)
