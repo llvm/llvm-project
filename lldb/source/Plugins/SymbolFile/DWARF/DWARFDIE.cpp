@@ -32,7 +32,7 @@ class ElaboratingDIEIterator
   // Container sizes are optimized for the case of following DW_AT_specification
   // and DW_AT_abstract_origin just once.
   llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<lldb::user_id_t, 3> m_seen;
+  llvm::SmallSet<DWARFDebugInfoEntry *, 3> m_seen;
 
   void Next() {
     assert(!m_worklist.empty() && "Incrementing end iterator?");
@@ -44,7 +44,7 @@ class ElaboratingDIEIterator
     // And add back any items that elaborate it.
     for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
-        if (m_seen.insert(die.GetID()).second)
+        if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
     }
   }
