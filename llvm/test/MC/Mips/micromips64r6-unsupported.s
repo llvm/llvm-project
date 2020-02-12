@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -filetype=obj -triple=mips64-unknown-linux -mattr=+micromips \
+# RUN: not --crash llvm-mc -filetype=obj -triple=mips64-unknown-linux -mattr=+micromips \
 # RUN: -mcpu=mips64r6 %s 2>&1 | FileCheck %s -check-prefix=CHECK-OPTION
 # RUN: not llvm-mc -filetype=obj -triple=mips64-unknown-linux -mcpu=mips64r6 \
 # RUN: %s 2>&1 | FileCheck %s -check-prefix=CHECK-MM-DIRECTIVE

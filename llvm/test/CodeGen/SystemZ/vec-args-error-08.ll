@@ -1,6 +1,6 @@
 ; Verify that we detect unsupported single-element vector types.
 
-; RUN: not llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 2>&1 | FileCheck %s
 
 declare <1 x fp128> @bar()
 

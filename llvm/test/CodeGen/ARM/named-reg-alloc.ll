@@ -1,5 +1,5 @@
-; RUN: not llc < %s -mtriple=arm-apple-darwin 2>&1 | FileCheck %s
-; RUN: not llc < %s -mtriple=arm-linux-gnueabi 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=arm-apple-darwin 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=arm-linux-gnueabi 2>&1 | FileCheck %s
 
 define i32 @get_stack() nounwind {
 entry:
