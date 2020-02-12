@@ -460,7 +460,7 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assumed it.
   if (TM.getTargetTriple().isOSBinFormatELF() &&
       GlobalObject::isExternalLinkage(GV.getLinkage()) && GV.isDSOLocal() &&
-      !GV.isDeclaration() && isa<GlobalObject>(GV))
+      !GV.isDeclaration() && !isa<GlobalIFunc>(GV))
     return getSymbolWithGlobalValueBase(&GV, "$local");
   return TM.getSymbol(&GV);
 }
@@ -1383,6 +1383,9 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
 
   // Emit the directives as assignments aka .set:
   OutStreamer->EmitAssignment(Name, Expr);
+  MCSymbol *LocalAlias = getSymbolPreferLocal(GIS);
+  if (LocalAlias != Name)
+    OutStreamer->EmitAssignment(LocalAlias, Expr);
 
   if (auto *GA = dyn_cast<GlobalAlias>(&GIS)) {
     // If the aliasee does not correspond to a symbol in the output, i.e. the

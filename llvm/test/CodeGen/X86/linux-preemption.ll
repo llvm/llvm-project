@@ -108,9 +108,9 @@ define i32* @get_weak_default_alias() {
 define i32* @get_strong_local_alias() {
   ret i32* @strong_local_alias
 }
-; CHECK: leaq strong_local_alias(%rip), %rax
-; STATIC: movl $strong_local_alias, %eax
-; CHECK32: leal strong_local_alias@GOTOFF(%eax), %eax
+; CHECK: leaq .Lstrong_local_alias$local(%rip), %rax
+; STATIC: movl $.Lstrong_local_alias$local, %eax
+; CHECK32: leal .Lstrong_local_alias$local@GOTOFF(%eax), %eax
 
 @weak_local_alias = weak dso_local alias i32, i32* @aliasee
 define i32* @get_weak_local_alias() {
@@ -235,6 +235,7 @@ define void()* @get_external_preemptable_function() {
 ; COMMON-NEXT: .set weak_default_alias, aliasee
 ; COMMON-NEXT: .globl strong_local_alias
 ; COMMON-NEXT: .set strong_local_alias, aliasee
+; COMMON-NEXT: .set .Lstrong_local_alias$local, aliasee
 ; COMMON-NEXT: .weak weak_local_alias
 ; COMMON-NEXT: .set weak_local_alias, aliasee
 ; COMMON-NEXT: .globl strong_preemptable_alias
