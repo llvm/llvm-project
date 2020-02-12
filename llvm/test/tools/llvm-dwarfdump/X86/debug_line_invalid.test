@@ -165,8 +165,8 @@
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
 
 # ALL-NOT:  warning:
-# ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0x00
-# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 0x01
+# ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0
+# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 1
 # ALL-NEXT: warning: parsing line table prologue at 0x00000054 found an invalid directory or file table description at 0x00000073
 # ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba

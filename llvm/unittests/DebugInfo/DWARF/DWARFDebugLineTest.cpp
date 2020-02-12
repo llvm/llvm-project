@@ -339,36 +339,33 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
       "unit length found of value 0xfffffff0");
 }
 
-TEST_F(DebugLineBasicFixture, ErrorForLowVersion) {
+struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
+                                            public CommonFixture {
+  void SetUp() { Version = GetParam(); }
+
+  uint16_t Version;
+};
+
+TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
   if (!setupGenerator())
     return;
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue(
-      {{LineTable::Half, LineTable::Long}, {1, LineTable::Half}});
-
-  generate();
-
-  checkGetOrParseLineTableEmitsFatalError(
-      "parsing line table prologue at offset "
-      "0x00000000 found unsupported version "
-      "0x01");
-}
-
-TEST_F(DebugLineBasicFixture, ErrorForHighVersion) {
-  if (!setupGenerator())
-    return;
-
-  LineTable &LT = Gen->addLineTable();
-  LT.setCustomPrologue(
-      {{LineTable::Half, LineTable::Long}, {6, LineTable::Half}});
+      {{LineTable::Half, LineTable::Long}, {Version, LineTable::Half}});
 
   generate();
 
   checkGetOrParseLineTableEmitsFatalError(
       "parsing line table prologue at offset 0x00000000 found unsupported "
-      "version 0x06");
+      "version " +
+      std::to_string(Version));
 }
+
+INSTANTIATE_TEST_CASE_P(UnsupportedVersionTestParams,
+                        DebugLineUnsupportedVersionFixture,
+                        Values(/*1 below min */ 1, /* 1 above max */ 6,
+                               /* Maximum possible */ 0xffff), );
 
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   if (!setupGenerator(5))
@@ -785,9 +782,9 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
   EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
-              "unsupported version 0x00",
+              "unsupported version 0",
               "parsing line table prologue at offset 0x00000006 found "
-              "unsupported version 0x01"},
+              "unsupported version 1"},
              std::move(Unrecoverable));
 }
 
@@ -843,9 +840,9 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
-              "unsupported version 0x00",
+              "unsupported version 0",
               "parsing line table prologue at offset 0x00000006 found "
-              "unsupported version 0x01"},
+              "unsupported version 1"},
              std::move(Unrecoverable));
 }
 
