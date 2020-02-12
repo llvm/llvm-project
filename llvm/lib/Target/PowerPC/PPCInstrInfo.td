@@ -2325,10 +2325,15 @@ let isCodeGenOnly = 1 in {
   }
 }
 
+// We used to have EIEIO as value but E[0-9A-Z] is a reserved name
+def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
+                                 "eieio", IIC_LdStLoad, []>;
+
 def : Pat<(int_ppc_sync),   (SYNC 0)>, Requires<[HasSYNC]>;
 def : Pat<(int_ppc_lwsync), (SYNC 1)>, Requires<[HasSYNC]>;
 def : Pat<(int_ppc_sync),   (MSYNC)>, Requires<[HasOnlyMSYNC]>;
 def : Pat<(int_ppc_lwsync), (MSYNC)>, Requires<[HasOnlyMSYNC]>;
+def : Pat<(int_ppc_eieio),  (EnforceIEIO)>;
 
 //===----------------------------------------------------------------------===//
 // PPC32 Arithmetic Instructions.
@@ -4175,10 +4180,6 @@ def ISYNC : XLForm_2_ext<19, 150, 0, 0, 0, (outs), (ins),
 
 def ICBI : XForm_1a<31, 982, (outs), (ins memrr:$src),
                     "icbi $src", IIC_LdStICBI, []>;
-
-// We used to have EIEIO as value but E[0-9A-Z] is a reserved name
-def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
-                           "eieio", IIC_LdStLoad, []>;
 
 def WAIT : XForm_24_sync<31, 30, (outs), (ins i32imm:$L),
                          "wait $L", IIC_LdStLoad, []>;
