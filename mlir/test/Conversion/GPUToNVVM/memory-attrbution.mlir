@@ -92,18 +92,18 @@ gpu.module @kernel {
     // CHECK: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
     // CHECK: %[[descr4:.*]] = llvm.insertvalue %[[c0]], %[[descr3]][2]
-    // CHECK: %[[c6:.*]] = llvm.mlir.constant(6 : index) : !llvm.i64
-    // CHECK: %[[descr5:.*]] = llvm.insertvalue %[[c6]], %[[descr4]][3, 2]
-    // CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-    // CHECK: %[[descr6:.*]] = llvm.insertvalue %[[c1]], %[[descr5]][4, 2]
+    // CHECK: %[[c4:.*]] = llvm.mlir.constant(4 : index) : !llvm.i64
+    // CHECK: %[[descr5:.*]] = llvm.insertvalue %[[c4]], %[[descr4]][3, 0]
+    // CHECK: %[[c12:.*]] = llvm.mlir.constant(12 : index) : !llvm.i64
+    // CHECK: %[[descr6:.*]] = llvm.insertvalue %[[c12]], %[[descr5]][4, 0]
     // CHECK: %[[c2:.*]] = llvm.mlir.constant(2 : index) : !llvm.i64
     // CHECK: %[[descr7:.*]] = llvm.insertvalue %[[c2]], %[[descr6]][3, 1]
     // CHECK: %[[c6:.*]] = llvm.mlir.constant(6 : index) : !llvm.i64
     // CHECK: %[[descr8:.*]] = llvm.insertvalue %[[c6]], %[[descr7]][4, 1]
-    // CHECK: %[[c4:.*]] = llvm.mlir.constant(4 : index) : !llvm.i64
-    // CHECK: %[[descr9:.*]] = llvm.insertvalue %[[c4]], %[[descr8]][3, 0]
-    // CHECK: %[[c12:.*]] = llvm.mlir.constant(12 : index) : !llvm.i64
-    // CHECK: %[[descr10:.*]] = llvm.insertvalue %[[c12]], %[[descr9]][4, 0]
+    // CHECK: %[[c6:.*]] = llvm.mlir.constant(6 : index) : !llvm.i64
+    // CHECK: %[[descr9:.*]] = llvm.insertvalue %[[c6]], %[[descr8]][3, 2]
+    // CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+    // CHECK: %[[descr10:.*]] = llvm.insertvalue %[[c1]], %[[descr9]][4, 2]
 
     %c0 = constant 0 : index
     store %arg0, %arg1[%c0,%c0,%c0] : memref<4x2x6xf32, 3>
