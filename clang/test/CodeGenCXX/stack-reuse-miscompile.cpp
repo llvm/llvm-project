@@ -26,8 +26,6 @@ const char * f(S s)
 // CHECK: [[T2:%.*]] = alloca %class.T, align 4
 // CHECK: [[T3:%.*]] = alloca %class.T, align 4
 //
-// CHECK: [[AGG:%.*]] = alloca %class.S, align 4
-//
 // FIXME: We could defer starting the lifetime of the return object of concat
 // until the call.
 // CHECK: [[T1i8:%.*]] = bitcast %class.T* [[T1]] to i8*
@@ -39,14 +37,7 @@ const char * f(S s)
 //
 // CHECK: [[T3i8:%.*]] = bitcast %class.T* [[T3]] to i8*
 // CHECK: call void @llvm.lifetime.start.p0i8(i64 16, i8* [[T3i8]])
-//
-// CHECK: [[AGGi8:%.*]] = bitcast %class.S* [[AGG]] to i8*
-// CHECK: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[AGGi8]])
-//
 // CHECK: [[T5:%.*]] = call %class.T* @_ZN1TC1E1S(%class.T* [[T3]], [2 x i32] %{{.*}})
-//
-// CHECK: [[AGGi8:%.*]] = bitcast %class.S* {{.*}} to i8*
-// CHECK: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[AGGi8]])
 //
 // CHECK: call void @_ZNK1T6concatERKS_(%class.T* sret [[T1]], %class.T* [[T2]], %class.T* dereferenceable(16) [[T3]])
 // CHECK: [[T6:%.*]] = call i8* @_ZNK1T3strEv(%class.T* [[T1]])
