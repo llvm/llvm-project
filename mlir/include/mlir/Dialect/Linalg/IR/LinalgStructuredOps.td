@@ -330,6 +330,8 @@ def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
       llvm_unreachable("NYI referenceIndexingMaps for CopyOp");
     }
   }];
+  let verifier = [{ return ::verify(*this); }];
+  
   let hasFolder = 1;
 }
 
