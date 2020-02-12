@@ -175,10 +175,12 @@ private:
                        unsigned OffsetBits) const;
 
   std::pair<Register, unsigned>
-  selectDS1Addr1OffsetImpl(MachineOperand &Src) const;
-
+  selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
+
+  std::pair<Register, unsigned>
+  selectDS64Bit4ByteAlignedImpl(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectDS64Bit4ByteAligned(MachineOperand &Root) const;
 
