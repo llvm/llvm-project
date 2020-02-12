@@ -4076,6 +4076,16 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
 
       std::string error_explainer = "attach failed";
       if (err_str[0] != '\0') {
+        // This is not a super helpful message for end users
+        if (strcmp (err_str, "unable to start the exception thread") == 0) {
+          snprintf (err_str, sizeof (err_str) - 1,
+                    "Not allowed to attach to process.  Look in the console "
+                    "messages (Console.app), near the debugserver entries "
+                    "when the attached failed.  The subsystem that denied "
+                    "the attach permission will likely have logged an "
+                    "informative message about why it was denied.");
+          err_str[sizeof (err_str) - 1] = '\0';
+        }
         error_explainer += " (";
         error_explainer += err_str;
         error_explainer += ")";
