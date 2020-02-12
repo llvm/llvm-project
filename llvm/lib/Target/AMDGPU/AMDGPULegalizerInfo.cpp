@@ -191,7 +191,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
-  const LLT S96 = LLT::scalar(96);
   const LLT S128 = LLT::scalar(128);
   const LLT S256 = LLT::scalar(256);
   const LLT S1024 = LLT::scalar(1024);
@@ -702,7 +701,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     }
   };
 
-  const auto needToSplitMemOp = [=](const LegalityQuery &Query, bool IsLoad) -> bool {
+  const auto needToSplitMemOp = [=](const LegalityQuery &Query,
+                                    bool IsLoad) -> bool {
     const LLT DstTy = Query.Types[0];
 
     // Split vector extloads.
@@ -722,9 +722,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Catch weird sized loads that don't evenly divide into the access sizes
     // TODO: May be able to widen depending on alignment etc.
-    unsigned NumRegs = MemSize / 32;
-    if (NumRegs == 3 && !ST.hasDwordx3LoadStores())
-      return true;
+    unsigned NumRegs = (MemSize + 31) / 32;
+    if (NumRegs == 3) {
+      if (!ST.hasDwordx3LoadStores())
+        return true;
+    } else {
+      // If the alignment allows, these should have been widened.
+      if (!isPowerOf2_32(NumRegs))
+        return true;
+    }
 
     if (Align < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
@@ -732,6 +738,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     }
 
     return false;
+  };
+
+  const auto shouldWidenLoadResult = [=](const LegalityQuery &Query) -> bool {
+    unsigned Size = Query.Types[0].getSizeInBits();
+    if (isPowerOf2_32(Size))
+      return false;
+
+    if (Size == 96 && ST.hasDwordx3LoadStores())
+      return false;
+
+    unsigned AddrSpace = Query.Types[1].getAddressSpace();
+    if (Size >= maxSizeForAddrSpace(AddrSpace, true))
+      return false;
+
+    unsigned Align = Query.MMODescrs[0].AlignInBits;
+    unsigned RoundedSize = NextPowerOf2(Size);
+    return (Align >= RoundedSize);
   };
 
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccess() ? 0 : 32;
@@ -747,14 +770,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     auto &Actions = getActionDefinitionsBuilder(Op);
     // Whitelist the common cases.
-    // TODO: Pointer loads
-    // TODO: Wide constant loads
-    // TODO: Only CI+ has 3x loads
     // TODO: Loads to s16 on gfx9
     Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, 32, GlobalAlign32},
                                       {V2S32, GlobalPtr, 64, GlobalAlign32},
-                                      {V3S32, GlobalPtr, 96, GlobalAlign32},
-                                      {S96, GlobalPtr, 96, GlobalAlign32},
                                       {V4S32, GlobalPtr, 128, GlobalAlign32},
                                       {S128, GlobalPtr, 128, GlobalAlign32},
                                       {S64, GlobalPtr, 64, GlobalAlign32},
@@ -782,13 +800,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
                                       {S32, ConstantPtr, 32, GlobalAlign32},
                                       {V2S32, ConstantPtr, 64, GlobalAlign32},
-                                      {V3S32, ConstantPtr, 96, GlobalAlign32},
                                       {V4S32, ConstantPtr, 128, GlobalAlign32},
                                       {S64, ConstantPtr, 64, GlobalAlign32},
                                       {S128, ConstantPtr, 128, GlobalAlign32},
                                       {V2S32, ConstantPtr, 32, GlobalAlign32}});
     Actions
         .customIf(typeIs(1, Constant32Ptr))
+        // Widen suitably aligned loads by loading extra elements.
+        .moreElementsIf([=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            return Op == G_LOAD && Ty.isVector() &&
+                   shouldWidenLoadResult(Query);
+          }, moreElementsToNextPow2(0))
+        .widenScalarIf([=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            return Op == G_LOAD && !Ty.isVector() &&
+                   shouldWidenLoadResult(Query);
+          }, widenScalarOrEltToNextPow2(0))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
               return !Query.Types[0].isVector() &&
@@ -804,6 +832,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // Split extloads.
               if (DstSize > MemSize)
                 return std::make_pair(0, LLT::scalar(MemSize));
+
+              if (!isPowerOf2_32(DstSize)) {
+                // We're probably decomposing an odd sized store. Try to split
+                // to the widest type. TODO: Account for alignment. As-is it
+                // should be OK, since the new parts will be further legalized.
+                unsigned FloorSize = PowerOf2Floor(DstSize);
+                return std::make_pair(0, LLT::scalar(FloorSize));
+              }
 
               if (DstSize > 32 && (DstSize % 32 != 0)) {
                 // FIXME: Need a way to specify non-extload of larger size if
@@ -832,6 +868,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
 
+              // FIXME: Handle widened to power of 2 results better. This ends
+              // up scalarizing.
+              // FIXME: 3 element stores scalarized on SI
+
               // Split if it's too large for the address space.
               if (Query.MMODescrs[0].SizeInBits > MaxSize) {
                 unsigned NumElts = DstTy.getNumElements();
@@ -854,9 +894,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       LLT::vector(NumElts / NumPieces, EltTy));
               }
 
+              // FIXME: We could probably handle weird extending loads better.
+              unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+              if (DstTy.getSizeInBits() > MemSize)
+                return std::make_pair(0, EltTy);
+
+              unsigned EltSize = EltTy.getSizeInBits();
+              unsigned DstSize = DstTy.getSizeInBits();
+              if (!isPowerOf2_32(DstSize)) {
+                // We're probably decomposing an odd sized store. Try to split
+                // to the widest type. TODO: Account for alignment. As-is it
+                // should be OK, since the new parts will be further legalized.
+                unsigned FloorSize = PowerOf2Floor(DstSize);
+                return std::make_pair(
+                  0, LLT::scalarOrVector(FloorSize / EltSize, EltTy));
+              }
+
               // Need to split because of alignment.
               unsigned Align = Query.MMODescrs[0].AlignInBits;
-              unsigned EltSize = EltTy.getSizeInBits();
               if (EltSize > Align &&
                   (EltSize / Align < DstTy.getNumElements())) {
                 return std::make_pair(0, LLT::vector(EltSize / Align, EltTy));
@@ -904,7 +959,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           }
         })
         .widenScalarToNextPow2(0)
-        // TODO: v3s32->v4s32 with alignment
         .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0));
   }
 
