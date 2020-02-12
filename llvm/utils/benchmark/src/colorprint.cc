@@ -136,13 +136,18 @@ void ColorPrintf(std::ostream& out, LogColor color, const char* fmt,
   CONSOLE_SCREEN_BUFFER_INFO buffer_info;
   GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
   const WORD old_color_attrs = buffer_info.wAttributes;
+  WORD new_color_attrs;
 
   // We need to flush the stream buffers into the console before each
   // SetConsoleTextAttribute call lest it affect the text that is already
   // printed but has not yet reached the console.
   fflush(stdout);
-  SetConsoleTextAttribute(stdout_handle,
-                          GetPlatformColorCode(color) | FOREGROUND_INTENSITY);
+  
+  // Do not assume the console background color is black.
+  // Hence just mask off the foreground bits before adding the new value
+  new_color_attrs = (old_color_attrs & ~7) | FOREGROUND_INTENSITY |
+                     GetPlatformColorCode(color);
+  SetConsoleTextAttribute(stdout_handle, new_color_attrs);
   vprintf(fmt, args);
 
   fflush(stdout);
