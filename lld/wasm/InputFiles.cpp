@@ -536,7 +536,15 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   return symtab->addDefinedData(name, flags, &f, nullptr, 0, 0);
 }
 
+bool BitcodeFile::doneLTO = false;
+
 void BitcodeFile::parse() {
+  if (doneLTO) {
+    error(toString(mb.getBufferIdentifier()) +
+          ": attempt to add bitcode file after LTO.");
+    return;
+  }
+
   obj = check(lto::InputFile::create(MemoryBufferRef(
       mb.getBuffer(), saver.save(archiveName + mb.getBufferIdentifier()))));
   Triple t(obj->getTargetTriple());
