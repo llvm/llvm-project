@@ -1702,6 +1702,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   bool IsVectorCall = State.CC == llvm::CallingConv::X86_VectorCall;
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
+  TypeInfo TI = getContext().getTypeInfo(Ty);
 
   // Check with the C++ ABI first.
   const RecordType *RT = Ty->getAs<RecordType>();
@@ -1751,7 +1752,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     bool NeedsPadding = false;
     bool InReg;
     if (shouldAggregateUseDirect(Ty, State, InReg, NeedsPadding)) {
-      unsigned SizeInRegs = (getContext().getTypeSize(Ty) + 31) / 32;
+      unsigned SizeInRegs = (TI.Width + 31) / 32;
       SmallVector<llvm::Type*, 3> Elements(SizeInRegs, Int32);
       llvm::Type *Result = llvm::StructType::get(LLVMContext, Elements);
       if (InReg)
@@ -1761,14 +1762,19 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     }
     llvm::IntegerType *PaddingType = NeedsPadding ? Int32 : nullptr;
 
+    // Pass over-aligned aggregates on Windows indirectly. This behavior was
+    // added in MSVC 2015.
+    if (IsWin32StructABI && TI.AlignIsRequired && TI.Align > 32)
+      return getIndirectResult(Ty, /*ByVal=*/false, State);
+
     // Expand small (<= 128-bit) record types when we know that the stack layout
     // of those arguments will match the struct. This is important because the
     // LLVM backend isn't smart enough to remove byval, which inhibits many
     // optimizations.
     // Don't do this for the MCU if there are still free integer registers
     // (see X86_64 ABI for full explanation).
-    if (getContext().getTypeSize(Ty) <= 4 * 32 &&
-        (!IsMCUABI || State.FreeRegs == 0) && canExpandIndirectArgument(Ty))
+    if (TI.Width <= 4 * 32 && (!IsMCUABI || State.FreeRegs == 0) &&
+        canExpandIndirectArgument(Ty))
       return ABIArgInfo::getExpandWithPadding(
           IsFastCall || IsVectorCall || IsRegCall, PaddingType);
 
@@ -1776,14 +1782,24 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    // On Windows, vectors are passed directly if registers are available, or
+    // indirectly if not. This avoids the need to align argument memory. Pass
+    // user-defined vector types larger than 512 bits indirectly for simplicity.
+    if (IsWin32StructABI) {
+      if (TI.Width <= 512 && State.FreeSSERegs > 0) {
+        --State.FreeSSERegs;
+        return ABIArgInfo::getDirectInReg();
+      }
+      return getIndirectResult(Ty, /*ByVal=*/false, State);
+    }
+
     // On Darwin, some vectors are passed in memory, we handle this by passing
     // it as an i8/i16/i32/i64.
     if (IsDarwinVectorABI) {
-      uint64_t Size = getContext().getTypeSize(Ty);
-      if ((Size == 8 || Size == 16 || Size == 32) ||
-          (Size == 64 && VT->getNumElements() == 1))
-        return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(),
-                                                            Size));
+      if ((TI.Width == 8 || TI.Width == 16 || TI.Width == 32) ||
+          (TI.Width == 64 && VT->getNumElements() == 1))
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(getVMContext(), TI.Width));
     }
 
     if (IsX86_MMXType(CGT.ConvertType(Ty)))
@@ -1813,9 +1829,10 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   CCState State(FI);
   if (IsMCUABI)
     State.FreeRegs = 3;
-  else if (State.CC == llvm::CallingConv::X86_FastCall)
+  else if (State.CC == llvm::CallingConv::X86_FastCall) {
     State.FreeRegs = 2;
-  else if (State.CC == llvm::CallingConv::X86_VectorCall) {
+    State.FreeSSERegs = 3;
+  } else if (State.CC == llvm::CallingConv::X86_VectorCall) {
     State.FreeRegs = 2;
     State.FreeSSERegs = 6;
   } else if (FI.getHasRegParm())
@@ -1823,6 +1840,11 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   else if (State.CC == llvm::CallingConv::X86_RegCall) {
     State.FreeRegs = 5;
     State.FreeSSERegs = 8;
+  } else if (IsWin32StructABI) {
+    // Since MSVC 2015, the first three SSE vectors have been passed in
+    // registers. The rest are passed indirectly.
+    State.FreeRegs = DefaultNumRegisterParameters;
+    State.FreeSSERegs = 3;
   } else
     State.FreeRegs = DefaultNumRegisterParameters;
 
@@ -1869,16 +1891,25 @@ X86_32ABIInfo::addFieldToArgStruct(SmallVector<llvm::Type *, 6> &FrameFields,
                                    CharUnits &StackOffset, ABIArgInfo &Info,
                                    QualType Type) const {
   // Arguments are always 4-byte-aligned.
-  CharUnits FieldAlign = CharUnits::fromQuantity(4);
+  CharUnits WordSize = CharUnits::fromQuantity(4);
+  assert(StackOffset.isMultipleOf(WordSize) && "unaligned inalloca struct");
 
-  assert(StackOffset.isMultipleOf(FieldAlign) && "unaligned inalloca struct");
-  Info = ABIArgInfo::getInAlloca(FrameFields.size());
-  FrameFields.push_back(CGT.ConvertTypeForMem(Type));
-  StackOffset += getContext().getTypeSizeInChars(Type);
+  // sret pointers and indirect things will require an extra pointer
+  // indirection, unless they are byval. Most things are byval, and will not
+  // require this indirection.
+  bool IsIndirect = false;
+  if (Info.isIndirect() && !Info.getIndirectByVal())
+    IsIndirect = true;
+  Info = ABIArgInfo::getInAlloca(FrameFields.size(), IsIndirect);
+  llvm::Type *LLTy = CGT.ConvertTypeForMem(Type);
+  if (IsIndirect)
+    LLTy = LLTy->getPointerTo(0);
+  FrameFields.push_back(LLTy);
+  StackOffset += IsIndirect ? WordSize : getContext().getTypeSizeInChars(Type);
 
   // Insert padding bytes to respect alignment.
   CharUnits FieldEnd = StackOffset;
-  StackOffset = FieldEnd.alignTo(FieldAlign);
+  StackOffset = FieldEnd.alignTo(WordSize);
   if (StackOffset != FieldEnd) {
     CharUnits NumBytes = StackOffset - FieldEnd;
     llvm::Type *Ty = llvm::Type::getInt8Ty(getVMContext());
@@ -1892,16 +1923,12 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   switch (Info.getKind()) {
   case ABIArgInfo::InAlloca:
     return true;
-  case ABIArgInfo::Indirect:
-    assert(Info.getIndirectByVal());
-    return true;
   case ABIArgInfo::Ignore:
     return false;
+  case ABIArgInfo::Indirect:
   case ABIArgInfo::Direct:
   case ABIArgInfo::Extend:
-    if (Info.getInReg())
-      return false;
-    return true;
+    return !Info.getInReg();
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
     // These are aggregate types which are never passed in registers when
@@ -1935,8 +1962,7 @@ void X86_32ABIInfo::rewriteWithInAlloca(CGFunctionInfo &FI) const {
 
   // Put the sret parameter into the inalloca struct if it's in memory.
   if (Ret.isIndirect() && !Ret.getInReg()) {
-    CanQualType PtrTy = getContext().getPointerType(FI.getReturnType());
-    addFieldToArgStruct(FrameFields, StackOffset, Ret, PtrTy);
+    addFieldToArgStruct(FrameFields, StackOffset, Ret, FI.getReturnType());
     // On Windows, the hidden sret parameter is always returned in eax.
     Ret.setInAllocaSRet(IsWin32StructABI);
   }
