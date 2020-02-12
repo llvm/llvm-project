@@ -204,9 +204,7 @@ namespace clang {
 
     // Wrapper for an overload set.
     template <typename ToDeclT> struct CallOverloadedCreateFun {
-      template <typename... Args>
-      auto operator()(Args &&... args)
-          -> decltype(ToDeclT::Create(std::forward<Args>(args)...)) {
+      template <typename... Args> decltype(auto) operator()(Args &&... args) {
         return ToDeclT::Create(std::forward<Args>(args)...);
       }
     };
