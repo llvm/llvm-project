@@ -31,10 +31,8 @@ static cl::opt<bool> PropagateAttrs("propagate-attrs", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Propagate attributes in index"));
 
-// FIXME: Enable again when thin link compile time regressions understood and
-// addressed
 static cl::opt<bool> ImportConstantsWithRefs(
-    "import-constants-with-refs", cl::init(false), cl::Hidden,
+    "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
 FunctionSummary FunctionSummary::ExternalNode =
