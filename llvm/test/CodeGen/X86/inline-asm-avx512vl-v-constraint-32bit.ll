@@ -1,7 +1,5 @@
 ; RUN: not llc < %s -mtriple i386-unknown-linux-gnu -mattr +avx512vl -o /dev/null 2> %t
 ; RUN: FileCheck %s --input-file %t
-; XFAIL: *
-; Temporarily disable this since the llc return code depents on bots.
 
 define <4 x float> @testxmm_1(<4 x float> %_xmm0, i64 %_l) {
 ; CHECK: error: inline assembly requires more registers than available

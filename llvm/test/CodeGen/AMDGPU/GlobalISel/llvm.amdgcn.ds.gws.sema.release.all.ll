@@ -1,4 +1,4 @@
-; RUN: not --crash llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %S/../llvm.amdgcn.ds.gws.sema.release.all.ll 2>&1 | FileCheck -enable-var-scope -check-prefix=GFX6ERR-GISEL %s
+; RUN: not llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %S/../llvm.amdgcn.ds.gws.sema.release.all.ll 2>&1 | FileCheck -enable-var-scope -check-prefix=GFX6ERR-GISEL %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.sema.release.all.ll | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %S/../llvm.amdgcn.ds.gws.sema.release.all.ll
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.sema.release.all.ll | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP,GFX8 %S/../llvm.amdgcn.ds.gws.sema.release.all.ll
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.sema.release.all.ll | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %S/../llvm.amdgcn.ds.gws.sema.release.all.ll

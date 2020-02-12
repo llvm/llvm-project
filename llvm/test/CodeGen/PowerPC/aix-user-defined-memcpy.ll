@@ -8,7 +8,7 @@
 
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=32-DIS %s
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: not llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -mcpu=pwr4 -mattr=-altivec -filetype=obj < %s 2>&1 | FileCheck \
 ; RUN: --check-prefix=64-CHECK %s
 
