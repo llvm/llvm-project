@@ -7578,7 +7578,7 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
   const TargetInfo &T = CGT.getTarget();
   uint64_t Size = getContext().getTypeSize(RetTy);
 
-  if (const auto *VecTy = RetTy->getAs<VectorType>()) {
+  if (RetTy->getAs<VectorType>()) {
     // HVX vectors are returned in vector registers or register pairs.
     if (T.hasFeature("hvx")) {
       assert(T.hasFeature("hvx-length64b") || T.hasFeature("hvx-length128b"));
