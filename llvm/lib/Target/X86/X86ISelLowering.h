@@ -808,13 +808,14 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
-    /// Return 1 if we can compute the negated form of the specified expression
-    /// for the same cost as the expression itself, or 2 if we can compute the
-    /// negated form more cheaply than the expression itself. Else return 0.
-    char isNegatibleForFree(SDValue Op, SelectionDAG &DAG, bool LegalOperations,
-                            bool ForCodeSize, unsigned Depth) const override;
+    /// Returns whether computing the negated form of the specified expression
+    /// is more expensive, the same cost or cheaper.
+    NegatibleCost getNegatibleCost(SDValue Op, SelectionDAG &DAG,
+                                   bool LegalOperations, bool ForCodeSize,
+                                   unsigned Depth) const override;
 
-    /// If isNegatibleForFree returns true, return the newly negated expression.
+    /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
+    /// expression.
     SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                  bool LegalOperations, bool ForCodeSize,
                                  unsigned Depth) const override;
