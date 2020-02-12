@@ -517,6 +517,10 @@ public:
 
   ConstString GetTypeName(void *type) override;
 
+  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
+    return GetTypeName(type);
+  }
+
   ConstString GetDisplayTypeName(void *type, const SymbolContext *sc) override;
 
   ConstString GetMangledTypeName(void *type) override;
