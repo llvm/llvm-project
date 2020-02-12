@@ -1019,6 +1019,8 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
         assert(MemVT.getVectorNumElements() == 3 ||
                MemVT.getVectorNumElements() == 5);
         MemVT = MemVT.getPow2VectorType(State.getContext());
+      } else if (!MemVT.isSimple() && !MemVT.isVector()) {
+        MemVT = MemVT.getRoundIntegerType(State.getContext());
       }
 
       unsigned PartOffset = 0;
