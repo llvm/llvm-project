@@ -1680,6 +1680,11 @@ MemberExpr *MemberExpr::Create(
     CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(DC);
     if (RD && RD->isDependentContext() && RD->isCurrentInstantiation(DC))
       E->setTypeDependent(T->isDependentType());
+
+    // Bitfield with value-dependent width is type-dependent.
+    FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl);
+    if (FD && FD->isBitField() && FD->getBitWidth()->isValueDependent())
+      E->setTypeDependent(true);
   }
 
   if (HasQualOrFound) {
