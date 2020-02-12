@@ -87,11 +87,13 @@ public:
   /// of predecessors that received a copy of \p MBB.
   /// If \p RemovalCallback is non-null. It will be called before MBB is
   /// deleted.
+  /// If \p CandidatePtr is not null, duplicate into these blocks only.
   bool tailDuplicateAndUpdate(
       bool IsSimple, MachineBasicBlock *MBB,
       MachineBasicBlock *ForcedLayoutPred,
       SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds = nullptr,
-      function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr);
+      function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr,
+      SmallVectorImpl<MachineBasicBlock *> *CandidatePtr = nullptr);
 
 private:
   using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
@@ -119,7 +121,8 @@ private:
                      MachineBasicBlock *TailBB,
                      MachineBasicBlock *ForcedLayoutPred,
                      SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-                     SmallVectorImpl<MachineInstr *> &Copies);
+                     SmallVectorImpl<MachineInstr *> &Copies,
+                     SmallVectorImpl<MachineBasicBlock *> *CandidatePtr);
   void appendCopies(MachineBasicBlock *MBB,
                  SmallVectorImpl<std::pair<unsigned,RegSubRegPair>> &CopyInfos,
                  SmallVectorImpl<MachineInstr *> &Copies);
