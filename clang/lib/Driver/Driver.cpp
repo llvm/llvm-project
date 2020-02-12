@@ -3753,6 +3753,11 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
+  // If we have more than one job, then disable integrated-cc1 for now.
+  if (C.getJobs().size() > 1)
+    for (auto &J : C.getJobs())
+      J.InProcess = false;
+
   // If the user passed -Qunused-arguments or there were errors, don't warn
   // about any unused arguments.
   if (Diags.hasErrorOccurred() ||
