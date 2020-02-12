@@ -2,7 +2,7 @@
 # RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
-# ERR: version 6 of .debug_addr section at offset 0x0 is not supported
+# ERR: address table at offset 0x0 has unsupported version 6
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents
