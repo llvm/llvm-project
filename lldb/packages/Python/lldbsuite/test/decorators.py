@@ -694,7 +694,7 @@ def skipUnlessHasCallSiteInfo(func):
 
         f = tempfile.NamedTemporaryFile()
         cmd = "echo 'int main() {}' | " \
-              "%s -g -glldb -O1 -Xclang -femit-debug-entry-values -S -emit-llvm -x c -o %s -" % (compiler_path, f.name)
+              "%s -g -glldb -O1 -S -emit-llvm -x c -o %s -" % (compiler_path, f.name)
         if os.popen(cmd).close() is not None:
             return "Compiler can't compile with call site info enabled"
 
