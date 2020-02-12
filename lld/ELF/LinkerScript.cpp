@@ -831,9 +831,10 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
 
   switchTo(sec);
 
+  ctx->lmaOffset = 0;
+
   if (sec->lmaExpr)
     ctx->lmaOffset = sec->lmaExpr().getValue() - dot;
-
   if (MemoryRegion *mr = sec->lmaRegion)
     ctx->lmaOffset = alignTo(mr->curPos, sec->alignment) - dot;
 
