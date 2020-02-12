@@ -69,7 +69,7 @@ def main():
   parser.add_argument('--enable', action='store_true', dest='enabled', default=True,
                       help='Activate CHECK line generation from this point forward')
   parser.add_argument('--disable', action='store_false', dest='enabled',
-                      help='Deativate CHECK line generation from this point forward')
+                      help='Deactivate CHECK line generation from this point forward')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
 
