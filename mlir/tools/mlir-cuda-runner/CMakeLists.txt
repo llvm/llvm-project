@@ -35,31 +35,48 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     ${CUDA_RUNTIME_LIBRARY}
   )
 
-  set(FULL_LINK_LIBS
+  set(LIBS
+    LLVMCore
+    LLVMSupport
+    MLIRJitRunner
     MLIRAffineOps
-    MLIRLoopToStandard
+    MLIRAnalysis
+    MLIREDSC
+    MLIRExecutionEngine
+    MLIRFxpMathOps
     MLIRGPU
     MLIRGPUtoCUDATransforms
     MLIRGPUtoNVVMTransforms
+    MLIRIR
     MLIRLLVMIR
+    MLIRLinalgOps
+    MLIRLoopToStandard
+    MLIROpenMP
+    MLIRParser
+    MLIRQuantOps
+    MLIRROCDLIR
+    MLIRSPIRV
+    MLIRSPIRV
     MLIRStandardOps
     MLIRStandardToLLVM
+    MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms
     MLIRTranslation
-  )
-  set(LIBS
-    MLIRIR
-    MLIRParser
-    MLIREDSC
-    MLIRAnalysis
-    MLIRExecutionEngine
-    MLIRJitRunner
-    MLIRSupport
-    LLVMCore
-    LLVMSupport
     ${CUDA_RUNTIME_LIBRARY}
   )
+
+  # Manually expand the target library, since our MLIR libraries
+  # aren't plugged into the LLVM dependency tracking. If we don't
+  # do this then we can't insert the CodeGen library after ourselves
+  llvm_expand_pseudo_components(TARGET_LIBS AllTargetsCodeGens)
+  # Prepend LLVM in front of every target, this is how the library
+  # are named with CMake
+  SET(targets_to_link)
+  FOREACH(t ${TARGET_LIBS})
+    LIST(APPEND targets_to_link "LLVM${t}")
+  ENDFOREACH(t)
+
   add_llvm_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
   )
@@ -68,7 +85,6 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
   llvm_update_compile_flags(mlir-cuda-runner)
-  whole_archive_link(mlir-cuda-runner ${FULL_LINK_LIBS})
-  target_link_libraries(mlir-cuda-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+  target_link_libraries(mlir-cuda-runner PRIVATE ${LIBS} ${targets_to_link})
 
 endif()
