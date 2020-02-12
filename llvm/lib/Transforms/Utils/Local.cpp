@@ -505,15 +505,19 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
     I->eraseFromParent();
   }
 }
+void llvm::setDbgVariableUndef(DbgVariableIntrinsic *DVI) {
+  Value *DbgValue = DVI->getVariableLocation(false);
+  Value *Undef = UndefValue::get(DbgValue ? DbgValue->getType()
+                                          : Type::getInt1Ty(DVI->getContext()));
+  DVI->setOperand(
+      0, MetadataAsValue::get(DVI->getContext(), ValueAsMetadata::get(Undef)));
+}
 
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, I);
-  for (auto *DII : DbgUsers) {
-    Value *Undef = UndefValue::get(I->getType());
-    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
-                                            ValueAsMetadata::get(Undef)));
-  }
+  for (auto *DII : DbgUsers)
+    setDbgVariableUndef(DII);
   return !DbgUsers.empty();
 }
 
@@ -1060,6 +1064,19 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       // We explicitly check for such uses in CanPropagatePredecessorsForPHIs.
       assert(PN->use_empty() && "There shouldn't be any uses here!");
       PN->eraseFromParent();
+    }
+    // If Succ has multiple predecessors, each debug intrinsic in BB may or may
+    // not be valid when we reach Succ, so the debug variable should be set
+    // undef since its value is unknown.
+    Instruction *DbgInsertPoint = Succ->getFirstNonPHI();
+    while (DbgInfoIntrinsic *DI = dyn_cast<DbgInfoIntrinsic>(&BB->front())) {
+      if (auto DVI = dyn_cast<DbgVariableIntrinsic>(DI)) {
+        if (!isa<DbgDeclareInst>(DVI))
+          setDbgVariableUndef(DVI);
+        DVI->moveBefore(DbgInsertPoint);
+      } else {
+        break;
+      }
     }
   }
 
