@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=riscv32 < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=DEFAULT %s
-; RUN: not --crash llc -mtriple=riscv32 -target-abi ilp32 < %s 2>&1 \
+; RUN: not llc -mtriple=riscv32 -target-abi ilp32 < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32IF-ILP32 %s
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32f < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32IF-ILP32F %s

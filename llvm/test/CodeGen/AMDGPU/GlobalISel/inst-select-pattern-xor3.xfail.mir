@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o /dev/null %s 2>&1  | FileCheck -check-prefix=ERR %s
+# RUN: not llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o /dev/null %s 2>&1  | FileCheck -check-prefix=ERR %s
 
 # ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
 
