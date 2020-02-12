@@ -59,6 +59,208 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
   return handled;
 }
 
+namespace {
+// The Completer class is a convenient base class for building searchers that
+// go along with the SearchFilter passed to the standard Completer functions.
+class Completer : public Searcher {
+public:
+  Completer(CommandInterpreter &interpreter, CompletionRequest &request)
+      : m_interpreter(interpreter), m_request(request) {}
+
+  ~Completer() override = default;
+
+  CallbackReturn SearchCallback(SearchFilter &filter, SymbolContext &context,
+                                Address *addr) override = 0;
+
+  lldb::SearchDepth GetDepth() override = 0;
+
+  virtual void DoCompletion(SearchFilter *filter) = 0;
+
+protected:
+  CommandInterpreter &m_interpreter;
+  CompletionRequest &m_request;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Completer);
+};
+} // namespace
+
+// SourceFileCompleter implements the source file completer
+namespace {
+class SourceFileCompleter : public Completer {
+public:
+  SourceFileCompleter(CommandInterpreter &interpreter,
+                      CompletionRequest &request)
+      : Completer(interpreter, request), m_matching_files() {
+    FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
+    m_file_name = partial_spec.GetFilename().GetCString();
+    m_dir_name = partial_spec.GetDirectory().GetCString();
+  }
+
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthCompUnit; }
+
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context,
+                                          Address *addr) override {
+    if (context.comp_unit != nullptr) {
+      const char *cur_file_name =
+          context.comp_unit->GetPrimaryFile().GetFilename().GetCString();
+      const char *cur_dir_name =
+          context.comp_unit->GetPrimaryFile().GetDirectory().GetCString();
+
+      bool match = false;
+      if (m_file_name && cur_file_name &&
+          strstr(cur_file_name, m_file_name) == cur_file_name)
+        match = true;
+
+      if (match && m_dir_name && cur_dir_name &&
+          strstr(cur_dir_name, m_dir_name) != cur_dir_name)
+        match = false;
+
+      if (match) {
+        m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
+      }
+    }
+    return Searcher::eCallbackReturnContinue;
+  }
+
+  void DoCompletion(SearchFilter *filter) override {
+    filter->Search(*this);
+    // Now convert the filelist to completions:
+    for (size_t i = 0; i < m_matching_files.GetSize(); i++) {
+      m_request.AddCompletion(
+          m_matching_files.GetFileSpecAtIndex(i).GetFilename().GetCString());
+    }
+  }
+
+private:
+  FileSpecList m_matching_files;
+  const char *m_file_name;
+  const char *m_dir_name;
+
+  DISALLOW_COPY_AND_ASSIGN(SourceFileCompleter);
+};
+} // namespace
+
+static bool regex_chars(const char comp) {
+  return llvm::StringRef("[](){}+.*|^$\\?").contains(comp);
+}
+
+namespace {
+class SymbolCompleter : public Completer {
+
+public:
+  SymbolCompleter(CommandInterpreter &interpreter, CompletionRequest &request)
+      : Completer(interpreter, request) {
+    std::string regex_str;
+    if (!m_request.GetCursorArgumentPrefix().empty()) {
+      regex_str.append("^");
+      regex_str.append(std::string(m_request.GetCursorArgumentPrefix()));
+    } else {
+      // Match anything since the completion string is empty
+      regex_str.append(".");
+    }
+    std::string::iterator pos =
+        find_if(regex_str.begin() + 1, regex_str.end(), regex_chars);
+    while (pos < regex_str.end()) {
+      pos = regex_str.insert(pos, '\\');
+      pos = find_if(pos + 2, regex_str.end(), regex_chars);
+    }
+    m_regex = RegularExpression(regex_str);
+  }
+
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
+
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context,
+                                          Address *addr) override {
+    if (context.module_sp) {
+      SymbolContextList sc_list;
+      const bool include_symbols = true;
+      const bool include_inlines = true;
+      context.module_sp->FindFunctions(m_regex, include_symbols,
+                                       include_inlines, sc_list);
+
+      SymbolContext sc;
+      // Now add the functions & symbols to the list - only add if unique:
+      for (uint32_t i = 0; i < sc_list.GetSize(); i++) {
+        if (sc_list.GetContextAtIndex(i, sc)) {
+          ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
+          // Ensure that the function name matches the regex. This is more than
+          // a sanity check. It is possible that the demangled function name
+          // does not start with the prefix, for example when it's in an
+          // anonymous namespace.
+          if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
+            m_match_set.insert(func_name);
+        }
+      }
+    }
+    return Searcher::eCallbackReturnContinue;
+  }
+
+  void DoCompletion(SearchFilter *filter) override {
+    filter->Search(*this);
+    collection::iterator pos = m_match_set.begin(), end = m_match_set.end();
+    for (pos = m_match_set.begin(); pos != end; pos++)
+      m_request.AddCompletion((*pos).GetCString());
+  }
+
+private:
+  RegularExpression m_regex;
+  typedef std::set<ConstString> collection;
+  collection m_match_set;
+
+  DISALLOW_COPY_AND_ASSIGN(SymbolCompleter);
+};
+} // namespace
+
+namespace {
+class ModuleCompleter : public Completer {
+public:
+  ModuleCompleter(CommandInterpreter &interpreter, CompletionRequest &request)
+      : Completer(interpreter, request) {
+    FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
+    m_file_name = partial_spec.GetFilename().GetCString();
+    m_dir_name = partial_spec.GetDirectory().GetCString();
+  }
+
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
+
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context,
+                                          Address *addr) override {
+    if (context.module_sp) {
+      const char *cur_file_name =
+          context.module_sp->GetFileSpec().GetFilename().GetCString();
+      const char *cur_dir_name =
+          context.module_sp->GetFileSpec().GetDirectory().GetCString();
+
+      bool match = false;
+      if (m_file_name && cur_file_name &&
+          strstr(cur_file_name, m_file_name) == cur_file_name)
+        match = true;
+
+      if (match && m_dir_name && cur_dir_name &&
+          strstr(cur_dir_name, m_dir_name) != cur_dir_name)
+        match = false;
+
+      if (match) {
+        m_request.AddCompletion(cur_file_name);
+      }
+    }
+    return Searcher::eCallbackReturnContinue;
+  }
+
+  void DoCompletion(SearchFilter *filter) override { filter->Search(*this); }
+
+private:
+  const char *m_file_name;
+  const char *m_dir_name;
+
+  DISALLOW_COPY_AND_ASSIGN(ModuleCompleter);
+};
+} // namespace
+
 void CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
                                      CompletionRequest &request,
                                      SearchFilter *searcher) {
@@ -316,164 +518,4 @@ void CommandCompletions::VariablePath(CommandInterpreter &interpreter,
                                       CompletionRequest &request,
                                       SearchFilter *searcher) {
   Variable::AutoComplete(interpreter.GetExecutionContext(), request);
-}
-
-CommandCompletions::Completer::Completer(CommandInterpreter &interpreter,
-                                         CompletionRequest &request)
-    : m_interpreter(interpreter), m_request(request) {}
-
-CommandCompletions::Completer::~Completer() = default;
-
-// SourceFileCompleter
-
-CommandCompletions::SourceFileCompleter::SourceFileCompleter(
-    CommandInterpreter &interpreter, CompletionRequest &request)
-    : CommandCompletions::Completer(interpreter, request), m_matching_files() {
-  FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
-  m_file_name = partial_spec.GetFilename().GetCString();
-  m_dir_name = partial_spec.GetDirectory().GetCString();
-}
-
-lldb::SearchDepth CommandCompletions::SourceFileCompleter::GetDepth() {
-  return lldb::eSearchDepthCompUnit;
-}
-
-Searcher::CallbackReturn
-CommandCompletions::SourceFileCompleter::SearchCallback(SearchFilter &filter,
-                                                        SymbolContext &context,
-                                                        Address *addr) {
-  if (context.comp_unit != nullptr) {
-    const char *cur_file_name =
-        context.comp_unit->GetPrimaryFile().GetFilename().GetCString();
-    const char *cur_dir_name =
-        context.comp_unit->GetPrimaryFile().GetDirectory().GetCString();
-
-    bool match = false;
-    if (m_file_name && cur_file_name &&
-        strstr(cur_file_name, m_file_name) == cur_file_name)
-      match = true;
-
-    if (match && m_dir_name && cur_dir_name &&
-        strstr(cur_dir_name, m_dir_name) != cur_dir_name)
-      match = false;
-
-    if (match) {
-      m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
-    }
-  }
-  return Searcher::eCallbackReturnContinue;
-}
-
-void CommandCompletions::SourceFileCompleter::DoCompletion(
-    SearchFilter *filter) {
-  filter->Search(*this);
-  // Now convert the filelist to completions:
-  for (size_t i = 0; i < m_matching_files.GetSize(); i++) {
-    m_request.AddCompletion(
-        m_matching_files.GetFileSpecAtIndex(i).GetFilename().GetCString());
-  }
-}
-
-// SymbolCompleter
-
-static bool regex_chars(const char comp) {
-  return llvm::StringRef("[](){}+.*|^$\\?").contains(comp);
-}
-
-CommandCompletions::SymbolCompleter::SymbolCompleter(
-    CommandInterpreter &interpreter, CompletionRequest &request)
-    : CommandCompletions::Completer(interpreter, request) {
-  std::string regex_str;
-  if (!m_request.GetCursorArgumentPrefix().empty()) {
-    regex_str.append("^");
-    regex_str.append(std::string(m_request.GetCursorArgumentPrefix()));
-  } else {
-    // Match anything since the completion string is empty
-    regex_str.append(".");
-  }
-  std::string::iterator pos =
-      find_if(regex_str.begin() + 1, regex_str.end(), regex_chars);
-  while (pos < regex_str.end()) {
-    pos = regex_str.insert(pos, '\\');
-    pos = find_if(pos + 2, regex_str.end(), regex_chars);
-  }
-  m_regex = RegularExpression(regex_str);
-}
-
-lldb::SearchDepth CommandCompletions::SymbolCompleter::GetDepth() {
-  return lldb::eSearchDepthModule;
-}
-
-Searcher::CallbackReturn CommandCompletions::SymbolCompleter::SearchCallback(
-    SearchFilter &filter, SymbolContext &context, Address *addr) {
-  if (context.module_sp) {
-    SymbolContextList sc_list;
-    const bool include_symbols = true;
-    const bool include_inlines = true;
-    context.module_sp->FindFunctions(m_regex, include_symbols, include_inlines,
-                                     sc_list);
-
-    SymbolContext sc;
-    // Now add the functions & symbols to the list - only add if unique:
-    for (uint32_t i = 0; i < sc_list.GetSize(); i++) {
-      if (sc_list.GetContextAtIndex(i, sc)) {
-        ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
-        // Ensure that the function name matches the regex. This is more than a
-        // sanity check. It is possible that the demangled function name does
-        // not start with the prefix, for example when it's in an anonymous
-        // namespace.
-        if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
-          m_match_set.insert(func_name);
-      }
-    }
-  }
-  return Searcher::eCallbackReturnContinue;
-}
-
-void CommandCompletions::SymbolCompleter::DoCompletion(SearchFilter *filter) {
-  filter->Search(*this);
-  collection::iterator pos = m_match_set.begin(), end = m_match_set.end();
-  for (pos = m_match_set.begin(); pos != end; pos++)
-    m_request.AddCompletion((*pos).GetCString());
-}
-
-// ModuleCompleter
-CommandCompletions::ModuleCompleter::ModuleCompleter(
-    CommandInterpreter &interpreter, CompletionRequest &request)
-    : CommandCompletions::Completer(interpreter, request) {
-  FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
-  m_file_name = partial_spec.GetFilename().GetCString();
-  m_dir_name = partial_spec.GetDirectory().GetCString();
-}
-
-lldb::SearchDepth CommandCompletions::ModuleCompleter::GetDepth() {
-  return lldb::eSearchDepthModule;
-}
-
-Searcher::CallbackReturn CommandCompletions::ModuleCompleter::SearchCallback(
-    SearchFilter &filter, SymbolContext &context, Address *addr) {
-  if (context.module_sp) {
-    const char *cur_file_name =
-        context.module_sp->GetFileSpec().GetFilename().GetCString();
-    const char *cur_dir_name =
-        context.module_sp->GetFileSpec().GetDirectory().GetCString();
-
-    bool match = false;
-    if (m_file_name && cur_file_name &&
-        strstr(cur_file_name, m_file_name) == cur_file_name)
-      match = true;
-
-    if (match && m_dir_name && cur_dir_name &&
-        strstr(cur_dir_name, m_dir_name) != cur_dir_name)
-      match = false;
-
-    if (match) {
-      m_request.AddCompletion(cur_file_name);
-    }
-  }
-  return Searcher::eCallbackReturnContinue;
-}
-
-void CommandCompletions::ModuleCompleter::DoCompletion(SearchFilter *filter) {
-  filter->Search(*this);
 }
