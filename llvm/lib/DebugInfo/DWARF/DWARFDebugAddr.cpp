@@ -138,11 +138,12 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
 void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx32 ": ", HeaderOffset);
-  OS << format("Addr Section: length = 0x%8.8" PRIx32
-               ", version = 0x%4.4" PRIx16 ", "
-               "addr_size = 0x%2.2" PRIx8 ", seg_size = 0x%2.2" PRIx8 "\n",
-               HeaderData.Length, HeaderData.Version, HeaderData.AddrSize,
-               HeaderData.SegSize);
+  if (HeaderData.Length)
+    OS << format("Address table header: length = 0x%8.8" PRIx32
+                 ", version = 0x%4.4" PRIx16 ", "
+                 "addr_size = 0x%2.2" PRIx8 ", seg_size = 0x%2.2" PRIx8 "\n",
+                 HeaderData.Length, HeaderData.Version, HeaderData.AddrSize,
+                 HeaderData.SegSize);
 
   if (Addrs.size() > 0) {
     const char *AddrFmt = (HeaderData.AddrSize == 4) ? "0x%8.8" PRIx64 "\n"
