@@ -5,16 +5,16 @@ set(LLVM_OPTIONAL_SOURCES
 set(LIB_LIBS
   MLIRAnalysis
   MLIRLLVMIR
-  MLIROptMain
+  MLIROptLib
   MLIRParser
   MLIRPass
   MLIRTransforms
   MLIRSupport
 )
-add_llvm_library(MLIRMlirOptLib
+add_llvm_library(MLIRMlirOptMain
   mlir-opt.cpp
 )
-target_link_libraries(MLIRMlirOptLib
+target_link_libraries(MLIRMlirOptMain
   ${LIB_LIBS}
 )
 
@@ -43,7 +43,7 @@ set(FULL_LINK_LIBS
   MLIRLoopOps
   MLIRNVVMIR
   MLIROpenMP
-  MLIROptMain
+  MLIROptLib
   MLIRParser
   MLIRPass
   MLIRQuantizerFxpMathConfig
@@ -71,7 +71,7 @@ set(FULL_LINK_LIBS
 )
 set(LIBS
   MLIRIR
-  MLIROptMain
+  MLIROptLib
   LLVMSupport
   LLVMCore
   LLVMAsmParser
