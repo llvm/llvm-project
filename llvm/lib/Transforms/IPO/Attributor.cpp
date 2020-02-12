@@ -2820,29 +2820,16 @@ struct AAIsDeadValueImpl : public AAIsDead {
 
   /// See AAIsDead::isKnownDead(Instruction *I).
   bool isKnownDead(const Instruction *I) const override {
-    return I == getCtxI() && getKnown();
+    return isAssumedDead(I) && getKnown();
   }
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return isAssumedDead() ? "assumed-dead" : "assumed-live";
   }
-};
 
-struct AAIsDeadFloating : public AAIsDeadValueImpl {
-  AAIsDeadFloating(const IRPosition &IRP) : AAIsDeadValueImpl(IRP) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    if (Instruction *I = dyn_cast<Instruction>(&getAssociatedValue()))
-      if (!wouldInstructionBeTriviallyDead(I))
-        indicatePessimisticFixpoint();
-    if (isa<UndefValue>(getAssociatedValue()))
-      indicatePessimisticFixpoint();
-  }
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
+  /// Check if all uses are assumed dead.
+  bool areAllUsesAssumedDead(Attributor &A) {
     auto UsePred = [&](const Use &U, bool &Follow) {
       Instruction *UserI = cast<Instruction>(U.getUser());
       if (CallSite CS = CallSite(UserI)) {
@@ -2862,7 +2849,53 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       return wouldInstructionBeTriviallyDead(UserI);
     };
 
-    if (!A.checkForAllUses(UsePred, *this, getAssociatedValue()))
+    return A.checkForAllUses(UsePred, *this, getAssociatedValue());
+  }
+
+  /// Determine if \p I is assumed to be side-effect free.
+  bool isAssumedSideEffectFree(Attributor &A, Instruction *I) {
+    if (!I || wouldInstructionBeTriviallyDead(I))
+      return true;
+
+    auto *CB = dyn_cast<CallBase>(I);
+    if (!CB || isa<IntrinsicInst>(CB))
+      return false;
+
+    const IRPosition &CallIRP = IRPosition::callsite_function(*CB);
+    const auto &NoUnwindAA = A.getAAFor<AANoUnwind>(*this, CallIRP);
+    if (!NoUnwindAA.isAssumedNoUnwind())
+      return false;
+
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, CallIRP);
+    if (!MemBehaviorAA.isAssumedReadOnly())
+      return false;
+
+    return true;
+  }
+};
+
+struct AAIsDeadFloating : public AAIsDeadValueImpl {
+  AAIsDeadFloating(const IRPosition &IRP) : AAIsDeadValueImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (isa<UndefValue>(getAssociatedValue())) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
+    if (!isAssumedSideEffectFree(A, I))
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
+    if (!isAssumedSideEffectFree(A, I))
+      return indicatePessimisticFixpoint();
+
+    if (!areAllUsesAssumedDead(A))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -2870,12 +2903,16 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     Value &V = getAssociatedValue();
-    if (auto *I = dyn_cast<Instruction>(&V))
-      if (wouldInstructionBeTriviallyDead(I)) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      // If we get here we basically know the users are all dead. We check if
+      // isAssumedSideEffectFree returns true here again because it might not be
+      // the case and only the users are dead but the instruction (=call) is
+      // still needed.
+      if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
         A.deleteAfterManifest(*I);
         return ChangeStatus::CHANGED;
       }
-
+    }
     if (V.use_empty())
       return ChangeStatus::UNCHANGED;
 
@@ -2956,6 +2993,69 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(IsDead) }
 };
 
+struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
+  AAIsDeadCallSiteReturned(const IRPosition &IRP)
+      : AAIsDeadFloating(IRP), IsAssumedSideEffectFree(true) {}
+
+  /// See AAIsDead::isAssumedDead().
+  bool isAssumedDead() const override {
+    return AAIsDeadFloating::isAssumedDead() && IsAssumedSideEffectFree;
+  }
+
+  /// Return true if all users are assumed dead.
+  bool hasOnlyAssumedDeadUses() const { return getAssumed(); }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (isa<UndefValue>(getAssociatedValue())) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    // We track this separately as a secondary state.
+    IsAssumedSideEffectFree = isAssumedSideEffectFree(A, getCtxI());
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    if (IsAssumedSideEffectFree && !isAssumedSideEffectFree(A, getCtxI())) {
+      IsAssumedSideEffectFree = false;
+      Changed = ChangeStatus::CHANGED;
+    }
+
+    if (!areAllUsesAssumedDead(A))
+      return indicatePessimisticFixpoint();
+    return Changed;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    if (auto *CI = dyn_cast<CallInst>(&getAssociatedValue()))
+      if (CI->isMustTailCall())
+        return ChangeStatus::UNCHANGED;
+    return AAIsDeadFloating::manifest(A);
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (IsAssumedSideEffectFree)
+      STATS_DECLTRACK_CSRET_ATTR(IsDead)
+    else
+      STATS_DECLTRACK_CSRET_ATTR(UnusedResult)
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return isAssumedDead()
+               ? "assumed-dead"
+               : (getAssumed() ? "assumed-dead-users" : "assumed-live");
+  }
+
+private:
+  bool IsAssumedSideEffectFree;
+};
+
 struct AAIsDeadReturned : public AAIsDeadValueImpl {
   AAIsDeadReturned(const IRPosition &IRP) : AAIsDeadValueImpl(IRP) {}
 
@@ -2970,7 +3070,8 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
           IRPosition::callsite_returned(ACS.getCallSite());
       const auto &RetIsDeadAA = A.getAAFor<AAIsDead>(*this, CSRetPos);
       AllKnownDead &= RetIsDeadAA.isKnownDead();
-      return RetIsDeadAA.isAssumedDead();
+      return static_cast<const AAIsDeadCallSiteReturned &>(RetIsDeadAA)
+          .hasOnlyAssumedDeadUses();
     };
 
     bool AllCallSitesKnown;
@@ -3001,16 +3102,6 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(IsDead) }
-};
-
-struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
-  AAIsDeadCallSiteReturned(const IRPosition &IRP) : AAIsDeadFloating(IRP) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {}
-
-  /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(IsDead) }
 };
 
 struct AAIsDeadFunction : public AAIsDead {
@@ -7530,6 +7621,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   auto CallSitePred = [&](Instruction &I) -> bool {
     CallSite CS(&I);
+    IRPosition CSRetPos = IRPosition::callsite_returned(CS);
+
+    // Call sites might be dead if they do not have side effects and no live
+    // users. The return value might be dead if there are no live users.
+    getOrCreateAAFor<AAIsDead>(CSRetPos);
+
     if (Function *Callee = CS.getCalledFunction()) {
       // Skip declerations except if annotations on their call sites were
       // explicitly requested.
@@ -7541,13 +7638,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
         IRPosition CSRetPos = IRPosition::callsite_returned(CS);
 
-        // Call site return values might be dead.
-        getOrCreateAAFor<AAIsDead>(CSRetPos);
-
         // Call site return integer values might be limited by a constant range.
-        if (Callee->getReturnType()->isIntegerTy()) {
+        if (Callee->getReturnType()->isIntegerTy())
           getOrCreateAAFor<AAValueConstantRange>(CSRetPos);
-        }
       }
 
       for (int i = 0, e = CS.getNumArgOperands(); i < e; i++) {
