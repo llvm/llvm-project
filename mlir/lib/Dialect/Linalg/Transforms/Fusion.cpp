@@ -283,6 +283,10 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     LLVM_DEBUG(dbgs() << "\n***Consider producer:\t"
                       << *dependence.dependentOpView.op << "\n");
     auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
+    if (isa<linalg::IndexedGenericOp>(dependence.dependentOpView.op)) {
+      LLVM_DEBUG(dbgs() << "Not fusing indexed_generic producer");
+      continue;
+    }
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;
