@@ -144,6 +144,19 @@ public:
   Block &back() { return getBody().back(); }
   Block &front() { return getBody().front(); }
 
+  /// Add an entry block to an empty function, and set up the block arguments
+  /// to match the signature of the function. The newly inserted entry block
+  /// is returned.
+  ///
+  /// Note that the concrete class must define a method with the same name to
+  /// hide this one if the concrete class does not use FunctionType for the
+  /// function type under the hood.
+  Block *addEntryBlock();
+
+  /// Add a normal block to the end of the function's block list. The function
+  /// should at least already have an entry block.
+  Block *addBlock();
+
   /// Hook for concrete ops to verify the contents of the body. Called as a
   /// part of trait verification, after type verification and ensuring that a
   /// region exists.
@@ -161,12 +174,34 @@ public:
         getTypeAttrName());
   }
 
+  /// Return the type of this function.
+  ///
+  /// Note that the concrete class must define a method with the same name to
+  /// hide this one if the concrete class does not use FunctionType for the
+  /// function type under the hood.
+  FunctionType getType() {
+    return getTypeAttr().getValue().template cast<FunctionType>();
+  }
+
   bool isTypeAttrValid() {
     auto typeAttr = getTypeAttr();
     if (!typeAttr)
       return false;
     return typeAttr.getValue() != Type{};
   }
+
+  /// Change the type of this function in place. This is an extremely dangerous
+  /// operation and it is up to the caller to ensure that this is legal for this
+  /// function, and to restore invariants:
+  ///  - the entry block args must be updated to match the function params.
+  ///  - the argument/result attributes may need an update: if the new type
+  ///    has less parameters we drop the extra attributes, if there are more
+  ///    parameters they won't have any attributes.
+  ///
+  /// Note that the concrete class must define a method with the same name to
+  /// hide this one if the concrete class does not use FunctionType for the
+  /// function type under the hood.
+  void setType(FunctionType newType);
 
   //===--------------------------------------------------------------------===//
   // Argument Handling
@@ -422,6 +457,43 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
     return funcOp.emitOpError("expects one region");
 
   return funcOp.verifyBody();
+}
+
+//===----------------------------------------------------------------------===//
+// Function Body.
+//===----------------------------------------------------------------------===//
+
+template <typename ConcreteType>
+Block *FunctionLike<ConcreteType>::addEntryBlock() {
+  assert(empty() && "function already has an entry block");
+  auto *entry = new Block();
+  push_back(entry);
+  entry->addArguments(getType().getInputs());
+  return entry;
+}
+
+template <typename ConcreteType>
+Block *FunctionLike<ConcreteType>::addBlock() {
+  assert(!empty() && "function should at least have an entry block");
+  push_back(new Block());
+  return &back();
+}
+
+//===----------------------------------------------------------------------===//
+// Function Type Attribute.
+//===----------------------------------------------------------------------===//
+
+template <typename ConcreteType>
+void FunctionLike<ConcreteType>::setType(FunctionType newType) {
+  SmallVector<char, 16> nameBuf;
+  auto oldType = getType();
+  auto *concreteOp = static_cast<ConcreteType *>(this);
+
+  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
+    concreteOp->removeAttr(getArgAttrName(i, nameBuf));
+  for (int i = newType.getNumResults(), e = oldType.getNumResults(); i < e; i++)
+    concreteOp->removeAttr(getResultAttrName(i, nameBuf));
+  concreteOp->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
 //===----------------------------------------------------------------------===//

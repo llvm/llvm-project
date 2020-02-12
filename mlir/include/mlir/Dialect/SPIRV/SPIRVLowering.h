@@ -25,7 +25,7 @@ namespace mlir {
 /// For composite types, this converter additionally performs type wrapping to
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
-class SPIRVTypeConverter final : public TypeConverter {
+class SPIRVTypeConverter : public TypeConverter {
 public:
   using TypeConverter::TypeConverter;
 
@@ -59,6 +59,7 @@ void populateBuiltinFuncToSPIRVPatterns(MLIRContext *context,
 
 namespace spirv {
 class AccessChainOp;
+class FuncOp;
 
 class SPIRVConversionTarget : public ConversionTarget {
 public:
@@ -104,7 +105,8 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
 
 /// Sets the InterfaceVarABIAttr and EntryPointABIAttr for a function and its
 /// arguments.
-LogicalResult setABIAttrs(FuncOp funcOp, EntryPointABIAttr entryPointInfo,
+LogicalResult setABIAttrs(spirv::FuncOp funcOp,
+                          EntryPointABIAttr entryPointInfo,
                           ArrayRef<InterfaceVarABIAttr> argABIInfo);
 } // namespace spirv
 } // namespace mlir

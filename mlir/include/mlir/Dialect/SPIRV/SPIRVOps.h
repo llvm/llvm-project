@@ -43,4 +43,40 @@ namespace spirv {
 } // end namespace spirv
 } // end namespace mlir
 
+namespace llvm {
+
+/// spirv::Function ops hash just like pointers.
+template <>
+struct DenseMapInfo<mlir::spirv::FuncOp> {
+  static mlir::spirv::FuncOp getEmptyKey() {
+    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::spirv::FuncOp::getFromOpaquePointer(pointer);
+  }
+  static mlir::spirv::FuncOp getTombstoneKey() {
+    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::spirv::FuncOp::getFromOpaquePointer(pointer);
+  }
+  static unsigned getHashValue(mlir::spirv::FuncOp val) {
+    return hash_value(val.getAsOpaquePointer());
+  }
+  static bool isEqual(mlir::spirv::FuncOp LHS, mlir::spirv::FuncOp RHS) {
+    return LHS == RHS;
+  }
+};
+
+/// Allow stealing the low bits of spirv::Function ops.
+template <>
+struct PointerLikeTypeTraits<mlir::spirv::FuncOp> {
+public:
+  static inline void *getAsVoidPointer(mlir::spirv::FuncOp I) {
+    return const_cast<void *>(I.getAsOpaquePointer());
+  }
+  static inline mlir::spirv::FuncOp getFromVoidPointer(void *P) {
+    return mlir::spirv::FuncOp::getFromOpaquePointer(P);
+  }
+  static constexpr int NumLowBitsAvailable = 3;
+};
+
+} // namespace llvm
+
 #endif // MLIR_DIALECT_SPIRV_SPIRVOPS_H_

@@ -6,7 +6,7 @@
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
-  func @access_chain() -> () {
+  spv.func @access_chain() -> () "None" {
     %0 = spv.constant 1: i32
     // CHECK: [[VAR1:%.*]] = spv._address_of @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4 x f32>>, Input>
     // CHECK-NEXT: spv.AccessChain [[VAR1]][{{.*}}, {{.*}}] : !spv.ptr<!spv.struct<f32, !spv.array<4 x f32>>, Input>
@@ -30,7 +30,7 @@ func @address_of() -> () {
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
-  func @foo() -> () {
+  spv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spv.globalVariable symbol}}
     %0 = spv._address_of @var2 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
   }
@@ -40,7 +40,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
-  func @foo() -> () {
+  spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
     %0 = spv._address_of @var1 : !spv.ptr<f32, Input>
   }
@@ -136,7 +136,7 @@ func @value_result_num_elements_mismatch() -> () {
 //===----------------------------------------------------------------------===//
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    // CHECK: spv.EntryPoint "GLCompute" @do_nothing
@@ -146,7 +146,7 @@ spv.module "Logical" "GLSL450" {
 spv.module "Logical" "GLSL450" {
    spv.globalVariable @var2 : !spv.ptr<f32, Input>
    spv.globalVariable @var3 : !spv.ptr<f32, Output>
-   func @do_something(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) -> () {
+   spv.func @do_something(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) -> () "None" {
      %1 = spv.Load "Input" %arg0 : f32
      spv.Store "Output" %arg1, %1 : f32
      spv.Return
@@ -158,7 +158,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    // expected-error @+1 {{invalid kind of attribute specified}}
@@ -168,7 +168,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    // expected-error @+1 {{function 'do_something' not found in 'spv.module'}}
@@ -183,7 +183,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      // expected-error @+1 {{op must appear in a module-like op's block}}
      spv.EntryPoint "GLCompute" @do_something
    }
@@ -192,7 +192,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
@@ -203,12 +203,61 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{custom op 'spv.EntryPoint' invalid execution_model attribute specification: "ContractionOff"}}
    spv.EntryPoint "ContractionOff" @do_nothing
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.func
+//===----------------------------------------------------------------------===//
+
+// CHECK: spv.func @foo() "None"
+spv.func @foo() "None"
+
+// CHECK: spv.func @bar(%{{.+}}: i32) -> i32 "Inline|Pure" {
+spv.func @bar(%arg: i32) -> (i32) "Inline|Pure" {
+  // CHECK-NEXT: spv.
+  spv.ReturnValue %arg: i32
+// CHECK-NEXT: }
+}
+
+// CHECK: spv.func @baz(%{{.+}}: i32) "DontInline" attributes {additional_stuff = 64 : i64}
+spv.func @baz(%arg: i32) "DontInline" attributes {
+  additional_stuff = 64
+} { spv.Return }
+
+// -----
+
+// expected-error @+1 {{expected function_control attribute specified as string}}
+spv.func @missing_function_control() { spv.Return }
+
+// -----
+
+// expected-error @+1 {{cannot have more than one result}}
+spv.func @cannot_have_more_than_one_result(%arg: i32) -> (i32, i32) "None"
+
+// -----
+
+// expected-error @+1 {{expected SSA identifier}}
+spv.func @cannot_have_variadic_arguments(%arg: i32, ...) "None"
+
+// -----
+
+// Nested function
+spv.module "Logical" "GLSL450" {
+  spv.func @outer_func() -> () "None" {
+    // expected-error @+1 {{must appear in a module-like op's block}}
+    spv.func @inner_func() -> () "None" {
+      spv.Return
+    }
+    spv.Return
+  }
 }
 
 // -----
@@ -299,7 +348,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-  func @foo() {
+  spv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
     spv.globalVariable @var0 : !spv.ptr<f32, Input>
     spv.Return
@@ -332,7 +381,7 @@ spv.module "Logical" "GLSL450" {
 // Module with function
 // CHECK: spv.module
 spv.module "Logical" "GLSL450" {
-  func @do_nothing() -> () {
+  spv.func @do_nothing() -> () "None" {
     spv.Return
   }
 }
@@ -383,9 +432,9 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-// Use non SPIR-V op inside.module
+// Use non SPIR-V op inside module
 spv.module "Logical" "GLSL450" {
-  // expected-error @+1 {{'spv.module' can only contain func and spv.* ops}}
+  // expected-error @+1 {{'spv.module' can only contain spv.* ops}}
   "dialect.op"() : () -> ()
 }
 
@@ -393,7 +442,7 @@ spv.module "Logical" "GLSL450" {
 
 // Use non SPIR-V op inside function
 spv.module "Logical" "GLSL450" {
-  func @do_nothing() -> () {
+  spv.func @do_nothing() -> () "None" {
     // expected-error @+1 {{functions in 'spv.module' can only contain spv.* ops}}
     "dialect.op"() : () -> ()
   }
@@ -404,20 +453,7 @@ spv.module "Logical" "GLSL450" {
 // Use external function
 spv.module "Logical" "GLSL450" {
   // expected-error @+1 {{'spv.module' cannot contain external functions}}
-  func @extern() -> ()
-}
-
-// -----
-
-// Module with nested function
-spv.module "Logical" "GLSL450" {
-  func @outer_func() -> () {
-    // expected-error @+1 {{'spv.module' cannot contain nested functions}}
-    func @inner_func() -> () {
-      spv.Return
-    }
-    spv.Return
-  }
+  spv.func @extern() -> () "None"
 }
 
 // -----
@@ -459,14 +495,14 @@ spv.module "Logical" "GLSL450" {
   spv.specConstant @sc3 = 1.5 : f32
 
   // CHECK-LABEL: @reference
-  func @reference() -> i1 {
+  spv.func @reference() -> i1 "None" {
     // CHECK: spv._reference_of @sc1 : i1
     %0 = spv._reference_of @sc1 : i1
     spv.ReturnValue %0 : i1
   }
 
   // CHECK-LABEL: @initialize
-  func @initialize() -> i64 {
+  spv.func @initialize() -> i64 "None" {
     // CHECK: spv._reference_of @sc2 : i64
     %0 = spv._reference_of @sc2 : i64
     %1 = spv.Variable init(%0) : !spv.ptr<i64, Function>
@@ -475,7 +511,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @compute
-  func @compute() -> f32 {
+  spv.func @compute() -> f32 "None" {
     // CHECK: spv._reference_of @sc3 : f32
     %0 = spv._reference_of @sc3 : f32
     %1 = spv.constant 6.0 : f32
@@ -497,7 +533,7 @@ func @reference_of() {
 // -----
 
 spv.module "Logical" "GLSL450" {
-  func @foo() -> () {
+  spv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spv.specConstant symbol}}
     %0 = spv._reference_of @sc : i32
     spv.Return
@@ -508,7 +544,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   spv.specConstant @sc = 42 : i32
-  func @foo() -> () {
+  spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
     %0 = spv._reference_of @sc : f32
     spv.Return

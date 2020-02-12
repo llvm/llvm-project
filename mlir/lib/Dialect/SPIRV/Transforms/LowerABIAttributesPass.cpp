@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -30,7 +29,8 @@ static bool isScalarOrVectorType(Type type) {
 
 /// Creates a global variable for an argument based on the ABI info.
 static spirv::GlobalVariableOp
-createGlobalVariableForArg(FuncOp funcOp, OpBuilder &builder, unsigned argNum,
+createGlobalVariableForArg(spirv::FuncOp funcOp, OpBuilder &builder,
+                           unsigned argNum,
                            spirv::InterfaceVarABIAttr abiInfo) {
   auto spirvModule = funcOp.getParentOfType<spirv::ModuleOp>();
   if (!spirvModule) {
@@ -70,7 +70,7 @@ createGlobalVariableForArg(FuncOp funcOp, OpBuilder &builder, unsigned argNum,
 /// Gets the global variables that need to be specified as interface variable
 /// with an spv.EntryPointOp. Traverses the body of a entry function to do so.
 static LogicalResult
-getInterfaceVariables(FuncOp funcOp,
+getInterfaceVariables(spirv::FuncOp funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
   auto module = funcOp.getParentOfType<spirv::ModuleOp>();
   if (!module) {
@@ -97,7 +97,8 @@ getInterfaceVariables(FuncOp funcOp,
 }
 
 /// Lowers the entry point attribute.
-static LogicalResult lowerEntryPointABIAttr(FuncOp funcOp, OpBuilder &builder) {
+static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
+                                            OpBuilder &builder) {
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
   auto entryPointAttr =
       funcOp.getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName);
@@ -127,13 +128,18 @@ static LogicalResult lowerEntryPointABIAttr(FuncOp funcOp, OpBuilder &builder) {
 }
 
 namespace {
-/// Pattern rewriter for changing function signature to match the ABI specified
-/// in attributes.
-class FuncOpLowering final : public SPIRVOpLowering<FuncOp> {
+/// A pattern to convert function signature according to interface variable ABI
+/// attributes.
+///
+/// Specifically, this pattern creates global variables according to interface
+/// variable ABI attributes attached to function arguments and converts all
+/// function argument uses to those global variables. This is necessary because
+/// Vulkan requires all shader entry points to be of void(void) type.
+class ProcessInterfaceVarABI final : public SPIRVOpLowering<spirv::FuncOp> {
 public:
-  using SPIRVOpLowering<FuncOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<spirv::FuncOp>::SPIRVOpLowering;
   PatternMatchResult
-  matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
+  matchAndRewrite(spirv::FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -145,9 +151,9 @@ private:
 };
 } // namespace
 
-PatternMatchResult
-FuncOpLowering::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
-                                ConversionPatternRewriter &rewriter) const {
+PatternMatchResult ProcessInterfaceVarABI::matchAndRewrite(
+    spirv::FuncOp funcOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
   if (!funcOp.getAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {
     // TODO(ravishankarm) : Non-entry point functions are not handled.
@@ -185,8 +191,7 @@ FuncOpLowering::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.
     if (isScalarOrVectorType(argType.value())) {
-      auto indexType =
-          typeConverter.convertType(IndexType::get(funcOp.getContext()));
+      auto indexType = SPIRVTypeConverter::getIndexType(funcOp.getContext());
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
@@ -213,26 +218,33 @@ void LowerABIAttributesPass::runOnOperation() {
 
   SPIRVTypeConverter typeConverter;
   OwningRewritePatternList patterns;
-  patterns.insert<FuncOpLowering>(context, typeConverter);
+  patterns.insert<ProcessInterfaceVarABI>(context, typeConverter);
 
-  std::unique_ptr<ConversionTarget> target = spirv::SPIRVConversionTarget::get(
-      spirv::lookupTargetEnvOrDefault(module), context);
-  auto entryPointAttrName = spirv::getEntryPointABIAttrName();
-  target->addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-    return op.getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName) &&
-           op.getNumResults() == 0 && op.getNumArguments() == 0;
+  ConversionTarget target(*context);
+  // "Legal" function ops should have no interface variable ABI attributes.
+  target.addDynamicallyLegalOp<spirv::FuncOp>([&](spirv::FuncOp op) {
+    StringRef attrName = spirv::getInterfaceVarABIAttrName();
+    for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i)
+      if (op.getArgAttr(i, attrName))
+        return false;
+    return true;
   });
-  target->addLegalOp<ReturnOp>();
+  // All other SPIR-V ops are legal.
+  target.markUnknownOpDynamicallyLegal([](Operation *op) {
+    return op->getDialect()->getNamespace() ==
+           spirv::SPIRVDialect::getDialectNamespace();
+  });
   if (failed(
-          applyPartialConversion(module, *target, patterns, &typeConverter))) {
+          applyPartialConversion(module, target, patterns, &typeConverter))) {
     return signalPassFailure();
   }
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point
   // attributes.
   OpBuilder builder(context);
-  SmallVector<FuncOp, 1> entryPointFns;
-  module.walk([&](FuncOp funcOp) {
+  SmallVector<spirv::FuncOp, 1> entryPointFns;
+  auto entryPointAttrName = spirv::getEntryPointABIAttrName();
+  module.walk([&](spirv::FuncOp funcOp) {
     if (funcOp.getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName)) {
       entryPointFns.push_back(funcOp);
     }
