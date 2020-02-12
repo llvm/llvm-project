@@ -187,7 +187,7 @@ public:
   /// Standard "Dump" method.  At present it does nothing.
   virtual void Dump(Stream *s) const;
 
-  lldb::SearchFilterSP CopyForBreakpoint(Breakpoint &breakpoint);
+  lldb::SearchFilterSP CreateCopy(lldb::TargetSP& target_sp);
 
   static lldb::SearchFilterSP
   CreateFromStructuredData(const lldb::TargetSP& target_sp,
@@ -261,13 +261,13 @@ protected:
                                                const SymbolContext &context,
                                                Searcher &searcher);
 
-  virtual lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) = 0;
+  virtual lldb::SearchFilterSP DoCreateCopy() = 0;
 
   void SetTarget(lldb::TargetSP &target_sp) { m_target_sp = target_sp; }
 
-  lldb::TargetSP
-      m_target_sp; // Every filter has to be associated with a target for
-                   // now since you need a starting place for the search.
+  lldb::TargetSP m_target_sp; // Every filter has to be associated with
+                              // a target for now since you need a starting
+                              // place for the search.
 private:
   unsigned char SubclassID;
 };
@@ -295,7 +295,7 @@ public:
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 };
 
 /// \class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h" This
@@ -341,7 +341,7 @@ public:
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
 private:
   FileSpec m_module_spec;
@@ -394,7 +394,7 @@ public:
   void SerializeUnwrapped(StructuredData::DictionarySP &options_dict_sp);
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
 protected:
   FileSpecList m_module_spec_list;
@@ -432,7 +432,7 @@ public:
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
 private:
   FileSpecList m_cu_spec_list;

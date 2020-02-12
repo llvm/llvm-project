@@ -161,9 +161,8 @@ void SearchFilter::GetDescription(Stream *s) {}
 
 void SearchFilter::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP SearchFilter::CopyForBreakpoint(Breakpoint &breakpoint) {
-  SearchFilterSP ret_sp = DoCopyForBreakpoint(breakpoint);
-  TargetSP target_sp = breakpoint.GetTargetSP();
+lldb::SearchFilterSP SearchFilter::CreateCopy(lldb::TargetSP& target_sp) {
+  SearchFilterSP ret_sp = DoCreateCopy();
   ret_sp->SetTarget(target_sp);
   return ret_sp;
 }
@@ -391,8 +390,7 @@ bool SearchFilterForUnconstrainedSearches::ModulePasses(
   return true;
 }
 
-lldb::SearchFilterSP SearchFilterForUnconstrainedSearches::DoCopyForBreakpoint(
-    Breakpoint &breakpoint) {
+SearchFilterSP SearchFilterForUnconstrainedSearches::DoCreateCopy() {
   return std::make_shared<SearchFilterForUnconstrainedSearches>(*this);
 }
 
@@ -467,8 +465,7 @@ uint32_t SearchFilterByModule::GetFilterRequiredItems() {
 
 void SearchFilterByModule::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP
-SearchFilterByModule::DoCopyForBreakpoint(Breakpoint &breakpoint) {
+SearchFilterSP SearchFilterByModule::DoCreateCopy() {
   return std::make_shared<SearchFilterByModule>(*this);
 }
 
@@ -612,8 +609,7 @@ uint32_t SearchFilterByModuleList::GetFilterRequiredItems() {
 
 void SearchFilterByModuleList::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP
-SearchFilterByModuleList::DoCopyForBreakpoint(Breakpoint &breakpoint) {
+lldb::SearchFilterSP SearchFilterByModuleList::DoCreateCopy() {
   return std::make_shared<SearchFilterByModuleList>(*this);
 }
 
@@ -834,7 +830,6 @@ uint32_t SearchFilterByModuleListAndCU::GetFilterRequiredItems() {
 
 void SearchFilterByModuleListAndCU::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP
-SearchFilterByModuleListAndCU::DoCopyForBreakpoint(Breakpoint &breakpoint) {
+SearchFilterSP SearchFilterByModuleListAndCU::DoCreateCopy() {
   return std::make_shared<SearchFilterByModuleListAndCU>(*this);
 }

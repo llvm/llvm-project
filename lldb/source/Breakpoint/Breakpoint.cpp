@@ -74,7 +74,7 @@ BreakpointSP Breakpoint::CopyFromBreakpoint(TargetSP new_target,
   BreakpointSP bp(new Breakpoint(*new_target, bp_to_copy_from));
   // Now go through and copy the filter & resolver:
   bp->m_resolver_sp = bp_to_copy_from.m_resolver_sp->CopyForBreakpoint(*bp);
-  bp->m_filter_sp = bp_to_copy_from.m_filter_sp->CopyForBreakpoint(*bp);
+  bp->m_filter_sp = bp_to_copy_from.m_filter_sp->CreateCopy(new_target);
   return bp;
 }
 
