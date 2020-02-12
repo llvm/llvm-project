@@ -228,3 +228,16 @@ define void()* @get_external_preemptable_function() {
 
 ; COMMON:     {{^}}strong_local_global:
 ; COMMON-NEXT .Lstrong_local_global:
+
+; COMMON:      .globl strong_default_alias
+; COMMON-NEXT: .set strong_default_alias, aliasee
+; COMMON-NEXT: .weak weak_default_alias
+; COMMON-NEXT: .set weak_default_alias, aliasee
+; COMMON-NEXT: .globl strong_local_alias
+; COMMON-NEXT: .set strong_local_alias, aliasee
+; COMMON-NEXT: .weak weak_local_alias
+; COMMON-NEXT: .set weak_local_alias, aliasee
+; COMMON-NEXT: .globl strong_preemptable_alias
+; COMMON-NEXT: .set strong_preemptable_alias, aliasee
+; COMMON-NEXT: .weak weak_preemptable_alias
+; COMMON-NEXT: .set weak_preemptable_alias, aliasee
