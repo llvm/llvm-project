@@ -31,7 +31,7 @@ class DWARFDebugAddrTable {
   uint64_t Offset;
   /// The total length of the entries for this table, not including the length
   /// field itself.
-  uint32_t Length = 0;
+  uint64_t Length = 0;
   /// The DWARF version number.
   uint16_t Version;
   /// The size in bytes of an address on the target architecture. For
