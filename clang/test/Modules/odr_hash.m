@@ -77,6 +77,7 @@ __attribute__((objc_root_class))
 - (void)multiple:(int)arg1 :(int)arg2 args:(int)arg3;
 @end
 
+@class WS;
 #endif
 
 #if defined(FIRST)
@@ -675,6 +676,22 @@ II0 *ii0;
 @end
 #else
 #endif
+
+#if defined(FIRST)
+@interface IP9
+@property (nonatomic, readonly, strong) WS * _Nullable ws;
+@end
+#elif defined(SECOND)
+@interface WS
+- (void)sayHello;
+@end
+@interface IP9
+@property (nonatomic, readonly, strong) WS * ws;
+@end
+#else
+IP9 *ip9;
+#endif
+
 
 // Keep macros contained to one file.
 #ifdef FIRST
