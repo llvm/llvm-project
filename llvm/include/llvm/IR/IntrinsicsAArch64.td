@@ -1931,5 +1931,10 @@ def int_aarch64_sve_sqdmlslt    : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlalbt   : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlslbt   : SVE2_3VectorArg_Long_Intrinsic;
 
+// SVE2 ADDSUB Long Unpredicated.
+def int_aarch64_sve_adclb       : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_adclt       : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sbclb       : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sbclt       : AdvSIMD_3VectorArg_Intrinsic;
 
 }
