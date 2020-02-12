@@ -897,10 +897,9 @@ TEST_FUNC(linalg_dilated_conv_nhwc) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_dilated_conv_nhwc(
-      makeValueHandles(llvm::to_vector<3>(f.getArguments())),
-      /*depth_multiplier=*/7,
-      /*strides=*/{3, 4}, /*dilations=*/{5, 6});
+  linalg_dilated_conv_nhwc(makeValueHandles(f.getArguments()),
+                           /*depth_multiplier=*/7,
+                           /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
   f.erase();

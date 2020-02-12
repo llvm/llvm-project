@@ -220,13 +220,11 @@ public:
     return getBlocks().front().getArgument(idx);
   }
 
-  // Supports non-const operand iteration.
+  /// Support argument iteration.
   using args_iterator = Block::args_iterator;
   args_iterator args_begin() { return front().args_begin(); }
   args_iterator args_end() { return front().args_end(); }
-  iterator_range<args_iterator> getArguments() {
-    return {args_begin(), args_end()};
-  }
+  Block::BlockArgListType getArguments() { return front().getArguments(); }
 
   //===--------------------------------------------------------------------===//
   // Argument Attributes
