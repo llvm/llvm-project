@@ -54,7 +54,7 @@ static void emitDiagnostics(const BoundNodes &Match, const Decl *D,
                      OS.str(), Location, Range);
 }
 
-auto callsName(const char *FunctionName) -> decltype(callee(functionDecl())) {
+decltype(auto) callsName(const char *FunctionName) {
   return callee(functionDecl(hasName(FunctionName)));
 }
 
