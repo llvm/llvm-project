@@ -555,7 +555,7 @@ void ASTDeclReader::Visit(Decl *D) {
 
 void ASTDeclReader::VisitDecl(Decl *D) {
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
-      isa<ParmVarDecl>(D)) {
+      isa<ParmVarDecl>(D) || isa<ObjCTypeParamDecl>(D)) {
     // We don't want to deserialize the DeclContext of a template
     // parameter or of a parameter of a function template immediately.   These
     // entities might be used in the formulation of its DeclContext (for
