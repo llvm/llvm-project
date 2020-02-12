@@ -29,7 +29,6 @@ using namespace lldb_private;
 
 CommandCompletions::CommonCompletionElement
     CommandCompletions::g_common_completions[] = {
-        {eCustomCompletion, nullptr},
         {eSourceFileCompletion, CommandCompletions::SourceFiles},
         {eDiskFileCompletion, CommandCompletions::DiskFiles},
         {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
@@ -46,9 +45,6 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
     CommandInterpreter &interpreter, uint32_t completion_mask,
     CompletionRequest &request, SearchFilter *searcher) {
   bool handled = false;
-
-  if (completion_mask & eCustomCompletion)
-    return false;
 
   for (int i = 0;; i++) {
     if (g_common_completions[i].type == eNoCompletion)
