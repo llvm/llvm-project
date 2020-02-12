@@ -3,7 +3,7 @@
 ; RUN: opt -attributor-cgscc --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 ; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,MODULE,ALL_BUT_OLD_CGSCCC
 ; RUN: opt -passes='attributor-cgscc' --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC,ALL_BUT_OLD_CGSCCC
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; ALL_BUT_OLD_CGSCCC: @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
 @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* blockaddress(@dead_with_blockaddress_users, %lab0), i8* blockaddress(@dead_with_blockaddress_users, %end)]
@@ -280,7 +280,7 @@ cleanup:
   ret i32 0
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; TEST 5.4 unounwind invoke instruction replaced by a call and a branch instruction put after it.
 define i32 @invoke_nounwind_phi(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -370,7 +370,7 @@ cleanup:
   ret i32 0
 }
 
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
@@ -894,7 +894,7 @@ define void @useless_arg_ext_int_ext(i32* %a) {
   ret void
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; FIXME: We should fold terminators.
 
@@ -956,7 +956,8 @@ define i32 @switch_default_dead_caller() {
   %call2 = tail call i32 @switch_default_dead(i64 0)
   ret i32 %call2
 }
-; UTC_ARGS: --turn off
+
+; UTC_ARGS: --disable
 
 ; Allow blockaddress users
 ; ALL_BUT_OLD_CGSCCC-NOT @dead_with_blockaddress_users
