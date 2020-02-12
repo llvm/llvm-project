@@ -556,13 +556,28 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
   /// } VAARG handling
 
-  // VE has no REM or DIVREM operations.
-  for (MVT IntVT : MVT::integer_valuetypes()) {
+  /// Int Ops {
+  for (MVT IntVT : {MVT::i32, MVT::i64}) {
+    // VE has no REM or DIVREM operations.
     setOperationAction(ISD::UREM, IntVT, Expand);
     setOperationAction(ISD::SREM, IntVT, Expand);
     setOperationAction(ISD::SDIVREM, IntVT, Expand);
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
+
+    setOperationAction(ISD::CTTZ, IntVT, Expand);
+    setOperationAction(ISD::ROTL, IntVT, Expand);
+    setOperationAction(ISD::ROTR, IntVT, Expand);
+
+    // Use isel patterns for i32 and i64
+    setOperationAction(ISD::BSWAP, IntVT, Legal);
+    setOperationAction(ISD::CTLZ, IntVT, Legal);
+    setOperationAction(ISD::CTPOP, IntVT, Legal);
+
+    // Use isel patterns for i64, Promote i32
+    LegalizeAction Act = (IntVT == MVT::i32) ? Promote : Legal;
+    setOperationAction(ISD::BITREVERSE, IntVT, Act);
   }
+  /// } Int Ops
 
   /// Conversion {
   // VE doesn't have instructions for fp<->uint, so expand them by llvm
