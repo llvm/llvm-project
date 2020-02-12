@@ -855,7 +855,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
                        : Builder.CreateUIToFP(IB,F32Ty);
 
-  Value *RCP = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), FB);
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP = Builder.CreateCall(RcpDecl, { FB });
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
@@ -965,7 +967,10 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   // RCP =  URECIP(Den) = 2^32 / Den + e
   // e is rounding error.
   Value *DEN_F32 = Builder.CreateUIToFP(Den, F32Ty);
-  Value *RCP_F32 = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), DEN_F32);
+
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP_F32 = Builder.CreateCall(RcpDecl, { DEN_F32 });
   Constant *UINT_MAX_PLUS_1 = ConstantFP::get(F32Ty, BitsToFloat(0x4f800000));
   Value *RCP_SCALE = Builder.CreateFMul(RCP_F32, UINT_MAX_PLUS_1);
   Value *RCP = Builder.CreateFPToUI(RCP_SCALE, I32Ty);
