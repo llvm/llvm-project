@@ -1,8 +1,8 @@
 # The LLVM Compiler Infrastructure
 
-This directory and its subdirectories contain source code for LLVM,
+This directory and its sub-directories contain source code for LLVM,
 a toolkit for the construction of highly optimized compilers,
-optimizers, and runtime environments.
+optimizers, and run-time environments.
 
 The README briefly describes how to get started with building LLVM.
 For more information on how to contribute to the LLVM project, please
@@ -37,9 +37,9 @@ The LLVM Getting Started documentation may be out of date.  The [Clang
 Getting Started](http://clang.llvm.org/get_started.html) page might have more
 accurate information.
 
-This is an example workflow and configuration to get and build the LLVM source:
+This is an example work-flow and configuration to get and build the LLVM source:
 
-1. Checkout LLVM (including related subprojects like Clang):
+1. Checkout LLVM (including related sub-projects like Clang):
 
      * ``git clone https://github.com/llvm/llvm-project.git``
 
@@ -56,7 +56,7 @@ This is an example workflow and configuration to get and build the LLVM source:
 
      * ``cmake -G <generator> [options] ../llvm``
 
-        Some common generators are:
+        Some common build system generators are:
 
         * ``Ninja`` --- for generating [Ninja](https://ninja-build.org)
           build files. Most llvm developers use Ninja.
@@ -68,7 +68,7 @@ This is an example workflow and configuration to get and build the LLVM source:
         Some Common options:
 
         * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
-          subprojects you'd like to additionally build. Can include any of: clang,
+          sub-projects you'd like to additionally build. Can include any of: clang,
           clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
           polly, or debuginfo-tests.
 
@@ -76,7 +76,7 @@ This is an example workflow and configuration to get and build the LLVM source:
           ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
 
         * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
-          pathname of where you want the LLVM tools and libraries to be installed
+          path name of where you want the LLVM tools and libraries to be installed
           (default ``/usr/local``).
 
         * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
@@ -85,20 +85,21 @@ This is an example workflow and configuration to get and build the LLVM source:
         * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
           (default is Yes for Debug builds, No for all other build types).
 
-      * Run your build tool of choice!
+      * ``cmake --build . [-- [options] <target>]`` or your build system specified above
+        directly.
 
         * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
 
         * The ``check-all`` target (i.e. ``ninja check-all``) will run the
           regression tests to ensure everything is in working order.
 
-        * CMake will generate build targets for each tool and library, and most
+        * CMake will generate targets for each tool and library, and most
           LLVM sub-projects generate their own ``check-<project>`` target.
 
-        * Running a serial build will be *slow*.  To improve speed, try running a
-          parallel build. That's done by default in Ninja; for ``make``, use
-          ``make -j NNN`` (NNN is the number of parallel jobs, use e.g. number of
-          CPUs you have.)
+        * Running a serial build will be **slow**.  To improve speed, try running a
+          parallel build.  That's done by default in Ninja; for ``make``, use the option
+          ``-j NNN``, where ``NNN`` is the number of parallel jobs, e.g. the number of
+          CPUs you have.
 
       * For more information see [CMake](https://llvm.org/docs/CMake.html)
 
