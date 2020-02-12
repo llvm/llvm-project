@@ -179,7 +179,7 @@ void FormatManager::GetPossibleMatches(
     bool did_strip_ptr, bool did_strip_ref, bool did_strip_typedef,
     bool root_level) {
   compiler_type = compiler_type.GetTypeForFormatters();
-  ConstString type_name(compiler_type.GetConstTypeName());
+  ConstString type_name(compiler_type.GetTypeName());
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());

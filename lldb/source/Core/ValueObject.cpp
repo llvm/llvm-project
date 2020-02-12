@@ -1650,13 +1650,13 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 ConstString ValueObject::GetTypeName() {
-  return GetCompilerType().GetConstTypeName();
+  return GetCompilerType().GetTypeName();
 }
 
 ConstString ValueObject::GetDisplayTypeName() { return GetTypeName(); }
 
 ConstString ValueObject::GetQualifiedTypeName() {
-  return GetCompilerType().GetConstQualifiedTypeName();
+  return GetCompilerType().GetTypeName();
 }
 
 LanguageType ValueObject::GetObjectRuntimeLanguage() {

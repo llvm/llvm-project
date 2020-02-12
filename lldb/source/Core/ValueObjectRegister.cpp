@@ -219,7 +219,7 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
 
 ConstString ValueObjectRegister::GetTypeName() {
   if (m_type_name.IsEmpty())
-    m_type_name = GetCompilerType().GetConstTypeName();
+    m_type_name = GetCompilerType().GetTypeName();
   return m_type_name;
 }
 

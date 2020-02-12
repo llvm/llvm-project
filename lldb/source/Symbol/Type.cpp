@@ -303,7 +303,7 @@ void Type::Dump(Stream *s, bool show_context) {
 
 ConstString Type::GetName() {
   if (!m_name)
-    m_name = GetForwardCompilerType().GetConstTypeName();
+    m_name = GetForwardCompilerType().GetTypeName();
   return m_name;
 }
 
@@ -657,7 +657,7 @@ CompilerType Type::GetForwardCompilerType() {
 }
 
 ConstString Type::GetQualifiedName() {
-  return GetForwardCompilerType().GetConstTypeName();
+  return GetForwardCompilerType().GetTypeName();
 }
 
 bool Type::GetTypeScopeAndBasename(const llvm::StringRef& name,
