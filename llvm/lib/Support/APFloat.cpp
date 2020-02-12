@@ -1686,6 +1686,44 @@ IEEEFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
   }
 }
 
+IEEEFloat::opStatus IEEEFloat::remainderSpecials(const IEEEFloat &rhs) {
+  switch (PackCategoriesIntoKey(category, rhs.category)) {
+  default:
+    llvm_unreachable(nullptr);
+
+  case PackCategoriesIntoKey(fcZero, fcNaN):
+  case PackCategoriesIntoKey(fcNormal, fcNaN):
+  case PackCategoriesIntoKey(fcInfinity, fcNaN):
+    assign(rhs);
+    LLVM_FALLTHROUGH;
+  case PackCategoriesIntoKey(fcNaN, fcZero):
+  case PackCategoriesIntoKey(fcNaN, fcNormal):
+  case PackCategoriesIntoKey(fcNaN, fcInfinity):
+  case PackCategoriesIntoKey(fcNaN, fcNaN):
+    if (isSignaling()) {
+      makeQuiet();
+      return opInvalidOp;
+    }
+    return rhs.isSignaling() ? opInvalidOp : opOK;
+
+  case PackCategoriesIntoKey(fcZero, fcInfinity):
+  case PackCategoriesIntoKey(fcZero, fcNormal):
+  case PackCategoriesIntoKey(fcNormal, fcInfinity):
+    return opOK;
+
+  case PackCategoriesIntoKey(fcNormal, fcZero):
+  case PackCategoriesIntoKey(fcInfinity, fcZero):
+  case PackCategoriesIntoKey(fcInfinity, fcNormal):
+  case PackCategoriesIntoKey(fcInfinity, fcInfinity):
+  case PackCategoriesIntoKey(fcZero, fcZero):
+    makeNaN();
+    return opInvalidOp;
+
+  case PackCategoriesIntoKey(fcNormal, fcNormal):
+    return opDivByZero; // fake status, indicating this is not a special case
+  }
+}
+
 /* Change sign.  */
 void IEEEFloat::changeSign() {
   /* Look mummy, this one's easy.  */
@@ -1770,40 +1808,108 @@ IEEEFloat::opStatus IEEEFloat::divide(const IEEEFloat &rhs,
   return fs;
 }
 
-/* Normalized remainder.  This is not currently correct in all cases.  */
+/* Normalized remainder.  */
 IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   opStatus fs;
-  IEEEFloat V = *this;
   unsigned int origSign = sign;
 
-  fs = V.divide(rhs, rmNearestTiesToEven);
-  if (fs == opDivByZero)
+  // First handle the special cases.
+  fs = remainderSpecials(rhs);
+  if (fs != opDivByZero)
     return fs;
 
-  int parts = partCount();
-  integerPart *x = new integerPart[parts];
-  bool ignored;
-  fs = V.convertToInteger(makeMutableArrayRef(x, parts),
-                          parts * integerPartWidth, true, rmNearestTiesToEven,
-                          &ignored);
-  if (fs == opInvalidOp) {
-    delete[] x;
-    return fs;
+  fs = opOK;
+
+  // Make sure the current value is less than twice the denom. If the addition
+  // did not succeed (an overflow has happened), which means that the finite
+  // value we currently posses must be less than twice the denom (as we are
+  // using the same semantics).
+  IEEEFloat P2 = rhs;
+  if (P2.add(rhs, rmNearestTiesToEven) == opOK) {
+    fs = mod(P2);
+    assert(fs == opOK);
   }
 
-  fs = V.convertFromZeroExtendedInteger(x, parts * integerPartWidth, true,
-                                        rmNearestTiesToEven);
-  assert(fs==opOK);   // should always work
+  // Lets work with absolute numbers.
+  IEEEFloat P = rhs;
+  P.sign = false;
+  sign = false;
 
-  fs = V.multiply(rhs, rmNearestTiesToEven);
-  assert(fs==opOK || fs==opInexact);   // should not overflow or underflow
+  //
+  // To calculate the remainder we use the following scheme.
+  //
+  // The remainder is defained as follows:
+  //
+  // remainder = numer - rquot * denom = x - r * p
+  //
+  // Where r is the result of: x/p, rounded toward the nearest integral value
+  // (with halfway cases rounded toward the even number).
+  //
+  // Currently, (after x mod 2p):
+  // r is the number of 2p's present inside x, which is inherently, an even
+  // number of p's.
+  //
+  // We may split the remaining calculation into 4 options:
+  // - if x < 0.5p then we round to the nearest number with is 0, and are done.
+  // - if x == 0.5p then we round to the nearest even number which is 0, and we
+  //   are done as well.
+  // - if 0.5p < x < p then we round to nearest number which is 1, and we have
+  //   to subtract 1p at least once.
+  // - if x >= p then we must subtract p at least once, as x must be a
+  //   remainder.
+  //
+  // By now, we were done, or we added 1 to r, which in turn, now an odd number.
+  //
+  // We can now split the remaining calculation to the following 3 options:
+  // - if x < 0.5p then we round to the nearest number with is 0, and are done.
+  // - if x == 0.5p then we round to the nearest even number. As r is odd, we
+  //   must round up to the next even number. so we must subtract p once more.
+  // - if x > 0.5p (and inherently x < p) then we must round r up to the next
+  //   integral, and subtract p once more.
+  //
 
-  fs = subtract(V, rmNearestTiesToEven);
-  assert(fs==opOK || fs==opInexact);   // likewise
+  // Extend the semantics to prevent an overflow/underflow or inexact result.
+  bool losesInfo;
+  fltSemantics extendedSemantics = *semantics;
+  extendedSemantics.maxExponent++;
+  extendedSemantics.minExponent--;
+  extendedSemantics.precision += 2;
+
+  IEEEFloat VEx = *this;
+  fs = VEx.convert(extendedSemantics, rmNearestTiesToEven, &losesInfo);
+  assert(fs == opOK && !losesInfo);
+  IEEEFloat PEx = P;
+  fs = PEx.convert(extendedSemantics, rmNearestTiesToEven, &losesInfo);
+  assert(fs == opOK && !losesInfo);
+
+  // It is simpler to work with 2x instead of 0.5p, and we do not need to lose
+  // any fraction.
+  fs = VEx.add(VEx, rmNearestTiesToEven);
+  assert(fs == opOK);
+
+  if (VEx.compare(PEx) == cmpGreaterThan) {
+    fs = subtract(P, rmNearestTiesToEven);
+    assert(fs == opOK);
+
+    // Make VEx = this.add(this), but because we have different semantics, we do
+    // not want to `convert` again, so we just subtract PEx twice (which equals
+    // to the desired value).
+    fs = VEx.subtract(PEx, rmNearestTiesToEven);
+    assert(fs == opOK);
+    fs = VEx.subtract(PEx, rmNearestTiesToEven);
+    assert(fs == opOK);
+
+    cmpResult result = VEx.compare(PEx);
+    if (result == cmpGreaterThan || result == cmpEqual) {
+      fs = subtract(P, rmNearestTiesToEven);
+      assert(fs == opOK);
+    }
+  }
 
   if (isZero())
     sign = origSign;    // IEEE754 requires this
-  delete[] x;
+  else
+    sign ^= origSign;
   return fs;
 }
 

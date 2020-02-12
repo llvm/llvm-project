@@ -511,6 +511,7 @@ private:
   opStatus divideSpecials(const IEEEFloat &);
   opStatus multiplySpecials(const IEEEFloat &);
   opStatus modSpecials(const IEEEFloat &);
+  opStatus remainderSpecials(const IEEEFloat&);
 
   /// @}
 
