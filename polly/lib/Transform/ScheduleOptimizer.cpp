@@ -809,7 +809,7 @@ static isl::schedule_node permuteBandNodeDimensions(isl::schedule_node Node,
                                                     unsigned FirstDim,
                                                     unsigned SecondDim) {
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band &&
-         isl_schedule_node_band_n_member(Node.get()) >
+         (unsigned)isl_schedule_node_band_n_member(Node.get()) >
              std::max(FirstDim, SecondDim));
   auto PartialSchedule =
       isl::manage(isl_schedule_node_band_get_partial_schedule(Node.get()));
