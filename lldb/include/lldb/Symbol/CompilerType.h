@@ -149,10 +149,6 @@ public:
 
   TypeSystem *GetTypeSystem() const { return m_type_system; }
 
-  ConstString GetConstQualifiedTypeName() const;
-
-  ConstString GetConstTypeName() const;
-
   ConstString GetTypeName() const;
 
   ConstString GetDisplayTypeName() const;

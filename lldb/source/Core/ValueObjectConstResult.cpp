@@ -228,7 +228,7 @@ size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
 
 ConstString ValueObjectConstResult::GetTypeName() {
   if (m_type_name.IsEmpty())
-    m_type_name = GetCompilerType().GetConstTypeName();
+    m_type_name = GetCompilerType().GetTypeName();
   return m_type_name;
 }
 
