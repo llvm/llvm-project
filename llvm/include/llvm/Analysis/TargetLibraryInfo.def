@@ -1122,6 +1122,15 @@ TLI_DEFINE_STRING_INTERNAL("reallocf")
 /// char *realpath(const char *file_name, char *resolved_name);
 TLI_DEFINE_ENUM_INTERNAL(realpath)
 TLI_DEFINE_STRING_INTERNAL("realpath")
+/// double remainder(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(remainder)
+TLI_DEFINE_STRING_INTERNAL("remainder")
+/// float remainderf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(remainderf)
+TLI_DEFINE_STRING_INTERNAL("remainderf")
+/// long double remainderl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(remainderl)
+TLI_DEFINE_STRING_INTERNAL("remainderl")
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)
 TLI_DEFINE_STRING_INTERNAL("remove")
