@@ -10,8 +10,8 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src
 ;
 ; CHECKBE-LABEL: vmovn32_trunc1:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 q2, q1
-; CHECKBE-NEXT:    vrev64.16 q1, q0
+; CHECKBE-NEXT:    vrev64.32 q2, q1
+; CHECKBE-NEXT:    vrev64.32 q1, q0
 ; CHECKBE-NEXT:    vmovnt.i32 q1, q2
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
@@ -30,8 +30,8 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src
 ;
 ; CHECKBE-LABEL: vmovn32_trunc2:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 q2, q0
-; CHECKBE-NEXT:    vrev64.16 q3, q1
+; CHECKBE-NEXT:    vrev64.32 q2, q0
+; CHECKBE-NEXT:    vrev64.32 q3, q1
 ; CHECKBE-NEXT:    vmovnt.i32 q3, q2
 ; CHECKBE-NEXT:    vrev64.16 q0, q3
 ; CHECKBE-NEXT:    bx lr
@@ -49,8 +49,8 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src
 ;
 ; CHECKBE-LABEL: vmovn16_trunc1:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.8 q2, q1
-; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vrev64.16 q2, q1
+; CHECKBE-NEXT:    vrev64.16 q1, q0
 ; CHECKBE-NEXT:    vmovnt.i16 q1, q2
 ; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
@@ -69,8 +69,8 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src
 ;
 ; CHECKBE-LABEL: vmovn16_trunc2:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.8 q2, q0
-; CHECKBE-NEXT:    vrev64.8 q3, q1
+; CHECKBE-NEXT:    vrev64.16 q2, q0
+; CHECKBE-NEXT:    vrev64.16 q3, q1
 ; CHECKBE-NEXT:    vmovnt.i16 q3, q2
 ; CHECKBE-NEXT:    vrev64.8 q0, q3
 ; CHECKBE-NEXT:    bx lr
