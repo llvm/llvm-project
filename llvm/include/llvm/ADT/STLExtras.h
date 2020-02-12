@@ -115,9 +115,8 @@ public:
 
   template <typename Callable>
   function_ref(Callable &&callable,
-               typename std::enable_if<
-                   !std::is_same<typename std::remove_reference<Callable>::type,
-                                 function_ref>::value>::type * = nullptr)
+               std::enable_if_t<!std::is_same<std::remove_reference_t<Callable>,
+                                              function_ref>::value> * = nullptr)
       : callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
@@ -254,9 +253,8 @@ struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
 // Returns an iterator_range over the given container which iterates in reverse.
 // Note that the container must have rbegin()/rend() methods for this to work.
 template <typename ContainerTy>
-auto reverse(
-    ContainerTy &&C,
-    typename std::enable_if<has_rbegin<ContainerTy>::value>::type * = nullptr) {
+auto reverse(ContainerTy &&C,
+             std::enable_if_t<has_rbegin<ContainerTy>::value> * = nullptr) {
   return make_range(C.rbegin(), C.rend());
 }
 
@@ -271,8 +269,7 @@ std::reverse_iterator<IteratorTy> make_reverse_iterator(IteratorTy It) {
 // bidirectional iterators for this to work.
 template <typename ContainerTy>
 auto reverse(ContainerTy &&C,
-             typename std::enable_if<!has_rbegin<ContainerTy>::value>::type * =
-                 nullptr) {
+             std::enable_if_t<!has_rbegin<ContainerTy>::value> * = nullptr) {
   return make_range(llvm::make_reverse_iterator(std::end(C)),
                     llvm::make_reverse_iterator(std::begin(C)));
 }
@@ -1148,11 +1145,11 @@ void DeleteContainerSeconds(Container &C) {
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).
 template <typename R>
-auto size(R &&Range, typename std::enable_if<
-                         std::is_same<typename std::iterator_traits<decltype(
-                                          Range.begin())>::iterator_category,
-                                      std::random_access_iterator_tag>::value,
-                         void>::type * = nullptr) {
+auto size(R &&Range,
+          std::enable_if_t<std::is_same<typename std::iterator_traits<decltype(
+                                            Range.begin())>::iterator_category,
+                                        std::random_access_iterator_tag>::value,
+                           void> * = nullptr) {
   return std::distance(Range.begin(), Range.end());
 }
 
@@ -1516,12 +1513,11 @@ decltype(auto) apply_tuple(F &&f, Tuple &&t) {
 template <typename IterTy>
 bool hasNItems(
     IterTy &&Begin, IterTy &&End, unsigned N,
-    typename std::enable_if<
-        !std::is_same<
-            typename std::iterator_traits<typename std::remove_reference<
-                decltype(Begin)>::type>::iterator_category,
-            std::random_access_iterator_tag>::value,
-        void>::type * = nullptr) {
+    std::enable_if_t<
+        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
+                          decltype(Begin)>>::iterator_category,
+                      std::random_access_iterator_tag>::value,
+        void> * = nullptr) {
   for (; N; --N, ++Begin)
     if (Begin == End)
       return false; // Too few.
@@ -1533,12 +1529,11 @@ bool hasNItems(
 template <typename IterTy>
 bool hasNItemsOrMore(
     IterTy &&Begin, IterTy &&End, unsigned N,
-    typename std::enable_if<
-        !std::is_same<
-            typename std::iterator_traits<typename std::remove_reference<
-                decltype(Begin)>::type>::iterator_category,
-            std::random_access_iterator_tag>::value,
-        void>::type * = nullptr) {
+    std::enable_if_t<
+        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
+                          decltype(Begin)>>::iterator_category,
+                      std::random_access_iterator_tag>::value,
+        void> * = nullptr) {
   for (; N; --N, ++Begin)
     if (Begin == End)
       return false; // Too few.
