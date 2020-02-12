@@ -296,7 +296,7 @@ public:
     return StringOffsetSection;
   }
 
-  void setAddrOffsetSection(const DWARFSection *AOS, uint32_t Base) {
+  void setAddrOffsetSection(const DWARFSection *AOS, uint64_t Base) {
     AddrOffsetSection = AOS;
     AddrOffsetSectionBase = Base;
   }

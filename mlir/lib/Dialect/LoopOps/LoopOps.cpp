@@ -332,10 +332,9 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParallelOp op) {
-  p << op.getOperationName() << " (";
-  p.printOperands(op.getBody()->getArguments());
-  p << ") = (" << op.lowerBound() << ") to (" << op.upperBound() << ") step ("
-    << op.step() << ")";
+  p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = ("
+    << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
+    << ")";
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op.getAttrs());
   if (!op.results().empty())

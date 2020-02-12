@@ -710,7 +710,7 @@ public:
       s.PutCString(")");
       break;
     case Operand::Type::Register:
-      s.PutCString(op.m_register.AsCString());
+      s.PutCString(op.m_register.GetStringRef());
       break;
     case Operand::Type::Sum:
       s.PutCString("(");

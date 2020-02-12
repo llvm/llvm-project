@@ -63,7 +63,7 @@ isl_stat isl_flow_foreach(__isl_keep isl_flow *deps,
 		void *user),
 	void *user);
 __isl_give isl_map *isl_flow_get_no_source(__isl_keep isl_flow *deps, int must);
-void isl_flow_free(__isl_take isl_flow *deps);
+__isl_null isl_flow *isl_flow_free(__isl_take isl_flow *deps);
 
 isl_ctx *isl_flow_get_ctx(__isl_keep isl_flow *deps);
 

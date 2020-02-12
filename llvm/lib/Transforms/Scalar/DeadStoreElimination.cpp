@@ -1681,10 +1681,10 @@ struct DSEState {
 
       // Remove the Instruction from MSSA.
       if (MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst)) {
-        Updater.removeMemoryAccess(MA);
         if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
           SkipStores.insert(MD);
         }
+        Updater.removeMemoryAccess(MA);
       }
 
       // Remove its operands

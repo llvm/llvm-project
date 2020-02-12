@@ -86,9 +86,13 @@ public:
                  symbol_name, {}, true);
 
       } else {
+        std::string alternate_symbol;
+        if (!entry.alternate_symbol.IsEmpty())
+          alternate_symbol.append(entry.alternate_symbol.GetCString());
+
         callback(entry.recognizer_id, entry.recognizer->GetName(),
                  entry.module.GetCString(), entry.symbol.GetCString(),
-                 entry.alternate_symbol.GetCString(), false);
+                 alternate_symbol, false);
       }
     }
   }

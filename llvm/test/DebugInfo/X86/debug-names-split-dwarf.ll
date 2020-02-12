@@ -1,4 +1,4 @@
-; REQUIRES: object-emission
+; REQUIRES: x86
 
 ; Verify that DWARF v5 accelerator tables work with split-dwarf.
 ; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo \

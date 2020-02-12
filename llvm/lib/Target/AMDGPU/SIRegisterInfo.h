@@ -14,7 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
-#include "AMDGPURegisterInfo.h"
+#define GET_REGINFO_HEADER
+#include "AMDGPUGenRegisterInfo.inc"
+
 #include "SIDefines.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -25,7 +27,7 @@ class LiveIntervals;
 class MachineRegisterInfo;
 class SIMachineFunctionInfo;
 
-class SIRegisterInfo final : public AMDGPURegisterInfo {
+class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
 private:
   const GCNSubtarget &ST;
   unsigned SGPRSetID;
@@ -36,6 +38,8 @@ private:
   BitVector AGPRPressureSets;
   bool SpillSGPRToVGPR;
   bool isWave32;
+
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
                            BitVector &PressureSets) const;

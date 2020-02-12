@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 ; XFAIL: hexagon
 
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s > %t

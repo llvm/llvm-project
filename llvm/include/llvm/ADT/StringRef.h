@@ -265,8 +265,7 @@ namespace llvm {
     /// The declaration here is extra complicated so that `stringRef = {}`
     /// and `stringRef = "abc"` continue to select the move assignment operator.
     template <typename T>
-    typename std::enable_if<std::is_same<T, std::string>::value,
-                            StringRef>::type &
+    std::enable_if_t<std::is_same<T, std::string>::value, StringRef> &
     operator=(T &&Str) = delete;
 
     /// @}
@@ -508,7 +507,7 @@ namespace llvm {
     /// this returns true to signify the error.  The string is considered
     /// erroneous if empty or if it overflows T.
     template <typename T>
-    typename std::enable_if<std::numeric_limits<T>::is_signed, bool>::type
+    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
     getAsInteger(unsigned Radix, T &Result) const {
       long long LLVal;
       if (getAsSignedInteger(*this, Radix, LLVal) ||
@@ -519,7 +518,7 @@ namespace llvm {
     }
 
     template <typename T>
-    typename std::enable_if<!std::numeric_limits<T>::is_signed, bool>::type
+    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
     getAsInteger(unsigned Radix, T &Result) const {
       unsigned long long ULLVal;
       // The additional cast to unsigned long long is required to avoid the
@@ -542,7 +541,7 @@ namespace llvm {
     /// The portion of the string representing the discovered numeric value
     /// is removed from the beginning of the string.
     template <typename T>
-    typename std::enable_if<std::numeric_limits<T>::is_signed, bool>::type
+    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
     consumeInteger(unsigned Radix, T &Result) {
       long long LLVal;
       if (consumeSignedInteger(*this, Radix, LLVal) ||
@@ -553,7 +552,7 @@ namespace llvm {
     }
 
     template <typename T>
-    typename std::enable_if<!std::numeric_limits<T>::is_signed, bool>::type
+    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
     consumeInteger(unsigned Radix, T &Result) {
       unsigned long long ULLVal;
       if (consumeUnsignedInteger(*this, Radix, ULLVal) ||

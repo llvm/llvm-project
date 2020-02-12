@@ -1882,7 +1882,7 @@ public:
 /// #pragma omp flush acq_rel
 /// \endcode
 /// In this example directive '#pragma omp flush' has 'acq_rel' clause.
-class OMPAcqRelClause : public OMPClause {
+class OMPAcqRelClause final : public OMPClause {
 public:
   /// Build 'ack_rel' clause.
   ///
@@ -1912,6 +1912,126 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_acq_rel;
+  }
+};
+
+/// This represents 'acquire' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush acquire
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'acquire' clause.
+class OMPAcquireClause final : public OMPClause {
+public:
+  /// Build 'acquire' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPAcquireClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_acquire, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPAcquireClause()
+      : OMPClause(OMPC_acquire, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_acquire;
+  }
+};
+
+/// This represents 'release' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush release
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'release' clause.
+class OMPReleaseClause final : public OMPClause {
+public:
+  /// Build 'release' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPReleaseClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_release, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPReleaseClause()
+      : OMPClause(OMPC_release, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_release;
+  }
+};
+
+/// This represents 'relaxed' clause in the '#pragma omp atomic'
+/// directives.
+///
+/// \code
+/// #pragma omp atomic relaxed
+/// \endcode
+/// In this example directive '#pragma omp atomic' has 'relaxed' clause.
+class OMPRelaxedClause final : public OMPClause {
+public:
+  /// Build 'relaxed' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPRelaxedClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_relaxed, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPRelaxedClause()
+      : OMPClause(OMPC_relaxed, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_relaxed;
   }
 };
 
@@ -6491,7 +6611,7 @@ public:
 template<class ImplClass, template <typename> class Ptr, typename RetTy>
 class OMPClauseVisitorBase {
 public:
-#define PTR(CLASS) typename Ptr<CLASS>::type
+#define PTR(CLASS) Ptr<CLASS>
 #define DISPATCH(CLASS) \
   return static_cast<ImplClass*>(this)->Visit##CLASS(static_cast<PTR(CLASS)>(S))
 
@@ -6514,12 +6634,11 @@ public:
 #undef DISPATCH
 };
 
-template <typename T>
-using const_ptr = typename std::add_pointer<typename std::add_const<T>::type>;
+template <typename T> using const_ptr = std::add_pointer_t<std::add_const_t<T>>;
 
-template<class ImplClass, typename RetTy = void>
-class OMPClauseVisitor :
-      public OMPClauseVisitorBase <ImplClass, std::add_pointer, RetTy> {};
+template <class ImplClass, typename RetTy = void>
+class OMPClauseVisitor
+    : public OMPClauseVisitorBase<ImplClass, std::add_pointer_t, RetTy> {};
 template<class ImplClass, typename RetTy = void>
 class ConstOMPClauseVisitor :
       public OMPClauseVisitorBase <ImplClass, const_ptr, RetTy> {};

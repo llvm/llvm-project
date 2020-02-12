@@ -25,6 +25,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/AtomicOrdering.h"
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
@@ -4492,6 +4493,9 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_default:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_shared:
   case OMPC_linear:
   case OMPC_aligned:
@@ -4539,17 +4543,51 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
-  if (S.getSingleClause<OMPSeqCstClause>())
+  bool MemOrderingSpecified = false;
+  if (S.getSingleClause<OMPSeqCstClause>()) {
     AO = llvm::AtomicOrdering::SequentiallyConsistent;
-  else if (S.getSingleClause<OMPAcqRelClause>())
+    MemOrderingSpecified = true;
+  } else if (S.getSingleClause<OMPAcqRelClause>()) {
     AO = llvm::AtomicOrdering::AcquireRelease;
+    MemOrderingSpecified = true;
+  } else if (S.getSingleClause<OMPAcquireClause>()) {
+    AO = llvm::AtomicOrdering::Acquire;
+    MemOrderingSpecified = true;
+  } else if (S.getSingleClause<OMPReleaseClause>()) {
+    AO = llvm::AtomicOrdering::Release;
+    MemOrderingSpecified = true;
+  } else if (S.getSingleClause<OMPRelaxedClause>()) {
+    AO = llvm::AtomicOrdering::Monotonic;
+    MemOrderingSpecified = true;
+  }
   OpenMPClauseKind Kind = OMPC_unknown;
   for (const OMPClause *C : S.clauses()) {
-    // Find first clause (skip seq_cst|acq_rel clause, if it is first).
+    // Find first clause (skip seq_cst|acq_rel|aqcuire|release|relaxed clause,
+    // if it is first).
     if (C->getClauseKind() != OMPC_seq_cst &&
-        C->getClauseKind() != OMPC_acq_rel) {
+        C->getClauseKind() != OMPC_acq_rel &&
+        C->getClauseKind() != OMPC_acquire &&
+        C->getClauseKind() != OMPC_release &&
+        C->getClauseKind() != OMPC_relaxed) {
       Kind = C->getClauseKind();
       break;
+    }
+  }
+  if (!MemOrderingSpecified) {
+    llvm::AtomicOrdering DefaultOrder =
+        CGM.getOpenMPRuntime().getDefaultMemoryOrdering();
+    if (DefaultOrder == llvm::AtomicOrdering::Monotonic ||
+        DefaultOrder == llvm::AtomicOrdering::SequentiallyConsistent ||
+        (DefaultOrder == llvm::AtomicOrdering::AcquireRelease &&
+         Kind == OMPC_capture)) {
+      AO = DefaultOrder;
+    } else if (DefaultOrder == llvm::AtomicOrdering::AcquireRelease) {
+      if (Kind == OMPC_unknown || Kind == OMPC_update || Kind == OMPC_write) {
+        AO = llvm::AtomicOrdering::Release;
+      } else if (Kind == OMPC_read) {
+        assert(Kind == OMPC_read && "Unexpected atomic kind.");
+        AO = llvm::AtomicOrdering::Acquire;
+      }
     }
   }
 

@@ -158,6 +158,26 @@ spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
       context);
 }
 
+spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
+  while (op && !op->hasTrait<OpTrait::FunctionLike>())
+    op = op->getParentOp();
+  if (!op)
+    return {};
+
+  if (auto attr = op->getAttrOfType<spirv::EntryPointABIAttr>(
+          spirv::getEntryPointABIAttrName()))
+    return attr;
+
+  return {};
+}
+
+DenseIntElementsAttr spirv::lookupLocalWorkGroupSize(Operation *op) {
+  if (auto entryPoint = spirv::lookupEntryPointABI(op))
+    return entryPoint.local_size();
+
+  return {};
+}
+
 spirv::ResourceLimitsAttr
 spirv::getDefaultResourceLimits(MLIRContext *context) {
   auto i32Type = IntegerType::get(32, context);
@@ -186,17 +206,4 @@ spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
           spirv::getTargetEnvAttrName()))
     return attr;
   return getDefaultTargetEnv(op->getContext());
-}
-
-DenseIntElementsAttr spirv::lookupLocalWorkGroupSize(Operation *op) {
-  while (op && !op->hasTrait<OpTrait::FunctionLike>())
-    op = op->getParentOp();
-  if (!op)
-    return {};
-
-  if (auto attr = op->getAttrOfType<spirv::EntryPointABIAttr>(
-          spirv::getEntryPointABIAttrName()))
-    return attr.local_size();
-
-  return {};
 }

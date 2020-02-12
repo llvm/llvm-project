@@ -2755,10 +2755,14 @@ bool Sema::CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
   case Mips::BI__builtin_msa_ld_h: i = 1; l = -1024; u = 1022; m = 2; break;
   case Mips::BI__builtin_msa_ld_w: i = 1; l = -2048; u = 2044; m = 4; break;
   case Mips::BI__builtin_msa_ld_d: i = 1; l = -4096; u = 4088; m = 8; break;
+  case Mips::BI__builtin_msa_ldr_d: i = 1; l = -4096; u = 4088; m = 8; break;
+  case Mips::BI__builtin_msa_ldr_w: i = 1; l = -2048; u = 2044; m = 4; break;
   case Mips::BI__builtin_msa_st_b: i = 2; l = -512; u = 511; m = 1; break;
   case Mips::BI__builtin_msa_st_h: i = 2; l = -1024; u = 1022; m = 2; break;
   case Mips::BI__builtin_msa_st_w: i = 2; l = -2048; u = 2044; m = 4; break;
   case Mips::BI__builtin_msa_st_d: i = 2; l = -4096; u = 4088; m = 8; break;
+  case Mips::BI__builtin_msa_str_d: i = 2; l = -4096; u = 4088; m = 8; break;
+  case Mips::BI__builtin_msa_str_w: i = 2; l = -2048; u = 2044; m = 4; break;
   }
 
   if (!m)

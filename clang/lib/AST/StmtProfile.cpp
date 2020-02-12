@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/ODRHash.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/FoldingSet.h"
 using namespace clang;
@@ -518,6 +519,12 @@ void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
+
+void OMPClauseProfiler::VisitOMPAcquireClause(const OMPAcquireClause *) {}
+
+void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
+
+void OMPClauseProfiler::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 

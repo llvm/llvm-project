@@ -1023,17 +1023,6 @@ struct Attributor {
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
-  /// Replace all uses of \p Old with \p New and, for calls (and invokes),
-  /// update the call graph.
-  void replaceAllUsesWith(Value &Old, Value &New) {
-    if (CallBase *OldCB = dyn_cast<CallBase>(&Old)) {
-      // We do not modify the call graph here but simply reanalyze the old
-      // function. This should be revisited once the old PM is gone.
-      CGModifiedFunctions.insert(OldCB->getFunction());
-    }
-    Old.replaceAllUsesWith(&New);
-  }
-
 private:
   /// Check \p Pred on all call sites of \p Fn.
   ///

@@ -237,12 +237,29 @@ class FuzzedDataProvider {
     return result + range * ConsumeProbability<T>();
   }
 
+  // Writes |num_bytes| of input data to the given destination pointer. If there
+  // is not enough data left, writes all remaining bytes. Return value is the
+  // number of bytes written.
+  // In general, it's better to avoid using this function, but it may be useful
+  // in cases when it's necessary to fill a certain buffer or object with
+  // fuzzing data.
+  size_t ConsumeData(void *destination, size_t num_bytes) {
+    num_bytes = std::min(num_bytes, remaining_bytes_);
+    CopyAndAdvance(destination, num_bytes);
+    return num_bytes;
+  }
+
   // Reports the remaining bytes available for fuzzed input.
   size_t remaining_bytes() { return remaining_bytes_; }
 
  private:
   FuzzedDataProvider(const FuzzedDataProvider &) = delete;
   FuzzedDataProvider &operator=(const FuzzedDataProvider &) = delete;
+
+  void CopyAndAdvance(void *destination, size_t num_bytes) {
+    std::memcpy(destination, data_ptr_, num_bytes);
+    Advance(num_bytes);
+  }
 
   void Advance(size_t num_bytes) {
     if (num_bytes > remaining_bytes_)
@@ -253,7 +270,7 @@ class FuzzedDataProvider {
   }
 
   template <typename T>
-  std::vector<T> ConsumeBytes(size_t size, size_t num_bytes_to_consume) {
+  std::vector<T> ConsumeBytes(size_t size, size_t num_bytes) {
     static_assert(sizeof(T) == sizeof(uint8_t), "Incompatible data type.");
 
     // The point of using the size-based constructor below is to increase the
@@ -264,13 +281,12 @@ class FuzzedDataProvider {
     // To increase the odds even more, we also call |shrink_to_fit| below.
     std::vector<T> result(size);
     if (size == 0) {
-      if (num_bytes_to_consume != 0)
+      if (num_bytes != 0)
         abort();
       return result;
     }
 
-    std::memcpy(result.data(), data_ptr_, num_bytes_to_consume);
-    Advance(num_bytes_to_consume);
+    CopyAndAdvance(result.data(), num_bytes);
 
     // Even though |shrink_to_fit| is also implementation specific, we expect it
     // to provide an additional assurance in case vector's constructor allocated

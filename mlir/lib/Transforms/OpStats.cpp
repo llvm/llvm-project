@@ -10,6 +10,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -78,6 +79,10 @@ void PrintOpStatsPass::printSummary() {
     os << llvm::left_justify(opName, maxLenOpName) << " , " << opCount[key]
        << '\n';
   }
+}
+
+std::unique_ptr<OpPassBase<ModuleOp>> mlir::createPrintOpStatsPass() {
+  return std::make_unique<PrintOpStatsPass>();
 }
 
 static PassRegistration<PrintOpStatsPass>

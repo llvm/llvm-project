@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUFrameLowering.h"
-#include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -734,24 +733,24 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
   }
 }
 
-char AMDGPUTargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
-                                              bool LegalOperations,
-                                              bool ForCodeSize,
-                                              unsigned Depth) const {
+TargetLowering::NegatibleCost
+AMDGPUTargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
+                                       bool LegalOperations, bool ForCodeSize,
+                                       unsigned Depth) const {
   switch (Op.getOpcode()) {
-    case ISD::FMA:
-    case ISD::FMAD: {
-      // Negating a fma is not free if it has users without source mods.
-      if (!allUsesHaveSourceMods(Op.getNode()))
-        return 0;
-      break;
-    }
-    default:
-      break;
+  case ISD::FMA:
+  case ISD::FMAD: {
+    // Negating a fma is not free if it has users without source mods.
+    if (!allUsesHaveSourceMods(Op.getNode()))
+      return NegatibleCost::Expensive;
+    break;
+  }
+  default:
+    break;
   }
 
-  return TargetLowering::isNegatibleForFree(Op, DAG, LegalOperations,
-                                            ForCodeSize, Depth);
+  return TargetLowering::getNegatibleCost(Op, DAG, LegalOperations, ForCodeSize,
+                                          Depth);
 }
 
 //===---------------------------------------------------------------------===//
@@ -1020,6 +1019,8 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
         assert(MemVT.getVectorNumElements() == 3 ||
                MemVT.getVectorNumElements() == 5);
         MemVT = MemVT.getPow2VectorType(State.getContext());
+      } else if (!MemVT.isSimple() && !MemVT.isVector()) {
+        MemVT = MemVT.getRoundIntegerType(State.getContext());
       }
 
       unsigned PartOffset = 0;

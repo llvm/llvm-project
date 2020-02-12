@@ -179,7 +179,7 @@ private:
   LogicalResult processName(uint32_t resultID, StringRef name);
 
   /// Processes a SPIR-V function op.
-  LogicalResult processFuncOp(FuncOp op);
+  LogicalResult processFuncOp(spirv::FuncOp op);
 
   LogicalResult processVariableOp(spirv::VariableOp op);
 
@@ -682,7 +682,7 @@ Serializer::processMemberDecoration(uint32_t structID, uint32_t memberIndex,
 }
 } // namespace
 
-LogicalResult Serializer::processFuncOp(FuncOp op) {
+LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   LLVM_DEBUG(llvm::dbgs() << "-- start function '" << op.getName() << "' --\n");
   assert(functionHeader.empty() && functionBody.empty());
 
@@ -1642,7 +1642,7 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processBranchConditionalOp(op);
       })
       .Case([&](spirv::ConstantOp op) { return processConstantOp(op); })
-      .Case([&](FuncOp op) { return processFuncOp(op); })
+      .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
       })

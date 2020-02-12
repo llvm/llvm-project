@@ -23,6 +23,7 @@
 #include "clang-c/FatalErrorHandler.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCategories.h"
@@ -2235,6 +2236,12 @@ void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
+
+void OMPClauseEnqueue::VisitOMPAcquireClause(const OMPAcquireClause *) {}
+
+void OMPClauseEnqueue::VisitOMPReleaseClause(const OMPReleaseClause *) {}
+
+void OMPClauseEnqueue::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
 void OMPClauseEnqueue::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 

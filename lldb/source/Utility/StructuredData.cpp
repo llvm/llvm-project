@@ -156,7 +156,7 @@ void StructuredData::String::Serialize(json::OStream &s) const {
 void StructuredData::Dictionary::Serialize(json::OStream &s) const {
   s.objectBegin();
   for (const auto &pair : m_dict) {
-    s.attributeBegin(pair.first.AsCString());
+    s.attributeBegin(pair.first.GetStringRef());
     pair.second->Serialize(s);
     s.attributeEnd();
   }

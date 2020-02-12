@@ -204,6 +204,13 @@ def UpdateFloatElementsAttr : Pat<
     ConstantAttr<RankedF32ElementsAttr<[2]>, "{5.0f, 6.0f}">:$f32attr,
     $f64attr)>;
 
+def IntElementsAttrOp : TEST_Op<"int_elements_attr"> {
+  let arguments = (ins
+      RankedI32ElementsAttr<[2]>:$vector_i32_attr,
+      RankedI64ElementsAttr<[4, 8]>:$matrix_i64_attr
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // Test Attribute Constraints
 //===----------------------------------------------------------------------===//
@@ -637,6 +644,11 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
   let arguments = (ins Variadic<I32>:$operands);
   let results = (outs Variadic<I32>);
   let hasFolder = 1;
+}
+
+def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
+  let arguments = (ins I32:$op1, I32:$op2, I32:$op3, I32:$op4);
+  let results = (outs I32);
 }
 
 //===----------------------------------------------------------------------===//

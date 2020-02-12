@@ -652,6 +652,12 @@ struct DidChangeTextDocumentParams {
   /// either they will be provided for this version or some subsequent one.
   /// This is a clangd extension.
   llvm::Optional<bool> wantDiagnostics;
+
+  /// Force a complete rebuild of the file, ignoring all cached state. Slow!
+  /// This is useful to defeat clangd's assumption that missing headers will
+  /// stay missing.
+  /// This is a clangd extension.
+  bool forceRebuild = false;
 };
 bool fromJSON(const llvm::json::Value &, DidChangeTextDocumentParams &);
 

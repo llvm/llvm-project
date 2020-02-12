@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 
-#if _ARCH_PPC
+#if __LDBL_MANT_DIG__ == 113
 
 #include "int_lib.h"
 #include <math.h>
@@ -37,7 +37,7 @@ int test__powitf2(long double a, si_int b, long double expected)
 
 int main()
 {
-#if _ARCH_PPC
+#if __LDBL_MANT_DIG__ == 113
     if (test__powitf2(0, 0, 1))
         return 1;
     if (test__powitf2(1, 0, 1))

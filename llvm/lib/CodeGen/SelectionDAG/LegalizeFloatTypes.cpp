@@ -2440,6 +2440,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::EXTRACT_VECTOR_ELT:
     R = SoftPromoteHalfRes_EXTRACT_VECTOR_ELT(N); break;
   case ISD::FCOPYSIGN:  R = SoftPromoteHalfRes_FCOPYSIGN(N); break;
+  case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:   R = SoftPromoteHalfRes_FP_ROUND(N); break;
 
   // Unary FP Operations
@@ -2592,6 +2593,14 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FPOWI(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
+  if (N->isStrictFPOpcode()) {
+    SDValue Res =
+        DAG.getNode(ISD::STRICT_FP_TO_FP16, SDLoc(N), {MVT::i16, MVT::Other},
+                    {N->getOperand(0), N->getOperand(1)});
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+    return Res;
+  }
+
   return DAG.getNode(ISD::FP_TO_FP16, SDLoc(N), MVT::i16, N->getOperand(0));
 }
 
@@ -2701,6 +2710,7 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
+  case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:  Res = SoftPromoteHalfOp_FP_EXTEND(N); break;
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
@@ -2741,7 +2751,18 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FCOPYSIGN(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
-  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(IsStrict ? 1 : 0));
+
+  if (IsStrict) {
+    SDValue Res =
+        DAG.getNode(ISD::STRICT_FP16_TO_FP, SDLoc(N),
+                    {N->getValueType(0), MVT::Other}, {N->getOperand(0), Op});
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+    ReplaceValueWith(SDValue(N, 0), Res);
+    return SDValue();
+  }
+
   return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), N->getValueType(0), Op);
 }
 

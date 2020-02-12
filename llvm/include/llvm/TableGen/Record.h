@@ -1295,6 +1295,7 @@ public:
   Init *resolveReferences(Resolver &R) const override;
   Init *Fold(Record *CurRec) const;
 
+  bool isConcrete() const override;
   std::string getAsString() const override {
     return Rec->getAsString() + "." + FieldName->getValue().str();
   }

@@ -3495,21 +3495,20 @@ bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
 }
 
 ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
-  std::string type_name;
-  if (type) {
-    clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
-    clang::QualType qual_type(GetQualType(type));
-    printing_policy.SuppressTagKeyword = true;
-    const clang::TypedefType *typedef_type =
-        qual_type->getAs<clang::TypedefType>();
-    if (typedef_type) {
-      const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
-      type_name = typedef_decl->getQualifiedNameAsString();
-    } else {
-      type_name = qual_type.getAsString(printing_policy);
-    }
+  if (!type)
+    return ConstString();
+
+  clang::QualType qual_type(GetQualType(type));
+
+  // For a typedef just return the qualified name.
+  if (const auto *typedef_type = qual_type->getAs<clang::TypedefType>()) {
+    const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
+    return ConstString(typedef_decl->getQualifiedNameAsString());
   }
-  return ConstString(type_name);
+
+  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
+  printing_policy.SuppressTagKeyword = true;
+  return ConstString(qual_type.getAsString(printing_policy));
 }
 
 uint32_t

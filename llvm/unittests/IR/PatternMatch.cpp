@@ -1319,8 +1319,8 @@ TYPED_TEST_CASE(MutableConstTest, MutableConstTestTypes);
 TYPED_TEST(MutableConstTest, ICmp) {
   auto &IRB = PatternMatchTest::IRB;
 
-  typedef typename std::tuple_element<0, TypeParam>::type ValueType;
-  typedef typename std::tuple_element<1, TypeParam>::type InstructionType;
+  typedef std::tuple_element_t<0, TypeParam> ValueType;
+  typedef std::tuple_element_t<1, TypeParam> InstructionType;
 
   Value *L = IRB.getInt32(1);
   Value *R = IRB.getInt32(2);

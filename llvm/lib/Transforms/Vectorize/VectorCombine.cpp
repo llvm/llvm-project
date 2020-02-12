@@ -22,7 +22,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -31,8 +30,6 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecCmp, "Number of vector compares formed");
-DEBUG_COUNTER(VecCombineCounter, "vector-combine-transform",
-              "Controls transformations in vector-combine pass");
 
 static bool foldExtractCmp(Instruction &I, const TargetTransformInfo &TTI) {
   // Match a cmp with extracted vector operands.

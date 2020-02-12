@@ -17,13 +17,13 @@ add_llvm_library(MLIRSupport
   )
 target_link_libraries(MLIRSupport LLVMSupport ${LLVM_PTHREAD_LIB})
 
-add_llvm_library(MLIROptMain
+add_llvm_library(MLIROptLib
   MlirOptMain.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
   )
-target_link_libraries(MLIROptMain
+target_link_libraries(MLIROptLib
   MLIRPass
   MLIRParser
   LLVMSupport

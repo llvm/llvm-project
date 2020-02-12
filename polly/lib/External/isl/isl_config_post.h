@@ -27,7 +27,7 @@ int isl_ffs(int i);
 #define strncasecmp _strnicmp
 #endif
 
-#if !HAVE_DECL_SNPRINTF && HAVE_DECL__SNPRINTF
+#if HAVE_DECL__SNPRINTF
 #define snprintf _snprintf
 #endif
 

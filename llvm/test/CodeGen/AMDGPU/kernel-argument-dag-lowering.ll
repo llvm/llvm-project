@@ -130,3 +130,25 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
   store volatile [3 x i16] %arg1, [3 x i16] addrspace(1)* undef
   ret void
 }
+
+; GCN-LABEL: {{^}}v2i15_arg:
+; GCN: s_load_dword [[DWORD:s[0-9]+]]
+; GCN-DAG: s_bfe_u32 [[BFE:s[0-9]+]], [[DWORD]], 0x100010{{$}}
+; GCN-DAG: s_and_b32 [[AND:s[0-9]+]], [[DWORD]], 0x7fff{{$}}
+define amdgpu_kernel void @v2i15_arg(<2 x i15> addrspace(1)* nocapture %out, <2 x i15> %in) {
+entry:
+  store <2 x i15> %in, <2 x i15> addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}v3i15_arg:
+; GCN: s_load_dword [[DWORD:s[0-9]+]]
+; GCN: s_lshl_b64
+; GCN: s_and_b32
+; GCN: s_and_b32
+; GCN: s_or_b32
+define amdgpu_kernel void @v3i15_arg(<3 x i15> addrspace(1)* nocapture %out, <3 x i15> %in) {
+entry:
+  store <3 x i15> %in, <3 x i15> addrspace(1)* %out, align 4
+  ret void
+}

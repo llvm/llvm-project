@@ -50,8 +50,6 @@ tools/clang
 tools/lldb
 # lld, which is tracked independently.
 tools/lld
-# llgo, which is tracked independently.
-tools/llgo
 # Polly, which is tracked independently.
 tools/polly
 # avrlit, which is tracked independently.

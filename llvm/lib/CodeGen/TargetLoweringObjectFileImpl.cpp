@@ -1866,9 +1866,6 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   }
 
   if (Kind.isMergeableCString()) {
-    if (!Kind.isMergeable1ByteCString())
-      report_fatal_error("Unhandled multi-byte mergeable string kind.");
-
     unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
         cast<GlobalVariable>(GO));
 

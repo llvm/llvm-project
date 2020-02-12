@@ -114,30 +114,28 @@ namespace llvm {
     /// Construct an ArrayRef<const T*> from ArrayRef<T*>. This uses SFINAE to
     /// ensure that only ArrayRefs of pointers can be converted.
     template <typename U>
-    ArrayRef(
-        const ArrayRef<U *> &A,
-        typename std::enable_if<
-           std::is_convertible<U *const *, T const *>::value>::type * = nullptr)
-      : Data(A.data()), Length(A.size()) {}
+    ArrayRef(const ArrayRef<U *> &A,
+             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
+                 * = nullptr)
+        : Data(A.data()), Length(A.size()) {}
 
     /// Construct an ArrayRef<const T*> from a SmallVector<T*>. This is
     /// templated in order to avoid instantiating SmallVectorTemplateCommon<T>
     /// whenever we copy-construct an ArrayRef.
-    template<typename U, typename DummyT>
+    template <typename U, typename DummyT>
     /*implicit*/ ArrayRef(
-      const SmallVectorTemplateCommon<U *, DummyT> &Vec,
-      typename std::enable_if<
-          std::is_convertible<U *const *, T const *>::value>::type * = nullptr)
-      : Data(Vec.data()), Length(Vec.size()) {
-    }
+        const SmallVectorTemplateCommon<U *, DummyT> &Vec,
+        std::enable_if_t<std::is_convertible<U *const *, T const *>::value> * =
+            nullptr)
+        : Data(Vec.data()), Length(Vec.size()) {}
 
     /// Construct an ArrayRef<const T*> from std::vector<T*>. This uses SFINAE
     /// to ensure that only vectors of pointers can be converted.
-    template<typename U, typename A>
+    template <typename U, typename A>
     ArrayRef(const std::vector<U *, A> &Vec,
-             typename std::enable_if<
-                 std::is_convertible<U *const *, T const *>::value>::type* = 0)
-      : Data(Vec.data()), Length(Vec.size()) {}
+             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
+                 * = 0)
+        : Data(Vec.data()), Length(Vec.size()) {}
 
     /// @}
     /// @name Simple Operations
@@ -256,7 +254,7 @@ namespace llvm {
     /// The declaration here is extra complicated so that "arrayRef = {}"
     /// continues to select the move assignment operator.
     template <typename U>
-    typename std::enable_if<std::is_same<U, T>::value, ArrayRef<T>>::type &
+    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
     operator=(U &&Temporary) = delete;
 
     /// Disallow accidental assignment from a temporary.
@@ -264,7 +262,7 @@ namespace llvm {
     /// The declaration here is extra complicated so that "arrayRef = {}"
     /// continues to select the move assignment operator.
     template <typename U>
-    typename std::enable_if<std::is_same<U, T>::value, ArrayRef<T>>::type &
+    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
     operator=(std::initializer_list<U>) = delete;
 
     /// @}

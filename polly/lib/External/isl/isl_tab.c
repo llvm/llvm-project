@@ -2116,7 +2116,7 @@ static int add_zero_row(struct isl_tab *tab)
  * one more element in the constraint array are available in the tableau.
  * If tab->bmap is set, then two rows are needed instead of one.
  */
-int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
+isl_stat isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 {
 	struct isl_tab_undo *snap = NULL;
 	struct isl_tab_var *var;
@@ -2126,8 +2126,8 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 	isl_int cst;
 
 	if (!tab)
-		return -1;
-	isl_assert(tab->mat->ctx, !tab->M, return -1);
+		return isl_stat_error;
+	isl_assert(tab->mat->ctx, !tab->M, return isl_stat_error);
 
 	if (tab->need_undo)
 		snap = isl_tab_snap(tab);
@@ -2143,7 +2143,7 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 		isl_int_clear(cst);
 	}
 	if (r < 0)
-		return -1;
+		return isl_stat_error;
 
 	var = &tab->con[r];
 	row = var->index;
@@ -2156,16 +2156,16 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 	if (tab->bmap) {
 		tab->bmap = isl_basic_map_add_ineq(tab->bmap, eq);
 		if (isl_tab_push(tab, isl_tab_undo_bmap_ineq) < 0)
-			return -1;
+			return isl_stat_error;
 		isl_seq_neg(eq, eq, 1 + tab->n_var);
 		tab->bmap = isl_basic_map_add_ineq(tab->bmap, eq);
 		isl_seq_neg(eq, eq, 1 + tab->n_var);
 		if (isl_tab_push(tab, isl_tab_undo_bmap_ineq) < 0)
-			return -1;
+			return isl_stat_error;
 		if (!tab->bmap)
-			return -1;
+			return isl_stat_error;
 		if (add_zero_row(tab) < 0)
-			return -1;
+			return isl_stat_error;
 	}
 
 	sgn = isl_int_sgn(tab->mat->row[row][1]);
@@ -2180,22 +2180,22 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
 	if (sgn < 0) {
 		sgn = sign_of_max(tab, var);
 		if (sgn < -1)
-			return -1;
+			return isl_stat_error;
 		if (sgn < 0) {
 			if (isl_tab_mark_empty(tab) < 0)
-				return -1;
-			return 0;
+				return isl_stat_error;
+			return isl_stat_ok;
 		}
 	}
 
 	var->is_nonneg = 1;
 	if (to_col(tab, var) < 0)
-		return -1;
+		return isl_stat_error;
 	var->is_nonneg = 0;
 	if (isl_tab_kill_col(tab, var->index) < 0)
-		return -1;
+		return isl_stat_error;
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Construct and return an inequality that expresses an upper bound
@@ -2208,16 +2208,17 @@ int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq)
  *
  *	m d <= e
  */
-static struct isl_vec *ineq_for_div(struct isl_basic_map *bmap, unsigned div)
+static __isl_give isl_vec *ineq_for_div(__isl_keep isl_basic_map *bmap,
+	unsigned div)
 {
-	unsigned total;
+	isl_size total;
 	unsigned div_pos;
 	struct isl_vec *ineq;
 
-	if (!bmap)
+	total = isl_basic_map_dim(bmap, isl_dim_all);
+	if (total < 0)
 		return NULL;
 
-	total = isl_basic_map_total_dim(bmap);
 	div_pos = 1 + total - bmap->n_div + div;
 
 	ineq = isl_vec_alloc(bmap->ctx, 1 + total);
@@ -2247,11 +2248,13 @@ static struct isl_vec *ineq_for_div(struct isl_basic_map *bmap, unsigned div)
 static isl_stat add_div_constraints(struct isl_tab *tab, unsigned div,
 	isl_stat (*add_ineq)(void *user, isl_int *), void *user)
 {
-	unsigned total;
+	isl_size total;
 	unsigned div_pos;
 	struct isl_vec *ineq;
 
-	total = isl_basic_map_total_dim(tab->bmap);
+	total = isl_basic_map_dim(tab->bmap, isl_dim_all);
+	if (total < 0)
+		return isl_stat_error;
 	div_pos = 1 + total - tab->bmap->n_div + div;
 
 	ineq = ineq_for_div(tab->bmap, div);
@@ -2331,7 +2334,8 @@ int isl_tab_insert_div(struct isl_tab *tab, int pos, __isl_keep isl_vec *div,
 {
 	int r;
 	int nonneg;
-	int n_div, o_div;
+	isl_size n_div;
+	int o_div;
 
 	if (!tab || !div)
 		return -1;
@@ -2340,8 +2344,9 @@ int isl_tab_insert_div(struct isl_tab *tab, int pos, __isl_keep isl_vec *div,
 		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
 			"unexpected size", return -1);
 
-	isl_assert(tab->mat->ctx, tab->bmap, return -1);
 	n_div = isl_basic_map_dim(tab->bmap, isl_dim_div);
+	if (n_div < 0)
+		return -1;
 	o_div = tab->n_var - n_div;
 	if (pos < o_div || pos > tab->n_var)
 		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
@@ -2392,12 +2397,12 @@ __isl_give struct isl_tab *isl_tab_from_basic_map(
 {
 	int i;
 	struct isl_tab *tab;
+	isl_size total;
 
-	if (!bmap)
+	total = isl_basic_map_dim(bmap, isl_dim_all);
+	if (total < 0)
 		return NULL;
-	tab = isl_tab_alloc(bmap->ctx,
-			    isl_basic_map_total_dim(bmap) + bmap->n_ineq + 1,
-			    isl_basic_map_total_dim(bmap), 0);
+	tab = isl_tab_alloc(bmap->ctx, total + bmap->n_ineq + 1, total, 0);
 	if (!tab)
 		return NULL;
 	tab->preserve = track;
@@ -2441,14 +2446,16 @@ struct isl_tab *isl_tab_from_recession_cone(__isl_keep isl_basic_set *bset,
 	isl_int cst;
 	int i;
 	struct isl_tab *tab;
-	unsigned offset = 0;
+	isl_size offset = 0;
+	isl_size total;
 
-	if (!bset)
-		return NULL;
+	total = isl_basic_set_dim(bset, isl_dim_all);
 	if (parametric)
 		offset = isl_basic_set_dim(bset, isl_dim_param);
+	if (total < 0 || offset < 0)
+		return NULL;
 	tab = isl_tab_alloc(bset->ctx, bset->n_eq + bset->n_ineq,
-				isl_basic_set_total_dim(bset) - offset, 0);
+				total - offset, 0);
 	if (!tab)
 		return NULL;
 	tab->rational = ISL_F_ISSET(bset, ISL_BASIC_SET_RATIONAL);
@@ -2750,6 +2757,18 @@ static isl_stat cut_to_hyperplane(struct isl_tab *tab, struct isl_tab_var *var)
 	return isl_stat_ok;
 }
 
+/* Check that "con" is a valid constraint position for "tab".
+ */
+static isl_stat isl_tab_check_con(struct isl_tab *tab, int con)
+{
+	if (!tab)
+		return isl_stat_error;
+	if (con < 0 || con >= tab->n_con)
+		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
+			"position out of bounds", return isl_stat_error);
+	return isl_stat_ok;
+}
+
 /* Given a tableau "tab" and an inequality constraint "con" of the tableau,
  * relax the inequality by one.  That is, the inequality r >= 0 is replaced
  * by r' = r + 1 >= 0.
@@ -3037,6 +3056,30 @@ static int update_con_after_move(struct isl_tab *tab, int i, int old)
 	return 0;
 }
 
+/* Interchange constraints "con1" and "con2" in "tab".
+ * In particular, interchange the contents of these entries in tab->con.
+ * Since tab->col_var and tab->row_var point back into this array,
+ * they need to be updated accordingly.
+ */
+isl_stat isl_tab_swap_constraints(struct isl_tab *tab, int con1, int con2)
+{
+	struct isl_tab_var var;
+
+	if (isl_tab_check_con(tab, con1) < 0 ||
+	    isl_tab_check_con(tab, con2) < 0)
+		return isl_stat_error;
+
+	var = tab->con[con1];
+	tab->con[con1] = tab->con[con2];
+	if (update_con_after_move(tab, con1, con2) < 0)
+		return isl_stat_error;
+	tab->con[con2] = var;
+	if (update_con_after_move(tab, con2, con1) < 0)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
 /* Rotate the "n" constraints starting at "first" to the right,
  * putting the last constraint in the position of the first constraint.
  */
@@ -3060,6 +3103,77 @@ static int rotate_constraints(struct isl_tab *tab, int first, int n)
 		return -1;
 
 	return 0;
+}
+
+/* Drop the "n" entries starting at position "first" in tab->con, moving all
+ * subsequent entries down.
+ * Since some of the entries of tab->row_var and tab->col_var contain
+ * indices into this array, they have to be updated accordingly.
+ */
+static isl_stat con_drop_entries(struct isl_tab *tab,
+	unsigned first, unsigned n)
+{
+	int i;
+
+	if (first + n > tab->n_con || first + n < first)
+		isl_die(isl_tab_get_ctx(tab), isl_error_internal,
+			"invalid range", return isl_stat_error);
+
+	tab->n_con -= n;
+
+	for (i = first; i < tab->n_con; ++i) {
+		tab->con[i] = tab->con[i + n];
+		if (update_con_after_move(tab, i, i + n) < 0)
+			return isl_stat_error;
+	}
+
+	return isl_stat_ok;
+}
+
+/* isl_basic_map_gauss5 callback that gets called when
+ * two (equality) constraints "a" and "b" get interchanged
+ * in the basic map.  Perform the same interchange in "tab".
+ */
+static isl_stat swap_eq(unsigned a, unsigned b, void *user)
+{
+	struct isl_tab *tab = user;
+
+	return isl_tab_swap_constraints(tab, a, b);
+}
+
+/* isl_basic_map_gauss5 callback that gets called when
+ * the final "n" equality constraints get removed.
+ * As a special case, if "n" is equal to the total number
+ * of equality constraints, then this means the basic map
+ * turned out to be empty.
+ * Drop the same number of equality constraints from "tab" or
+ * mark it empty in the special case.
+ */
+static isl_stat drop_eq(unsigned n, void *user)
+{
+	struct isl_tab *tab = user;
+
+	if (tab->n_eq == n)
+		return isl_tab_mark_empty(tab);
+
+	tab->n_eq -= n;
+	return con_drop_entries(tab, tab->n_eq, n);
+}
+
+/* If "bmap" has more than a single reference, then call
+ * isl_basic_map_gauss on it, updating "tab" accordingly.
+ */
+static __isl_give isl_basic_map *gauss_if_shared(__isl_take isl_basic_map *bmap,
+	struct isl_tab *tab)
+{
+	isl_bool single;
+
+	single = isl_basic_map_has_single_reference(bmap);
+	if (single < 0)
+		return isl_basic_map_free(bmap);
+	if (single)
+		return bmap;
+	return isl_basic_map_gauss5(bmap, NULL, &swap_eq, &drop_eq, tab);
 }
 
 /* Make the equalities that are implicit in "bmap" but that have been
@@ -3088,20 +3202,25 @@ static int rotate_constraints(struct isl_tab *tab, int first, int n)
  * If "tab" contains any constraints that are not in "bmap" then they
  * appear after those in "bmap" and they should be left untouched.
  *
- * Note that this function leaves "bmap" in a temporary state
- * as it does not call isl_basic_map_gauss.  Calling this function
- * is the responsibility of the caller.
+ * Note that this function only calls isl_basic_map_gauss
+ * (in case some equality constraints got detected)
+ * if "bmap" has more than one reference.
+ * If it only has a single reference, then it is left in a temporary state,
+ * because the caller may require this state.
+ * Calling isl_basic_map_gauss is then the responsibility of the caller.
  */
 __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 	__isl_take isl_basic_map *bmap)
 {
 	int i;
+	unsigned n_eq;
 
 	if (!tab || !bmap)
 		return isl_basic_map_free(bmap);
 	if (tab->empty)
 		return bmap;
 
+	n_eq = tab->n_eq;
 	for (i = bmap->n_ineq - 1; i >= 0; --i) {
 		if (!isl_tab_is_equality(tab, bmap->n_eq + i))
 			continue;
@@ -3113,6 +3232,9 @@ __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 			return isl_basic_map_free(bmap);
 		tab->n_eq++;
 	}
+
+	if (n_eq != tab->n_eq)
+		bmap = gauss_if_shared(bmap, tab);
 
 	return bmap;
 }
@@ -3313,11 +3435,8 @@ enum isl_lp_result isl_tab_min(struct isl_tab *tab,
  */
 int isl_tab_is_redundant(struct isl_tab *tab, int con)
 {
-	if (!tab)
+	if (isl_tab_check_con(tab, con) < 0)
 		return -1;
-	if (con < 0 || con >= tab->n_con)
-		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
-			"position out of bounds", return -1);
 	if (tab->con[con].is_zero)
 		return 0;
 	if (tab->con[con].is_redundant)
@@ -3579,7 +3698,7 @@ isl_bool isl_tab_need_undo(struct isl_tab *tab)
 	if (!tab)
 		return isl_bool_error;
 
-	return tab->need_undo;
+	return isl_bool_ok(tab->need_undo);
 }
 
 /* Remove all tracking of undo information from "tab", invalidating
@@ -3759,8 +3878,12 @@ isl_stat isl_tab_restore_redundant(struct isl_tab *tab)
 static isl_stat drop_bmap_div(struct isl_tab *tab, int pos)
 {
 	int off;
+	isl_size n_div;
 
-	off = tab->n_var - isl_basic_map_dim(tab->bmap, isl_dim_div);
+	n_div = isl_basic_map_dim(tab->bmap, isl_dim_div);
+	if (n_div < 0)
+		return isl_stat_error;
+	off = tab->n_var - n_div;
 	if (isl_basic_map_drop_div(tab->bmap, pos - off) < 0)
 		return isl_stat_error;
 	if (tab->samples) {
@@ -3870,9 +3993,11 @@ static isl_stat perform_undo(struct isl_tab *tab, struct isl_tab_undo *undo)
 	case isl_tab_undo_unrestrict:
 		return perform_undo_var(tab, undo);
 	case isl_tab_undo_bmap_eq:
-		return isl_basic_map_free_equality(tab->bmap, 1);
+		tab->bmap = isl_basic_map_free_equality(tab->bmap, 1);
+		return tab->bmap ? isl_stat_ok : isl_stat_error;
 	case isl_tab_undo_bmap_ineq:
-		return isl_basic_map_free_inequality(tab->bmap, 1);
+		tab->bmap = isl_basic_map_free_inequality(tab->bmap, 1);
+		return tab->bmap ? isl_stat_ok : isl_stat_error;
 	case isl_tab_undo_bmap_div:
 		return drop_bmap_div(tab, undo->u.var_index);
 	case isl_tab_undo_saved_basis:
@@ -3896,12 +4021,12 @@ static isl_stat perform_undo(struct isl_tab *tab, struct isl_tab_undo *undo)
 /* Return the tableau to the state it was in when the snapshot "snap"
  * was taken.
  */
-int isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap)
+isl_stat isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap)
 {
 	struct isl_tab_undo *undo, *next;
 
 	if (!tab)
-		return -1;
+		return isl_stat_error;
 
 	tab->in_undo = 1;
 	for (undo = tab->top; undo && undo != &tab->bottom; undo = next) {
@@ -3912,15 +4037,15 @@ int isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap)
 			tab->top = undo;
 			free_undo(tab);
 			tab->in_undo = 0;
-			return -1;
+			return isl_stat_error;
 		}
 		free_undo_record(undo);
 	}
 	tab->in_undo = 0;
 	tab->top = undo;
 	if (!undo)
-		return -1;
-	return 0;
+		return isl_stat_error;
+	return isl_stat_ok;
 }
 
 /* The given row "row" represents an inequality violated by all

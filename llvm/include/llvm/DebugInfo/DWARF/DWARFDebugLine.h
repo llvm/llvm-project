@@ -130,7 +130,7 @@ public:
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     Error parse(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-                function_ref<void(Error)> RecoverableErrorCallback,
+                function_ref<void(Error)> RecoverableErrorHandler,
                 const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
@@ -275,7 +275,7 @@ public:
     /// Parse prologue and all rows.
     Error parse(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
                 const DWARFContext &Ctx, const DWARFUnit *U,
-                function_ref<void(Error)> RecoverableErrorCallback,
+                function_ref<void(Error)> RecoverableErrorHandler,
                 raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
@@ -304,7 +304,7 @@ public:
   Expected<const LineTable *>
   getOrParseLineTable(DWARFDataExtractor &DebugLineData, uint64_t Offset,
                       const DWARFContext &Ctx, const DWARFUnit *U,
-                      function_ref<void(Error)> RecoverableErrorCallback);
+                      function_ref<void(Error)> RecoverableErrorHandler);
 
   /// Helper to allow for parsing of an entire .debug_line section in sequence.
   class SectionParser {
@@ -317,29 +317,27 @@ public:
                   tu_range TUs);
 
     /// Get the next line table from the section. Report any issues via the
-    /// callbacks.
+    /// handlers.
     ///
-    /// \param RecoverableErrorCallback - any issues that don't prevent further
-    /// parsing of the table will be reported through this callback.
-    /// \param UnrecoverableErrorCallback - any issues that prevent further
-    /// parsing of the table will be reported through this callback.
+    /// \param RecoverableErrorHandler - any issues that don't prevent further
+    /// parsing of the table will be reported through this handler.
+    /// \param UnrecoverableErrorHandler - any issues that prevent further
+    /// parsing of the table will be reported through this handler.
     /// \param OS - if not null, the parser will print information about the
     /// table as it parses it.
-    LineTable
-    parseNext(
-        function_ref<void(Error)> RecoverableErrorCallback,
-        function_ref<void(Error)> UnrecoverableErrorCallback,
-        raw_ostream *OS = nullptr);
+    LineTable parseNext(function_ref<void(Error)> RecoverableErrorHandler,
+                        function_ref<void(Error)> UnrecoverableErrorHandler,
+                        raw_ostream *OS = nullptr);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
     ///
-    /// \param RecoverableErrorCallback - report any recoverable prologue
-    /// parsing issues via this callback.
-    /// \param UnrecoverableErrorCallback - report any unrecoverable prologue
-    /// parsing issues via this callback.
-    void skip(function_ref<void(Error)> RecoverableErrorCallback,
-              function_ref<void(Error)> UnrecoverableErrorCallback);
+    /// \param RecoverableErrorHandler - report any recoverable prologue
+    /// parsing issues via this handler.
+    /// \param UnrecoverableErrorHandler - report any unrecoverable prologue
+    /// parsing issues via this handler.
+    void skip(function_ref<void(Error)> RecoverableErrorHandler,
+              function_ref<void(Error)> UnrecoverableErrorHandler);
 
     /// Indicates if the parser has parsed as much as possible.
     ///

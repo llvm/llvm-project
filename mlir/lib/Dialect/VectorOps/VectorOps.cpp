@@ -61,8 +61,48 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ReductionOp op) {
+  // Verify for 1-D vector.
+  int64_t rank = op.getVectorType().getRank();
+  if (rank != 1)
+    return op.emitOpError("unsupported reduction rank: ") << rank;
+
+  // Verify supported reduction kind.
+  auto kind = op.kind();
+  Type eltType = op.dest().getType();
+  if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
+    if (eltType.isF32() || eltType.isF64() || eltType.isInteger(32) ||
+        eltType.isInteger(64))
+      return success();
+    return op.emitOpError("unsupported reduction type");
+  }
+  if (kind == "and" || kind == "or" || kind == "xor") {
+    if (eltType.isInteger(32) || eltType.isInteger(64))
+      return success();
+    return op.emitOpError("unsupported reduction type");
+  }
+  return op.emitOpError("unknown reduction kind: ") << kind;
+}
+
+//===----------------------------------------------------------------------===//
 // ContractionOp
 //===----------------------------------------------------------------------===//
+
+void vector::ContractionOp::build(Builder *builder, OperationState &result,
+                                  Value lhs, Value rhs, Value acc,
+                                  ArrayRef<ArrayRef<AffineExpr>> indexingExprs,
+                                  ArrayRef<StringRef> iteratorTypes) {
+  result.addOperands({lhs, rhs, acc});
+  result.addTypes(acc.getType());
+  result.addAttribute(getIndexingMapsAttrName(),
+                      builder->getAffineMapArrayAttr(
+                          AffineMap::inferFromExprList(indexingExprs)));
+  result.addAttribute(getIteratorTypesAttrName(),
+                      builder->getStrArrayAttr(iteratorTypes));
+}
 
 void vector::ContractionOp::build(Builder *builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,

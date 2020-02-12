@@ -14,75 +14,77 @@ func @add_sub(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @fadd_scalar
-func @fadd_scalar(%arg: f32) -> f32 {
+func @fadd_scalar(%arg: f32) {
   // CHECK: spv.FAdd
   %0 = addf %arg, %arg : f32
-  return %0 : f32
+  return
 }
 
 // CHECK-LABEL: @fdiv_scalar
-func @fdiv_scalar(%arg: f32) -> f32 {
+func @fdiv_scalar(%arg: f32) {
   // CHECK: spv.FDiv
   %0 = divf %arg, %arg : f32
-  return %0 : f32
+  return
 }
 
 // CHECK-LABEL: @fmul_scalar
-func @fmul_scalar(%arg: f32) -> f32 {
+func @fmul_scalar(%arg: f32) {
   // CHECK: spv.FMul
   %0 = mulf %arg, %arg : f32
-  return %0 : f32
+  return
 }
 
 // CHECK-LABEL: @fmul_vector2
-func @fmul_vector2(%arg: vector<2xf32>) -> vector<2xf32> {
+func @fmul_vector2(%arg: vector<2xf32>) {
   // CHECK: spv.FMul
   %0 = mulf %arg, %arg : vector<2xf32>
-  return %0 : vector<2xf32>
+  return
 }
 
 // CHECK-LABEL: @fmul_vector3
-func @fmul_vector3(%arg: vector<3xf32>) -> vector<3xf32> {
+func @fmul_vector3(%arg: vector<3xf32>) {
   // CHECK: spv.FMul
   %0 = mulf %arg, %arg : vector<3xf32>
-  return %0 : vector<3xf32>
+  return
 }
 
 // CHECK-LABEL: @fmul_vector4
-func @fmul_vector4(%arg: vector<4xf32>) -> vector<4xf32> {
+func @fmul_vector4(%arg: vector<4xf32>) {
   // CHECK: spv.FMul
   %0 = mulf %arg, %arg : vector<4xf32>
-  return %0 : vector<4xf32>
+  return
 }
 
 // CHECK-LABEL: @fmul_vector5
-func @fmul_vector5(%arg: vector<5xf32>) -> vector<5xf32> {
-  // Vector length of only 2, 3, and 4 is valid for SPIR-V
+func @fmul_vector5(%arg: vector<5xf32>) {
+  // Vector length of only 2, 3, and 4 is valid for SPIR-V.
   // CHECK: mulf
   %0 = mulf %arg, %arg : vector<5xf32>
-  return %0 : vector<5xf32>
+  return
 }
 
-// CHECK-LABEL: @fmul_tensor
-func @fmul_tensor(%arg: tensor<4xf32>) -> tensor<4xf32> {
-  // For tensors mulf cannot be lowered directly to spv.FMul
-  // CHECK: mulf
-  %0 = mulf %arg, %arg : tensor<4xf32>
-  return %0 : tensor<4xf32>
-}
+// TODO(antiagainst): enable this once we support converting binary ops
+// needing type conversion.
+// XXXXX-LABEL: @fmul_tensor
+//func @fmul_tensor(%arg: tensor<4xf32>) {
+  // For tensors mulf cannot be lowered directly to spv.FMul.
+  // XXXXX: mulf
+  //%0 = mulf %arg, %arg : tensor<4xf32>
+  //return
+//}
 
 // CHECK-LABEL: @frem_scalar
-func @frem_scalar(%arg: f32) -> f32 {
+func @frem_scalar(%arg: f32) {
   // CHECK: spv.FRem
   %0 = remf %arg, %arg : f32
-  return %0 : f32
+  return
 }
 
 // CHECK-LABEL: @fsub_scalar
-func @fsub_scalar(%arg: f32) -> f32 {
+func @fsub_scalar(%arg: f32) {
   // CHECK: spv.FSub
   %0 = subf %arg, %arg : f32
-  return %0 : f32
+  return
 }
 
 // CHECK-LABEL: @div_rem
@@ -306,7 +308,7 @@ func @sitofp(%arg0 : i32) {
 // memref type
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>) {
+// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>)
 func @memref_type(%arg0: memref<3xi1>) {
   return
 }

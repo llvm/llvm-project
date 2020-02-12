@@ -828,7 +828,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       if (!FileSystem::Instance().IsDirectory(search_path_spec))
         continue;
       search_path_spec.AppendPathComponent(
-          module_spec.GetFileSpec().GetFilename().AsCString());
+          module_spec.GetFileSpec().GetFilename().GetStringRef());
       if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 

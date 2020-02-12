@@ -268,19 +268,6 @@ size_t CompilerType::GetPointerByteSize() const {
   return 0;
 }
 
-ConstString CompilerType::GetConstQualifiedTypeName() const {
-  return GetConstTypeName();
-}
-
-ConstString CompilerType::GetConstTypeName() const {
-  if (IsValid()) {
-    ConstString type_name(GetTypeName());
-    if (type_name)
-      return type_name;
-  }
-  return ConstString("<invalid>");
-}
-
 ConstString CompilerType::GetTypeName() const {
   if (IsValid()) {
     return m_type_system->GetTypeName(m_type);
@@ -288,7 +275,11 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString CompilerType::GetDisplayTypeName() const { return GetTypeName(); }
+ConstString CompilerType::GetDisplayTypeName() const {
+  if (IsValid())
+    return m_type_system->GetDisplayTypeName(m_type);
+  return ConstString("<invalid>");
+}
 
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {

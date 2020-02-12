@@ -633,6 +633,7 @@ namespace ISD {
     /// form a semi-softened interface for dealing with f16 (as an i16), which
     /// is often a storage-only type but has native conversions.
     FP16_TO_FP, FP_TO_FP16,
+    STRICT_FP16_TO_FP, STRICT_FP_TO_FP16,
 
     /// Perform various unary floating-point operations inspired by libm. For
     /// FPOWI, the result is undefined if if the integer operand doesn't fit

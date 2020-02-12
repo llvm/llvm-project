@@ -281,12 +281,9 @@ void VectorizerTestPass::runOnFunction() {
   }
 }
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createVectorizerTestPass() {
-  return std::make_unique<VectorizerTestPass>();
+namespace mlir {
+void registerVectorizerTestPass() {
+  PassRegistration<VectorizerTestPass> pass(
+      "affine-vectorizer-test", "Tests vectorizer standalone functionality.");
 }
-
-static PassRegistration<VectorizerTestPass>
-    pass("affine-vectorizer-test",
-         "Tests vectorizer standalone functionality.");
-
-#undef DEBUG_TYPE
+} // namespace mlir

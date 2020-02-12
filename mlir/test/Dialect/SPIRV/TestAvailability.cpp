@@ -213,6 +213,9 @@ ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
   return matchSuccess();
 }
 
-static PassRegistration<ConvertToTargetEnv>
-    convertToTargetEnvPass("test-spirv-target-env",
-                           "Test SPIR-V target environment");
+namespace mlir {
+void registerConvertToTargetEnvPass() {
+  PassRegistration<ConvertToTargetEnv> convertToTargetEnvPass(
+      "test-spirv-target-env", "Test SPIR-V target environment");
+}
+} // namespace mlir

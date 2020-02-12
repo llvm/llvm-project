@@ -97,6 +97,11 @@ public:
     return RunSafelyOnThread([&]() { Fn(UserData); }, RequestedStackSize);
   }
 
+  /// Explicitly trigger a crash recovery in the current process, and
+  /// return failure from RunSafely(). This function does not return.
+  LLVM_ATTRIBUTE_NORETURN
+  void HandleExit(int RetCode);
+
   /// In case of a crash, this is the crash identifier.
   int RetCode = 0;
 

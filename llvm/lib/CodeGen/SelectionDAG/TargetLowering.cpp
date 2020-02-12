@@ -5545,12 +5545,13 @@ verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
   return false;
 }
 
-char TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
-                                        bool LegalOperations, bool ForCodeSize,
-                                        unsigned Depth) const {
+TargetLowering::NegatibleCost
+TargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
+                                 bool LegalOperations, bool ForCodeSize,
+                                 unsigned Depth) const {
   // fneg is removable even if it has multiple uses.
   if (Op.getOpcode() == ISD::FNEG)
-    return 2;
+    return NegatibleCost::Cheaper;
 
   // Don't allow anything with multiple uses unless we know it is free.
   EVT VT = Op.getValueType();
@@ -5558,107 +5559,115 @@ char TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
   const TargetOptions &Options = DAG.getTarget().Options;
   if (!Op.hasOneUse() && !(Op.getOpcode() == ISD::FP_EXTEND &&
                            isFPExtFree(VT, Op.getOperand(0).getValueType())))
-    return 0;
+    return NegatibleCost::Expensive;
 
   // Don't recurse exponentially.
   if (Depth > SelectionDAG::MaxRecursionDepth)
-    return 0;
+    return NegatibleCost::Expensive;
 
   switch (Op.getOpcode()) {
   case ISD::ConstantFP: {
     if (!LegalOperations)
-      return 1;
+      return NegatibleCost::Neutral;
 
     // Don't invert constant FP values after legalization unless the target says
     // the negated constant is legal.
-    return isOperationLegal(ISD::ConstantFP, VT) ||
-           isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
-                        ForCodeSize);
+    if (isOperationLegal(ISD::ConstantFP, VT) ||
+        isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
+                     ForCodeSize))
+      return NegatibleCost::Neutral;
+    break;
   }
   case ISD::BUILD_VECTOR: {
     // Only permit BUILD_VECTOR of constants.
     if (llvm::any_of(Op->op_values(), [&](SDValue N) {
           return !N.isUndef() && !isa<ConstantFPSDNode>(N);
         }))
-      return 0;
+      return NegatibleCost::Expensive;
     if (!LegalOperations)
-      return 1;
+      return NegatibleCost::Neutral;
     if (isOperationLegal(ISD::ConstantFP, VT) &&
         isOperationLegal(ISD::BUILD_VECTOR, VT))
-      return 1;
-    return llvm::all_of(Op->op_values(), [&](SDValue N) {
-      return N.isUndef() ||
-             isFPImmLegal(neg(cast<ConstantFPSDNode>(N)->getValueAPF()), VT,
-                          ForCodeSize);
-    });
+      return NegatibleCost::Neutral;
+    if (llvm::all_of(Op->op_values(), [&](SDValue N) {
+          return N.isUndef() ||
+                 isFPImmLegal(neg(cast<ConstantFPSDNode>(N)->getValueAPF()), VT,
+                              ForCodeSize);
+        }))
+      return NegatibleCost::Neutral;
+    break;
   }
-  case ISD::FADD:
+  case ISD::FADD: {
     if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
+      return NegatibleCost::Expensive;
 
     // After operation legalization, it might not be legal to create new FSUBs.
     if (LegalOperations && !isOperationLegalOrCustom(ISD::FSUB, VT))
-      return 0;
+      return NegatibleCost::Expensive;
 
     // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
-    if (char V = isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations,
-                                    ForCodeSize, Depth + 1))
-      return V;
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    if (V0 != NegatibleCost::Expensive)
+      return V0;
     // fold (fneg (fadd A, B)) -> (fsub (fneg B), A)
-    return isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
-                              ForCodeSize, Depth + 1);
+    return getNegatibleCost(Op.getOperand(1), DAG, LegalOperations, ForCodeSize,
+                            Depth + 1);
+  }
   case ISD::FSUB:
     // We can't turn -(A-B) into B-A when we honor signed zeros.
     if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
+      return NegatibleCost::Expensive;
 
     // fold (fneg (fsub A, B)) -> (fsub B, A)
-    return 1;
-
+    return NegatibleCost::Neutral;
   case ISD::FMUL:
-  case ISD::FDIV:
+  case ISD::FDIV: {
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y) or (fmul X, (fneg Y))
-    if (char V = isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations,
-                                    ForCodeSize, Depth + 1))
-      return V;
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    if (V0 != NegatibleCost::Expensive)
+      return V0;
 
     // Ignore X * 2.0 because that is expected to be canonicalized to X + X.
     if (auto *C = isConstOrConstSplatFP(Op.getOperand(1)))
       if (C->isExactlyValue(2.0) && Op.getOpcode() == ISD::FMUL)
-        return 0;
+        return NegatibleCost::Expensive;
 
-    return isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
-                              ForCodeSize, Depth + 1);
-
+    return getNegatibleCost(Op.getOperand(1), DAG, LegalOperations, ForCodeSize,
+                            Depth + 1);
+  }
   case ISD::FMA:
   case ISD::FMAD: {
     if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return 0;
+      return NegatibleCost::Expensive;
 
     // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
     // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    char V2 = isNegatibleForFree(Op.getOperand(2), DAG, LegalOperations,
-                                 ForCodeSize, Depth + 1);
-    if (!V2)
-      return 0;
+    NegatibleCost V2 = getNegatibleCost(Op.getOperand(2), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    if (NegatibleCost::Expensive == V2)
+      return NegatibleCost::Expensive;
 
     // One of Op0/Op1 must be cheaply negatible, then select the cheapest.
-    char V0 = isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations,
-                                 ForCodeSize, Depth + 1);
-    char V1 = isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
-                                 ForCodeSize, Depth + 1);
-    char V01 = std::max(V0, V1);
-    return V01 ? std::max(V01, V2) : 0;
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    NegatibleCost V1 = getNegatibleCost(Op.getOperand(1), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    NegatibleCost V01 = std::max(V0, V1);
+    if (V01 == NegatibleCost::Expensive)
+      return NegatibleCost::Expensive;
+    return std::max(V01, V2);
   }
 
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND:
   case ISD::FSIN:
-    return isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations,
-                              ForCodeSize, Depth + 1);
+    return getNegatibleCost(Op.getOperand(0), DAG, LegalOperations, ForCodeSize,
+                            Depth + 1);
   }
 
-  return 0;
+  return NegatibleCost::Expensive;
 }
 
 SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
@@ -5670,7 +5679,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     return Op.getOperand(0);
 
   assert(Depth <= SelectionDAG::MaxRecursionDepth &&
-         "getNegatedExpression doesn't match isNegatibleForFree");
+         "getNegatedExpression doesn't match getNegatibleCost");
   const SDNodeFlags Flags = Op->getFlags();
 
   switch (Op.getOpcode()) {
@@ -5692,14 +5701,15 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     }
     return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Ops);
   }
-  case ISD::FADD:
+  case ISD::FADD: {
     assert((DAG.getTarget().Options.NoSignedZerosFPMath ||
             Flags.hasNoSignedZeros()) &&
            "Expected NSZ fp-flag");
 
     // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
-    if (isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations, ForCodeSize,
-                           Depth + 1))
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    if (V0 != NegatibleCost::Expensive)
       return DAG.getNode(ISD::FSUB, SDLoc(Op), Op.getValueType(),
                          getNegatedExpression(Op.getOperand(0), DAG,
                                               LegalOperations, ForCodeSize,
@@ -5711,6 +5721,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                             LegalOperations, ForCodeSize,
                                             Depth + 1),
                        Op.getOperand(0), Flags);
+  }
   case ISD::FSUB:
     // fold (fneg (fsub 0, B)) -> B
     if (ConstantFPSDNode *N0CFP =
@@ -5723,10 +5734,11 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                        Op.getOperand(1), Op.getOperand(0), Flags);
 
   case ISD::FMUL:
-  case ISD::FDIV:
+  case ISD::FDIV: {
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
-    if (isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations, ForCodeSize,
-                           Depth + 1))
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    if (V0 != NegatibleCost::Expensive)
       return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
                          getNegatedExpression(Op.getOperand(0), DAG,
                                               LegalOperations, ForCodeSize,
@@ -5739,7 +5751,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
         getNegatedExpression(Op.getOperand(1), DAG, LegalOperations,
                              ForCodeSize, Depth + 1),
         Flags);
-
+  }
   case ISD::FMA:
   case ISD::FMAD: {
     assert((DAG.getTarget().Options.NoSignedZerosFPMath ||
@@ -5749,12 +5761,12 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     SDValue Neg2 = getNegatedExpression(Op.getOperand(2), DAG, LegalOperations,
                                         ForCodeSize, Depth + 1);
 
-    char V0 = isNegatibleForFree(Op.getOperand(0), DAG, LegalOperations,
-                                 ForCodeSize, Depth + 1);
-    char V1 = isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
-                                 ForCodeSize, Depth + 1);
+    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
+    NegatibleCost V1 = getNegatibleCost(Op.getOperand(1), DAG, LegalOperations,
+                                        ForCodeSize, Depth + 1);
     // TODO: This is a hack. It is possible that costs have changed between now
-    //       and the initial calls to isNegatibleForFree(). That is because we
+    //       and the initial calls to getNegatibleCost(). That is because we
     //       are rewriting the expression, and that may change the number of
     //       uses (and therefore the cost) of values. If the negation costs are
     //       equal, only negate this value if it is a constant. Otherwise, try

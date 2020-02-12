@@ -32,7 +32,7 @@ template <typename T, typename GenT> T uniform(GenT &Gen) {
 /// elements, which may each be weighted to be more likely choices.
 template <typename T, typename GenT> class ReservoirSampler {
   GenT &RandGen;
-  typename std::remove_const<T>::type Selection = {};
+  std::remove_const_t<T> Selection = {};
   uint64_t TotalWeight = 0;
 
 public:
@@ -70,8 +70,8 @@ public:
 };
 
 template <typename GenT, typename RangeT,
-          typename ElT = typename std::remove_reference<
-              decltype(*std::begin(std::declval<RangeT>()))>::type>
+          typename ElT = std::remove_reference_t<
+              decltype(*std::begin(std::declval<RangeT>()))>>
 ReservoirSampler<ElT, GenT> makeSampler(GenT &RandGen, RangeT &&Items) {
   ReservoirSampler<ElT, GenT> RS(RandGen);
   RS.sample(Items);

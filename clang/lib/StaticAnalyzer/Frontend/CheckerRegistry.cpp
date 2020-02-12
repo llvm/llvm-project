@@ -51,11 +51,10 @@ using CheckerNameLT = FullNameLT<CheckerRegistry::CheckerInfo>;
 } // end of anonymous namespace
 
 template <class CheckerOrPackageInfoList>
-static
-    typename std::conditional<std::is_const<CheckerOrPackageInfoList>::value,
-                              typename CheckerOrPackageInfoList::const_iterator,
-                              typename CheckerOrPackageInfoList::iterator>::type
-    binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
+static std::conditional_t<std::is_const<CheckerOrPackageInfoList>::value,
+                          typename CheckerOrPackageInfoList::const_iterator,
+                          typename CheckerOrPackageInfoList::iterator>
+binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
 
   using CheckerOrPackage = typename CheckerOrPackageInfoList::value_type;
   using CheckerOrPackageFullNameLT = FullNameLT<CheckerOrPackage>;

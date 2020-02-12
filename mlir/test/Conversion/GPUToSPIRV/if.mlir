@@ -10,7 +10,7 @@ module attributes {gpu.container_module} {
   gpu.module @kernels {
     // CHECK-LABEL: @kernel_simple_selection
     gpu.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1)
-    attributes {gpu.kernel} {
+    attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       %value = constant 0.0 : f32
       %i = constant 0 : index
 
@@ -31,7 +31,7 @@ module attributes {gpu.container_module} {
 
     // CHECK-LABEL: @kernel_nested_selection
     gpu.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1)
-    attributes {gpu.kernel} {
+    attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
       %i = constant 0 : index
       %j = constant 9 : index
 

@@ -1,4 +1,4 @@
-; REQUIRES: object-emission
+; REQUIRES: x86
 
 ; RUN: llc -mtriple=i386-linux-gnu -filetype=obj -relocation-model=pic %s -o /dev/null
 

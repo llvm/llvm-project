@@ -88,6 +88,14 @@ public:
   // capable of unit splitting.
   bool canSplitThinLTOUnit() const override { return false; }
 
+  llvm::DenormalMode getDefaultDenormalModeForType(
+    const llvm::opt::ArgList &DriverArgs,
+    Action::OffloadKind DeviceOffloadKind,
+    const llvm::fltSemantics *FPType) const override {
+    // DAZ and FTZ are on by default.
+    return llvm::DenormalMode::getPreserveSign();
+  }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

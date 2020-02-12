@@ -45,6 +45,9 @@ struct ParseInputs {
   tooling::CompileCommand CompileCommand;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::string Contents;
+  // Prevent reuse of the cached preamble/AST. Slow! Useful to workaround
+  // clangd's assumption that missing header files will stay missing.
+  bool ForceRebuild = false;
   // Used to recover from diagnostics (e.g. find missing includes for symbol).
   const SymbolIndex *Index = nullptr;
   ParseOptions Opts;

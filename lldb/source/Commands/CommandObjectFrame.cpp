@@ -959,14 +959,26 @@ protected:
     bool any_printed = false;
     StackFrameRecognizerManager::ForEach(
         [&result, &any_printed](uint32_t recognizer_id, std::string name,
-                                std::string function, std::string symbol,
+                                std::string module, std::string symbol,
                                 std::string alternate_symbol, bool regexp) {
-          if (name == "")
+          Stream &stream = result.GetOutputStream();
+
+          if (name.empty())
             name = "(internal)";
-          result.GetOutputStream().Printf(
-              "%d: %s, module %s, function %s{%s}%s\n", recognizer_id,
-              name.c_str(), function.c_str(), symbol.c_str(),
-              alternate_symbol.c_str(), regexp ? " (regexp)" : "");
+
+          stream << std::to_string(recognizer_id) << ": " << name;
+          if (!module.empty())
+            stream << ", module " << module;
+          if (!symbol.empty())
+            stream << ", function " << symbol;
+          if (!alternate_symbol.empty())
+            stream << ", symbol " << alternate_symbol;
+          if (regexp)
+            stream << " (regexp)";
+
+          stream.EOL();
+          stream.Flush();
+
           any_printed = true;
         });
 

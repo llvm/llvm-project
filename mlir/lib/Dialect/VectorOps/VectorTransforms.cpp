@@ -646,6 +646,90 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
   }
 };
 
+/// Decomposes ShapeCastOp on tuple-of-vectors to multiple ShapeCastOps, each
+/// on vector types.
+struct ShapeCastOpDecomposer : public OpRewritePattern<vector::ShapeCastOp> {
+  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                     PatternRewriter &rewriter) const override {
+    // Check if 'shapeCastOp' has tuple source/result type.
+    auto sourceTupleType =
+        shapeCastOp.source().getType().dyn_cast_or_null<TupleType>();
+    auto resultTupleType =
+        shapeCastOp.result().getType().dyn_cast_or_null<TupleType>();
+    if (!sourceTupleType || !resultTupleType)
+      return matchFailure();
+    assert(sourceTupleType.size() == resultTupleType.size());
+
+    // Create single-vector ShapeCastOp for each source tuple element.
+    Location loc = shapeCastOp.getLoc();
+    SmallVector<Value, 8> resultElements;
+    resultElements.reserve(resultTupleType.size());
+    for (unsigned i = 0, e = sourceTupleType.size(); i < e; ++i) {
+      auto sourceElement = rewriter.create<vector::TupleGetOp>(
+          loc, sourceTupleType.getType(i), shapeCastOp.source(),
+          rewriter.getI64IntegerAttr(i));
+      resultElements.push_back(rewriter.create<vector::ShapeCastOp>(
+          loc, resultTupleType.getType(i), sourceElement));
+    }
+
+    // Replace 'shapeCastOp' with tuple of 'resultElements'.
+    rewriter.replaceOpWithNewOp<vector::TupleOp>(shapeCastOp, resultTupleType,
+                                                 resultElements);
+    return matchSuccess();
+  }
+};
+
+/// ShapeCastOpFolder folds cancelling ShapeCastOps away.
+//
+// Example:
+//
+//  The following MLIR with cancelling ShapeCastOps:
+//
+//   %0 = source : vector<5x4x2xf32>
+//   %1 = shape_cast %0 : vector<5x4x2xf32> to vector<20x2xf32>
+//   %2 = shape_cast %1 : vector<20x2xf32> to vector<5x4x2xf32>
+//   %3 = user %2 : vector<5x4x2xf32>
+//
+//  Should canonicalize to the following:
+//
+//   %0 = source : vector<5x4x2xf32>
+//   %1 = user %0 : vector<5x4x2xf32>
+//
+struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
+  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                     PatternRewriter &rewriter) const override {
+    // Check if 'shapeCastOp' has vector source/result type.
+    auto sourceVectorType =
+        shapeCastOp.source().getType().dyn_cast_or_null<VectorType>();
+    auto resultVectorType =
+        shapeCastOp.result().getType().dyn_cast_or_null<VectorType>();
+    if (!sourceVectorType || !resultVectorType)
+      return matchFailure();
+
+    // Check if shape cast op source operand is also a shape cast op.
+    auto sourceShapeCastOp = dyn_cast_or_null<vector::ShapeCastOp>(
+        shapeCastOp.source().getDefiningOp());
+    if (!sourceShapeCastOp)
+      return matchFailure();
+    auto operandSourceVectorType =
+        sourceShapeCastOp.source().getType().cast<VectorType>();
+    auto operandResultVectorType =
+        sourceShapeCastOp.result().getType().cast<VectorType>();
+
+    // Check if shape cast operations invert each other.
+    if (operandSourceVectorType != resultVectorType ||
+        operandResultVectorType != sourceVectorType)
+      return matchFailure();
+
+    rewriter.replaceOp(shapeCastOp, sourceShapeCastOp.source());
+    return matchSuccess();
+  }
+};
+
 // Patter rewrite which forward tuple elements to their users.
 // User(TupleGetOp(ExtractSlicesOp(InsertSlicesOp(TupleOp(Producer)))))
 //   -> User(Producer)
@@ -784,8 +868,8 @@ public:
 // TODO(andydavis) Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SplitTransferReadOp, SplitTransferWriteOp, TupleGetFolderOp>(
-      context);
+  patterns.insert<ShapeCastOpDecomposer, ShapeCastOpFolder, SplitTransferReadOp,
+                  SplitTransferWriteOp, TupleGetFolderOp>(context);
 }
 
 void mlir::vector::populateVectorSlicesLoweringPatterns(

@@ -1,16 +1,11 @@
-if(MLIR_CUDA_CONVERSIONS_ENABLED)
-  add_llvm_library(MLIRGPUtoCUDATransforms
-    ConvertKernelFuncToCubin.cpp
-    ConvertLaunchFuncToCudaCalls.cpp
-  )
-  target_link_libraries(MLIRGPUtoCUDATransforms
-    LLVMNVPTXCodeGen
-    LLVMNVPTXDesc
-    LLVMNVPTXInfo
-    MLIRGPU
-    MLIRLLVMIR
-    MLIRNVVMIR
-    MLIRPass
-    MLIRTargetNVVMIR
-  )
-endif()
+add_llvm_library(MLIRGPUtoCUDATransforms
+  ConvertKernelFuncToCubin.cpp
+  ConvertLaunchFuncToCudaCalls.cpp
+)
+target_link_libraries(MLIRGPUtoCUDATransforms
+  MLIRGPU
+  MLIRLLVMIR
+  MLIRNVVMIR
+  MLIRPass
+  MLIRTargetNVVMIR
+)

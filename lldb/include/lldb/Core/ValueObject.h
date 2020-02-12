@@ -902,7 +902,7 @@ protected:
   // Use this constructor to create a "root variable object".  The ValueObject
   // will be locked to this context through-out its lifespan.
 
-  ValueObject(ExecutionContextScope *exe_scope,
+  ValueObject(ExecutionContextScope *exe_scope, ValueObjectManager &manager,
               AddressType child_ptr_or_ref_addr_type = eAddressTypeLoad);
 
   // Use this constructor to create a ValueObject owned by another ValueObject.

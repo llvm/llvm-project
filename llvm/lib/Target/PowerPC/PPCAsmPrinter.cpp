@@ -1607,8 +1607,7 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   if (GV->isDeclaration())
     return;
 
-  if ((!GVKind.isGlobalWriteableData() && !GVKind.isReadOnly()) ||
-      GVKind.isMergeable2ByteCString() || GVKind.isMergeable4ByteCString())
+  if (!GVKind.isGlobalWriteableData() && !GVKind.isReadOnly())
     report_fatal_error("Encountered a global variable kind that is "
                        "not supported yet.");
 

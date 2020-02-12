@@ -33,8 +33,8 @@ struct isl_mat *isl_mat_identity(struct isl_ctx *ctx, unsigned n_row);
 __isl_give isl_mat *isl_mat_copy(__isl_keep isl_mat *mat);
 __isl_null isl_mat *isl_mat_free(__isl_take isl_mat *mat);
 
-int isl_mat_rows(__isl_keep isl_mat *mat);
-int isl_mat_cols(__isl_keep isl_mat *mat);
+isl_size isl_mat_rows(__isl_keep isl_mat *mat);
+isl_size isl_mat_cols(__isl_keep isl_mat *mat);
 __isl_give isl_val *isl_mat_get_element_val(__isl_keep isl_mat *mat,
 	int row, int col);
 __isl_give isl_mat *isl_mat_set_element_si(__isl_take isl_mat *mat,
@@ -106,7 +106,7 @@ isl_bool isl_mat_is_equal(__isl_keep isl_mat *mat1, __isl_keep isl_mat *mat2);
 isl_bool isl_mat_has_linearly_independent_rows(__isl_keep isl_mat *mat1,
 	__isl_keep isl_mat *mat2);
 
-int isl_mat_rank(__isl_keep isl_mat *mat);
+isl_size isl_mat_rank(__isl_keep isl_mat *mat);
 int isl_mat_initial_non_zero_cols(__isl_keep isl_mat *mat);
 
 void isl_mat_print_internal(__isl_keep isl_mat *mat, FILE *out, int indent);

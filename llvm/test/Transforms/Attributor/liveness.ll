@@ -3,7 +3,7 @@
 ; RUN: opt -attributor-cgscc --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 ; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,MODULE,ALL_BUT_OLD_CGSCCC
 ; RUN: opt -passes='attributor-cgscc' --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC,ALL_BUT_OLD_CGSCCC
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; ALL_BUT_OLD_CGSCCC: @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
 @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* blockaddress(@dead_with_blockaddress_users, %lab0), i8* blockaddress(@dead_with_blockaddress_users, %end)]
@@ -280,7 +280,7 @@ cleanup:
   ret i32 0
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; TEST 5.4 unounwind invoke instruction replaced by a call and a branch instruction put after it.
 define i32 @invoke_nounwind_phi(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -370,7 +370,7 @@ cleanup:
   ret i32 0
 }
 
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
@@ -544,6 +544,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
   ret i8* %6
 }
 
+declare void @sink() nofree nosync nounwind willreturn
 define void @test_unreachable() {
 ; CHECK:       define void @test_unreachable()
 ; CHECK-NEXT:    call void @test_unreachable()
@@ -893,7 +894,7 @@ define void @useless_arg_ext_int_ext(i32* %a) {
   ret void
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; FIXME: We should fold terminators.
 
@@ -906,10 +907,35 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; CHECK-NEXT:    i64 10, label [[RETURN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
+; CHECK-NEXT:    call void @sink()
 ; CHECK-NEXT:    ret i32 123
 ; CHECK:       return:
 ; CHECK-NEXT:    unreachable
 ;
+entry:
+  switch i64 %i, label %sw.default [
+  i64 3, label %return
+  i64 10, label %return
+  ]
+
+sw.default:
+  call void @sink()
+  ret i32 123
+
+return:
+  ret i32 0
+}
+
+define i32 @switch_default_caller() {
+; CGSCC-LABEL: define {{[^@]+}}@switch_default_caller()
+; CGSCC-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default(i64 0)
+; CGSCC-NEXT:    ret i32 123
+;
+  %call2 = tail call i32 @switch_default(i64 0)
+  ret i32 %call2
+}
+
+define internal i32 @switch_default_dead(i64 %i) nounwind {
 entry:
   switch i64 %i, label %sw.default [
   i64 3, label %return
@@ -923,15 +949,15 @@ return:
   ret i32 0
 }
 
-define i32 @switch_default_caller() {
-; CHECK-LABEL: define {{[^@]+}}@switch_default_caller()
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default(i64 0)
+define i32 @switch_default_dead_caller() {
+; CHECK-LABEL: define {{[^@]+}}@switch_default_dead_caller()
 ; CHECK-NEXT:    ret i32 123
 ;
-  %call2 = tail call i32 @switch_default(i64 0)
+  %call2 = tail call i32 @switch_default_dead(i64 0)
   ret i32 %call2
 }
-; UTC_ARGS: --turn off
+
+; UTC_ARGS: --disable
 
 ; Allow blockaddress users
 ; ALL_BUT_OLD_CGSCCC-NOT @dead_with_blockaddress_users

@@ -12,6 +12,7 @@
 
 #include "RISCVRegisterInfo.h"
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -101,6 +102,39 @@ bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
+}
+
+// Frame indexes representing locations of CSRs which are given a fixed location
+// by save/restore libcalls.
+static const std::map<unsigned, int> FixedCSRFIMap = {
+  {/*ra*/  RISCV::X1,   -1},
+  {/*s0*/  RISCV::X8,   -2},
+  {/*s1*/  RISCV::X9,   -3},
+  {/*s2*/  RISCV::X18,  -4},
+  {/*s3*/  RISCV::X19,  -5},
+  {/*s4*/  RISCV::X20,  -6},
+  {/*s5*/  RISCV::X21,  -7},
+  {/*s6*/  RISCV::X22,  -8},
+  {/*s7*/  RISCV::X23,  -9},
+  {/*s8*/  RISCV::X24,  -10},
+  {/*s9*/  RISCV::X25,  -11},
+  {/*s10*/ RISCV::X26,  -12},
+  {/*s11*/ RISCV::X27,  -13}
+};
+
+bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
+                                             unsigned Reg,
+                                             int &FrameIdx) const {
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->useSaveRestoreLibCalls())
+    return false;
+
+  auto FII = FixedCSRFIMap.find(Reg);
+  if (FII == FixedCSRFIMap.end())
+    return false;
+
+  FrameIdx = FII->second;
+  return true;
 }
 
 void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,

@@ -417,7 +417,7 @@ func @u_convert_scalar(%arg0 : i32) -> i64 {
 //===----------------------------------------------------------------------===//
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
@@ -426,7 +426,7 @@ spv.module "Logical" "GLSL450" {
 }
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
@@ -437,7 +437,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 spv.module "Logical" "GLSL450" {
-   func @do_nothing() -> () {
+   spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
@@ -642,7 +642,7 @@ func @aligned_load_incorrect_attributes() -> () {
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   // CHECK_LABEL: @simple_load
-  func @simple_load() -> () {
+  spv.func @simple_load() -> () "None" {
     // CHECK: spv.Load "Input" {{%.*}} : f32
     %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
     %1 = spv.Load "Input" %0 : f32
@@ -1059,7 +1059,7 @@ func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
-  func @simple_store(%arg0 : f32) -> () {
+  spv.func @simple_store(%arg0 : f32) -> () "None" {
     %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
     // CHECK: spv.Store  "Input" {{%.*}}, {{%.*}} : f32
     spv.Store  "Input" %0, %arg0 : f32
@@ -1132,7 +1132,7 @@ func @variable_init_normal_constant() -> () {
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @global : !spv.ptr<f32, Workgroup>
-  func @variable_init_global_variable() -> () {
+  spv.func @variable_init_global_variable() -> () "None" {
     %0 = spv._address_of @global : !spv.ptr<f32, Workgroup>
     // CHECK: spv.Variable init({{.*}}) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
     %1 = spv.Variable init(%0) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
@@ -1148,7 +1148,7 @@ spv.module "Logical" "GLSL450" {
 spv.module "Logical" "GLSL450" {
   spv.specConstant @sc = 42 : i32
   // CHECK-LABEL: @variable_init_spec_constant
-  func @variable_init_spec_constant() -> () {
+  spv.func @variable_init_spec_constant() -> () "None" {
     %0 = spv._reference_of @sc : i32
     // CHECK: spv.Variable init(%0) : !spv.ptr<i32, Function>
     %1 = spv.Variable init(%0) : !spv.ptr<i32, Function>

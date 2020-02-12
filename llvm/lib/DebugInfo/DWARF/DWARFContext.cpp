@@ -252,12 +252,13 @@ static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
       WithColor::error() << toString(std::move(Err)) << '\n';
       // Keep going after an error, if we can, assuming that the length field
       // could be read. If it couldn't, stop reading the section.
-      if (!AddrTable.hasValidLength())
-        break;
-      Offset = TableOffset + AddrTable.getLength();
-    } else {
-      AddrTable.dump(OS, DumpOpts);
+      if (auto TableLength = AddrTable.getFullLength()) {
+        Offset = TableOffset + *TableLength;
+        continue;
+      }
+      break;
     }
+    AddrTable.dump(OS, DumpOpts);
   }
 }
 
@@ -879,7 +880,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
 }
 
 Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
-    DWARFUnit *U, function_ref<void(Error)> RecoverableErrorCallback) {
+    DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) {
   if (!Line)
     Line.reset(new DWARFDebugLine);
 
@@ -904,7 +905,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
                               U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset, *this, U,
-                                   RecoverableErrorCallback);
+                                   RecoverableErrorHandler);
 }
 
 void DWARFContext::parseNormalUnits() {

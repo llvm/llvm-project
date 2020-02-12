@@ -3131,7 +3131,7 @@ void RenderScriptRuntime::DumpKernels(Stream &strm) const {
     strm.Printf("Resource '%s':", module->m_resname.c_str());
     strm.EOL();
     for (const auto &kernel : module->m_kernels) {
-      strm.Indent(kernel.m_name.AsCString());
+      strm.Indent(kernel.m_name.GetStringRef());
       strm.EOL();
     }
   }
@@ -3941,7 +3941,7 @@ void RSModuleDescriptor::Dump(Stream &strm) const {
 }
 
 void RSGlobalDescriptor::Dump(Stream &strm) const {
-  strm.Indent(m_name.AsCString());
+  strm.Indent(m_name.GetStringRef());
   VariableList var_list;
   m_module->m_module->FindGlobalVariables(m_name, nullptr, 1U, var_list);
   if (var_list.GetSize() == 1) {
@@ -3966,12 +3966,12 @@ void RSGlobalDescriptor::Dump(Stream &strm) const {
 }
 
 void RSKernelDescriptor::Dump(Stream &strm) const {
-  strm.Indent(m_name.AsCString());
+  strm.Indent(m_name.GetStringRef());
   strm.EOL();
 }
 
 void RSReductionDescriptor::Dump(lldb_private::Stream &stream) const {
-  stream.Indent(m_reduce_name.AsCString());
+  stream.Indent(m_reduce_name.GetStringRef());
   stream.IndentMore();
   stream.EOL();
   stream.Indent();

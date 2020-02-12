@@ -67,6 +67,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const GCNSubtarget *ST = nullptr;
   AssumptionCache *AC = nullptr;
+  DominatorTree *DT = nullptr;
   LegacyDivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
@@ -156,6 +157,9 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// Perform same function as equivalently named function in DAGCombiner. Since
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
+
+  bool divHasSpecialOptimization(BinaryOperator &I,
+                                 Value *Num, Value *Den) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -620,10 +624,12 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
     return nullptr;
 
   Type *Ty = Den->getType();
-  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, Ty);
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     if (AllowInaccurateRcp || RcpIsAccurate) {
       if (CLHS->isExactlyValue(1.0)) {
+        Function *Decl = Intrinsic::getDeclaration(
+          Mod, Intrinsic::amdgcn_rcp, Ty);
+
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
         // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
@@ -636,10 +642,13 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
 
         // 1.0 / x -> rcp(x)
         return Builder.CreateCall(Decl, { Den });
-       }
+      }
 
        // Same as for 1.0, but expand the sign out of the constant.
-       if (CLHS->isExactlyValue(-1.0)) {
+      if (CLHS->isExactlyValue(-1.0)) {
+        Function *Decl = Intrinsic::getDeclaration(
+          Mod, Intrinsic::amdgcn_rcp, Ty);
+
          // -1.0 / x -> rcp (fneg x)
          Value *FNeg = Builder.CreateFNeg(Den);
          return Builder.CreateCall(Decl, { FNeg });
@@ -648,6 +657,9 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
   }
 
   if (AllowInaccurateRcp) {
+    Function *Decl = Intrinsic::getDeclaration(
+      Mod, Intrinsic::amdgcn_rcp, Ty);
+
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
     Value *Recip = Builder.CreateCall(Decl, { Den });
@@ -847,7 +859,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
                        : Builder.CreateUIToFP(IB,F32Ty);
 
-  Value *RCP = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), FB);
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP = Builder.CreateCall(RcpDecl, { FB });
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
@@ -899,6 +913,42 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   return Res;
 }
 
+// Try to recognize special cases the DAG will emit special, better expansions
+// than the general expansion we do here.
+
+// TODO: It would be better to just directly handle those optimizations here.
+bool AMDGPUCodeGenPrepare::divHasSpecialOptimization(
+  BinaryOperator &I, Value *Num, Value *Den) const {
+  if (Constant *C = dyn_cast<Constant>(Den)) {
+    // Arbitrary constants get a better expansion as long as a wider mulhi is
+    // legal.
+    if (C->getType()->getScalarSizeInBits() <= 32)
+      return true;
+
+    // TODO: Sdiv check for not exact for some reason.
+
+    // If there's no wider mulhi, there's only a better expansion for powers of
+    // two.
+    // TODO: Should really know for each vector element.
+    if (isKnownToBeAPowerOfTwo(C, *DL, true, 0, AC, &I, DT))
+      return true;
+
+    return false;
+  }
+
+  if (BinaryOperator *BinOpDen = dyn_cast<BinaryOperator>(Den)) {
+    // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
+    if (BinOpDen->getOpcode() == Instruction::Shl &&
+        isa<Constant>(BinOpDen->getOperand(0)) &&
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), *DL, true,
+                               0, AC, &I, DT)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
                                             BinaryOperator &I,
                                             Value *Num, Value *Den) const {
@@ -910,8 +960,8 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   FMF.setFast();
   Builder.setFastMathFlags(FMF);
 
-  if (isa<Constant>(Den))
-    return nullptr; // Keep it for optimization
+  if (divHasSpecialOptimization(I, Num, Den))
+    return nullptr;  // Keep it for later optimization.
 
   bool IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
   bool IsSigned = Opc == Instruction::SRem || Opc == Instruction::SDiv;
@@ -937,7 +987,6 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
 
   ConstantInt *Zero = Builder.getInt32(0);
   ConstantInt *One = Builder.getInt32(1);
-  ConstantInt *MinusOne = Builder.getInt32(~0);
 
   Value *Sign = nullptr;
   if (IsSigned) {
@@ -957,7 +1006,10 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   // RCP =  URECIP(Den) = 2^32 / Den + e
   // e is rounding error.
   Value *DEN_F32 = Builder.CreateUIToFP(Den, F32Ty);
-  Value *RCP_F32 = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), DEN_F32);
+
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP_F32 = Builder.CreateCall(RcpDecl, { DEN_F32 });
   Constant *UINT_MAX_PLUS_1 = ConstantFP::get(F32Ty, BitsToFloat(0x4f800000));
   Value *RCP_SCALE = Builder.CreateFMul(RCP_F32, UINT_MAX_PLUS_1);
   Value *RCP = Builder.CreateFPToUI(RCP_SCALE, I32Ty);
@@ -995,18 +1047,14 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   // Remainder = Num - Num_S_Remainder
   Value *Remainder = Builder.CreateSub(Num, Num_S_Remainder);
 
-  // Remainder_GE_Den = (Remainder >= Den ? -1 : 0)
-  Value *Rem_GE_Den_CC = Builder.CreateICmpUGE(Remainder, Den);
-  Value *Remainder_GE_Den = Builder.CreateSelect(Rem_GE_Den_CC, MinusOne, Zero);
+  // Remainder_GE_Den = Remainder >= Den;
+  Value *Remainder_GE_Den = Builder.CreateICmpUGE(Remainder, Den);
 
-  // Remainder_GE_Zero = (Num >= Num_S_Remainder ? -1 : 0)
-  Value *Num_GE_Num_S_Rem_CC = Builder.CreateICmpUGE(Num, Num_S_Remainder);
-  Value *Remainder_GE_Zero = Builder.CreateSelect(Num_GE_Num_S_Rem_CC,
-                                                  MinusOne, Zero);
+  // Remainder_GE_Zero = Num >= Num_S_Remainder
+  Value *Remainder_GE_Zero = Builder.CreateICmpUGE(Num, Num_S_Remainder);
 
   // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
   Value *Tmp1 = Builder.CreateAnd(Remainder_GE_Den, Remainder_GE_Zero);
-  Value *Tmp1_0_CC = Builder.CreateICmpEQ(Tmp1, Zero);
 
   Value *Res;
   if (IsDiv) {
@@ -1016,11 +1064,11 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
     // Quotient_S_One = Quotient - 1
     Value *Quotient_S_One = Builder.CreateSub(Quotient, One);
 
-    // Div = (Tmp1 == 0 ? Quotient : Quotient_A_One)
-    Value *Div = Builder.CreateSelect(Tmp1_0_CC, Quotient, Quotient_A_One);
+    // Div = (Tmp1 ? Quotient_A_One : Quotient)
+    Value *Div = Builder.CreateSelect(Tmp1, Quotient_A_One, Quotient);
 
-    // Div = (Remainder_GE_Zero == 0 ? Quotient_S_One : Div)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Div, Quotient_S_One);
+    // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
+    Res = Builder.CreateSelect(Remainder_GE_Zero, Div, Quotient_S_One);
   } else {
     // Remainder_S_Den = Remainder - Den
     Value *Remainder_S_Den = Builder.CreateSub(Remainder, Den);
@@ -1028,11 +1076,11 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
     // Remainder_A_Den = Remainder + Den
     Value *Remainder_A_Den = Builder.CreateAdd(Remainder, Den);
 
-    // Rem = (Tmp1 == 0 ? Remainder : Remainder_S_Den)
-    Value *Rem = Builder.CreateSelect(Tmp1_0_CC, Remainder, Remainder_S_Den);
+    // Rem = (Tmp1 ?  Remainder_S_Den : Remainder)
+    Value *Rem = Builder.CreateSelect(Tmp1, Remainder_S_Den, Remainder);
 
-    // Rem = (Remainder_GE_Zero == 0 ? Remainder_A_Den : Rem)
-    Res = Builder.CreateSelect(Num_GE_Num_S_Rem_CC, Rem, Remainder_A_Den);
+    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
+    Res = Builder.CreateSelect(Remainder_GE_Zero, Rem, Remainder_A_Den);
   }
 
   if (IsSigned) {
@@ -1198,6 +1246,10 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   ST = &TM.getSubtarget<GCNSubtarget>(F);
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   DA = &getAnalysis<LegacyDivergenceAnalysis>();
+
+  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+
   HasUnsafeFPMath = hasUnsafeFPMath(F);
   HasFP32Denormals = ST->hasFP32Denormals(F);
 

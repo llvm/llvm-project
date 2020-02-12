@@ -1451,6 +1451,14 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::PseudoD_SELECT_I:
   case Mips::PseudoD_SELECT_I64:
     return emitPseudoD_SELECT(MI, BB);
+  case Mips::LDR_W:
+    return emitLDR_W(MI, BB);
+  case Mips::LDR_D:
+    return emitLDR_D(MI, BB);
+  case Mips::STR_W:
+    return emitSTR_W(MI, BB);
+  case Mips::STR_D:
+    return emitSTR_D(MI, BB);
   }
 }
 
@@ -4714,4 +4722,275 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
       return Reg;
   }
   report_fatal_error("Invalid register name global variable");
+}
+
+MachineBasicBlock *MipsTargetLowering::emitLDR_W(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const bool IsLittle = Subtarget.isLittle();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register Dest = MI.getOperand(0).getReg();
+  Register Address = MI.getOperand(1).getReg();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  MachineBasicBlock::iterator I(MI);
+
+  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
+    // Mips release 6 can load from adress that is not naturally-aligned.
+    Register Temp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::LW))
+        .addDef(Temp)
+        .addUse(Address)
+        .addImm(Imm);
+    BuildMI(*BB, I, DL, TII->get(Mips::FILL_W)).addDef(Dest).addUse(Temp);
+  } else {
+    // Mips release 5 needs to use instructions that can load from an unaligned
+    // memory address.
+    Register LoadHalf = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register LoadFull = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register Undef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::IMPLICIT_DEF)).addDef(Undef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWR))
+        .addDef(LoadHalf)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 0 : 3))
+        .addUse(Undef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWL))
+        .addDef(LoadFull)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 3 : 0))
+        .addUse(LoadHalf);
+    BuildMI(*BB, I, DL, TII->get(Mips::FILL_W)).addDef(Dest).addUse(LoadFull);
+  }
+
+  MI.eraseFromParent();
+  return BB;
+}
+
+MachineBasicBlock *MipsTargetLowering::emitLDR_D(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const bool IsLittle = Subtarget.isLittle();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register Dest = MI.getOperand(0).getReg();
+  Register Address = MI.getOperand(1).getReg();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  MachineBasicBlock::iterator I(MI);
+
+  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
+    // Mips release 6 can load from adress that is not naturally-aligned.
+    if (Subtarget.isGP64bit()) {
+      Register Temp = MRI.createVirtualRegister(&Mips::GPR64RegClass);
+      BuildMI(*BB, I, DL, TII->get(Mips::LD))
+          .addDef(Temp)
+          .addUse(Address)
+          .addImm(Imm);
+      BuildMI(*BB, I, DL, TII->get(Mips::FILL_D)).addDef(Dest).addUse(Temp);
+    } else {
+      Register Wtemp = MRI.createVirtualRegister(&Mips::MSA128WRegClass);
+      Register Lo = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register Hi = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      BuildMI(*BB, I, DL, TII->get(Mips::LW))
+          .addDef(Lo)
+          .addUse(Address)
+          .addImm(Imm + (IsLittle ? 0 : 4));
+      BuildMI(*BB, I, DL, TII->get(Mips::LW))
+          .addDef(Hi)
+          .addUse(Address)
+          .addImm(Imm + (IsLittle ? 4 : 0));
+      BuildMI(*BB, I, DL, TII->get(Mips::FILL_W)).addDef(Wtemp).addUse(Lo);
+      BuildMI(*BB, I, DL, TII->get(Mips::INSERT_W), Dest)
+          .addUse(Wtemp)
+          .addUse(Hi)
+          .addImm(1);
+    }
+  } else {
+    // Mips release 5 needs to use instructions that can load from an unaligned
+    // memory address.
+    Register LoHalf = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register LoFull = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register LoUndef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register HiHalf = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register HiFull = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register HiUndef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register Wtemp = MRI.createVirtualRegister(&Mips::MSA128WRegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::IMPLICIT_DEF)).addDef(LoUndef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWR))
+        .addDef(LoHalf)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 0 : 7))
+        .addUse(LoUndef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWL))
+        .addDef(LoFull)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 3 : 4))
+        .addUse(LoHalf);
+    BuildMI(*BB, I, DL, TII->get(Mips::IMPLICIT_DEF)).addDef(HiUndef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWR))
+        .addDef(HiHalf)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 4 : 3))
+        .addUse(HiUndef);
+    BuildMI(*BB, I, DL, TII->get(Mips::LWL))
+        .addDef(HiFull)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 7 : 0))
+        .addUse(HiHalf);
+    BuildMI(*BB, I, DL, TII->get(Mips::FILL_W)).addDef(Wtemp).addUse(LoFull);
+    BuildMI(*BB, I, DL, TII->get(Mips::INSERT_W), Dest)
+        .addUse(Wtemp)
+        .addUse(HiFull)
+        .addImm(1);
+  }
+
+  MI.eraseFromParent();
+  return BB;
+}
+
+MachineBasicBlock *MipsTargetLowering::emitSTR_W(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const bool IsLittle = Subtarget.isLittle();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register StoreVal = MI.getOperand(0).getReg();
+  Register Address = MI.getOperand(1).getReg();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  MachineBasicBlock::iterator I(MI);
+
+  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
+    // Mips release 6 can store to adress that is not naturally-aligned.
+    Register BitcastW = MRI.createVirtualRegister(&Mips::MSA128WRegClass);
+    Register Tmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY)).addDef(BitcastW).addUse(StoreVal);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+        .addDef(Tmp)
+        .addUse(BitcastW)
+        .addImm(0);
+    BuildMI(*BB, I, DL, TII->get(Mips::SW))
+        .addUse(Tmp)
+        .addUse(Address)
+        .addImm(Imm);
+  } else {
+    // Mips release 5 needs to use instructions that can store to an unaligned
+    // memory address.
+    Register Tmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+        .addDef(Tmp)
+        .addUse(StoreVal)
+        .addImm(0);
+    BuildMI(*BB, I, DL, TII->get(Mips::SWR))
+        .addUse(Tmp)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 0 : 3));
+    BuildMI(*BB, I, DL, TII->get(Mips::SWL))
+        .addUse(Tmp)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 3 : 0));
+  }
+
+  MI.eraseFromParent();
+
+  return BB;
+}
+
+MachineBasicBlock *MipsTargetLowering::emitSTR_D(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const bool IsLittle = Subtarget.isLittle();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register StoreVal = MI.getOperand(0).getReg();
+  Register Address = MI.getOperand(1).getReg();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  MachineBasicBlock::iterator I(MI);
+
+  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
+    // Mips release 6 can store to adress that is not naturally-aligned.
+    if (Subtarget.isGP64bit()) {
+      Register BitcastD = MRI.createVirtualRegister(&Mips::MSA128DRegClass);
+      Register Lo = MRI.createVirtualRegister(&Mips::GPR64RegClass);
+      BuildMI(*BB, I, DL, TII->get(Mips::COPY))
+          .addDef(BitcastD)
+          .addUse(StoreVal);
+      BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_D))
+          .addDef(Lo)
+          .addUse(BitcastD)
+          .addImm(0);
+      BuildMI(*BB, I, DL, TII->get(Mips::SD))
+          .addUse(Lo)
+          .addUse(Address)
+          .addImm(Imm);
+    } else {
+      Register BitcastW = MRI.createVirtualRegister(&Mips::MSA128WRegClass);
+      Register Lo = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register Hi = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      BuildMI(*BB, I, DL, TII->get(Mips::COPY))
+          .addDef(BitcastW)
+          .addUse(StoreVal);
+      BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+          .addDef(Lo)
+          .addUse(BitcastW)
+          .addImm(0);
+      BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+          .addDef(Hi)
+          .addUse(BitcastW)
+          .addImm(1);
+      BuildMI(*BB, I, DL, TII->get(Mips::SW))
+          .addUse(Lo)
+          .addUse(Address)
+          .addImm(Imm + (IsLittle ? 0 : 4));
+      BuildMI(*BB, I, DL, TII->get(Mips::SW))
+          .addUse(Hi)
+          .addUse(Address)
+          .addImm(Imm + (IsLittle ? 4 : 0));
+    }
+  } else {
+    // Mips release 5 needs to use instructions that can store to an unaligned
+    // memory address.
+    Register Bitcast = MRI.createVirtualRegister(&Mips::MSA128WRegClass);
+    Register Lo = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register Hi = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY)).addDef(Bitcast).addUse(StoreVal);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+        .addDef(Lo)
+        .addUse(Bitcast)
+        .addImm(0);
+    BuildMI(*BB, I, DL, TII->get(Mips::COPY_S_W))
+        .addDef(Hi)
+        .addUse(Bitcast)
+        .addImm(1);
+    BuildMI(*BB, I, DL, TII->get(Mips::SWR))
+        .addUse(Lo)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 0 : 3));
+    BuildMI(*BB, I, DL, TII->get(Mips::SWL))
+        .addUse(Lo)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 3 : 0));
+    BuildMI(*BB, I, DL, TII->get(Mips::SWR))
+        .addUse(Hi)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 4 : 7));
+    BuildMI(*BB, I, DL, TII->get(Mips::SWL))
+        .addUse(Hi)
+        .addUse(Address)
+        .addImm(Imm + (IsLittle ? 7 : 4));
+  }
+
+  MI.eraseFromParent();
+  return BB;
 }

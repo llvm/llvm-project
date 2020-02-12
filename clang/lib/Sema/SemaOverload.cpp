@@ -230,7 +230,6 @@ bool StandardConversionSequence::isPointerConversionToBool() const {
        getFromType()->isMemberPointerType() ||
        getFromType()->isObjCObjectPointerType() ||
        getFromType()->isBlockPointerType() ||
-       getFromType()->isNullPtrType() ||
        First == ICK_Array_To_Pointer || First == ICK_Function_To_Pointer))
     return true;
 
@@ -328,9 +327,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       goto FloatingIntegralConversion;
     if (FromType->isIntegralOrUnscopedEnumerationType())
       goto IntegralConversion;
-    // Boolean conversions can be from pointers and pointers to members
-    // [conv.bool], and those aren't considered narrowing conversions.
-    return NK_Not_Narrowing;
+    // -- from a pointer type or pointer-to-member type to bool, or
+    return NK_Type_Narrowing;
 
   // -- from a floating-point type to an integer type, or
   //
@@ -1848,8 +1846,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              (FromType->isArithmeticType() ||
               FromType->isAnyPointerType() ||
               FromType->isBlockPointerType() ||
-              FromType->isMemberPointerType() ||
-              FromType->isNullPtrType())) {
+              FromType->isMemberPointerType())) {
     // Boolean conversions (C++ 4.12).
     SCS.Second = ICK_Boolean_Conversion;
     FromType = S.Context.BoolTy;
@@ -5438,6 +5435,17 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
 /// expression From to bool (C++0x [conv]p3).
 static ImplicitConversionSequence
 TryContextuallyConvertToBool(Sema &S, Expr *From) {
+  // C++ [dcl.init]/17.8:
+  //   - Otherwise, if the initialization is direct-initialization, the source
+  //     type is std::nullptr_t, and the destination type is bool, the initial
+  //     value of the object being initialized is false.
+  if (From->getType()->isNullPtrType())
+    return ImplicitConversionSequence::getNullptrToBool(From->getType(),
+                                                        S.Context.BoolTy,
+                                                        From->isGLValue());
+
+  // All other direct-initialization of bool is equivalent to an implicit
+  // conversion to bool in which explicit conversions are permitted.
   return TryImplicitConversion(S, From, S.Context.BoolTy,
                                /*SuppressUserConversions=*/false,
                                AllowedExplicit::Conversions,

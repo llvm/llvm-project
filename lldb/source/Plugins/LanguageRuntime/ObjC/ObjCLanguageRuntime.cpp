@@ -397,7 +397,7 @@ ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   if (!class_type)
     return llvm::None;
 
-  ConstString class_name(class_type.GetConstTypeName());
+  ConstString class_name(class_type.GetTypeName());
   if (!class_name)
     return llvm::None;
 

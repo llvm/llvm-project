@@ -139,24 +139,6 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
       entry.eraseArgument(originalNumArgs - i - 1);
 }
 
-/// Add an entry block to an empty function, and set up the block arguments
-/// to match the signature of the function.
-Block *FuncOp::addEntryBlock() {
-  assert(empty() && "function already has an entry block");
-  auto *entry = new Block();
-  push_back(entry);
-  entry->addArguments(getType().getInputs());
-  return entry;
-}
-
-/// Add a normal block to the end of the function's block list. The function
-/// should at least already have an entry block.
-Block *FuncOp::addBlock() {
-  assert(!empty() && "function should at least have an entry block");
-  push_back(new Block());
-  return &back();
-}
-
 /// Clone the internal blocks from this function into dest and all attributes
 /// from this function to dest.
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {

@@ -1,7 +1,7 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
 spv.module "Logical" "GLSL450" {
-  func @foo() -> () {
+  spv.func @foo() -> () "None" {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @foo

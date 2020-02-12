@@ -273,6 +273,8 @@ private:
   /// new copy.
   Register narrowExtendRegIfNeeded(Register ExtReg,
                                              MachineIRBuilder &MIB) const;
+  Register widenGPRBankRegIfNeeded(Register Reg, unsigned Size,
+                                   MachineIRBuilder &MIB) const;
   ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -1124,26 +1126,25 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
 MachineInstr *AArch64InstructionSelector::emitTestBit(
     Register TestReg, uint64_t Bit, bool IsNegative, MachineBasicBlock *DstMBB,
     MachineIRBuilder &MIB) const {
-  MachineRegisterInfo &MRI = *MIB.getMRI();
-#ifndef NDEBUG
+  assert(TestReg.isValid());
   assert(ProduceNonFlagSettingCondBr &&
          "Cannot emit TB(N)Z with speculation tracking!");
-  assert(TestReg.isValid());
-  LLT Ty = MRI.getType(TestReg);
-  unsigned Size = Ty.getSizeInBits();
-  assert(Bit < Size &&
-         "Bit to test must be smaler than the size of a test register!");
-  assert(Ty.isScalar() && "Expected a scalar!");
-  assert(Size >= 32 && "Expected at least a 32-bit register!");
-#endif
+  MachineRegisterInfo &MRI = *MIB.getMRI();
 
   // Attempt to optimize the test bit by walking over instructions.
   TestReg = getTestBitReg(TestReg, Bit, IsNegative, MRI);
-  bool UseWReg = Bit < 32;
+  LLT Ty = MRI.getType(TestReg);
+  unsigned Size = Ty.getSizeInBits();
+  assert(!Ty.isVector() && "Expected a scalar!");
+  assert(Bit < 64 && "Bit is too large!");
 
   // When the test register is a 64-bit register, we have to narrow to make
   // TBNZW work.
-  if (UseWReg)
+  bool UseWReg = Bit < 32;
+  unsigned NecessarySize = UseWReg ? 32 : 64;
+  if (Size < NecessarySize)
+    TestReg = widenGPRBankRegIfNeeded(TestReg, NecessarySize, MIB);
+  else if (Size > NecessarySize)
     TestReg = narrowExtendRegIfNeeded(TestReg, MIB);
 
   static const unsigned OpcTable[2][2] = {{AArch64::TBZX, AArch64::TBNZX},
@@ -5152,6 +5153,52 @@ Register AArch64InstructionSelector::narrowExtendRegIfNeeded(
   // Select the copy into a subregister copy.
   selectCopy(*Copy, TII, MRI, TRI, RBI);
   return Copy.getReg(0);
+}
+
+Register AArch64InstructionSelector::widenGPRBankRegIfNeeded(
+    Register Reg, unsigned WideSize, MachineIRBuilder &MIB) const {
+  assert(WideSize >= 8 && "WideSize is smaller than all possible registers?");
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  unsigned NarrowSize = MRI.getType(Reg).getSizeInBits();
+  assert(WideSize >= NarrowSize &&
+         "WideSize cannot be smaller than NarrowSize!");
+
+  // If the sizes match, just return the register.
+  //
+  // If NarrowSize is an s1, then we can select it to any size, so we'll treat
+  // it as a don't care.
+  if (NarrowSize == WideSize || NarrowSize == 1)
+    return Reg;
+
+  // Now check the register classes.
+  const RegisterBank *RB = RBI.getRegBank(Reg, MRI, TRI);
+  const TargetRegisterClass *OrigRC = getMinClassForRegBank(*RB, NarrowSize);
+  const TargetRegisterClass *WideRC = getMinClassForRegBank(*RB, WideSize);
+  assert(OrigRC && "Could not determine narrow RC?");
+  assert(WideRC && "Could not determine wide RC?");
+
+  // If the sizes differ, but the register classes are the same, there is no
+  // need to insert a SUBREG_TO_REG.
+  //
+  // For example, an s8 that's supposed to be a GPR will be selected to either
+  // a GPR32 or a GPR64 register. Note that this assumes that the s8 will
+  // always end up on a GPR32.
+  if (OrigRC == WideRC)
+    return Reg;
+
+  // We have two different register classes. Insert a SUBREG_TO_REG.
+  unsigned SubReg = 0;
+  getSubRegForClass(OrigRC, TRI, SubReg);
+  assert(SubReg && "Couldn't determine subregister?");
+
+  // Build the SUBREG_TO_REG and return the new, widened register.
+  auto SubRegToReg =
+      MIB.buildInstr(AArch64::SUBREG_TO_REG, {WideRC}, {})
+          .addImm(0)
+          .addUse(Reg)
+          .addImm(SubReg);
+  constrainSelectedInstRegOperands(*SubRegToReg, TII, TRI, RBI);
+  return SubRegToReg.getReg(0);
 }
 
 /// Select an "extended register" operand. This operand folds in an extend

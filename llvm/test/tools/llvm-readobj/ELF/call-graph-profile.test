@@ -1,0 +1,40 @@
+## This test checks how we handle the --elf-cg-profile option.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj %t.o --elf-cg-profile | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf %t.o --elf-cg-profile | FileCheck %s --check-prefix=GNU
+
+# LLVM:      CGProfile [
+# LLVM-NEXT:  CGProfileEntry {
+# LLVM-NEXT:    From: foo (1)
+# LLVM-NEXT:    To: bar (2)
+# LLVM-NEXT:    Weight: 89
+# LLVM-NEXT:  }
+# LLVM-NEXT:  CGProfileEntry {
+# LLVM-NEXT:    From: bar (2)
+# LLVM-NEXT:    To: foo (1)
+# LLVM-NEXT:    Weight: 98
+# LLVM-NEXT:  }
+# LLVM-NEXT: ]
+
+# GNU: GNUStyle::printCGProfile not implemented
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - From:   foo
+        To:     bar
+        Weight: 89
+      - From:   bar
+        To:     foo
+        Weight: 98
+Symbols:
+  - Name: foo
+  - Name: bar

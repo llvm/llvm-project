@@ -66,7 +66,7 @@ bool shutdownRequested();
 /// requested (which interrupts IO), we'll fail rather than retry.
 template <typename Fun, typename Ret = decltype(std::declval<Fun>()())>
 Ret retryAfterSignalUnlessShutdown(
-    const typename std::enable_if<true, Ret>::type &Fail, // Suppress deduction.
+    const std::enable_if_t<true, Ret> &Fail, // Suppress deduction.
     const Fun &F) {
   Ret Res;
   do {

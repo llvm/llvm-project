@@ -59,10 +59,11 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// 'dest' that is attached to an operation registered to the current dialect.
   bool isLegalToInline(Region *dest, Region *src,
                        BlockAndValueMapping &) const final {
-    // Return true here when inlining into spv.selection and spv.loop
-    // operations.
+    // Return true here when inlining into spv.func, spv.selection, and
+    // spv.loop operations.
     auto op = dest->getParentOp();
-    return isa<spirv::SelectionOp>(op) || isa<spirv::LoopOp>(op);
+    return isa<spirv::FuncOp>(op) || isa<spirv::SelectionOp>(op) ||
+           isa<spirv::LoopOp>(op);
   }
 
   /// Returns true if the given operation 'op', that is registered to this

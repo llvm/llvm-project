@@ -180,7 +180,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
     UnitLength = PrologueLength + 2;
     break;
   case 5:
-    PrologueLength = 39;
+    PrologueLength = 42;
     UnitLength = PrologueLength + 4;
     EXPECT_EQ(Prologue.getAddressSize(), 8u);
     EXPECT_EQ(Prologue.SegSelectorSize, 0u);
@@ -204,6 +204,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
   ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
+  ASSERT_EQ(Prologue.FileNames[0].DirIdx, 0u);
   EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
 }
 
@@ -338,36 +339,33 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
       "unit length found of value 0xfffffff0");
 }
 
-TEST_F(DebugLineBasicFixture, ErrorForLowVersion) {
+struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
+                                            public CommonFixture {
+  void SetUp() { Version = GetParam(); }
+
+  uint16_t Version;
+};
+
+TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
   if (!setupGenerator())
     return;
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue(
-      {{LineTable::Half, LineTable::Long}, {1, LineTable::Half}});
-
-  generate();
-
-  checkGetOrParseLineTableEmitsFatalError(
-      "parsing line table prologue at offset "
-      "0x00000000 found unsupported version "
-      "0x01");
-}
-
-TEST_F(DebugLineBasicFixture, ErrorForHighVersion) {
-  if (!setupGenerator())
-    return;
-
-  LineTable &LT = Gen->addLineTable();
-  LT.setCustomPrologue(
-      {{LineTable::Half, LineTable::Long}, {6, LineTable::Half}});
+      {{LineTable::Half, LineTable::Long}, {Version, LineTable::Half}});
 
   generate();
 
   checkGetOrParseLineTableEmitsFatalError(
       "parsing line table prologue at offset 0x00000000 found unsupported "
-      "version 0x06");
+      "version " +
+      std::to_string(Version));
 }
+
+INSTANTIATE_TEST_CASE_P(UnsupportedVersionTestParams,
+                        DebugLineUnsupportedVersionFixture,
+                        Values(/*1 below min */ 1, /* 1 above max */ 6,
+                               /* Maximum possible */ 0xffff), );
 
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   if (!setupGenerator(5))
@@ -451,12 +449,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
 
   LineTable &LT = Gen->addLineTable(Format);
   DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
-  // FIXME: Ideally, we'd test for 1 less than expected, but the code does not
-  // currently fail if missing only the terminator of a v2-4 file table.
-  if (Version < 5)
-    Prologue.PrologueLength -= 2;
-  else
-    Prologue.PrologueLength -= 1;
+  Prologue.PrologueLength -= 2;
   LT.setPrologue(Prologue);
 
   generate();
@@ -467,23 +460,34 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
   DWARFDebugLine::LineTable Result(**ExpectedLineTable);
   // Undo the earlier modification so that it can be compared against a
   // "default" prologue.
-  if (Version < 5)
-    Result.Prologue.PrologueLength += 2;
-  else
-    Result.Prologue.PrologueLength += 1;
+  Result.Prologue.PrologueLength += 2;
   checkDefaultPrologue(Version, Format, Result.Prologue, 0);
 
   uint64_t ExpectedEnd =
-      Prologue.TotalLength - 1 + Prologue.sizeofTotalLength();
-  if (Version < 5)
-    --ExpectedEnd;
-  checkError(
+      Prologue.TotalLength - 2 + Prologue.sizeofTotalLength();
+  std::vector<std::string> Errs;
+  // Parsing of a DWARFv2-4 file table stops at the end of an entry once the
+  // prologue end has been reached, whether or not the trailing null terminator
+  // has been found. As such, the expected error message will be slightly
+  // different.
+  uint64_t ActualEnd = Version == 5 ? ExpectedEnd + 2 : ExpectedEnd + 1;
+  if (Version != 5) {
+    Errs.emplace_back(
+        (Twine("parsing line table prologue at 0x00000000 found an invalid "
+               "directory or file table description at 0x000000") +
+         Twine::utohexstr(ActualEnd))
+            .str());
+    Errs.emplace_back("file names table was not null terminated before the end "
+                      "of the prologue");
+  }
+  Errs.emplace_back(
       (Twine("parsing line table prologue at 0x00000000 should have ended at "
              "0x000000") +
        Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
-       Twine::utohexstr(ExpectedEnd + 1))
-          .str(),
-      std::move(Recoverable));
+       Twine::utohexstr(ActualEnd))
+          .str());
+  std::vector<StringRef> ErrRefs(Errs.begin(), Errs.end());
+  checkError(ErrRefs, std::move(Recoverable));
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -784,9 +788,9 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
   EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
-              "unsupported version 0x00",
+              "unsupported version 0",
               "parsing line table prologue at offset 0x00000006 found "
-              "unsupported version 0x01"},
+              "unsupported version 1"},
              std::move(Unrecoverable));
 }
 
@@ -842,9 +846,9 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
-              "unsupported version 0x00",
+              "unsupported version 0",
               "parsing line table prologue at offset 0x00000006 found "
-              "unsupported version 0x01"},
+              "unsupported version 1"},
              std::move(Unrecoverable));
 }
 
@@ -914,6 +918,53 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   EXPECT_TRUE(InOutput("0x0000003d: 0a DW_LNS_set_prologue_end\n")) << Output;
   EXPECT_TRUE(InOutput("0x0000003e: 0b DW_LNS_set_epilogue_begin\n")) << Output;
   EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
+}
+
+TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
+  if (!setupGenerator(5))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  DWARFDebugLine::Prologue P = LT.createBasicPrologue();
+  P.IncludeDirectories.push_back(
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b dir"));
+  P.FileNames.push_back(DWARFDebugLine::FileNameEntry());
+  P.FileNames.back().Name =
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b file");
+  P.FileNames.back().DirIdx = 1;
+  P.PrologueLength += 14;
+  LT.setPrologue(P);
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  EXPECT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  std::string Result;
+  // DWARF 5 stores the compilation directory in two places: the Compilation
+  // Unit and the directory table entry 0, and implementations are free to use
+  // one or the other. This copy serves as the one stored in the CU.
+  StringRef CompDir = "a dir";
+  EXPECT_FALSE(
+      (*ExpectedLineTable)
+          ->Prologue.getFileNameByIndex(
+              1, CompDir, DILineInfoSpecifier::FileLineInfoKind::None, Result));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::Default, Result));
+  EXPECT_STREQ(Result.c_str(), "b file");
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+                      Result));
+  EXPECT_THAT(Result.c_str(), MatchesRegex("b dir.b file"));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                      Result));
+  EXPECT_THAT(Result.c_str(), MatchesRegex("a dir.b dir.b file"));
 }
 
 } // end anonymous namespace

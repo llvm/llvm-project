@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(UtilsTests
   ASanStackFrameLayoutTest.cpp
   BasicBlockUtilsTest.cpp
+  CallPromotionUtilsTest.cpp
   CloningTest.cpp
   CodeExtractorTest.cpp
   CodeMoverUtilsTest.cpp

@@ -169,7 +169,8 @@ def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
 def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
-  let Defs = [EXEC];
+  let Uses = [EXEC];
+  let Defs = [EXEC, SCC];
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;

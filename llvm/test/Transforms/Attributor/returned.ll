@@ -334,8 +334,8 @@ if.end:
 ; BOTH: declare void @unknown_fn(i32* (i32*)*)
 ;
 ; BOTH:       Function Attrs: noinline nounwind uwtable
-; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* readnone returned "no-capture-maybe-returned" %r)
-; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* readnone returned "no-capture-maybe-returned" %r)
+; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* nofree readnone returned "no-capture-maybe-returned" %r)
+; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* nofree readnone returned "no-capture-maybe-returned" %r)
 declare void @unknown_fn(i32* (i32*)*) #0
 
 define i32* @calls_unknown_fn(i32* %r) #0 {

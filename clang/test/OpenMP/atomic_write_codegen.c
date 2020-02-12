@@ -87,12 +87,12 @@ int main() {
 #pragma omp atomic write
  __imag(civ) = 1;
 // CHECK: load i8, i8*
-// CHECK: store atomic i8
+// CHECK: store atomic i8{{.*}}monotonic
 #pragma omp atomic write
   bx = bv;
 // CHECK: load i8, i8*
-// CHECK: store atomic i8
-#pragma omp atomic write
+// CHECK: store atomic i8{{.*}}release
+#pragma omp atomic write release
   cx = cv;
 // CHECK: load i8, i8*
 // CHECK: store atomic i8
@@ -189,7 +189,7 @@ int main() {
 #pragma omp atomic write
   bx = cv;
 // CHECK: load i8, i8*
-// CHECK: store atomic i8
+// CHECK: store atomic i8{{.*}}seq_cst
 // CHECK: call{{.*}} @__kmpc_flush(
 #pragma omp atomic write, seq_cst
   cx = ucv;
@@ -486,11 +486,11 @@ int main() {
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-#pragma omp atomic write
+#pragma omp atomic relaxed write
   bfx4_packed.b = ldv;
 // CHECK: load i64, i64*
 // CHECK: [[VEC_ITEM_VAL:%.+]] = uitofp i64 %{{.+}} to float
-// CHECK: [[I64VAL:%.+]] = load atomic i64, i64* bitcast (<2 x float>* [[DEST:@.+]] to i64*) acquire
+// CHECK: [[I64VAL:%.+]] = load atomic i64, i64* bitcast (<2 x float>* [[DEST:@.+]] to i64*) monotonic
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_I64:%.+]] = phi i64 [ [[I64VAL]], %{{.+}} ], [ [[FAILED_I64_OLD_VAL:%.+]], %[[CONT]] ]
@@ -500,13 +500,12 @@ int main() {
 // CHECK: [[NEW_VEC_VAL:%.+]] = insertelement <2 x float> [[VEC_VAL]], float [[VEC_ITEM_VAL]], i64 0
 // CHECK: store <2 x float> [[NEW_VEC_VAL]], <2 x float>* [[LDTEMP]]
 // CHECK: [[NEW_I64:%.+]] = load i64, i64* [[BITCAST]]
-// CHECK: [[RES:%.+]] = cmpxchg i64* bitcast (<2 x float>* [[DEST]] to i64*), i64 [[OLD_I64]], i64 [[NEW_I64]] acq_rel acquire
+// CHECK: [[RES:%.+]] = cmpxchg i64* bitcast (<2 x float>* [[DEST]] to i64*), i64 [[OLD_I64]], i64 [[NEW_I64]] monotonic monotonic
 // CHECK: [[FAILED_I64_OLD_VAL:%.+]] = extractvalue { i64, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i64, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-// CHECK: call{{.*}} @__kmpc_flush(
-#pragma omp atomic write acq_rel
+#pragma omp atomic write relaxed
   float2x.x = ulv;
 // CHECK: call i32 @llvm.read_register.i32(
 // CHECK: sitofp i32 %{{.+}} to double

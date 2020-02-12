@@ -4,16 +4,19 @@
 
 #include <functional>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 
 /* ISL_USE_EXCEPTIONS should be defined to 1 if exceptions are available.
  * gcc and clang define __cpp_exceptions; MSVC and xlC define _CPPUNWIND.
+ * Older versions of gcc (e.g., 4.9) only define __EXCEPTIONS.
  * If exceptions are not available, any error condition will result
  * in an abort.
  */
 #ifndef ISL_USE_EXCEPTIONS
-#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND) || defined(__EXCEPTIONS)
 #define ISL_USE_EXCEPTIONS	1
 #else
 #define ISL_USE_EXCEPTIONS	0
@@ -80,10 +83,10 @@ public:
 	 * will be included in the exception thrown from inside the bindings.
 	 */
 	static constexpr auto on_error = ISL_ON_ERROR_CONTINUE;
-	/* Wrapper for throwing an exception on NULL input.
+	/* Wrapper for throwing an exception with the given message.
 	 */
-	static void throw_NULL_input(const char *file, int line) {
-		throw_error(isl_error_invalid, "NULL input", file, line);
+	static void throw_invalid(const char *msg, const char *file, int line) {
+		throw_error(isl_error_invalid, msg, file, line);
 	}
 	static inline void throw_last_error(ctx ctx);
 };
@@ -204,11 +207,11 @@ public:
 	 * In the case exceptions are not available, isl should abort.
 	 */
 	static constexpr auto on_error = ISL_ON_ERROR_ABORT;
-	/* Wrapper for throwing an exception on NULL input.
+	/* Wrapper for throwing an exception with the given message.
 	 * In the case exceptions are not available, print an error and abort.
 	 */
-	static void throw_NULL_input(const char *file, int line) {
-		fprintf(stderr, "%s:%d: NULL input\n", file, line);
+	static void throw_invalid(const char *msg, const char *file, int line) {
+		fprintf(stderr, "%s:%d: %s\n", file, line, msg);
 		abort();
 	}
 	/* Throw an exception corresponding to the last

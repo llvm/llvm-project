@@ -95,6 +95,24 @@ private:
   const std::string f64Func;
 };
 
+namespace gpu {
+/// Returns a predicate to be used with addDynamicallyLegalOp. The predicate
+/// returns false for calls to the provided intrinsics and true otherwise.
+inline std::function<bool(Operation *)>
+filterIllegalLLVMIntrinsics(ArrayRef<StringRef> intrinsics, MLIRContext *ctx) {
+  SmallVector<StringRef, 4> illegalIds(intrinsics.begin(), intrinsics.end());
+  return [illegalIds](Operation *op) -> bool {
+    LLVM::CallOp callOp = dyn_cast<LLVM::CallOp>(op);
+    if (!callOp || !callOp.callee())
+      return true;
+    StringRef callee = callOp.callee().getValue();
+    return !llvm::any_of(illegalIds, [callee](StringRef intrinsic) {
+      return callee.equals(intrinsic);
+    });
+  };
+}
+} // namespace gpu
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_OPTOFUNCCALLLOWERING_H_

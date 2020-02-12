@@ -223,7 +223,6 @@ define i1 @ret_undef() {
 
 define void @cond_br_on_undef_interproc() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc(
-; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef()
 ; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    unreachable
@@ -249,7 +248,6 @@ e:
 ; More complicated interproc deduction of undef
 define void @cond_br_on_undef_interproc2() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc2(
-; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef2()
 ; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    unreachable

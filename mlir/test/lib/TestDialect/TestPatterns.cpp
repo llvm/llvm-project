@@ -50,9 +50,6 @@ struct TestPatternDriver : public FunctionPass<TestPatternDriver> {
 };
 } // end anonymous namespace
 
-static mlir::PassRegistration<TestPatternDriver>
-    pass("test-patterns", "Run test dialect patterns");
-
 //===----------------------------------------------------------------------===//
 // ReturnType Driver.
 //===----------------------------------------------------------------------===//
@@ -106,9 +103,6 @@ struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
   }
 };
 } // end anonymous namespace
-
-static mlir::PassRegistration<TestReturnTypeDriver>
-    rt_pass("test-return-type", "Run return type functions");
 
 //===----------------------------------------------------------------------===//
 // Legalization Driver.
@@ -440,13 +434,6 @@ static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
             clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
                        "partial", "Perform a partial conversion")));
 
-static mlir::PassRegistration<TestLegalizePatternDriver>
-    legalizer_pass("test-legalize-patterns",
-                   "Run test dialect legalization patterns", [] {
-                     return std::make_unique<TestLegalizePatternDriver>(
-                         legalizerConversionMode);
-                   });
-
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
 // to get the remapped value of a original value that was replaced using
@@ -505,6 +492,22 @@ struct TestRemappedValue : public mlir::FunctionPass<TestRemappedValue> {
 };
 } // end anonymous namespace
 
-static PassRegistration<TestRemappedValue> remapped_value_pass(
-    "test-remapped-value",
-    "Test public remapped value mechanism in ConversionPatternRewriter");
+namespace mlir {
+void registerPatternsTestPass() {
+  mlir::PassRegistration<TestReturnTypeDriver>("test-return-type",
+                                               "Run return type functions");
+
+  mlir::PassRegistration<TestPatternDriver>("test-patterns",
+                                            "Run test dialect patterns");
+
+  mlir::PassRegistration<TestLegalizePatternDriver>(
+      "test-legalize-patterns", "Run test dialect legalization patterns", [] {
+        return std::make_unique<TestLegalizePatternDriver>(
+            legalizerConversionMode);
+      });
+
+  PassRegistration<TestRemappedValue>(
+      "test-remapped-value",
+      "Test public remapped value mechanism in ConversionPatternRewriter");
+}
+} // namespace mlir

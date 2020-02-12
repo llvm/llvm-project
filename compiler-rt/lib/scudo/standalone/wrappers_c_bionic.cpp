@@ -25,11 +25,6 @@
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
 static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
-// Pointer to the static allocator so that the C++ wrappers can access it.
-// Technically we could have a completely separated heap for C & C++ but in
-// reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)> *
-    CONCATENATE(SCUDO_ALLOCATOR, Ptr) = &SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
 
@@ -44,11 +39,6 @@ extern "C" void SCUDO_PREFIX(malloc_postinit)();
 static scudo::Allocator<scudo::AndroidSvelteConfig,
                         SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
-// Pointer to the static allocator so that the C++ wrappers can access it.
-// Technically we could have a completely separated heap for C & C++ but in
-// reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::AndroidSvelteConfig, SCUDO_PREFIX(malloc_postinit)> *
-    CONCATENATE(SCUDO_ALLOCATOR, Ptr) = &SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
 

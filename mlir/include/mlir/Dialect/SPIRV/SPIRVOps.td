@@ -210,7 +210,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
   let autogenSerialization = 0;
 
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
-                              FuncOp function,
+                              spirv::FuncOp function,
                               spirv::ExecutionMode executionMode,
                               ArrayRef<int32_t> params}]>];
 }

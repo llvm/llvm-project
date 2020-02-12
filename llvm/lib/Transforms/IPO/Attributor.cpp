@@ -374,9 +374,11 @@ static Value *constructPointer(Type *ResTy, Value *Ptr, int64_t Offset,
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
 /// further, the callback \p VisitValueCB is invoked and passed the current
-/// value, the \p State, and a flag to indicate if we stripped anything. To
-/// limit how much effort is invested, we will never visit more values than
-/// specified by \p MaxValues.
+/// value, the \p State, and a flag to indicate if we stripped anything.
+/// Stripped means that we unpacked the value associated with \p IRP at least
+/// once. Note that the value used for the callback may still be the value
+/// associated with \p IRP (due to PHIs). To limit how much effort is invested,
+/// we will never visit more values than specified by \p MaxValues.
 template <typename AAType, typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
@@ -1192,8 +1194,9 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
     if (CB.getNumUses() == 0 || CB.isMustTailCall())
       return ChangeStatus::UNCHANGED;
-    A.replaceAllUsesWith(CB, C);
-    return ChangeStatus::CHANGED;
+    if (A.changeValueAfterManifest(CB, C))
+      return ChangeStatus::CHANGED;
+    return ChangeStatus::UNCHANGED;
   };
 
   // If the assumed unique return value is an argument, annotate it.
@@ -1771,6 +1774,8 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
+      if (isa<ReturnInst>(UserI))
+        return true;
 
       // Unknown user.
       return false;
@@ -4443,8 +4448,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
         LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *C
                           << " :: " << *this << "\n");
-        A.changeValueAfterManifest(V, *C);
-        Changed = ChangeStatus::CHANGED;
+        if (A.changeValueAfterManifest(V, *C))
+          Changed = ChangeStatus::CHANGED;
       }
     }
 
@@ -4696,7 +4701,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
                              AI->getNextNode());
 
-      A.replaceAllUsesWith(*MallocCall, *AI);
+      A.changeValueAfterManifest(*MallocCall, *AI);
 
       if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
         auto *NBB = II->getNormalDest();
@@ -6485,14 +6490,27 @@ bool Attributor::checkForAllUses(
     const Use *U = Worklist.pop_back_val();
     if (!Visited.insert(U).second)
       continue;
-    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << "\n");
-    if (Instruction *UserI = dyn_cast<Instruction>(U->getUser()))
-      if (LivenessAA && LivenessAA->isAssumedDead(UserI)) {
-        LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
-                          << *LivenessAA << "\n");
-        AnyDead = true;
-        continue;
+    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << " [" << LivenessAA
+                      << "]\n");
+    if (LivenessAA) {
+      if (Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
+        if (LivenessAA->isAssumedDead(UserI)) {
+          LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
+                            << *LivenessAA << "\n");
+          AnyDead = true;
+          continue;
+        }
+        if (PHINode *PHI = dyn_cast<PHINode>(UserI)) {
+          BasicBlock *IncomingBB = PHI->getIncomingBlock(*U);
+          if (LivenessAA->isAssumedDead(IncomingBB->getTerminator())) {
+            LLVM_DEBUG(dbgs() << "[Attributor] Dead user: " << *UserI << ": "
+                              << *LivenessAA << "\n");
+            AnyDead = true;
+            continue;
+          }
+        }
       }
+    }
 
     bool Follow = false;
     if (!Pred(*U, Follow))
@@ -7705,10 +7723,12 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     A.identifyDefaultAbstractAttributes(*F);
   }
 
-  bool Changed = A.run() == ChangeStatus::CHANGED;
+  ChangeStatus Changed = A.run();
   assert(!verifyModule(*Functions.front()->getParent(), &errs()) &&
          "Module verification failed!");
-  return Changed;
+  LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
+                    << " functions, result: " << Changed << ".\n");
+  return Changed == ChangeStatus::CHANGED;
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {

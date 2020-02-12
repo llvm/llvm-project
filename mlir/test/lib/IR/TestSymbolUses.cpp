@@ -103,8 +103,12 @@ struct SymbolReplacementPass : public ModulePass<SymbolReplacementPass> {
 };
 } // end anonymous namespace
 
-static PassRegistration<SymbolUsesPass> pass("test-symbol-uses",
-                                             "Test detection of symbol uses");
+namespace mlir {
+void registerSymbolTestPasses() {
+  PassRegistration<SymbolUsesPass>("test-symbol-uses",
+                                   "Test detection of symbol uses");
 
-static PassRegistration<SymbolReplacementPass>
-    rauwPass("test-symbol-rauw", "Test replacement of symbol uses");
+  PassRegistration<SymbolReplacementPass>("test-symbol-rauw",
+                                          "Test replacement of symbol uses");
+}
+} // namespace mlir

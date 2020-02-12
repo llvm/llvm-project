@@ -126,7 +126,7 @@ public:
 
   TypeNameSpecifierImpl(CompilerType type) : m_is_regex(false), m_type() {
     if (type.IsValid()) {
-      m_type.m_type_name.assign(type.GetConstTypeName().GetCString());
+      m_type.m_type_name.assign(type.GetTypeName().GetCString());
       m_type.m_compiler_type = type;
     }
   }

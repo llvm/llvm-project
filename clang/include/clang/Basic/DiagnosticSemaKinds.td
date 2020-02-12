@@ -9695,9 +9695,11 @@ def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
-def err_omp_atomic_several_mem_order_clauses : Error<
-  "directive '#pragma omp atomic' cannot contain more than one 'seq_cst' or 'acq_rel' clause">;
-def note_omp_atomic_previous_clause : Note<
+def err_omp_several_mem_order_clauses : Error<
+  "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
+def err_omp_atomic_incompatible_mem_order_clause : Error<
+  "directive '#pragma omp atomic%select{ %0|}1' cannot be used with '%2' clause">;
+def note_omp_previous_mem_order_clause : Note<
   "'%0' clause used here">;
 def err_omp_target_contains_not_only_teams : Error<
   "target construct with nested teams region contains statements outside of the teams construct">;
@@ -9850,10 +9852,10 @@ def err_omp_requires_clause_redeclaration : Error <
   "Only one %0 clause can appear on a requires directive in a single translation unit">;
 def note_omp_requires_previous_clause : Note <
   "%0 clause previously used here">;
-def err_omp_target_before_requires : Error <
-  "target region encountered before requires directive with '%0' clause">;
-def note_omp_requires_encountered_target : Note <
-  "target previously encountered here">;
+def err_omp_directive_before_requires : Error <
+  "'%0' region encountered before requires directive with '%1' clause">;
+def note_omp_requires_encountered_directive : Note <
+  "'%0' previously encountered here">;
 def err_omp_invalid_scope : Error <
   "'#pragma omp %0' directive must appear only in file scope">;
 def note_omp_invalid_length_on_this_ptr_mapping : Note <

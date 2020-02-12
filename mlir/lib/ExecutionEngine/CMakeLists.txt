@@ -13,6 +13,7 @@ target_link_libraries(MLIRExecutionEngine
   LLVMBitReader
   LLVMBitWriter
   LLVMExecutionEngine
+  LLVMObject
   LLVMOrcJIT
   LLVMJITLink
   LLVMSupport

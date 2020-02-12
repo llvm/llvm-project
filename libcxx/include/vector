@@ -1956,8 +1956,8 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __firs
 #endif  // _LIBCPP_NO_EXCEPTIONS
     }
     __p = _VSTD::rotate(__p, __old_last, this->__end_);
-    insert(__make_iter(__p), make_move_iterator(__v.begin()),
-                                    make_move_iterator(__v.end()));
+    insert(__make_iter(__p), _VSTD::make_move_iterator(__v.begin()),
+                             _VSTD::make_move_iterator(__v.end()));
     return begin() + __off;
 }
 

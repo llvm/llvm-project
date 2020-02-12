@@ -29,6 +29,10 @@ struct TestVectorToLoopsPass
 
 } // end anonymous namespace
 
-static PassRegistration<TestVectorToLoopsPass>
-    pass("test-convert-vector-to-loops",
-         "Converts vector transfer ops to loops over scalars and vector casts");
+namespace mlir {
+void registerTestVectorToLoopsPass() {
+  PassRegistration<TestVectorToLoopsPass> pass(
+      "test-convert-vector-to-loops",
+      "Converts vector transfer ops to loops over scalars and vector casts");
+}
+} // namespace mlir
