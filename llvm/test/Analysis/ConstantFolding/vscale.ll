@@ -185,6 +185,20 @@ define <vscale x 4 x i32> @shufflevector() {
   %i2 = shufflevector <vscale x 4 x i32> %i, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %i2
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Memory Access and Addressing Operations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+define <vscale x 2 x double> @load() {
+; CHECK-LABEL: @load(
+; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
+; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
+;
+  %r = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
+  ret <vscale x 2 x double> %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Conversion Operations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
