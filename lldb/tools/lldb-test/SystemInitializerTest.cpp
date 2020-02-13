@@ -96,7 +96,6 @@ LLDB_PLUGIN_DECLARE(StructuredDataDarwinLog)
 LLDB_PLUGIN_DECLARE(PlatformRemoteGDBServer)
 LLDB_PLUGIN_DECLARE(ProcessGDBRemote)
 LLDB_PLUGIN_DECLARE(DynamicLoaderMacOSXDYLD)
-LLDB_PLUGIN_DECLARE(DynamicLoaderMacOS)
 LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
@@ -234,7 +233,6 @@ llvm::Error SystemInitializerTest::Initialize() {
 
   LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOS);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderPOSIXDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
@@ -322,7 +320,6 @@ void SystemInitializerTest::Terminate() {
   LLDB_PLUGIN_TERMINATE(StructuredDataDarwinLog);
 
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOS);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderPOSIXDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);

@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicLoaderMacOSXDYLD.h"
+#include "DynamicLoaderDarwin.h"
+#include "DynamicLoaderMacOS.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -24,12 +29,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
-
-#include "DynamicLoaderDarwin.h"
-#include "DynamicLoaderMacOSXDYLD.h"
-
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -1123,9 +1122,11 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
+  DynamicLoaderMacOS::Initialize();
 }
 
 void DynamicLoaderMacOSXDYLD::Terminate() {
+  DynamicLoaderMacOS::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
