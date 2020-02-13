@@ -286,7 +286,7 @@ def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 def AMDGPUffbh_u32_impl : SDNode<"AMDGPUISD::FFBH_U32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 
-def AMDGPUffbl_b32 : SDNode<"AMDGPUISD::FFBL_B32", SDTIntUnaryOp>;
+def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
 // when performing the mulitply. The result is a 32-bit value.
@@ -424,6 +424,10 @@ def AMDGPUffbh_i32 : PatFrags<(ops node:$src),
 def AMDGPUffbh_u32 : PatFrags<(ops node:$src),
   [(ctlz_zero_undef node:$src),
    (AMDGPUffbh_u32_impl node:$src)]>;
+
+def AMDGPUffbl_b32 : PatFrags<(ops node:$src),
+  [(cttz_zero_undef node:$src),
+   (AMDGPUffbl_b32_impl node:$src)]>;
 
 def AMDGPUpkrtz_f16_f32 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_cvt_pkrtz node:$src0, node:$src1),
