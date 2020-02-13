@@ -1321,8 +1321,11 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
       assert(DI->getVariable() && "Missing variable");
       assert(DI->getDebugLoc() && "Missing location");
       const Value *Address = DI->getAddress();
-      if (!Address)
+      if (!Address) {
+        LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *DI
+                          << " (bad address)\n");
         continue;
+      }
 
       // Look through casts and constant offset GEPs. These mostly come from
       // inalloca.
@@ -1347,6 +1350,8 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
       if (Offset.getBoolValue())
         Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
                                      Offset.getZExtValue());
+      LLVM_DEBUG(dbgs() << "processDbgDeclares: setVariableDbgInfo FI=" << FI
+                        << ", " << *DI << "\n");
       MF->setVariableDbgInfo(DI->getVariable(), Expr, FI, DI->getDebugLoc());
     }
   }
