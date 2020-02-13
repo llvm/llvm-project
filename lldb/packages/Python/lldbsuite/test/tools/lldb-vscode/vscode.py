@@ -111,6 +111,7 @@ class DebugCommunication(object):
         self.exit_status = None
         self.initialize_body = None
         self.thread_stop_reasons = {}
+        self.breakpoint_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -186,7 +187,7 @@ class DebugCommunication(object):
                     self.output[category] = output
                 self.output_condition.notify()
                 self.output_condition.release()
-                # no need to add 'output' packets to our packets list
+                # no need to add 'output' event packets to our packets list
                 return keepGoing
             elif event == 'process':
                 # When a new process is attached or launched, remember the
@@ -200,6 +201,13 @@ class DebugCommunication(object):
                 self._process_stopped()
                 tid = body['threadId']
                 self.thread_stop_reasons[tid] = body
+            elif event == 'breakpoint':
+                # Breakpoint events come in when a breakpoint has locations
+                # added or removed. Keep track of them so we can look for them
+                # in tests.
+                self.breakpoint_events.append(packet)
+                # no need to add 'breakpoint' event packets to our packets list
+                return keepGoing
         elif packet_type == 'response':
             if packet['command'] == 'disconnect':
                 keepGoing = False

@@ -15,7 +15,7 @@
 #include <string>
 
 namespace lldb_vscode {
-  
+
 struct BreakpointBase {
 
   // An optional expression for conditional breakpoints.
@@ -36,6 +36,7 @@ struct BreakpointBase {
   void SetCondition();
   void SetHitCondition();
   void UpdateBreakpoint(const BreakpointBase &request_bp);
+  static const char *GetBreakpointLabel();
 };
 
 } // namespace lldb_vscode

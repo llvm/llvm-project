@@ -17,6 +17,9 @@ SourceBreakpoint::SourceBreakpoint(const llvm::json::Object &obj)
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   bp = g_vsc.target.BreakpointCreateByLocation(source_path.str().c_str(), line);
+  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
+  // we add a label to our breakpoints.
+  bp.AddName(GetBreakpointLabel());
   if (!condition.empty())
     SetCondition();
   if (!hitCondition.empty())
