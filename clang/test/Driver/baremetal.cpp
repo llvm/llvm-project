@@ -13,7 +13,7 @@
 // CHECK-V6M-C-NEXT: "{{[^"]*}}ld{{(\.(lld|bfd|gold))?}}{{(\.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-V6M-C-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
-// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m.a"
+// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
 // CHECK-V6M-C-SAME: "-o" "{{.*}}.o"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
@@ -35,7 +35,7 @@
 // CHECK-V6M-DEFAULTCXX: "{{[^"]*}}ld{{(\.(lld|bfd|gold))?}}{{(\.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-V6M-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}lib{{(64)?}}{{[/\\]+}}clang{{[/\\]+}}{{.*}}{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m.a"
+// CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
 // CHECK-V6M-DEFAULTCXX-SAME: "-o" "{{.*}}.o"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
@@ -48,7 +48,7 @@
 // CHECK-V6M-LIBCXX: "{{[^"]*}}ld{{(\.(lld|bfd|gold))?}}{{(\.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-V6M-LIBCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}lib{{(64)?}}{{[/\\]+}}clang{{[/\\]+}}{{.*}}{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-LIBCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m.a"
+// CHECK-V6M-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
 // CHECK-V6M-LIBCXX-SAME: "-o" "{{.*}}.o"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
@@ -61,7 +61,7 @@
 // CHECK-V6M-LIBSTDCXX: "{{[^"]*}}ld{{(\.(lld|bfd|gold))?}}{{(\.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-V6M-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}lib{{(64)?}}{{[/\\]+}}clang{{[/\\]+}}{{.*}}{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-LIBSTDCXX-SAME: "-lstdc++" "-lsupc++" "-lunwind"
-// CHECK-V6M-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m.a"
+// CHECK-V6M-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
 // CHECK-V6M-LIBSTDCXX-SAME: "-o" "{{.*}}.o"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
