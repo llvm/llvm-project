@@ -371,7 +371,9 @@ def AnyComplex : Type<CPred<"$_self.isa<ComplexType>()">, "complex-type">;
 
 class OpaqueType<string dialect, string name, string description>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
-         description>;
+         description>,
+    BuildableType<"OpaqueType::get($_builder.getIdentifier(\"" # dialect #
+                  "\"), \"" # name # "\", $_builder.getContext())">;
 
 // Function Type
 
