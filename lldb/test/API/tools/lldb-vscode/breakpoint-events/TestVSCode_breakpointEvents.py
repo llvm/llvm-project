@@ -17,6 +17,7 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
+    @skipUnlessDarwin
     def test_breakpoint_events(self):
         '''
             This test sets a breakpoint in a shared library and runs and stops
