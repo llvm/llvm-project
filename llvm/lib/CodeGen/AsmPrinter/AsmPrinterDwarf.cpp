@@ -36,22 +36,23 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 /// EmitSLEB128 - emit the specified signed leb128 value.
-void AsmPrinter::EmitSLEB128(int64_t Value, const char *Desc) const {
+void AsmPrinter::emitSLEB128(int64_t Value, const char *Desc) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
-  OutStreamer->EmitSLEB128IntValue(Value);
+  OutStreamer->emitSLEB128IntValue(Value);
 }
 
-void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc, unsigned PadTo) const {
+void AsmPrinter::emitULEB128(uint64_t Value, const char *Desc,
+                             unsigned PadTo) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
-  OutStreamer->EmitULEB128IntValue(Value, PadTo);
+  OutStreamer->emitULEB128IntValue(Value, PadTo);
 }
 
 /// Emit something like ".uleb128 Hi-Lo".
-void AsmPrinter::EmitLabelDifferenceAsULEB128(const MCSymbol *Hi,
+void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
                                               const MCSymbol *Lo) const {
   OutStreamer->emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
@@ -165,7 +166,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
   }
 
   // Otherwise, emit it as a label difference from the start of the section.
-  EmitLabelDifference(Label, Label->getSection().getBeginSymbol(), 4);
+  emitLabelDifference(Label, Label->getSection().getBeginSymbol(), 4);
 }
 
 void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
@@ -179,25 +180,23 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   emitInt32(S.Offset);
 }
 
-void AsmPrinter::EmitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
-  EmitLabelPlusOffset(Label, Offset, MAI->getCodePointerSize());
+void AsmPrinter::emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
+  emitLabelPlusOffset(Label, Offset, MAI->getCodePointerSize());
 }
 
-void AsmPrinter::EmitCallSiteOffset(const MCSymbol *Hi,
-                                    const MCSymbol *Lo,
+void AsmPrinter::emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
                                     unsigned Encoding) const {
   // The least significant 3 bits specify the width of the encoding
   if ((Encoding & 0x7) == dwarf::DW_EH_PE_uleb128)
-    EmitLabelDifferenceAsULEB128(Hi, Lo);
+    emitLabelDifferenceAsULEB128(Hi, Lo);
   else
-    EmitLabelDifference(Hi, Lo, GetSizeOfEncodedValue(Encoding));
+    emitLabelDifference(Hi, Lo, GetSizeOfEncodedValue(Encoding));
 }
 
-void AsmPrinter::EmitCallSiteValue(uint64_t Value,
-                                   unsigned Encoding) const {
+void AsmPrinter::emitCallSiteValue(uint64_t Value, unsigned Encoding) const {
   // The least significant 3 bits specify the width of the encoding
   if ((Encoding & 0x7) == dwarf::DW_EH_PE_uleb128)
-    EmitULEB128(Value);
+    emitULEB128(Value);
   else
     OutStreamer->EmitIntValue(Value, GetSizeOfEncodedValue(Encoding));
 }
@@ -256,7 +255,7 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
                             Twine::utohexstr(Die.getOffset()) + ":0x" +
                             Twine::utohexstr(Die.getSize()) + " " +
                             dwarf::TagString(Die.getTag()));
-  EmitULEB128(Die.getAbbrevNumber());
+  emitULEB128(Die.getAbbrevNumber());
 
   // Emit the DIE attribute values.
   for (const auto &V : Die.values()) {
@@ -286,7 +285,7 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
 
 void AsmPrinter::emitDwarfAbbrev(const DIEAbbrev &Abbrev) const {
   // Emit the abbreviations code (base 1 index.)
-  EmitULEB128(Abbrev.getNumber(), "Abbreviation Code");
+  emitULEB128(Abbrev.getNumber(), "Abbreviation Code");
 
   // Emit the abbreviations data.
   Abbrev.Emit(this);

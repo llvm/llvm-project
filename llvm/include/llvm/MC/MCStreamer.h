@@ -670,17 +670,17 @@ public:
     EmitIntValue(Value, Size);
   }
 
-  virtual void EmitULEB128Value(const MCExpr *Value);
+  virtual void emitULEB128Value(const MCExpr *Value);
 
-  virtual void EmitSLEB128Value(const MCExpr *Value);
+  virtual void emitSLEB128Value(const MCExpr *Value);
 
   /// Special case of EmitULEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
-  void EmitULEB128IntValue(uint64_t Value, unsigned PadTo = 0);
+  void emitULEB128IntValue(uint64_t Value, unsigned PadTo = 0);
 
   /// Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
-  void EmitSLEB128IntValue(int64_t Value);
+  void emitSLEB128IntValue(int64_t Value);
 
   /// Special case of EmitValue that avoids the client having to pass in
   /// a MCExpr for MCSymbols.
@@ -821,7 +821,7 @@ public:
 
   /// Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
-  unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
+  unsigned emitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                   StringRef Filename,
                                   Optional<MD5::MD5Result> Checksum = None,
                                   Optional<StringRef> Source = None,
@@ -851,7 +851,7 @@ public:
 
   /// This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
-  virtual void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
+  virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);

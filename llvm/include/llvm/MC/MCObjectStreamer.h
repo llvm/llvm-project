@@ -114,13 +114,13 @@ public:
   /// @{
 
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  virtual void EmitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                               uint64_t Offset);
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
-  void EmitULEB128Value(const MCExpr *Value) override;
-  void EmitSLEB128Value(const MCExpr *Value) override;
+  void emitULEB128Value(const MCExpr *Value) override;
+  void emitSLEB128Value(const MCExpr *Value) override;
   void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
@@ -140,14 +140,13 @@ public:
                          unsigned MaxBytesToEmit = 0) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
-  void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
-                             unsigned Column, unsigned Flags,
-                             unsigned Isa, unsigned Discriminator,
+  void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
+                             unsigned Flags, unsigned Isa,
+                             unsigned Discriminator,
                              StringRef FileName) override;
-  void EmitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
-                                const MCSymbol *Label,
-                                unsigned PointerSize);
-  void EmitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
+  void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
+                                const MCSymbol *Label, unsigned PointerSize);
+  void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label);
   void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,

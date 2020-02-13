@@ -397,7 +397,7 @@ static bool canBeHidden(const GlobalValue *GV, const MCAsmInfo &MAI) {
   return GV->canBeOmittedFromSymbolTable();
 }
 
-void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
+void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   GlobalValue::LinkageTypes Linkage = GV->getLinkage();
   switch (Linkage) {
   case GlobalValue::CommonLinkage:
@@ -501,7 +501,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   // getOrCreateEmuTLSControlSym only creates the symbol with name and default
   // attributes.
   // GV's or GVSym's attributes will be used for the EmittedSym.
-  EmitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
+  emitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
 
   if (!GV->hasInitializer())   // External globals require no extra code.
     return;
@@ -551,7 +551,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
       TheSection->isVirtualSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
-    EmitLinkage(GV, GVSym);
+    emitLinkage(GV, GVSym);
     // .zerofill __DATA, __bss, _foo, 400, 5
     OutStreamer->EmitZerofill(TheSection, GVSym, Size, Alignment.value());
     return;
@@ -621,7 +621,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
     OutStreamer->SwitchSection(TLVSect);
     // Emit the linkage here.
-    EmitLinkage(GV, GVSym);
+    emitLinkage(GV, GVSym);
     OutStreamer->EmitLabel(GVSym);
 
     // Three pointers in size:
@@ -642,7 +642,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   OutStreamer->SwitchSection(TheSection);
 
-  EmitLinkage(GV, EmittedInitSym);
+  emitLinkage(GV, EmittedInitSym);
   EmitAlignment(Alignment, GV);
 
   OutStreamer->EmitLabel(EmittedInitSym);
@@ -664,7 +664,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 ///
 /// \p Value - The value to emit.
 /// \p Size - The size of the integer (in bytes) to emit.
-void AsmPrinter::EmitDebugValue(const MCExpr *Value, unsigned Size) const {
+void AsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   OutStreamer->EmitValue(Value, Size);
 }
 
@@ -683,13 +683,13 @@ void AsmPrinter::emitFunctionHeader() {
 
   // Print the 'header' of function.
   OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(&F, TM));
-  EmitVisibility(CurrentFnSym, F.getVisibility());
+  emitVisibility(CurrentFnSym, F.getVisibility());
 
   if (MAI->needsFunctionDescriptors() &&
       F.getLinkage() != GlobalValue::InternalLinkage)
-    EmitLinkage(&F, CurrentFnDescSym);
+    emitLinkage(&F, CurrentFnDescSym);
 
-  EmitLinkage(&F, CurrentFnSym);
+  emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
     EmitAlignment(MF->getAlignment(), &F);
 
@@ -1046,7 +1046,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   uint64_t StackSize = FrameInfo.getStackSize();
   OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
-  OutStreamer->EmitULEB128IntValue(StackSize);
+  OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->PopSection();
 }
@@ -1374,7 +1374,7 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
                                                ? MCSA_ELF_TypeIndFunction
                                                : MCSA_ELF_TypeFunction);
 
-  EmitVisibility(Name, GIS.getVisibility());
+  emitVisibility(Name, GIS.getVisibility());
 
   const MCExpr *Expr = lowerConstant(GIS.getIndirectSymbol());
 
@@ -1459,7 +1459,7 @@ bool AsmPrinter::doFinalization(Module &M) {
       continue;
 
     MCSymbol *Name = getSymbol(&F);
-    EmitVisibility(Name, V, false);
+    emitVisibility(Name, V, false);
   }
 
   // Emit the remarks section contents.
@@ -2182,7 +2182,7 @@ void AsmPrinter::emitInt64(uint64_t Value) const {
 /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
 /// is specified by Size and Hi/Lo specify the labels. This implicitly uses
 /// .set if it avoids relocations.
-void AsmPrinter::EmitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
+void AsmPrinter::emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
                                      unsigned Size) const {
   OutStreamer->emitAbsoluteSymbolDiff(Hi, Lo, Size);
 }
@@ -2190,7 +2190,7 @@ void AsmPrinter::EmitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
 /// EmitLabelPlusOffset - Emit something like ".long Label+Offset"
 /// where the size in bytes of the directive is specified by Size and Label
 /// specifies the label.  This implicitly uses .set if it is available.
-void AsmPrinter::EmitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
+void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
   if (MAI->needsDwarfSectionOffsetDirective() && IsSectionRelative) {
@@ -3043,7 +3043,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
 void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {}
 
-void AsmPrinter::EmitVisibility(MCSymbol *Sym, unsigned Visibility,
+void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
                                 bool IsDefinition) const {
   MCSymbolAttr Attr = MCSA_Invalid;
 

@@ -1628,7 +1628,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
     MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
     EndLabel = Asm->createTempSymbol(Prefix + "end");
-    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+    Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
     Asm->OutStreamer->EmitLabel(BeginLabel);
   } else
     Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());

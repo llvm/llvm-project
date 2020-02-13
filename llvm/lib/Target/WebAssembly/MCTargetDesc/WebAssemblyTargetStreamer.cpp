@@ -113,9 +113,9 @@ void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {
       ++Grouped.back().second;
   }
 
-  Streamer.EmitULEB128IntValue(Grouped.size());
+  Streamer.emitULEB128IntValue(Grouped.size());
   for (auto Pair : Grouped) {
-    Streamer.EmitULEB128IntValue(Pair.second);
+    Streamer.emitULEB128IntValue(Pair.second);
     emitValueType(Pair.first);
   }
 }

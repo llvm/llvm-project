@@ -208,18 +208,18 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
         ".custom_section.producers", SectionKind::getMetadata());
     OutStreamer->PushSection();
     OutStreamer->SwitchSection(Producers);
-    OutStreamer->EmitULEB128IntValue(FieldCount);
+    OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
             std::make_pair("processed-by", &Tools)}) {
       if (Producers.second->empty())
         continue;
-      OutStreamer->EmitULEB128IntValue(strlen(Producers.first));
+      OutStreamer->emitULEB128IntValue(strlen(Producers.first));
       OutStreamer->EmitBytes(Producers.first);
-      OutStreamer->EmitULEB128IntValue(Producers.second->size());
+      OutStreamer->emitULEB128IntValue(Producers.second->size());
       for (auto &Producer : *Producers.second) {
-        OutStreamer->EmitULEB128IntValue(Producer.first.size());
+        OutStreamer->emitULEB128IntValue(Producer.first.size());
         OutStreamer->EmitBytes(Producer.first);
-        OutStreamer->EmitULEB128IntValue(Producer.second.size());
+        OutStreamer->emitULEB128IntValue(Producer.second.size());
         OutStreamer->EmitBytes(Producer.second);
       }
     }
@@ -267,10 +267,10 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   OutStreamer->PushSection();
   OutStreamer->SwitchSection(FeaturesSection);
 
-  OutStreamer->EmitULEB128IntValue(EmittedFeatures.size());
+  OutStreamer->emitULEB128IntValue(EmittedFeatures.size());
   for (auto &F : EmittedFeatures) {
     OutStreamer->EmitIntValue(F.Prefix, 1);
-    OutStreamer->EmitULEB128IntValue(F.Name.size());
+    OutStreamer->emitULEB128IntValue(F.Name.size());
     OutStreamer->EmitBytes(F.Name);
   }
 
