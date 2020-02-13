@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
 
@@ -1149,4 +1150,38 @@ TYPED_TEST(BitVectorTest, PushBack) {
   EXPECT_EQ(213U, Vec.size());
   EXPECT_EQ(102U, Vec.count());
 }
+
+TYPED_TEST(BitVectorTest, DenseSet) {
+  DenseSet<TypeParam> Set;
+  TypeParam A(10, true);
+  auto I = Set.insert(A);
+  EXPECT_EQ(true, I.second);
+
+  TypeParam B(5, true);
+  I = Set.insert(B);
+  EXPECT_EQ(true, I.second);
+
+  TypeParam C(20, false);
+  C.set(19);
+  I = Set.insert(C);
+  EXPECT_EQ(true, I.second);
+
+  TypeParam D;
+  EXPECT_DEATH(Set.insert(D),
+               "Empty/Tombstone value shouldn't be inserted into map!");
+
+  EXPECT_EQ(3U, Set.size());
+  EXPECT_EQ(1U, Set.count(A));
+  EXPECT_EQ(1U, Set.count(B));
+  EXPECT_EQ(1U, Set.count(C));
+
+  EXPECT_EQ(true, Set.erase(B));
+  EXPECT_EQ(2U, Set.size());
+
+  EXPECT_EQ(true, Set.erase(C));
+  EXPECT_EQ(1U, Set.size());
+
+  EXPECT_EQ(true, Set.erase(A));
+  EXPECT_EQ(0U, Set.size());
 }
+} // namespace
