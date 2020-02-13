@@ -1130,6 +1130,8 @@ class TypedArrayAttrBase<Attr element, string description>: ArrayAttrBase<
                           "; })">]>,
     description> {
   let constBuilderCall = "$_builder.getArrayAttr($0)";
+
+  Attr elementAttr = element;
 }
 
 def I32ArrayAttr : TypedArrayAttrBase<I32Attr,

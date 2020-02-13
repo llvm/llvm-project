@@ -1,5 +1,6 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL --dump-input-on-failure
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF --dump-input-on-failure
+// RUN: mlir-tblgen -print-records -I %S/../../include %s | FileCheck %s --check-prefix=RECORD --dump-input-on-failure
 
 include "mlir/IR/OpBase.td"
 
@@ -239,3 +240,12 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF:   return {{.*}} != nullptr
 
 // DEF: build(Builder *odsBuilder, OperationState &odsState, /*optional*/UnitAttr attr)
+
+
+// Test elementAttr field of TypedArrayAttr.
+// ---
+
+def SomeTypedArrayAttr : TypedArrayAttrBase<SomeAttr, "SomeAttr array">;
+
+// RECORD-LABEL: def SomeTypedArrayAttr
+// RECORD: Attr elementAttr = SomeAttr;
