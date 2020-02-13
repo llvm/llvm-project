@@ -96,7 +96,7 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_EQ(cast<CallInst>(Barrier)->getArgOperand(1), GTID);
 
   Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateCancel) {
@@ -151,7 +151,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   OMPBuilder.popFinalizationCB();
 
   Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
@@ -212,7 +212,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   OMPBuilder.popFinalizationCB();
 
   Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
@@ -267,7 +267,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   OMPBuilder.popFinalizationCB();
 
   Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, DbgLoc) {
@@ -362,9 +362,9 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
 
   auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
 
-  IRBuilder<>::InsertPoint AfterIP = OMPBuilder.CreateParallel(
-      Loc, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr, OMP_PROC_BIND_default, false);
-
+  IRBuilder<>::InsertPoint AfterIP =
+      OMPBuilder.CreateParallel(Loc, BodyGenCB, PrivCB, FiniCB, nullptr,
+                                nullptr, OMP_PROC_BIND_default, false);
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 1U);
   EXPECT_EQ(NumFinalizationPoints, 1U);
@@ -372,10 +372,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
 
+  OMPBuilder.finalize();
+
   EXPECT_NE(PrivAI, nullptr);
   Function *OutlinedFn = PrivAI->getFunction();
   EXPECT_NE(F, OutlinedFn);
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoUnwind));
   EXPECT_TRUE(OutlinedFn->hasFnAttribute(Attribute::NoRecurse));
   EXPECT_TRUE(OutlinedFn->hasParamAttribute(0, Attribute::NoAlias));
@@ -470,6 +472,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
+  OMPBuilder.finalize();
 
   EXPECT_NE(PrivAI, nullptr);
   Function *OutlinedFn = PrivAI->getFunction();
@@ -595,6 +598,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
+  OMPBuilder.finalize();
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
