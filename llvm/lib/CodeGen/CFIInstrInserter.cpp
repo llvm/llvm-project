@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -76,6 +77,10 @@ class CFIInstrInserter : public MachineFunctionPass {
     unsigned IncomingCFARegister = 0;
     /// Value of cfa register valid at basic block exit.
     unsigned OutgoingCFARegister = 0;
+    /// Set of callee saved registers saved at basic block entry.
+    BitVector IncomingCSRSaved;
+    /// Set of callee saved registers saved at basic block exit.
+    BitVector OutgoingCSRSaved;
     /// If in/out cfa offset and register values for this block have already
     /// been set or not.
     bool Processed = false;
@@ -108,7 +113,8 @@ class CFIInstrInserter : public MachineFunctionPass {
     return -MBBVector[MBB->getNumber()].IncomingCFAOffset;
   }
 
-  void report(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ);
+  void reportCFAError(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ);
+  void reportCSRError(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ);
   /// Go through each MBB in a function and check that outgoing offset and
   /// register of its predecessors match incoming offset and register of that
   /// MBB, as well as that incoming offset and register of its successors match
@@ -132,6 +138,8 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   // function.
   unsigned InitialRegister =
       MF.getSubtarget().getFrameLowering()->getInitialCFARegister(MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned NumRegs = TRI.getNumRegs();
 
   // Initialize MBBMap.
   for (MachineBasicBlock &MBB : MF) {
@@ -141,6 +149,8 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
     MBBInfo.OutgoingCFAOffset = InitialOffset;
     MBBInfo.IncomingCFARegister = InitialRegister;
     MBBInfo.OutgoingCFARegister = InitialRegister;
+    MBBInfo.IncomingCSRSaved.resize(NumRegs);
+    MBBInfo.OutgoingCSRSaved.resize(NumRegs);
     MBBVector[MBB.getNumber()] = MBBInfo;
   }
 
@@ -159,8 +169,11 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   int SetOffset = MBBInfo.IncomingCFAOffset;
   // Outgoing cfa register set by the block.
   unsigned SetRegister = MBBInfo.IncomingCFARegister;
-  const std::vector<MCCFIInstruction> &Instrs =
-      MBBInfo.MBB->getParent()->getFrameInstructions();
+  MachineFunction *MF = MBBInfo.MBB->getParent();
+  const std::vector<MCCFIInstruction> &Instrs = MF->getFrameInstructions();
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  unsigned NumRegs = TRI.getNumRegs();
+  BitVector CSRSaved(NumRegs), CSRRestored(NumRegs);
 
   // Determine cfa offset and register set by the block.
   for (MachineInstr &MI : *MBBInfo.MBB) {
@@ -181,6 +194,15 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         SetRegister = CFI.getRegister();
         SetOffset = CFI.getOffset();
         break;
+      case MCCFIInstruction::OpOffset:
+      case MCCFIInstruction::OpRegister:
+      case MCCFIInstruction::OpRelOffset:
+        CSRSaved.set(CFI.getRegister());
+        break;
+      case MCCFIInstruction::OpRestore:
+      case MCCFIInstruction::OpUndefined:
+        CSRRestored.set(CFI.getRegister());
+        break;
       case MCCFIInstruction::OpRememberState:
         // TODO: Add support for handling cfi_remember_state.
 #ifndef NDEBUG
@@ -199,12 +221,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         break;
       // Other CFI directives do not affect CFA value.
       case MCCFIInstruction::OpSameValue:
-      case MCCFIInstruction::OpOffset:
-      case MCCFIInstruction::OpRelOffset:
       case MCCFIInstruction::OpEscape:
-      case MCCFIInstruction::OpRestore:
-      case MCCFIInstruction::OpUndefined:
-      case MCCFIInstruction::OpRegister:
       case MCCFIInstruction::OpWindowSave:
       case MCCFIInstruction::OpNegateRAState:
       case MCCFIInstruction::OpGnuArgsSize:
@@ -218,6 +235,11 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   // Update outgoing CFA info.
   MBBInfo.OutgoingCFAOffset = SetOffset;
   MBBInfo.OutgoingCFARegister = SetRegister;
+
+  // Update outgoing CSR info.
+  MBBInfo.OutgoingCSRSaved = MBBInfo.IncomingCSRSaved;
+  MBBInfo.OutgoingCSRSaved |= CSRSaved;
+  MBBInfo.OutgoingCSRSaved.reset(CSRRestored);
 }
 
 void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
@@ -236,6 +258,7 @@ void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
       if (!SuccInfo.Processed) {
         SuccInfo.IncomingCFAOffset = CurrentInfo.OutgoingCFAOffset;
         SuccInfo.IncomingCFARegister = CurrentInfo.OutgoingCFARegister;
+        SuccInfo.IncomingCSRSaved = CurrentInfo.OutgoingCSRSaved;
         Stack.push_back(Succ);
       }
     }
@@ -287,12 +310,23 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
           .addCFIIndex(CFIIndex);
       InsertedCFIInstr = true;
     }
+
+    BitVector SetDifference = PrevMBBInfo->OutgoingCSRSaved;
+    SetDifference.reset(MBBInfo.IncomingCSRSaved);
+    for (int Reg : SetDifference.set_bits()) {
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
+      BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+      InsertedCFIInstr = true;
+    }
     PrevMBBInfo = &MBBInfo;
   }
   return InsertedCFIInstr;
 }
 
-void CFIInstrInserter::report(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ) {
+void CFIInstrInserter::reportCFAError(const MBBCFAInfo &Pred,
+                                      const MBBCFAInfo &Succ) {
   errs() << "*** Inconsistent CFA register and/or offset between pred and succ "
             "***\n";
   errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
@@ -305,6 +339,22 @@ void CFIInstrInserter::report(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ) {
          << " incoming CFA Reg:" << Succ.IncomingCFARegister << "\n";
   errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
          << " incoming CFA Offset:" << Succ.IncomingCFAOffset << "\n";
+}
+
+void CFIInstrInserter::reportCSRError(const MBBCFAInfo &Pred,
+                                      const MBBCFAInfo &Succ) {
+  errs() << "*** Inconsistent CSR Saved between pred and succ in function "
+         << Pred.MBB->getParent()->getName() << " ***\n";
+  errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
+         << " outgoing CSR Saved: ";
+  for (int Reg : Pred.OutgoingCSRSaved.set_bits())
+    errs() << Reg << " ";
+  errs() << "\n";
+  errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
+         << " incoming CSR Saved: ";
+  for (int Reg : Succ.IncomingCSRSaved.set_bits())
+    errs() << Reg << " ";
+  errs() << "\n";
 }
 
 unsigned CFIInstrInserter::verify(MachineFunction &MF) {
@@ -321,7 +371,13 @@ unsigned CFIInstrInserter::verify(MachineFunction &MF) {
         // we don't generate epilogues inside such blocks.
         if (SuccMBBInfo.MBB->succ_empty() && !SuccMBBInfo.MBB->isReturnBlock())
           continue;
-        report(CurrMBBInfo, SuccMBBInfo);
+        reportCFAError(CurrMBBInfo, SuccMBBInfo);
+        ErrorNum++;
+      }
+      // Check that IncomingCSRSaved of every successor matches the
+      // OutgoingCSRSaved of CurrMBB
+      if (SuccMBBInfo.IncomingCSRSaved != CurrMBBInfo.OutgoingCSRSaved) {
+        reportCSRError(CurrMBBInfo, SuccMBBInfo);
         ErrorNum++;
       }
     }
