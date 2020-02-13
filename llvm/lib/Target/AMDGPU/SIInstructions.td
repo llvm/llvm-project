@@ -1786,6 +1786,55 @@ def : GCNPat <
              (V_ALIGNBIT_B32 $a, $a, (i32 8)))
 >;
 
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+def : GCNPat <
+  (i64 (bswap i64:$a)),
+  (REG_SEQUENCE VReg_64,
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 24)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 8))),
+  sub0,
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 24)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 8))),
+  sub1)
+>;
+
+
+let SubtargetPredicate = isGFX8Plus in {
+// Magic number: 3 | (2 << 8) | (1 << 16) | (0 << 24)
+//
+// My reading of the manual suggests we should be using src0 for the
+// register value, but this is what seems to work.
+def : GCNPat <
+  (i32 (bswap i32:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x00010203)))
+>;
+
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+def : GCNPat <
+  (i64 (bswap i64:$a)),
+  (REG_SEQUENCE VReg_64,
+  (V_PERM_B32 (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub1),
+              (S_MOV_B32 (i32 0x00010203))),
+  sub0,
+  (V_PERM_B32 (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub0),
+              (S_MOV_B32 (i32 0x00010203))),
+  sub1)
+>;
+
+}
+
 let OtherPredicates = [NoFP16Denormals] in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),

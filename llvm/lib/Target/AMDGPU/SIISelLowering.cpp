@@ -361,8 +361,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
   }
 
-  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+
+  // FIXME: This should be narrowed to i32, but that only happens if i64 is
+  // illegal.
+  setOperationAction(ISD::BSWAP, MVT::i64, Legal);
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
 
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
