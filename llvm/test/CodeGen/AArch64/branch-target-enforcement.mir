@@ -97,6 +97,12 @@
     ret i32 %merge2
   }
 
+  define hidden i32 @debug_ptr_auth() "branch-target-enforcement" {
+  entry:
+    tail call void asm sideeffect "", "~{lr}"()
+    ret i32 0
+  }
+
 ...
 ---
 # External function, could be addres-taken elsewhere so needs BTI JC.
@@ -321,5 +327,30 @@ body:             |
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.return), 0
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
     RET undef $lr, implicit killed $w0
+---
+# When PACIASP is the first real instruction in the functions then BTI should not be inserted.
+name:            debug_ptr_auth
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    liveins: $lr
+
+    ; CHECK-LABEL: name: debug_ptr_auth
+    ; CHECK-NOT: HINT
+    ; CHECK: DBG_VALUE
+    ; CHECK: frame-setup PACIASP
+    ; CHECK-NOT: HINT
+    ; CHECK: RETAA
+    DBG_VALUE $lr
+    frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
+    frame-setup CFI_INSTRUCTION negate_ra_sign_state
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
+    $w0 = ORRWrs $wzr, $wzr, 0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    RETAA implicit $sp, implicit $lr, implicit killed $w0
 
 ...
