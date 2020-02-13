@@ -3439,13 +3439,16 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.decl]), those constraints are checked for satisfaction
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
-  if (CheckInstantiatedFunctionTemplateConstraints(Info.getLocation(),
-          Specialization, Builder, Info.AssociatedConstraintsSatisfaction))
-    return TDK_MiscellaneousDeductionFailure;
+  if (!PartialOverloading ||
+      (Builder.size() == FunctionTemplate->getTemplateParameters()->size())) {
+    if (CheckInstantiatedFunctionTemplateConstraints(Info.getLocation(),
+            Specialization, Builder, Info.AssociatedConstraintsSatisfaction))
+      return TDK_MiscellaneousDeductionFailure;
 
-  if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-    Info.reset(TemplateArgumentList::CreateCopy(Context, Builder));
-    return TDK_ConstraintsNotSatisfied;
+    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+      Info.reset(TemplateArgumentList::CreateCopy(Context, Builder));
+      return TDK_ConstraintsNotSatisfied;
+    }
   }
 
   if (OriginalCallArgs) {
