@@ -3,7 +3,7 @@
 ; TODO: Add max-iteration check
 
 ; Disable update test checks and enable it where required.
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; ModuleID = 'value-simplify.ll'
 source_filename = "value-simplify.ll"
@@ -145,7 +145,7 @@ f:
 }
 
 define i1 @ipccp2() {
-; CHECK-LABEL: define {{[^@]+}}@ipccp2() #1
+; CHECK-LABEL: define {{[^@]+}}@ipccp2()
 ; CHECK-NEXT:    ret i1 true
 ;
   %r = call i1 @ipccp2i(i1 true)
@@ -162,7 +162,7 @@ f:
 }
 
 define i1 @ipccp2b() {
-; CHECK-LABEL: define {{[^@]+}}@ipccp2b() #1
+; CHECK-LABEL: define {{[^@]+}}@ipccp2b()
 ; CHECK-NEXT:    ret i1 true
 ;
   %r = call i1 @ipccp2ib(i1 true)
@@ -186,7 +186,7 @@ define i32 @ipccp3() {
   ret i32 %r
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; Do not touch complicated arguments (for now)
 %struct.X = type { i8* }
@@ -311,4 +311,4 @@ for.end:
   ret void
 }
 
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable

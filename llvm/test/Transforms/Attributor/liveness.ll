@@ -57,8 +57,8 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 ; TEST 1: Only first block is live.
 
 ; CHECK: Function Attrs: nofree noreturn nosync nounwind
-; MODULE-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nofree nonnull readonly %ptr1, i32* nocapture nofree readnone %ptr2)
-; CGSCC-NEXT:  define i32 @first_block_no_return(i32 %a, i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %ptr1, i32* nocapture nofree readnone %ptr2)
+; MODULE-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nofree nonnull readnone %ptr1, i32* nocapture nofree readnone %ptr2)
+; CGSCC-NEXT:  define i32 @first_block_no_return(i32 %a, i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) %ptr1, i32* nocapture nofree readnone %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
   call i32 @internal_load(i32* %ptr1)
