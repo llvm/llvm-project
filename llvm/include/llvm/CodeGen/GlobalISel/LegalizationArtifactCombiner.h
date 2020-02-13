@@ -81,7 +81,7 @@ public:
     // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
-      const LLT &DstTy = MRI.getType(DstReg);
+      const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
         Builder.buildConstant(
@@ -125,7 +125,7 @@ public:
     // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
-      const LLT &DstTy = MRI.getType(DstReg);
+      const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
         Builder.buildConstant(
@@ -178,7 +178,7 @@ public:
     // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
-      const LLT &DstTy = MRI.getType(DstReg);
+      const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
         Builder.buildConstant(
