@@ -344,20 +344,21 @@ TEST(ScudoCombinedTest, ThreadedCombined) {
 #endif
 }
 
-
 struct DeathSizeClassConfig {
   static const scudo::uptr NumBits = 1;
   static const scudo::uptr MinSizeLog = 10;
   static const scudo::uptr MidSizeLog = 10;
-  static const scudo::uptr MaxSizeLog = 10;
-  static const scudo::u32 MaxNumCachedHint = 1;
-  static const scudo::uptr MaxBytesCachedLog = 10;
+  static const scudo::uptr MaxSizeLog = 11;
+  static const scudo::u32 MaxNumCachedHint = 4;
+  static const scudo::uptr MaxBytesCachedLog = 12;
 };
 
+static const scudo::uptr DeathRegionSizeLog = 20U;
 struct DeathConfig {
-  // Tiny allocator, its Primary only serves chunks of 1024 bytes.
+  // Tiny allocator, its Primary only serves chunks of two sizes.
   using DeathSizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
-  typedef scudo::SizeClassAllocator64<DeathSizeClassMap, 20U> Primary;
+  typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
+      Primary;
   typedef scudo::MapAllocator<scudo::MapAllocatorNoCache> Secondary;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U>;
 };
@@ -414,4 +415,40 @@ TEST(ScudoCombinedTest, ReleaseToOS) {
   Allocator->reset();
 
   Allocator->releaseToOS();
+}
+
+// Verify that when a region gets full, Android will still manage to
+// fulfill the allocation through a larger size class.
+TEST(ScudoCombinedTest, FullRegion) {
+  using AllocatorT = scudo::Allocator<DeathConfig>;
+  auto Deleter = [](AllocatorT *A) {
+    A->unmapTestOnly();
+    delete A;
+  };
+  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
+                                                           Deleter);
+  Allocator->reset();
+
+  const scudo::uptr Size = 1000U;
+  const scudo::uptr MaxNumberOfChunks =
+      (1U << DeathRegionSizeLog) /
+      DeathConfig::DeathSizeClassMap::getSizeByClassId(1U);
+  void *P;
+  std::vector<void *> V;
+  scudo::uptr FailedAllocationsCount = 0;
+  for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
+    P = Allocator->allocate(Size, Origin);
+    if (!P)
+      FailedAllocationsCount++;
+    else
+      V.push_back(P);
+  }
+  while (!V.empty()) {
+    Allocator->deallocate(V.back(), Origin);
+    V.pop_back();
+  }
+  if (SCUDO_ANDROID)
+    EXPECT_EQ(FailedAllocationsCount, 0U);
+  else
+    EXPECT_GT(FailedAllocationsCount, 0U);
 }
