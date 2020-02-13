@@ -504,7 +504,7 @@ that include merges, so the `git rebase` step above is required.
 Bisecting commits
 ^^^^^^^^^^^^^^^^^
 
-See `Bisecting LLVM code <GitBisecting.html>` for how to use ``git bisect``
+See `Bisecting LLVM code <GitBisecting.html>`_ for how to use ``git bisect``
 on LLVM.
 
 Reverting a change
