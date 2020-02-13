@@ -651,7 +651,7 @@ class, as shown in this example:
 
    (lldb) type summary add -P Rectangle
    Enter your Python command(s). Type 'DONE' to end.
-   def function (valobj,internal_dict):
+   def function (valobj,internal_dict,options):
       height_val = valobj.GetChildMemberWithName('height')
       width_val = valobj.GetChildMemberWithName('width')
       height = height_val.GetValueAsUnsigned(0)
@@ -698,6 +698,12 @@ that (yet) via this method call, and you must use ``GetChildAtIndex()``
 querying it for the array items one by one. Also, handling custom formats is
 something you have to deal with on your own.
 
+``options`` Python summary formatters can optionally define this
+third argument, which is an object of type ``lldb.SBTypeSummaryOptions``,
+allowing for a few customizations of the result. The decision to
+adopt or not this third argument - and the meaning of options thereof
+- is up to the individual formatter's writer.
+
 Other than interactively typing a Python script there are two other ways for
 you to input a Python script as a summary:
 
@@ -715,14 +721,6 @@ you to input a Python script as a summary:
   or somehow loaded it from a file, using the command script import command.
   LLDB will emit a warning if it is unable to find the function you passed, but
   will still register the binding.
-
-Starting in SVN r222593, Python summary formatters can optionally define a
-third argument: options
-
-This is an object of type ``lldb.SBTypeSummaryOptions`` that can be passed into
-the formatter, allowing for a few customizations of the result. The decision to
-adopt or not this third argument - and the meaning of options thereof - is
-within the individual formatters' writer.
 
 Regular Expression Typenames
 ----------------------------
