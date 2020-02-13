@@ -1627,6 +1627,7 @@ TEST(CompletionTest, Render) {
   Include.Header = "\"foo.h\"";
   C.Kind = CompletionItemKind::Method;
   C.Score.Total = 1.0;
+  C.Score.ExcludingName = .5;
   C.Origin = SymbolOrigin::AST | SymbolOrigin::Static;
 
   CodeCompleteOptions Opts;
@@ -1644,6 +1645,7 @@ TEST(CompletionTest, Render) {
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
+  EXPECT_EQ(R.score, .5f);
 
   Opts.EnableSnippets = true;
   R = C.render(Opts);

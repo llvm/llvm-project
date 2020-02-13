@@ -1094,6 +1094,13 @@ struct CompletionItem {
   /// Indicates if this item is deprecated.
   bool deprecated = false;
 
+  /// This is Clangd extension.
+  /// The score that Clangd calculates to rank completion items. This score can
+  /// be used to adjust the ranking on the client side.
+  /// NOTE: This excludes fuzzy matching score which is typically calculated on
+  /// the client side.
+  float score = 0.f;
+
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //
