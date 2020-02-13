@@ -34,6 +34,9 @@ public:
   /// before any other method and only once!
   void initialize();
 
+  /// Finalize the underlying module, e.g., by outlining regions.
+  void finalize();
+
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
@@ -254,6 +257,20 @@ private:
 
   /// Map to remember existing ident_t*.
   DenseMap<std::pair<Constant *, uint64_t>, GlobalVariable *> IdentMap;
+
+  /// Helper that contains information about regions we need to outline
+  /// during finalization.
+  struct OutlineInfo {
+    SmallVector<BasicBlock *, 32> Blocks;
+    using PostOutlineCBTy = std::function<void(Function &)>;
+    PostOutlineCBTy PostOutlineCB;
+  };
+
+  /// Collection of regions that need to be outlined during finalization.
+  SmallVector<OutlineInfo, 16> OutlineInfos;
+
+  /// Add a new region that will be outlined later.
+  void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
 };
 
 } // end namespace llvm
