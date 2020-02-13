@@ -302,7 +302,8 @@ std::vector<const CXXConstructorDecl *> getConstructors(const NamedDecl *ND) {
   if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
     if (!RD->hasUserDeclaredConstructor())
       return {};
-    Ctors = {RD->ctors().begin(), RD->ctors().end()};
+    for (const CXXConstructorDecl *Ctor : RD->ctors())
+      Ctors.push_back(Ctor);
     for (const auto *D : RD->decls()) {
       if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
         if (const auto *Ctor =
