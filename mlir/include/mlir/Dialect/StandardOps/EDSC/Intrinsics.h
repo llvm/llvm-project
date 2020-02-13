@@ -52,11 +52,14 @@ struct ValueBuilder : public ValueHandle {
 using std_addf = ValueBuilder<AddFOp>;
 using std_alloc = ValueBuilder<AllocOp>;
 using std_call = OperationBuilder<CallOp>;
+using std_constant = ValueBuilder<ConstantOp>;
 using std_constant_float = ValueBuilder<ConstantFloatOp>;
 using std_constant_index = ValueBuilder<ConstantIndexOp>;
 using std_constant_int = ValueBuilder<ConstantIntOp>;
 using std_dealloc = OperationBuilder<DeallocOp>;
 using std_dim = ValueBuilder<DimOp>;
+using std_extract_element = ValueBuilder<ExtractElementOp>;
+using std_index_cast = ValueBuilder<IndexCastOp>;
 using std_muli = ValueBuilder<MulIOp>;
 using std_mulf = ValueBuilder<MulFOp>;
 using std_memref_cast = ValueBuilder<MemRefCastOp>;
@@ -65,7 +68,10 @@ using std_select = ValueBuilder<SelectOp>;
 using std_load = ValueBuilder<LoadOp>;
 using std_store = OperationBuilder<StoreOp>;
 using std_subi = ValueBuilder<SubIOp>;
+using std_sub_view = ValueBuilder<SubViewOp>;
 using std_tanh = ValueBuilder<TanhOp>;
+using std_tensor_load = ValueBuilder<TensorLoadOp>;
+using std_tensor_store = OperationBuilder<TensorStoreOp>;
 using std_view = ValueBuilder<ViewOp>;
 using std_zero_extendi = ValueBuilder<ZeroExtendIOp>;
 using std_sign_extendi = ValueBuilder<SignExtendIOp>;
@@ -74,7 +80,7 @@ using std_sign_extendi = ValueBuilder<SignExtendIOp>;
 ///
 /// Prerequisites:
 ///   All Handles have already captured previously constructed IR objects.
-OperationHandle br(BlockHandle bh, ArrayRef<ValueHandle> operands);
+OperationHandle std_br(BlockHandle bh, ArrayRef<ValueHandle> operands);
 
 /// Creates a new mlir::Block* and branches to it from the current block.
 /// Argument types are specified by `operands`.
@@ -89,8 +95,8 @@ OperationHandle br(BlockHandle bh, ArrayRef<ValueHandle> operands);
 ///   All `operands` have already captured an mlir::Value
 ///   captures.size() == operands.size()
 ///   captures and operands are pairwise of the same type.
-OperationHandle br(BlockHandle *bh, ArrayRef<ValueHandle *> captures,
-                   ArrayRef<ValueHandle> operands);
+OperationHandle std_br(BlockHandle *bh, ArrayRef<ValueHandle *> captures,
+                       ArrayRef<ValueHandle> operands);
 
 /// Branches into the mlir::Block* captured by BlockHandle `trueBranch` with
 /// `trueOperands` if `cond` evaluates to `true` (resp. `falseBranch` and
@@ -98,10 +104,10 @@ OperationHandle br(BlockHandle *bh, ArrayRef<ValueHandle *> captures,
 ///
 /// Prerequisites:
 ///   All Handles have captured previously constructed IR objects.
-OperationHandle cond_br(ValueHandle cond, BlockHandle trueBranch,
-                        ArrayRef<ValueHandle> trueOperands,
-                        BlockHandle falseBranch,
-                        ArrayRef<ValueHandle> falseOperands);
+OperationHandle std_cond_br(ValueHandle cond, BlockHandle trueBranch,
+                            ArrayRef<ValueHandle> trueOperands,
+                            BlockHandle falseBranch,
+                            ArrayRef<ValueHandle> falseOperands);
 
 /// Eagerly creates new mlir::Block* with argument types specified by
 /// `trueOperands`/`falseOperands`.
@@ -119,12 +125,12 @@ OperationHandle cond_br(ValueHandle cond, BlockHandle trueBranch,
 ///   `falseCaptures`.size() == `falseOperands`.size()
 ///   `trueCaptures` and `trueOperands` are pairwise of the same type
 ///   `falseCaptures` and `falseOperands` are pairwise of the same type.
-OperationHandle cond_br(ValueHandle cond, BlockHandle *trueBranch,
-                        ArrayRef<ValueHandle *> trueCaptures,
-                        ArrayRef<ValueHandle> trueOperands,
-                        BlockHandle *falseBranch,
-                        ArrayRef<ValueHandle *> falseCaptures,
-                        ArrayRef<ValueHandle> falseOperands);
+OperationHandle std_cond_br(ValueHandle cond, BlockHandle *trueBranch,
+                            ArrayRef<ValueHandle *> trueCaptures,
+                            ArrayRef<ValueHandle> trueOperands,
+                            BlockHandle *falseBranch,
+                            ArrayRef<ValueHandle *> falseCaptures,
+                            ArrayRef<ValueHandle> falseOperands);
 
 /// Provide an index notation around sdt_load and std_store.
 using StdIndexedValue =
