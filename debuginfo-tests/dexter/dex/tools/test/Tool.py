@@ -58,7 +58,7 @@ class TestCase(object):
 
         if self.error:
             script_error = (' : {}'.format(
-                self.error.script_error.splitlines()[0].decode()) if getattr(
+                self.error.script_error.splitlines()[0]) if getattr(
                     self.error, 'script_error', None) else '')
 
             error = ' [{}{}]'.format(
