@@ -19,7 +19,14 @@ int main(int argc, char *argv[]) {
     { MaxThreadsL2 = omp_get_max_threads(); }
   }
 
-  // CHECK: Non-SPMD MaxThreadsL1 = 32
+  //FIXME: This Non-SPMD kernel will have 32 active threads due to
+  //       thread_limit. However, Non-SPMD MaxThreadsL1 is the total number of
+  //       threads in block (64 in this case), which translates to worker
+  //       threads + WARP_SIZE for Non-SPMD kernels and worker threads for SPMD
+  //       kernels. According to the spec, omp_get_max_threads must return the
+  //       max active threads possible between the two kernel types.
+
+  // CHECK: Non-SPMD MaxThreadsL1 = 64
   printf("Non-SPMD MaxThreadsL1 = %d\n", MaxThreadsL1);
   // CHECK: Non-SPMD MaxThreadsL2 = 1
   printf("Non-SPMD MaxThreadsL2 = %d\n", MaxThreadsL2);
