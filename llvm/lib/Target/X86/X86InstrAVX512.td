@@ -3232,8 +3232,8 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
 multiclass axv512_cmp_packed_cc_no_vlx_lowering<string InstStr,
                                                 X86VectorVTInfo Narrow,
                                                 X86VectorVTInfo Wide> {
-def : Pat<(Narrow.KVT (X86any_cmpm (Narrow.VT Narrow.RC:$src1),
-                                   (Narrow.VT Narrow.RC:$src2), timm:$cc)),
+def : Pat<(Narrow.KVT (X86cmpm (Narrow.VT Narrow.RC:$src1),
+                               (Narrow.VT Narrow.RC:$src2), timm:$cc)),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr#"Zrri")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
@@ -3250,8 +3250,8 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
            timm:$cc), Narrow.KRC)>;
 
 // Broadcast load.
-def : Pat<(Narrow.KVT (X86any_cmpm (Narrow.VT Narrow.RC:$src1),
-                                   (Narrow.VT (Narrow.BroadcastLdFrag addr:$src2)), timm:$cc)),
+def : Pat<(Narrow.KVT (X86cmpm (Narrow.VT Narrow.RC:$src1),
+                               (Narrow.VT (Narrow.BroadcastLdFrag addr:$src2)), timm:$cc)),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr#"Zrmbi")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
@@ -3266,8 +3266,8 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
            addr:$src2, timm:$cc), Narrow.KRC)>;
 
 // Commuted with broadcast load.
-def : Pat<(Narrow.KVT (X86any_cmpm (Narrow.VT (Narrow.BroadcastLdFrag addr:$src2)),
-                                   (Narrow.VT Narrow.RC:$src1), timm:$cc)),
+def : Pat<(Narrow.KVT (X86cmpm (Narrow.VT (Narrow.BroadcastLdFrag addr:$src2)),
+                               (Narrow.VT Narrow.RC:$src1), timm:$cc)),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr#"Zrmbi")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
