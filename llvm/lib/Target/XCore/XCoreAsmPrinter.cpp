@@ -74,10 +74,10 @@ namespace {
     void emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV);
     void EmitGlobalVariable(const GlobalVariable *GV) override;
 
-    void EmitFunctionEntryLabel() override;
+    void emitFunctionEntryLabel() override;
     void EmitInstruction(const MachineInstr *MI) override;
-    void EmitFunctionBodyStart() override;
-    void EmitFunctionBodyEnd() override;
+    void emitFunctionBodyStart() override;
+    void emitFunctionBodyEnd() override;
   };
 } // end of anonymous namespace
 
@@ -165,18 +165,18 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   getTargetStreamer().emitCCBottomData(GVSym->getName());
 }
 
-void XCoreAsmPrinter::EmitFunctionBodyStart() {
+void XCoreAsmPrinter::emitFunctionBodyStart() {
   MCInstLowering.Initialize(&MF->getContext());
 }
 
 /// EmitFunctionBodyEnd - Targets can override this to emit stuff after
 /// the last basic block in the function.
-void XCoreAsmPrinter::EmitFunctionBodyEnd() {
+void XCoreAsmPrinter::emitFunctionBodyEnd() {
   // Emit function end directives
   getTargetStreamer().emitCCBottomFunction(CurrentFnSym->getName());
 }
 
-void XCoreAsmPrinter::EmitFunctionEntryLabel() {
+void XCoreAsmPrinter::emitFunctionEntryLabel() {
   // Mark the start of the function
   getTargetStreamer().emitCCTopFunction(CurrentFnSym->getName());
   OutStreamer->EmitLabel(CurrentFnSym);

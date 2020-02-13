@@ -138,10 +138,10 @@ public:
   void printSavedRegsBitmask();
   void emitFrameDirective();
   const char *getCurrentABIString() const;
-  void EmitFunctionEntryLabel() override;
-  void EmitFunctionBodyStart() override;
-  void EmitFunctionBodyEnd() override;
-  void EmitBasicBlockEnd(const MachineBasicBlock &MBB) override;
+  void emitFunctionEntryLabel() override;
+  void emitFunctionBodyStart() override;
+  void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   bool isBlockOnlyReachableByFallthrough(
                                    const MachineBasicBlock* MBB) const override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -154,8 +154,8 @@ public:
   void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void EmitStartOfAsmFile(Module &M) override;
-  void EmitEndOfAsmFile(Module &M) override;
+  void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
   void EmitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };

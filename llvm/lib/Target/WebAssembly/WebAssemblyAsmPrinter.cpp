@@ -85,7 +85,7 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 // WebAssemblyAsmPrinter Implementation.
 //===----------------------------------------------------------------------===//
 
-void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &It : OutContext.getSymbols()) {
     // Emit a .globaltype and .eventtype declaration.
     auto Sym = cast<MCSymbolWasm>(It.getValue());
@@ -286,7 +286,7 @@ void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
   // Nothing to do; jump tables are incorporated into the instruction stream.
 }
 
-void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
+void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   const Function &F = MF->getFunction();
   SmallVector<MVT, 1> ResultVTs;
   SmallVector<MVT, 4> ParamVTs;
@@ -312,7 +312,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   valTypesFromMVTs(MFI->getLocals(), Locals);
   getTargetStreamer()->emitLocal(Locals);
 
-  AsmPrinter::EmitFunctionBodyStart();
+  AsmPrinter::emitFunctionBodyStart();
 }
 
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {

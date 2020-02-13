@@ -115,7 +115,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   EmitProgramInfoR600(MF);
 
-  EmitFunctionBody();
+  emitFunctionBody();
 
   if (isVerbose()) {
     MCSectionELF *CommentSection =

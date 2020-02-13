@@ -196,7 +196,7 @@ namespace {
       return true;
     }
 
-    void EmitFunctionEntryCode() override;
+    void emitFunctionEntryCode() override;
 
     bool IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const override;
 
@@ -1390,7 +1390,7 @@ void X86DAGToDAGISel::emitSpecialCodeForMain() {
   }
 }
 
-void X86DAGToDAGISel::EmitFunctionEntryCode() {
+void X86DAGToDAGISel::emitFunctionEntryCode() {
   // If this is main, emit special code for main.
   const Function &F = MF->getFunction();
   if (F.hasExternalLinkage() && F.getName() == "main")

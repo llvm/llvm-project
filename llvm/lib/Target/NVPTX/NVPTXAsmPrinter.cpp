@@ -434,13 +434,13 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
   return false;
 }
 
-void NVPTXAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
-  AsmPrinter::EmitBasicBlockStart(MBB);
+void NVPTXAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
+  AsmPrinter::emitBasicBlockStart(MBB);
   if (isLoopHeaderOfNoUnroll(MBB))
     OutStreamer->EmitRawText(StringRef("\t.pragma \"nounroll\";\n"));
 }
 
-void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
+void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 
@@ -489,14 +489,14 @@ bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
   return Result;
 }
 
-void NVPTXAsmPrinter::EmitFunctionBodyStart() {
+void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
   OutStreamer->EmitRawText(O.str());
 }
 
-void NVPTXAsmPrinter::EmitFunctionBodyEnd() {
+void NVPTXAsmPrinter::emitFunctionBodyEnd() {
   VRegMapping.clear();
 }
 

@@ -319,7 +319,7 @@ public:
   /// Emit the specified function out to the OutStreamer.
   bool runOnMachineFunction(MachineFunction &MF) override {
     SetupMachineFunction(MF);
-    EmitFunctionBody();
+    emitFunctionBody();
     return false;
   }
 
@@ -332,7 +332,7 @@ public:
   virtual void SetupMachineFunction(MachineFunction &MF);
 
   /// This method emits the body and trailer for a function.
-  void EmitFunctionBody();
+  void emitFunctionBody();
 
   void emitCFIInstruction(const MachineInstr &MI);
 
@@ -406,28 +406,28 @@ public:
 
   /// This virtual method can be overridden by targets that want to emit
   /// something at the start of their file.
-  virtual void EmitStartOfAsmFile(Module &) {}
+  virtual void emitStartOfAsmFile(Module &) {}
 
   /// This virtual method can be overridden by targets that want to emit
   /// something at the end of their file.
-  virtual void EmitEndOfAsmFile(Module &) {}
+  virtual void emitEndOfAsmFile(Module &) {}
 
   /// Targets can override this to emit stuff before the first basic block in
   /// the function.
-  virtual void EmitFunctionBodyStart() {}
+  virtual void emitFunctionBodyStart() {}
 
   /// Targets can override this to emit stuff after the last basic block in the
   /// function.
-  virtual void EmitFunctionBodyEnd() {}
+  virtual void emitFunctionBodyEnd() {}
 
   /// Targets can override this to emit stuff at the start of a basic block.
   /// By default, this method prints the label for the specified
   /// MachineBasicBlock, an alignment (if present) and a comment describing it
   /// if appropriate.
-  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB);
+  virtual void emitBasicBlockStart(const MachineBasicBlock &MBB);
 
   /// Targets can override this to emit stuff at the end of a basic block.
-  virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB);
+  virtual void emitBasicBlockEnd(const MachineBasicBlock &MBB);
 
   /// Targets should implement this to emit instructions.
   virtual void EmitInstruction(const MachineInstr *) {
@@ -437,9 +437,9 @@ public:
   /// Return the symbol for the specified constant pool entry.
   virtual MCSymbol *GetCPISymbol(unsigned CPID) const;
 
-  virtual void EmitFunctionEntryLabel();
+  virtual void emitFunctionEntryLabel();
 
-  virtual void EmitFunctionDescriptor() {
+  virtual void emitFunctionDescriptor() {
     llvm_unreachable("Function descriptor is target-specific.");
   }
 
@@ -678,7 +678,7 @@ private:
   mutable unsigned Counter = ~0U;
 
   /// This method emits the header for the current function.
-  virtual void EmitFunctionHeader();
+  virtual void emitFunctionHeader();
 
   /// Emit a blob of inline asm to the output streamer.
   void
