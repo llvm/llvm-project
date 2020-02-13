@@ -190,7 +190,7 @@ public:
   lldb::SearchFilterSP CopyForBreakpoint(Breakpoint &breakpoint);
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -288,7 +288,7 @@ public:
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -334,7 +334,7 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -385,7 +385,7 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -425,7 +425,7 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 

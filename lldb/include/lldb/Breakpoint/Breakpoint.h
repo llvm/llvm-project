@@ -142,7 +142,8 @@ public:
 
   // Saving & restoring breakpoints:
   static lldb::BreakpointSP CreateFromStructuredData(
-      Target &target, StructuredData::ObjectSP &data_object_sp, Status &error);
+      lldb::TargetSP target_sp, StructuredData::ObjectSP &data_object_sp,
+      Status &error);
 
   static bool
   SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
@@ -570,7 +571,7 @@ public:
 
   // This one should only be used by Target to copy breakpoints from target to
   // target - primarily from the dummy target to prime new targets.
-  static lldb::BreakpointSP CopyFromBreakpoint(Target& new_target,
+  static lldb::BreakpointSP CopyFromBreakpoint(lldb::TargetSP new_target,
       const Breakpoint &bp_to_copy_from);
 
 protected:

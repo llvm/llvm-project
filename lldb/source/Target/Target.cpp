@@ -131,7 +131,8 @@ void Target::PrimeFromDummyTarget(Target *target) {
     if (breakpoint_sp->IsInternal())
       continue;
 
-    BreakpointSP new_bp(Breakpoint::CopyFromBreakpoint(*this, *breakpoint_sp));
+    BreakpointSP new_bp(
+        Breakpoint::CopyFromBreakpoint(shared_from_this(), *breakpoint_sp));
     AddBreakpoint(std::move(new_bp), false);
   }
 
@@ -1108,8 +1109,8 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
         !Breakpoint::SerializedBreakpointMatchesNames(bkpt_data_sp, names))
       continue;
 
-    BreakpointSP bkpt_sp =
-        Breakpoint::CreateFromStructuredData(*this, bkpt_data_sp, error);
+    BreakpointSP bkpt_sp = Breakpoint::CreateFromStructuredData(
+        shared_from_this(), bkpt_data_sp, error);
     if (!error.Success()) {
       error.SetErrorStringWithFormat(
           "Error restoring breakpoint %zu from %s: %s.", i,
