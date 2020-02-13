@@ -180,13 +180,22 @@ function(add_openmp_testsuite target comment)
       ${cmake_3_2_USES_TERMINAL}
     )
   else()
-    add_lit_testsuite(${target}
-      ${comment}
-      ${ARG_UNPARSED_ARGUMENTS}
-      ${ARG_EXCLUDE_FROM_CHECK_ALL}
-      DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
-      ARGS ${ARG_ARGS}
-    )
+    if (ARG_EXCLUDE_FROM_CHECK_ALL)
+      add_lit_testsuite(${target}
+        ${comment}
+        ${ARG_UNPARSED_ARGUMENTS}
+        EXCLUDE_FROM_CHECK_ALL
+        DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
+        ARGS ${ARG_ARGS}
+      )
+    else()
+      add_lit_testsuite(${target}
+        ${comment}
+        ${ARG_UNPARSED_ARGUMENTS}
+        DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
+        ARGS ${ARG_ARGS}
+      )
+    endif()
   endif()
 endfunction()
 
