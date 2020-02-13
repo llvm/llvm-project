@@ -6597,7 +6597,6 @@ multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
                   (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
 }
 
-
 //===----------------------------------------------------------------------===//
 // SVE Compute Vector Address Group
 //===----------------------------------------------------------------------===//
@@ -7062,6 +7061,7 @@ class sve2_crypto_unary_op<bit opc, string asm>
 
 /// Addressing modes
 def am_sve_indexed_s4 :ComplexPattern<i64, 2, "SelectAddrModeIndexedSVE<-8,7>", [], [SDNPWantRoot]>;
+def am_sve_indexed_s6 :ComplexPattern<i64, 2, "SelectAddrModeIndexedSVE<-32,31>", [], [SDNPWantRoot]>;
 
 def am_sve_regreg_lsl0 : ComplexPattern<i64, 2, "SelectSVERegRegAddrMode<0>", []>;
 def am_sve_regreg_lsl1 : ComplexPattern<i64, 2, "SelectSVERegRegAddrMode<1>", []>;
