@@ -210,7 +210,9 @@ def S_BCNT1_I32_B64 : SOP1_32_64 <"s_bcnt1_i32_b64",
 
 def S_FF0_I32_B32 : SOP1_32 <"s_ff0_i32_b32">;
 def S_FF0_I32_B64 : SOP1_32_64 <"s_ff0_i32_b64">;
-def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64">;
+def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64",
+  [(set i32:$sdst, (AMDGPUffbl_b32 i64:$src0))]
+>;
 
 def S_FF1_I32_B32 : SOP1_32 <"s_ff1_i32_b32",
   [(set i32:$sdst, (AMDGPUffbl_b32 i32:$src0))]
