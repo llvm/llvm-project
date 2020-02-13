@@ -360,7 +360,7 @@ void BTFKindDataSec::emitType(MCStreamer &OS) {
 
   for (const auto &V : Vars) {
     OS.EmitIntValue(std::get<0>(V), 4);
-    Asm->EmitLabelReference(std::get<1>(V), 4);
+    Asm->emitLabelReference(std::get<1>(V), 4);
     OS.EmitIntValue(std::get<2>(V), 4);
   }
 }
@@ -802,7 +802,7 @@ void BTFDebug::emitBTFExtSection() {
     OS.EmitIntValue(FuncSec.first, 4);
     OS.EmitIntValue(FuncSec.second.size(), 4);
     for (const auto &FuncInfo : FuncSec.second) {
-      Asm->EmitLabelReference(FuncInfo.Label, 4);
+      Asm->emitLabelReference(FuncInfo.Label, 4);
       OS.EmitIntValue(FuncInfo.TypeId, 4);
     }
   }
@@ -816,7 +816,7 @@ void BTFDebug::emitBTFExtSection() {
     OS.EmitIntValue(LineSec.first, 4);
     OS.EmitIntValue(LineSec.second.size(), 4);
     for (const auto &LineInfo : LineSec.second) {
-      Asm->EmitLabelReference(LineInfo.Label, 4);
+      Asm->emitLabelReference(LineInfo.Label, 4);
       OS.EmitIntValue(LineInfo.FileNameOff, 4);
       OS.EmitIntValue(LineInfo.LineOff, 4);
       OS.AddComment("Line " + std::to_string(LineInfo.LineNum) + " Col " +
@@ -835,7 +835,7 @@ void BTFDebug::emitBTFExtSection() {
       OS.EmitIntValue(FieldRelocSec.first, 4);
       OS.EmitIntValue(FieldRelocSec.second.size(), 4);
       for (const auto &FieldRelocInfo : FieldRelocSec.second) {
-        Asm->EmitLabelReference(FieldRelocInfo.Label, 4);
+        Asm->emitLabelReference(FieldRelocInfo.Label, 4);
         OS.EmitIntValue(FieldRelocInfo.TypeID, 4);
         OS.EmitIntValue(FieldRelocInfo.OffsetNameOff, 4);
         OS.EmitIntValue(FieldRelocInfo.RelocKind, 4);

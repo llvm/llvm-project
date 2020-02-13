@@ -157,7 +157,7 @@ public:
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
-  void EmitDebugValue(const MCExpr *Value, unsigned Size) const override;
+  void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 
 } // end namespace llvm

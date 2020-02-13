@@ -176,11 +176,11 @@ void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
 }
 
 void DebugLocDwarfExpression::emitSigned(int64_t Value) {
-  getActiveStreamer().EmitSLEB128(Value, Twine(Value));
+  getActiveStreamer().emitSLEB128(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
-  getActiveStreamer().EmitULEB128(Value, Twine(Value));
+  getActiveStreamer().emitULEB128(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitData1(uint8_t Value) {
@@ -189,7 +189,7 @@ void DebugLocDwarfExpression::emitData1(uint8_t Value) {
 
 void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   assert(Idx < (1ULL << (ULEB128PadSize * 7)) && "Idx wont fit");
-  getActiveStreamer().EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
+  getActiveStreamer().emitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
@@ -1840,7 +1840,7 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
     FileNo = static_cast<DwarfCompileUnit &>(*DCUs[CUID])
                  .getOrCreateSourceID(Scope->getFile());
   }
-  Asm.OutStreamer->EmitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
+  Asm.OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
                                          Discriminator, Fn);
 }
 
@@ -2148,7 +2148,7 @@ void DwarfDebug::emitDebugPubSections() {
 
 void DwarfDebug::emitSectionReference(const DwarfCompileUnit &CU) {
   if (useSectionsAsReferences())
-    Asm->EmitDwarfOffset(CU.getSection()->getBeginSymbol(),
+    Asm->emitDwarfOffset(CU.getSection()->getBeginSymbol(),
                          CU.getDebugSectionOffset());
   else
     Asm->emitDwarfSymbolReference(CU.getLabelBegin());
@@ -2164,7 +2164,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
   MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
   MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-  Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+  Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
 
   Asm->OutStreamer->EmitLabel(BeginLabel);
 
@@ -2246,7 +2246,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
         uint64_t Offset =
             CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
         assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
-        Streamer.EmitULEB128(Offset, "", ULEB128PadSize);
+        Streamer.emitULEB128(Offset, "", ULEB128PadSize);
         // Make sure comments stay aligned.
         for (unsigned J = 0; J < ULEB128PadSize; ++J)
           if (Comment != End)
@@ -2337,7 +2337,7 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
   // Emit the size.
   Asm->OutStreamer->AddComment("Loc expr size");
   if (getDwarfVersion() >= 5)
-    Asm->EmitULEB128(DebugLocs.getBytes(Entry).size());
+    Asm->emitULEB128(DebugLocs.getBytes(Entry).size());
   else if (DebugLocs.getBytes(Entry).size() <= std::numeric_limits<uint16_t>::max())
     Asm->emitInt16(DebugLocs.getBytes(Entry).size());
   else {
@@ -2357,7 +2357,7 @@ static void emitListsTableHeaderStart(AsmPrinter *Asm,
                                       MCSymbol *TableEnd) {
   // Build the table header, which starts with the length field.
   Asm->OutStreamer->AddComment("Length");
-  Asm->EmitLabelDifference(TableEnd, TableStart, 4);
+  Asm->emitLabelDifference(TableEnd, TableStart, 4);
   Asm->OutStreamer->EmitLabel(TableStart);
   // Version number (DWARF v5 and later).
   Asm->OutStreamer->AddComment("Version");
@@ -2384,8 +2384,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->EmitLabel(Holder.getRnglistsTableBaseSym());
 
   for (const RangeSpanList &List : Holder.getRangeLists())
-    Asm->EmitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(),
-                             4);
+    Asm->emitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(), 4);
 
   return TableEnd;
 }
@@ -2406,7 +2405,7 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->EmitLabel(DebugLocs.getSym());
 
   for (const auto &List : DebugLocs.getLists())
-    Asm->EmitLabelDifference(List.Label, DebugLocs.getSym(), 4);
+    Asm->emitLabelDifference(List.Label, DebugLocs.getSym(), 4);
 
   return TableEnd;
 }
@@ -2455,7 +2454,7 @@ static void emitRangeList(
         Asm->OutStreamer->AddComment(StringifyEnum(BaseAddressx));
         Asm->emitInt8(BaseAddressx);
         Asm->OutStreamer->AddComment("  base address index");
-        Asm->EmitULEB128(DD.getAddressPool().getIndex(Base));
+        Asm->emitULEB128(DD.getAddressPool().getIndex(Base));
       }
     } else if (BaseIsSet && !UseDwarf5) {
       BaseIsSet = false;
@@ -2475,20 +2474,20 @@ static void emitRangeList(
           Asm->OutStreamer->AddComment(StringifyEnum(OffsetPair));
           Asm->emitInt8(OffsetPair);
           Asm->OutStreamer->AddComment("  starting offset");
-          Asm->EmitLabelDifferenceAsULEB128(Begin, Base);
+          Asm->emitLabelDifferenceAsULEB128(Begin, Base);
           Asm->OutStreamer->AddComment("  ending offset");
-          Asm->EmitLabelDifferenceAsULEB128(End, Base);
+          Asm->emitLabelDifferenceAsULEB128(End, Base);
         } else {
-          Asm->EmitLabelDifference(Begin, Base, Size);
-          Asm->EmitLabelDifference(End, Base, Size);
+          Asm->emitLabelDifference(Begin, Base, Size);
+          Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
         Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
         Asm->emitInt8(StartxLength);
         Asm->OutStreamer->AddComment("  start index");
-        Asm->EmitULEB128(DD.getAddressPool().getIndex(Begin));
+        Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
         Asm->OutStreamer->AddComment("  length");
-        Asm->EmitLabelDifferenceAsULEB128(End, Begin);
+        Asm->emitLabelDifferenceAsULEB128(End, Begin);
       } else {
         Asm->OutStreamer->EmitSymbolValue(Begin, Size);
         Asm->OutStreamer->EmitSymbolValue(End, Size);
@@ -2569,10 +2568,10 @@ void DwarfDebug::emitDebugLocDWO() {
       // addresses in the address pool to minimize object size/relocations.
       Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.Begin);
-      Asm->EmitULEB128(idx);
+      Asm->emitULEB128(idx);
       // Also the pre-standard encoding is slightly different, emitting this as
       // an address-length entry here, but its a ULEB128 in DWARFv5 loclists.
-      Asm->EmitLabelDifference(Entry.End, Entry.Begin, 4);
+      Asm->emitLabelDifference(Entry.End, Entry.Begin, 4);
       emitDebugLocEntryLocation(Entry, List.CU);
     }
     Asm->emitInt8(dwarf::DW_LLE_end_of_list);
@@ -2717,11 +2716,11 @@ void DwarfDebug::emitDebugARanges() {
     Asm->OutStreamer->emitFill(Padding, 0xff);
 
     for (const ArangeSpan &Span : List) {
-      Asm->EmitLabelReference(Span.Start, PtrSize);
+      Asm->emitLabelReference(Span.Start, PtrSize);
 
       // Calculate the size as being from the span start to it's end.
       if (Span.End) {
-        Asm->EmitLabelDifference(Span.End, Span.Start, PtrSize);
+        Asm->emitLabelDifference(Span.End, Span.Start, PtrSize);
       } else {
         // For symbols without an end marker (e.g. common), we
         // write a single arange entry containing just that one symbol.
@@ -2802,8 +2801,8 @@ void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
 }
 
 void DwarfDebug::emitMacro(DIMacro &M) {
-  Asm->EmitULEB128(M.getMacinfoType());
-  Asm->EmitULEB128(M.getLine());
+  Asm->emitULEB128(M.getMacinfoType());
+  Asm->emitULEB128(M.getLine());
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
   Asm->OutStreamer->EmitBytes(Name);
@@ -2817,11 +2816,11 @@ void DwarfDebug::emitMacro(DIMacro &M) {
 
 void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   assert(F.getMacinfoType() == dwarf::DW_MACINFO_start_file);
-  Asm->EmitULEB128(dwarf::DW_MACINFO_start_file);
-  Asm->EmitULEB128(F.getLine());
-  Asm->EmitULEB128(U.getOrCreateSourceID(F.getFile()));
+  Asm->emitULEB128(dwarf::DW_MACINFO_start_file);
+  Asm->emitULEB128(F.getLine());
+  Asm->emitULEB128(U.getOrCreateSourceID(F.getFile()));
   handleMacroNodes(F.getElements(), U);
-  Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);
+  Asm->emitULEB128(dwarf::DW_MACINFO_end_file);
 }
 
 void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {

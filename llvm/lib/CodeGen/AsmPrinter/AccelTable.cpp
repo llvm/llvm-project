@@ -271,7 +271,7 @@ void AccelTableWriter::emitOffsets(const MCSymbol *Base) const {
         continue;
       PrevHash = HashValue;
       Asm->OutStreamer->AddComment("Offset in Bucket " + Twine(i));
-      Asm->EmitLabelDifference(Hash->Sym, Base, sizeof(uint32_t));
+      Asm->emitLabelDifference(Hash->Sym, Base, sizeof(uint32_t));
     }
   }
 }
@@ -368,7 +368,7 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
 
   AsmPrinter *Asm = Ctx.Asm;
   Asm->OutStreamer->AddComment("Header: unit length");
-  Asm->EmitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,
+  Asm->emitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,
                            sizeof(uint32_t));
   Asm->OutStreamer->EmitLabel(Ctx.ContributionStart);
   Asm->OutStreamer->AddComment("Header: version");
@@ -386,7 +386,7 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
   Asm->OutStreamer->AddComment("Header: name count");
   Asm->emitInt32(NameCount);
   Asm->OutStreamer->AddComment("Header: abbreviation table size");
-  Asm->EmitLabelDifference(Ctx.AbbrevEnd, Ctx.AbbrevStart, sizeof(uint32_t));
+  Asm->emitLabelDifference(Ctx.AbbrevEnd, Ctx.AbbrevStart, sizeof(uint32_t));
   Asm->OutStreamer->AddComment("Header: augmentation string size");
   assert(AugmentationStringSize % 4 == 0);
   Asm->emitInt32(AugmentationStringSize);
@@ -457,18 +457,18 @@ void Dwarf5AccelTableWriter<DataT>::emitAbbrevs() const {
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
     assert(Abbrev.first != 0);
-    Asm->EmitULEB128(Abbrev.first);
+    Asm->emitULEB128(Abbrev.first);
     Asm->OutStreamer->AddComment(dwarf::TagString(Abbrev.first));
-    Asm->EmitULEB128(Abbrev.first);
+    Asm->emitULEB128(Abbrev.first);
     for (const auto &AttrEnc : Abbrev.second) {
-      Asm->EmitULEB128(AttrEnc.Index, dwarf::IndexString(AttrEnc.Index).data());
-      Asm->EmitULEB128(AttrEnc.Form,
+      Asm->emitULEB128(AttrEnc.Index, dwarf::IndexString(AttrEnc.Index).data());
+      Asm->emitULEB128(AttrEnc.Form,
                        dwarf::FormEncodingString(AttrEnc.Form).data());
     }
-    Asm->EmitULEB128(0, "End of abbrev");
-    Asm->EmitULEB128(0, "End of abbrev");
+    Asm->emitULEB128(0, "End of abbrev");
+    Asm->emitULEB128(0, "End of abbrev");
   }
-  Asm->EmitULEB128(0, "End of abbrev list");
+  Asm->emitULEB128(0, "End of abbrev list");
   Asm->OutStreamer->EmitLabel(AbbrevEnd);
 }
 
@@ -478,7 +478,7 @@ void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) const {
   assert(AbbrevIt != Abbreviations.end() &&
          "Why wasn't this abbrev generated?");
 
-  Asm->EmitULEB128(AbbrevIt->first, "Abbreviation code");
+  Asm->emitULEB128(AbbrevIt->first, "Abbreviation code");
   for (const auto &AttrEnc : AbbrevIt->second) {
     Asm->OutStreamer->AddComment(dwarf::IndexString(AttrEnc.Index));
     switch (AttrEnc.Index) {

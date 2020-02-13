@@ -154,7 +154,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
 void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
                                                        const MCSymbol *Lo) {
   if (Optional<uint64_t> Diff = absoluteSymbolDiff(getAssembler(), Hi, Lo)) {
-    EmitULEB128IntValue(*Diff);
+    emitULEB128IntValue(*Diff);
     return;
   }
   MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
@@ -291,7 +291,7 @@ void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 // Emit a label at a previously emitted fragment/offset position. This must be
 // within the currently-active section.
-void MCObjectStreamer::EmitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
+void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
                                       MCFragment *F, uint64_t Offset) {
   assert(F->getParent() == getCurrentSectionOnly());
 
@@ -309,19 +309,19 @@ void MCObjectStreamer::EmitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
   }
 }
 
-void MCObjectStreamer::EmitULEB128Value(const MCExpr *Value) {
+void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
   if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
-    EmitULEB128IntValue(IntValue);
+    emitULEB128IntValue(IntValue);
     return;
   }
   insert(new MCLEBFragment(*Value, false));
 }
 
-void MCObjectStreamer::EmitSLEB128Value(const MCExpr *Value) {
+void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
   int64_t IntValue;
   if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
-    EmitSLEB128IntValue(IntValue);
+    emitSLEB128IntValue(IntValue);
     return;
   }
   insert(new MCLEBFragment(*Value, true));
@@ -443,7 +443,7 @@ void MCObjectStreamer::EmitBundleUnlock() {
   llvm_unreachable(BundlingNotImplementedMsg);
 }
 
-void MCObjectStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
+void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                              unsigned Column, unsigned Flags,
                                              unsigned Isa,
                                              unsigned Discriminator,
@@ -452,8 +452,8 @@ void MCObjectStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
   // first one gets a line entry.
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
 
-  this->MCStreamer::EmitDwarfLocDirective(FileNo, Line, Column, Flags,
-                                          Isa, Discriminator, FileName);
+  this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
+                                          Discriminator, FileName);
 }
 
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
@@ -473,7 +473,7 @@ static void emitDwarfSetLineAddr(MCObjectStreamer &OS,
                                  int PointerSize) {
   // emit the sequence to set the address
   OS.EmitIntValue(dwarf::DW_LNS_extended_op, 1);
-  OS.EmitULEB128IntValue(PointerSize + 1);
+  OS.emitULEB128IntValue(PointerSize + 1);
   OS.EmitIntValue(dwarf::DW_LNE_set_address, 1);
   OS.EmitSymbolValue(Label, PointerSize);
 
@@ -481,7 +481,7 @@ static void emitDwarfSetLineAddr(MCObjectStreamer &OS,
   MCDwarfLineAddr::Emit(&OS, Params, LineDelta, 0);
 }
 
-void MCObjectStreamer::EmitDwarfAdvanceLineAddr(int64_t LineDelta,
+void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                                                 const MCSymbol *LastLabel,
                                                 const MCSymbol *Label,
                                                 unsigned PointerSize) {
@@ -500,7 +500,7 @@ void MCObjectStreamer::EmitDwarfAdvanceLineAddr(int64_t LineDelta,
   insert(new MCDwarfLineAddrFragment(LineDelta, *AddrDelta));
 }
 
-void MCObjectStreamer::EmitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
+void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label) {
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
   int64_t Res;

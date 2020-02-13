@@ -447,7 +447,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
     // the type table. See PR35809 or GNU as bug 4029.
     MCSymbol *TTBaseRefLabel = Asm->createTempSymbol("ttbaseref");
     TTBaseLabel = Asm->createTempSymbol("ttbase");
-    Asm->EmitLabelDifferenceAsULEB128(TTBaseLabel, TTBaseRefLabel);
+    Asm->emitLabelDifferenceAsULEB128(TTBaseLabel, TTBaseRefLabel);
     Asm->OutStreamer->EmitLabel(TTBaseRefLabel);
   }
 
@@ -457,7 +457,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   MCSymbol *CstBeginLabel = Asm->createTempSymbol("cst_begin");
   MCSymbol *CstEndLabel = Asm->createTempSymbol("cst_end");
   Asm->EmitEncodingByte(CallSiteEncoding, "Call site");
-  Asm->EmitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
+  Asm->emitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
   Asm->OutStreamer->EmitLabel(CstBeginLabel);
 
   // SjLj / Wasm Exception handling
@@ -472,7 +472,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
         Asm->OutStreamer->AddComment(">> Call Site " + Twine(idx) + " <<");
         Asm->OutStreamer->AddComment("  On exception at call site "+Twine(idx));
       }
-      Asm->EmitULEB128(idx);
+      Asm->emitULEB128(idx);
 
       // Offset of the first associated action record, relative to the start of
       // the action table. This value is biased by 1 (1 indicates the start of
@@ -484,7 +484,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
           Asm->OutStreamer->AddComment("  Action: " +
                                        Twine((S.Action - 1) / 2 + 1));
       }
-      Asm->EmitULEB128(S.Action);
+      Asm->emitULEB128(S.Action);
     }
   } else {
     // Itanium LSDA exception handling
@@ -524,23 +524,23 @@ MCSymbol *EHStreamer::emitExceptionTable() {
       // Offset of the call site relative to the start of the procedure.
       if (VerboseAsm)
         Asm->OutStreamer->AddComment(">> Call Site " + Twine(++Entry) + " <<");
-      Asm->EmitCallSiteOffset(BeginLabel, EHFuncBeginSym, CallSiteEncoding);
+      Asm->emitCallSiteOffset(BeginLabel, EHFuncBeginSym, CallSiteEncoding);
       if (VerboseAsm)
         Asm->OutStreamer->AddComment(Twine("  Call between ") +
                                      BeginLabel->getName() + " and " +
                                      EndLabel->getName());
-      Asm->EmitCallSiteOffset(EndLabel, BeginLabel, CallSiteEncoding);
+      Asm->emitCallSiteOffset(EndLabel, BeginLabel, CallSiteEncoding);
 
       // Offset of the landing pad relative to the start of the procedure.
       if (!S.LPad) {
         if (VerboseAsm)
           Asm->OutStreamer->AddComment("    has no landing pad");
-        Asm->EmitCallSiteValue(0, CallSiteEncoding);
+        Asm->emitCallSiteValue(0, CallSiteEncoding);
       } else {
         if (VerboseAsm)
           Asm->OutStreamer->AddComment(Twine("    jumps to ") +
                                        S.LPad->LandingPadLabel->getName());
-        Asm->EmitCallSiteOffset(S.LPad->LandingPadLabel, EHFuncBeginSym,
+        Asm->emitCallSiteOffset(S.LPad->LandingPadLabel, EHFuncBeginSym,
                                 CallSiteEncoding);
       }
 
@@ -554,7 +554,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
           Asm->OutStreamer->AddComment("  On action: " +
                                        Twine((S.Action - 1) / 2 + 1));
       }
-      Asm->EmitULEB128(S.Action);
+      Asm->emitULEB128(S.Action);
     }
   }
   Asm->OutStreamer->EmitLabel(CstEndLabel);
@@ -584,7 +584,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
       else
         Asm->OutStreamer->AddComment("  Cleanup");
     }
-    Asm->EmitSLEB128(Action.ValueForTypeID);
+    Asm->emitSLEB128(Action.ValueForTypeID);
 
     // Action Record
     //
@@ -598,7 +598,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
         Asm->OutStreamer->AddComment("  Continue to action "+Twine(NextAction));
       }
     }
-    Asm->EmitSLEB128(Action.NextAction);
+    Asm->emitSLEB128(Action.NextAction);
   }
 
   if (HaveTTData) {
@@ -649,6 +649,6 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
         Asm->OutStreamer->AddComment("FilterInfo " + Twine(Entry));
     }
 
-    Asm->EmitULEB128(TypeID);
+    Asm->emitULEB128(TypeID);
   }
 }
