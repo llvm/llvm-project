@@ -12,7 +12,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
 
-class ABIMacOSX_arm : public lldb_private::ABI {
+class ABIMacOSX_arm : public lldb_private::RegInfoBasedABI {
 public:
   ~ABIMacOSX_arm() override = default;
 
@@ -85,11 +85,7 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  ABIMacOSX_arm(lldb::ProcessSP process_sp,
-                std::unique_ptr<llvm::MCRegisterInfo> info_up)
-      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
-    // Call CreateInstance instead.
-  }
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
 #endif // liblldb_ABIMacOSX_arm_h_

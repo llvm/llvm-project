@@ -20,7 +20,6 @@ define void @baz(<8 x i32> %arg) local_unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@baz
 ; CHECK-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
 ; CHECK-NEXT:    ret void
 ;
 bb:

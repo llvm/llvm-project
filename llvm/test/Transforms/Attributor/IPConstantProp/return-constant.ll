@@ -28,9 +28,9 @@ define internal i32 @foo(i1 %C) {
 ; CHECK-SAME: (i1 [[C:%.*]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i32 52
+; CHECK-NEXT:    ret i32 undef
 ; CHECK:       F:
-; CHECK-NEXT:    ret i32 52
+; CHECK-NEXT:    ret i32 undef
 ;
   br i1 %C, label %T, label %F
 

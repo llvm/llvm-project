@@ -501,6 +501,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
 Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
                                           const DataLayout &DL) {
+  // Bail out early. Not expect to load from scalable global variable.
+  if (LoadTy->isVectorTy() && LoadTy->getVectorIsScalable())
+    return nullptr;
+
   auto *PTy = cast<PointerType>(C->getType());
   auto *IntType = dyn_cast<IntegerType>(LoadTy);
 
@@ -520,8 +524,8 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
     else if (LoadTy->isDoubleTy())
       MapTy = Type::getInt64Ty(C->getContext());
     else if (LoadTy->isVectorTy()) {
-      MapTy = PointerType::getIntNTy(C->getContext(),
-                                     DL.getTypeSizeInBits(LoadTy));
+      MapTy = PointerType::getIntNTy(
+          C->getContext(), DL.getTypeSizeInBits(LoadTy).getFixedSize());
     } else
       return nullptr;
 
@@ -561,7 +565,8 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
     return nullptr;
 
   int64_t Offset = OffsetAI.getSExtValue();
-  int64_t InitializerSize = DL.getTypeAllocSize(GV->getInitializer()->getType());
+  int64_t InitializerSize =
+      DL.getTypeAllocSize(GV->getInitializer()->getType()).getFixedSize();
 
   // If we're not accessing anything in this constant, the result is undefined.
   if (Offset <= -1 * static_cast<int64_t>(BytesLoaded))

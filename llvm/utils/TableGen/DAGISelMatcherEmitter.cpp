@@ -619,7 +619,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
-    // These should always fit into one byte.
+    // These should always fit into 7 bits.
     OS << "OPC_EmitInteger, "
       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", "
       << Val << ",\n";

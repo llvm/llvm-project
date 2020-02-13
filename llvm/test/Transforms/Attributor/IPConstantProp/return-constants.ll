@@ -32,6 +32,17 @@ F:                                                ; preds = %0
 }
 
 define internal %0 @bar(i1 %Q) {
+; CHECK-LABEL: define {{[^@]+}}@bar
+; CHECK-SAME: (i1 [[Q:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
+; CHECK-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[B:%.*]] = insertvalue [[TMP0]] %A, i32 22, 1
+; CHECK-NEXT:    ret [[TMP0]] %B
+; CHECK:       F:
+; CHECK-NEXT:    [[C:%.*]] = insertvalue [[TMP0]] %A, i32 23, 1
+; CHECK-NEXT:    ret [[TMP0]] %C
+;
   %A = insertvalue %0 undef, i32 21, 0
   br i1 %Q, label %T, label %F
 
@@ -48,13 +59,33 @@ define %0 @caller(i1 %Q) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i1 [[Q:%.*]])
 ; CHECK-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
+; CHECK-NEXT:    ret [[TMP0]] %X
+;
+  %X = call %0 @foo(i1 %Q)
+  %A = extractvalue %0 %X, 0
+  %B = extractvalue %0 %X, 1
+  %Y = call %0 @bar(i1 %Q)
+  %C = extractvalue %0 %Y, 0
+  %D = extractvalue %0 %Y, 1
+  %M = add i32 %A, %C
+  %N = add i32 %B, %D
+  ret %0 %X
+}
+
+; Similar to @caller but the result of both calls are actually used.
+define i32 @caller2(i1 %Q) {
+; CHECK-LABEL: define {{[^@]+}}@caller2
+; CHECK-SAME: (i1 [[Q:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
 ; CHECK-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] %X, 0
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] %X, 1
-; CHECK-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] undef, 0
-; CHECK-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] undef, 1
+; CHECK-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]])
+; CHECK-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] %Y, 0
+; CHECK-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] %Y, 1
 ; CHECK-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
 ; CHECK-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
-; CHECK-NEXT:    ret [[TMP0]] %X
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %X = call %0 @foo(i1 %Q)
   %A = extractvalue %0 %X, 0
@@ -65,5 +96,6 @@ define %0 @caller(i1 %Q) {
   %M = add i32 %A, %C
 ;; Check that the second return values didn't get propagated
   %N = add i32 %B, %D
-  ret %0 %X
+  %R = add i32 %N, %M
+  ret i32 %R
 }

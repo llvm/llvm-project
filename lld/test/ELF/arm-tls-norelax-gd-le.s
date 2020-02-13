@@ -37,5 +37,5 @@ x:
 
 
 // Without any definition of __tls_get_addr we get an error
-// RUN: not ld.lld  %t.o -o %t 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not ld.lld  %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 // ERR: error: undefined symbol: __tls_get_addr

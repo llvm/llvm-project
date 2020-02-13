@@ -92,6 +92,118 @@ define double @ext1_ext1_fsub(<2 x double> %x, <2 x double> %y) {
   ret double %r
 }
 
+define double @ext1_ext1_fadd_different_types(<2 x double> %x, <4 x double> %y) {
+; CHECK-LABEL: @ext1_ext1_fadd_different_types(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x double> [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = fadd fast double [[E0]], [[E1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %e0 = extractelement <2 x double> %x, i32 1
+  %e1 = extractelement <4 x double> %y, i32 1
+  %r = fadd fast double %e0, %e1
+  ret double %r
+}
+
+define i32 @ext1_ext1_add_same_vec(<4 x i32> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[X]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %e0 = extractelement <4 x i32> %x, i32 1
+  %e1 = extractelement <4 x i32> %x, i32 1
+  %r = add i32 %e0, %e1
+  ret i32 %r
+}
+
+define i32 @ext1_ext1_add_same_vec_cse(<4 x i32> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec_cse(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[E0]], [[E0]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %e0 = extractelement <4 x i32> %x, i32 1
+  %r = add i32 %e0, %e0
+  ret i32 %r
+}
+
+declare void @use_i8(i8)
+
+define i8 @ext1_ext1_add_same_vec_extra_use0(<16 x i8> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec_extra_use0(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E0]])
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e0)
+  %e1 = extractelement <16 x i8> %x, i32 0
+  %r = add i8 %e0, %e1
+  ret i8 %r
+}
+
+define i8 @ext1_ext1_add_same_vec_extra_use1(<16 x i8> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec_extra_use1(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[X]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E1]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 0
+  %e1 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e1)
+  %r = add i8 %e0, %e1
+  ret i8 %r
+}
+
+define i8 @ext1_ext1_add_same_vec_cse_extra_use(<16 x i8> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec_cse_extra_use(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E]], [[E]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e)
+  %r = add i8 %e, %e
+  ret i8 %r
+}
+
+define i8 @ext1_ext1_add_uses1(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: @ext1_ext1_add_uses1(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E0]])
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e0)
+  %e1 = extractelement <16 x i8> %y, i32 0
+  %r = add i8 %e0, %e1
+  ret i8 %r
+}
+
+define i8 @ext1_ext1_add_uses2(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: @ext1_ext1_add_uses2(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E1]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 0
+  %e1 = extractelement <16 x i8> %y, i32 0
+  call void @use_i8(i8 %e1)
+  %r = add i8 %e0, %e1
+  ret i8 %r
+}
+
 define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @ext0_ext1_add(
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0

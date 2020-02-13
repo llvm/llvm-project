@@ -1277,11 +1277,12 @@ static TemplateParameterList *CreateTemplateParameterList(
     if (name && name[0])
       identifier_info = &ast.Idents.get(name);
     if (IsValueParam(template_param_infos.args[i])) {
+      QualType template_param_type =
+          template_param_infos.args[i].getIntegralType();
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
-          identifier_info, template_param_infos.args[i].getIntegralType(),
-          parameter_pack, nullptr));
-
+          identifier_info, template_param_type, parameter_pack,
+          ast.getTrivialTypeSourceInfo(template_param_type)));
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth, i,

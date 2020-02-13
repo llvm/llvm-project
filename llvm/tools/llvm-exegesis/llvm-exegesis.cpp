@@ -47,9 +47,10 @@ static cl::OptionCategory Options("llvm-exegesis options");
 static cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
 static cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
 
-static cl::opt<int> OpcodeIndex("opcode-index",
-                                cl::desc("opcode to measure, by index"),
-                                cl::cat(BenchmarkOptions), cl::init(0));
+static cl::opt<int> OpcodeIndex(
+    "opcode-index",
+    cl::desc("opcode to measure, by index, or -1 to measure all opcodes"),
+    cl::cat(BenchmarkOptions), cl::init(0));
 
 static cl::opt<std::string>
     OpcodeNames("opcode-name",
@@ -238,6 +239,10 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   if (InstrDesc.isCall() || InstrDesc.isReturn())
     return make_error<Failure>("Unsupported opcode: isCall/isReturn");
 
+  const std::vector<InstructionTemplate> InstructionVariants =
+      State.getExegesisTarget().generateInstructionVariants(
+          Instr, MaxConfigsPerOpcode);
+
   SnippetGenerator::Options SnippetOptions;
   SnippetOptions.MaxConfigsPerOpcode = MaxConfigsPerOpcode;
   const std::unique_ptr<SnippetGenerator> Generator =
@@ -245,7 +250,16 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
                                                        SnippetOptions);
   if (!Generator)
     ExitWithError("cannot create snippet generator");
-  return Generator->generateConfigurations(Instr, ForbiddenRegs);
+
+  std::vector<BenchmarkCode> Benchmarks;
+  for (const InstructionTemplate &Variant : InstructionVariants) {
+    if (Benchmarks.size() >= MaxConfigsPerOpcode)
+      break;
+    if (auto Err = Generator->generateConfigurations(Variant, Benchmarks,
+                                                     ForbiddenRegs))
+      return std::move(Err);
+  }
+  return Benchmarks;
 }
 
 void benchmarkMain() {

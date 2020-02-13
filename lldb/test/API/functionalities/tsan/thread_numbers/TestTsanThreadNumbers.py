@@ -67,7 +67,7 @@ class TsanThreadNumbersTestCase(TestBase):
         self.assertEqual(data["mops"][0]["thread_id"], report_thread_id)
 
         other_thread_id = data["mops"][1]["thread_id"]
-        self.assertTrue(other_thread_id != report_thread_id)
+        self.assertNotEqual(other_thread_id, report_thread_id)
         other_thread = self.dbg.GetSelectedTarget(
         ).process.GetThreadByIndexID(other_thread_id)
         self.assertTrue(other_thread.IsValid())

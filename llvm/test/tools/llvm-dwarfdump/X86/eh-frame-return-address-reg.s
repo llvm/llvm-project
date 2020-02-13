@@ -10,7 +10,7 @@
 # checks that we are able to dump it correctly.
 
 # CHECK:      .eh_frame contents:
-# CHECK:      00000000 00000010 ffffffff CIE
+# CHECK:      00000000 00000010 00000000 CIE
 # CHECK-NEXT:   Version:               1
 # CHECK-NEXT:   Augmentation:          "zR"
 # CHECK-NEXT:   Code alignment factor: 1

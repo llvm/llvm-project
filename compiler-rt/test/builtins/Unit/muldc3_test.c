@@ -1,4 +1,4 @@
-// RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// RUN: %clang_builtins %s -ffp-contract=off %librt -lm -o %t && %run %t
 // REQUIRES: librt_has_muldc3
 //===-- muldc3_test.c - Test __muldc3 -------------------------------------===//
 //

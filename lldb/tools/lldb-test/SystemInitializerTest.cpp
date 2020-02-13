@@ -74,7 +74,6 @@ LLDB_PLUGIN_DECLARE(EmulateInstructionARM64)
 LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS)
 LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS64)
 LLDB_PLUGIN_DECLARE(EmulateInstructionPPC64)
-LLDB_PLUGIN_DECLARE(SymbolFileDWARFDebugMap)
 LLDB_PLUGIN_DECLARE(ItaniumABILanguageRuntime)
 LLDB_PLUGIN_DECLARE(AppleObjCRuntime)
 LLDB_PLUGIN_DECLARE(SystemRuntimeMacOSX)
@@ -97,7 +96,6 @@ LLDB_PLUGIN_DECLARE(StructuredDataDarwinLog)
 LLDB_PLUGIN_DECLARE(PlatformRemoteGDBServer)
 LLDB_PLUGIN_DECLARE(ProcessGDBRemote)
 LLDB_PLUGIN_DECLARE(DynamicLoaderMacOSXDYLD)
-LLDB_PLUGIN_DECLARE(DynamicLoaderMacOS)
 LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
@@ -205,7 +203,6 @@ llvm::Error SystemInitializerTest::Initialize() {
   LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS64);
   LLDB_PLUGIN_INITIALIZE(EmulateInstructionPPC64);
 
-  LLDB_PLUGIN_INITIALIZE(SymbolFileDWARFDebugMap);
   LLDB_PLUGIN_INITIALIZE(ItaniumABILanguageRuntime);
   LLDB_PLUGIN_INITIALIZE(AppleObjCRuntime);
   LLDB_PLUGIN_INITIALIZE(SystemRuntimeMacOSX);
@@ -236,7 +233,6 @@ llvm::Error SystemInitializerTest::Initialize() {
 
   LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOS);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderPOSIXDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
@@ -299,7 +295,6 @@ void SystemInitializerTest::Terminate() {
   LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS64);
   LLDB_PLUGIN_TERMINATE(EmulateInstructionPPC64);
 
-  LLDB_PLUGIN_TERMINATE(SymbolFileDWARFDebugMap);
   LLDB_PLUGIN_TERMINATE(ItaniumABILanguageRuntime);
   LLDB_PLUGIN_TERMINATE(AppleObjCRuntime);
   LLDB_PLUGIN_TERMINATE(SystemRuntimeMacOSX);
@@ -325,7 +320,6 @@ void SystemInitializerTest::Terminate() {
   LLDB_PLUGIN_TERMINATE(StructuredDataDarwinLog);
 
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOS);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderPOSIXDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);

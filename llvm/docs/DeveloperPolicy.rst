@@ -160,7 +160,7 @@ larger features. Accepted ways to speed up review times for your patches are:
 Developers should participate in code reviews as both reviewers and
 reviewees. If someone is kind enough to review your code, you should return the
 favor for someone else.  Note that anyone is welcome to review and give feedback
-on a patch, but only people with Subversion write access can approve it.
+on a patch, but only people with GitHub commit access can approve it.
 
 There is a web based code review tool that can optionally be used
 for code reviews. See :doc:`Phabricator`.
@@ -325,9 +325,9 @@ Below are some guidelines about the format of the message itself:
   and in-code comments, ex. capitalization, full stop, etc.
 
 * If the commit is a bug fix on top of another recently committed patch, or a
-  revert or reapply of a patch, include the svn revision number of the prior
-  related commit. This could be as simple as "Revert rNNNN because it caused
-  PR#".
+  revert or reapply of a patch, include the git commit hash of the prior
+  related commit. This could be as simple as "Revert commit NNNN because it
+  caused PR#".
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and

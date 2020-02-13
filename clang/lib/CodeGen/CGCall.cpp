@@ -3692,24 +3692,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  AggValueSlot ArgSlot = AggValueSlot::ignored();
-  Address ArgSlotAlloca = Address::invalid();
-  if (hasAggregateEvaluationKind(E->getType())) {
-    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
-
-    // Emit a lifetime start/end for this temporary. If the type has a
-    // destructor, then we need to keep it alive. FIXME: We should still be able
-    // to end the lifetime after the destructor returns.
-    if (!E->getType().isDestructedType()) {
-      uint64_t size =
-          CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(E->getType()));
-      if (auto *lifetimeSize =
-              EmitLifetimeStart(size, ArgSlotAlloca.getPointer()))
-        args.addLifetimeCleanup({ArgSlotAlloca.getPointer(), lifetimeSize});
-    }
-  }
-
-  args.add(EmitAnyExpr(E, ArgSlot), type);
+  args.add(EmitAnyExprToTemp(E), type);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
@@ -4809,9 +4792,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // we can't use the full cleanup mechanism.
   for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
     LifetimeEnd.Emit(*this, /*Flags=*/{});
-
-  for (auto &LT : CallArgs.getLifetimeCleanups())
-    EmitLifetimeEnd(LT.Size, LT.Addr);
 
   return Ret;
 }

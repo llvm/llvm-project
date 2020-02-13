@@ -161,5 +161,5 @@ entry:
 ; CHECK-NOT: attributes #
 ; CHECK: attributes #{{.*}} = { nofree nosync nounwind }
 ; CHECK: attributes #{{.*}} = { nofree norecurse nosync nounwind }
-; CHECK: attributes #{{.*}} = { nosync }
+; CHECK: attributes #{{.*}} = { nosync nounwind }
 ; CHECK-NOT: attributes #

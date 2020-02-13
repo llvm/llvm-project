@@ -36,7 +36,7 @@ class TestStepOverWatchpoint(TestBase):
         process = target.LaunchSimple(None, None,
                                       self.get_process_working_directory())
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(process,
@@ -60,14 +60,14 @@ class TestStepOverWatchpoint(TestBase):
         self.assertTrue(read_watchpoint, "Failed to set read watchpoint.")
 
         thread.StepOver()
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonWatchpoint,
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonWatchpoint,
                         STOPPED_DUE_TO_WATCHPOINT)
-        self.assertTrue(thread.GetStopDescription(20) == 'watchpoint 1')
+        self.assertEquals(thread.GetStopDescription(20), 'watchpoint 1')
 
         process.Continue()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
-        self.assertTrue(thread.GetStopDescription(20) == 'step over')
+        self.assertEquals(thread.GetStopDescription(20), 'step over')
 
         self.step_inst_for_watchpoint(1)
 
@@ -89,14 +89,14 @@ class TestStepOverWatchpoint(TestBase):
                         error.GetCString())
 
         thread.StepOver()
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonWatchpoint,
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonWatchpoint,
                         STOPPED_DUE_TO_WATCHPOINT)
-        self.assertTrue(thread.GetStopDescription(20) == 'watchpoint 2')
+        self.assertEquals(thread.GetStopDescription(20), 'watchpoint 2')
 
         process.Continue()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
-        self.assertTrue(thread.GetStopDescription(20) == 'step over')
+        self.assertEquals(thread.GetStopDescription(20), 'step over')
 
         self.step_inst_for_watchpoint(2)
 
@@ -110,10 +110,10 @@ class TestStepOverWatchpoint(TestBase):
                 self.assertFalse(watchpoint_hit, "Watchpoint already hit.")
                 expected_stop_desc = "watchpoint %d" % wp_id
                 actual_stop_desc = self.thread().GetStopDescription(20)
-                self.assertTrue(actual_stop_desc == expected_stop_desc,
+                self.assertEquals(actual_stop_desc, expected_stop_desc,
                                 "Watchpoint ID didn't match.")
                 watchpoint_hit = True
             else:
-                self.assertTrue(stop_reason == lldb.eStopReasonPlanComplete,
+                self.assertEquals(stop_reason, lldb.eStopReasonPlanComplete,
                                 STOPPED_DUE_TO_STEP_IN)
         self.assertTrue(watchpoint_hit, "Watchpoint never hit.")

@@ -5,9 +5,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-bad-debug.s -o %t4.o
 # RUN: rm -f %t2.a
 # RUN: llvm-ar rc %t2.a %t2.o
-# RUN: not ld.lld %t.o %t2.a %t3.o %t4.o -o %t.exe 2>&1 \
+# RUN: not ld.lld %t.o %t2.a %t3.o %t4.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not="error:" --implicit-check-not="warning:"
-# RUN: not ld.lld -pie %t.o %t2.a %t3.o %t4.o -o %t.exe 2>&1 \
+# RUN: not ld.lld -pie %t.o %t2.a %t3.o %t4.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck %s --implicit-check-not="error:" --implicit-check-not="warning:"
 
 # CHECK:      error: undefined symbol: foo
@@ -72,7 +72,7 @@
 # CHECK-NEXT: >>> referenced by undef-bad-debug2.s:11 (dir2{{/|\\}}undef-bad-debug2.s:11)
 # CHECK-NEXT: >>>               {{.*}}tmp4.o:(.text+0x18)
 
-# RUN: not ld.lld %t.o %t2.a -o %t.exe -no-demangle 2>&1 | \
+# RUN: not ld.lld %t.o %t2.a -o /dev/null -no-demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=NO-DEMANGLE %s
 # NO-DEMANGLE: error: undefined symbol: _Z3fooi
 

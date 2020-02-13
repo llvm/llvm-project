@@ -227,6 +227,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    report_fatal_error("Unsupported dynamic stack allocation");
   default:
     llvm_unreachable("unimplemented operand");
   }

@@ -3990,21 +3990,6 @@ let Predicates = [HasMVEInt] in {
 // vector types (v4i1<>v8i1, etc.) also as part of lowering vector shuffles.
 def predicate_cast : SDNode<"ARMISD::PREDICATE_CAST", SDTUnaryOp>;
 
-// 'vector_reg_cast' is an operation that reinterprets the contents of an MVE
-// vector register as a different vector type, without changing the contents of
-// the register. It differs from 'bitconvert' in that bitconvert reinterprets
-// the _memory_ storage format of the vector, whereas vector_reg_cast
-// reinterprets the _register_ format - and in big-endian, the memory and
-// register formats are different, so they are different operations.
-//
-// For example, 'vector_reg_cast' between v8i16 and v16i8 will map the LSB of
-// the zeroth i16 lane to the zeroth i8 lane, regardless of system endianness,
-// whereas 'bitconvert' will map it to the high byte in big-endian mode,
-// because that's what VSTRH.16 followed by VLDRB.8 would do. So the bitconvert
-// would have to emit a VREV16.8 instruction, whereas the vector_reg_cast emits
-// no code at all if the vector is already in a register.
-def vector_reg_cast : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
-
 let Predicates = [HasMVEInt] in {
   foreach VT = [ v4i1, v8i1, v16i1 ] in {
     def : Pat<(i32 (predicate_cast (VT VCCR:$src))),
@@ -4019,7 +4004,7 @@ let Predicates = [HasMVEInt] in {
 
   foreach VT = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
     foreach VT2 = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
-      def : Pat<(VT (vector_reg_cast (VT2 MQPR:$src))), (VT MQPR:$src)>;
+      def : Pat<(VT (ARMVectorRegCast (VT2 MQPR:$src))), (VT MQPR:$src)>;
 }
 
 // end of MVE compares

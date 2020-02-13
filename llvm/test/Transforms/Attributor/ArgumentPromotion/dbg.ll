@@ -21,14 +21,16 @@ define internal void @test(i32** %X) !dbg !2 {
 
 define internal void @test_byval(%struct.pair* byval %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval()
+; CHECK-NEXT:    call void @sink(i32 0)
 ; CHECK-NEXT:    ret void
 ;
+  call void @sink(i32 0)
   ret void
 }
 
 define void @caller(i32** %Y, %struct.pair* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (i32** nocapture readonly [[Y:%.*]], %struct.pair* nocapture nofree readonly [[P:%.*]])
+; CHECK-SAME: (i32** nocapture readonly [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]])
 ; CHECK-NEXT:    call void @test(i32** nocapture readonly align 8 [[Y]]), !dbg !4
 ; CHECK-NEXT:    call void @test_byval(), !dbg !5
 ; CHECK-NEXT:    ret void

@@ -948,6 +948,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<3>, ImmArg<4>]>;
 
+  class AdvSIMD_SVE_DUP_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMVectorElementType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_EXPA_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMVectorOfBitcastsToInt<0>],
@@ -1225,6 +1232,12 @@ def int_aarch64_sve_ldff1 : AdvSIMD_1Vec_PredFaultingLoad_Intrinsic;
 def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 
 //
+// Scalar to vector operations
+//
+
+def int_aarch64_sve_dup : AdvSIMD_SVE_DUP_Intrinsic;
+
+//
 // Integer arithmetic
 //
 
@@ -1235,6 +1248,7 @@ def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_pmul       : AdvSIMD_2VectorArg_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_mul_lane   : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_umulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
 
@@ -1253,7 +1267,9 @@ def int_aarch64_sve_uabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_mad        : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_msb        : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_mla        : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_mla_lane   : AdvSIMD_3VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_mls        : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_mls_lane   : AdvSIMD_3VectorArgIndexed_Intrinsic;
 
 def int_aarch64_sve_saddv      : AdvSIMD_SVE_SADDV_Reduce_Intrinsic;
 def int_aarch64_sve_uaddv      : AdvSIMD_SVE_SADDV_Reduce_Intrinsic;

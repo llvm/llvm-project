@@ -852,14 +852,41 @@ struct Attributor {
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
-  bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA);
+  bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p I is assumed dead.
+  ///
+  /// If \p LivenessAA is not provided it is queried.
+  bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *LivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p U is assumed dead.
+  ///
+  /// If \p FnLivenessAA is not provided it is queried.
+  bool isAssumedDead(const Use &U, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p IRP is assumed dead.
+  ///
+  /// If \p FnLivenessAA is not provided it is queried.
+  bool isAssumedDead(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Check \p Pred on all (transitive) uses of \p V.
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
   /// associated value and return true if \p Pred holds every time.
   bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
-                       const AbstractAttribute &QueryingAA, const Value &V);
+                       const AbstractAttribute &QueryingAA, const Value &V,
+                       DepClassTy LivenessDepClass = DepClassTy::OPTIONAL);
 
   /// Helper struct used in the communication between an abstract attribute (AA)
   /// that wants to change the signature of a function and the Attributor which
@@ -997,7 +1024,8 @@ struct Attributor {
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(const function_ref<bool(Instruction &)> &Pred,
                                const AbstractAttribute &QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes);
+                               const ArrayRef<unsigned> &Opcodes,
+                               bool CheckBBLivenessOnly = false);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
@@ -2109,6 +2137,10 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
   AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
 
+protected:
+  /// The query functions are protected such that other attributes need to go
+  /// through the Attributor interfaces: `Attributor::isAssumedDead(...)`
+
   /// Returns true if the underlying value is assumed dead.
   virtual bool isAssumedDead() const = 0;
 
@@ -2141,6 +2173,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
     return false;
   }
 
+public:
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const override { return *this; }
 
@@ -2149,6 +2182,8 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 
   /// Unique ID (due to the unique address)
   static const char ID;
+
+  friend struct Attributor;
 };
 
 /// State for dereferenceable attribute

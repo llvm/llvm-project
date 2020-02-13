@@ -2253,28 +2253,22 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-static void restoreCRs(bool isPPC64, bool is31, bool CR2Spilled,
-                       bool CR3Spilled, bool CR4Spilled, MachineBasicBlock &MBB,
+static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
+                       bool CR4Spilled, MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MI,
                        ArrayRef<CalleeSavedInfo> CSI, unsigned CSIIndex) {
 
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   DebugLoc DL;
-  unsigned RestoreOp, MoveReg;
+  unsigned MoveReg = PPC::R12;
 
-  if (isPPC64)
-    // This is handled during epilogue generation.
-    return;
-  else {
-    // 32-bit:  FP-relative
-    MBB.insert(MI, addFrameReference(BuildMI(*MF, DL, TII.get(PPC::LWZ),
-                                             PPC::R12),
-                                     CSI[CSIIndex].getFrameIdx()));
-    RestoreOp = PPC::MTOCRF;
-    MoveReg = PPC::R12;
-  }
+  // 32-bit:  FP-relative
+  MBB.insert(MI,
+             addFrameReference(BuildMI(*MF, DL, TII.get(PPC::LWZ), MoveReg),
+                               CSI[CSIIndex].getFrameIdx()));
 
+  unsigned RestoreOp = PPC::MTOCRF;
   if (CR2Spilled)
     MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR2)
                .addReg(MoveReg, getKillRegState(!CR3Spilled && !CR4Spilled)));
@@ -2327,6 +2321,10 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
   return MBB.erase(I);
 }
 
+static bool isCalleeSavedCR(unsigned Reg) {
+  return PPC::CR2 == Reg || Reg == PPC::CR3 || Reg == PPC::CR4;
+}
+
 bool
 PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
@@ -2365,6 +2363,11 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;
 
+    // Restore of callee saved condition register field is handled during
+    // epilogue insertion.
+    if (isCalleeSavedCR(Reg) && !Subtarget.is32BitELFABI())
+      continue;
+
     if (Reg == PPC::CR2) {
       CR2Spilled = true;
       // The spill slot is associated only with CR2, which is the
@@ -2380,12 +2383,10 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     } else {
       // When we first encounter a non-CR register after seeing at
       // least one CR register, restore all spilled CRs together.
-      if ((CR2Spilled || CR3Spilled || CR4Spilled)
-          && !(PPC::CR2 <= Reg && Reg <= PPC::CR4)) {
+      if (CR2Spilled || CR3Spilled || CR4Spilled) {
         bool is31 = needsFP(*MF);
-        restoreCRs(Subtarget.isPPC64(), is31,
-                   CR2Spilled, CR3Spilled, CR4Spilled,
-                   MBB, I, CSI, CSIIndex);
+        restoreCRs(is31, CR2Spilled, CR3Spilled, CR4Spilled, MBB, I, CSI,
+                   CSIIndex);
         CR2Spilled = CR3Spilled = CR4Spilled = false;
       }
 
@@ -2423,9 +2424,10 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   // If we haven't yet spilled the CRs, do so now.
   if (CR2Spilled || CR3Spilled || CR4Spilled) {
+    assert(Subtarget.is32BitELFABI() &&
+           "Only set CR[2|3|4]Spilled on 32-bit SVR4.");
     bool is31 = needsFP(*MF);
-    restoreCRs(Subtarget.isPPC64(), is31, CR2Spilled, CR3Spilled, CR4Spilled,
-               MBB, I, CSI, CSIIndex);
+    restoreCRs(is31, CR2Spilled, CR3Spilled, CR4Spilled, MBB, I, CSI, CSIIndex);
   }
 
   return true;

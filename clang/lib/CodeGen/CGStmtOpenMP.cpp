@@ -2018,12 +2018,14 @@ static void emitCommonSimdLoop(CodeGenFunction &CGF, const OMPLoopDirective &S,
     BodyCodeGen(CGF);
   };
   const Expr *IfCond = nullptr;
-  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
-    if (CGF.getLangOpts().OpenMP >= 50 &&
-        (C->getNameModifier() == OMPD_unknown ||
-         C->getNameModifier() == OMPD_simd)) {
-      IfCond = C->getCondition();
-      break;
+  if (isOpenMPSimdDirective(S.getDirectiveKind())) {
+    for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+      if (CGF.getLangOpts().OpenMP >= 50 &&
+          (C->getNameModifier() == OMPD_unknown ||
+           C->getNameModifier() == OMPD_simd)) {
+        IfCond = C->getCondition();
+        break;
+      }
     }
   }
   if (IfCond) {
@@ -5137,7 +5139,8 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
 CodeGenFunction::JumpDest
 CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_parallel || Kind == OMPD_task ||
-      Kind == OMPD_target_parallel)
+      Kind == OMPD_target_parallel || Kind == OMPD_taskloop ||
+      Kind == OMPD_master_taskloop || Kind == OMPD_parallel_master_taskloop)
     return ReturnBlock;
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
          Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||
@@ -5682,7 +5685,7 @@ void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
       Action.Enter(CGF);
       CGF.EmitOMPTaskLoopBasedDirective(S);
     };
-    OMPLexicalScope Scope(CGF, S, llvm::None, /*EmitPreInitStmt=*/false);
+    OMPLexicalScope Scope(CGF, S, OMPD_parallel, /*EmitPreInitStmt=*/false);
     CGM.getOpenMPRuntime().emitMasterRegion(CGF, TaskLoopCodeGen,
                                             S.getBeginLoc());
   };

@@ -2,7 +2,7 @@
 
 # CHECK: .eh_frame contents:
 
-# CHECK: 00000000 00000018 ffffffff CIE
+# CHECK: 00000000 00000018 00000000 CIE
 # CHECK:   Version:               1
 # CHECK:   Augmentation:          "zPLR"
 # CHECK:   Code alignment factor: 1
@@ -19,7 +19,7 @@
 # CHECK:   DW_CFA_offset: reg31 -4
 # CHECK:   DW_CFA_nop:
 
-# CHECK: 00000038 00000000 ffffffff CIE
+# CHECK: 00000038 00000000 00000000 CIE
 # CHECK:   Version:               0
 # CHECK:   Augmentation:          ""
 # CHECK:   Code alignment factor: 0

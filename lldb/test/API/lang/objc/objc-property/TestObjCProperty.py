@@ -48,12 +48,12 @@ class ObjCPropertyTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, main_bkpt)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         thread = threads[0]
         frame = thread.GetFrameAtIndex(0)
 
@@ -62,7 +62,7 @@ class ObjCPropertyTestCase(TestBase):
         access_count = mine.GetChildMemberWithName("_access_count")
         self.assertTrue(access_count.IsValid())
         start_access_count = access_count.GetValueAsUnsigned(123456)
-        self.assertTrue(start_access_count != 123456)
+        self.assertNotEqual(start_access_count, 123456)
 
         #
         # The first set of tests test calling the getter & setter of
@@ -74,13 +74,13 @@ class ObjCPropertyTestCase(TestBase):
         nonexistant_error = nonexistant_value.GetError()
         self.assertTrue(nonexistant_error.Success())
         nonexistant_int = nonexistant_value.GetValueAsUnsigned(123456)
-        self.assertTrue(nonexistant_int == 6)
+        self.assertEquals(nonexistant_int, 6)
 
         # Calling the getter function would up the access count, so make sure
         # that happened.
 
         new_access_count = access_count.GetValueAsUnsigned(123456)
-        self.assertTrue(new_access_count - start_access_count == 1)
+        self.assertEquals(new_access_count - start_access_count, 1)
         start_access_count = new_access_count
 
         #
@@ -94,7 +94,7 @@ class ObjCPropertyTestCase(TestBase):
         # that happened.
 
         new_access_count = access_count.GetValueAsUnsigned(123456)
-        self.assertTrue(new_access_count - start_access_count == 1)
+        self.assertEquals(new_access_count - start_access_count, 1)
         start_access_count = new_access_count
 
         #
@@ -123,12 +123,12 @@ class ObjCPropertyTestCase(TestBase):
             "mine.idWithProtocol", False)
         idWithProtocol_error = idWithProtocol_value.GetError()
         self.assertTrue(idWithProtocol_error.Success())
-        self.assertTrue(idWithProtocol_value.GetTypeName() == "id")
+        self.assertEquals(idWithProtocol_value.GetTypeName(), "id")
 
         # Make sure that class property getter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt", False)
         self.assertTrue(value.GetError().Success())
-        self.assertTrue(value.GetValueAsUnsigned(11111) == 123)
+        self.assertEquals(value.GetValueAsUnsigned(11111), 123)
 
         # Make sure that class property setter works as expected
         value = frame.EvaluateExpression("BaseClass.classInt = 234", False)
@@ -137,4 +137,4 @@ class ObjCPropertyTestCase(TestBase):
         # Verify that setter above actually worked
         value = frame.EvaluateExpression("BaseClass.classInt", False)
         self.assertTrue(value.GetError().Success())
-        self.assertTrue(value.GetValueAsUnsigned(11111) == 234)
+        self.assertEquals(value.GetValueAsUnsigned(11111), 234)

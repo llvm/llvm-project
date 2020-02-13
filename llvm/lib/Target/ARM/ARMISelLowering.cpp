@@ -7526,7 +7526,7 @@ SDValue ARMTargetLowering::ReconstructShuffle(SDValue Op,
     if (SrcEltTy == SmallestEltTy)
       continue;
     assert(ShuffleVT.getVectorElementType() == SmallestEltTy);
-    Src.ShuffleVec = DAG.getNode(ISD::BITCAST, dl, ShuffleVT, Src.ShuffleVec);
+    Src.ShuffleVec = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, ShuffleVT, Src.ShuffleVec);
     Src.WindowScale = SrcEltTy.getSizeInBits() / SmallestEltTy.getSizeInBits();
     Src.WindowBase *= Src.WindowScale;
   }
@@ -7578,7 +7578,7 @@ SDValue ARMTargetLowering::ReconstructShuffle(SDValue Op,
                                             ShuffleOps[1], Mask, DAG);
   if (!Shuffle)
     return SDValue();
-  return DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
+  return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Shuffle);
 }
 
 enum ShuffleOpCodes {
@@ -12952,6 +12952,28 @@ PerformPREDICATE_CASTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return SDValue();
 }
 
+static SDValue
+PerformVECTOR_REG_CASTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              const ARMSubtarget *ST) {
+  EVT VT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+  SDLoc dl(N);
+
+  // Under Little endian, a VECTOR_REG_CAST is equivalent to a BITCAST
+  if (ST->isLittle())
+    return DCI.DAG.getNode(ISD::BITCAST, dl, VT, Op);
+
+  // VECTOR_REG_CAST(VECTOR_REG_CAST(x)) == VECTOR_REG_CAST(x)
+  if (Op->getOpcode() == ARMISD::VECTOR_REG_CAST) {
+    // If the valuetypes are the same, we can remove the cast entirely.
+    if (Op->getOperand(0).getValueType() == VT)
+      return Op->getOperand(0);
+    return DCI.DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Op->getOperand(0));
+  }
+
+  return SDValue();
+}
+
 static SDValue PerformVCMPCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const ARMSubtarget *Subtarget) {
@@ -14787,6 +14809,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformARMBUILD_VECTORCombine(N, DCI);
   case ARMISD::PREDICATE_CAST:
     return PerformPREDICATE_CASTCombine(N, DCI);
+  case ARMISD::VECTOR_REG_CAST:
+    return PerformVECTOR_REG_CASTCombine(N, DCI, Subtarget);
   case ARMISD::VCMP:
     return PerformVCMPCombine(N, DCI, Subtarget);
   case ARMISD::SMULWB: {
@@ -15853,7 +15877,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     if (Op.getOpcode() == ARMISD::VGETLANEs)
       Known = Known.sext(DstSz);
     else {
-      Known = Known.zext(DstSz, true /* extended bits are known zero */);
+      Known = Known.zext(DstSz);
     }
     assert(DstSz == Known.getBitWidth());
     break;
@@ -16503,6 +16527,15 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
   assert(!(DstSz == 32 && Subtarget->hasFP16()) &&
          "With FP16, 16 to 32 conversion is legal!");
+
+  // Converting from 32 -> 64 is valid if we have FP64.
+  if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
+    // FIXME: Remove this when we have strict fp instruction selection patterns
+    if (IsStrict) {
+      DAG.mutateStrictFPToFP(Op.getNode());
+    }
+    return Op;
+  }
 
   // Either we are converting from 16 -> 64, without FP16 and/or
   // FP.double-precision or without Armv8-fp. So we must do it in two

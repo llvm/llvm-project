@@ -38,13 +38,14 @@ SnippetGenerator::SnippetGenerator(const LLVMState &State, const Options &Opts)
 
 SnippetGenerator::~SnippetGenerator() = default;
 
-Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
-    const Instruction &Instr, const BitVector &ExtraForbiddenRegs) const {
+Error SnippetGenerator::generateConfigurations(
+    const InstructionTemplate &Variant, std::vector<BenchmarkCode> &Benchmarks,
+    const BitVector &ExtraForbiddenRegs) const {
   BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
   ForbiddenRegs |= ExtraForbiddenRegs;
   // If the instruction has memory registers, prevent the generator from
   // using the scratch register and its aliasing registers.
-  if (Instr.hasMemoryOperands()) {
+  if (Variant.getInstr().hasMemoryOperands()) {
     const auto &ET = State.getExegesisTarget();
     unsigned ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
@@ -55,7 +56,7 @@ Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
         State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
     // FIXME: We could make a copy of the scratch register.
-    for (const auto &Op : Instr.Operands) {
+    for (const auto &Op : Variant.getInstr().Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
           ScratchRegAliases.test(Op.getImplicitReg()))
         return make_error<Failure>(
@@ -64,16 +65,19 @@ Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
     ForbiddenRegs |= ScratchRegAliases;
   }
 
-  if (auto E = generateCodeTemplates(Instr, ForbiddenRegs)) {
-    std::vector<BenchmarkCode> Output;
-    for (CodeTemplate &CT : E.get()) {
+  if (auto E = generateCodeTemplates(Variant, ForbiddenRegs)) {
+    MutableArrayRef<CodeTemplate> Templates = E.get();
+
+    // Avoid reallocations in the loop.
+    Benchmarks.reserve(Benchmarks.size() + Templates.size());
+    for (CodeTemplate &CT : Templates) {
       // TODO: Generate as many BenchmarkCode as needed.
       {
         BenchmarkCode BC;
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
           if (auto error = randomizeUnsetVariables(State, ForbiddenRegs, IT))
-            return std::move(error);
+            return error;
           BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
@@ -81,13 +85,14 @@ Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
         BC.Key.RegisterInitialValues =
             computeRegisterInitialValues(CT.Instructions);
         BC.Key.Config = CT.Config;
-        Output.push_back(std::move(BC));
-        if (Output.size() >= Opts.MaxConfigsPerOpcode)
-          return Output; // Early exit if we exceeded the number of allowed
-                         // configs.
+        Benchmarks.emplace_back(std::move(BC));
+        if (Benchmarks.size() >= Opts.MaxConfigsPerOpcode) {
+          // We reached the number of  allowed configs and return early.
+          return Error::success();
+        }
       }
     }
-    return Output;
+    return Error::success();
   } else
     return E.takeError();
 }
@@ -135,34 +140,35 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
 }
 
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(const Instruction &Instr) {
-  const AliasingConfigurations SelfAliasing(Instr, Instr);
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant) {
+  const AliasingConfigurations SelfAliasing(Variant.getInstr(),
+                                            Variant.getInstr());
   if (SelfAliasing.empty())
     return make_error<SnippetGeneratorFailure>("empty self aliasing");
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
-  InstructionTemplate IT(&Instr);
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "implicit Self cycles, picking random values.";
   } else {
     CT.Info = "explicit self cycles, selecting one aliasing Conf.";
     // This is a self aliasing instruction so defs and uses are from the same
-    // instance, hence twice IT in the following call.
-    setRandomAliasing(SelfAliasing, IT, IT);
+    // instance, hence twice Variant in the following call.
+    setRandomAliasing(SelfAliasing, Variant, Variant);
   }
-  CT.Instructions.push_back(std::move(IT));
+  CT.Instructions.push_back(std::move(Variant));
   return std::move(Result);
 }
 
 Expected<std::vector<CodeTemplate>>
-generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
+generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
+                                   StringRef Msg) {
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
   CT.Info =
       std::string(formatv("{0}, repeating an unconstrained assignment", Msg));
-  CT.Instructions.emplace_back(&Instr);
+  CT.Instructions.push_back(std::move(Variant));
   return std::move(Result);
 }
 

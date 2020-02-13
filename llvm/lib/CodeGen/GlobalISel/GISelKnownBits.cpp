@@ -294,7 +294,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_ANYEXT: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
+    Known = Known.zext(BitWidth);
     break;
   }
   case TargetOpcode::G_LOAD: {
@@ -360,9 +360,9 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
                                : SrcTy.getSizeInBits();
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
-    Known = Known.zextOrTrunc(SrcBitWidth, true);
+    Known = Known.zextOrTrunc(SrcBitWidth);
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
-    Known = Known.zextOrTrunc(BitWidth, true);
+    Known = Known.zextOrTrunc(BitWidth);
     if (BitWidth > SrcBitWidth)
       Known.Zero.setBitsFrom(SrcBitWidth);
     break;

@@ -51,25 +51,25 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOut()
 
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped)
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_sint(int)")
+        self.assertEquals(fun_name, "outer_sint(int)")
 
         return_value = thread.GetStopReturnValue()
         self.assertTrue(return_value.IsValid())
 
         ret_int = return_value.GetValueAsSigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(in_int == ret_int)
+        self.assertEquals(in_int, ret_int)
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
         # Then test stepping out two frames at once:
 
         thread_list = lldbutil.continue_to_breakpoint(self.process, inner_sint_bkpt)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEquals(len(thread_list), 1)
         thread = thread_list[0]
 
         # We are done with the inner_sint breakpoint:
@@ -77,23 +77,23 @@ class ReturnValueTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(1)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_sint(int)")
+        self.assertEquals(fun_name, "outer_sint(int)")
         in_int = frame.FindVariable("value").GetValueAsSigned(error)
         self.assertTrue(error.Success())
 
         thread.StepOutOfFrame(frame)
 
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped)
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "main")
+        self.assertEquals(fun_name, "main")
 
         ret_value = thread.GetStopReturnValue()
         self.assertTrue(return_value.IsValid())
         ret_int = ret_value.GetValueAsSigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(2 * in_int == ret_int)
+        self.assertEquals(2 * in_int, ret_int)
 
         # Now try some simple returns that have different types:
         inner_float_bkpt = self.target.BreakpointCreateByName(
@@ -102,7 +102,7 @@ class ReturnValueTestCase(TestBase):
         self.process.Continue()
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, inner_float_bkpt)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEquals(len(thread_list), 1)
         thread = thread_list[0]
 
         self.target.BreakpointDelete(inner_float_bkpt.GetID())
@@ -112,12 +112,12 @@ class ReturnValueTestCase(TestBase):
         in_float = float(in_value.GetValue())
         thread.StepOut()
 
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped)
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_float(float)")
+        self.assertEquals(fun_name, "outer_float(float)")
 
         #return_value = thread.GetStopReturnValue()
         #self.assertTrue(return_value.IsValid())
@@ -235,7 +235,7 @@ class ReturnValueTestCase(TestBase):
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, bkpt)
 
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEquals(len(thread_list), 1)
         thread = thread_list[0]
 
         self.target.BreakpointDelete(bkpt.GetID())
@@ -254,14 +254,14 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOut()
 
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped)
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Assuming all these functions step out to main.  Could figure out the caller dynamically
         # if that would add something to the test.
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "main")
+        self.assertEquals(fun_name, "main")
 
         frame = thread.GetFrameAtIndex(0)
         ret_value = thread.GetStopReturnValue()
@@ -269,7 +269,7 @@ class ReturnValueTestCase(TestBase):
         self.assertTrue(ret_value.IsValid())
 
         num_ret_children = ret_value.GetNumChildren()
-        self.assertTrue(num_in_children == num_ret_children)
+        self.assertEquals(num_in_children, num_ret_children)
         for idx in range(0, num_ret_children):
             in_child = in_value.GetChildAtIndex(idx)
             ret_child = ret_value.GetChildAtIndex(idx)

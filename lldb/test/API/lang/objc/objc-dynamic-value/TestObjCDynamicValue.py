@@ -64,12 +64,12 @@ class ObjCDynamicValueTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, main_before_setProperty_bkpt)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         thread = threads[0]
 
         #
@@ -130,7 +130,7 @@ class ObjCDynamicValueTestCase(TestBase):
 
         threads = lldbutil.get_stopped_threads(
             process, lldb.eStopReasonPlanComplete)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         line_entry = threads[0].GetFrameAtIndex(0).GetLineEntry()
 
         self.assertEqual(line_entry.GetLine(), self.set_property_line)
@@ -143,7 +143,7 @@ class ObjCDynamicValueTestCase(TestBase):
 
         threads = lldbutil.continue_to_breakpoint(
             process, handle_SourceBase_bkpt)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -183,7 +183,7 @@ class ObjCDynamicValueTestCase(TestBase):
 
         threads = lldbutil.continue_to_breakpoint(
             process, handle_SourceBase_bkpt)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -201,7 +201,7 @@ class ObjCDynamicValueTestCase(TestBase):
 
     def examine_SourceDerived_ptr(self, object):
         self.assertTrue(object)
-        self.assertTrue(object.GetTypeName().find('SourceDerived') != -1)
+        self.assertNotEqual(object.GetTypeName().find('SourceDerived'), -1)
         derivedValue = object.GetChildMemberWithName('_derivedValue')
         self.assertTrue(derivedValue)
-        self.assertTrue(int(derivedValue.GetValue(), 0) == 30)
+        self.assertEquals(int(derivedValue.GetValue(), 0), 30)

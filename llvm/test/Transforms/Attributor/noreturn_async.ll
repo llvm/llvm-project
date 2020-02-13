@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=1 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_sync.ll but with a personality which
 ; indicates that the exception handler *can* catch asynchronous exceptions. As
@@ -25,8 +25,10 @@ entry:
 ; CHECK:      Function Attrs: nofree noreturn nosync nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
+; CHECK-NEXT:   {{.*}}@printf{{.*}}
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
 ; CHECK-NEXT:   unreachable
+  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0)) nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
   ret void

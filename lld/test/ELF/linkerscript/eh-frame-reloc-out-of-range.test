@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/eh-frame-reloc-out-of-range.s -o %t.o
-# RUN: not ld.lld %t.o -T %s -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -T %s -o /dev/null 2>&1 | FileCheck %s
 
 PHDRS { eh PT_LOAD; text PT_LOAD; }
 SECTIONS { . = 0x10000;

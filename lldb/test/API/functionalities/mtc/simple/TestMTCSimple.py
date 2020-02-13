@@ -25,7 +25,7 @@ class MTCSimpleTestCase(TestBase):
 
     @skipIf(archs=['i386'])
     def mtc_tests(self):
-        self.assertTrue(self.mtc_dylib_path != "")
+        self.assertNotEqual(self.mtc_dylib_path, "")
 
         # Load the test
         exe = self.getBuildArtifact("a.out")

@@ -869,6 +869,7 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
     Result["additionalTextEdits"] = llvm::json::Array(CI.additionalTextEdits);
   if (CI.deprecated)
     Result["deprecated"] = CI.deprecated;
+  Result["score"] = CI.score;
   return std::move(Result);
 }
 

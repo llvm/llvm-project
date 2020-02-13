@@ -2771,7 +2771,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (HonorINFs && HonorNaNs &&
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
-        DenormalFPMath != llvm::DenormalMode::getIEEE() &&
         FPContract.equals("off"))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
@@ -6159,7 +6158,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Output.getType() == types::TY_Object &&
       Args.hasFlag(options::OPT__SLASH_showFilenames,
                    options::OPT__SLASH_showFilenames_, false)) {
-    C.getJobs().getJobs().back()->setPrintInputFilenames(true);
+    C.getJobs().getJobs().back()->PrintInputFilenames = true;
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))

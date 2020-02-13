@@ -19,6 +19,6 @@ SECTIONS {
 ## Check that we error out if trying to get alignment of
 ## section that does not exist.
 # RUN: echo "SECTIONS { _aaa = ALIGNOF(.foo); }" > %t.script
-# RUN: not ld.lld -o %t1 --script %t.script %t 2>&1 \
+# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR %s
 # ERR: {{.*}}.script:1: undefined section .foo

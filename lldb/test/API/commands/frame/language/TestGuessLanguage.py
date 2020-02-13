@@ -65,7 +65,7 @@ class TestFrameGuessLanguage(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEquals(breakpoint.GetHitCount(), 1)
 
         thread = threads[0]
 

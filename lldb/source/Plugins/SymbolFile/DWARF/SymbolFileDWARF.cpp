@@ -226,6 +226,7 @@ void SymbolFileDWARF::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
                                 DebuggerInitialize);
+  SymbolFileDWARFDebugMap::Initialize();
 }
 
 void SymbolFileDWARF::DebuggerInitialize(Debugger &debugger) {
@@ -240,6 +241,7 @@ void SymbolFileDWARF::DebuggerInitialize(Debugger &debugger) {
 }
 
 void SymbolFileDWARF::Terminate() {
+  SymbolFileDWARFDebugMap::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
   LogChannelDWARF::Terminate();
 }

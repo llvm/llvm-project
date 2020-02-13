@@ -89,42 +89,42 @@ SECTIONS {
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=NUMERR %s
 # NUMERR: malformed number: 0x12Q41
 
 ## Missing closing bracket.
 # RUN: echo "SECTIONS { . = (1; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR %s
 # BRACKETERR: ) expected, but got ;
 
 ## Missing opening bracket.
 # RUN: echo "SECTIONS { . = 1); }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR2 %s
 # BRACKETERR2: ; expected, but got )
 
 ## Empty expression.
 # RUN: echo "SECTIONS { . = ; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERREXPR %s
 # ERREXPR: malformed number: ;
 
 ## Div by zero error.
 # RUN: echo "SECTIONS { . = 1 / 0; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=DIVZERO %s
 # DIVZERO: {{.*}}.script:1: division by zero
 
 ## Mod by zero error.
 # RUN: echo "SECTIONS { . = 1 % 0; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=MODZERO %s
 # MODZERO: {{.*}}.script:1: modulo by zero
 
 ## Broken ternary operator expression.
 # RUN: echo "SECTIONS { . = 1 ? 2; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
 # TERNERR: : expected, but got ;

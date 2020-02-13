@@ -343,7 +343,8 @@ public:
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
   ParseResult
   parseAffineMapOfSSAIds(AffineMap &map,
-                         function_ref<ParseResult(bool)> parseElement);
+                         function_ref<ParseResult(bool)> parseElement,
+                         OpAsmParser::Delimiter delimiter);
 
 private:
   /// The Parser is subclassed and reinstantiated.  Do not add additional
@@ -2431,7 +2432,8 @@ public:
   AffineMap parseAffineMapRange(unsigned numDims, unsigned numSymbols);
   ParseResult parseAffineMapOrIntegerSetInline(AffineMap &map, IntegerSet &set);
   IntegerSet parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols);
-  ParseResult parseAffineMapOfSSAIds(AffineMap &map);
+  ParseResult parseAffineMapOfSSAIds(AffineMap &map,
+                                     OpAsmParser::Delimiter delimiter);
   void getDimsAndSymbolSSAIds(SmallVectorImpl<StringRef> &dimAndSymbolSSAIds,
                               unsigned &numDims);
 
@@ -2917,9 +2919,24 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
 }
 
 /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
-ParseResult AffineParser::parseAffineMapOfSSAIds(AffineMap &map) {
-  if (parseToken(Token::l_square, "expected '['"))
-    return failure();
+ParseResult
+AffineParser::parseAffineMapOfSSAIds(AffineMap &map,
+                                     OpAsmParser::Delimiter delimiter) {
+  Token::Kind rightToken;
+  switch (delimiter) {
+  case OpAsmParser::Delimiter::Square:
+    if (parseToken(Token::l_square, "expected '['"))
+      return failure();
+    rightToken = Token::r_square;
+    break;
+  case OpAsmParser::Delimiter::Paren:
+    if (parseToken(Token::l_paren, "expected '('"))
+      return failure();
+    rightToken = Token::r_paren;
+    break;
+  default:
+    return emitError("unexpected delimiter");
+  }
 
   SmallVector<AffineExpr, 4> exprs;
   auto parseElt = [&]() -> ParseResult {
@@ -2931,7 +2948,7 @@ ParseResult AffineParser::parseAffineMapOfSSAIds(AffineMap &map) {
   // Parse a multi-dimensional affine expression (a comma-separated list of
   // 1-d affine expressions); the list cannot be empty. Grammar:
   // multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)
-  if (parseCommaSeparatedListUntil(Token::r_square, parseElt,
+  if (parseCommaSeparatedListUntil(rightToken, parseElt,
                                    /*allowEmptyList=*/true))
     return failure();
   // Parsed a valid affine map.
@@ -3081,9 +3098,10 @@ ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {
 /// parse SSA value uses encountered while parsing affine expressions.
 ParseResult
 Parser::parseAffineMapOfSSAIds(AffineMap &map,
-                               function_ref<ParseResult(bool)> parseElement) {
+                               function_ref<ParseResult(bool)> parseElement,
+                               OpAsmParser::Delimiter delimiter) {
   return AffineParser(state, /*allowParsingSSAIds=*/true, parseElement)
-      .parseAffineMapOfSSAIds(map);
+      .parseAffineMapOfSSAIds(map, delimiter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4182,10 +4200,10 @@ public:
   }
 
   /// Parse an AffineMap of SSA ids.
-  ParseResult
-  parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands,
-                         Attribute &mapAttr, StringRef attrName,
-                         SmallVectorImpl<NamedAttribute> &attrs) override {
+  ParseResult parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands,
+                                     Attribute &mapAttr, StringRef attrName,
+                                     SmallVectorImpl<NamedAttribute> &attrs,
+                                     Delimiter delimiter) override {
     SmallVector<OperandType, 2> dimOperands;
     SmallVector<OperandType, 1> symOperands;
 
@@ -4201,7 +4219,7 @@ public:
     };
 
     AffineMap map;
-    if (parser.parseAffineMapOfSSAIds(map, parseElement))
+    if (parser.parseAffineMapOfSSAIds(map, parseElement, delimiter))
       return failure();
     // Add AffineMap attribute.
     if (map) {
