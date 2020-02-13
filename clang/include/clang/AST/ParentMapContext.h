@@ -89,8 +89,6 @@ public:
 /// Container for either a single DynTypedNode or for an ArrayRef to
 /// DynTypedNode. For use with ParentMap.
 class DynTypedNodeList {
-  using DynTypedNode = DynTypedNode;
-
   llvm::AlignedCharArrayUnion<DynTypedNode, ArrayRef<DynTypedNode>> Storage;
   bool IsSingleNode;
 
