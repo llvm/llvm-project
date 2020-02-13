@@ -123,19 +123,19 @@ public:
   /// Implemented in AMDGPUMCInstLower.cpp
   void EmitInstruction(const MachineInstr *MI) override;
 
-  void EmitFunctionBodyStart() override;
+  void emitFunctionBodyStart() override;
 
-  void EmitFunctionBodyEnd() override;
+  void emitFunctionBodyEnd() override;
 
-  void EmitFunctionEntryLabel() override;
+  void emitFunctionEntryLabel() override;
 
-  void EmitBasicBlockStart(const MachineBasicBlock &MBB) override;
+  void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
 
   void EmitGlobalVariable(const GlobalVariable *GV) override;
 
-  void EmitStartOfAsmFile(Module &M) override;
+  void emitStartOfAsmFile(Module &M) override;
 
-  void EmitEndOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
 
   bool isBlockOnlyReachableByFallthrough(
     const MachineBasicBlock *MBB) const override;

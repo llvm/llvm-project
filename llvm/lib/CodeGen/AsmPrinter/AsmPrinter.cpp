@@ -281,7 +281,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   OutStreamer->EmitVersionForTarget(Target, M.getSDKVersion());
 
   // Allow the target to emit any magic that it wants at the start of the file.
-  EmitStartOfAsmFile(M);
+  emitStartOfAsmFile(M);
 
   // Very minimal debug info. It is ignored if we emit actual debug info. If we
   // don't, this at least helps the user find where a global came from.
@@ -671,7 +671,7 @@ void AsmPrinter::EmitDebugValue(const MCExpr *Value, unsigned Size) const {
 
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
-void AsmPrinter::EmitFunctionHeader() {
+void AsmPrinter::emitFunctionHeader() {
   const Function &F = MF->getFunction();
 
   if (isVerbose())
@@ -751,11 +751,11 @@ void AsmPrinter::EmitFunctionHeader() {
   // the AIX target. The PowerPC 64-bit V1 ELF target also uses function
   // descriptors and should be converted to use this hook as well.
   if (MAI->needsFunctionDescriptors())
-    EmitFunctionDescriptor();
+    emitFunctionDescriptor();
 
   // Emit the CurrentFnSym. This is a virtual function to allow targets to do
   // their wild and crazy things as required.
-  EmitFunctionEntryLabel();
+  emitFunctionEntryLabel();
 
   if (CurrentFnBegin) {
     if (MAI->useAssignmentForEHBegin()) {
@@ -782,7 +782,7 @@ void AsmPrinter::EmitFunctionHeader() {
 
 /// EmitFunctionEntryLabel - Emit the label that is the entrypoint for the
 /// function.  This can be overridden by targets as required to do custom stuff.
-void AsmPrinter::EmitFunctionEntryLabel() {
+void AsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->redefineIfPossible();
 
   // The function label could have already been emitted if two symbols end up
@@ -1067,11 +1067,11 @@ static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF,
 
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
-void AsmPrinter::EmitFunctionBody() {
-  EmitFunctionHeader();
+void AsmPrinter::emitFunctionBody() {
+  emitFunctionHeader();
 
   // Emit target-specific gunk before the function body.
-  EmitFunctionBodyStart();
+  emitFunctionBodyStart();
 
   bool ShouldPrintDebugScopes = MMI->hasDebugInfo();
 
@@ -1098,7 +1098,7 @@ void AsmPrinter::EmitFunctionBody() {
   int NumInstsInFunction = 0;
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
-    EmitBasicBlockStart(MBB);
+    emitBasicBlockStart(MBB);
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
@@ -1176,7 +1176,7 @@ void AsmPrinter::EmitFunctionBody() {
       }
     }
 
-    EmitBasicBlockEnd(MBB);
+    emitBasicBlockEnd(MBB);
   }
 
   EmittedInsts += NumInstsInFunction;
@@ -1221,7 +1221,7 @@ void AsmPrinter::EmitFunctionBody() {
   }
 
   // Emit target-specific gunk after the function body.
-  EmitFunctionBodyEnd();
+  emitFunctionBodyEnd();
 
   if (needFuncLabelsForEHOrDebugInfo(*MF, MMI) ||
       MAI->hasDotTypeDotSizeDirective()) {
@@ -1683,7 +1683,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Allow the target to emit any magic that it wants at the end of the file,
   // after everything else has gone out.
-  EmitEndOfAsmFile(M);
+  emitEndOfAsmFile(M);
 
   MMI = nullptr;
 
@@ -3082,7 +3082,7 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
 /// EmitBasicBlockStart - This method prints the label for the specified
 /// MachineBasicBlock, an alignment (if present) and a comment describing
 /// it if appropriate.
-void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
+void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // End the previous funclet and start a new one.
   if (MBB.isEHFuncletEntry()) {
     for (const HandlerInfo &HI : Handlers) {
@@ -3142,7 +3142,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 }
 
-void AsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {}
+void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {}
 
 void AsmPrinter::EmitVisibility(MCSymbol *Sym, unsigned Visibility,
                                 bool IsDefinition) const {

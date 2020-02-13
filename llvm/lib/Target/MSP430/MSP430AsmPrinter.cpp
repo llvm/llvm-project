@@ -180,7 +180,7 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   SetupMachineFunction(MF);
-  EmitFunctionBody();
+  emitFunctionBody();
   return false;
 }
 

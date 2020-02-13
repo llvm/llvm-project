@@ -112,7 +112,7 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
   return static_cast<AMDGPUTargetStreamer*>(OutStreamer->getTargetStreamer());
 }
 
-void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
+void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (IsaInfo::hasCodeObjectV3(getGlobalSTI())) {
     std::string ExpectedTarget;
     raw_string_ostream ExpectedTargetOS(ExpectedTarget);
@@ -144,7 +144,7 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
       Version.Major, Version.Minor, Version.Stepping, "AMD", "AMDGPU");
 }
 
-void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Following code requires TargetStreamer to be present.
   if (!getTargetStreamer())
     return;
@@ -180,7 +180,7 @@ bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
   return (MBB->back().getOpcode() != AMDGPU::S_SETPC_B64);
 }
 
-void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
+void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
@@ -199,7 +199,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
-void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
+void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
@@ -239,10 +239,10 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
   Streamer.PopSection();
 }
 
-void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
+void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
   if (IsaInfo::hasCodeObjectV3(getGlobalSTI()) &&
       TM.getTargetTriple().getOS() == Triple::AMDHSA) {
-    AsmPrinter::EmitFunctionEntryLabel();
+    AsmPrinter::emitFunctionEntryLabel();
     return;
   }
 
@@ -261,10 +261,10 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
     HexLines.push_back("");
   }
 
-  AsmPrinter::EmitFunctionEntryLabel();
+  AsmPrinter::emitFunctionEntryLabel();
 }
 
-void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
+void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
@@ -273,7 +273,7 @@ void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
     HexLines.push_back("");
   }
-  AsmPrinter::EmitBasicBlockStart(MBB);
+  AsmPrinter::emitBasicBlockStart(MBB);
 }
 
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
@@ -460,7 +460,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   HexLines.clear();
   DisasmLineMaxLen = 0;
 
-  EmitFunctionBody();
+  emitFunctionBody();
 
   if (isVerbose()) {
     MCSectionELF *CommentSection =
