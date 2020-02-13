@@ -66,8 +66,12 @@ def sync_source_lists(write):
     changes_by_rev = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     def find_gitrev(touched_line, in_file):
-        return git_out(
-            ['log', '--format=%h', '-1', '-S' + touched_line, in_file]).rstrip()
+        # re.escape() escapes e.g. '-', which works in practice but has
+        # undefined behavior according to the POSIX extended regex spec.
+        posix_re_escape = lambda s: re.sub(r'([.[{()\\*+?|^$])', r'\\\1', s)
+        cmd = ['log', '--format=%h', '-1', '--pickaxe-regex',
+               r'-S\<%s\>' % posix_re_escape(touched_line), in_file]
+        return git_out(cmd).rstrip()
 
     # Collect changes to gn files, grouped by revision.
     for gn_file in gn_files:
