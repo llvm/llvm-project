@@ -203,9 +203,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
           // that have debug info are last in the sort.
           if (*Prev == *Curr) {
             // FunctionInfo entries match exactly (range, lines, inlines)
-            OS << "warning: duplicate function info entries, removing "
-                  "duplicate:\n"
-               << *Curr << '\n';
+            OS << "warning: duplicate function info entries for range: "
+               << Curr->Range << '\n';
             Curr = Funcs.erase(Prev);
           } else {
             if (!Prev->hasRichInfo() && Curr->hasRichInfo()) {
@@ -244,10 +243,21 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   return Error::success();
 }
 
-uint32_t GsymCreator::insertString(StringRef S) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
+  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  if (Copy) {
+    // We need to provide backing storage for the string if requested
+    // since StringTableBuilder stores references to strings. Any string
+    // that comes from a section in an object file doesn't need to be
+    // copied, but any string created by code will need to be copied.
+    // This allows GsymCreator to be really fast when parsing DWARF and
+    // other object files as most strings don't need to be copied.
+    CachedHashStringRef CHStr(S);
+    if (!StrTab.contains(CHStr))
+      S = StringStorage.insert(S).first->getKey();
+  }
   return StrTab.add(S);
 }
 
@@ -273,3 +283,9 @@ void GsymCreator::forEachFunctionInfo(
       break;
   }
 }
+
+size_t GsymCreator::getNumFunctionInfos() const{
+  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  return Funcs.size();
+}
+
