@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
+
+#include "TextStubHelpers.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 #include "llvm/TextAPI/MachO/TextAPIWriter.h"
@@ -15,40 +17,17 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-struct ExampleSymbol {
-  SymbolKind Kind;
-  std::string Name;
-  bool WeakDefined;
-  bool ThreadLocalValue;
-};
-using ExampleSymbolSeq = std::vector<ExampleSymbol>;
-using UUIDs = std::vector<std::pair<Target, std::string>>;
-
-inline bool operator<(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name) < std::tie(RHS.Kind, RHS.Name);
-}
-
-inline bool operator==(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name, LHS.WeakDefined, LHS.ThreadLocalValue) ==
-         std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
-}
-
-inline std::string stripWhitespace(std::string s) {
-  s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
-  return s;
-}
-
-static ExampleSymbol TBDv4ExportedSymbols[] = {
+static ExportedSymbol TBDv4ExportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symA", false, false},
     {SymbolKind::GlobalSymbol, "_symAB", false, false},
     {SymbolKind::GlobalSymbol, "_symB", false, false},
 };
 
-static ExampleSymbol TBDv4ReexportedSymbols[] = {
+static ExportedSymbol TBDv4ReexportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symC", false, false},
 };
 
-static ExampleSymbol TBDv4UndefinedSymbols[] = {
+static ExportedSymbol TBDv4UndefinedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symD", false, false},
 };
 
@@ -146,11 +125,11 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(1U, File->reexportedLibraries().size());
   EXPECT_EQ(reexport, File->reexportedLibraries().front());
 
-  ExampleSymbolSeq Exports, Reexports, Undefineds;
-  ExampleSymbol temp;
+  ExportedSymbolSeq Exports, Reexports, Undefineds;
+  ExportedSymbol temp;
   for (const auto *Sym : File->symbols()) {
-    temp = ExampleSymbol{Sym->getKind(), std::string(Sym->getName()),
-                         Sym->isWeakDefined(), Sym->isThreadLocalValue()};
+    temp = ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                          Sym->isWeakDefined(), Sym->isThreadLocalValue()};
     EXPECT_FALSE(Sym->isWeakReferenced());
     if (Sym->isUndefined())
       Undefineds.emplace_back(std::move(temp));
@@ -162,11 +141,11 @@ TEST(TBDv4, ReadFile) {
   llvm::sort(Reexports.begin(), Reexports.end());
   llvm::sort(Undefineds.begin(), Undefineds.end());
 
-  EXPECT_EQ(sizeof(TBDv4ExportedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4ExportedSymbols) / sizeof(ExportedSymbol),
             Exports.size());
-  EXPECT_EQ(sizeof(TBDv4ReexportedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4ReexportedSymbols) / sizeof(ExportedSymbol),
             Reexports.size());
-  EXPECT_EQ(sizeof(TBDv4UndefinedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4UndefinedSymbols) / sizeof(ExportedSymbol),
             Undefineds.size());
   EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
                          std::begin(TBDv4ExportedSymbols)));
