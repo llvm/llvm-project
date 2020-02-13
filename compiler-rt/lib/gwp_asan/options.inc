@@ -17,9 +17,10 @@ GWP_ASAN_OPTION(
     "When allocations are right-aligned, should we perfectly align them up to "
     "the page boundary? By default (false), we round up allocation size to the "
     "nearest power of two (1, 2, 4, 8, 16) up to a maximum of 16-byte "
-    "alignment for performance reasons. Setting this to true can find single "
-    "byte buffer-overflows for multibyte allocations at the cost of "
-    "performance, and may be incompatible with some architectures.")
+    "alignment for performance reasons. For Bionic, we use 8-byte alignment by "
+    "default. Setting this to true can find single byte buffer-overflows for "
+    "multibyte allocations at the cost of performance, and may be incompatible "
+    "with some architectures.")
 
 GWP_ASAN_OPTION(int, MaxSimultaneousAllocations, 16,
                 "Number of simultaneously-guarded allocations available in the "

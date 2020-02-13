@@ -8,9 +8,10 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 
+#include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
+#include "gwp_asan/random.h"
 #include "gwp_asan/utilities.h"
-#include "optional/segv_handler.h"
 
 // RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
 // macro is defined before including <inttypes.h>.
@@ -175,7 +176,14 @@ void *GuardedPoolAllocator::allocate(size_t Size) {
     return nullptr;
 
   uintptr_t Ptr = State.slotToAddr(Index);
-  Ptr += allocationSlotOffset(Size);
+  // Should we right-align this allocation?
+  if (getRandomUnsigned32() % 2 == 0) {
+    AlignmentStrategy Align = AlignmentStrategy::DEFAULT;
+    if (PerfectlyRightAlign)
+      Align = AlignmentStrategy::PERFECT;
+    Ptr +=
+        State.maximumAllocationSize() - rightAlignedAllocationSize(Size, Align);
+  }
   AllocationMetadata *Meta = addrToMetadata(Ptr);
 
   // If a slot is multiple pages in size, and the allocation takes up a single
@@ -276,26 +284,6 @@ size_t GuardedPoolAllocator::reserveSlot() {
 void GuardedPoolAllocator::freeSlot(size_t SlotIndex) {
   assert(FreeSlotsLength < State.MaxSimultaneousAllocations);
   FreeSlots[FreeSlotsLength++] = SlotIndex;
-}
-
-uintptr_t GuardedPoolAllocator::allocationSlotOffset(size_t Size) const {
-  assert(Size > 0);
-
-  bool ShouldRightAlign = getRandomUnsigned32() % 2 == 0;
-  if (!ShouldRightAlign)
-    return 0;
-
-  uintptr_t Offset = State.maximumAllocationSize();
-  if (!PerfectlyRightAlign) {
-    if (Size == 3)
-      Size = 4;
-    else if (Size > 4 && Size <= 8)
-      Size = 8;
-    else if (Size > 8 && (Size % 16) != 0)
-      Size += 16 - (Size % 16);
-  }
-  Offset -= Size;
-  return Offset;
 }
 
 GWP_ASAN_TLS_INITIAL_EXEC
