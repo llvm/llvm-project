@@ -396,8 +396,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Depth + 1))
       return I;
     assert(InputKnown.getBitWidth() == SrcBitWidth && "Src width changed?");
-    Known = InputKnown.zextOrTrunc(BitWidth,
-                                   true /* ExtendedBitsAreKnownZero */);
+    Known = InputKnown.zextOrTrunc(BitWidth);
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }

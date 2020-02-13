@@ -1254,9 +1254,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Q.DL.getTypeSizeInBits(ScalarTy);
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
-    Known = Known.zextOrTrunc(SrcBitWidth, false);
+    Known = Known.anyextOrTrunc(SrcBitWidth);
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    Known = Known.zextOrTrunc(BitWidth, true /* ExtendedBitsAreKnownZero */);
+    Known = Known.zextOrTrunc(BitWidth);
     break;
   }
   case Instruction::BitCast: {
