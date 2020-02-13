@@ -1094,18 +1094,30 @@ define void @useless_arg_ext_int_ext(i32* %a) {
 ; FIXME: We should fold terminators.
 
 define internal i32 @switch_default(i64 %i) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@switch_default
-; CHECK-SAME: (i64 [[I:%.*]])
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 3, label [[RETURN:%.*]]
-; CHECK-NEXT:    i64 10, label [[RETURN]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.default:
-; CHECK-NEXT:    call void @sink()
-; CHECK-NEXT:    ret i32 123
-; CHECK:       return:
-; CHECK-NEXT:    unreachable
+; MODULE-LABEL: define {{[^@]+}}@switch_default()
+; MODULE-NEXT:  entry:
+; MODULE-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
+; MODULE-NEXT:    i64 3, label [[RETURN:%.*]]
+; MODULE-NEXT:    i64 10, label [[RETURN]]
+; MODULE-NEXT:    ]
+; MODULE:       sw.default:
+; MODULE-NEXT:    call void @sink()
+; MODULE-NEXT:    ret i32 undef
+; MODULE:       return:
+; MODULE-NEXT:    unreachable
+;
+; CGSCC-LABEL: define {{[^@]+}}@switch_default
+; CGSCC-SAME: (i64 [[I:%.*]])
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
+; CGSCC-NEXT:    i64 3, label [[RETURN:%.*]]
+; CGSCC-NEXT:    i64 10, label [[RETURN]]
+; CGSCC-NEXT:    ]
+; CGSCC:       sw.default:
+; CGSCC-NEXT:    call void @sink()
+; CGSCC-NEXT:    ret i32 123
+; CGSCC:       return:
+; CGSCC-NEXT:    unreachable
 ;
 entry:
   switch i64 %i, label %sw.default [
@@ -1122,6 +1134,10 @@ return:
 }
 
 define i32 @switch_default_caller() {
+; MODULE-LABEL: define {{[^@]+}}@switch_default_caller()
+; MODULE-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default()
+; MODULE-NEXT:    ret i32 123
+;
 ; CGSCC-LABEL: define {{[^@]+}}@switch_default_caller()
 ; CGSCC-NEXT:    [[CALL2:%.*]] = tail call i32 @switch_default(i64 0)
 ; CGSCC-NEXT:    ret i32 123
