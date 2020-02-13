@@ -1275,7 +1275,7 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
   }
 }
 
-void HexagonDAGToDAGISel::EmitFunctionEntryCode() {
+void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   auto &HST = MF->getSubtarget<HexagonSubtarget>();
   auto &HFI = *HST.getFrameLowering();
   if (!HFI.needsAligna(*MF))

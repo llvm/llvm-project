@@ -78,7 +78,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  virtual void EmitFunctionEntryCode() {}
+  virtual void emitFunctionEntryCode() {}
 
   /// PreprocessISelDAG - This hook allows targets to hack on the graph before
   /// instruction selection starts.

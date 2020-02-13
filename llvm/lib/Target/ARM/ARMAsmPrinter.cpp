@@ -57,7 +57,7 @@ ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
 
-void ARMAsmPrinter::EmitFunctionBodyEnd() {
+void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
   // of the function.
   if (!InConstantPool)
@@ -66,7 +66,7 @@ void ARMAsmPrinter::EmitFunctionBodyEnd() {
   OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
 }
 
-void ARMAsmPrinter::EmitFunctionEntryLabel() {
+void ARMAsmPrinter::emitFunctionEntryLabel() {
   if (AFI->isThumbFunction()) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
     OutStreamer->EmitThumbFunc(CurrentFnSym);
@@ -158,7 +158,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Emit the rest of the function body.
-  EmitFunctionBody();
+  emitFunctionBody();
 
   // Emit the XRay table for this function.
   emitXRayTable();
@@ -471,7 +471,7 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   }
 }
 
-void ARMAsmPrinter::EmitStartOfAsmFile(Module &M) {
+void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   // Use unified assembler syntax.
   OutStreamer->EmitAssemblerFlag(MCAF_SyntaxUnified);
@@ -511,7 +511,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 }
 
 
-void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // All darwin targets use mach-o.
@@ -570,7 +570,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
 }
 
 //===----------------------------------------------------------------------===//
-// Helper routines for EmitStartOfAsmFile() and EmitEndOfAsmFile()
+// Helper routines for emitStartOfAsmFile() and emitEndOfAsmFile()
 // FIXME:
 // The following seem like one-off assembler flags, but they actually need
 // to appear in the .ARM.attributes section in ELF.
