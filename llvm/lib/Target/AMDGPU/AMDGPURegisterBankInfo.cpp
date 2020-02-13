@@ -572,27 +572,6 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
 
   }
-  case TargetOpcode::G_ICMP: {
-    // TODO: Should report 32-bit for scalar output type.
-    unsigned Size = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
-    const InstructionMapping &SSMapping = getInstructionMapping(1, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 1),
-                          nullptr, // Predicate operand.
-                          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size)}),
-      4); // Num Operands
-    AltMappings.push_back(&SSMapping);
-
-    const InstructionMapping &VVMapping = getInstructionMapping(4, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1),
-                          nullptr, // Predicate operand.
-                          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size)}),
-      4); // Num Operands
-    AltMappings.push_back(&VVMapping);
-
-    return AltMappings;
-  }
   case TargetOpcode::G_SELECT: {
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     const InstructionMapping &SSMapping = getInstructionMapping(1, 1,
@@ -1832,7 +1811,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     MachineBasicBlock *MBB = MI.getParent();
     B.setInsertPt(*MBB, std::next(MI.getIterator()));
-    B.buildTrunc(DstReg, NewDstReg);
+
+    // If we had a constrained VCC result register, a copy was inserted to VCC
+    // from SGPR.
+    SmallVector<Register, 1> DefRegs(OpdMapper.getVRegs(0));
+    if (DefRegs.empty())
+      DefRegs.push_back(DstReg);
+    B.buildTrunc(DefRegs[0], NewDstReg);
     return;
   }
   case AMDGPU::G_SELECT: {
@@ -3287,25 +3272,31 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ICMP: {
     auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
     unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+
+    // See if the result register has already been constrained to vcc, which may
+    // happen due to control flow intrinsic lowering.
+    unsigned DstBank = getRegBankID(MI.getOperand(0).getReg(), MRI, *TRI,
+                                    AMDGPU::SGPRRegBankID);
     unsigned Op2Bank = getRegBankID(MI.getOperand(2).getReg(), MRI, *TRI);
     unsigned Op3Bank = getRegBankID(MI.getOperand(3).getReg(), MRI, *TRI);
 
-    bool CanUseSCC = Op2Bank == AMDGPU::SGPRRegBankID &&
+    bool CanUseSCC = DstBank == AMDGPU::SGPRRegBankID &&
+                     Op2Bank == AMDGPU::SGPRRegBankID &&
                      Op3Bank == AMDGPU::SGPRRegBankID &&
       (Size == 32 || (Size == 64 &&
                       (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
                       Subtarget.hasScalarCompareEq64()));
 
-    unsigned Op0Bank = CanUseSCC ? AMDGPU::SGPRRegBankID : AMDGPU::VCCRegBankID;
+    DstBank = CanUseSCC ? AMDGPU::SGPRRegBankID : AMDGPU::VCCRegBankID;
+    unsigned SrcBank = CanUseSCC ? AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
 
     // TODO: Use 32-bit for scalar output size.
     // SCC results will need to be copied to a 32-bit SGPR virtual register.
     const unsigned ResultSize = 1;
 
-    OpdsMapping[0] = AMDGPU::getValueMapping(Op0Bank, ResultSize);
-    OpdsMapping[1] = nullptr; // Predicate Operand.
-    OpdsMapping[2] = AMDGPU::getValueMapping(Op2Bank, Size);
-    OpdsMapping[3] = AMDGPU::getValueMapping(Op3Bank, Size);
+    OpdsMapping[0] = AMDGPU::getValueMapping(DstBank, ResultSize);
+    OpdsMapping[2] = AMDGPU::getValueMapping(SrcBank, Size);
+    OpdsMapping[3] = AMDGPU::getValueMapping(SrcBank, Size);
     break;
   }
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
