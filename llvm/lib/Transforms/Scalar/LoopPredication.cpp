@@ -358,11 +358,13 @@ Pass *llvm::createLoopPredicationPass() {
 PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
-  const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
-  auto *BPI = FAM.getCachedResult<BranchProbabilityAnalysis>(*F);
-  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, BPI);
+  // For the new PM, we also can't use BranchProbabilityInfo as an analysis
+  // pass. Function analyses need to be preserved across loop transformations
+  // but BPI is not preserved, hence a newly built one is needed.
+  BranchProbabilityInfo BPI;
+  BPI.calculate(*F, AR.LI);
+  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, &BPI);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();
 

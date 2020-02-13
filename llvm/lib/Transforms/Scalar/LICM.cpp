@@ -243,19 +243,14 @@ private:
 
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
-  const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
-  Function *F = L.getHeader()->getParent();
-
-  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
-  // FIXME: This should probably be optional rather than required.
-  if (!ORE)
-    report_fatal_error("LICM: OptimizationRemarkEmitterAnalysis not "
-                       "cached at a higher level");
+  // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
+  // pass.  Function analyses need to be preserved across loop transformations
+  // but ORE cannot be preserved (see comment before the pass definition).
+  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
   LoopInvariantCodeMotion LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap);
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.TTI, &AR.SE,
-                      AR.MSSA, ORE))
+                      AR.MSSA, &ORE))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
