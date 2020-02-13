@@ -122,6 +122,14 @@
 								"type": "string",
 								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
 							},
+							"targetTriple": {
+								"type": "string",
+								"description": "Triplet of the target architecture to override value derived from the program file."
+							},
+							"platformName": {
+								"type": "string",
+								"description": "Name of the execution platform to override value derived from the program file."
+							},
 							"initCommands": {
 									"type": "array",
 									"description": "Initialization commands executed upon debugger startup.",
@@ -174,6 +182,14 @@
 							"debuggerRoot": {
 								"type": "string",
 								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
+							},
+							"targetTriple": {
+								"type": "string",
+								"description": "Triplet of the target architecture to override value derived from the program file."
+							},
+							"platformName": {
+								"type": "string",
+								"description": "Name of the execution platform to override value derived from the program file."
 							},
 							"attachCommands": {
 								"type": "array",
