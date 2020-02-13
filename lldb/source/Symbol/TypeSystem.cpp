@@ -165,11 +165,6 @@ Status TypeSystem::IsCompatible() {
   return Status();
 }
 
-ConstString TypeSystem::GetDisplayTypeName(void *type,
-                                           const SymbolContext *sc) {
-  return GetTypeName(type);
-}
-
 ConstString TypeSystem::GetMangledTypeName(void *type) {
   return GetTypeName(type);
 }

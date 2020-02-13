@@ -216,7 +216,7 @@ public:
   // specialized behavior.
   // \param sc  An optional symbol context of the function the type appears in.
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
-                                         const SymbolContext *sc = nullptr);
+                                         const SymbolContext *sc = nullptr) = 0;
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.
