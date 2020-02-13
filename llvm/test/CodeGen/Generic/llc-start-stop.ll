@@ -23,16 +23,16 @@
 ; START-BEFORE: Loop Strength Reduction
 ; START-BEFORE-NEXT: Basic Alias Analysis (stateless AA impl)
 
-; RUN: not llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
-; RUN: not llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE
-; RUN: not llc < %s -start-after=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-AFTER
-; RUN: not llc < %s -stop-after=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-AFTER
+; RUN: not --crash llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
+; RUN: not --crash llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE
+; RUN: not --crash llc < %s -start-after=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-AFTER
+; RUN: not --crash llc < %s -stop-after=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-AFTER
 ; NONEXISTENT-START-BEFORE: "nonexistent" pass is not registered.
 ; NONEXISTENT-STOP-BEFORE: "nonexistent" pass is not registered.
 ; NONEXISTENT-START-AFTER: "nonexistent" pass is not registered.
 ; NONEXISTENT-STOP-AFTER: "nonexistent" pass is not registered.
 
-; RUN: not llc < %s -start-before=loop-reduce -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=DOUBLE-START
-; RUN: not llc < %s -stop-before=loop-reduce -stop-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=DOUBLE-STOP
+; RUN: not --crash llc < %s -start-before=loop-reduce -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=DOUBLE-START
+; RUN: not --crash llc < %s -stop-before=loop-reduce -stop-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=DOUBLE-STOP
 ; DOUBLE-START: start-before and start-after specified!
 ; DOUBLE-STOP: stop-before and stop-after specified!

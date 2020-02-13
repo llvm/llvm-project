@@ -1,4 +1,4 @@
-  ; RUN: not opt %loadPolly -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s 2>&1 | FileCheck %s
+  ; RUN: not --crash opt %loadPolly -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Array has not a valid type.
 ;
