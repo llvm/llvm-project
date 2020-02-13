@@ -46,6 +46,11 @@ public:
 
   std::vector<std::string> ExtraOpts;
 
+  llvm::DenormalMode getDefaultDenormalModeForType(
+    const llvm::opt::ArgList &DriverArgs,
+    Action::OffloadKind DeviceOffloadKind,
+    const llvm::fltSemantics *FPType = nullptr) const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

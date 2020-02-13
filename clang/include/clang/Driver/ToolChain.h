@@ -573,12 +573,19 @@ public:
   virtual void AddCCKextLibArgs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// If a runtime library exists that sets global flags for unsafe floating
+  /// point math, return true.
+  ///
+  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
+  virtual bool isFastMathRuntimeAvailable(
+    const llvm::opt::ArgList &Args, std::string &Path) const;
+
   /// AddFastMathRuntimeIfAvailable - If a runtime library exists that sets
   /// global flags for unsafe floating point math, add it and return true.
   ///
   /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
-  virtual bool AddFastMathRuntimeIfAvailable(
-      const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
+  bool addFastMathRuntimeIfAvailable(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
 
   /// addProfileRTLibs - When -fprofile-instr-profile is specified, try to pass
   /// a suitable profile runtime library to the linker.
