@@ -159,14 +159,16 @@ bool TailDuplicator::tailDuplicateAndUpdate(
     bool IsSimple, MachineBasicBlock *MBB,
     MachineBasicBlock *ForcedLayoutPred,
     SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds,
-    function_ref<void(MachineBasicBlock *)> *RemovalCallback) {
+    function_ref<void(MachineBasicBlock *)> *RemovalCallback,
+    SmallVectorImpl<MachineBasicBlock *> *CandidatePtr) {
   // Save the successors list.
   SmallSetVector<MachineBasicBlock *, 8> Succs(MBB->succ_begin(),
                                                MBB->succ_end());
 
   SmallVector<MachineBasicBlock *, 8> TDBBs;
   SmallVector<MachineInstr *, 16> Copies;
-  if (!tailDuplicate(IsSimple, MBB, ForcedLayoutPred, TDBBs, Copies))
+  if (!tailDuplicate(IsSimple, MBB, ForcedLayoutPred,
+                     TDBBs, Copies, CandidatePtr))
     return false;
 
   ++NumTails;
@@ -804,9 +806,10 @@ bool TailDuplicator::canTailDuplicate(MachineBasicBlock *TailBB,
 /// \p Copies            A vector of copy instructions inserted. Used later to
 ///                      walk all the inserted copies and remove redundant ones.
 bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
-                                   MachineBasicBlock *ForcedLayoutPred,
-                                   SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-                                   SmallVectorImpl<MachineInstr *> &Copies) {
+                          MachineBasicBlock *ForcedLayoutPred,
+                          SmallVectorImpl<MachineBasicBlock *> &TDBBs,
+                          SmallVectorImpl<MachineInstr *> &Copies,
+                          SmallVectorImpl<MachineBasicBlock *> *CandidatePtr) {
   LLVM_DEBUG(dbgs() << "\n*** Tail-duplicating " << printMBBReference(*TailBB)
                     << '\n');
 
@@ -820,8 +823,12 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   // block into them, if possible. Copying the list ahead of time also
   // avoids trouble with the predecessor list reallocating.
   bool Changed = false;
-  SmallSetVector<MachineBasicBlock *, 8> Preds(TailBB->pred_begin(),
-                                               TailBB->pred_end());
+  SmallSetVector<MachineBasicBlock *, 8> Preds;
+  if (CandidatePtr)
+    Preds.insert(CandidatePtr->begin(), CandidatePtr->end());
+  else
+    Preds.insert(TailBB->pred_begin(), TailBB->pred_end());
+
   for (MachineBasicBlock *PredBB : Preds) {
     assert(TailBB != PredBB &&
            "Single-block loop should have been rejected earlier!");
@@ -830,13 +837,17 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
       continue;
 
     // Don't duplicate into a fall-through predecessor (at least for now).
-    bool IsLayoutSuccessor = false;
-    if (ForcedLayoutPred)
-      IsLayoutSuccessor = (ForcedLayoutPred == PredBB);
-    else if (PredBB->isLayoutSuccessor(TailBB) && PredBB->canFallThrough())
-      IsLayoutSuccessor = true;
-    if (IsLayoutSuccessor)
-      continue;
+    // If profile is available, findDuplicateCandidates can choose better
+    // fall-through predecessor.
+    if (!(MF->getFunction().hasProfileData() && LayoutMode)) {
+      bool IsLayoutSuccessor = false;
+      if (ForcedLayoutPred)
+        IsLayoutSuccessor = (ForcedLayoutPred == PredBB);
+      else if (PredBB->isLayoutSuccessor(TailBB) && PredBB->canFallThrough())
+        IsLayoutSuccessor = true;
+      if (IsLayoutSuccessor)
+        continue;
+    }
 
     LLVM_DEBUG(dbgs() << "\nTail-duplicating into PredBB: " << *PredBB
                       << "From Succ: " << *TailBB);
