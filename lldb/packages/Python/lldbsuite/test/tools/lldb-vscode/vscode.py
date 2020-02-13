@@ -847,13 +847,17 @@ class DebugCommunication(object):
 
 
 class DebugAdaptor(DebugCommunication):
-    def __init__(self, executable=None, port=None, init_commands=[]):
+    def __init__(self, executable=None, port=None, init_commands=[], log_file=None):
         self.process = None
         if executable is not None:
+            adaptor_env = os.environ.copy()
+            if log_file:
+                adaptor_env['LLDBVSCODE_LOG'] = log_file
             self.process = subprocess.Popen([executable],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+                                            stderr=subprocess.PIPE,
+                                            env=adaptor_env)
             DebugCommunication.__init__(self, self.process.stdout,
                                         self.process.stdin, init_commands)
         elif port is not None:

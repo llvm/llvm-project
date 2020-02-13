@@ -129,6 +129,12 @@ std::string VSCode::ReadJSON() {
   if (!input.read_full(log.get(), length, json_str))
     return json_str;
 
+  if (log) {
+    *log << "--> " << std::endl
+         << "Content-Length: " << length << "\r\n\r\n"
+         << json_str << std::endl;
+  }
+
   return json_str;
 }
 

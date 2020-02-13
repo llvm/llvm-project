@@ -12,8 +12,10 @@ class VSCodeTestCaseBase(TestBase):
         '''Create the Visual Studio Code debug adaptor'''
         self.assertTrue(os.path.exists(self.lldbVSCodeExec),
                         'lldb-vscode must exist')
+        log_file_path = self.getBuildArtifact('vscode.txt')
         self.vscode = vscode.DebugAdaptor(
-            executable=self.lldbVSCodeExec, init_commands=self.setUpCommands())
+            executable=self.lldbVSCodeExec, init_commands=self.setUpCommands(),
+            log_file=log_file_path)
 
     def build_and_create_debug_adaptor(self):
         self.build()
@@ -133,7 +135,7 @@ class VSCodeTestCaseBase(TestBase):
                                     key, key_path, d))
         return value
 
-    def get_stackFrames_and_totalFramesCount(self, threadId=None, startFrame=None, 
+    def get_stackFrames_and_totalFramesCount(self, threadId=None, startFrame=None,
                         levels=None, dump=False):
         response = self.vscode.request_stackTrace(threadId=threadId,
                                                   startFrame=startFrame,
