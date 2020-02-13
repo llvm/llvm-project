@@ -123,7 +123,7 @@ class BasicExprCommandsTestCase(TestBase):
                     startstr="main")
 
         # We should be stopped on the breakpoint with a hit count of 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1, BREAKPOINT_HIT_ONCE)
+        self.assertEquals(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
         #
         # Use Python API to evaluate expressions while stopped in a stack frame.
@@ -164,15 +164,15 @@ class BasicExprCommandsTestCase(TestBase):
         # Make sure ignoring breakpoints works from the command line:
         self.expect("expression -i true -- a_function_to_call()",
                     substrs=['(int) $', ' 1'])
-        self.assertTrue(callee_break.GetHitCount() == 1)
+        self.assertEquals(callee_break.GetHitCount(), 1)
 
         # Now try ignoring breakpoints using the SB API's:
         options = lldb.SBExpressionOptions()
         options.SetIgnoreBreakpoints(True)
         value = frame.EvaluateExpression('a_function_to_call()', options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetValueAsSigned(0) == 2)
-        self.assertTrue(callee_break.GetHitCount() == 2)
+        self.assertEquals(value.GetValueAsSigned(0), 2)
+        self.assertEquals(callee_break.GetHitCount(), 2)
 
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for

@@ -191,5 +191,5 @@ class PluginPythonOSPlugin(TestBase):
         self.assertTrue(
             line_entry.GetFileSpec().GetFilename() == 'main.c',
             "Make sure we stepped from line 5 to line 6 in main.c")
-        self.assertTrue(line_entry.GetLine() == 6,
+        self.assertEquals(line_entry.GetLine(), 6,
                         "Make sure we stepped from line 5 to line 6 in main.c")

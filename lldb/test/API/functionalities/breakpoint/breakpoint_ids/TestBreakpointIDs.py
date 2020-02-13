@@ -22,15 +22,15 @@ class BreakpointIDTestCase(TestBase):
 
         bpno = lldbutil.run_break_set_by_symbol(
             self, 'product', num_expected_locations=-1, sym_exact=False)
-        self.assertTrue(bpno == 1, "First breakpoint number is 1.")
+        self.assertEquals(bpno, 1, "First breakpoint number is 1.")
 
         bpno = lldbutil.run_break_set_by_symbol(
             self, 'sum', num_expected_locations=-1, sym_exact=False)
-        self.assertTrue(bpno == 2, "Second breakpoint number is 2.")
+        self.assertEquals(bpno, 2, "Second breakpoint number is 2.")
 
         bpno = lldbutil.run_break_set_by_symbol(
             self, 'junk', num_expected_locations=0, sym_exact=False)
-        self.assertTrue(bpno == 3, "Third breakpoint number is 3.")
+        self.assertEquals(bpno, 3, "Third breakpoint number is 3.")
 
         self.expect(
             "breakpoint disable 1.1 - 2.2 ",

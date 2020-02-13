@@ -71,7 +71,7 @@ class AddressBreakpointTestCase(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEquals(breakpoint.GetHitCount(), 1)
 
         process.Kill()
 
@@ -88,4 +88,4 @@ class AddressBreakpointTestCase(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should now be 2.
-        self.assertTrue(breakpoint.GetHitCount() == 2)
+        self.assertEquals(breakpoint.GetHitCount(), 2)

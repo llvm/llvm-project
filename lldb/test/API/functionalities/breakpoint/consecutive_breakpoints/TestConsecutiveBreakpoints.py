@@ -26,7 +26,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
 
         address = frame.GetPCAddress()
         instructions = self.target.ReadInstructions(address, 2)
-        self.assertTrue(len(instructions) == 2)
+        self.assertEquals(len(instructions), 2)
         self.bkpt_address = instructions[1].GetAddress()
         self.breakpoint2 = self.target.BreakpointCreateByAddress(
             self.bkpt_address.GetLoadAddress(self.target))

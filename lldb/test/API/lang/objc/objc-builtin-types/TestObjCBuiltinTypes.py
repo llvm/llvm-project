@@ -48,7 +48,7 @@ class TestObjCBuiltinTypes(TestBase):
         self.assertTrue(
             len(thread_list) != 0,
             "No thread stopped at our breakpoint.")
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEquals(len(thread_list), 1,
                         "More than one thread stopped at our breakpoint.")
 
         # Now make sure we can call a function in the class method we've

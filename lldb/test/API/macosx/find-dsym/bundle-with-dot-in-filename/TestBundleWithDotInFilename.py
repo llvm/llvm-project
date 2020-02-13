@@ -56,7 +56,7 @@ class BundleWithDotInFilenameTestCase(TestBase):
         self.assertTrue(target.IsValid(), 'Should have a valid Target after attaching to process')
 
         setup_complete = target.FindFirstGlobalVariable("setup_is_complete")
-        self.assertTrue(setup_complete.GetValueAsUnsigned() == 1, 'Check that inferior process has completed setup')
+        self.assertEquals(setup_complete.GetValueAsUnsigned(), 1, 'Check that inferior process has completed setup')
 
         # Find the bundle module, see if we found the dSYM too (they're both in "hide.app")
         i = 0

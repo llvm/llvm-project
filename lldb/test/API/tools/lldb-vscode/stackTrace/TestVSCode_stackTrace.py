@@ -41,13 +41,13 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         else:
             expected_line = self.recurse_invocation
             expected_name = 'main'
-        self.assertTrue(frame_name == expected_name,
+        self.assertEquals(frame_name, expected_name,
                         'frame #%i name "%s" == "%s"' % (
                             frame_idx, frame_name, expected_name))
-        self.assertTrue(frame_source == self.source_path,
+        self.assertEquals(frame_source, self.source_path,
                         'frame #%i source "%s" == "%s"' % (
                             frame_idx, frame_source, self.source_path))
-        self.assertTrue(frame_line == expected_line,
+        self.assertEquals(frame_line, expected_line,
                         'frame #%i line %i == %i' % (frame_idx, frame_line,
                                                      expected_line))
 
@@ -68,7 +68,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
 
         # Set breakoint at a point of deepest recuusion
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEquals(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
 
         self.continue_to_breakpoints(breakpoint_ids)
@@ -78,14 +78,14 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         frameCount = len(stackFrames)
         self.assertTrue(frameCount >= 20,
                         'verify we get at least 20 frames for all frames')
-        self.assertTrue(totalFrames == frameCount,
+        self.assertEquals(totalFrames, frameCount,
                         'verify we get correct value for totalFrames count')
         self.verify_stackFrames(startFrame, stackFrames)
 
         # Verify all stack frames by specifying startFrame = 0 and levels not
         # specified
         stackFrames = self.get_stackFrames(startFrame=startFrame)
-        self.assertTrue(frameCount == len(stackFrames),
+        self.assertEquals(frameCount, len(stackFrames),
                         ('verify same number of frames with startFrame=%i') % (
                             startFrame))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -94,7 +94,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 0
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(frameCount == len(stackFrames),
+        self.assertEquals(frameCount, len(stackFrames),
                         ('verify same number of frames with startFrame=%i and'
                          ' levels=%i') % (startFrame, levels))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -104,7 +104,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 1
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(levels == len(stackFrames),
+        self.assertEquals(levels, len(stackFrames),
                         ('verify one frame with startFrame=%i and'
                          ' levels=%i') % (startFrame, levels))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -114,7 +114,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 3
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(levels == len(stackFrames),
+        self.assertEquals(levels, len(stackFrames),
                         ('verify %i frames with startFrame=%i and'
                          ' levels=%i') % (levels, startFrame, levels))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -125,7 +125,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 16
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(levels == len(stackFrames),
+        self.assertEquals(levels, len(stackFrames),
                         ('verify %i frames with startFrame=%i and'
                          ' levels=%i') % (levels, startFrame, levels))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -136,10 +136,10 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
                                             startFrame=startFrame,
                                             levels=levels)
-        self.assertTrue(len(stackFrames) == frameCount - startFrame,
+        self.assertEquals(len(stackFrames), frameCount - startFrame,
                         ('verify less than 1000 frames with startFrame=%i and'
                          ' levels=%i') % (startFrame, levels))
-        self.assertTrue(totalFrames == frameCount,
+        self.assertEquals(totalFrames, frameCount,
                         'verify we get correct value for totalFrames count '
                         'when requested frames not from 0 index')
         self.verify_stackFrames(startFrame, stackFrames)
@@ -149,7 +149,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 0
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(len(stackFrames) == frameCount - startFrame,
+        self.assertEquals(len(stackFrames), frameCount - startFrame,
                         ('verify less than 1000 frames with startFrame=%i and'
                          ' levels=%i') % (startFrame, levels))
         self.verify_stackFrames(startFrame, stackFrames)
@@ -159,5 +159,5 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
         levels = 1
         stackFrames = self.get_stackFrames(startFrame=startFrame,
                                            levels=levels)
-        self.assertTrue(0 == len(stackFrames),
+        self.assertEquals(0, len(stackFrames),
                         'verify zero frames with startFrame out of bounds')

@@ -48,14 +48,14 @@ class ExprCommandWithFixits(TestBase):
         value = frame.EvaluateExpression("my_pointer.first", options)
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Success())
-        self.assertTrue(value.GetValueAsUnsigned() == 10)
+        self.assertEquals(value.GetValueAsUnsigned(), 10)
 
         # Try with two errors:
         two_error_expression = "my_pointer.second->a"
         value = frame.EvaluateExpression(two_error_expression, options)
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Success())
-        self.assertTrue(value.GetValueAsUnsigned() == 20)
+        self.assertEquals(value.GetValueAsUnsigned(), 20)
 
         # Now turn off the fixits, and the expression should fail:
         options.SetAutoApplyFixIts(False)

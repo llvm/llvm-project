@@ -60,7 +60,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -76,7 +76,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(val_value.IsValid(), "Got the SBValue for val")
         actual_value = val_value.GetValueAsSigned(error, 0)
         self.assertTrue(error.Success(), "Got a value from val")
-        self.assertTrue(actual_value == 100, "Got the right value from val")
+        self.assertEquals(actual_value, 100, "Got the right value from val")
 
         result = val_value.SetValueFromCString("12345")
         self.assertTrue(result, "Setting val returned True.")
@@ -99,7 +99,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(
             error.Success(),
             "Got an unsigned value for second_val")
-        self.assertTrue(actual_value == 5555)
+        self.assertEquals(actual_value, 5555)
 
         result = mine_second_value.SetValueFromCString("98765")
         self.assertTrue(result, "Success setting mine.second_value.")
@@ -107,7 +107,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(
             error.Success(),
             "Got a changed value from mine.second_val")
-        self.assertTrue(actual_value == 98765,
+        self.assertEquals(actual_value, 98765,
                         "Got the right changed value from mine.second_val")
 
         # Next do the same thing with the pointer version.
@@ -120,7 +120,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(
             error.Success(),
             "Got an unsigned value for ptr->second_val")
-        self.assertTrue(actual_value == 6666)
+        self.assertEquals(actual_value, 6666)
 
         result = ptr_second_value.SetValueFromCString("98765")
         self.assertTrue(result, "Success setting ptr->second_value.")
@@ -128,7 +128,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(
             error.Success(),
             "Got a changed value from ptr->second_val")
-        self.assertTrue(actual_value == 98765,
+        self.assertEquals(actual_value, 98765,
                         "Got the right changed value from ptr->second_val")
 
         # gcc may set multiple locations for breakpoint
@@ -138,7 +138,7 @@ class ChangeValueAPITestCase(TestBase):
         # values as well...
         process.Continue()
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -171,7 +171,7 @@ class ChangeValueAPITestCase(TestBase):
 
         process.Continue()
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(

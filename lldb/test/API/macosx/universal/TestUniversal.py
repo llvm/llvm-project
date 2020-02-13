@@ -155,7 +155,7 @@ class UniversalTestCase(TestBase):
         # backtracing failed.
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         thread = threads[0]
         self.assertTrue(
             thread.GetNumFrames() > 1,

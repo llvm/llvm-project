@@ -50,7 +50,7 @@ class Issue11581TestCase(TestBase):
             frame = process.GetSelectedThread().GetSelectedFrame()
             pointer = frame.FindVariable("r14")
             addr = pointer.GetValueAsUnsigned(0)
-            self.assertTrue(addr != 0, "could not read pointer to StgClosure")
+            self.assertNotEqual(addr, 0, "could not read pointer to StgClosure")
             addr = addr - 1
             self.runCmd("register write r14 %d" % addr)
             self.expect(
