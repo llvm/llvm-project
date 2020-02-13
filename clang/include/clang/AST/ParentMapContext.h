@@ -52,33 +52,31 @@ public:
   /// NestedNameSpecifier or NestedNameSpecifierLoc.
   template <typename NodeT> DynTypedNodeList getParents(const NodeT &Node);
 
-  DynTypedNodeList getParents(const ast_type_traits::DynTypedNode &Node);
+  DynTypedNodeList getParents(const DynTypedNode &Node);
 
   /// Clear parent maps.
   void clear();
 
-  ast_type_traits::TraversalKind getTraversalKind() const { return Traversal; }
-  void setTraversalKind(ast_type_traits::TraversalKind TK) { Traversal = TK; }
+  TraversalKind getTraversalKind() const { return Traversal; }
+  void setTraversalKind(TraversalKind TK) { Traversal = TK; }
 
   const Expr *traverseIgnored(const Expr *E) const;
   Expr *traverseIgnored(Expr *E) const;
-  ast_type_traits::DynTypedNode
-  traverseIgnored(const ast_type_traits::DynTypedNode &N) const;
+  DynTypedNode traverseIgnored(const DynTypedNode &N) const;
 
 private:
   ASTContext &ASTCtx;
   class ParentMap;
-  ast_type_traits::TraversalKind Traversal = ast_type_traits::TK_AsIs;
+  TraversalKind Traversal = TK_AsIs;
   std::unique_ptr<ParentMap> Parents;
 };
 
 class TraversalKindScope {
   ParentMapContext &Ctx;
-  ast_type_traits::TraversalKind TK = ast_type_traits::TK_AsIs;
+  TraversalKind TK = TK_AsIs;
 
 public:
-  TraversalKindScope(ASTContext &ASTCtx,
-                     llvm::Optional<ast_type_traits::TraversalKind> ScopeTK)
+  TraversalKindScope(ASTContext &ASTCtx, llvm::Optional<TraversalKind> ScopeTK)
       : Ctx(ASTCtx.getParentMapContext()) {
     TK = Ctx.getTraversalKind();
     if (ScopeTK)
@@ -91,10 +89,9 @@ public:
 /// Container for either a single DynTypedNode or for an ArrayRef to
 /// DynTypedNode. For use with ParentMap.
 class DynTypedNodeList {
-  using DynTypedNode = ast_type_traits::DynTypedNode;
+  using DynTypedNode = DynTypedNode;
 
-  llvm::AlignedCharArrayUnion<ast_type_traits::DynTypedNode,
-                              ArrayRef<DynTypedNode>> Storage;
+  llvm::AlignedCharArrayUnion<DynTypedNode, ArrayRef<DynTypedNode>> Storage;
   bool IsSingleNode;
 
 public:
@@ -106,14 +103,14 @@ public:
     new (Storage.buffer) ArrayRef<DynTypedNode>(A);
   }
 
-  const ast_type_traits::DynTypedNode *begin() const {
+  const DynTypedNode *begin() const {
     if (!IsSingleNode)
       return reinterpret_cast<const ArrayRef<DynTypedNode> *>(Storage.buffer)
           ->begin();
     return reinterpret_cast<const DynTypedNode *>(Storage.buffer);
   }
 
-  const ast_type_traits::DynTypedNode *end() const {
+  const DynTypedNode *end() const {
     if (!IsSingleNode)
       return reinterpret_cast<const ArrayRef<DynTypedNode> *>(Storage.buffer)
           ->end();
@@ -131,7 +128,7 @@ public:
 
 template <typename NodeT>
 inline DynTypedNodeList ParentMapContext::getParents(const NodeT &Node) {
-  return getParents(ast_type_traits::DynTypedNode::create(Node));
+  return getParents(DynTypedNode::create(Node));
 }
 
 template <typename NodeT>
@@ -140,8 +137,7 @@ inline DynTypedNodeList ASTContext::getParents(const NodeT &Node) {
 }
 
 template <>
-inline DynTypedNodeList
-ASTContext::getParents(const ast_type_traits::DynTypedNode &Node) {
+inline DynTypedNodeList ASTContext::getParents(const DynTypedNode &Node) {
   return getParentMapContext().getParents(Node);
 }
 
