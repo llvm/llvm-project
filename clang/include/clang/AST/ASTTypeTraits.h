@@ -33,8 +33,6 @@ namespace clang {
 
 struct PrintingPolicy;
 
-namespace ast_type_traits {
-
 /// Defines how we descend a level in the AST when we pass
 /// through expressions.
 enum TraversalKind {
@@ -522,18 +520,29 @@ template <typename T, typename EnablerT> struct DynTypedNode::BaseConverter {
   }
 };
 
-} // end namespace ast_type_traits
+// Previously these types were defined in the clang::ast_type_traits namespace.
+// Provide typedefs so that legacy code can be fixed asynchronously.
+namespace ast_type_traits {
+using DynTypedNode = ::clang::DynTypedNode;
+using ASTNodeKind = ::clang::ASTNodeKind;
+using TraversalKind = ::clang::TraversalKind;
+
+constexpr TraversalKind TK_AsIs = ::clang::TK_AsIs;
+constexpr TraversalKind TK_IgnoreImplicitCastsAndParentheses =
+    ::clang::TK_IgnoreImplicitCastsAndParentheses;
+constexpr TraversalKind TK_IgnoreUnlessSpelledInSource =
+    ::clang::TK_IgnoreUnlessSpelledInSource;
+} // namespace ast_type_traits
+
 } // end namespace clang
 
 namespace llvm {
 
 template <>
-struct DenseMapInfo<clang::ast_type_traits::ASTNodeKind>
-    : clang::ast_type_traits::ASTNodeKind::DenseMapInfo {};
+struct DenseMapInfo<clang::ASTNodeKind> : clang::ASTNodeKind::DenseMapInfo {};
 
 template <>
-struct DenseMapInfo<clang::ast_type_traits::DynTypedNode>
-    : clang::ast_type_traits::DynTypedNode::DenseMapInfo {};
+struct DenseMapInfo<clang::DynTypedNode> : clang::DynTypedNode::DenseMapInfo {};
 
 }  // end namespace llvm
 

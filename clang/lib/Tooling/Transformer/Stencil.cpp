@@ -26,7 +26,6 @@ using namespace clang;
 using namespace transformer;
 
 using ast_matchers::MatchFinder;
-using ast_type_traits::DynTypedNode;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
