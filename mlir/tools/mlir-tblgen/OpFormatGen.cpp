@@ -498,22 +498,25 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   if (hasAllOperands) {
     body << "  if (parser.resolveOperands(allOperands, ";
 
+    auto emitOperandType = [&](int idx) {
+      if (Optional<int> val = operandTypes[idx].getBuilderIdx())
+        body << "ArrayRef<Type>(odsBuildableType" << *val << ")";
+      else if (Optional<StringRef> var = operandTypes[idx].getVariable())
+        body << *var << "Types";
+      else
+        body << op.getOperand(idx).name << "Types";
+    };
+
     // Group all of the operand types together to perform the resolution all at
     // once. Use llvm::concat to perform the merge. llvm::concat does not allow
     // the case of a single range, so guard it here.
     if (op.getNumOperands() > 1) {
       body << "llvm::concat<const Type>(";
-      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
-        if (Optional<int> val = operandTypes[i].getBuilderIdx())
-          body << "ArrayRef<Type>(odsBuildableType" << *val << ")";
-        else if (Optional<StringRef> var = operandTypes[i].getVariable())
-          body << *var << "Types";
-        else
-          body << op.getOperand(i).name << "Types";
-      });
+      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body,
+                      emitOperandType);
       body << ")";
     } else {
-      body << op.operand_begin()->name << "Types";
+      emitOperandType(/*idx=*/0);
     }
 
     body << ", allOperandLoc, result.operands))\n"
