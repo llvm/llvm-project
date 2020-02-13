@@ -12,6 +12,8 @@
 
 namespace mlir {
 class AffineForOp;
+class MLIRContext;
+class OwningRewritePatternList;
 struct LogicalResult;
 class Value;
 
@@ -71,6 +73,11 @@ LogicalResult convertLoopNestToGPULaunch(loop::ForOp forOp,
 LogicalResult convertLoopToGPULaunch(loop::ForOp forOp,
                                      ArrayRef<Value> numWorkGroups,
                                      ArrayRef<Value> workGroupSizes);
+
+/// Adds the conversion pattern from `loop.parallel` to `gpu.launch` to the
+/// provided pattern list.
+void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
+                                       MLIRContext *ctx);
 
 } // namespace mlir
 
