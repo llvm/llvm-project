@@ -112,3 +112,17 @@ func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: @parallel
+// CHECK-SAME: (%[[N:.*]]: index)
+func @parallel(%N : index) {
+  // CHECK: affine.parallel (%[[I0:.*]], %[[J0:.*]]) = (0, 0) to (symbol(%[[N]]), 100) step (10, 10)
+  affine.parallel (%i0, %j0) = (0, 0) to (symbol(%N), 100) step (10, 10) {
+    // CHECK-NEXT: affine.parallel (%{{.*}}, %{{.*}}) = (%[[I0]], %[[J0]]) to (%[[I0]] + 10, %[[J0]] + 10)
+    affine.parallel (%i1, %j1) = (%i0, %j0) to (%i0 + 10, %j0 + 10) {
+    }
+  }
+  return
+}
