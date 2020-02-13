@@ -12,7 +12,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
 
-class ABISysV_mips : public lldb_private::ABI {
+class ABISysV_mips : public lldb_private::RegInfoBasedABI {
 public:
   ~ABISysV_mips() override = default;
 
@@ -87,11 +87,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABISysV_mips(lldb::ProcessSP process_sp,
-               std::unique_ptr<llvm::MCRegisterInfo> info_up)
-      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
-    // Call CreateInstance instead.
-  }
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
 #endif // liblldb_ABISysV_mips_h_

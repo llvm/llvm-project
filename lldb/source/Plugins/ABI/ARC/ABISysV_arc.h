@@ -16,7 +16,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
 
-class ABISysV_arc : public lldb_private::ABI {
+class ABISysV_arc : public lldb_private::RegInfoBasedABI {
 public:
   ~ABISysV_arc() override = default;
 
@@ -97,7 +97,7 @@ private:
 
   bool IsRegisterFileReduced(lldb_private::RegisterContext &reg_ctx) const;
 
-  using lldb_private::ABI::ABI; // Call CreateInstance instead.
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 
   using RegisterFileFlag = llvm::Optional<bool>;
   mutable RegisterFileFlag m_is_reg_file_reduced;
