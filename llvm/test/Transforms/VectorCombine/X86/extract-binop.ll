@@ -129,79 +129,79 @@ define i32 @ext1_ext1_add_same_vec_cse(<4 x i32> %x) {
   ret i32 %r
 }
 
-declare void @use_i64(i64)
+declare void @use_i8(i8)
 
-define i64 @ext1_ext1_add_same_vec_extra_use0(<2 x i64> %x) {
+define i8 @ext1_ext1_add_same_vec_extra_use0(<16 x i8> %x) {
 ; CHECK-LABEL: @ext1_ext1_add_same_vec_extra_use0(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 1
-; CHECK-NEXT:    call void @use_i64(i64 [[E0]])
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x i64> [[X]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E0]])
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e0 = extractelement <2 x i64> %x, i32 1
-  call void @use_i64(i64 %e0)
-  %e1 = extractelement <2 x i64> %x, i32 1
-  %r = add i64 %e0, %e1
-  ret i64 %r
+  %e0 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e0)
+  %e1 = extractelement <16 x i8> %x, i32 0
+  %r = add i8 %e0, %e1
+  ret i8 %r
 }
 
-define i64 @ext1_ext1_add_same_vec_extra_use1(<2 x i64> %x) {
+define i8 @ext1_ext1_add_same_vec_extra_use1(<16 x i8> %x) {
 ; CHECK-LABEL: @ext1_ext1_add_same_vec_extra_use1(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x i64> [[X]], i32 1
-; CHECK-NEXT:    call void @use_i64(i64 [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[X]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E1]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e0 = extractelement <2 x i64> %x, i32 1
-  %e1 = extractelement <2 x i64> %x, i32 1
-  call void @use_i64(i64 %e1)
-  %r = add i64 %e0, %e1
-  ret i64 %r
+  %e0 = extractelement <16 x i8> %x, i32 0
+  %e1 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e1)
+  %r = add i8 %e0, %e1
+  ret i8 %r
 }
 
-define i64 @ext1_ext1_add_same_vec_cse_extra_use(<2 x i64> %x) {
+define i8 @ext1_ext1_add_same_vec_cse_extra_use(<16 x i8> %x) {
 ; CHECK-LABEL: @ext1_ext1_add_same_vec_cse_extra_use(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 1
-; CHECK-NEXT:    call void @use_i64(i64 [[E]])
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[E]], [[E]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E]], [[E]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e = extractelement <2 x i64> %x, i32 1
-  call void @use_i64(i64 %e)
-  %r = add i64 %e, %e
-  ret i64 %r
+  %e = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e)
+  %r = add i8 %e, %e
+  ret i8 %r
 }
 
-define i64 @ext1_ext1_add_uses1(<2 x i64> %x, <2 x i64> %y) {
+define i8 @ext1_ext1_add_uses1(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @ext1_ext1_add_uses1(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 1
-; CHECK-NEXT:    call void @use_i64(i64 [[E0]])
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x i64> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E0]])
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e0 = extractelement <2 x i64> %x, i32 1
-  call void @use_i64(i64 %e0)
-  %e1 = extractelement <2 x i64> %y, i32 1
-  %r = add i64 %e0, %e1
-  ret i64 %r
+  %e0 = extractelement <16 x i8> %x, i32 0
+  call void @use_i8(i8 %e0)
+  %e1 = extractelement <16 x i8> %y, i32 0
+  %r = add i8 %e0, %e1
+  ret i8 %r
 }
 
-define i64 @ext1_ext1_add_uses2(<2 x i64> %x, <2 x i64> %y) {
+define i8 @ext1_ext1_add_uses2(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @ext1_ext1_add_uses2(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x i64> [[Y:%.*]], i32 1
-; CHECK-NEXT:    call void @use_i64(i64 [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; CHECK-NEXT:    call void @use_i8(i8 [[E1]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e0 = extractelement <2 x i64> %x, i32 1
-  %e1 = extractelement <2 x i64> %y, i32 1
-  call void @use_i64(i64 %e1)
-  %r = add i64 %e0, %e1
-  ret i64 %r
+  %e0 = extractelement <16 x i8> %x, i32 0
+  %e1 = extractelement <16 x i8> %y, i32 0
+  call void @use_i8(i8 %e1)
+  %r = add i8 %e0, %e1
+  ret i8 %r
 }
 
 define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
