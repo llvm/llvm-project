@@ -604,7 +604,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
       Cond =
           MIB.buildICmp(CmpInst::ICMP_SLE, i1Ty, CmpOpReg, CondRHS).getReg(0);
     } else {
-      const LLT &CmpTy = MRI->getType(CmpOpReg);
+      const LLT CmpTy = MRI->getType(CmpOpReg);
       auto Sub = MIB.buildSub({CmpTy}, CmpOpReg, CondLHS);
       auto Diff = MIB.buildConstant(CmpTy, High - Low);
       Cond = MIB.buildICmp(CmpInst::ICMP_ULE, i1Ty, Sub, Diff).getReg(0);
@@ -1956,7 +1956,7 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT &VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildSExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);

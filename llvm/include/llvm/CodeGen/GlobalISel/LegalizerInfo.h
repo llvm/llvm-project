@@ -153,7 +153,7 @@ struct LegalizeActionStep {
   LLT NewType;
 
   LegalizeActionStep(LegalizeAction Action, unsigned TypeIdx,
-                     const LLT &NewType)
+                     const LLT NewType)
       : Action(Action), TypeIdx(TypeIdx), NewType(NewType) {}
 
   bool operator==(const LegalizeActionStep &RHS) const {
@@ -739,7 +739,7 @@ public:
   }
 
   /// Ensure the scalar or element is at least as wide as Ty.
-  LegalizeRuleSet &minScalarOrElt(unsigned TypeIdx, const LLT &Ty) {
+  LegalizeRuleSet &minScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
@@ -749,7 +749,7 @@ public:
 
   /// Ensure the scalar or element is at least as wide as Ty.
   LegalizeRuleSet &minScalarOrEltIf(LegalityPredicate Predicate,
-                                    unsigned TypeIdx, const LLT &Ty) {
+                                    unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
@@ -759,7 +759,7 @@ public:
   }
 
   /// Ensure the scalar is at least as wide as Ty.
-  LegalizeRuleSet &minScalar(unsigned TypeIdx, const LLT &Ty) {
+  LegalizeRuleSet &minScalar(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
@@ -768,7 +768,7 @@ public:
   }
 
   /// Ensure the scalar is at most as wide as Ty.
-  LegalizeRuleSet &maxScalarOrElt(unsigned TypeIdx, const LLT &Ty) {
+  LegalizeRuleSet &maxScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
@@ -777,7 +777,7 @@ public:
   }
 
   /// Ensure the scalar is at most as wide as Ty.
-  LegalizeRuleSet &maxScalar(unsigned TypeIdx, const LLT &Ty) {
+  LegalizeRuleSet &maxScalar(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
@@ -789,7 +789,7 @@ public:
   /// For example, when the maximum size of one type depends on the size of
   /// another such as extracting N bits from an M bit container.
   LegalizeRuleSet &maxScalarIf(LegalityPredicate Predicate, unsigned TypeIdx,
-                               const LLT &Ty) {
+                               const LLT Ty) {
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(
@@ -801,15 +801,15 @@ public:
   }
 
   /// Limit the range of scalar sizes to MinTy and MaxTy.
-  LegalizeRuleSet &clampScalar(unsigned TypeIdx, const LLT &MinTy,
-                               const LLT &MaxTy) {
+  LegalizeRuleSet &clampScalar(unsigned TypeIdx, const LLT MinTy,
+                               const LLT MaxTy) {
     assert(MinTy.isScalar() && MaxTy.isScalar() && "Expected scalar types");
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
   /// Limit the range of scalar sizes to MinTy and MaxTy.
-  LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT &MinTy,
-                                    const LLT &MaxTy) {
+  LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT MinTy,
+                                    const LLT MaxTy) {
     return minScalarOrElt(TypeIdx, MinTy).maxScalarOrElt(TypeIdx, MaxTy);
   }
 
@@ -855,7 +855,7 @@ public:
   }
 
   /// Limit the number of elements in EltTy vectors to at least MinElements.
-  LegalizeRuleSet &clampMinNumElements(unsigned TypeIdx, const LLT &EltTy,
+  LegalizeRuleSet &clampMinNumElements(unsigned TypeIdx, const LLT EltTy,
                                        unsigned MinElements) {
     // Mark the type index as covered:
     typeIdx(TypeIdx);
@@ -873,7 +873,7 @@ public:
         });
   }
   /// Limit the number of elements in EltTy vectors to at most MaxElements.
-  LegalizeRuleSet &clampMaxNumElements(unsigned TypeIdx, const LLT &EltTy,
+  LegalizeRuleSet &clampMaxNumElements(unsigned TypeIdx, const LLT EltTy,
                                        unsigned MaxElements) {
     // Mark the type index as covered:
     typeIdx(TypeIdx);
@@ -896,12 +896,12 @@ public:
   /// No effect if the type is not a vector or does not have the same element
   /// type as the constraints.
   /// The element type of MinTy and MaxTy must match.
-  LegalizeRuleSet &clampNumElements(unsigned TypeIdx, const LLT &MinTy,
-                                    const LLT &MaxTy) {
+  LegalizeRuleSet &clampNumElements(unsigned TypeIdx, const LLT MinTy,
+                                    const LLT MaxTy) {
     assert(MinTy.getElementType() == MaxTy.getElementType() &&
            "Expected element types to agree");
 
-    const LLT &EltTy = MinTy.getElementType();
+    const LLT EltTy = MinTy.getElementType();
     return clampMinNumElements(TypeIdx, EltTy, MinTy.getNumElements())
         .clampMaxNumElements(TypeIdx, EltTy, MaxTy.getNumElements());
   }
