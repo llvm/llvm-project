@@ -1518,7 +1518,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
-    return Name == "rint" || Name == "rintf" ||
+    return Name == "remainder" || Name == "remainderf" ||
+           Name == "rint" || Name == "rintf" ||
            Name == "round" || Name == "roundf";
   case 's':
     return Name == "sin" || Name == "sinf" ||
@@ -2098,6 +2099,14 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
             return ConstantFP::get(Ty->getContext(), V);
         }
         break;
+      case LibFunc_remainder:
+      case LibFunc_remainderf:
+        if (TLI->has(Func)) {
+          APFloat V = Op1->getValueAPF();
+          if (APFloat::opStatus::opOK == V.remainder(Op2->getValueAPF()))
+            return ConstantFP::get(Ty->getContext(), V);
+        }
+        break;
       case LibFunc_atan2:
       case LibFunc_atan2f:
       case LibFunc_atan2_finite:
@@ -2632,6 +2641,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_fmodl:
       case LibFunc_fmod:
       case LibFunc_fmodf:
+      case LibFunc_remainderl:
+      case LibFunc_remainder:
+      case LibFunc_remainderf:
         return Op0.isNaN() || Op1.isNaN() ||
                (!Op0.isInfinity() && !Op1.isZero());
 
