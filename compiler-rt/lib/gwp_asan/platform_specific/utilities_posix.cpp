@@ -62,7 +62,7 @@ static size_t alignPowerOfTwo(size_t RealAllocationSize) {
 
 #ifdef __BIONIC__
 static constexpr AlignmentStrategy PlatformDefaultAlignment =
-    AlignmentStrategy::ANDROID;
+    AlignmentStrategy::BIONIC;
 #else  // __BIONIC__
 static constexpr AlignmentStrategy PlatformDefaultAlignment =
     AlignmentStrategy::POWER_OF_TWO;
