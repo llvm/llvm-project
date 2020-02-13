@@ -5945,12 +5945,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
     assert(Variable && "Missing variable");
-
+    LLVM_DEBUG(dbgs() << "SelectionDAG visiting debug intrinsic: " << DI
+                      << "\n");
     // Check if address has undef value.
     const Value *Address = DI.getVariableLocation();
     if (!Address || isa<UndefValue>(Address) ||
         (Address->use_empty() && !isa<Argument>(Address))) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
+                        << " (bad/undef/unused-arg address)\n");
       return;
     }
 
@@ -5979,6 +5981,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         SDDbgValue *SDV = DAG.getFrameIndexDbgValue(
             Variable, Expression, FI, /*IsIndirect*/ true, dl, SDNodeOrder);
         DAG.AddDbgValue(SDV, getRoot().getNode(), isParameter);
+      } else {
+        LLVM_DEBUG(dbgs() << "Skipping " << DI
+                          << " (variable info stashed in MF side table)\n");
       }
       return;
     }
@@ -6013,7 +6018,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       // virtual register info from the FuncInfo.ValueMap.
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true,
                                     N)) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
+                          << " (could not emit func-arg dbg_value)\n");
       }
     }
     return;
