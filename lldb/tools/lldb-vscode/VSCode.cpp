@@ -303,4 +303,52 @@ void VSCode::RunExitCommands() {
   RunLLDBCommands("Running exitCommands:", exit_commands);
 }
 
+lldb::SBTarget VSCode::CreateTargetFromArguments(
+    const llvm::json::Object &arguments,
+    lldb::SBError &error) {
+  // Grab the name of the program we need to debug and create a target using
+  // the given program as an argument. Executable file can be a source of target
+  // architecture and platform, if they differ from the host. Setting exe path
+  // in launch info is useless because Target.Launch() will not change
+  // architecture and platform, therefore they should be known at the target
+  // creation. We also use target triple and platform from the launch
+  // configuration, if given, since in some cases ELF file doesn't contain
+  // enough information to determine correct arch and platform (or ELF can be
+  // omitted at all), so it is good to leave the user an apportunity to specify
+  // those. Any of those three can be left empty.
+  llvm::StringRef target_triple = GetString(arguments, "targetTriple");
+  llvm::StringRef platform_name = GetString(arguments, "platformName");
+  llvm::StringRef program = GetString(arguments, "program");
+  auto target = this->debugger.CreateTarget(
+    program.data(),
+    target_triple.data(),
+    platform_name.data(),
+    true, // Add dependent modules.
+    error
+  );
+
+  if (error.Fail()) {
+    // Update message if there was an error.
+    error.SetErrorStringWithFormat(
+        "Could not create a target for a program '%s': %s.",
+        program.data(), error.GetCString());
+  }
+
+  return target;
+}
+
+void VSCode::SetTarget(const lldb::SBTarget target) {
+  this->target = target;
+
+  if (target.IsValid()) {
+    // Configure breakpoint event listeners for the target.
+    lldb::SBListener listener = this->debugger.GetListener();
+    listener.StartListeningForEvents(
+        this->target.GetBroadcaster(),
+        lldb::SBTarget::eBroadcastBitBreakpointChanged);
+    listener.StartListeningForEvents(this->broadcaster,
+                                     eBroadcastBitStopEventThread);
+  }
+}
+
 } // namespace lldb_vscode
