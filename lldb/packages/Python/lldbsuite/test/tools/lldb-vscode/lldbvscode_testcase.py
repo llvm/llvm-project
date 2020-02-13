@@ -22,8 +22,7 @@ class VSCodeTestCaseBase(TestBase):
     def set_source_breakpoints(self, source_path, lines, condition=None,
                                hitCondition=None):
         '''Sets source breakpoints and returns an array of strings containing
-           the breakpoint location IDs ("1.1", "1.2") for each breakpoint
-           that was set.
+           the breakpoint IDs ("1", "2") for each breakpoint that was set.
         '''
         response = self.vscode.request_setBreakpoints(
             source_path, lines, condition=condition, hitCondition=hitCondition)
@@ -32,17 +31,14 @@ class VSCodeTestCaseBase(TestBase):
         breakpoints = response['body']['breakpoints']
         breakpoint_ids = []
         for breakpoint in breakpoints:
-            response_id = breakpoint['id']
-            bp_id = response_id >> 32
-            bp_loc_id = response_id & 0xffffffff
-            breakpoint_ids.append('%i.%i' % (bp_id, bp_loc_id))
+            breakpoint_ids.append('%i' % (breakpoint['id']))
         return breakpoint_ids
 
     def set_function_breakpoints(self, functions, condition=None,
                                  hitCondition=None):
         '''Sets breakpoints by function name given an array of function names
-           and returns an array of strings containing the breakpoint location
-           IDs ("1.1", "1.2") for each breakpoint that was set.
+           and returns an array of strings containing the breakpoint IDs
+           ("1", "2") for each breakpoint that was set.
         '''
         response = self.vscode.request_setFunctionBreakpoints(
             functions, condition=condition, hitCondition=hitCondition)
@@ -51,18 +47,15 @@ class VSCodeTestCaseBase(TestBase):
         breakpoints = response['body']['breakpoints']
         breakpoint_ids = []
         for breakpoint in breakpoints:
-            response_id = breakpoint['id']
-            bp_id = response_id >> 32
-            bp_loc_id = response_id & 0xffffffff
-            breakpoint_ids.append('%i.%i' % (bp_id, bp_loc_id))
+            breakpoint_ids.append('%i' % (breakpoint['id']))
         return breakpoint_ids
 
     def verify_breakpoint_hit(self, breakpoint_ids):
         '''Wait for the process we are debugging to stop, and verify we hit
            any breakpoint location in the "breakpoint_ids" array.
-           "breakpoint_ids" should be a list of breakpoint location ID strings
-           (["1.1", "2.1"]). The return value from
-           self.set_source_breakpoints() can be passed to this function'''
+           "breakpoint_ids" should be a list of breakpoint ID strings
+           (["1", "2"]). The return value from self.set_source_breakpoints()
+           or self.set_function_breakpoints() can be passed to this function'''
         stopped_events = self.vscode.wait_for_stopped()
         for stopped_event in stopped_events:
             if 'body' in stopped_event:
@@ -73,14 +66,21 @@ class VSCodeTestCaseBase(TestBase):
                     continue
                 if 'description' not in body:
                     continue
-                # Description is "breakpoint 1.1", so look for any location id
-                # ("1.1") in the description field as verification that one of
-                # the breakpoint locations was hit
+                # Descriptions for breakpoints will be in the form
+                # "breakpoint 1.1", so look for any description that matches
+                # ("breakpoint 1.") in the description field as verification
+                # that one of the breakpoint locations was hit. VSCode doesn't
+                # allow breakpoints to have multiple locations, but LLDB does.
+                # So when looking at the description we just want to make sure
+                # the right breakpoint matches and not worry about the actual
+                # location.
                 description = body['description']
+                print("description: %s" % (description))
                 for breakpoint_id in breakpoint_ids:
-                    if breakpoint_id in description:
-                        return True
-        return False
+                    match_desc = 'breakpoint %s.' % (breakpoint_id)
+                    if match_desc in description:
+                        return
+        self.assertTrue(False, "breakpoint not hit")
 
     def verify_exception_breakpoint_hit(self, filter_label):
         '''Wait for the process we are debugging to stop, and verify the stop

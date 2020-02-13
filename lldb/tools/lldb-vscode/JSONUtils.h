@@ -199,13 +199,13 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints);
 /// Converts breakpoint location to a Visual Studio Code "Breakpoint"
 /// JSON object and appends it to the \a breakpoints array.
 ///
-/// \param[in] bp_loc
-///     A LLDB breakpoint location object to convert into a JSON value
+/// \param[in] bp
+///     A LLDB breakpoint object to convert into a JSON value
 ///
 /// \return
 ///     A "Breakpoint" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc);
+llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp);
 
 /// Create a "Event" JSON object using \a event_name as the event name
 ///

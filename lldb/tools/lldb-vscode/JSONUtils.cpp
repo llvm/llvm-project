@@ -281,16 +281,33 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   },
 //   "required": [ "verified" ]
 // }
-llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc) {
+llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
-  if (!bp_loc.IsValid())
+  if (!bp.IsValid())
     return llvm::json::Value(std::move(object));
 
-  object.try_emplace("verified", true);
-  const auto vs_id = MakeVSCodeBreakpointID(bp_loc);
-  object.try_emplace("id", vs_id);
+  object.try_emplace("verified", bp.GetNumResolvedLocations() > 0);
+  object.try_emplace("id", bp.GetID());
+  // VS Code DAP doesn't currently allow one breakpoint to have multiple
+  // locations so we just report the first one. If we report all locations
+  // then the IDE starts showing the wrong line numbers and locations for
+  // other source file and line breakpoints in the same file.
+
+  // Below we search for the first resolved location in a breakpoint and report
+  // this as the breakpoint location since it will have a complete location
+  // that is at least loaded in the current process.
+  lldb::SBBreakpointLocation bp_loc;
+  const auto num_locs = bp.GetNumLocations();
+  for (size_t i=0; i<num_locs; ++i) {
+    bp_loc = bp.GetLocationAtIndex(i);
+    if (bp_loc.IsResolved())
+      break;
+  }
+  // If not locations are resolved, use the first location.
+  if (!bp_loc.IsResolved())
+    bp_loc = bp.GetLocationAtIndex(0);
   auto bp_addr = bp_loc.GetAddress();
   if (bp_addr.IsValid()) {
     auto line_entry = bp_addr.GetLineEntry();
@@ -303,15 +320,7 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc) {
 }
 
 void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints) {
-  if (!bp.IsValid())
-    return;
-  const auto num_locations = bp.GetNumLocations();
-  if (num_locations == 0)
-    return;
-  for (size_t i = 0; i < num_locations; ++i) {
-    auto bp_loc = bp.GetLocationAtIndex(i);
-    breakpoints.emplace_back(CreateBreakpoint(bp_loc));
-  }
+  breakpoints.emplace_back(CreateBreakpoint(bp));
 }
 
 // "Event": {
@@ -741,6 +750,12 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       body.try_emplace("reason", "breakpoint");
+      char desc_str[64];
+      uint64_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
+      snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
+               bp_id, bp_loc_id);
+      EmplaceSafeString(body, "description", desc_str);
     }
   } break;
   case lldb::eStopReasonWatchpoint:
@@ -870,4 +885,3 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
 }
 
 } // namespace lldb_vscode
-
