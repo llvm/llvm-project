@@ -77,7 +77,7 @@ using I = intptr_t;
 // Converts an offset into a pointer.
 const void *forge(size_t offset) {
   return reinterpret_cast<const void *>(offset);
-};
+}
 
 TEST(UtilsTest, OffsetToNextAligned) {
   EXPECT_EQ(offset_to_next_aligned<16>(forge(0)), I(0));
