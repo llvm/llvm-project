@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=xcore 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -march=xcore 2>&1 | FileCheck %s
 
 ; CHECK: emitPrologue unsupported alignment: 8
 define void @f() nounwind {
