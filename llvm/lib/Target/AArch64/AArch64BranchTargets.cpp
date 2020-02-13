@@ -118,6 +118,10 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
 
   auto MBBI = MBB.begin();
 
+  // Skip the meta instuctions, those will be removed anyway.
+  for (; MBBI != MBB.end() && MBBI->isMetaInstruction(); ++MBBI)
+    ;
+
   // PACI[AB]SP are implicitly BTI JC, so no BTI instruction needed there.
   if (MBBI != MBB.end() && (MBBI->getOpcode() == AArch64::PACIASP ||
                             MBBI->getOpcode() == AArch64::PACIBSP))
