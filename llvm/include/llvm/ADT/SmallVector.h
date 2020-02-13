@@ -284,8 +284,8 @@ protected:
   template <typename T1, typename T2>
   static void uninitialized_copy(
       T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<typename std::remove_const<T1>::type,
-                                    T2>::value> * = nullptr) {
+      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
+          nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
     // use memcpy here. Note that I and E are iterators and thus might be
@@ -911,8 +911,8 @@ inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
 /// SmallVector with elements of the vector.  This is useful, for example,
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
-SmallVector<typename std::remove_const<typename std::remove_reference<
-                decltype(*std::begin(std::declval<R &>()))>::type>::type,
+SmallVector<std::remove_const_t<std::remove_reference_t<
+                decltype(*std::begin(std::declval<R &>()))>>,
             Size>
 to_vector(R &&Range) {
   return {std::begin(Range), std::end(Range)};
