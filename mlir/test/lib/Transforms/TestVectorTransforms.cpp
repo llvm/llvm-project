@@ -42,16 +42,29 @@ struct TestVectorSlicesConversion
   }
 };
 
+struct TestVectorContractionConversion
+    : public FunctionPass<TestVectorContractionConversion> {
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    populateVectorContractLoweringPatterns(patterns, &getContext());
+    applyPatternsGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
 void registerTestVectorConversions() {
-  PassRegistration<TestVectorToVectorConversion> pass(
+  PassRegistration<TestVectorToVectorConversion> vectorToVectorPass(
       "test-vector-to-vector-conversion",
       "Test conversion patterns between ops in the vector dialect");
 
-  PassRegistration<TestVectorSlicesConversion> slices_pass(
+  PassRegistration<TestVectorSlicesConversion> slicesPass(
       "test-vector-slices-conversion",
       "Test conversion patterns that lower slices ops in the vector dialect");
+
+  PassRegistration<TestVectorContractionConversion> contractionPass(
+      "test-vector-contraction-conversion",
+      "Test conversion patterns that lower contract ops in the vector dialect");
 }
 } // namespace mlir

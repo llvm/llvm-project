@@ -538,6 +538,7 @@ static bool isIdentitySuffix(AffineMap map) {
 }
 
 namespace {
+
 // Splits vector TransferReadOp into smaller TransferReadOps based on slicing
 // scheme of its unique ExtractSlicesOp user.
 struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
@@ -862,6 +863,72 @@ public:
   }
 };
 
+/// Progressive lowering of ConstractionOp.
+class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
+public:
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(vector::ContractionOp op,
+                                     PatternRewriter &rewriter) const override {
+    // TODO(ajcbik): implement masks
+    if (llvm::size(op.masks()) != 0)
+      return matchFailure();
+
+    auto loc = op.getLoc();
+    VectorType lhsType = op.getLhsType();
+    VectorType rhsType = op.getRhsType();
+    Type resType = op.getResultType();
+
+    // Find first batch dimension in lhs/rhs, and lower when found.
+    std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();
+    if (!batchDimMap.empty()) {
+      // TODO(ajcbik): implement batch
+      return matchFailure();
+    }
+
+    // Collect contracting dimensions.
+    std::vector<std::pair<int64_t, int64_t>> contractingDimMap =
+        op.getContractingDimMap();
+    DenseSet<int64_t> lhsContractingDimSet;
+    DenseSet<int64_t> rhsContractingDimSet;
+    for (auto &dimPair : contractingDimMap) {
+      lhsContractingDimSet.insert(dimPair.first);
+      rhsContractingDimSet.insert(dimPair.second);
+    }
+
+    // Find free dimension in lhs/rhs, and lower first when found.
+    for (int64_t i = 0, e = lhsType.getRank(); i < e; ++i) {
+      if (lhsContractingDimSet.count(i) == 0) {
+        // TODO(ajcbik): implement free
+        return matchFailure();
+      }
+    }
+    for (int64_t i = 0, e = rhsType.getRank(); i < e; ++i) {
+      if (rhsContractingDimSet.count(i) == 0) {
+        // TODO(ajcbik): implement free
+        return matchFailure();
+      }
+    }
+
+    // Only contraction dimensions remain.
+    if (!resType.isa<VectorType>() && lhsType.getRank() == 1 &&
+        rhsType.getRank() == 1) {
+      // Handle reduction into scalar.
+      Value zero = rewriter.create<ConstantOp>(loc, resType,
+                                               rewriter.getZeroAttr(resType));
+      Value splat = rewriter.create<SplatOp>(loc, lhsType, zero);
+      Value fma =
+          rewriter.create<vector::FMAOp>(loc, op.lhs(), op.rhs(), splat);
+      StringAttr kind = rewriter.getStringAttr("add");
+      rewriter.replaceOpWithNewOp<vector::ReductionV2Op>(op, resType, kind, fma,
+                                                         op.acc());
+      return matchSuccess();
+    }
+    // TODO(ajcbik): implement more contraction
+    return matchFailure();
+  }
+};
+
 } // namespace
 
 // TODO(andydavis) Add pattern to rewrite ExtractSlices(ConstantMaskOp).
@@ -875,4 +942,9 @@ void mlir::vector::populateVectorToVectorTransformationPatterns(
 void mlir::vector::populateVectorSlicesLoweringPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
   patterns.insert<ExtractSlicesOpLowering, InsertSlicesOpLowering>(context);
+}
+
+void mlir::vector::populateVectorContractLoweringPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<ContractionOpLowering>(context);
 }
