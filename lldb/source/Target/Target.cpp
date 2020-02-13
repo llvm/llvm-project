@@ -127,12 +127,12 @@ void Target::PrimeFromDummyTarget(Target *target) {
 
   m_stop_hooks = target->m_stop_hooks;
 
-  for (BreakpointSP breakpoint_sp : target->m_breakpoint_list.Breakpoints()) {
+  for (const auto &breakpoint_sp : target->m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
       continue;
 
-    BreakpointSP new_bp(new Breakpoint(*this, *breakpoint_sp.get()));
-    AddBreakpoint(new_bp, false);
+    BreakpointSP new_bp(Breakpoint::CopyFromBreakpoint(*this, *breakpoint_sp));
+    AddBreakpoint(std::move(new_bp), false);
   }
 
   for (auto bp_name_entry : target->m_breakpoint_names) {
