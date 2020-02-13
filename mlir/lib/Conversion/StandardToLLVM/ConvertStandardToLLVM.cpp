@@ -430,7 +430,17 @@ MemRefDescriptor::fromStaticShape(OpBuilder &builder, Location loc,
                                   LLVMTypeConverter &typeConverter,
                                   MemRefType type, Value memory) {
   assert(type.hasStaticShape() && "unexpected dynamic shape");
-  assert(type.getAffineMaps().empty() && "unexpected layout map");
+
+  // Extract all strides and offsets and verify they are static.
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto result = getStridesAndOffset(type, strides, offset);
+  (void)result;
+  assert(succeeded(result) && "unexpected failure in stride computation");
+  assert(offset != MemRefType::getDynamicStrideOrOffset() &&
+         "expected static offset");
+  assert(!llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) &&
+         "expected static strides");
 
   auto convertedType = typeConverter.convertType(type);
   assert(convertedType && "unexpected failure in memref type conversion");
@@ -438,16 +448,12 @@ MemRefDescriptor::fromStaticShape(OpBuilder &builder, Location loc,
   auto descr = MemRefDescriptor::undef(builder, loc, convertedType);
   descr.setAllocatedPtr(builder, loc, memory);
   descr.setAlignedPtr(builder, loc, memory);
-  descr.setConstantOffset(builder, loc, 0);
+  descr.setConstantOffset(builder, loc, offset);
 
-  // Fill in sizes and strides, in reverse order to simplify stride
-  // calculation.
-  uint64_t runningStride = 1;
-  for (unsigned i = type.getRank(); i > 0; --i) {
-    unsigned dim = i - 1;
-    descr.setConstantSize(builder, loc, dim, type.getDimSize(dim));
-    descr.setConstantStride(builder, loc, dim, runningStride);
-    runningStride *= type.getDimSize(dim);
+  // Fill in sizes and strides
+  for (unsigned i = 0, e = type.getRank(); i != e; ++i) {
+    descr.setConstantSize(builder, loc, i, type.getDimSize(i));
+    descr.setConstantStride(builder, loc, i, strides[i]);
   }
   return descr;
 }
