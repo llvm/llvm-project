@@ -1,4 +1,4 @@
-; RUN: not llc < %s -asm-verbose=false 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -asm-verbose=false 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
