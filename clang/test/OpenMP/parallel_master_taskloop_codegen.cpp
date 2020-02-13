@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
 // CHECK: call void [[OMP_OUTLINED3]](i32* %{{.+}}, i32* %{{.+}}, i32* [[ARGC]], i8*** [[ARGV]], i64 [[COND]], i64 [[NUM_TASKS]])
 // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
-
+// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEFLOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*))
 
 // CHECK: define internal void [[OMP_OUTLINED1]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i64 %{{.+}})
 // CHECK: [[PRIO_ADDR:%.+]] = bitcast i64* %{{.+}} to i32*
@@ -186,6 +186,23 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
   for (int j = argc; j < argv[argc][argc]; ++j)
     ;
+// CHECK:       define internal void [[OMP_OUTLINED4]](i32* {{.+}}, i32* {{.+}})
+// CHECK:       [[RES:%.+]] = call {{.*}}i32 @__kmpc_master(%struct.ident_t* [[DEFLOC]], i32 [[GTID:%.+]])
+// CHECK-NEXT:  [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
+// CHECK-NEXT:  br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
+// CHECK:       [[THEN]]
+// CHECK: call void @__kmpc_taskgroup(
+// CHECK: call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 1, i64 80, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_CANCEL:@.+]] to i32 (i32, i8*)*))
+// CHECK: call void @__kmpc_taskloop(
+// CHECK: call void @__kmpc_end_taskgroup(
+// CHECK-NEXT:  call {{.*}}void @__kmpc_end_master(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
+// CHECK-NEXT:  br label {{%?}}[[EXIT]]
+// CHECK:       [[EXIT]]
+#pragma omp parallel master taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup
+#pragma omp cancellation point taskgroup
+  }
 }
 
 // CHECK-LABEL: @_ZN1SC2Ei
