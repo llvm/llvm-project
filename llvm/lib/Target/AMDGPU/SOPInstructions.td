@@ -220,7 +220,9 @@ def S_FLBIT_I32_B32 : SOP1_32 <"s_flbit_i32_b32",
   [(set i32:$sdst, (AMDGPUffbh_u32 i32:$src0))]
 >;
 
-def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64">;
+def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
+  [(set i32:$sdst, (AMDGPUffbh_u32 i64:$src0))]
+>;
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
   [(set i32:$sdst, (AMDGPUffbh_i32 i32:$src0))]
 >;
