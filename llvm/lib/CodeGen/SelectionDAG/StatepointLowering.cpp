@@ -859,7 +859,8 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
     const auto &DL = DAG.getDataLayout();
 
     unsigned AS = ISP.getCalledValue()->getType()->getPointerAddressSpace();
-    ActualCallee = DAG.getConstant(0, getCurSDLoc(), TLI.getPointerTy(DL, AS));
+    ActualCallee =
+        DAG.getTargetConstant(0, getCurSDLoc(), TLI.getPointerTy(DL, AS));
   } else {
     ActualCallee = getValue(ISP.getCalledValue());
   }
