@@ -299,7 +299,7 @@ PatternMatchResult WorkGroupSizeConversion::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 
 // Legalizes a GPU function as an entry SPIR-V function.
-static FuncOp
+static spirv::FuncOp
 lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
                      ConversionPatternRewriter &rewriter,
                      spirv::EntryPointABIAttr entryPointInfo,
@@ -325,11 +325,10 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
       signatureConverter.addInputs(argType.index(), convertedType);
     }
   }
-  auto newFuncOp = rewriter.create<FuncOp>(
+  auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               llvm::None),
-      ArrayRef<NamedAttribute>());
+                               llvm::None));
   for (const auto &namedAttr : funcOp.getAttrs()) {
     if (namedAttr.first.is(impl::getTypeAttrName()) ||
         namedAttr.first.is(SymbolTable::getSymbolAttrName()))
@@ -362,8 +361,8 @@ PatternMatchResult GPUFuncOpConversion::matchAndRewrite(
     funcOp.emitRemark("match failure: missing 'spv.entry_point_abi' attribute");
     return matchFailure();
   }
-  FuncOp newFuncOp = lowerAsEntryFunction(funcOp, typeConverter, rewriter,
-                                          entryPointAttr, argABI);
+  spirv::FuncOp newFuncOp = lowerAsEntryFunction(
+      funcOp, typeConverter, rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return matchFailure();
   newFuncOp.removeAttr(Identifier::get(gpu::GPUDialect::getKernelFuncAttrName(),

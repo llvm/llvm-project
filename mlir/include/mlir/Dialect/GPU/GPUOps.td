@@ -128,11 +128,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
              nullptr;
     }
 
-    /// Returns the type of the function this Op defines.
-    FunctionType getType() {
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
-
     /// Change the type of this function in place. This is an extremely
     /// dangerous operation and it is up to the caller to ensure that this is
     /// legal for this function, and to restore invariants:

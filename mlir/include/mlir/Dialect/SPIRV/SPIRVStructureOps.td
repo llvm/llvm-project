@@ -15,7 +15,10 @@
 #ifndef SPIRV_STRUCTURE_OPS
 #define SPIRV_STRUCTURE_OPS
 
+include "mlir/Analysis/CallInterfaces.td"
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+
+// -----
 
 def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
@@ -60,6 +63,8 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
+
+// -----
 
 def SPV_ConstantOp : SPV_Op<"constant", [NoSideEffect]> {
   let summary = "The op that declares a SPIR-V normal constant";
@@ -125,6 +130,8 @@ def SPV_ConstantOp : SPV_Op<"constant", [NoSideEffect]> {
   let autogenSerialization = 0;
 }
 
+// -----
+
 def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
   let summary = [{
     Declare an entry point, its execution model, and its interface.
@@ -182,10 +189,93 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
                               spirv::ExecutionModel executionModel,
-                              FuncOp function,
+                              spirv::FuncOp function,
                               ArrayRef<Attribute> interfaceVars}]>];
 }
 
+// -----
+
+def SPV_FuncOp : SPV_Op<"func", [
+    DeclareOpInterfaceMethods<CallableOpInterface>,
+    FunctionLike, InModuleScope, IsolatedFromAbove, Symbol
+  ]> {
+  let summary = "Declare or define a function";
+
+  let description = [{
+    This op declares or defines a SPIR-V function using one region, which
+    contains one or more blocks.
+
+    Different from the SPIR-V binary format, this op is not allowed to
+    implicitly capture global values, and all external references must use
+    function arguments or symbol references. This op itself defines a symbol
+    that is unique in the enclosing module op.
+
+    This op itself takes no operands and generates no results. Its region
+    can take zero or more arguments and return zero or one values.
+
+    ### Custom assembly form
+
+    ```
+    spv-function-control ::= "None" | "Inline" | "DontInline" | ...
+    spv-function-op ::= `spv.func` function-signature
+                         spv-function-control region
+    ```
+
+    For example:
+
+    ```
+    spv.func @foo() -> () "None" { ... }
+    spv.func @bar() -> () "Inline|Pure" { ... }
+    ```
+  }];
+
+  let arguments = (ins
+    TypeAttr:$type,
+    StrAttr:$sym_name,
+    SPV_FunctionControlAttr:$function_control
+  );
+
+  let results = (outs);
+
+  let regions = (region AnyRegion:$body);
+
+  let verifier = [{ return success(); }];
+
+  let builders = [OpBuilder<[{
+    Builder *, OperationState &state,
+    StringRef name, FunctionType type,
+    spirv::FunctionControl control = spirv::FunctionControl::None,
+    ArrayRef<NamedAttribute> attrs = {}
+  }]>];
+
+  let hasOpcode = 0;
+
+  let autogenSerialization = 0;
+
+  let extraClassDeclaration = [{
+  private:
+    // This trait needs access to the hooks defined below.
+    friend class OpTrait::FunctionLike<FuncOp>;
+
+    /// Returns the number of arguments. Hook for OpTrait::FunctionLike.
+    unsigned getNumFuncArguments() { return getType().getNumInputs(); }
+
+    /// Returns the number of results. Hook for OpTrait::FunctionLike.
+    unsigned getNumFuncResults() { return getType().getNumResults(); }
+
+    /// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
+    /// attribute is present and checks if it holds a function type. Ensures
+    /// getType, getNumFuncArguments, and getNumFuncResults can be called safely
+    LogicalResult verifyType();
+
+    /// Hook for OpTrait::FunctionLike, called after verifying the function
+    /// type and the presence of the (potentially empty) function body.
+    /// Ensures SPIR-V specific semantics.
+    LogicalResult verifyBody();
+  }];
+}
+
+// -----
 
 def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let summary = [{
@@ -238,6 +328,8 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
     OptionalAttr<FlatSymbolRefAttr>:$initializer
   );
 
+  let results = (outs);
+
   let builders = [
     OpBuilder<"Builder *builder, OperationState &state, "
       "TypeAttr type, ArrayRef<NamedAttribute> namedAttrs", [{
@@ -251,8 +343,6 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
                 Type type, StringRef name, spirv::BuiltIn builtin}]>
   ];
 
-  let results = (outs);
-
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
@@ -264,10 +354,12 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   }];
 }
 
+// -----
+
 def SPV_ModuleOp : SPV_Op<"module",
                           [IsolatedFromAbove,
                            SingleBlockImplicitTerminator<"ModuleEndOp">,
-                           NativeOpTrait<"SymbolTable">]> {
+                           SymbolTable]> {
   let summary = "The top-level op that defines a SPIR-V module";
 
   let description = [{
@@ -351,6 +443,8 @@ def SPV_ModuleOp : SPV_Op<"module",
   }];
 }
 
+// -----
+
 def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
   let summary = "The pseudo op that ends a SPIR-V module";
 
@@ -373,6 +467,8 @@ def SPV_ModuleEndOp : SPV_Op<"_module_end", [InModuleScope, Terminator]> {
 
   let autogenSerialization = 0;
 }
+
+// -----
 
 def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
@@ -413,6 +509,8 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
 
   let assemblyFormat = "$spec_const attr-dict `:` type($reference)";
 }
+
+// -----
 
 def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
   let summary = "The op that declares a SPIR-V specialization constant";
@@ -460,5 +558,7 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
 
   let autogenSerialization = 0;
 }
+
+// -----
 
 #endif // SPIRV_STRUCTURE_OPS

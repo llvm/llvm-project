@@ -26,7 +26,7 @@ module attributes {
 // CHECK:      spv.globalVariable
 // CHECK-SAME: built_in("LocalInvocationId")
 
-// CHECK:      func @single_workgroup_reduction
+// CHECK:      @single_workgroup_reduction
 // CHECK-SAME: (%[[INPUT:.+]]: !spv.ptr{{.+}}, %[[OUTPUT:.+]]: !spv.ptr{{.+}})
 
 // CHECK:        %[[ZERO:.+]] = spv.constant 0 : i32

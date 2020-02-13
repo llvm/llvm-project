@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1498,7 +1499,7 @@ static void print(spirv::ControlBarrierOp op, OpAsmPrinter &printer) {
 
 void spirv::EntryPointOp::build(Builder *builder, OperationState &state,
                                 spirv::ExecutionModel executionModel,
-                                FuncOp function,
+                                spirv::FuncOp function,
                                 ArrayRef<Attribute> interfaceVars) {
   build(builder, state,
         builder->getI32IntegerAttr(static_cast<int32_t>(executionModel)),
@@ -1559,7 +1560,7 @@ static LogicalResult verify(spirv::EntryPointOp entryPointOp) {
 //===----------------------------------------------------------------------===//
 
 void spirv::ExecutionModeOp::build(Builder *builder, OperationState &state,
-                                   FuncOp function,
+                                   spirv::FuncOp function,
                                    spirv::ExecutionMode executionMode,
                                    ArrayRef<int32_t> params) {
   build(builder, state, builder->getSymbolRefAttr(function),
@@ -1592,9 +1593,10 @@ static ParseResult parseExecutionModeOp(OpAsmParser &parser,
 }
 
 static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
-  printer << spirv::ExecutionModeOp::getOperationName() << " @"
-          << execModeOp.fn() << " \""
-          << stringifyExecutionMode(execModeOp.execution_mode()) << "\"";
+  printer << spirv::ExecutionModeOp::getOperationName() << " ";
+  printer.printSymbolName(execModeOp.fn());
+  printer << " \"" << stringifyExecutionMode(execModeOp.execution_mode())
+          << "\"";
   auto values = execModeOp.values();
   if (!values.size())
     return;
@@ -1605,14 +1607,145 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.func
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
+  SmallVector<OpAsmParser::OperandType, 4> entryArgs;
+  SmallVector<SmallVector<NamedAttribute, 2>, 4> argAttrs;
+  SmallVector<SmallVector<NamedAttribute, 2>, 4> resultAttrs;
+  SmallVector<Type, 4> argTypes;
+  SmallVector<Type, 4> resultTypes;
+  auto &builder = parser.getBuilder();
+
+  // Parse the name as a symbol.
+  StringAttr nameAttr;
+  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+                             state.attributes))
+    return failure();
+
+  // Parse the function signature.
+  bool isVariadic = false;
+  if (impl::parseFunctionSignature(parser, /*allowVariadic=*/false, entryArgs,
+                                   argTypes, argAttrs, isVariadic, resultTypes,
+                                   resultAttrs))
+    return failure();
+
+  auto fnType = builder.getFunctionType(argTypes, resultTypes);
+  state.addAttribute(impl::getTypeAttrName(), TypeAttr::get(fnType));
+
+  // Parse the optional function control keyword.
+  spirv::FunctionControl fnControl;
+  if (parseEnumAttribute(fnControl, parser, state))
+    return failure();
+
+  // If additional attributes are present, parse them.
+  if (parser.parseOptionalAttrDictWithKeyword(state.attributes))
+    return failure();
+
+  // Add the attributes to the function arguments.
+  assert(argAttrs.size() == argTypes.size());
+  assert(resultAttrs.size() == resultTypes.size());
+  impl::addArgAndResultAttrs(builder, state, argAttrs, resultAttrs);
+
+  // Parse the optional function body.
+  auto *body = state.addRegion();
+  return parser.parseOptionalRegion(
+      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+}
+
+static void print(spirv::FuncOp fnOp, OpAsmPrinter &printer) {
+  // Print function name, signature, and control.
+  printer << spirv::FuncOp::getOperationName() << " ";
+  printer.printSymbolName(fnOp.sym_name());
+  auto fnType = fnOp.getType();
+  impl::printFunctionSignature(printer, fnOp, fnType.getInputs(),
+                               /*isVariadic=*/false, fnType.getResults());
+  printer << " \"" << spirv::stringifyFunctionControl(fnOp.function_control())
+          << "\"";
+  impl::printFunctionAttributes(
+      printer, fnOp, fnType.getNumInputs(), fnType.getNumResults(),
+      {spirv::attributeName<spirv::FunctionControl>()});
+
+  // Print the body if this is not an external function.
+  Region &body = fnOp.body();
+  if (!body.empty())
+    printer.printRegion(body, /*printEntryBlockArgs=*/false,
+                        /*printBlockTerminators=*/true);
+}
+
+LogicalResult spirv::FuncOp::verifyType() {
+  auto type = getTypeAttr().getValue();
+  if (!type.isa<FunctionType>())
+    return emitOpError("requires '" + getTypeAttrName() +
+                       "' attribute of function type");
+  if (getType().getNumResults() > 1)
+    return emitOpError("cannot have more than one result");
+  return success();
+}
+
+LogicalResult spirv::FuncOp::verifyBody() {
+  FunctionType fnType = getType();
+
+  auto walkResult = walk([fnType](Operation *op) -> WalkResult {
+    if (auto retOp = dyn_cast<spirv::ReturnOp>(op)) {
+      if (fnType.getNumResults() != 0)
+        return retOp.emitOpError("cannot be used in functions returning value");
+    } else if (auto retOp = dyn_cast<spirv::ReturnValueOp>(op)) {
+      if (fnType.getNumResults() != 1)
+        return retOp.emitOpError(
+                   "returns 1 value but enclosing function requires ")
+               << fnType.getNumResults() << " results";
+
+      auto retOperandType = retOp.value().getType();
+      auto fnResultType = fnType.getResult(0);
+      if (retOperandType != fnResultType)
+        return retOp.emitOpError(" return value's type (")
+               << retOperandType << ") mismatch with function's result type ("
+               << fnResultType << ")";
+    }
+    return WalkResult::advance();
+  });
+
+  // TODO(antiagainst): verify other bits like linkage type.
+
+  return failure(walkResult.wasInterrupted());
+}
+
+void spirv::FuncOp::build(Builder *builder, OperationState &state,
+                          StringRef name, FunctionType type,
+                          spirv::FunctionControl control,
+                          ArrayRef<NamedAttribute> attrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder->getStringAttr(name));
+  state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
+  state.addAttribute(
+      spirv::attributeName<spirv::FunctionControl>(),
+      builder->getI32IntegerAttr(static_cast<uint32_t>(control)));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+}
+
+// CallableOpInterface
+Region *spirv::FuncOp::getCallableRegion() {
+  return isExternal() ? nullptr : &body();
+}
+
+// CallableOpInterface
+ArrayRef<Type> spirv::FuncOp::getCallableResults() {
+  return getType().getResults();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.FunctionCall
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::FunctionCallOp functionCallOp) {
   auto fnName = functionCallOp.callee();
 
-  auto funcOp = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
-      functionCallOp.getParentOp(), fnName));
+  auto funcOp =
+      dyn_cast_or_null<spirv::FuncOp>(SymbolTable::lookupNearestSymbolFrom(
+          functionCallOp.getParentOp(), fnName));
   if (!funcOp) {
     return functionCallOp.emitOpError("callee function '")
            << fnName << "' not found in nearest symbol table";
@@ -2274,69 +2407,61 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
   auto &op = *moduleOp.getOperation();
   auto *dialect = op.getDialect();
   auto &body = op.getRegion(0).front();
-  DenseMap<std::pair<FuncOp, spirv::ExecutionModel>, spirv::EntryPointOp>
+  DenseMap<std::pair<spirv::FuncOp, spirv::ExecutionModel>, spirv::EntryPointOp>
       entryPoints;
   SymbolTable table(moduleOp);
 
   for (auto &op : body) {
-    if (op.getDialect() == dialect) {
-      // For EntryPoint op, check that the function and execution model is not
-      // duplicated in EntryPointOps. Also verify that the interface specified
-      // comes from globalVariables here to make this check cheaper.
-      if (auto entryPointOp = dyn_cast<spirv::EntryPointOp>(op)) {
-        auto funcOp = table.lookup<FuncOp>(entryPointOp.fn());
-        if (!funcOp) {
-          return entryPointOp.emitError("function '")
-                 << entryPointOp.fn() << "' not found in 'spv.module'";
-        }
-        if (auto interface = entryPointOp.interface()) {
-          for (Attribute varRef : interface) {
-            auto varSymRef = varRef.dyn_cast<FlatSymbolRefAttr>();
-            if (!varSymRef) {
-              return entryPointOp.emitError(
-                         "expected symbol reference for interface "
-                         "specification instead of '")
-                     << varRef;
-            }
-            auto variableOp =
-                table.lookup<spirv::GlobalVariableOp>(varSymRef.getValue());
-            if (!variableOp) {
-              return entryPointOp.emitError("expected spv.globalVariable "
-                                            "symbol reference instead of'")
-                     << varSymRef << "'";
-            }
+    if (op.getDialect() != dialect)
+      return op.emitError("'spv.module' can only contain spv.* ops");
+
+    // For EntryPoint op, check that the function and execution model is not
+    // duplicated in EntryPointOps. Also verify that the interface specified
+    // comes from globalVariables here to make this check cheaper.
+    if (auto entryPointOp = dyn_cast<spirv::EntryPointOp>(op)) {
+      auto funcOp = table.lookup<spirv::FuncOp>(entryPointOp.fn());
+      if (!funcOp) {
+        return entryPointOp.emitError("function '")
+               << entryPointOp.fn() << "' not found in 'spv.module'";
+      }
+      if (auto interface = entryPointOp.interface()) {
+        for (Attribute varRef : interface) {
+          auto varSymRef = varRef.dyn_cast<FlatSymbolRefAttr>();
+          if (!varSymRef) {
+            return entryPointOp.emitError(
+                       "expected symbol reference for interface "
+                       "specification instead of '")
+                   << varRef;
+          }
+          auto variableOp =
+              table.lookup<spirv::GlobalVariableOp>(varSymRef.getValue());
+          if (!variableOp) {
+            return entryPointOp.emitError("expected spv.globalVariable "
+                                          "symbol reference instead of'")
+                   << varSymRef << "'";
           }
         }
+      }
 
-        auto key = std::pair<FuncOp, spirv::ExecutionModel>(
-            funcOp, entryPointOp.execution_model());
-        auto entryPtIt = entryPoints.find(key);
-        if (entryPtIt != entryPoints.end()) {
-          return entryPointOp.emitError("duplicate of a previous EntryPointOp");
+      auto key = std::pair<spirv::FuncOp, spirv::ExecutionModel>(
+          funcOp, entryPointOp.execution_model());
+      auto entryPtIt = entryPoints.find(key);
+      if (entryPtIt != entryPoints.end()) {
+        return entryPointOp.emitError("duplicate of a previous EntryPointOp");
+      }
+      entryPoints[key] = entryPointOp;
+    } else if (auto funcOp = dyn_cast<spirv::FuncOp>(op)) {
+      if (funcOp.isExternal())
+        return op.emitError("'spv.module' cannot contain external functions");
+
+      // TODO(antiagainst): move this check to spv.func.
+      for (auto &block : funcOp)
+        for (auto &op : block) {
+          if (op.getDialect() != dialect)
+            return op.emitError(
+                "functions in 'spv.module' can only contain spv.* ops");
         }
-        entryPoints[key] = entryPointOp;
-      }
-      continue;
     }
-
-    auto funcOp = dyn_cast<FuncOp>(op);
-    if (!funcOp)
-      return op.emitError("'spv.module' can only contain func and spv.* ops");
-
-    if (funcOp.isExternal())
-      return op.emitError("'spv.module' cannot contain external functions");
-
-    for (auto &block : funcOp)
-      for (auto &op : block) {
-        if (op.getDialect() == dialect)
-          continue;
-
-        if (isa<FuncOp>(op))
-          return op.emitError("'spv.module' cannot contain nested functions");
-
-        return op.emitError(
-            "functions in 'spv.module' can only contain spv.* ops");
-      }
   }
 
   // Verify capabilities. ODS already guarantees that we have an array of
@@ -2386,12 +2511,7 @@ static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ReturnOp returnOp) {
-  auto funcOp = returnOp.getParentOfType<FuncOp>();
-  auto numOutputs = funcOp.getType().getNumResults();
-  if (numOutputs != 0)
-    return returnOp.emitOpError("cannot be used in functions returning value")
-           << (numOutputs > 1 ? "s" : "");
-
+  // Verification is performed in spv.func op.
   return success();
 }
 
@@ -2400,20 +2520,7 @@ static LogicalResult verify(spirv::ReturnOp returnOp) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ReturnValueOp retValOp) {
-  auto funcOp = retValOp.getParentOfType<FuncOp>();
-  auto numFnResults = funcOp.getType().getNumResults();
-  if (numFnResults != 1)
-    return retValOp.emitOpError(
-               "returns 1 value but enclosing function requires ")
-           << numFnResults << " results";
-
-  auto operandType = retValOp.value().getType();
-  auto fnResultType = funcOp.getType().getResult(0);
-  if (operandType != fnResultType)
-    return retValOp.emitOpError(" return value's type (")
-           << operandType << ") mismatch with function's result type ("
-           << fnResultType << ")";
-
+  // Verification is performed in spv.func op.
   return success();
 }
 

@@ -191,6 +191,7 @@ PatternMatchResult
 FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   auto fnType = funcOp.getType();
+  // TODO(antiagainst): support converting functions with one result.
   if (fnType.getNumResults())
     return matchFailure();
 
@@ -202,12 +203,23 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
     signatureConverter.addInputs(argType.index(), convertedType);
   }
 
-  rewriter.updateRootInPlace(funcOp, [&] {
-    funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), llvm::None));
-    rewriter.applySignatureConversion(&funcOp.getBody(), signatureConverter);
-  });
+  // Create the converted spv.func op.
+  auto newFuncOp = rewriter.create<spirv::FuncOp>(
+      funcOp.getLoc(), funcOp.getName(),
+      rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
+                               llvm::None));
 
+  // Copy over all attributes other than the function name and type.
+  for (const auto &namedAttr : funcOp.getAttrs()) {
+    if (!namedAttr.first.is(impl::getTypeAttrName()) &&
+        !namedAttr.first.is(SymbolTable::getSymbolAttrName()))
+      newFuncOp.setAttr(namedAttr.first, namedAttr.second);
+  }
+
+  rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                              newFuncOp.end());
+  rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
+  rewriter.eraseOp(funcOp);
   return matchSuccess();
 }
 
@@ -308,7 +320,8 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
   auto indexType = typeConverter.getIndexType(builder.getContext());
 
   Value ptrLoc = nullptr;
-  assert(indices.size() == strides.size());
+  assert(indices.size() == strides.size() &&
+         "must provide indices for all dimensions");
   for (auto index : enumerate(indices)) {
     Value strideVal = builder.create<spirv::ConstantOp>(
         loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
@@ -330,7 +343,8 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-mlir::spirv::setABIAttrs(FuncOp funcOp, spirv::EntryPointABIAttr entryPointInfo,
+mlir::spirv::setABIAttrs(spirv::FuncOp funcOp,
+                         spirv::EntryPointABIAttr entryPointInfo,
                          ArrayRef<spirv::InterfaceVarABIAttr> argABIInfo) {
   // Set the attributes for argument and the function.
   StringRef argABIAttrName = spirv::getInterfaceVarABIAttrName();
