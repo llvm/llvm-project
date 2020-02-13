@@ -1850,6 +1850,8 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   if (InsertInclude && InsertInclude->Insertion)
     LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
 
+  LSP.score = Score.ExcludingName;
+
   return LSP;
 }
 

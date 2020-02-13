@@ -24,6 +24,7 @@
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 5,
 # CHECK-NEXT:        "label": " size",
+# CHECK-NEXT:        "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:        "sortText": "{{.*}}size",
 # CHECK-NEXT:        "textEdit": {
 # CHECK-NEXT:          "newText": "size",
@@ -46,6 +47,7 @@
 # CHECK-NEXT:         "insertTextFormat": 1,
 # CHECK-NEXT:         "kind": 10,
 # CHECK-NEXT:         "label": " default_capacity",
+# CHECK-NEXT:         "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:         "sortText": "{{.*}}default_capacity",
 # CHECK-NEXT:         "textEdit": {
 # CHECK-NEXT:           "newText": "default_capacity",
@@ -86,6 +88,7 @@
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 6,
 # CHECK-NEXT:        "label": " ns_member",
+# CHECK-NEXT:        "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:        "sortText": "{{.*}}ns_member",
 # CHECK-NEXT:        "textEdit": {
 # CHECK-NEXT:          "newText": "ns_member",
