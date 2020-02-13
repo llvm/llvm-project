@@ -283,8 +283,8 @@ def AMDGPUbfe_i32 : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
-def AMDGPUffbh_u32 : SDNode<"AMDGPUISD::FFBH_U32", SDTIntUnaryOp>;
-def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntUnaryOp>;
+def AMDGPUffbh_u32_impl : SDNode<"AMDGPUISD::FFBH_U32", SDTIntBitCountUnaryOp>;
+def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 
 def AMDGPUffbl_b32 : SDNode<"AMDGPUISD::FFBL_B32", SDTIntUnaryOp>;
 
@@ -420,6 +420,10 @@ def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
 def AMDGPUffbh_i32 : PatFrags<(ops node:$src),
   [(int_amdgcn_sffbh node:$src),
    (AMDGPUffbh_i32_impl node:$src)]>;
+
+def AMDGPUffbh_u32 : PatFrags<(ops node:$src),
+  [(ctlz_zero_undef node:$src),
+   (AMDGPUffbh_u32_impl node:$src)]>;
 
 def AMDGPUpkrtz_f16_f32 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_cvt_pkrtz node:$src0, node:$src1),
