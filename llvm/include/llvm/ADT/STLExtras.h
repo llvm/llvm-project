@@ -63,14 +63,16 @@ template <typename...> struct conjunction : std::true_type {};
 template <typename B1> struct conjunction<B1> : B1 {};
 template <typename B1, typename... Bn>
 struct conjunction<B1, Bn...>
-    : std::conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
+    : std::conditional<bool(B1::value), conjunction<Bn...>, B1>::type {};
 
 template <typename T> struct make_const_ptr {
-  using type = std::add_pointer_t<std::add_const_t<T>>;
+  using type =
+      typename std::add_pointer<typename std::add_const<T>::type>::type;
 };
 
 template <typename T> struct make_const_ref {
-  using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
+  using type = typename std::add_lvalue_reference<
+      typename std::add_const<T>::type>::type;
 };
 
 //===----------------------------------------------------------------------===//
@@ -115,7 +117,7 @@ public:
   function_ref(Callable &&callable,
                std::enable_if_t<!std::is_same<std::remove_reference_t<Callable>,
                                               function_ref>::value> * = nullptr)
-      : callback(callback_fn<std::remove_reference_t<Callable>>),
+      : callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
   Ret operator()(Params ...params) const {
@@ -198,12 +200,12 @@ template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N) {
 
 template <typename ItTy, typename FuncTy,
           typename FuncReturnTy =
-              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+            decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
 class mapped_iterator
     : public iterator_adaptor_base<
-          mapped_iterator<ItTy, FuncTy>, ItTy,
-          typename std::iterator_traits<ItTy>::iterator_category,
-          std::remove_reference_t<FuncReturnTy>> {
+             mapped_iterator<ItTy, FuncTy>, ItTy,
+             typename std::iterator_traits<ItTy>::iterator_category,
+             typename std::remove_reference<FuncReturnTy>::type> {
 public:
   mapped_iterator(ItTy U, FuncTy F)
     : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
@@ -245,7 +247,8 @@ public:
 
 /// Metafunction to determine if T& or T has a member called rbegin().
 template <typename Ty>
-struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
+struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
+};
 
 // Returns an iterator_range over the given container which iterates in reverse.
 // Note that the container must have rbegin()/rend() methods for this to work.
@@ -292,14 +295,15 @@ class filter_iterator_base
     : public iterator_adaptor_base<
           filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
           WrappedIteratorT,
-          std::common_type_t<IterTag,
-                             typename std::iterator_traits<
-                                 WrappedIteratorT>::iterator_category>> {
+          typename std::common_type<
+              IterTag, typename std::iterator_traits<
+                           WrappedIteratorT>::iterator_category>::type> {
   using BaseT = iterator_adaptor_base<
       filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
       WrappedIteratorT,
-      std::common_type_t<IterTag, typename std::iterator_traits<
-                                      WrappedIteratorT>::iterator_category>>;
+      typename std::common_type<
+          IterTag, typename std::iterator_traits<
+                       WrappedIteratorT>::iterator_category>::type>;
 
 protected:
   WrappedIteratorT End;
@@ -517,10 +521,9 @@ template<typename... Iters> struct ZipTupleType {
 
 template <typename ZipType, typename... Iters>
 using zip_traits = iterator_facade_base<
-    ZipType,
-    std::common_type_t<
-        std::bidirectional_iterator_tag,
-        typename std::iterator_traits<Iters>::iterator_category...>,
+    ZipType, typename std::common_type<std::bidirectional_iterator_tag,
+                                       typename std::iterator_traits<
+                                           Iters>::iterator_category...>::type,
     // ^ TODO: Implement random access methods.
     typename ZipTupleType<Iters...>::type,
     typename std::iterator_traits<typename std::tuple_element<
@@ -672,8 +675,9 @@ static auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 }
 
 template <typename Iter> struct ZipLongestItemType {
-  using type = llvm::Optional<std::remove_const_t<
-      std::remove_reference_t<decltype(*std::declval<Iter>())>>>;
+  using type =
+      llvm::Optional<typename std::remove_const<typename std::remove_reference<
+          decltype(*std::declval<Iter>())>::type>::type>;
 };
 
 template <typename... Iters> struct ZipLongestTupleType {
@@ -684,12 +688,12 @@ template <typename... Iters>
 class zip_longest_iterator
     : public iterator_facade_base<
           zip_longest_iterator<Iters...>,
-          std::common_type_t<
+          typename std::common_type<
               std::forward_iterator_tag,
-              typename std::iterator_traits<Iters>::iterator_category...>,
+              typename std::iterator_traits<Iters>::iterator_category...>::type,
           typename ZipLongestTupleType<Iters...>::type,
-          typename std::iterator_traits<
-              std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,
+          typename std::iterator_traits<typename std::tuple_element<
+              0, std::tuple<Iters...>>::type>::difference_type,
           typename ZipLongestTupleType<Iters...>::type *,
           typename ZipLongestTupleType<Iters...>::type> {
 public:
@@ -1497,8 +1501,8 @@ decltype(auto) apply_tuple_impl(F &&f, Tuple &&t, std::index_sequence<I...>) {
 /// return the result.
 template <typename F, typename Tuple>
 decltype(auto) apply_tuple(F &&f, Tuple &&t) {
-  using Indices =
-      std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>;
+  using Indices = std::make_index_sequence<
+      std::tuple_size<typename std::decay<Tuple>::type>::value>;
 
   return detail::apply_tuple_impl(std::forward<F>(f), std::forward<Tuple>(t),
                                   Indices{});
