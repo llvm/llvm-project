@@ -282,7 +282,7 @@ public:
   virtual bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const = 0;
 
-  virtual llvm::Optional<TraversalKind> TraversalKind() const {
+  virtual llvm::Optional<clang::TraversalKind> TraversalKind() const {
     return llvm::None;
   }
 };
@@ -1168,10 +1168,10 @@ struct ArgumentAdaptingMatcherFunc {
 
 template <typename T>
 class TraversalMatcher : public WrapperMatcherInterface<T> {
-  TraversalKind Traversal;
+  clang::TraversalKind Traversal;
 
 public:
-  explicit TraversalMatcher(TraversalKind TK, const Matcher<T> &ChildMatcher)
+  explicit TraversalMatcher(clang::TraversalKind TK, const Matcher<T> &ChildMatcher)
       : TraversalMatcher::WrapperMatcherInterface(ChildMatcher), Traversal(TK) {
   }
 
@@ -1181,7 +1181,7 @@ public:
                                       Builder);
   }
 
-  llvm::Optional<TraversalKind> TraversalKind() const override {
+  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
     return Traversal;
   }
 };
