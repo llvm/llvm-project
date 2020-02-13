@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ast-print %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -36,8 +36,11 @@ T tmain(T argc) {
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
         for (int j = 0; j < 2; ++j)
-          for (int j = 0; j < 2; ++j)
+          for (int j = 0; j < 2; ++j) {
+#pragma omp cancel taskgroup
+#pragma omp cancellation point taskgroup
             foo();
+          }
   // CHECK-NEXT: #pragma omp parallel
   // CHECK-NEXT: #pragma omp taskloop private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) shared(g) if(c) final(d) mergeable priority(f) nogroup num_tasks(N)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -49,7 +52,9 @@ T tmain(T argc) {
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
-  // CHECK-NEXT: for (int j = 0; j < 2; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 2; ++j) {
+  // CHECK-NEXT: #pragma omp cancel taskgroup
+  // CHECK-NEXT: #pragma omp cancellation point taskgroup
   // CHECK-NEXT: foo();
   return T();
 }
@@ -70,12 +75,17 @@ int main(int argc, char **argv) {
 #pragma omp parallel
 #pragma omp taskloop private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc) reduction(max: a, e)
   for (int i = 0; i < 10; ++i)
-    for (int j = 0; j < 10; ++j)
+    for (int j = 0; j < 10; ++j) {
+#pragma omp cancel taskgroup
+#pragma omp cancellation point taskgroup
       foo();
+    }
   // CHECK-NEXT: #pragma omp parallel
   // CHECK-NEXT: #pragma omp taskloop private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc) reduction(max: a,e)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-  // CHECK-NEXT: for (int j = 0; j < 10; ++j)
+  // CHECK-NEXT: for (int j = 0; j < 10; ++j) {
+  // CHECK-NEXT: #pragma omp cancel taskgroup
+  // CHECK-NEXT: #pragma omp cancellation point taskgroup
   // CHECK-NEXT: foo();
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0]));
 }
