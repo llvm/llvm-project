@@ -173,7 +173,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     std::string Namespace = SubRegIndices.front().getNamespace();
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
-    OS << "enum {\n  NoSubRegister,\n";
+    OS << "enum : uint16_t {\n  NoSubRegister,\n";
     unsigned i = 0;
     for (const auto &Idx : SubRegIndices)
       OS << "  " << Idx.getName() << ",\t// " << ++i << "\n";

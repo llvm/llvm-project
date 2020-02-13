@@ -626,8 +626,12 @@ namespace llvm {
       return SubRegIndices;
     }
 
-    // Find a SubRegIndex form its Record def.
+    // Find a SubRegIndex from its Record def or add to the list if it does
+    // not exist there yet.
     CodeGenSubRegIndex *getSubRegIdx(Record*);
+
+    // Find a SubRegIndex from its Record def.
+    const CodeGenSubRegIndex *findSubRegIdx(const Record* Def) const;
 
     // Find or create a sub-register index representing the A+B composition.
     CodeGenSubRegIndex *getCompositeSubRegIndex(CodeGenSubRegIndex *A,
