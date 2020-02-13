@@ -497,6 +497,7 @@ OPENMP_ATOMIC_CLAUSE(acq_rel)
 OPENMP_ATOMIC_CLAUSE(acquire)
 OPENMP_ATOMIC_CLAUSE(release)
 OPENMP_ATOMIC_CLAUSE(relaxed)
+OPENMP_ATOMIC_CLAUSE(hint)
 
 // Clauses allowed for OpenMP directive 'target'.
 OPENMP_TARGET_CLAUSE(if)
