@@ -69,8 +69,6 @@ typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
-enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
-
 SOCKET AcceptConnection(int portno) {
   // Accept a socket connection from any host on "portno".
   SOCKET newsockfd = -1;
@@ -505,25 +503,13 @@ void request_attach(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json
   g_vsc.RunInitCommands();
 
-  // Grab the name of the program we need to debug and set it as the first
-  // argument that will be passed to the program we will debug.
-  const auto program = GetString(arguments, "program");
-  if (!program.empty()) {
-    lldb::SBFileSpec program_fspec(program.data(), true /*resolve_path*/);
-
-    g_vsc.launch_info.SetExecutableFile(program_fspec,
-                                        false /*add_as_first_arg*/);
-    const char *target_triple = nullptr;
-    const char *uuid_cstr = nullptr;
-    // Stand alone debug info file if different from executable
-    const char *symfile = nullptr;
-    g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
-    if (error.Fail()) {
-      response["success"] = llvm::json::Value(false);
-      EmplaceSafeString(response, "message", std::string(error.GetCString()));
-      g_vsc.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
+  lldb::SBError status;
+  g_vsc.SetTarget(g_vsc.CreateTargetFromArguments(*arguments, status));
+  if (status.Fail()) {
+    response["success"] = llvm::json::Value(false);
+    EmplaceSafeString(response, "message", status.GetCString());
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
   }
 
   const bool detatchOnError = GetBoolean(arguments, "detachOnError", false);
@@ -536,7 +522,8 @@ void request_attach(const llvm::json::Object &request) {
     char attach_info[256];
     auto attach_info_len =
         snprintf(attach_info, sizeof(attach_info),
-                 "Waiting to attach to \"%s\"...", program.data());
+                 "Waiting to attach to \"%s\"...",
+                 g_vsc.target.GetExecutable().GetFilename());
     g_vsc.SendOutput(OutputType::Console, llvm::StringRef(attach_info,
                                                           attach_info_len));
   }
@@ -1210,13 +1197,6 @@ void request_initialize(const llvm::json::Object &request) {
     g_vsc.debugger.SetErrorFileHandle(out, false);
   }
 
-  g_vsc.target = g_vsc.debugger.CreateTarget(nullptr);
-  lldb::SBListener listener = g_vsc.debugger.GetListener();
-  listener.StartListeningForEvents(
-      g_vsc.target.GetBroadcaster(),
-      lldb::SBTarget::eBroadcastBitBreakpointChanged);
-  listener.StartListeningForEvents(g_vsc.broadcaster,
-                                   eBroadcastBitStopEventThread);
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
   g_vsc.event_thread = std::thread(EventThreadFunction);
@@ -1358,38 +1338,28 @@ void request_launch(const llvm::json::Object &request) {
 
   SetSourceMapFromArguments(*arguments);
 
-  // Run any initialize LLDB commands the user specified in the launch.json
+  // Run any initialize LLDB commands the user specified in the launch.json.
+  // This is run before target is created, so commands can't do anything with
+  // the targets - preRunCommands are run with the target.
   g_vsc.RunInitCommands();
+
+  lldb::SBError status;
+  g_vsc.SetTarget(g_vsc.CreateTargetFromArguments(*arguments, status));
+  if (status.Fail()) {
+    response["success"] = llvm::json::Value(false);
+    EmplaceSafeString(response, "message", status.GetCString());
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  // Instantiate a launch info instance for the target.
+  g_vsc.launch_info = g_vsc.target.GetLaunchInfo();
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
   const auto cwd = GetString(arguments, "cwd");
   if (!cwd.empty())
     g_vsc.launch_info.SetWorkingDirectory(cwd.data());
-
-  // Grab the name of the program we need to debug and set it as the first
-  // argument that will be passed to the program we will debug.
-  llvm::StringRef program = GetString(arguments, "program");
-  if (!program.empty()) {
-    lldb::SBFileSpec program_fspec(program.data(), true /*resolve_path*/);
-    g_vsc.launch_info.SetExecutableFile(program_fspec,
-                                        true /*add_as_first_arg*/);
-    const char *target_triple = nullptr;
-    const char *uuid_cstr = nullptr;
-    // Stand alone debug info file if different from executable
-    const char *symfile = nullptr;
-    lldb::SBModule module = g_vsc.target.AddModule(
-        program.data(), target_triple, uuid_cstr, symfile);
-    if (!module.IsValid()) {
-      response["success"] = llvm::json::Value(false);
-
-      EmplaceSafeString(
-          response, "message",
-          llvm::formatv("Could not load program '{0}'.", program).str());
-      g_vsc.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
-  }
 
   // Extract any extra arguments and append them to our program arguments for
   // when we launch
