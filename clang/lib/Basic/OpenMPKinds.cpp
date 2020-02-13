@@ -599,8 +599,9 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
     }
     break;
   case OMPD_atomic:
-    if (OpenMPVersion < 50 && (CKind == OMPC_acq_rel || CKind == OMPC_acquire ||
-                               CKind == OMPC_release || CKind == OMPC_relaxed))
+    if (OpenMPVersion < 50 &&
+        (CKind == OMPC_acq_rel || CKind == OMPC_acquire ||
+         CKind == OMPC_release || CKind == OMPC_relaxed || CKind == OMPC_hint))
       return false;
     switch (CKind) {
 #define OPENMP_ATOMIC_CLAUSE(Name)                                             \
