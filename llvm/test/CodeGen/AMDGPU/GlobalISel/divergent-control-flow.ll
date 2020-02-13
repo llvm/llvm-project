@@ -56,3 +56,145 @@ if.true:
   %val = load volatile i32, i32 addrspace(1)* undef
   br label %endif
 }
+
+; Make sure and 1 is inserted on llvm.amdgcn.if
+define i32 @divergent_if_nonboolean_condition0(i32 %value) {
+; CHECK-LABEL: divergent_if_nonboolean_condition0:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:    s_cbranch_execz BB2_2
+; CHECK-NEXT:  ; %bb.1: ; %if.true
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:  BB2_2: ; %endif
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %c = trunc i32 %value to i1
+  br i1 %c, label %if.true, label %endif
+
+if.true:
+  %val = load volatile i32, i32 addrspace(1)* undef
+  br label %endif
+
+endif:
+  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  ret i32 %v
+}
+
+; Make sure and 1 is inserted on llvm.amdgcn.if
+define i32 @divergent_if_nonboolean_condition1(i32 addrspace(1)* %ptr) {
+; CHECK-LABEL: divergent_if_nonboolean_condition1:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:    s_cbranch_execz BB3_2
+; CHECK-NEXT:  ; %bb.1: ; %if.true
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:  BB3_2: ; %endif
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %value = load i32, i32 addrspace(1)* %ptr
+  %c = trunc i32 %value to i1
+  br i1 %c, label %if.true, label %endif
+
+if.true:
+  %val = load volatile i32, i32 addrspace(1)* undef
+  br label %endif
+
+endif:
+  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  ret i32 %v
+}
+
+@external_constant = external addrspace(4) constant i32, align 4
+@const.ptr = external addrspace(4) constant float*, align 4
+
+; Make sure this case compiles. G_ICMP was mis-mapped due to having
+; the result register class constrained by llvm.amdgcn.if lowering.
+define void @constrained_if_register_class() {
+; CHECK-LABEL: constrained_if_register_class:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    s_add_u32 s4, s4, external_constant@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+4
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x0
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    s_add_u32 s4, s4, const.ptr@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, const.ptr@gotpcrel32@hi+4
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
+; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
+; CHECK-NEXT:    s_and_b32 s6, s6, 1
+; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
+; CHECK-NEXT:    s_cbranch_scc1 BB4_6
+; CHECK-NEXT:  ; %bb.1: ; %bb2
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b32 s4, -1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s7
+; CHECK-NEXT:    flat_load_dword v0, v[0:1]
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[6:7], 0, 1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, 1.0, v0
+; CHECK-NEXT:    s_xor_b64 s[8:9], vcc, s[6:7]
+; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
+; CHECK-NEXT:  ; %bb.2: ; %bb7
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:  ; %bb.3: ; %bb8
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[6:7], s4, 0
+; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[6:7]
+; CHECK-NEXT:    s_cbranch_execz BB4_5
+; CHECK-NEXT:  ; %bb.4: ; %bb11
+; CHECK-NEXT:    v_mov_b32_e32 v0, 4.0
+; CHECK-NEXT:    buffer_store_dword v0, v0, s[0:3], s33 offen
+; CHECK-NEXT:  BB4_5: ; %Flow
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:  BB4_6: ; %bb12
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %tmp = load i32, i32 addrspace(4)* @external_constant
+  %ptr = load float*, float* addrspace(4)* @const.ptr
+  %tmp1 = icmp ne i32 %tmp, 0
+  br i1 %tmp1, label %bb12, label %bb2
+
+bb2:
+  %tmp4 = load float, float* %ptr, align 4
+  %tmp5 = fcmp olt float %tmp4, 1.0
+  %tmp6 = or i1 %tmp5, false
+  br i1 %tmp6, label %bb8, label %bb7
+
+bb7:
+  br label %bb8
+
+bb8:
+  %tmp9 = phi i32 [ 0, %bb7 ], [ -1, %bb2 ]
+  %tmp10 = icmp eq i32 %tmp9, 0
+  br i1 %tmp10, label %bb11, label %bb12
+
+bb11:
+  store float 4.0, float addrspace(5)* undef, align 4
+  br label %bb12
+
+bb12:
+  ret void
+}
