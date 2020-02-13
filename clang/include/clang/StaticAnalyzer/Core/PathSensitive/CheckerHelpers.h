@@ -14,6 +14,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 
 #include "clang/AST/Stmt.h"
+#include "llvm/ADT/Optional.h"
 #include <tuple>
 
 namespace clang {
@@ -22,6 +23,7 @@ class Expr;
 class VarDecl;
 class QualType;
 class AttributedType;
+class Preprocessor;
 
 namespace ento {
 
@@ -62,8 +64,13 @@ enum class Nullability : char {
 /// Get nullability annotation for a given type.
 Nullability getNullabilityAnnotation(QualType Type);
 
-} // end GR namespace
+/// Try to parse the value of a defined preprocessor macro. We can only parse
+/// simple expressions that consist of an optional minus sign token and then a
+/// token for an integer. If we cannot parse the value then None is returned.
+llvm::Optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP);
 
-} // end clang namespace
+} // namespace ento
+
+} // namespace clang
 
 #endif
