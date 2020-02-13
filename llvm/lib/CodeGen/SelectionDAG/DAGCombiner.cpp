@@ -13399,9 +13399,10 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
       TargetLowering::NegatibleCost::Expensive)
     return TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
 
-  // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0 FIXME: This is
-  // duplicated in getNegatibleCost, but getNegatibleCost doesn't know it
-  // was called from a context with a nsz flag if the input fsub does not.
+  // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0
+  // FIXME: This is duplicated in getNegatibleCost, but getNegatibleCost doesn't
+  // know it was called from a context with a nsz flag if the input fsub does
+  // not.
   if (N0.getOpcode() == ISD::FSUB &&
       (DAG.getTarget().Options.NoSignedZerosFPMath ||
        N->getFlags().hasNoSignedZeros()) && N0.hasOneUse()) {
