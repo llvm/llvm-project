@@ -34,8 +34,8 @@
 // RUN: echo "C D 40" >> %t.call_graph
 // RUN: echo "D B 10" >> %t.call_graph
 
-// RUN: not ld.lld -e A %t.o --symbol-ordering-file %t.symbol_order --call-graph-ordering-file %t.call_graph -o %t 2>&1 | FileCheck %s
-// RUN: not ld.lld -e A %t.o --call-graph-ordering-file %t.call_graph --symbol-ordering-file %t.symbol_order -o %t 2>&1 | FileCheck %s
+// RUN: not ld.lld -e A %t.o --symbol-ordering-file %t.symbol_order --call-graph-ordering-file %t.call_graph -o /dev/null 2>&1 | FileCheck %s
+// RUN: not ld.lld -e A %t.o --call-graph-ordering-file %t.call_graph --symbol-ordering-file %t.symbol_order -o /dev/null 2>&1 | FileCheck %s
 // CHECK: error: --symbol-ordering-file and --call-graph-order-file may not be used together
 
     .section    .text.D,"ax",@progbits

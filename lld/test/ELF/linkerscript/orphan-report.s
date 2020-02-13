@@ -12,7 +12,7 @@
 # RUN:   %t.o 2>&1 -verbose  -error-limit=0 | FileCheck %s --check-prefix=DEFAULT
 
 ## Check --orphan-handling=error reports errors about orphans.
-# RUN: not ld.lld -shared --orphan-handling=error -o %t.out --script %t.script \
+# RUN: not ld.lld -shared --orphan-handling=error -o /dev/null --script %t.script \
 # RUN:   %t.o 2>&1 -verbose  -error-limit=0 | FileCheck %s --check-prefix=REPORT
 # REPORT:      {{.*}}.o:(.text) is being placed in '.text'
 # REPORT-NEXT: {{.*}}.o:(.text.2) is being placed in '.text'
@@ -44,7 +44,7 @@
 # RUN: ld.lld -shared --orphan-handling=warn -o %t.out --script %t.script \
 # RUN:   %t.o 2>&1 -verbose | FileCheck %s --check-prefix=REPORT
 
-# RUN: not ld.lld --orphan-handling=foo -o %t.out --script %t.script %t.o 2>&1 \
+# RUN: not ld.lld --orphan-handling=foo -o /dev/null --script %t.script %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=UNKNOWN
 # UNKNOWN: unknown --orphan-handling mode: foo
 

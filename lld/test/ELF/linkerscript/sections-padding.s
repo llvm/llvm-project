@@ -32,7 +32,7 @@
 
 ## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
-# RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
+# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR2 %s
 # ERR2: malformed number: 0x99XX
 
@@ -58,12 +58,12 @@
 
 ## Check we report an error if expression value is larger than 32-bits.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =(0x11 << 32) }" > %t.script
-# RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 | FileCheck --check-prefix=ERR3 %s
+# RUN: not ld.lld -o /dev/null --script %t.script %t 2>&1 | FileCheck --check-prefix=ERR3 %s
 # ERR3: filler expression result does not fit 32-bit: 0x1100000000
 
 ## Check we report an error if an expression use a symbol.
 # RUN: echo "SECTIONS { foo = 0x11; .mysec : { *(.mysec*) } = foo }" > %t.script
-# RUN: not ld.lld -o %t.out %t --script %t.script 2>&1 | FileCheck --check-prefix=ERR4 %s
+# RUN: not ld.lld -o /dev/null %t --script %t.script 2>&1 | FileCheck --check-prefix=ERR4 %s
 # ERR4: symbol not found: foo
 
 .section        .mysec.1,"a"
