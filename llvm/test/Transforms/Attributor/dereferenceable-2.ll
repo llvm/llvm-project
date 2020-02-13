@@ -74,7 +74,7 @@ define void @gep0(i8* %unused, i8* %other, i8* %ptr) {
 ; Multiple arguments may be dereferenceable.
 
 define void @ordering(i8* %ptr1, i32* %ptr2) {
-; ATTRIBUTOR-LABEL: @ordering(i8* nocapture nofree nonnull readonly dereferenceable(3) %ptr1, i32* nocapture nofree nonnull readonly dereferenceable(8) %ptr2)
+; ATTRIBUTOR-LABEL: @ordering(i8* nocapture nofree nonnull readnone dereferenceable(3) %ptr1, i32* nocapture nofree nonnull readnone dereferenceable(8) %ptr2)
   %a20 = getelementptr i32, i32* %ptr2, i64 0
   %a12 = getelementptr i8, i8* %ptr1, i64 2
   %t12 = load i8, i8* %a12
@@ -91,7 +91,7 @@ define void @ordering(i8* %ptr1, i32* %ptr2) {
 ; Not in entry block.
 
 define void @not_entry_but_guaranteed_to_execute(i8* %ptr) {
-; ATTRIBUTOR-LABEL: @not_entry_but_guaranteed_to_execute(i8* nocapture nofree nonnull readonly dereferenceable(3) %ptr)
+; ATTRIBUTOR-LABEL: @not_entry_but_guaranteed_to_execute(i8* nocapture nofree nonnull readnone dereferenceable(3) %ptr)
 entry:
   br label %exit
 exit:
@@ -107,7 +107,7 @@ exit:
 ; Not in entry block and not guaranteed to execute.
 
 define void @not_entry_not_guaranteed_to_execute(i8* %ptr, i1 %cond) {
-; ATTRIBUTOR-LABEL: @not_entry_not_guaranteed_to_execute(i8* nocapture nofree readonly %ptr, i1 %cond)
+; ATTRIBUTOR-LABEL: @not_entry_not_guaranteed_to_execute(i8* nocapture nofree readnone %ptr, i1 %cond)
 entry:
   br i1 %cond, label %loads, label %exit
 loads:
@@ -125,7 +125,7 @@ exit:
 ; The last load may not execute, so derefenceable bytes only covers the 1st two loads.
 
 define void @partial_in_entry(i16* %ptr, i1 %cond) {
-; ATTRIBUTOR-LABEL: @partial_in_entry(i16* nocapture nofree nonnull readonly dereferenceable(4) %ptr, i1 %cond)
+; ATTRIBUTOR-LABEL: @partial_in_entry(i16* nocapture nofree nonnull readnone dereferenceable(4) %ptr, i1 %cond)
 entry:
   %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
   %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
@@ -157,7 +157,7 @@ define void @volatile_is_not_dereferenceable(i16* %ptr) {
 ; TODO: We should allow inference for atomic (but not volatile) ops.
 
 define void @atomic_is_alright(i16* %ptr) {
-; ATTRIBUTOR-LABEL: @atomic_is_alright(i16* nocapture nofree nonnull readonly align 2 dereferenceable(6) %ptr)
+; ATTRIBUTOR-LABEL: @atomic_is_alright(i16* nocapture nofree nonnull readnone align 2 dereferenceable(6) %ptr)
   %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
   %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
   %arrayidx2 = getelementptr i16, i16* %ptr, i64 2
@@ -170,7 +170,7 @@ define void @atomic_is_alright(i16* %ptr) {
 declare void @may_not_return()
 
 define void @not_guaranteed_to_transfer_execution(i16* %ptr) {
-; ATTRIBUTOR-LABEL: @not_guaranteed_to_transfer_execution(i16* nocapture nonnull readonly dereferenceable(2) %ptr)
+; ATTRIBUTOR-LABEL: @not_guaranteed_to_transfer_execution(i16* nocapture nofree nonnull readnone dereferenceable(2) %ptr)
   %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
   %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
   %arrayidx2 = getelementptr i16, i16* %ptr, i64 2
@@ -184,7 +184,7 @@ define void @not_guaranteed_to_transfer_execution(i16* %ptr) {
 ; We must have consecutive accesses.
 
 define void @variable_gep_index(i8* %unused, i8* %ptr, i64 %variable_index) {
-; ATTRIBUTOR-LABEL: @variable_gep_index(i8* nocapture nofree readnone %unused, i8* nocapture nofree nonnull readonly dereferenceable(1) %ptr, i64 %variable_index)
+; ATTRIBUTOR-LABEL: @variable_gep_index(i8* nocapture nofree readnone %unused, i8* nocapture nofree nonnull readnone dereferenceable(1) %ptr, i64 %variable_index)
   %arrayidx1 = getelementptr i8, i8* %ptr, i64 %variable_index
   %arrayidx2 = getelementptr i8, i8* %ptr, i64 2
   %t0 = load i8, i8* %ptr
@@ -197,7 +197,7 @@ define void @variable_gep_index(i8* %unused, i8* %ptr, i64 %variable_index) {
 
 define void @multi_index_gep(<4 x i8>* %ptr) {
 ; FIXME: %ptr should be dereferenceable(4)
-; ATTRIBUTOR-LABEL: @multi_index_gep(<4 x i8>* nocapture nofree nonnull readonly dereferenceable(1) %ptr)
+; ATTRIBUTOR-LABEL: @multi_index_gep(<4 x i8>* nocapture nofree nonnull readnone dereferenceable(1) %ptr)
   %arrayidx00 = getelementptr <4 x i8>, <4 x i8>* %ptr, i64 0, i64 0
   %t0 = load i8, i8* %arrayidx00
   ret void
@@ -206,7 +206,7 @@ define void @multi_index_gep(<4 x i8>* %ptr) {
 ; Could round weird bitwidths down?
 
 define void @not_byte_multiple(i9* %ptr) {
-; ATTRIBUTOR-LABEL: @not_byte_multiple(i9* nocapture nofree nonnull readonly dereferenceable(2) %ptr) 
+; ATTRIBUTOR-LABEL: @not_byte_multiple(i9* nocapture nofree nonnull readnone dereferenceable(2) %ptr) 
   %arrayidx0 = getelementptr i9, i9* %ptr, i64 0
   %t0 = load i9, i9* %arrayidx0
   ret void
@@ -215,7 +215,7 @@ define void @not_byte_multiple(i9* %ptr) {
 ; Missing direct access from the pointer.
 
 define void @no_pointer_deref(i16* %ptr) {
-; ATTRIBUTOR-LABEL: @no_pointer_deref(i16* nocapture nofree readonly %ptr)
+; ATTRIBUTOR-LABEL: @no_pointer_deref(i16* nocapture nofree readnone %ptr)
   %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
   %arrayidx2 = getelementptr i16, i16* %ptr, i64 2
   %t1 = load i16, i16* %arrayidx1
@@ -226,7 +226,7 @@ define void @no_pointer_deref(i16* %ptr) {
 ; Out-of-order is ok, but missing access concludes dereferenceable range.
 
 define void @non_consecutive(i32* %ptr) {
-; ATTRIBUTOR-LABEL: @non_consecutive(i32* nocapture nofree nonnull readonly dereferenceable(8) %ptr)
+; ATTRIBUTOR-LABEL: @non_consecutive(i32* nocapture nofree nonnull readnone dereferenceable(8) %ptr)
   %arrayidx1 = getelementptr i32, i32* %ptr, i64 1
   %arrayidx0 = getelementptr i32, i32* %ptr, i64 0
   %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
@@ -239,7 +239,7 @@ define void @non_consecutive(i32* %ptr) {
 ; Improve on existing dereferenceable attribute.
 
 define void @more_bytes(i32* dereferenceable(8) %ptr) {
-; ATTRIBUTOR-LABEL: @more_bytes(i32* nocapture nofree nonnull readonly dereferenceable(16) %ptr)
+; ATTRIBUTOR-LABEL: @more_bytes(i32* nocapture nofree nonnull readnone dereferenceable(16) %ptr)
   %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
   %arrayidx1 = getelementptr i32, i32* %ptr, i64 1
   %arrayidx0 = getelementptr i32, i32* %ptr, i64 0
@@ -254,7 +254,7 @@ define void @more_bytes(i32* dereferenceable(8) %ptr) {
 ; Improve on existing dereferenceable_or_null attribute.
 
 define void @more_bytes_and_not_null(i32* dereferenceable_or_null(8) %ptr) {
-; ATTRIBUTOR-LABEL: @more_bytes_and_not_null(i32* nocapture nofree nonnull readonly dereferenceable(16) %ptr)
+; ATTRIBUTOR-LABEL: @more_bytes_and_not_null(i32* nocapture nofree nonnull readnone dereferenceable(16) %ptr)
   %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
   %arrayidx1 = getelementptr i32, i32* %ptr, i64 1
   %arrayidx0 = getelementptr i32, i32* %ptr, i64 0
@@ -269,7 +269,7 @@ define void @more_bytes_and_not_null(i32* dereferenceable_or_null(8) %ptr) {
 ; But don't pessimize existing dereferenceable attribute.
 
 define void @better_bytes(i32* dereferenceable(100) %ptr) {
-; ATTRIBUTOR-LABEL: @better_bytes(i32* nocapture nofree nonnull readonly dereferenceable(100) %ptr)
+; ATTRIBUTOR-LABEL: @better_bytes(i32* nocapture nofree nonnull readnone dereferenceable(100) %ptr)
   %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
   %arrayidx1 = getelementptr i32, i32* %ptr, i64 1
   %arrayidx0 = getelementptr i32, i32* %ptr, i64 0
@@ -282,7 +282,7 @@ define void @better_bytes(i32* dereferenceable(100) %ptr) {
 }
 
 define void @bitcast(i32* %arg) {
-; ATTRIBUTOR-LABEL: @bitcast(i32* nocapture nofree nonnull readonly dereferenceable(8) %arg)
+; ATTRIBUTOR-LABEL: @bitcast(i32* nocapture nofree nonnull readnone dereferenceable(8) %arg)
   %ptr = bitcast i32* %arg to float*
   %arrayidx0 = getelementptr float, float* %ptr, i64 0
   %arrayidx1 = getelementptr float, float* %ptr, i64 1
@@ -292,7 +292,7 @@ define void @bitcast(i32* %arg) {
 }
 
 define void @bitcast_different_sizes(double* %arg1, i8* %arg2) {
-; ATTRIBUTOR-LABEL: @bitcast_different_sizes(double* nocapture nofree nonnull readonly dereferenceable(12) %arg1, i8* nocapture nofree nonnull readonly dereferenceable(16) %arg2)
+; ATTRIBUTOR-LABEL: @bitcast_different_sizes(double* nocapture nofree nonnull readnone dereferenceable(12) %arg1, i8* nocapture nofree nonnull readnone dereferenceable(16) %arg2)
   %ptr1 = bitcast double* %arg1 to float*
   %a10 = getelementptr float, float* %ptr1, i64 0
   %a11 = getelementptr float, float* %ptr1, i64 1
@@ -310,7 +310,7 @@ define void @bitcast_different_sizes(double* %arg1, i8* %arg2) {
 }
 
 define void @negative_offset(i32* %arg) {
-; ATTRIBUTOR-LABEL: @negative_offset(i32* nocapture nofree nonnull readonly dereferenceable(4) %arg)
+; ATTRIBUTOR-LABEL: @negative_offset(i32* nocapture nofree nonnull readnone dereferenceable(4) %arg)
   %ptr = bitcast i32* %arg to float*
   %arrayidx0 = getelementptr float, float* %ptr, i64 0
   %arrayidx1 = getelementptr float, float* %ptr, i64 -1
@@ -330,7 +330,7 @@ define void @stores(i32* %arg) {
 }
 
 define void @load_store(i32* %arg) {
-; ATTRIBUTOR-LABEL: @load_store(i32* nocapture nofree nonnull dereferenceable(8) %arg)
+; ATTRIBUTOR-LABEL: @load_store(i32* nocapture nofree nonnull writeonly dereferenceable(8) %arg)
   %ptr = bitcast i32* %arg to float*
   %arrayidx0 = getelementptr float, float* %ptr, i64 0
   %arrayidx1 = getelementptr float, float* %ptr, i64 1

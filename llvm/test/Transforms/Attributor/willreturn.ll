@@ -1,4 +1,4 @@
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_MODULE
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_MODULE
 ; RUN: opt -passes=attributor-cgscc --attributor-disable=false -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,ATTRIBUTOR_CGSCC
 
 
@@ -192,17 +192,23 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 
 ; TEST 6 (positive case)
 ; Call intrinsic function
-; FIXME: missing willreturn
-; ATTRIBUTOR: Function Attrs: nounwind readnone speculatable
+; ATTRIBUTOR: Function Attrs: nounwind readnone speculatable willreturn
 ; ATTRIBUTOR-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
-; FIXME: missing willreturn
-; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable
-; ATTRIBUTOR-NEXT: define void @call_floor(float %a)
+; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; ATTRIBUTOR_CGSCC:  Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; ATTRIBUTOR-NEXT:   define void @call_floor(float %a)
 define void @call_floor(float %a) #0 {
     tail call float @llvm.floor.f32(float %a)
     ret void
+}
+
+; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
+; ATTRIBUTOR-NEXT: define float @call_floor2(float %a)
+define float @call_floor2(float %a) #0 {
+    %c = tail call float @llvm.floor.f32(float %a)
+    ret float %c
 }
 
 

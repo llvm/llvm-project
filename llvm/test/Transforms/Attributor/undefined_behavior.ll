@@ -44,7 +44,6 @@ e:
 
 define void @load_null_pointer_is_defined() "null-pointer-is-valid"="true" {
 ; ATTRIBUTOR-LABEL: @load_null_pointer_is_defined(
-; ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* null
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %a = load i32, i32* null
@@ -57,14 +56,14 @@ define internal i32* @ret_null() {
 
 ; FIXME: null is propagated but the instruction
 ; is not changed to unreachable.
-define void @load_null_propagated() {
+define i32 @load_null_propagated() {
 ; ATTRIBUTOR-LABEL: @load_null_propagated(
 ; ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* null
-; ATTRIBUTOR-NEXT:    ret void
+; ATTRIBUTOR-NEXT:    ret i32 [[A]]
 ;
   %ptr = call i32* @ret_null()
   %a = load i32, i32* %ptr
-  ret void
+  ret i32 %a
 }
 
 ; -- Store tests --
