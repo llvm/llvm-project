@@ -1619,10 +1619,10 @@ let Predicates = [HasSVE2] in {
   defm UABALT_ZZZ : sve2_int_absdiff_accum_long<0b11, "uabalt", int_aarch64_sve_uabalt>;
 
   // SVE2 integer add/subtract long with carry
-  defm ADCLB_ZZZ : sve2_int_addsub_long_carry<0b00, "adclb">;
-  defm ADCLT_ZZZ : sve2_int_addsub_long_carry<0b01, "adclt">;
-  defm SBCLB_ZZZ : sve2_int_addsub_long_carry<0b10, "sbclb">;
-  defm SBCLT_ZZZ : sve2_int_addsub_long_carry<0b11, "sbclt">;
+  defm ADCLB_ZZZ : sve2_int_addsub_long_carry<0b00, "adclb", int_aarch64_sve_adclb>;
+  defm ADCLT_ZZZ : sve2_int_addsub_long_carry<0b01, "adclt", int_aarch64_sve_adclt>;
+  defm SBCLB_ZZZ : sve2_int_addsub_long_carry<0b10, "sbclb", int_aarch64_sve_sbclb>;
+  defm SBCLT_ZZZ : sve2_int_addsub_long_carry<0b11, "sbclt", int_aarch64_sve_sbclt>;
 
   // SVE2 bitwise shift right narrow (bottom)
   defm SQSHRUNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b000, "sqshrunb",  int_aarch64_sve_sqshrunb>;
