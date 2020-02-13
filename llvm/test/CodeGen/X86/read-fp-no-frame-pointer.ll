@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=x86_64-linux-gnueabi 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=x86_64-linux-gnueabi 2>&1 | FileCheck %s
 
 define i32 @get_frame() nounwind {
 entry:

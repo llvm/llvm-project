@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -disassemble < %s 2>&1 | FileCheck %s
+# RUN: not --crash llvm-mc -arch=amdgcn -mcpu=tahiti -disassemble < %s 2>&1 | FileCheck %s
 
 # CHECK: LLVM ERROR: Disassembly not yet supported for subtarget
 0x00 0x00 0x00 0x7e
