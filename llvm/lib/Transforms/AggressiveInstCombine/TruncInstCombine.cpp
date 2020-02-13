@@ -194,7 +194,7 @@ unsigned TruncInstCombine::getMinBitWidth() {
         unsigned IOpBitwidth = InstInfoMap.lookup(IOp).ValidBitWidth;
         if (IOpBitwidth >= ValidBitWidth)
           continue;
-        InstInfoMap[IOp].ValidBitWidth = std::max(ValidBitWidth, IOpBitwidth);
+        InstInfoMap[IOp].ValidBitWidth = ValidBitWidth;
         Worklist.push_back(IOp);
       }
   }
