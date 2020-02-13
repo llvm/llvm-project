@@ -249,10 +249,10 @@ void dwarfgen::LineTable::writeData(ArrayRef<ValueAndLength> Data,
       Asm.OutStreamer->EmitIntValue(Entry.Value, Entry.Length);
       continue;
     case ULEB:
-      Asm.EmitULEB128(Entry.Value);
+      Asm.emitULEB128(Entry.Value);
       continue;
     case SLEB:
-      Asm.EmitSLEB128(Entry.Value);
+      Asm.emitSLEB128(Entry.Value);
       continue;
     }
     llvm_unreachable("unsupported ValueAndLength Length value");
@@ -264,9 +264,9 @@ MCSymbol *dwarfgen::LineTable::writeDefaultPrologue(AsmPrinter &Asm) const {
   MCSymbol *UnitEnd = Asm.createTempSymbol("line_unit_end");
   if (Format == DwarfFormat::DWARF64) {
     Asm.emitInt32((int)dwarf::DW_LENGTH_DWARF64);
-    Asm.EmitLabelDifference(UnitEnd, UnitStart, 8);
+    Asm.emitLabelDifference(UnitEnd, UnitStart, 8);
   } else {
-    Asm.EmitLabelDifference(UnitEnd, UnitStart, 4);
+    Asm.emitLabelDifference(UnitEnd, UnitStart, 4);
   }
   Asm.OutStreamer->EmitLabel(UnitStart);
   Asm.emitInt16(Version);
@@ -277,7 +277,7 @@ MCSymbol *dwarfgen::LineTable::writeDefaultPrologue(AsmPrinter &Asm) const {
 
   MCSymbol *PrologueStart = Asm.createTempSymbol("line_prologue_start");
   MCSymbol *PrologueEnd = Asm.createTempSymbol("line_prologue_end");
-  Asm.EmitLabelDifference(PrologueEnd, PrologueStart,
+  Asm.emitLabelDifference(PrologueEnd, PrologueStart,
                           Format == DwarfFormat::DWARF64 ? 8 : 4);
   Asm.OutStreamer->EmitLabel(PrologueStart);
 
@@ -323,9 +323,9 @@ static void writeV2IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
   for (auto File : Prologue.FileNames) {
     assert(File.Name.getAsCString() && "expected a string form for file name");
     writeCString(*File.Name.getAsCString(), Asm);
-    Asm.EmitULEB128(File.DirIdx);
-    Asm.EmitULEB128(File.ModTime);
-    Asm.EmitULEB128(File.Length);
+    Asm.emitULEB128(File.DirIdx);
+    Asm.emitULEB128(File.ModTime);
+    Asm.emitULEB128(File.Length);
   }
   Asm.emitInt8(0);
 }
@@ -335,20 +335,20 @@ static void writeV5IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
   Asm.emitInt8(1); // directory_entry_format_count.
   // TODO: Add support for other content descriptions - we currently only
   // support a single DW_LNCT_path/DW_FORM_string.
-  Asm.EmitULEB128(DW_LNCT_path);
-  Asm.EmitULEB128(DW_FORM_string);
-  Asm.EmitULEB128(Prologue.IncludeDirectories.size());
+  Asm.emitULEB128(DW_LNCT_path);
+  Asm.emitULEB128(DW_FORM_string);
+  Asm.emitULEB128(Prologue.IncludeDirectories.size());
   for (auto Include : Prologue.IncludeDirectories) {
     assert(Include.getAsCString() && "expected a string form for include dir");
     writeCString(*Include.getAsCString(), Asm);
   }
 
   Asm.emitInt8(2); // file_name_entry_format_count.
-  Asm.EmitULEB128(DW_LNCT_path);
-  Asm.EmitULEB128(DW_FORM_string);
-  Asm.EmitULEB128(DW_LNCT_directory_index);
-  Asm.EmitULEB128(DW_FORM_data1);
-  Asm.EmitULEB128(Prologue.FileNames.size());
+  Asm.emitULEB128(DW_LNCT_path);
+  Asm.emitULEB128(DW_FORM_string);
+  Asm.emitULEB128(DW_LNCT_directory_index);
+  Asm.emitULEB128(DW_FORM_data1);
+  Asm.emitULEB128(Prologue.FileNames.size());
   for (auto File : Prologue.FileNames) {
     assert(File.Name.getAsCString() && "expected a string form for file name");
     writeCString(*File.Name.getAsCString(), Asm);

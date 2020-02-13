@@ -875,7 +875,7 @@ bool AsmParser::enabledGenDwarfForAssembly() {
                                           /*Cksum=*/None, /*Source=*/None);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
-    getContext().setGenDwarfFileNumber(getStreamer().EmitDwarfFileDirective(
+    getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
         /*CUID=*/0, getContext().getCompilationDir(), RootFile.Name,
         RootFile.Checksum, RootFile.Source));
   }
@@ -2249,7 +2249,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // current Dwarf File is for the CppHashFilename if not then emit the
     // Dwarf File table for it and adjust the line number for the .loc.
     if (!CppHashInfo.Filename.empty()) {
-      unsigned FileNumber = getStreamer().EmitDwarfFileDirective(
+      unsigned FileNumber = getStreamer().emitDwarfFileDirective(
           0, StringRef(), CppHashInfo.Filename);
       getContext().setGenDwarfFileNumber(FileNumber);
 
@@ -2258,7 +2258,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Line = CppHashInfo.LineNumber - 1 + (Line - CppHashLocLineNo);
     }
 
-    getStreamer().EmitDwarfLocDirective(
+    getStreamer().emitDwarfLocDirective(
         getContext().getGenDwarfFileNumber(), Line, 0,
         DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0,
         StringRef());
@@ -3573,7 +3573,7 @@ bool AsmParser::parseDirectiveLoc() {
   if (parseMany(parseLocOp, false /*hasComma*/))
     return true;
 
-  getStreamer().EmitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,
+  getStreamer().emitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,
                                       Isa, Discriminator, StringRef());
 
   return false;
@@ -4831,9 +4831,9 @@ bool AsmParser::parseDirectiveLEB128(bool Signed) {
     if (parseExpression(Value))
       return true;
     if (Signed)
-      getStreamer().EmitSLEB128Value(Value);
+      getStreamer().emitSLEB128Value(Value);
     else
-      getStreamer().EmitULEB128Value(Value);
+      getStreamer().emitULEB128Value(Value);
     return false;
   };
 
