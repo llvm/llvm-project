@@ -178,8 +178,6 @@ bool SimplifyInstructionsInBlock(BasicBlock *BB,
 /// Returns true if the dbg values have been changed.
 bool replaceDbgUsesWithUndef(Instruction *I);
 
-void setDbgVariableUndef(DbgVariableIntrinsic *DVI);
-
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
 //
