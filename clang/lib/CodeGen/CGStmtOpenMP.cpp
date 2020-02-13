@@ -2018,12 +2018,14 @@ static void emitCommonSimdLoop(CodeGenFunction &CGF, const OMPLoopDirective &S,
     BodyCodeGen(CGF);
   };
   const Expr *IfCond = nullptr;
-  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
-    if (CGF.getLangOpts().OpenMP >= 50 &&
-        (C->getNameModifier() == OMPD_unknown ||
-         C->getNameModifier() == OMPD_simd)) {
-      IfCond = C->getCondition();
-      break;
+  if (isOpenMPSimdDirective(S.getDirectiveKind())) {
+    for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+      if (CGF.getLangOpts().OpenMP >= 50 &&
+          (C->getNameModifier() == OMPD_unknown ||
+           C->getNameModifier() == OMPD_simd)) {
+        IfCond = C->getCondition();
+        break;
+      }
     }
   }
   if (IfCond) {
@@ -5682,7 +5684,7 @@ void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
       Action.Enter(CGF);
       CGF.EmitOMPTaskLoopBasedDirective(S);
     };
-    OMPLexicalScope Scope(CGF, S, llvm::None, /*EmitPreInitStmt=*/false);
+    OMPLexicalScope Scope(CGF, S, OMPD_parallel, /*EmitPreInitStmt=*/false);
     CGM.getOpenMPRuntime().emitMasterRegion(CGF, TaskLoopCodeGen,
                                             S.getBeginLoc());
   };
