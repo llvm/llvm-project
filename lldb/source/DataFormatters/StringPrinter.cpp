@@ -131,14 +131,15 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
                                                          uint8_t *&next) {
   StringPrinter::StringPrinterBufferPointer retval{nullptr};
 
-  unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
+  const unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
 
-  if (1u + std::distance(buffer, buffer_end) < utf8_encoded_len) {
-    // I don't have enough bytes - print whatever I have left
-    retval = {buffer, static_cast<size_t>(1 + buffer_end - buffer)};
-    next = buffer_end + 1;
+  // If the utf8 encoded length is invalid, or if there aren't enough bytes to
+  // print, this is some kind of corrupted string.
+  if (utf8_encoded_len == 0 || utf8_encoded_len > 4)
     return retval;
-  }
+  if ((buffer_end - buffer) < utf8_encoded_len)
+    // There's no room in the buffer for the utf8 sequence.
+    return retval;
 
   char32_t codepoint = 0;
   switch (utf8_encoded_len) {
@@ -160,12 +161,6 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
         (unsigned char)*buffer, (unsigned char)*(buffer + 1),
         (unsigned char)*(buffer + 2), (unsigned char)*(buffer + 3));
     break;
-  default:
-    // this is probably some bogus non-character thing just print it as-is and
-    // hope to sync up again soon
-    retval = {buffer, 1};
-    next = buffer + 1;
-    return retval;
   }
 
   if (codepoint) {
@@ -215,9 +210,7 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
     return retval;
   }
 
-  // this should not happen - but just in case.. try to resync at some point
-  retval = {buffer, 1};
-  next = buffer + 1;
+  // We couldn't figure out how to print this string.
   return retval;
 }
 
@@ -227,7 +220,7 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
 static StringPrinter::StringPrinterBufferPointer
 GetPrintable(StringPrinter::StringElementType type, uint8_t *buffer,
              uint8_t *buffer_end, uint8_t *&next) {
-  if (!buffer)
+  if (!buffer || buffer >= buffer_end)
     return {nullptr};
 
   switch (type) {
@@ -354,13 +347,11 @@ static bool DumpUTFBufferToStream(
             escaping_callback(utf8_data_ptr, utf8_data_end_ptr, next_data);
         auto printable_bytes = printable.GetBytes();
         auto printable_size = printable.GetSize();
-        if (!printable_bytes || !next_data) {
-          // GetPrintable() failed on us - print one byte in a desperate resync
-          // attempt
-          printable_bytes = utf8_data_ptr;
-          printable_size = 1;
-          next_data = utf8_data_ptr + 1;
-        }
+
+        // We failed to figure out how to print this string.
+        if (!printable_bytes || !next_data)
+          return false;
+
         for (unsigned c = 0; c < printable_size; c++)
           stream.Printf("%c", *(printable_bytes + c));
         utf8_data_ptr = (uint8_t *)next_data;
@@ -478,13 +469,11 @@ bool StringPrinter::ReadStringAndDumpToStream<
       auto printable = escaping_callback(data, data_end, next_data);
       auto printable_bytes = printable.GetBytes();
       auto printable_size = printable.GetSize();
-      if (!printable_bytes || !next_data) {
-        // GetPrintable() failed on us - print one byte in a desperate resync
-        // attempt
-        printable_bytes = data;
-        printable_size = 1;
-        next_data = data + 1;
-      }
+
+      // We failed to figure out how to print this string.
+      if (!printable_bytes || !next_data)
+        return false;
+
       for (unsigned c = 0; c < printable_size; c++)
         options.GetStream()->Printf("%c", *(printable_bytes + c));
       data = (uint8_t *)next_data;
