@@ -52,7 +52,7 @@ namespace {
     void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,
                          const char *Modifier = nullptr);
 
-    void EmitFunctionBodyStart() override;
+    void emitFunctionBodyStart() override;
     void EmitInstruction(const MachineInstr *MI) override;
 
     static const char *getRegisterName(unsigned RegNo) {
@@ -270,7 +270,7 @@ void SparcAsmPrinter::EmitInstruction(const MachineInstr *MI)
   } while ((++I != E) && I->isInsideBundle()); // Delay slot check.
 }
 
-void SparcAsmPrinter::EmitFunctionBodyStart() {
+void SparcAsmPrinter::emitFunctionBodyStart() {
   if (!MF->getSubtarget<SparcSubtarget>().is64Bit())
     return;
 

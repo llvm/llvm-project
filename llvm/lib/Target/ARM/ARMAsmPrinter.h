@@ -93,10 +93,10 @@ public:
   void EmitConstantPool() override {
     // we emit constant pools customly!
   }
-  void EmitFunctionBodyEnd() override;
-  void EmitFunctionEntryLabel() override;
-  void EmitStartOfAsmFile(Module &M) override;
-  void EmitEndOfAsmFile(Module &M) override;
+  void emitFunctionBodyEnd() override;
+  void emitFunctionEntryLabel() override;
+  void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
   void EmitXXStructor(const DataLayout &DL, const Constant *CV) override;
   void EmitGlobalVariable(const GlobalVariable *GV) override;
 
@@ -117,7 +117,7 @@ public:
 private:
   void EmitSled(const MachineInstr &MI, SledKind Kind);
 
-  // Helpers for EmitStartOfAsmFile() and EmitEndOfAsmFile()
+  // Helpers for emitStartOfAsmFile() and emitEndOfAsmFile()
   void emitAttributes();
 
   // Generic helper used to emit e.g. ARMv5 mul pseudos

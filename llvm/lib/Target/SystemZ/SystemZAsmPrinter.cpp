@@ -719,7 +719,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void SystemZAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   emitStackMaps(SM);
 }
 

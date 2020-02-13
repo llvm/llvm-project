@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
+
+#include "TextStubHelpers.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 #include "llvm/TextAPI/MachO/TextAPIWriter.h"
@@ -15,35 +17,17 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-struct ExampleSymbol {
-  SymbolKind Kind;
-  std::string Name;
-  bool WeakDefined;
-  bool ThreadLocalValue;
-};
-using ExampleSymbolSeq = std::vector<ExampleSymbol>;
-using UUIDs = std::vector<std::pair<Target, std::string>>;
-
-inline bool operator<(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name) < std::tie(RHS.Kind, RHS.Name);
-}
-
-inline bool operator==(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
-  return std::tie(LHS.Kind, LHS.Name, LHS.WeakDefined, LHS.ThreadLocalValue) ==
-         std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
-}
-
-static ExampleSymbol TBDv4ExportedSymbols[] = {
+static ExportedSymbol TBDv4ExportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symA", false, false},
     {SymbolKind::GlobalSymbol, "_symAB", false, false},
     {SymbolKind::GlobalSymbol, "_symB", false, false},
 };
 
-static ExampleSymbol TBDv4ReexportedSymbols[] = {
+static ExportedSymbol TBDv4ReexportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symC", false, false},
 };
 
-static ExampleSymbol TBDv4UndefinedSymbols[] = {
+static ExportedSymbol TBDv4UndefinedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symD", false, false},
 };
 
@@ -141,11 +125,11 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(1U, File->reexportedLibraries().size());
   EXPECT_EQ(reexport, File->reexportedLibraries().front());
 
-  ExampleSymbolSeq Exports, Reexports, Undefineds;
-  ExampleSymbol temp;
+  ExportedSymbolSeq Exports, Reexports, Undefineds;
+  ExportedSymbol temp;
   for (const auto *Sym : File->symbols()) {
-    temp = ExampleSymbol{Sym->getKind(), std::string(Sym->getName()),
-                         Sym->isWeakDefined(), Sym->isThreadLocalValue()};
+    temp = ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                          Sym->isWeakDefined(), Sym->isThreadLocalValue()};
     EXPECT_FALSE(Sym->isWeakReferenced());
     if (Sym->isUndefined())
       Undefineds.emplace_back(std::move(temp));
@@ -157,11 +141,11 @@ TEST(TBDv4, ReadFile) {
   llvm::sort(Reexports.begin(), Reexports.end());
   llvm::sort(Undefineds.begin(), Undefineds.end());
 
-  EXPECT_EQ(sizeof(TBDv4ExportedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4ExportedSymbols) / sizeof(ExportedSymbol),
             Exports.size());
-  EXPECT_EQ(sizeof(TBDv4ReexportedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4ReexportedSymbols) / sizeof(ExportedSymbol),
             Reexports.size());
-  EXPECT_EQ(sizeof(TBDv4UndefinedSymbols) / sizeof(ExampleSymbol),
+  EXPECT_EQ(sizeof(TBDv4UndefinedSymbols) / sizeof(ExportedSymbol),
             Undefineds.size());
   EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
                          std::begin(TBDv4ExportedSymbols)));
@@ -255,13 +239,20 @@ TEST(TBDv4, MultipleTargets) {
   EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
   for (auto Platform : File->getPlatforms())
     EXPECT_EQ(Platforms.count(Platform), 1U);
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_multiple_targets),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, MultipleTargetsSameArch) {
   static const char tbd_targets_same_arch[] =
       "--- !tapi-tbd\n"
       "tbd-version: 4\n"
-      "targets: [ x86_64-maccatalyst, x86_64-tvos ]\n"
+      "targets: [ x86_64-tvos , x86_64-maccatalyst ]\n"
       "install-name: Test.dylib\n"
       "...\n";
 
@@ -277,13 +268,20 @@ TEST(TBDv4, MultipleTargetsSameArch) {
   EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
   for (auto Platform : File->getPlatforms())
     EXPECT_EQ(Platforms.count(Platform), 1U);
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_targets_same_arch),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, MultipleTargetsSamePlatform) {
   static const char tbd_multiple_targets_same_platform[] =
       "--- !tapi-tbd\n"
       "tbd-version: 4\n"
-      "targets: [ arm64-ios, armv7k-ios ]\n"
+      "targets: [ armv7k-ios , arm64-ios]\n"
       "install-name: Test.dylib\n"
       "...\n";
 
@@ -295,6 +293,13 @@ TEST(TBDv4, MultipleTargetsSamePlatform) {
   EXPECT_EQ(AK_arm64 | AK_armv7k, File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_multiple_targets_same_platform),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_maccatalyst) {
@@ -313,6 +318,13 @@ TEST(TBDv4, Target_maccatalyst) {
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::macCatalyst, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_target_maccatalyst),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_x86_ios) {
@@ -330,6 +342,13 @@ TEST(TBDv4, Target_x86_ios) {
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_target_x86_ios),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_arm_bridgeOS) {
@@ -347,6 +366,13 @@ TEST(TBDv4, Target_arm_bridgeOS) {
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::bridgeOS, *File->getPlatforms().begin());
   EXPECT_EQ(ArchitectureSet(AK_armv7k), File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_platform_bridgeos),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_x86_macos) {
@@ -363,6 +389,12 @@ TEST(TBDv4, Target_x86_macos) {
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::macOS, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_x86_macos), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_x86_ios_simulator) {
@@ -380,6 +412,12 @@ TEST(TBDv4, Target_x86_ios_simulator) {
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::iOSSimulator, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_x86_ios_sim), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_x86_tvos_simulator) {
@@ -398,6 +436,12 @@ TEST(TBDv4, Target_x86_tvos_simulator) {
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::tvOSSimulator, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_x86_tvos_sim), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_i386_watchos_simulator) {
@@ -416,6 +460,13 @@ TEST(TBDv4, Target_i386_watchos_simulator) {
   EXPECT_EQ(ArchitectureSet(AK_i386), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::watchOSSimulator, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_i386_watchos_sim),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Swift_1) {
@@ -431,6 +482,8 @@ TEST(TBDv4, Swift_1) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(1U, File->getSwiftABIVersion());
+
+  // No writer test because we emit "swift-abi-version:1.0".
 }
 
 TEST(TBDv4, Swift_2) {
@@ -446,6 +499,8 @@ TEST(TBDv4, Swift_2) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(2U, File->getSwiftABIVersion());
+
+  // No writer test because we emit "swift-abi-version:2.0".
 }
 
 TEST(TBDv4, Swift_5) {
@@ -461,6 +516,12 @@ TEST(TBDv4, Swift_5) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(5U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_swift_5), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Swift_99) {
@@ -476,6 +537,12 @@ TEST(TBDv4, Swift_99) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(99U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_swift_99), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, InvalidArchitecture) {
