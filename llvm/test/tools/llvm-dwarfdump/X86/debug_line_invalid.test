@@ -36,7 +36,7 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x361 %t-malformed.o 2> %t-malformed-off-last.err \
+# RUN: llvm-dwarfdump -debug-line=0x3c9 %t-malformed.o 2> %t-malformed-off-last.err \
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
@@ -171,7 +171,25 @@
 # NONFATAL:      0xffffeeeeddddcccd 1 0 1 0 0 is_stmt{{$}}
 # NONFATAL:      0xffffeeeeddddcccd 1 0 1 0 0 is_stmt end_sequence{{$}}
 
-# LAST:          debug_line[0x00000361]
+## V4 table with unterminated include directory table.
+# NONFATAL:      debug_line[0x00000361]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL:      include_directories[  1] = "dir1"
+# NONFATAL-NOT:  file_names
+# NONFATAL:      0xabcdef0123456789 {{.*}} is_stmt end_sequence
+
+## V4 table with unterminated file name table.
+# NONFATAL:      debug_line[0x00000390]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL:      file_names[  1]:
+# NONFATAL-NEXT:            name: "foo.c"
+# NONFATAL-NEXT:       dir_index: 1
+# NONFATAL-NEXT:        mod_time: 0x00000002
+# NONFATAL-NEXT:          length: 0x00000003
+# NONFATAL-NOT:  file_names
+# NONFATAL:      0xababcdcdefef0909 {{.*}} is_stmt end_sequence
+
+# LAST:          debug_line[0x000003c9]
 # LAST:          0x00000000cafebabe {{.*}} end_sequence
 
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
@@ -181,6 +199,8 @@
 # ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 1
 # ALL-NEXT: warning: parsing line table prologue at 0x00000054 found an invalid directory or file table description at 0x00000073
 # ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
+# ALL-NEXT: warning: parsing line table prologue at 0x00000081 found an invalid directory or file table description at 0x000000ba
+# ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba
 # ALL-NEXT: warning: parsing line table prologue at 0x000000c8 should have ended at 0x00000103 but it ended at 0x00000102
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
@@ -197,4 +217,8 @@
 # ALL-NEXT: warning: parsing line table prologue at 0x000002ec found an invalid directory or file table description at 0x00000315
 # ALL-NEXT: warning: failed to parse directory entry because skipping the form value failed.
 # ALL-NEXT: warning: parsing line table prologue at offset 0x00000332 found opcode base of 0. Assuming no standard opcodes
+# ALL-NEXT: warning: parsing line table prologue at 0x00000361 found an invalid directory or file table description at 0x00000382
+# ALL-NEXT: warning: include directories table was not null terminated before the end of the prologue
+# ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bb
+# ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
 # ALL-NOT:  warning:
