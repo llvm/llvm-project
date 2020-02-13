@@ -216,6 +216,29 @@ def Vector_ReductionOp :
   }];
 }
 
+// TODO(ajcbik): quick version with "fused" accumulator; next step
+//               will merge Reduction/ReductionV2 into one with
+//               an optional accumulator instead
+def Vector_ReductionV2Op :
+  Vector_Op<"reductionv2", [NoSideEffect]>,
+    Arguments<(ins StrAttr:$kind, VectorOf<[F32, F64]>:$vector, AnyType:$acc)>,
+    Results<(outs AnyType:$dest)> {
+  let summary = "reduction operation";
+  let description = [{
+     As vector.reduction, but with a fused accumulator (add/mul for fp only).
+  }];
+  let verifier = ?;
+  let assemblyFormat = [{
+    $kind `,` $vector `,` $acc attr-dict `:`
+      type($vector) `,` type($acc) `into` type($dest)
+  }];
+  let extraClassDeclaration = [{
+    VectorType getVectorType() {
+      return vector().getType().cast<VectorType>();
+    }
+  }];
+}
+
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
