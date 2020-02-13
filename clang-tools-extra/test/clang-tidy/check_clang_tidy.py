@@ -159,7 +159,7 @@ def run_test_once(args, extra_args):
     diff_output = e.output
 
   print('------------------------------ Fixes -----------------------------\n' +
-        diff_output.decode() +
+        diff_output.decode(errors='ignore') +
         '\n------------------------------------------------------------------')
 
   if has_check_fixes:
