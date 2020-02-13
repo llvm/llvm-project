@@ -69,77 +69,39 @@ def break_on_all_but_main(Control, Symbols, main_offset):
   # All breakpoints are currently discarded: we just sys.exit for cleanup
   return
 
-def process_creator(binfile):
-  Kernel32 = WinDLL("Kernel32")
-
-  # Another flavour of process creation
-  startupinfoa = STARTUPINFOA()
-  startupinfoa.cb = sizeof(STARTUPINFOA)
-  startupinfoa.lpReserved = None
-  startupinfoa.lpDesktop = None
-  startupinfoa.lpTitle = None
-  startupinfoa.dwX = 0
-  startupinfoa.dwY = 0
-  startupinfoa.dwXSize = 0
-  startupinfoa.dwYSize = 0
-  startupinfoa.dwXCountChars = 0
-  startupinfoa.dwYCountChars = 0
-  startupinfoa.dwFillAttribute = 0
-  startupinfoa.dwFlags = 0
-  startupinfoa.wShowWindow = 0
-  startupinfoa.cbReserved2 = 0
-  startupinfoa.lpReserved2 = None
-  startupinfoa.hStdInput = None
-  startupinfoa.hStdOutput = None
-  startupinfoa.hStdError = None
-  processinformation = PROCESS_INFORMATION()
-
-  # 0x4 below specifies CREATE_SUSPENDED.
-  ret = Kernel32.CreateProcessA(binfile.encode("ascii"), None, None, None, False, 0x4, None, None, byref(startupinfoa), byref(processinformation))
-  if ret == 0:
-    raise Exception('CreateProcess running {}'.format(binfile))
-
-  return processinformation.dwProcessId, processinformation.dwThreadId, processinformation.hProcess, processinformation.hThread
-
-def thread_resumer(hProcess, hThread):
-  Kernel32 = WinDLL("Kernel32")
-
-  # For reasons unclear to me, other suspend-references seem to be opened on
-  # the opened thread. Clear them all.
-  while True:
-    ret = Kernel32.ResumeThread(hThread)
-    if ret <= 0:
-      break
-  if ret < 0:
-    Kernel32.TerminateProcess(hProcess, 1)
-    raise Exception("Couldn't resume process after startup")
-
-  return
-
 def setup_everything(binfile):
   from . import client
   from . import symbols
   Client = client.Client()
 
-  created_pid, created_tid, hProcess, hThread = process_creator(binfile)
+  Client.Control.SetEngineOptions(0x20) # DEBUG_ENGOPT_INITIAL_BREAK
+
+  Client.CreateProcessAndAttach2(binfile)
 
   # Load lines as well as general symbols
   sym_opts = Client.Symbols.GetSymbolOptions()
   sym_opts |= symbols.SymbolOptionFlags.SYMOPT_LOAD_LINES
   Client.Symbols.SetSymbolOptions(sym_opts)
 
-  Client.AttachProcess(created_pid)
+  # Need to enter the debugger engine to let it attach properly.
+  res = Client.Control.WaitForEvent(timeout=1000)
+  if res == S_FALSE:
+    # The debugee apparently didn't do anything at all. Rather than risk
+    # hanging, bail out at this point.
+    client.TerminateProcesses()
+    raise Exception("Debuggee did not start in a timely manner")
 
-  # Need to enter the debugger engine to let it attach properly
-  Client.Control.WaitForEvent(timeout=1)
-  Client.SysObjects.set_current_thread(created_pid, created_tid)
+  # Enable line stepping.
   Client.Control.Execute("l+t")
+  # Enable C++ expression interpretation.
   Client.Control.SetExpressionSyntax(cpp=True)
 
+  # We've requested to break into the process at the earliest opportunity,
+  # and WaitForEvent'ing means we should have reached that break state.
+  # Now set a breakpoint on the main symbol, and "go" until we reach it.
   module_name = Client.Symbols.get_exefile_module_name()
   offset = Client.Symbols.GetOffsetByName("{}!main".format(module_name))
   breakpoint = Client.Control.AddBreakpoint2(offset=offset, enabled=True)
-  thread_resumer(hProcess, hThread)
   Client.Control.SetExecutionStatus(control.DebugStatus.DEBUG_STATUS_GO)
 
   # Problem: there is no guarantee that the client will ever reach main,
@@ -149,7 +111,7 @@ def setup_everything(binfile):
   # completely hanging in the case of a environmental/programming error.
   res = Client.Control.WaitForEvent(timeout=5000)
   if res == S_FALSE:
-    Kernel32.TerminateProcess(hProcess, 1)
+    client.TerminateProcesses()
     raise Exception("Debuggee did not reach main function in a timely manner")
 
   break_on_all_but_main(Client.Control, Client.Symbols, offset)
@@ -160,7 +122,7 @@ def setup_everything(binfile):
   for x in range(filts[0], filts[0] + filts[1]):
     Client.Control.SetExceptionFilterSecondCommand(x, "qd")
 
-  return Client, hProcess
+  return Client
 
 def step_once(client):
   client.Control.Execute("p")
@@ -179,7 +141,5 @@ def main_loop(client):
   while res is not None:
     res = step_once(client)
 
-def cleanup(client, hProcess):
-  res = client.DetachProcesses()
-  Kernel32 = WinDLL("Kernel32")
-  Kernel32.TerminateProcess(hProcess, 1)
+def cleanup(client):
+  client.TerminateProcesses()
