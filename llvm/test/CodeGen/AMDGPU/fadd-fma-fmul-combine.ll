@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mattr=+fast-fmaf,-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FLUSH %s
-; RUN: llc -march=amdgcn -mattr=-fast-fmaf,-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FLUSH %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+fast-fmaf,-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FLUSH %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fast-fmaf,-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FLUSH %s
 
-; RUN: llc -march=amdgcn -mattr=+fast-fmaf,+fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FASTFMA %s
-; RUN: llc -march=amdgcn -mattr=-fast-fmaf,+fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-SLOWFMA %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+fast-fmaf,+fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-FASTFMA %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-fast-fmaf,+fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-SLOWFMA %s
 
 ; FIXME: This should also fold when fma is actually fast if an FMA
 ; exists in the original program.
