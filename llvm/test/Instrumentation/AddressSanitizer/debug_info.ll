@@ -21,15 +21,11 @@ entry:
 }
 
 ;   CHECK: define i32 @_Z3zzzi
-;   CHECK: entry:
-; Verify that llvm.dbg.declare calls are in the entry basic block.
-;   CHECK-NEXT: [[MyAlloca:%.*]] = alloca i8, i64 64
-;   CHECK-NOT: %entry
+;   CHECK: [[MyAlloca:%.*]] = alloca i8, i64 64
 ; Note: these dbg.declares used to contain `ptrtoint` operands. The instruction
 ; selector would then decline to put the variable in the MachineFunction side
 ; table. Check that the dbg.declares have `alloca` operands.
 ;   CHECK: call void @llvm.dbg.declare(metadata i8* [[MyAlloca]], metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32))
-;   CHECK-NOT: %entry
 ;   CHECK: call void @llvm.dbg.declare(metadata i8* [[MyAlloca]], metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 48))
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone

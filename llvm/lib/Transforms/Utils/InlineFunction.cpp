@@ -1848,10 +1848,6 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       Caller->getEntryBlock().getInstList().splice(
           InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
     }
-    // Move any dbg.declares describing the allocas into the entry basic block.
-    DIBuilder DIB(*Caller->getParent());
-    for (auto &AI : IFI.StaticAllocas)
-      replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::ApplyOffset, 0);
   }
 
   SmallVector<Value*,4> VarArgsToForward;
