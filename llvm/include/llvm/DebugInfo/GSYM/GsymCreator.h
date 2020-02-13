@@ -16,6 +16,7 @@
 #include <thread>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
@@ -135,6 +136,7 @@ class GsymCreator {
   mutable std::recursive_mutex Mutex;
   std::vector<FunctionInfo> Funcs;
   StringTableBuilder StrTab;
+  StringSet<> StringStorage;
   DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
@@ -162,9 +164,12 @@ public:
   /// All strings used by GSYM files must be uniqued by adding them to this
   /// string pool and using the returned offset for any string values.
   ///
-  /// \param   S The string to insert into the string table.
+  /// \param S The string to insert into the string table.
+  /// \param Copy If true, then make a backing copy of the string. If false,
+  ///             the string is owned by another object that will stay around
+  ///             long enough for the GsymCreator to save the GSYM file.
   /// \returns The unique 32 bit offset into the string table.
-  uint32_t insertString(StringRef S);
+  uint32_t insertString(StringRef S, bool Copy = true);
 
   /// Insert a file into this GSYM creator.
   ///
@@ -221,6 +226,9 @@ public:
   void forEachFunctionInfo(
       std::function<bool(const FunctionInfo &)> const &Callback) const;
 
+  /// Get the current number of FunctionInfo objects contained in this
+  /// object.
+  size_t getNumFunctionInfos() const;
 };
 
 } // namespace gsym
