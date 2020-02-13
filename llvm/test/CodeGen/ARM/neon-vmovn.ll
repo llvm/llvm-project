@@ -732,8 +732,8 @@ define arm_aapcs_vfpcc <16 x i8> @test(<8 x i16> %src1, <8 x i16> %src2) {
 ;
 ; CHECKBE-LABEL: test:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.8 q8, q1
-; CHECKBE-NEXT:    vrev64.8 q9, q0
+; CHECKBE-NEXT:    vrev64.16 q8, q1
+; CHECKBE-NEXT:    vrev64.16 q9, q0
 ; CHECKBE-NEXT:    vtrn.8 q9, q8
 ; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr

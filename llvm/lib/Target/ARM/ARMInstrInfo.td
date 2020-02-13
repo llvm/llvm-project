@@ -294,6 +294,21 @@ def ARMWLS      : SDNode<"ARMISD::WLS", SDT_ARMLoLoop, [SDNPHasChain]>;
 def ARMLE       : SDNode<"ARMISD::LE", SDT_ARMLoLoop, [SDNPHasChain]>;
 def ARMLoopDec  : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
 
+// 'VECTOR_REG_CAST' is an operation that reinterprets the contents of a
+// vector register as a different vector type, without changing the contents of
+// the register. It differs from 'bitconvert' in that bitconvert reinterprets
+// the _memory_ storage format of the vector, whereas VECTOR_REG_CAST
+// reinterprets the _register_ format - and in big-endian, the memory and
+// register formats are different, so they are different operations.
+//
+// For example, 'VECTOR_REG_CAST' between v8i16 and v16i8 will map the LSB of
+// the zeroth i16 lane to the zeroth i8 lane, regardless of system endianness,
+// whereas 'bitconvert' will map it to the high byte in big-endian mode,
+// because that's what (MVE) VSTRH.16 followed by VLDRB.8 would do. So the
+// bitconvert would have to emit a VREV16.8 instruction, whereas the
+// VECTOR_REG_CAST emits no code at all if the vector is already in a register.
+def ARMVectorRegCast : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
+
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
 
