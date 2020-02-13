@@ -84,6 +84,7 @@ size_t rightAlignedAllocationSize(size_t RealAllocationSize,
   case AlignmentStrategy::DEFAULT:
     __builtin_unreachable();
   }
+  __builtin_unreachable();
 }
 
 } // namespace gwp_asan
