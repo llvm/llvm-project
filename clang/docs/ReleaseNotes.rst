@@ -221,6 +221,25 @@ clang-format
   multiple lines. It is currently only available for JavaScript and disabled by
   default (``TCS_None``).
 
+- Option ``BraceWrapping.BeforeLambdaBody`` has been added to manage lambda
+  line break inside function parameter call in Allman style.
+
+  .. code-block:: c++
+
+      true:
+      connect(
+        []()
+        {
+          foo();
+          bar();
+        });
+
+      false:
+      connect([]() {
+          foo();
+          bar();
+        });
+
 libclang
 --------
 
