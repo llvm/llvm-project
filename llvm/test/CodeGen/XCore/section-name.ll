@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -march=xcore 2>&1 | FileCheck %s
+; RUN: not llc < %s -march=xcore 2>&1 | FileCheck %s
 
 @bar = internal global i32 zeroinitializer
 

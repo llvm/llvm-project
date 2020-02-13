@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass none 2>&1 | FileCheck %s
+# RUN: not llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass none 2>&1 | FileCheck %s
 # REQUIRES: systemz-registered-target
 
 # Test that a the machine verifier reports an error when a register in
