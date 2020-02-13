@@ -51,7 +51,7 @@ class TestWatchpointSetEnable(TestBase):
 
         wp = self.target.FindWatchpointByID(1)
         self.assertTrue(wp.IsValid(), "Didn't make a valid watchpoint.")
-        self.assertTrue(wp.GetWatchAddress() != lldb.LLDB_INVALID_ADDRESS, "Watch address is invalid")
+        self.assertNotEqual(wp.GetWatchAddress(), lldb.LLDB_INVALID_ADDRESS, "Watch address is invalid")
 
         wp.SetEnabled(False)
         self.assertTrue(not wp.IsEnabled(), "The watchpoint thinks it is still enabled")

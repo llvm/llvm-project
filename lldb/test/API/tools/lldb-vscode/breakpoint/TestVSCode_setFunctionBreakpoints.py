@@ -41,7 +41,7 @@ class TestVSCode_setFunctionBreakpoints(
         response = self.vscode.request_setFunctionBreakpoints(functions)
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
             for breakpoint in breakpoints:
                 bp_id_12 = breakpoint['id']
@@ -53,7 +53,7 @@ class TestVSCode_setFunctionBreakpoints(
         response = self.vscode.request_setFunctionBreakpoints(functions)
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
             for breakpoint in breakpoints:
                 self.assertTrue(breakpoint['verified'],
@@ -65,11 +65,11 @@ class TestVSCode_setFunctionBreakpoints(
         response = self.vscode.request_setFunctionBreakpoints(functions)
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
             for breakpoint in breakpoints:
                 bp_id = breakpoint['id']
-                self.assertTrue(bp_id == bp_id_12,
+                self.assertEquals(bp_id, bp_id_12,
                                 'verify "twelve" breakpoint ID is same')
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
@@ -81,11 +81,11 @@ class TestVSCode_setFunctionBreakpoints(
         response = self.vscode.request_testGetTargetBreakpoints()
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
             for breakpoint in breakpoints:
                 bp_id = breakpoint['id']
-                self.assertTrue(bp_id == bp_id_12,
+                self.assertEquals(bp_id, bp_id_12,
                                 'verify "twelve" breakpoint ID is same')
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
@@ -96,14 +96,14 @@ class TestVSCode_setFunctionBreakpoints(
         response = self.vscode.request_setFunctionBreakpoints(functions)
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
 
         # Verify with the target that all breakpoints have been cleared
         response = self.vscode.request_testGetTargetBreakpoints()
         if response:
             breakpoints = response['body']['breakpoints']
-            self.assertTrue(len(breakpoints) == len(functions),
+            self.assertEquals(len(breakpoints), len(functions),
                             "expect %u source breakpoints" % (len(functions)))
 
     @skipIfWindows
@@ -117,7 +117,7 @@ class TestVSCode_setFunctionBreakpoints(
         functions = ['twelve']
         breakpoint_ids = self.set_function_breakpoints(functions)
 
-        self.assertTrue(len(breakpoint_ids) == len(functions),
+        self.assertEquals(len(breakpoint_ids), len(functions),
                         "expect one breakpoint")
 
         # Verify we hit the breakpoint we just set
@@ -125,35 +125,35 @@ class TestVSCode_setFunctionBreakpoints(
 
         # Make sure i is zero at first breakpoint
         i = int(self.vscode.get_local_variable_value('i'))
-        self.assertTrue(i == 0, 'i != 0 after hitting breakpoint')
+        self.assertEquals(i, 0, 'i != 0 after hitting breakpoint')
 
         # Update the condition on our breakpoint
         new_breakpoint_ids = self.set_function_breakpoints(functions,
                                                            condition="i==4")
-        self.assertTrue(breakpoint_ids == new_breakpoint_ids,
+        self.assertEquals(breakpoint_ids, new_breakpoint_ids,
                         "existing breakpoint should have its condition "
                         "updated")
 
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.vscode.get_local_variable_value('i'))
-        self.assertTrue(i == 4,
+        self.assertEquals(i, 4,
                         'i != 4 showing conditional works')
         new_breakpoint_ids = self.set_function_breakpoints(functions,
                                                            hitCondition="2")
 
-        self.assertTrue(breakpoint_ids == new_breakpoint_ids,
+        self.assertEquals(breakpoint_ids, new_breakpoint_ids,
                         "existing breakpoint should have its condition "
                         "updated")
 
         # Continue with a hitContidtion of 2 and expect it to skip 1 value
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.vscode.get_local_variable_value('i'))
-        self.assertTrue(i == 6,
+        self.assertEquals(i, 6,
                         'i != 6 showing hitCondition works')
 
         # continue after hitting our hitCondition and make sure it only goes
         # up by 1
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.vscode.get_local_variable_value('i'))
-        self.assertTrue(i == 7,
+        self.assertEquals(i, 7,
                         'i != 7 showing post hitCondition hits every time')

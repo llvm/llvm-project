@@ -165,7 +165,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
         functions = ['main']
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertTrue(len(breakpoint_ids) == len(functions),
+        self.assertEquals(len(breakpoint_ids), len(functions),
                         "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         output = self.get_console(timeout=1.0)
