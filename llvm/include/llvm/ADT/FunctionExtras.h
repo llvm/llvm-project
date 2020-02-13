@@ -62,12 +62,12 @@ class unique_function<ReturnT(ParamTs...)> {
   // It doesn't have to be exact though, and in one way it is more strict
   // because we want to still be able to observe either moves *or* copies.
   template <typename T>
-  using AdjustedParamT =
-      std::conditional_t<!std::is_reference<T>::value &&
-                             llvm::is_trivially_copy_constructible<T>::value &&
-                             llvm::is_trivially_move_constructible<T>::value &&
-                             IsSizeLessThanThresholdT<T>::value,
-                         T, T &>;
+  using AdjustedParamT = typename std::conditional<
+      !std::is_reference<T>::value &&
+          llvm::is_trivially_copy_constructible<T>::value &&
+          llvm::is_trivially_move_constructible<T>::value &&
+          IsSizeLessThanThresholdT<T>::value,
+      T, T &>::type;
 
   // The type of the erased function pointer we use as a callback to dispatch to
   // the stored callable when it is trivial to move and destroy.
@@ -112,7 +112,8 @@ class unique_function<ReturnT(ParamTs...)> {
 
     // For in-line storage, we just provide an aligned character buffer. We
     // provide three pointers worth of storage here.
-    std::aligned_storage_t<InlineStorageSize, alignof(void *)> InlineStorage;
+    typename std::aligned_storage<InlineStorageSize, alignof(void *)>::type
+        InlineStorage;
   } StorageUnion;
 
   // A compressed pointer to either our dispatching callback or our table of
