@@ -329,7 +329,16 @@ public:
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     ID.AddInteger(D->getPropertyAttributes());
     ID.AddInteger(D->getPropertyImplementation());
-    AddQualType(D->getType());
+    // Presence of nullability might occur as part of extra annotations from
+    // APINotes. When ODR checking merged definitions between an APINotes'd
+    // module and a non-modular header, skip the nullability annotation to
+    // prevent ODR errors - they are too conservative here and there's
+    // currently no properly reason given that APINotes only applies to one
+    // specific modules.
+    if (D->getType()->canHaveNullability())
+      Hash.AddType(D->getType()->getUnqualifiedDesugaredType());
+    else
+      AddQualType(D->getType());
     AddDecl(D);
 
     Inherited::VisitObjCPropertyDecl(D);
