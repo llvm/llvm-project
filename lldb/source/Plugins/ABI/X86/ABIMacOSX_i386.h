@@ -13,7 +13,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
 
-class ABIMacOSX_i386 : public lldb_private::ABI {
+class ABIMacOSX_i386 : public lldb_private::RegInfoBasedABI {
 public:
   ~ABIMacOSX_i386() override = default;
 
@@ -92,11 +92,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABIMacOSX_i386(lldb::ProcessSP process_sp,
-                 std::unique_ptr<llvm::MCRegisterInfo> info_up)
-      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
-    // Call CreateInstance instead.
-  }
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
 #endif // liblldb_ABIMacOSX_i386_h_
