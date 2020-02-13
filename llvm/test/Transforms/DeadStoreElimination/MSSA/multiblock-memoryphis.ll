@@ -103,3 +103,73 @@ bb3:
   store i8 1, i8* %P2
   ret void
 }
+
+declare void @hoge()
+
+; Check a function with a MemoryPhi with 3 incoming values.
+define void @widget(i32* %Ptr, i1 %c1, i1 %c2, i32 %v1, i32 %v2, i32 %v3) {
+; CHECK-LABEL: @widget(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    tail call void @hoge()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[BB2:%.*]], label [[BB3]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 -1, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    switch i32 [[V1:%.*]], label [[BB8:%.*]] [
+; CHECK-NEXT:    i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:    i32 1, label [[BB6:%.*]]
+; CHECK-NEXT:    i32 2, label [[BB7:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb5:
+; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb6:
+; CHECK-NEXT:    store i32 1, i32* [[PTR]], align 4
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb7:
+; CHECK-NEXT:    store i32 2, i32* [[PTR]], align 4
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
+; CHECK-NEXT:    br label [[BB4]]
+;
+bb:
+  tail call void @hoge()
+  br i1 %c1, label %bb3, label %bb1
+
+bb1:                                              ; preds = %bb
+  br i1 %c2, label %bb2, label %bb3
+
+bb2:                                              ; preds = %bb1
+  store i32 -1, i32* %Ptr, align 4
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1, %bb
+  br label %bb4
+
+bb4:                                              ; preds = %bb8, %bb3
+  switch i32 %v1, label %bb8 [
+  i32 0, label %bb5
+  i32 1, label %bb6
+  i32 2, label %bb7
+  ]
+
+bb5:                                              ; preds = %bb4
+  store i32 0, i32* %Ptr, align 4
+  br label %bb8
+
+bb6:                                              ; preds = %bb4
+  store i32 1, i32* %Ptr, align 4
+  br label %bb8
+
+bb7:                                              ; preds = %bb4
+  store i32 2, i32* %Ptr, align 4
+  br label %bb8
+
+bb8:                                              ; preds = %bb7, %bb6, %bb5, %bb4
+  br label %bb4
+}
