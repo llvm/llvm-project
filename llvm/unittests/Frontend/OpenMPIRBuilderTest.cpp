@@ -613,7 +613,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     else
       ExitBB = CI->getNextNode()->getSuccessor(0);
     ASSERT_EQ(ExitBB->size(), 1U);
-    ASSERT_TRUE(isa<ReturnInst>(ExitBB->front()));
+    if (!isa<ReturnInst>(ExitBB->front())) {
+      ASSERT_TRUE(isa<BranchInst>(ExitBB->front()));
+      ASSERT_EQ(cast<BranchInst>(ExitBB->front()).getNumSuccessors(), 1U);
+      ASSERT_TRUE(isa<ReturnInst>(
+          cast<BranchInst>(ExitBB->front()).getSuccessor(0)->front()));
+    }
   }
 }
 
