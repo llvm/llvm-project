@@ -68,7 +68,7 @@ public:
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(Register R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
-  DstOp(const LLT &T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
+  DstOp(const LLT T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
 
   void addDefToMIB(MachineRegisterInfo &MRI, MachineInstrBuilder &MIB) const {
@@ -223,13 +223,13 @@ class MachineIRBuilder {
   MachineIRBuilderState State;
 
 protected:
-  void validateTruncExt(const LLT &Dst, const LLT &Src, bool IsExtend);
+  void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
 
-  void validateBinaryOp(const LLT &Res, const LLT &Op0, const LLT &Op1);
-  void validateShiftOp(const LLT &Res, const LLT &Op0, const LLT &Op1);
+  void validateBinaryOp(const LLT Res, const LLT Op0, const LLT Op1);
+  void validateShiftOp(const LLT Res, const LLT Op0, const LLT Op1);
 
-  void validateSelectOp(const LLT &ResTy, const LLT &TstTy, const LLT &Op0Ty,
-                        const LLT &Op1Ty);
+  void validateSelectOp(const LLT ResTy, const LLT TstTy, const LLT Op0Ty,
+                        const LLT Op1Ty);
   void recordInsertion(MachineInstr *MI) const;
 
 public:
@@ -436,7 +436,7 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   Optional<MachineInstrBuilder> materializePtrAdd(Register &Res, Register Op0,
-                                                  const LLT &ValueTy,
+                                                  const LLT ValueTy,
                                                   uint64_t Value);
 
   /// Build and insert \p Res = G_PTR_MASK \p Op0, \p NumBits

@@ -173,7 +173,7 @@ public:
       : ID(ID), MRI(MRI) {}
   // Profiling methods.
   const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
-  const GISelInstProfileBuilder &addNodeIDRegType(const LLT &Ty) const;
+  const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
   const GISelInstProfileBuilder &addNodeIDRegType(const unsigned) const;
 
   const GISelInstProfileBuilder &
