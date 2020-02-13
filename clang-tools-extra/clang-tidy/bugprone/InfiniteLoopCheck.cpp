@@ -153,6 +153,8 @@ static std::string getCondVarNames(const Stmt *Cond) {
 }
 
 static bool isKnownFalse(const Expr &Cond, const ASTContext &Ctx) {
+  if (Cond.isValueDependent())
+    return false;
   bool Result = false;
   if (Cond.EvaluateAsBooleanCondition(Result, Ctx))
     return !Result;
