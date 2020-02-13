@@ -162,6 +162,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 declare void @use_i8(i8* nocapture)
 define internal void @test9a(i8* %a, i8* %b) {
 ; CHECK: define internal void @test9a()
+  call void @use_i8(i8* null)
   ret void
 }
 define internal void @test9b(i8* %a, i8* %b) {

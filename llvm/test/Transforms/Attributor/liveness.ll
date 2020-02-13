@@ -8,7 +8,7 @@
 ; ALL_BUT_OLD_CGSCCC: @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
 @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* blockaddress(@dead_with_blockaddress_users, %lab0), i8* blockaddress(@dead_with_blockaddress_users, %end)]
 
-declare void @no_return_call() nofree noreturn nounwind readnone
+declare void @no_return_call() nofree noreturn nounwind nosync
 
 declare void @normal_call() readnone
 
@@ -547,9 +547,11 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
 declare void @sink() nofree nosync nounwind willreturn
 define void @test_unreachable() {
 ; CHECK:       define void @test_unreachable()
+; CHECK-NEXT:    call void @sink()
 ; CHECK-NEXT:    call void @test_unreachable()
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:  }
+  call void @sink()
   call void @test_unreachable()
   unreachable
 }
@@ -664,70 +666,262 @@ define linkonce_odr void @non_exact3() {
 ; CHECK-NEXT:   %nr = call i32 @foo_noreturn()
 ; CHECK-NEXT:   unreachable
 
-define internal void @non_dead_a0() { ret void }
-define internal void @non_dead_a1() { ret void }
-define internal void @non_dead_a2() { ret void }
-define internal void @non_dead_a3() { ret void }
-define internal void @non_dead_a4() { ret void }
-define internal void @non_dead_a5() { ret void }
-define internal void @non_dead_a6() { ret void }
-define internal void @non_dead_a7() { ret void }
-define internal void @non_dead_a8() { ret void }
-define internal void @non_dead_a9() { ret void }
-define internal void @non_dead_a10() { ret void }
-define internal void @non_dead_a11() { ret void }
-define internal void @non_dead_a12() { ret void }
-define internal void @non_dead_a13() { ret void }
-define internal void @non_dead_a14() { ret void }
-define internal void @non_dead_a15() { ret void }
-define internal void @non_dead_b0() { ret void }
-define internal void @non_dead_b1() { ret void }
-define internal void @non_dead_b2() { ret void }
-define internal void @non_dead_b3() { ret void }
-define internal void @non_dead_b4() { ret void }
-define internal void @non_dead_b5() { ret void }
-define internal void @non_dead_b6() { ret void }
-define internal void @non_dead_b7() { ret void }
-define internal void @non_dead_b8() { ret void }
-define internal void @non_dead_b9() { ret void }
-define internal void @non_dead_b10() { ret void }
-define internal void @non_dead_b11() { ret void }
-define internal void @non_dead_b12() { ret void }
-define internal void @non_dead_b13() { ret void }
-define internal void @non_dead_b14() { ret void }
-define internal void @non_dead_b15() { ret void }
-define internal void @non_dead_c0() { ret void }
-define internal void @non_dead_c1() { ret void }
-define internal void @non_dead_c2() { ret void }
-define internal void @non_dead_c3() { ret void }
-define internal void @non_dead_c4() { ret void }
-define internal void @non_dead_c5() { ret void }
-define internal void @non_dead_c6() { ret void }
-define internal void @non_dead_c7() { ret void }
-define internal void @non_dead_c8() { ret void }
-define internal void @non_dead_c9() { ret void }
-define internal void @non_dead_c10() { ret void }
-define internal void @non_dead_c11() { ret void }
-define internal void @non_dead_c12() { ret void }
-define internal void @non_dead_c13() { ret void }
-define internal void @non_dead_c14() { ret void }
-define internal void @non_dead_c15() { ret void }
-define internal void @non_dead_d0() { ret void }
-define internal void @non_dead_d1() { ret void }
-define internal void @non_dead_d2() { ret void }
-define internal void @non_dead_d3() { ret void }
-define internal void @non_dead_d4() { ret void }
-define internal void @non_dead_d5() { ret void }
-define internal void @non_dead_d6() { ret void }
-define internal void @non_dead_d7() { ret void }
-define internal void @non_dead_d8() { ret void }
-define internal void @non_dead_d9() { ret void }
-define internal void @non_dead_d10() { ret void }
-define internal void @non_dead_d11() { ret void }
-define internal void @non_dead_d12() { ret void }
-define internal void @non_dead_d13() { ret void }
-define internal void @non_dead_d14() { ret void }
-define internal void @non_dead_d15() { ret void }
+define internal void @non_dead_a0() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a1() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a2() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a3() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a4() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a5() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a6() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a7() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a8() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a9() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a10() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a11() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a12() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a13() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a14() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_a15() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b0() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b1() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b2() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b3() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b4() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b5() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b6() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b7() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b8() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b9() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b10() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b11() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b12() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b13() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b14() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_b15() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c0() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c1() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c2() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c3() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c4() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c5() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c6() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c7() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c8() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c9() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c10() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c11() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c12() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c13() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c14() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_c15() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d0() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d1() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d2() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d3() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d4() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d5() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d6() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d7() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d8() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d9() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d10() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d11() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d12() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d13() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d14() {
+  call void @sink()
+  ret void
+}
+define internal void @non_dead_d15() {
+  call void @sink()
+  ret void
+}
 define internal void @dead_e0() { call void @dead_e1() ret void }
 define internal void @dead_e1() { call void @dead_e2() ret void }
 define internal void @dead_e2() { ret void }
@@ -796,10 +990,10 @@ define internal void @dead_e2() { ret void }
 ; CHECK: define internal void @non_dead_d13()
 ; CHECK: define internal void @non_dead_d14()
 ; Verify we actually deduce information for these functions.
-; MODULE: Function Attrs: nofree nosync nounwind readnone willreturn
+; MODULE: Function Attrs: nofree nosync nounwind willreturn
 ; MODULE-NEXT: define internal void @non_dead_d15()
 ; MODULE-NOT: define internal void @dead_e
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-NEXT: define internal void @non_dead_d15()
 
 declare void @blowup() noreturn
@@ -860,6 +1054,7 @@ live_with_dead_entry:
 ; MODULE: define internal void @useless_arg_sink()
 ; CGSCC: define internal void @useless_arg_sink(i32*{{.*}} %a)
 define internal void @useless_arg_sink(i32* %a) {
+  call void @sink()
   ret void
 }
 
@@ -867,7 +1062,7 @@ define internal void @useless_arg_sink(i32* %a) {
 ; CGSCC: define internal void @useless_arg_almost_sink(i32*{{.*}} %a)
 define internal void @useless_arg_almost_sink(i32* %a) {
 ; MODULE: call void @useless_arg_sink()
-; CGSCC: call void @useless_arg_sink(i32* noalias nofree readnone %a)
+; CGSCC: call void @useless_arg_sink(i32* noalias nocapture nofree readnone %a)
   call void @useless_arg_sink(i32* %a)
   ret void
 }
