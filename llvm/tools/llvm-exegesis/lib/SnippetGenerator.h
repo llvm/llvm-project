@@ -34,11 +34,12 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT);
 
 // Generates code templates that has a self-dependency.
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(const Instruction &Instr);
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant);
 
 // Generates code templates without assignment constraints.
 Expected<std::vector<CodeTemplate>>
-generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg);
+generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
+                                   StringRef Msg);
 
 // A class representing failures that happened during Benchmark, they are used
 // to report informations to the user.
@@ -59,9 +60,9 @@ public:
   virtual ~SnippetGenerator();
 
   // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.
-  Expected<std::vector<BenchmarkCode>>
-  generateConfigurations(const Instruction &Instr,
-                         const BitVector &ExtraForbiddenRegs) const;
+  Error generateConfigurations(const InstructionTemplate &Variant,
+                               std::vector<BenchmarkCode> &Benchmarks,
+                               const BitVector &ExtraForbiddenRegs) const;
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<RegisterValue> computeRegisterInitialValues(
@@ -74,7 +75,7 @@ protected:
 private:
   // API to be implemented by subclasses.
   virtual Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr,
+  generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const = 0;
 };
 
@@ -100,6 +101,132 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 Error randomizeUnsetVariables(const LLVMState &State,
                               const BitVector &ForbiddenRegs,
                               InstructionTemplate &IT);
+
+// Combination generator.
+//
+// Example: given input {{0, 1}, {2}, {3, 4}} it will produce the following
+// combinations: {0, 2, 3}, {0, 2, 4}, {1, 2, 3}, {1, 2, 4}.
+//
+// It is important to think of input as vector-of-vectors, where the
+// outer vector is the variable space, and inner vector is choice space.
+// The number of choices for each variable can be different.
+//
+// As for implementation, it is useful to think of this as a weird number,
+// where each digit (==variable) may have different base (==number of choices).
+// Thus modelling of 'produce next combination' is exactly analogous to the
+// incrementing of an number - increment lowest digit (pick next choice for the
+// variable), and if it wrapped to the beginning then increment next digit.
+template <typename choice_type, typename choices_storage_type,
+          int variable_smallsize>
+class CombinationGenerator {
+  template <typename T> struct WrappingIterator {
+    using value_type = T;
+
+    const ArrayRef<value_type> Range;
+    typename decltype(Range)::const_iterator Position;
+
+    // Rewind the tape, placing the position to again point at the beginning.
+    void rewind() { Position = Range.begin(); }
+
+    // Advance position forward, possibly wrapping to the beginning.
+    // Returns whether the wrap happened.
+    bool operator++() {
+      ++Position;
+      bool Wrapped = Position == Range.end();
+      if (Wrapped)
+        rewind();
+      return Wrapped;
+    }
+
+    // Get the value at which we are currently pointing.
+    operator const value_type &() const { return *Position; }
+
+    WrappingIterator(ArrayRef<value_type> Range_) : Range(Range_) {
+      assert(!Range.empty() && "The range must not be empty.");
+      rewind();
+    }
+
+    // Only allow using our custom constructor.
+    WrappingIterator() = delete;
+    WrappingIterator(const WrappingIterator &) = delete;
+    WrappingIterator(WrappingIterator &&) = delete;
+    WrappingIterator &operator=(WrappingIterator) = delete;
+    WrappingIterator &operator=(const WrappingIterator &) = delete;
+    WrappingIterator &operator=(WrappingIterator &&) = delete;
+  };
+
+  const ArrayRef<choices_storage_type> VariablesChoices;
+  const function_ref<bool(ArrayRef<choice_type>)> &Callback;
+
+  void performGeneration() const {
+    SmallVector<WrappingIterator<choice_type>, variable_smallsize>
+        VariablesState;
+
+    // Initialize the per-variable state to refer to the possible choices for
+    // that variable.
+    VariablesState.reserve(VariablesChoices.size());
+    for (ArrayRef<choice_type> VariablesChoices : VariablesChoices)
+      VariablesState.emplace_back(VariablesChoices);
+
+    // Temporary buffer to store each combination before performing Callback.
+    SmallVector<choice_type, variable_smallsize> CurrentCombination;
+    CurrentCombination.resize(VariablesState.size());
+
+    while (true) {
+      // Gather the currently-selected variable choices into a vector.
+      for (auto I : llvm::zip(VariablesState, CurrentCombination))
+        std::get<1>(I) = std::get<0>(I);
+      // And pass the new combination into callback, as intended.
+      if (/*Abort=*/Callback(CurrentCombination))
+        return;
+
+      // 'increment' the whole VariablesState, much like you would increment
+      // a number: starting from the least significant element, increment it,
+      // and if it wrapped, then propagate that carry by also incrementing next
+      // (more significant) element.
+      for (WrappingIterator<choice_type> &VariableState :
+           llvm::reverse(VariablesState)) {
+        bool Wrapped = ++VariableState;
+        if (!Wrapped)
+          break;
+
+        if (VariablesState.begin() == &VariableState)
+          return; // The "most significant" variable has wrapped, which means
+                  // that we have produced all the combinations.
+
+        // We have carry - increment more significant variable next..
+      }
+    }
+  };
+
+public:
+  CombinationGenerator(ArrayRef<choices_storage_type> VariablesChoices_,
+                       const function_ref<bool(ArrayRef<choice_type>)> &Cb_)
+      : VariablesChoices(VariablesChoices_), Callback(Cb_) {
+#ifndef NDEBUG
+    assert(!VariablesChoices.empty() && "There should be some variables.");
+    llvm::for_each(VariablesChoices, [](ArrayRef<choice_type> VariableChoices) {
+      assert(!VariableChoices.empty() &&
+             "There must always be some choice, at least a placeholder one.");
+    });
+#endif
+  }
+
+  // How many combinations can we produce, max?
+  // This is at most how many times the callback will be called.
+  size_t numCombinations() const {
+    size_t NumVariants = 1;
+    for (ArrayRef<choice_type> VariableChoices : VariablesChoices)
+      NumVariants *= VariableChoices.size();
+    assert(NumVariants >= 1 &&
+           "We should always end up producing at least one combination");
+    return NumVariants;
+  }
+
+  // Actually perform exhaustive combination generation.
+  // Each result will be passed into the callback.
+  void generate() { performGeneration(); }
+};
 
 } // namespace exegesis
 } // namespace llvm

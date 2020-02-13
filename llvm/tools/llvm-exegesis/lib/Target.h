@@ -126,6 +126,16 @@ public:
     return true;
   }
 
+  // For some instructions, it is interesting to measure how it's performance
+  // characteristics differ depending on it's operands.
+  // This allows us to produce all the interesting variants.
+  virtual std::vector<InstructionTemplate>
+  generateInstructionVariants(const Instruction &Instr,
+                              unsigned MaxConfigsPerOpcode) const {
+    // By default, we're happy with whatever randomizer will give us.
+    return {&Instr};
+  }
+
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,

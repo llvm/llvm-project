@@ -38,6 +38,11 @@ struct InstructionTemplate {
   bool hasImmediateVariables() const;
   const Instruction &getInstr() const { return *Instr; }
   ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
+  void setVariableValues(ArrayRef<MCOperand> NewVariableValues) {
+    assert(VariableValues.size() == NewVariableValues.size() &&
+           "Value count mismatch");
+    VariableValues.assign(NewVariableValues.begin(), NewVariableValues.end());
+  }
 
   // Builds an MCInst from this InstructionTemplate setting its operands
   // to the corresponding variable values. Precondition: All VariableValues must
