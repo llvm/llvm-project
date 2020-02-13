@@ -215,6 +215,8 @@ enum NodeType : unsigned {
   PTEST,
   PTRUE,
 
+  DUP_PRED,
+
   LDNF1,
   LDNF1S,
   LDFF1,

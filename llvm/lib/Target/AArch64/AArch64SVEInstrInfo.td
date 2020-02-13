@@ -96,6 +96,9 @@ def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
 def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 
+def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisVec<2>, SDTCVecEltisVT<2,i1>]>;
+def AArch64dup_pred : SDNode<"AArch64ISD::DUP_PRED", SDT_AArch64DUP_PRED>;
+
 let Predicates = [HasSVE] in {
 
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -287,8 +290,8 @@ let Predicates = [HasSVE] in {
   defm DUP_ZZI : sve_int_perm_dup_i<"dup">;
 
   // Splat scalar register (predicated)
-  defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy">;
-  defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy">;
+  defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy", AArch64dup_pred>;
+  defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy", AArch64dup_pred>;
 
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
@@ -1396,8 +1399,8 @@ let Predicates = [HasSVE] in {
 
 let Predicates = [HasSVE2] in {
   // SVE2 integer multiply-add (indexed)
-  defm MLA_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b0, "mla", null_frag>;
-  defm MLS_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b1, "mls", null_frag>;
+  defm MLA_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b0, "mla", int_aarch64_sve_mla_lane>;
+  defm MLS_ZZZI : sve2_int_mla_by_indexed_elem<0b01, 0b1, "mls", int_aarch64_sve_mls_lane>;
 
   // SVE2 saturating multiply-add high (indexed)
   defm SQRDMLAH_ZZZI : sve2_int_mla_by_indexed_elem<0b10, 0b0, "sqrdmlah", int_aarch64_sve_sqrdmlah_lane>;
@@ -1408,7 +1411,7 @@ let Predicates = [HasSVE2] in {
   defm SQRDMLSH_ZZZ : sve2_int_mla<0b1, "sqrdmlsh", int_aarch64_sve_sqrdmlsh>;
 
   // SVE2 integer multiply (indexed)
-  defm MUL_ZZZI : sve2_int_mul_by_indexed_elem<0b1110, "mul", null_frag>;
+  defm MUL_ZZZI : sve2_int_mul_by_indexed_elem<0b1110, "mul", int_aarch64_sve_mul_lane>;
 
   // SVE2 saturating multiply high (indexed)
   defm SQDMULH_ZZZI  : sve2_int_mul_by_indexed_elem<0b1100, "sqdmulh",  int_aarch64_sve_sqdmulh_lane>;

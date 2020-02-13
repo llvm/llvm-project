@@ -5603,7 +5603,7 @@ class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve_int_perm_cpy_r<string asm> {
+multiclass sve_int_perm_cpy_r<string asm, SDPatternOperator op> {
   def _B : sve_int_perm_cpy_r<0b00, asm, ZPR8, GPR32sp>;
   def _H : sve_int_perm_cpy_r<0b01, asm, ZPR16, GPR32sp>;
   def _S : sve_int_perm_cpy_r<0b10, asm, ZPR32, GPR32sp>;
@@ -5617,6 +5617,11 @@ multiclass sve_int_perm_cpy_r<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPR3bAny:$Pg, GPR32sp:$Rn), 1>;
   def : InstAlias<"mov $Zd, $Pg/m, $Rn",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPR3bAny:$Pg, GPR64sp:$Rn), 1>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i1, i32, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i1,  i32, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1,  i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_cpy_v<bits<2> sz8_64, string asm, ZPRRegOp zprty,
@@ -5640,7 +5645,7 @@ class sve_int_perm_cpy_v<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve_int_perm_cpy_v<string asm> {
+multiclass sve_int_perm_cpy_v<string asm, SDPatternOperator op> {
   def _B : sve_int_perm_cpy_v<0b00, asm, ZPR8, FPR8>;
   def _H : sve_int_perm_cpy_v<0b01, asm, ZPR16, FPR16>;
   def _S : sve_int_perm_cpy_v<0b10, asm, ZPR32, FPR32>;
@@ -5654,6 +5659,11 @@ multiclass sve_int_perm_cpy_v<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPR3bAny:$Pg, FPR32:$Vn), 1>;
   def : InstAlias<"mov $Zd, $Pg/m, $Vn",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPR3bAny:$Pg, FPR64:$Vn), 1>;
+
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8f16, nxv8i1, f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv4i1, f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f32, op, nxv2f32, nxv2i1, f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2f64, nxv2i1, f64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_compact<bit sz, string asm, ZPRRegOp zprty>
