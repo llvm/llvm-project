@@ -378,7 +378,7 @@ void GsymReader::dump(raw_ostream &OS, Optional<FileEntry> FE) {
     StringRef Base = getString(FE->Base);
     if (!Dir.empty()) {
       OS << Dir;
-      if (Dir.contains('\\') and not Dir.contains('/'))
+      if (Dir.contains('\\') && !Dir.contains('/'))
         OS << '\\';
       else
         OS << '/';
