@@ -1206,9 +1206,7 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
@@ -1257,15 +1255,10 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
@@ -1303,20 +1296,12 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
@@ -1375,20 +1360,12 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; SSE2-NEXT:    pminsw %xmm1, %xmm2
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    pminsw %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    pxor %xmm4, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
@@ -1463,20 +1440,12 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE2-NEXT:    pminsw %xmm5, %xmm1
 ; SSE2-NEXT:    pminsw %xmm4, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-NEXT:    pxor %xmm8, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
