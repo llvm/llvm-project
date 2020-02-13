@@ -1772,27 +1772,42 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
     }
   }
 
-  assert(EltSize == 32 && "unhandled elt size");
+  if (EltSize == 32) {
+    static const int16_t Sub0_31_256[] = {
+      AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
+      AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
+      AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23,
+      AMDGPU::sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
+    };
 
-  static const int16_t Sub0_31_256[] = {
-    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
-    AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
-    AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23,
-    AMDGPU::sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
-  };
+    static const int16_t Sub0_15_256[] = {
+      AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
+      AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+    };
 
-  static const int16_t Sub0_15_256[] = {
-    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
-    AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+    switch (AMDGPU::getRegBitWidth(*RC->MC)) {
+    case 256:
+      return {};
+    case 512:
+      return makeArrayRef(Sub0_15_256);
+    case 1024:
+      return makeArrayRef(Sub0_31_256);
+    default:
+      llvm_unreachable("unhandled register size");
+    }
+  }
+
+  assert(EltSize == 64 && "unhandled elt size");
+  static const int16_t Sub0_31_512[] = {
+    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
+    AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
   };
 
   switch (AMDGPU::getRegBitWidth(*RC->MC)) {
-  case 256:
-    return {};
   case 512:
-    return makeArrayRef(Sub0_15_256);
+    return {};
   case 1024:
-    return makeArrayRef(Sub0_31_256);
+    return makeArrayRef(Sub0_31_512);
   default:
     llvm_unreachable("unhandled register size");
   }
