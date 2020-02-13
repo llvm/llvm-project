@@ -16,6 +16,7 @@
 # available.
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import binascii
 import subprocess
 import json
@@ -324,10 +325,10 @@ def is_hex_byte(str):
 
 def get_hex_string_if_all_printable(str):
     try:
-        s = binascii.unhexlify(str)
+        s = binascii.unhexlify(str).decode()
         if all(c in string.printable for c in s):
             return s
-    except TypeError:
+    except (TypeError, binascii.Error, UnicodeDecodeError):
         pass
     return None
 
@@ -548,10 +549,10 @@ class Packet:
     def get_key_value_pairs(self):
         kvp = list()
         if ';' in self.str:
-            key_value_pairs = string.split(self.str, ';')
+            key_value_pairs = self.str.split(';')
             for key_value_pair in key_value_pairs:
                 if len(key_value_pair):
-                    kvp.append(string.split(key_value_pair, ':'))
+                    kvp.append(key_value_pair.split(':', 1))
         return kvp
 
     def split(self, ch):
@@ -678,7 +679,7 @@ def cmd_qXfer(options, cmd, args):
 
 
 def rsp_qXfer(options, cmd, cmd_args, rsp):
-    data = string.split(cmd_args, ':')
+    data = cmd_args.split(':')
     if data[0] == 'features':
         if data[1] == 'read':
             filename, extension = os.path.splitext(data[2])
@@ -825,8 +826,8 @@ def cmd_vCont(options, cmd, args):
     else:
         got_other_threads = 0
         s = ''
-        for thread_action in string.split(args[1:], ';'):
-            (short_action, thread) = string.split(thread_action, ':')
+        for thread_action in args[1:].split(';'):
+            (short_action, thread) = thread_action.split(':', 1)
             tid = int(thread, 16)
             if short_action == 'c':
                 action = 'continue'
@@ -856,7 +857,7 @@ def rsp_vCont(options, cmd, cmd_args, rsp):
     if cmd_args == '?':
         # Skip the leading 'vCont;'
         rsp = rsp[6:]
-        modes = string.split(rsp, ';')
+        modes = rsp.split(';')
         s = "%s: supported extended continue modes include: " % (cmd)
 
         for i, mode in enumerate(modes):
