@@ -2168,7 +2168,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
       outs() << A->getFileName() << "(" << O->getFileName() << ")";
     else
       outs() << O->getFileName();
-    outs() << ":\tfile format " << O->getFileFormatName() << "\n\n";
+    outs() << ":\tfile format " << O->getFileFormatName().lower() << "\n\n";
   }
 
   if (StartAddress.getNumOccurrences() || StopAddress.getNumOccurrences())

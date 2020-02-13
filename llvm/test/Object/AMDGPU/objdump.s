@@ -45,7 +45,7 @@ BB5:
 	v_lshlrev_b32_e32 v7, 2, v7
         s_endpgm
 
-// CHECK:  file format ELF64-amdgpu
+// CHECK:  file format elf64-amdgpu
 // CHECK:  Disassembly of section .text:
 // CHECK:  hello_world:
 // CHECK:  s_mov_b32 m0, 0x10000                                      // 000000000100: BEFC00FF 00010000
