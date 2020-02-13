@@ -18,8 +18,18 @@ namespace Fortran::runtime {
   CrashArgs(message, ap);
 }
 
+static void (*crashHandler)(const char *, va_list &){nullptr};
+
+void Terminator::RegisterCrashHandler(
+    void (*handler)(const char *, va_list &)) {
+  crashHandler = handler;
+}
+
 [[noreturn]] void Terminator::CrashArgs(
     const char *message, va_list &ap) const {
+  if (crashHandler) {
+    crashHandler(message, ap);
+  }
   std::fputs("\nfatal Fortran runtime error", stderr);
   if (sourceFileName_) {
     std::fprintf(stderr, "(%s", sourceFileName_);

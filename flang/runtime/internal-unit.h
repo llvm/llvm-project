@@ -22,25 +22,32 @@ class IoErrorHandler;
 
 // Points to (but does not own) a CHARACTER scalar or array for internal I/O.
 // Does not buffer.
-template<bool isInput> class InternalDescriptorUnit : public ConnectionState {
+template<Direction DIR> class InternalDescriptorUnit : public ConnectionState {
 public:
-  using Scalar = std::conditional_t<isInput, const char *, char *>;
+  using Scalar =
+      std::conditional_t<DIR == Direction::Input, const char *, char *>;
   InternalDescriptorUnit(Scalar, std::size_t);
   InternalDescriptorUnit(const Descriptor &, const Terminator &);
   void EndIoStatement();
 
-  bool Emit(const char *, std::size_t bytes, IoErrorHandler &);
+  bool Emit(const char *, std::size_t, IoErrorHandler &);
+  std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
-  bool HandleAbsolutePosition(std::int64_t, IoErrorHandler &);
-  bool HandleRelativePosition(std::int64_t, IoErrorHandler &);
+  void BackspaceRecord(IoErrorHandler &);
 
 private:
   Descriptor &descriptor() { return staticDescriptor_.descriptor(); }
+  const Descriptor &descriptor() const {
+    return staticDescriptor_.descriptor();
+  }
+  Scalar CurrentRecord() const {
+    return descriptor().template ZeroBasedIndexedElement<char>(
+        currentRecordNumber - 1);
+  }
   StaticDescriptor<maxRank, true /*addendum*/> staticDescriptor_;
-  SubscriptValue at_[maxRank];
 };
 
-extern template class InternalDescriptorUnit<false>;
-extern template class InternalDescriptorUnit<true>;
+extern template class InternalDescriptorUnit<Direction::Output>;
+extern template class InternalDescriptorUnit<Direction::Input>;
 }
 #endif  // FORTRAN_RUNTIME_IO_INTERNAL_UNIT_H_

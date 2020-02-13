@@ -7,7 +7,7 @@ subroutine s(arg1, arg2, arg3)
 
   call inner(arg1) ! OK, assumed rank
   call inner(arg2) ! OK, assumed shape
-  !ERROR: Assumed-type TYPE(*) 'arg3' must be either assumed shape or assumed rank to be associated with TYPE(*) dummy argument 'dummy='
+  !ERROR: Assumed-type 'arg3' must be either assumed shape or assumed rank to be associated with assumed-type dummy argument 'dummy='
   call inner(arg3)
 
     contains

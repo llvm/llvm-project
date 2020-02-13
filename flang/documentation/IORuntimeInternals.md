@@ -273,12 +273,13 @@ A Narrative Overview Of `PRINT *, 'HELLO, WORLD'`
 =================================================
 1. When the compiled Fortran program begins execution at the `main()`
 entry point exported from its main program, it calls `ProgramStart()`
-with its arguments and environment.  `ProgramStart()` calls
-`ExternalFileUnit::InitializePredefinedUnits()` to create and
-initialize Fortran units 5 and 6 and connect them with the
-standard input and output file descriptors (respectively).
+with its arguments and environment.
 1. The generated code calls `BeginExternalListOutput()` to
 start the sequence of calls that implement the `PRINT` statement.
+Since the Fortran runtime I/O library has not yet been used in
+this process, its data structures are initialized on this
+first call, and Fortran I/O units 5 and 6 are connected with
+the stadard input and output file descriptors (respectively).
 The default unit code is converted to 6 and passed to
 `ExternalFileUnit::LookUpOrCrash()`, which returns a reference to
 unit 6's instance.

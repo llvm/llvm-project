@@ -14,7 +14,7 @@
 
 namespace Fortran::parser {
 
-char *CharBuffer::FreeSpace(std::size_t *n) {
+char *CharBuffer::FreeSpace(std::size_t &n) {
   int offset{LastBlockOffset()};
   if (blocks_.empty()) {
     blocks_.emplace_front();
@@ -24,7 +24,7 @@ char *CharBuffer::FreeSpace(std::size_t *n) {
     last_ = blocks_.emplace_after(last_);
     lastBlockEmpty_ = true;
   }
-  *n = Block::capacity - offset;
+  n = Block::capacity - offset;
   return last_->data + offset;
 }
 
@@ -38,7 +38,7 @@ void CharBuffer::Claim(std::size_t n) {
 std::size_t CharBuffer::Put(const char *data, std::size_t n) {
   std::size_t chunk;
   for (std::size_t at{0}; at < n; at += chunk) {
-    char *to{FreeSpace(&chunk)};
+    char *to{FreeSpace(chunk)};
     chunk = std::min(n - at, chunk);
     Claim(chunk);
     std::memcpy(to, data + at, chunk);

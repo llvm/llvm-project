@@ -30,24 +30,34 @@ bool DefaultFormatControlCallbacks::Emit(const char32_t *, std::size_t) {
         "I/O statement");
   return {};
 }
+std::optional<char32_t> DefaultFormatControlCallbacks::GetCurrentChar() {
+  Crash("DefaultFormatControlCallbacks::GetCurrentChar() called for non-input "
+        "I/O "
+        "statement");
+  return {};
+}
 bool DefaultFormatControlCallbacks::AdvanceRecord(int) {
   Crash("DefaultFormatControlCallbacks::AdvanceRecord() called unexpectedly");
   return {};
 }
-bool DefaultFormatControlCallbacks::HandleAbsolutePosition(std::int64_t) {
-  Crash("DefaultFormatControlCallbacks::HandleAbsolutePosition() called for "
-        "non-formatted "
-        "I/O statement");
-  return {};
+void DefaultFormatControlCallbacks::BackspaceRecord() {
+  Crash("DefaultFormatControlCallbacks::BackspaceRecord() called unexpectedly");
 }
-bool DefaultFormatControlCallbacks::HandleRelativePosition(std::int64_t) {
+void DefaultFormatControlCallbacks::HandleAbsolutePosition(std::int64_t) {
+  Crash("DefaultFormatControlCallbacks::HandleAbsolutePosition() called for "
+        "non-formatted I/O statement");
+}
+void DefaultFormatControlCallbacks::HandleRelativePosition(std::int64_t) {
   Crash("DefaultFormatControlCallbacks::HandleRelativePosition() called for "
-        "non-formatted "
-        "I/O statement");
-  return {};
+        "non-formatted I/O statement");
 }
 
-template class FormatControl<InternalFormattedIoStatementState<false>>;
-template class FormatControl<InternalFormattedIoStatementState<true>>;
-template class FormatControl<ExternalFormattedIoStatementState<false>>;
+template class FormatControl<
+    InternalFormattedIoStatementState<Direction::Output>>;
+template class FormatControl<
+    InternalFormattedIoStatementState<Direction::Input>>;
+template class FormatControl<
+    ExternalFormattedIoStatementState<Direction::Output>>;
+template class FormatControl<
+    ExternalFormattedIoStatementState<Direction::Input>>;
 }

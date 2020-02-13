@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_IO_API_H_
 
 #include "entry-names.h"
-#include "magic-numbers.h"
+#include "iostat.h"
 #include <cinttypes>
 #include <cstddef>
 
@@ -73,7 +73,7 @@ Cookie IONAME(BeginInternalListOutput)(char *internal,
     std::size_t internalLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginInternalListInput)(char *internal,
+Cookie IONAME(BeginInternalListInput)(const char *internal,
     std::size_t internalLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
@@ -81,7 +81,7 @@ Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInternalFormattedInput)(char *internal,
+Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -172,7 +172,7 @@ Cookie IONAME(BeginInquireIoLength)(
 //   }
 //   if (EndIoStatement(cookie) == FORTRAN_RUTIME_IOSTAT_END) goto label666;
 void IONAME(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
-    bool hasEnd = false, bool hasEor = false);
+    bool hasEnd = false, bool hasEor = false, bool hasIoMsg = false);
 
 // Control list options.  These return false on a error that the
 // Begin...() call has specified will be handled by the caller.
@@ -214,7 +214,7 @@ bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
 bool IONAME(OutputUnformattedBlock)(Cookie, const char *, std::size_t);
 bool IONAME(InputUnformattedBlock)(Cookie, char *, std::size_t);
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
-bool IONAME(InputInteger64)(Cookie, std::int64_t &, int kind = 8);
+bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
 bool IONAME(OutputReal32)(Cookie, float);
 bool IONAME(InputReal32)(Cookie, float &);
 bool IONAME(OutputReal64)(Cookie, double);
@@ -281,23 +281,6 @@ bool IONAME(InquirePendingId)(Cookie, std::int64_t, bool &);
 // NEXTREC, NUMBER, POS, RECL, SIZE
 bool IONAME(InquireInteger64)(
     Cookie, const char *specifier, std::int64_t &, int kind = 8);
-
-// The value of IOSTAT= is zero when no error, end-of-record,
-// or end-of-file condition has arisen; errors are positive values.
-// (See 12.11.5 in Fortran 2018 for the complete requirements;
-// these constants must match the values of their corresponding
-// named constants in the predefined module ISO_FORTRAN_ENV, so
-// they're actually defined in another magic-numbers.h header file
-// so that they can be included both here and there.)
-enum Iostat {
-  // Other errors have values >1
-  IostatInquireInternalUnit = FORTRAN_RUNTIME_IOSTAT_INQUIRE_INTERNAL_UNIT,
-  IostatOk = 0,
-  IostatEnd = FORTRAN_RUNTIME_IOSTAT_END,  // end-of-file & no error
-  IostatEor = FORTRAN_RUNTIME_IOSTAT_EOR,  // end-of-record & no error or EOF
-  IostatFlush =
-      FORTRAN_RUNTIME_IOSTAT_FLUSH,  // attempt to FLUSH an unflushable unit
-};
 
 // This function must be called to end an I/O statement, and its
 // cookie value may not be used afterwards unless it is recycled

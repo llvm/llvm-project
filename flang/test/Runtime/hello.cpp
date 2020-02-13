@@ -1,5 +1,6 @@
 // Basic sanity tests of I/O API; exhaustive testing will be done in Fortran
 
+#include "testing.h"
 #include "../../runtime/descriptor.h"
 #include "../../runtime/io-api.h"
 #include <cstring>
@@ -8,16 +9,15 @@
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
 
-static int failures{0};
-
-static void test(const char *format, const char *expect, std::string &&got) {
+static bool test(const char *format, const char *expect, std::string &&got) {
   std::string want{expect};
   want.resize(got.length(), ' ');
   if (got != want) {
-    std::cerr << '\'' << format << "' failed;\n     got '" << got
-              << "',\nexpected '" << want << "'\n";
-    ++failures;
+    Fail() << '\'' << format << "' failed;\n     got '" << got
+           << "',\nexpected '" << want << "'\n";
+    return false;
   }
+  return true;
 }
 
 static void hello() {
@@ -30,9 +30,8 @@ static void hello() {
   IONAME(OutputInteger64)(cookie, 0xfeedface);
   IONAME(OutputLogical)(cookie, true);
   if (auto status{IONAME(EndIoStatement)(cookie)}) {
-    std::cerr << "hello: '" << format << "' failed, status "
-              << static_cast<int>(status) << '\n';
-    ++failures;
+    Fail() << "hello: '" << format << "' failed, status "
+           << static_cast<int>(status) << '\n';
   } else {
     test(format, "HELLO, WORLD  678 0xFEEDFACE T",
         std::string{buffer, sizeof buffer});
@@ -46,21 +45,18 @@ static void multiline() {
   SubscriptValue extent[]{4};
   whole.Establish(TypeCode{CFI_type_char}, sizeof buffer[0], &buffer, 1, extent,
       CFI_attribute_pointer);
-  //  whole.Dump(std::cout);
+  whole.Dump();
   whole.Check();
   Descriptor &section{staticDescriptor[1].descriptor()};
   SubscriptValue lowers[]{0}, uppers[]{3}, strides[]{1};
   section.Establish(whole.type(), whole.ElementBytes(), nullptr, 1, extent,
       CFI_attribute_pointer);
-  //  section.Dump(std::cout);
-  section.Check();
   if (auto error{
           CFI_section(&section.raw(), &whole.raw(), lowers, uppers, strides)}) {
-    std::cerr << "multiline: CFI_section failed: " << error << '\n';
-    ++failures;
+    Fail() << "multiline: CFI_section failed: " << error << '\n';
     return;
   }
-  section.Dump(std::cout);
+  section.Dump();
   section.Check();
   const char *format{"('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,25X,'done')"};
   auto cookie{IONAME(BeginInternalArrayFormattedOutput)(
@@ -69,9 +65,8 @@ static void multiline() {
   IONAME(OutputAscii)(cookie, "HELLO", 5);
   IONAME(OutputInteger64)(cookie, 789);
   if (auto status{IONAME(EndIoStatement)(cookie)}) {
-    std::cerr << "multiline: '" << format << "' failed, status "
-              << static_cast<int>(status) << '\n';
-    ++failures;
+    Fail() << "multiline: '" << format << "' failed, status "
+           << static_cast<int>(status) << '\n';
   } else {
     test(format,
         ">HELLO, WORLD                  <"
@@ -88,15 +83,41 @@ static void realTest(const char *format, double x, const char *expect) {
       buffer, sizeof buffer, format, std::strlen(format))};
   IONAME(OutputReal64)(cookie, x);
   if (auto status{IONAME(EndIoStatement)(cookie)}) {
-    std::cerr << '\'' << format << "' failed, status "
-              << static_cast<int>(status) << '\n';
-    ++failures;
+    Fail() << '\'' << format << "' failed, status " << static_cast<int>(status)
+           << '\n';
   } else {
     test(format, expect, std::string{buffer, sizeof buffer});
   }
 }
 
+static void realInTest(
+    const char *format, const char *data, std::uint64_t want) {
+  auto cookie{IONAME(BeginInternalFormattedInput)(
+      data, std::strlen(data), format, std::strlen(format))};
+  union {
+    double x;
+    std::uint64_t raw;
+  } u;
+  u.raw = 0;
+  IONAME(EnableHandlers)(cookie, true, true, true, true, true);
+  IONAME(InputReal64)(cookie, u.x);
+  char iomsg[65];
+  iomsg[0] = '\0';
+  iomsg[sizeof iomsg - 1] = '\0';
+  IONAME(GetIoMsg)(cookie, iomsg, sizeof iomsg - 1);
+  auto status{IONAME(EndIoStatement)(cookie)};
+  if (status) {
+    Fail() << '\'' << format << "' failed reading '" << data << "', status "
+           << static_cast<int>(status) << " iomsg '" << iomsg << "'\n";
+  } else if (u.raw != want) {
+    Fail() << '\'' << format << "' failed reading '" << data << "', want 0x"
+           << std::hex << want << ", got 0x" << u.raw << std::dec << '\n';
+  }
+}
+
 int main() {
+  StartTests();
+
   hello();
   multiline();
 
@@ -382,10 +403,22 @@ int main() {
       "4040261841248583680000+306;");
   realTest("(G0,';')", u.d, ".17976931348623157+309;");
 
-  if (failures == 0) {
-    std::cout << "PASS\n";
-  } else {
-    std::cout << "FAIL " << failures << " tests\n";
-  }
-  return failures > 0;
+  realInTest("(F18.0)", "                 0", 0x0);
+  realInTest("(F18.0)", "                  ", 0x0);
+  realInTest("(F18.0)", "                -0", 0x8000000000000000);
+  realInTest("(F18.0)", "                 1", 0x3ff0000000000000);
+  realInTest("(F18.0)", "              125.", 0x405f400000000000);
+  realInTest("(F18.0)", "              12.5", 0x4029000000000000);
+  realInTest("(F18.0)", "              1.25", 0x3ff4000000000000);
+  realInTest("(F18.0)", "              .125", 0x3fc0000000000000);
+  realInTest("(F18.0)", "               125", 0x405f400000000000);
+  realInTest("(F18.1)", "               125", 0x4029000000000000);
+  realInTest("(F18.2)", "               125", 0x3ff4000000000000);
+  realInTest("(F18.3)", "               125", 0x3fc0000000000000);
+  realInTest("(-1P,F18.0)", "               125", 0x4093880000000000);  // 1250
+  realInTest("(1P,F18.0)", "               125", 0x4029000000000000);  // 12.5
+  realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000);  // 1250
+  realInTest("(DC,F18.0)", "              12,5", 0x4029000000000000);
+
+  return EndTests();
 }

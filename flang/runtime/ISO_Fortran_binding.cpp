@@ -11,6 +11,7 @@
 
 #include "../include/flang/ISO_Fortran_binding.h"
 #include "descriptor.h"
+#include <cstdlib>
 
 namespace Fortran::ISO {
 extern "C" {
@@ -75,7 +76,7 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
     dim->sm = byteSize;
     byteSize *= extent;
   }
-  void *p{new char[byteSize]};
+  void *p{std::malloc(byteSize)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -99,7 +100,7 @@ int CFI_deallocate(CFI_cdesc_t *descriptor) {
   if (!descriptor->base_addr) {
     return CFI_ERROR_BASE_ADDR_NULL;
   }
-  delete[] static_cast<char *>(descriptor->base_addr);
+  std::free(descriptor->base_addr);
   descriptor->base_addr = nullptr;
   return CFI_SUCCESS;
 }

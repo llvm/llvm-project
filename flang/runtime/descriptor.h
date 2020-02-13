@@ -19,14 +19,14 @@
 // but should never reference this internal header.
 
 #include "derived-type.h"
+#include "memory.h"
 #include "type-code.h"
 #include "flang/ISO_Fortran_binding.h"
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
-#include <memory>
-#include <ostream>
 
 namespace Fortran::runtime {
 
@@ -93,7 +93,7 @@ public:
     len_[which] = x;
   }
 
-  std::ostream &Dump(std::ostream &) const;
+  void Dump(FILE * = stdout) const;
 
 private:
   const DerivedType *derivedType_{nullptr};
@@ -141,17 +141,15 @@ public:
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  static std::unique_ptr<Descriptor> Create(TypeCode t,
-      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
-      const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static std::unique_ptr<Descriptor> Create(TypeCategory, int kind,
+  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static std::unique_ptr<Descriptor> Create(const DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
-      const SubscriptValue *extent = nullptr,
+  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
+      int rank = maxRank, const SubscriptValue *extent = nullptr,
+      ISO::CFI_attribute_t attribute = CFI_attribute_other);
+  static OwningPtr<Descriptor> Create(const DerivedType &dt, void *p = nullptr,
+      int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   ISO::CFI_cdesc_t &raw() { return raw_; }
@@ -192,13 +190,21 @@ public:
     return offset;
   }
 
-  template<typename A> A *Element(std::size_t offset) const {
+  template<typename A> A *OffsetElement(std::size_t offset) const {
     return reinterpret_cast<A *>(
         reinterpret_cast<char *>(raw_.base_addr) + offset);
   }
 
   template<typename A> A *Element(const SubscriptValue *subscript) const {
-    return Element<A>(SubscriptsToByteOffset(subscript));
+    return OffsetElement<A>(SubscriptsToByteOffset(subscript));
+  }
+
+  template<typename A> A *ZeroBasedIndexedElement(std::size_t n) const {
+    SubscriptValue at[maxRank];
+    if (SubscriptsForZeroBasedElementNumber(at, n)) {
+      return Element<A>(at);
+    }
+    return nullptr;
   }
 
   void GetLowerBounds(SubscriptValue *subscript) const {
@@ -207,17 +213,18 @@ public:
     }
   }
 
-  void IncrementSubscripts(
-      SubscriptValue *subscript, const int *permutation = nullptr) const {
-    for (int j{0}; j < raw_.rank; ++j) {
-      int k{permutation ? permutation[j] : j};
-      const Dimension &dim{GetDimension(k)};
-      if (subscript[k]++ < dim.UpperBound()) {
-        break;
-      }
-      subscript[k] = dim.LowerBound();
-    }
-  }
+  // When the passed subscript vector contains the last (or first)
+  // subscripts of the array, these wrap the subscripts around to
+  // their first (or last) values and return false.
+  bool IncrementSubscripts(
+      SubscriptValue *, const int *permutation = nullptr) const;
+  bool DecrementSubscripts(
+      SubscriptValue *, const int *permutation = nullptr) const;
+  // False when out of range.
+  bool SubscriptsForZeroBasedElementNumber(SubscriptValue *,
+      std::size_t elementNumber, const int *permutation = nullptr) const;
+  std::size_t ZeroBasedElementNumber(
+      const SubscriptValue *, const int *permutation = nullptr) const;
 
   DescriptorAddendum *Addendum() {
     if (raw_.f18Addendum != 0) {
@@ -270,7 +277,7 @@ public:
 
   // TODO: creation of array sections
 
-  std::ostream &Dump(std::ostream &) const;
+  void Dump(FILE * = stdout) const;
 
 private:
   ISO::CFI_cdesc_t raw_;

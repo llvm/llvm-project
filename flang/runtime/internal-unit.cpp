@@ -14,8 +14,8 @@
 
 namespace Fortran::runtime::io {
 
-template<bool isInput>
-InternalDescriptorUnit<isInput>::InternalDescriptorUnit(
+template<Direction DIR>
+InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length) {
   recordLength = length;
   endfileRecordNumber = 2;
@@ -24,8 +24,8 @@ InternalDescriptorUnit<isInput>::InternalDescriptorUnit(
       CFI_attribute_pointer);
 }
 
-template<bool isInput>
-InternalDescriptorUnit<isInput>::InternalDescriptorUnit(
+template<Direction DIR>
+InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     const Descriptor &that, const Terminator &terminator) {
   RUNTIME_CHECK(terminator, that.type().IsCharacter());
   Descriptor &d{descriptor()};
@@ -35,95 +35,107 @@ InternalDescriptorUnit<isInput>::InternalDescriptorUnit(
   d.Check();
   recordLength = d.ElementBytes();
   endfileRecordNumber = d.Elements() + 1;
-  d.GetLowerBounds(at_);
 }
 
-template<bool isInput> void InternalDescriptorUnit<isInput>::EndIoStatement() {
-  if constexpr (!isInput) {
-    // blank fill
-    while (currentRecordNumber < endfileRecordNumber.value_or(0)) {
-      char *record{descriptor().template Element<char>(at_)};
-      std::fill_n(record + furthestPositionInRecord,
-          recordLength.value_or(0) - furthestPositionInRecord, ' ');
+template<Direction DIR> void InternalDescriptorUnit<DIR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Output) {  // blank fill
+    while (char *record{CurrentRecord()}) {
+      if (furthestPositionInRecord <
+          recordLength.value_or(furthestPositionInRecord)) {
+        std::fill_n(record + furthestPositionInRecord,
+            *recordLength - furthestPositionInRecord, ' ');
+      }
       furthestPositionInRecord = 0;
       ++currentRecordNumber;
-      descriptor().IncrementSubscripts(at_);
     }
   }
 }
 
-template<bool isInput>
-bool InternalDescriptorUnit<isInput>::Emit(
+template<Direction DIR>
+bool InternalDescriptorUnit<DIR>::Emit(
     const char *data, std::size_t bytes, IoErrorHandler &handler) {
-  if constexpr (isInput) {
-    handler.Crash(
-        "InternalDescriptorUnit<true>::Emit() called for an input statement");
-    return false;
+  if constexpr (DIR == Direction::Input) {
+    handler.Crash("InternalDescriptorUnit<Direction::Input>::Emit() called");
+    return false && data[bytes] != 0;  // bogus compare silences GCC warning
+  } else {
+    if (bytes <= 0) {
+      return true;
+    }
+    char *record{CurrentRecord()};
+    if (!record) {
+      handler.SignalError(IostatInternalWriteOverrun);
+      return false;
+    }
+    auto furthestAfter{std::max(furthestPositionInRecord,
+        positionInRecord + static_cast<std::int64_t>(bytes))};
+    bool ok{true};
+    if (furthestAfter > static_cast<std::int64_t>(recordLength.value_or(0))) {
+      handler.SignalError(IostatRecordWriteOverrun);
+      furthestAfter = recordLength.value_or(0);
+      bytes = std::max(std::int64_t{0}, furthestAfter - positionInRecord);
+      ok = false;
+    } else if (positionInRecord > furthestPositionInRecord) {
+      std::fill_n(record + furthestPositionInRecord,
+          positionInRecord - furthestPositionInRecord, ' ');
+    }
+    std::memcpy(record + positionInRecord, data, bytes);
+    positionInRecord += bytes;
+    furthestPositionInRecord = furthestAfter;
+    return ok;
   }
-  if (currentRecordNumber >= endfileRecordNumber.value_or(0)) {
-    handler.SignalEnd();
-    return false;
-  }
-  char *record{descriptor().template Element<char>(at_)};
-  auto furthestAfter{std::max(furthestPositionInRecord,
-      positionInRecord + static_cast<std::int64_t>(bytes))};
-  bool ok{true};
-  if (furthestAfter > static_cast<std::int64_t>(recordLength.value_or(0))) {
-    handler.SignalEor();
-    furthestAfter = recordLength.value_or(0);
-    bytes = std::max(std::int64_t{0}, furthestAfter - positionInRecord);
-    ok = false;
-  }
-  std::memcpy(record + positionInRecord, data, bytes);
-  positionInRecord += bytes;
-  furthestPositionInRecord = furthestAfter;
-  return ok;
 }
 
-template<bool isInput>
-bool InternalDescriptorUnit<isInput>::AdvanceRecord(IoErrorHandler &handler) {
+template<Direction DIR>
+std::optional<char32_t> InternalDescriptorUnit<DIR>::GetCurrentChar(
+    IoErrorHandler &handler) {
+  if constexpr (DIR == Direction::Output) {
+    handler.Crash(
+        "InternalDescriptorUnit<Direction::Output>::GetCurrentChar() called");
+    return std::nullopt;
+  }
+  const char *record{CurrentRecord()};
+  if (!record) {
+    handler.SignalEnd();
+    return std::nullopt;
+  }
+  if (positionInRecord >= recordLength.value_or(positionInRecord)) {
+    return std::nullopt;
+  }
+  if (isUTF8) {
+    // TODO: UTF-8 decoding
+  }
+  return record[positionInRecord];
+}
+
+template<Direction DIR>
+bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
   if (currentRecordNumber >= endfileRecordNumber.value_or(0)) {
     handler.SignalEnd();
     return false;
   }
-  if (!HandleAbsolutePosition(recordLength.value_or(0), handler)) {
-    return false;
+  if constexpr (DIR == Direction::Output) {  // blank fill
+    if (furthestPositionInRecord <
+        recordLength.value_or(furthestPositionInRecord)) {
+      char *record{CurrentRecord()};
+      RUNTIME_CHECK(handler, record != nullptr);
+      std::fill_n(record + furthestPositionInRecord,
+          *recordLength - furthestPositionInRecord, ' ');
+    }
   }
   ++currentRecordNumber;
-  descriptor().IncrementSubscripts(at_);
   positionInRecord = 0;
   furthestPositionInRecord = 0;
   return true;
 }
 
-template<bool isInput>
-bool InternalDescriptorUnit<isInput>::HandleAbsolutePosition(
-    std::int64_t n, IoErrorHandler &handler) {
-  n = std::max<std::int64_t>(0, n);
-  bool ok{true};
-  if (n > static_cast<std::int64_t>(recordLength.value_or(n))) {
-    handler.SignalEor();
-    n = *recordLength;
-    ok = false;
-  }
-  if (n > furthestPositionInRecord && ok) {
-    if constexpr (!isInput) {
-      char *record{descriptor().template Element<char>(at_)};
-      std::fill_n(
-          record + furthestPositionInRecord, n - furthestPositionInRecord, ' ');
-    }
-    furthestPositionInRecord = n;
-  }
-  positionInRecord = n;
-  return ok;
+template<Direction DIR>
+void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
+  RUNTIME_CHECK(handler, currentRecordNumber > 1);
+  --currentRecordNumber;
+  positionInRecord = 0;
+  furthestPositionInRecord = 0;
 }
 
-template<bool isInput>
-bool InternalDescriptorUnit<isInput>::HandleRelativePosition(
-    std::int64_t n, IoErrorHandler &handler) {
-  return HandleAbsolutePosition(positionInRecord + n, handler);
-}
-
-template class InternalDescriptorUnit<false>;
-template class InternalDescriptorUnit<true>;
+template class InternalDescriptorUnit<Direction::Output>;
+template class InternalDescriptorUnit<Direction::Input>;
 }

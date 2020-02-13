@@ -47,7 +47,7 @@ public:
     lastBlockEmpty_ = false;
   }
 
-  char *FreeSpace(std::size_t *);
+  char *FreeSpace(std::size_t &);
   void Claim(std::size_t);
 
   // The return value is the byte offset of the new data,

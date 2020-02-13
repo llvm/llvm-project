@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "transformational.h"
-#include "flang/Common/idioms.h"
+#include "memory.h"
+#include "terminator.h"
 #include "flang/Evaluate/integer.h"
 #include <algorithm>
-#include <bitset>
 #include <cinttypes>
-#include <memory>
 
 namespace Fortran::runtime {
 
@@ -22,18 +21,22 @@ static inline std::int64_t GetInt64(const char *p, std::size_t bytes) {
   case 2: return *reinterpret_cast<const std::int16_t *>(p);
   case 4: return *reinterpret_cast<const std::int32_t *>(p);
   case 8: return *reinterpret_cast<const std::int64_t *>(p);
-  default: CRASH_NO_CASE;
+  default:
+    Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("no case for %dz bytes", bytes);
   }
 }
 
 // F2018 16.9.163
-std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
-    const Descriptor &shape, const Descriptor *pad, const Descriptor *order) {
+OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
+    const Descriptor *pad, const Descriptor *order) {
   // Compute and check the rank of the result.
-  CHECK(shape.rank() == 1);
-  CHECK(shape.type().IsInteger());
+  Terminator terminator{__FILE__, __LINE__};
+  RUNTIME_CHECK(terminator, shape.rank() == 1);
+  RUNTIME_CHECK(terminator, shape.type().IsInteger());
   SubscriptValue resultRank{shape.GetDimension(0).Extent()};
-  CHECK(resultRank >= 0 && resultRank <= static_cast<SubscriptValue>(maxRank));
+  RUNTIME_CHECK(terminator,
+      resultRank >= 0 && resultRank <= static_cast<SubscriptValue>(maxRank));
 
   // Extract and check the shape of the result; compute its element count.
   SubscriptValue lowerBound[maxRank];  // all 1's
@@ -45,7 +48,7 @@ std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
     lowerBound[j] = 1;
     resultExtent[j] =
         GetInt64(shape.Element<char>(&shapeSubscript), shapeElementBytes);
-    CHECK(resultExtent[j] >= 0);
+    RUNTIME_CHECK(terminator, resultExtent[j] >= 0);
     resultElements *= resultExtent[j];
   }
 
@@ -55,23 +58,25 @@ std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
   std::size_t sourceElements{source.Elements()};
   std::size_t padElements{pad ? pad->Elements() : 0};
   if (resultElements < sourceElements) {
-    CHECK(padElements > 0);
-    CHECK(pad->ElementBytes() == elementBytes);
+    RUNTIME_CHECK(terminator, padElements > 0);
+    RUNTIME_CHECK(terminator, pad->ElementBytes() == elementBytes);
   }
 
   // Extract and check the optional ORDER= argument, which must be a
   // permutation of [1..resultRank].
   int dimOrder[maxRank];
   if (order) {
-    CHECK(order->rank() == 1);
-    CHECK(order->type().IsInteger());
-    CHECK(order->GetDimension(0).Extent() == resultRank);
-    std::bitset<maxRank> values;
+    RUNTIME_CHECK(terminator, order->rank() == 1);
+    RUNTIME_CHECK(terminator, order->type().IsInteger());
+    RUNTIME_CHECK(terminator, order->GetDimension(0).Extent() == resultRank);
+    std::uint64_t values{0};
     SubscriptValue orderSubscript{order->GetDimension(0).LowerBound()};
     for (SubscriptValue j{0}; j < resultRank; ++j, ++orderSubscript) {
-      auto k{GetInt64(order->Element<char>(orderSubscript), shapeElementBytes)};
-      CHECK(k >= 1 && k <= resultRank && !values.test(k - 1));
-      values.set(k - 1);
+      auto k{GetInt64(
+          order->OffsetElement<char>(orderSubscript), shapeElementBytes)};
+      RUNTIME_CHECK(
+          terminator, k >= 1 && k <= resultRank && !((values >> k) & 1));
+      values |= std::uint64_t{1} << k;
       dimOrder[k - 1] = j;
     }
   } else {
@@ -84,7 +89,7 @@ std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
   const DescriptorAddendum *sourceAddendum{source.Addendum()};
   const DerivedType *sourceDerivedType{
       sourceAddendum ? sourceAddendum->derivedType() : nullptr};
-  std::unique_ptr<Descriptor> result;
+  OwningPtr<Descriptor> result;
   if (sourceDerivedType) {
     result = Descriptor::Create(*sourceDerivedType, nullptr, resultRank,
         resultExtent, CFI_attribute_allocatable);
@@ -94,7 +99,7 @@ std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
         CFI_attribute_allocatable);  // TODO rearrange these arguments
   }
   DescriptorAddendum *resultAddendum{result->Addendum()};
-  CHECK(resultAddendum);
+  RUNTIME_CHECK(terminator, resultAddendum);
   resultAddendum->flags() |= DescriptorAddendum::DoNotFinalize;
   if (sourceDerivedType) {
     std::size_t lenParameters{sourceDerivedType->lenParameters()};
@@ -106,7 +111,7 @@ std::unique_ptr<Descriptor> RESHAPE(const Descriptor &source,
   // Allocate storage for the result's data.
   int status{result->Allocate(lowerBound, resultExtent, elementBytes)};
   if (status != CFI_SUCCESS) {
-    common::die("RESHAPE: Allocate failed (error %d)", status);
+    terminator.Crash("RESHAPE: Allocate failed (error %d)", status);
   }
 
   // Populate the result's elements.

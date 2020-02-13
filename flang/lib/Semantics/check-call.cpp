@@ -613,16 +613,13 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
               const Symbol &assumed{DEREF(arg.GetAssumedTypeDummy())};
               if (!object.type.type().IsAssumedType()) {
                 messages.Say(
-                    "Assumed-type TYPE(*) '%s' may be associated only with an"
-                    " assumed-TYPE(*) %s"_err_en_US,
+                    "Assumed-type '%s' may be associated only with an assumed-type %s"_err_en_US,
                     assumed.name(), dummyName);
               } else if (const auto *details{
                              assumed.detailsIf<ObjectEntityDetails>()}) {
                 if (!(details->IsAssumedShape() || details->IsAssumedRank())) {
                   messages.Say(  // C711
-                      "Assumed-type TYPE(*) '%s' must be either assumed "
-                      "shape or assumed rank to be associated with TYPE(*) "
-                      "%s"_err_en_US,
+                      "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed-type %s"_err_en_US,
                       assumed.name(), dummyName);
                 }
               }

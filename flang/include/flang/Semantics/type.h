@@ -327,9 +327,7 @@ public:
   bool IsUnlimitedPolymorphic() const {
     return category_ == TypeStar || category_ == ClassStar;
   }
-  bool IsAssumedType() const {
-    return category_ == TypeStar;
-  }
+  bool IsAssumedType() const { return category_ == TypeStar; }
   bool IsNumeric(TypeCategory) const;
   const NumericTypeSpec &numericTypeSpec() const;
   const LogicalTypeSpec &logicalTypeSpec() const;

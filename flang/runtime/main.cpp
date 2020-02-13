@@ -9,7 +9,6 @@
 #include "main.h"
 #include "environment.h"
 #include "terminator.h"
-#include "unit.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
@@ -28,11 +27,10 @@ static void ConfigureFloatingPoint() {
 }
 
 extern "C" {
-
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[]) {
   std::atexit(Fortran::runtime::NotifyOtherImagesOfNormalEnd);
   Fortran::runtime::executionEnvironment.Configure(argc, argv, envp);
   ConfigureFloatingPoint();
-  Fortran::runtime::io::ExternalFileUnit::InitializePredefinedUnits();
+  // I/O is initialized on demand so that it works for non-Fortran main().
 }
 }

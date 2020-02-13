@@ -28,10 +28,8 @@ OwningPtr<char> SaveDefaultCharacter(
 int IdentifyValue(
     const char *value, std::size_t length, const char *possibilities[]);
 
-// A std::map<> customized to use the runtime's memory allocator
-template<typename KEY, typename VALUE>
-using MapAllocator = Allocator<std::pair<std::add_const_t<KEY>, VALUE>>;
-template<typename KEY, typename VALUE, typename COMPARE = std::less<KEY>>
-using Map = std::map<KEY, VALUE, COMPARE, MapAllocator<KEY, VALUE>>;
+// Truncates or pads as necessary
+void ToFortranDefaultCharacter(
+    char *to, std::size_t toLength, const char *from);
 }
 #endif  // FORTRAN_RUNTIME_TOOLS_H_

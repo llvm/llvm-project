@@ -1,4 +1,4 @@
-//===-- runtime/numeric-output.h --------------------------------*- C++ -*-===//
+//===-- runtime/edit-output.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,86 +6,155 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_RUNTIME_NUMERIC_OUTPUT_H_
-#define FORTRAN_RUNTIME_NUMERIC_OUTPUT_H_
-
-// Output data editing templates implementing the FORMAT data editing
-// descriptors E, EN, ES, EX, D, F, and G for REAL data (and COMPLEX
-// components, I and G for INTEGER, and B/O/Z for both.
-// See subclauses in 13.7.2.3 of Fortran 2018 for the
-// detailed specifications of these descriptors.
-// List-directed output (13.10.4) for numeric types is also done here.
-// Drives the same fast binary-to-decimal formatting templates used
-// in the f18 front-end.
-
-#include "format.h"
-#include "io-stmt.h"
-#include "flang/Decimal/decimal.h"
+#include "edit-output.h"
+#include "flang/Common/uint128.h"
+#include "flang/Common/unsigned-const-division.h"
 
 namespace Fortran::runtime::io {
 
-class IoStatementState;
-
-// I, B, O, Z, and G output editing for INTEGER.
-// edit is const here (and elsewhere in this header) so that one
-// edit descriptor with a repeat factor may safely serve to edit
-// multiple elements of an array.
-bool EditIntegerOutput(IoStatementState &, const DataEdit &, std::int64_t);
-
-// Encapsulates the state of a REAL output conversion.
-class RealOutputEditingBase {
-protected:
-  explicit RealOutputEditingBase(IoStatementState &io) : io_{io} {}
-
-  static bool IsDecimalNumber(const char *p) {
-    if (!p) {
-      return false;
+template<typename INT, typename UINT>
+bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
+  char buffer[130], *end = &buffer[sizeof buffer], *p = end;
+  bool isNegative{false};
+  if constexpr (std::is_same_v<INT, UINT>) {
+    isNegative = (n >> (8 * sizeof(INT) - 1)) != 0;
+  } else {
+    isNegative = n < 0;
+  }
+  UINT un{static_cast<UINT>(isNegative ? -n : n)};
+  int signChars{0};
+  switch (edit.descriptor) {
+  case DataEdit::ListDirected:
+  case 'G':
+  case 'I':
+    if (isNegative || (edit.modes.editingFlags & signPlus)) {
+      signChars = 1;  // '-' or '+'
     }
-    if (*p == '-' || *p == '+') {
-      ++p;
+    while (un > 0) {
+      auto quotient{common::DivideUnsignedBy<UINT, 10>(un)};
+      *--p = '0' + static_cast<int>(un - UINT{10} * quotient);
+      un = quotient;
     }
-    return *p >= '0' && *p <= '9';
+    break;
+  case 'B':
+    for (; un > 0; un >>= 1) {
+      *--p = '0' + (static_cast<int>(un) & 1);
+    }
+    break;
+  case 'O':
+    for (; un > 0; un >>= 3) {
+      *--p = '0' + (static_cast<int>(un) & 7);
+    }
+    break;
+  case 'Z':
+    for (; un > 0; un >>= 4) {
+      int digit = static_cast<int>(un) & 0xf;
+      *--p = digit >= 10 ? 'A' + (digit - 10) : '0' + digit;
+    }
+    break;
+  default:
+    io.GetIoErrorHandler().Crash(
+        "Data edit descriptor '%c' may not be used with an INTEGER data item",
+        edit.descriptor);
+    return false;
   }
 
-  const char *FormatExponent(int, const DataEdit &edit, int &length);
-  bool EmitPrefix(const DataEdit &, std::size_t length, std::size_t width);
-  bool EmitSuffix(const DataEdit &);
+  int digits = end - p;
+  int leadingZeroes{0};
+  int editWidth{edit.width.value_or(0)};
+  if (edit.digits && digits <= *edit.digits) {  // Iw.m
+    if (*edit.digits == 0 && n == 0) {
+      // Iw.0 with zero value: output field must be blank.  For I0.0
+      // and a zero value, emit one blank character.
+      signChars = 0;  // in case of SP
+      editWidth = std::max(1, editWidth);
+    } else {
+      leadingZeroes = *edit.digits - digits;
+    }
+  } else if (n == 0) {
+    leadingZeroes = 1;
+  }
+  int total{signChars + leadingZeroes + digits};
+  if (editWidth > 0 && total > editWidth) {
+    return io.EmitRepeated('*', editWidth);
+  }
+  int leadingSpaces{std::max(0, editWidth - total)};
+  if (edit.IsListDirected()) {
+    if (static_cast<std::size_t>(total) >
+            io.GetConnectionState().RemainingSpaceInRecord() &&
+        !io.AdvanceRecord()) {
+      return false;
+    }
+    leadingSpaces = 1;
+  }
+  return io.EmitRepeated(' ', leadingSpaces) &&
+      io.Emit(n < 0 ? "-" : "+", signChars) &&
+      io.EmitRepeated('0', leadingZeroes) && io.Emit(p, digits);
+}
 
-  IoStatementState &io_;
-  int trailingBlanks_{0};  // created when Gw editing maps to Fw
-  char exponent_[16];
-};
+// Formats the exponent (see table 13.1 for all the cases)
+const char *RealOutputEditingBase::FormatExponent(
+    int expo, const DataEdit &edit, int &length) {
+  char *eEnd{&exponent_[sizeof exponent_]};
+  char *exponent{eEnd};
+  for (unsigned e{static_cast<unsigned>(std::abs(expo))}; e > 0;) {
+    unsigned quotient{common::DivideUnsignedBy<unsigned, 10>(e)};
+    *--exponent = '0' + e - 10 * quotient;
+    e = quotient;
+  }
+  if (edit.expoDigits) {
+    if (int ed{*edit.expoDigits}) {  // Ew.dEe with e > 0
+      while (exponent > exponent_ + 2 /*E+*/ && exponent + ed > eEnd) {
+        *--exponent = '0';
+      }
+    } else if (exponent == eEnd) {
+      *--exponent = '0';  // Ew.dE0 with zero-valued exponent
+    }
+  } else {  // ensure at least two exponent digits
+    while (exponent + 2 > eEnd) {
+      *--exponent = '0';
+    }
+  }
+  *--exponent = expo < 0 ? '-' : '+';
+  if (edit.expoDigits || exponent + 3 == eEnd) {
+    *--exponent = edit.descriptor == 'D' ? 'D' : 'E';  // not 'G'
+  }
+  length = eEnd - exponent;
+  return exponent;
+}
 
-template<int binaryPrecision = 53>
-class RealOutputEditing : public RealOutputEditingBase {
-public:
-  template<typename A>
-  RealOutputEditing(IoStatementState &io, A x)
-    : RealOutputEditingBase{io}, x_{x} {}
-  bool Edit(const DataEdit &);
+bool RealOutputEditingBase::EmitPrefix(
+    const DataEdit &edit, std::size_t length, std::size_t width) {
+  if (edit.IsListDirected()) {
+    int prefixLength{edit.descriptor == DataEdit::ListDirectedRealPart
+            ? 2
+            : edit.descriptor == DataEdit::ListDirectedImaginaryPart ? 0 : 1};
+    int suffixLength{edit.descriptor == DataEdit::ListDirectedRealPart ||
+                edit.descriptor == DataEdit::ListDirectedImaginaryPart
+            ? 1
+            : 0};
+    length += prefixLength + suffixLength;
+    ConnectionState &connection{io_.GetConnectionState()};
+    return (connection.positionInRecord == 0 ||
+               length <= connection.RemainingSpaceInRecord() ||
+               io_.AdvanceRecord()) &&
+        io_.Emit(" (", prefixLength);
+  } else if (width > length) {
+    return io_.EmitRepeated(' ', width - length);
+  } else {
+    return true;
+  }
+}
 
-private:
-  using BinaryFloatingPoint =
-      decimal::BinaryFloatingPointNumber<binaryPrecision>;
-
-  // The DataEdit arguments here are const references or copies so that
-  // the original DataEdit can safely serve multiple array elements when
-  // it has a repeat count.
-  bool EditEorDOutput(const DataEdit &);
-  bool EditFOutput(const DataEdit &);
-  DataEdit EditForGOutput(DataEdit);  // returns an E or F edit
-  bool EditEXOutput(const DataEdit &);
-  bool EditListDirectedOutput(const DataEdit &);
-
-  bool IsZero() const { return x_.IsZero(); }
-
-  decimal::ConversionToDecimalResult Convert(
-      int significantDigits, const DataEdit &, int flags = 0);
-
-  BinaryFloatingPoint x_;
-  char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +
-      EXTRA_DECIMAL_CONVERSION_SPACE];
-};
+bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
+  if (edit.descriptor == DataEdit::ListDirectedRealPart) {
+    return io_.Emit(edit.modes.editingFlags & decimalComma ? ";" : ",", 1);
+  } else if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
+    return io_.Emit(")", 1);
+  } else {
+    return true;
+  }
+}
 
 template<int binaryPrecision>
 decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
@@ -331,7 +400,7 @@ bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
     if (edit.IsListDirected()) {
       return EditListDirectedOutput(edit);
     }
-    io_.GetIoErrorHandler().Crash(
+    io_.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a REAL data item",
         edit.descriptor);
     return false;
@@ -339,5 +408,88 @@ bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
   return false;
 }
 
+bool ListDirectedLogicalOutput(IoStatementState &io,
+    ListDirectedStatementState<Direction::Output> &list, bool truth) {
+  return list.EmitLeadingSpaceOrAdvance(io, 1) && io.Emit(truth ? "T" : "F", 1);
 }
-#endif  // FORTRAN_RUNTIME_NUMERIC_OUTPUT_H_
+
+bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
+  switch (edit.descriptor) {
+  case 'L':
+  case 'G': return io.Emit(truth ? "T" : "F", 1);
+  default:
+    io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+        "Data edit descriptor '%c' may not be used with a LOGICAL data item",
+        edit.descriptor);
+    return false;
+  }
+}
+
+bool ListDirectedDefaultCharacterOutput(IoStatementState &io,
+    ListDirectedStatementState<Direction::Output> &list, const char *x,
+    std::size_t length) {
+  bool ok{list.EmitLeadingSpaceOrAdvance(io, length, true)};
+  MutableModes &modes{io.mutableModes()};
+  ConnectionState &connection{io.GetConnectionState()};
+  if (modes.delim) {
+    // Value is delimited with ' or " marks, and interior
+    // instances of that character are doubled.  When split
+    // over multiple lines, delimit each lines' part.
+    ok &= io.Emit(&modes.delim, 1);
+    for (std::size_t j{0}; j < length; ++j) {
+      if (list.NeedAdvance(connection, 2)) {
+        ok &= io.Emit(&modes.delim, 1) && io.AdvanceRecord() &&
+            io.Emit(&modes.delim, 1);
+      }
+      if (x[j] == modes.delim) {
+        ok &= io.EmitRepeated(modes.delim, 2);
+      } else {
+        ok &= io.Emit(&x[j], 1);
+      }
+    }
+    ok &= io.Emit(&modes.delim, 1);
+  } else {
+    // Undelimited list-directed output
+    std::size_t put{0};
+    while (put < length) {
+      auto chunk{std::min(length - put, connection.RemainingSpaceInRecord())};
+      ok &= io.Emit(x + put, chunk);
+      put += chunk;
+      if (put < length) {
+        ok &= io.AdvanceRecord() && io.Emit(" ", 1);
+      }
+    }
+    list.lastWasUndelimitedCharacter = true;
+  }
+  return ok;
+}
+
+bool EditDefaultCharacterOutput(IoStatementState &io, const DataEdit &edit,
+    const char *x, std::size_t length) {
+  switch (edit.descriptor) {
+  case 'A':
+  case 'G': break;
+  default:
+    io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+        "Data edit descriptor '%c' may not be used with a CHARACTER data item",
+        edit.descriptor);
+    return false;
+  }
+  int len{static_cast<int>(length)};
+  int width{edit.width.value_or(len)};
+  return io.EmitRepeated(' ', std::max(0, width - len)) &&
+      io.Emit(x, std::min(width, len));
+}
+
+template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
+    IoStatementState &, const DataEdit &, std::int64_t);
+template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
+    IoStatementState &, const DataEdit &, common::uint128_t);
+
+template class RealOutputEditing<8>;
+template class RealOutputEditing<11>;
+template class RealOutputEditing<24>;
+template class RealOutputEditing<53>;
+template class RealOutputEditing<64>;
+template class RealOutputEditing<113>;
+}

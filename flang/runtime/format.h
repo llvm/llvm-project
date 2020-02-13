@@ -13,7 +13,6 @@
 
 #include "environment.h"
 #include "io-error.h"
-#include "terminator.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Decimal/decimal.h"
 #include <cinttypes>
@@ -41,10 +40,11 @@ struct MutableModes {
 struct DataEdit {
   char descriptor;  // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
 
-  // Special internal data edit descriptors to distinguish list-directed I/O
+  // Special internal data edit descriptors for list-directed I/O
   static constexpr char ListDirected{'g'};  // non-COMPLEX list-directed
   static constexpr char ListDirectedRealPart{'r'};  // emit "(r," or "(r;"
   static constexpr char ListDirectedImaginaryPart{'z'};  // emit "z)"
+  static constexpr char ListDirectedNullValue{'n'};  // see 13.10.3.2
   constexpr bool IsListDirected() const {
     return descriptor == ListDirected || descriptor == ListDirectedRealPart ||
         descriptor == ListDirectedImaginaryPart;
@@ -66,9 +66,11 @@ struct DefaultFormatControlCallbacks : public IoErrorHandler {
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t);
   bool Emit(const char32_t *, std::size_t);
+  std::optional<char32_t> GetCurrentChar();
   bool AdvanceRecord(int = 1);
-  bool HandleAbsolutePosition(std::int64_t);
-  bool HandleRelativePosition(std::int64_t);
+  void BackspaceRecord();
+  void HandleAbsolutePosition(std::int64_t);
+  void HandleRelativePosition(std::int64_t);
 };
 
 // Generates a sequence of DataEdits from a FORMAT statement or
@@ -86,7 +88,7 @@ public:
   // Determines the max parenthesis nesting level by scanning and validating
   // the FORMAT string.
   static int GetMaxParenthesisNesting(
-      const Terminator &, const CharType *format, std::size_t formatLength);
+      IoErrorHandler &, const CharType *format, std::size_t formatLength);
 
   // For attempting to allocate in a user-supplied stack area
   static std::size_t GetNeededSize(int maxHeight) {
@@ -98,8 +100,9 @@ public:
   // along the way.
   DataEdit GetNextDataEdit(Context &, int maxRepeat = 1);
 
-  // Emit any remaining character literals after the last data item.
-  void FinishOutput(Context &);
+  // Emit any remaining character literals after the last data item (on output)
+  // and perform remaining record positioning actions.
+  void Finish(Context &);
 
 private:
   static constexpr std::uint8_t maxMaxHeight{100};
@@ -119,14 +122,16 @@ private:
     SkipBlanks();
     return offset_ < formatLength_ ? format_[offset_] : '\0';
   }
-  CharType GetNextChar(const Terminator &terminator) {
+  CharType GetNextChar(IoErrorHandler &handler) {
     SkipBlanks();
     if (offset_ >= formatLength_) {
-      terminator.Crash("FORMAT missing at least one ')'");
+      handler.SignalError(
+          IostatErrorInFormat, "FORMAT missing at least one ')'");
+      return '\n';
     }
     return format_[offset_++];
   }
-  int GetIntField(const Terminator &, CharType firstCh = '\0');
+  int GetIntField(IoErrorHandler &, CharType firstCh = '\0');
 
   // Advances through the FORMAT until the next data edit
   // descriptor has been found; handles control edit descriptors

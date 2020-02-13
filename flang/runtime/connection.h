@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Fortran I/O connection state (internal & external)
+// Fortran I/O connection state (abstracted over internal & external units)
 
 #ifndef FORTRAN_RUNTIME_IO_CONNECTION_H_
 #define FORTRAN_RUNTIME_IO_CONNECTION_H_
@@ -17,6 +17,7 @@
 
 namespace Fortran::runtime::io {
 
+enum class Direction { Output, Input };
 enum class Access { Sequential, Direct, Stream };
 
 inline bool IsRecordFile(Access a) { return a != Access::Stream; }
@@ -25,24 +26,30 @@ inline bool IsRecordFile(Access a) { return a != Access::Stream; }
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential};  // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  std::optional<std::size_t> recordLength;  // RECL= when fixed-length
+  std::optional<std::int64_t> recordLength;  // RECL= when fixed-length
   bool isUnformatted{false};  // FORM='UNFORMATTED'
   bool isUTF8{false};  // ENCODING='UTF-8'
 };
 
 struct ConnectionState : public ConnectionAttributes {
+  bool IsAtEOF() const;  // true when read has hit EOF or endfile record
   std::size_t RemainingSpaceInRecord() const;
-  // Positions in a record file (sequential or direct, but not stream)
-  std::int64_t recordOffsetInFile{0};
+  void HandleAbsolutePosition(std::int64_t);
+  void HandleRelativePosition(std::int64_t);
+
+  // Positions in a record file (sequential or direct, not stream)
   std::int64_t currentRecordNumber{1};  // 1 is first
   std::int64_t positionInRecord{0};  // offset in current record
   std::int64_t furthestPositionInRecord{0};  // max(positionInRecord)
   bool nonAdvancing{false};  // ADVANCE='NO'
+
   // Set at end of non-advancing I/O data transfer
   std::optional<std::int64_t> leftTabLimit;  // offset in current record
+
   // currentRecordNumber value captured after ENDFILE/REWIND/BACKSPACE statement
-  // on a sequential access file
+  // or an end-of-file READ condition on a sequential access file
   std::optional<std::int64_t> endfileRecordNumber;
+
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes;  // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
 };

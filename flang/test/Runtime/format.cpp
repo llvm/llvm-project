@@ -1,7 +1,8 @@
 // Tests basic FORMAT string traversal
 
+#include "testing.h"
 #include "../runtime/format-implementation.h"
-#include "../runtime/terminator.h"
+#include "../runtime/io-error.h"
 #include <cstdarg>
 #include <cstring>
 #include <iostream>
@@ -12,20 +13,19 @@ using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
 using namespace std::literals::string_literals;
 
-static int failures{0};
 using Results = std::vector<std::string>;
 
 // A test harness context for testing FormatControl
-class TestFormatContext : public Terminator {
+class TestFormatContext : public IoErrorHandler {
 public:
   using CharType = char;
-  TestFormatContext() : Terminator{"format.cpp", 1} {}
+  TestFormatContext() : IoErrorHandler{"format.cpp", 1} {}
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t);
   bool Emit(const char32_t *, std::size_t);
   bool AdvanceRecord(int = 1);
-  bool HandleRelativePosition(std::int64_t);
-  bool HandleAbsolutePosition(std::int64_t);
+  void HandleRelativePosition(std::int64_t);
+  void HandleAbsolutePosition(std::int64_t);
   void Report(const DataEdit &);
   void Check(Results &);
   Results results;
@@ -34,17 +34,6 @@ public:
 private:
   MutableModes mutableModes_;
 };
-
-// Override the runtime's Crash() for testing purposes
-[[noreturn]] void Fortran::runtime::Terminator::Crash(
-    const char *message, ...) const {
-  std::va_list ap;
-  va_start(ap, message);
-  char buffer[1000];
-  std::vsnprintf(buffer, sizeof buffer, message, ap);
-  va_end(ap);
-  throw std::string{buffer};
-}
 
 bool TestFormatContext::Emit(const char *s, std::size_t len) {
   std::string str{s, len};
@@ -67,18 +56,16 @@ bool TestFormatContext::AdvanceRecord(int n) {
   return true;
 }
 
-bool TestFormatContext::HandleAbsolutePosition(std::int64_t n) {
+void TestFormatContext::HandleAbsolutePosition(std::int64_t n) {
   results.push_back("T"s + std::to_string(n));
-  return true;
 }
 
-bool TestFormatContext::HandleRelativePosition(std::int64_t n) {
+void TestFormatContext::HandleRelativePosition(std::int64_t n) {
   if (n < 0) {
     results.push_back("TL"s + std::to_string(-n));
   } else {
     results.push_back(std::to_string(n) + 'X');
   }
-  return true;
 }
 
 void TestFormatContext::Report(const DataEdit &edit) {
@@ -104,7 +91,7 @@ void TestFormatContext::Report(const DataEdit &edit) {
 
 void TestFormatContext::Check(Results &expect) {
   if (expect != results) {
-    std::cerr << "expected:";
+    Fail() << "expected:";
     for (const std::string &s : expect) {
       std::cerr << ' ' << s;
     }
@@ -113,7 +100,6 @@ void TestFormatContext::Check(Results &expect) {
       std::cerr << ' ' << s;
     }
     std::cerr << '\n';
-    ++failures;
   }
   expect.clear();
   results.clear();
@@ -127,7 +113,10 @@ static void Test(int n, const char *format, Results &&expect, int repeat = 1) {
     for (int j{0}; j < n; ++j) {
       context.Report(control.GetNextDataEdit(context, repeat));
     }
-    control.FinishOutput(context);
+    control.Finish(context);
+    if (int iostat{context.GetIoStat()}) {
+      context.Crash("GetIoStat() == %d", iostat);
+    }
   } catch (const std::string &crash) {
     context.results.push_back("Crash:"s + crash);
   }
@@ -135,6 +124,7 @@ static void Test(int n, const char *format, Results &&expect, int repeat = 1) {
 }
 
 int main() {
+  StartTests();
   Test(1, "('PI=',F9.7)", Results{"'PI='", "F9.7"});
   Test(1, "(3HPI=F9.7)", Results{"'PI='", "F9.7"});
   Test(1, "(3HPI=/F9.7)", Results{"'PI='", "/", "F9.7"});
@@ -146,5 +136,5 @@ int main() {
   Test(2, "(*('PI=',F9.7,:),'tooFar')",
       Results{"'PI='", "F9.7", "'PI='", "F9.7"});
   Test(1, "(3F9.7)", Results{"2*F9.7"}, 2);
-  return failures > 0;
+  return EndTests();
 }

@@ -43,6 +43,7 @@ public:
   std::size_t FrameLength() const {
     return std::min<std::size_t>(length_ - frame_, size_ - (start_ + frame_));
   }
+  std::size_t BytesBufferedBeforeFrame() const { return frame_ - start_; }
 
   // Returns a short frame at a non-fatal EOF.  Can return a long frame as well.
   std::size_t ReadFrame(
@@ -52,10 +53,10 @@ public:
     if (at < fileOffset_ || at > fileOffset_ + length_) {
       Reset(at);
     }
-    frame_ = static_cast<std::size_t>(at - fileOffset_);
-    if (start_ + frame_ + bytes > size_) {
+    frame_ = at - fileOffset_;
+    if (static_cast<std::int64_t>(start_ + frame_ + bytes) > size_) {
       DiscardLeadingBytes(frame_, handler);
-      if (start_ + bytes > size_) {
+      if (static_cast<std::int64_t>(start_ + bytes) > size_) {
         // Frame would wrap around; shift current data (if any) to force
         // contiguity.
         RUNTIME_CHECK(handler, length_ < size_);
@@ -90,7 +91,8 @@ public:
 
   void WriteFrame(FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
     if (!dirty_ || at < fileOffset_ || at > fileOffset_ + length_ ||
-        start_ + (at - fileOffset_) + bytes > size_) {
+        start_ + (at - fileOffset_) + static_cast<std::int64_t>(bytes) >
+            size_) {
       Flush(handler);
       fileOffset_ = at;
       Reallocate(bytes, handler);
@@ -120,11 +122,11 @@ public:
 private:
   STORE &Store() { return static_cast<STORE &>(*this); }
 
-  void Reallocate(std::size_t bytes, const Terminator &terminator) {
+  void Reallocate(std::int64_t bytes, const Terminator &terminator) {
     if (bytes > size_) {
       char *old{buffer_};
       auto oldSize{size_};
-      size_ = std::max(bytes, minBuffer);
+      size_ = std::max<std::int64_t>(bytes, minBuffer);
       buffer_ =
           reinterpret_cast<char *>(AllocateMemoryOrCrash(terminator, size_));
       auto chunk{std::min<std::int64_t>(length_, oldSize - start_)};
@@ -141,7 +143,7 @@ private:
     dirty_ = false;
   }
 
-  void DiscardLeadingBytes(std::size_t n, const Terminator &terminator) {
+  void DiscardLeadingBytes(std::int64_t n, const Terminator &terminator) {
     RUNTIME_CHECK(terminator, length_ >= n);
     length_ -= n;
     if (length_ == 0) {
@@ -163,7 +165,7 @@ private:
   static constexpr std::size_t minBuffer{64 << 10};
 
   char *buffer_{nullptr};
-  std::size_t size_{0};  // current allocated buffer size
+  std::int64_t size_{0};  // current allocated buffer size
   FileOffset fileOffset_{0};  // file offset corresponding to buffer valid data
   std::int64_t start_{0};  // buffer_[] offset of valid data
   std::int64_t length_{0};  // valid data length (can wrap)

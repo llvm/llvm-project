@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Wraps pthread_mutex_t (or whatever)
+// Wraps a mutex
 
 #ifndef FORTRAN_RUNTIME_LOCK_H_
 #define FORTRAN_RUNTIME_LOCK_H_
 
+#include "terminator.h"
 #include <mutex>
 
 namespace Fortran::runtime {

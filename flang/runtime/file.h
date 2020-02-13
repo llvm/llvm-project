@@ -12,7 +12,6 @@
 #define FORTRAN_RUNTIME_FILE_H_
 
 #include "io-error.h"
-#include "lock.h"
 #include "memory.h"
 #include <cinttypes>
 #include <optional>
@@ -27,7 +26,6 @@ class OpenFile {
 public:
   using FileOffset = std::int64_t;
 
-  Lock &lock() { return lock_; }
   const char *path() const { return path_.get(); }
   void set_path(OwningPtr<char> &&, std::size_t bytes);
   std::size_t pathLength() const { return pathLength_; }
@@ -76,14 +74,12 @@ private:
     OwningPtr<Pending> next;
   };
 
-  // lock_ must be held for these
   void CheckOpen(const Terminator &);
   bool Seek(FileOffset, IoErrorHandler &);
   bool RawSeek(FileOffset);
   bool RawSeekToEnd();
   int PendingResult(const Terminator &, int);
 
-  Lock lock_;
   int fd_{-1};
   OwningPtr<char> path_;
   std::size_t pathLength_;

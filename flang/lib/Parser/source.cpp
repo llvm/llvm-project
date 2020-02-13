@@ -200,7 +200,7 @@ bool SourceFile::ReadFile(std::string errorPath, std::stringstream *error) {
   CharBuffer buffer;
   while (true) {
     std::size_t count;
-    char *to{buffer.FreeSpace(&count)};
+    char *to{buffer.FreeSpace(count)};
     ssize_t got{read(fileDescriptor_, to, count)};
     if (got < 0) {
       *error << "could not read " << errorPath << ": " << std::strerror(errno);

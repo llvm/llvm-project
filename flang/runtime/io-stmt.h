@@ -11,6 +11,7 @@
 #ifndef FORTRAN_RUNTIME_IO_STMT_H_
 #define FORTRAN_RUNTIME_IO_STMT_H_
 
+#include "connection.h"
 #include "descriptor.h"
 #include "file.h"
 #include "format.h"
@@ -22,19 +23,19 @@
 
 namespace Fortran::runtime::io {
 
-struct ConnectionState;
 class ExternalFileUnit;
 
 class OpenStatementState;
 class CloseStatementState;
 class NoopCloseStatementState;
-template<bool isInput, typename CHAR = char>
+
+template<Direction, typename CHAR = char>
 class InternalFormattedIoStatementState;
-template<bool isInput, typename CHAR = char> class InternalListIoStatementState;
-template<bool isInput, typename CHAR = char>
+template<Direction, typename CHAR = char> class InternalListIoStatementState;
+template<Direction, typename CHAR = char>
 class ExternalFormattedIoStatementState;
-template<bool isInput> class ExternalListIoStatementState;
-template<bool isInput> class UnformattedIoStatementState;
+template<Direction> class ExternalListIoStatementState;
+template<Direction> class UnformattedIoStatementState;
 
 // The Cookie type in the I/O API is a pointer (for C) to this class.
 class IoStatementState {
@@ -42,15 +43,20 @@ public:
   template<typename A> explicit IoStatementState(A &x) : u_{x} {}
 
   // These member functions each project themselves into the active alternative.
-  // They're used by per-data-item routines in the I/O API(e.g., OutputReal64)
+  // They're used by per-data-item routines in the I/O API (e.g., OutputReal64)
   // to interact with the state of the I/O statement in progress.
   // This design avoids virtual member functions and function pointers,
-  // which may not have good support in some use cases.
-  DataEdit GetNextDataEdit(int = 1);
+  // which may not have good support in some runtime environments.
+  std::optional<DataEdit> GetNextDataEdit(int = 1);
   bool Emit(const char *, std::size_t);
+  std::optional<char32_t> GetCurrentChar();  // vacant after end of record
   bool AdvanceRecord(int = 1);
+  void BackspaceRecord();
+  void HandleRelativePosition(std::int64_t);
   int EndIoStatement();
   ConnectionState &GetConnectionState();
+  IoErrorHandler &GetIoErrorHandler() const;
+  ExternalFileUnit *GetExternalFileUnit() const;  // null if internal unit
   MutableModes &mutableModes();
 
   // N.B.: this also works with base classes
@@ -64,21 +70,31 @@ public:
         },
         u_);
   }
-  IoErrorHandler &GetIoErrorHandler() const;
 
   bool EmitRepeated(char, std::size_t);
   bool EmitField(const char *, std::size_t length, std::size_t width);
+  void SkipSpaces(std::optional<int> &remaining);
+  std::optional<char32_t> NextInField(std::optional<int> &remaining);
+  std::optional<char32_t> GetNextNonBlank();  // can advance record
 
 private:
   std::variant<std::reference_wrapper<OpenStatementState>,
       std::reference_wrapper<CloseStatementState>,
       std::reference_wrapper<NoopCloseStatementState>,
-      std::reference_wrapper<InternalFormattedIoStatementState<false>>,
-      std::reference_wrapper<InternalFormattedIoStatementState<true>>,
-      std::reference_wrapper<InternalListIoStatementState<false>>,
-      std::reference_wrapper<ExternalFormattedIoStatementState<false>>,
-      std::reference_wrapper<ExternalListIoStatementState<false>>,
-      std::reference_wrapper<UnformattedIoStatementState<false>>>
+      std::reference_wrapper<
+          InternalFormattedIoStatementState<Direction::Output>>,
+      std::reference_wrapper<
+          InternalFormattedIoStatementState<Direction::Input>>,
+      std::reference_wrapper<InternalListIoStatementState<Direction::Output>>,
+      std::reference_wrapper<InternalListIoStatementState<Direction::Input>>,
+      std::reference_wrapper<
+          ExternalFormattedIoStatementState<Direction::Output>>,
+      std::reference_wrapper<
+          ExternalFormattedIoStatementState<Direction::Input>>,
+      std::reference_wrapper<ExternalListIoStatementState<Direction::Output>>,
+      std::reference_wrapper<ExternalListIoStatementState<Direction::Input>>,
+      std::reference_wrapper<UnformattedIoStatementState<Direction::Output>>,
+      std::reference_wrapper<UnformattedIoStatementState<Direction::Input>>>
       u_;
 };
 
@@ -87,54 +103,80 @@ private:
 struct IoStatementBase : public DefaultFormatControlCallbacks {
   using DefaultFormatControlCallbacks::DefaultFormatControlCallbacks;
   int EndIoStatement();
-  DataEdit GetNextDataEdit(int = 1);  // crashing default
+  std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
+  ExternalFileUnit *GetExternalFileUnit() const { return nullptr; }
 };
 
 struct InputStatementState {};
 struct OutputStatementState {};
-template<bool isInput>
-using IoDirectionState =
-    std::conditional_t<isInput, InputStatementState, OutputStatementState>;
+template<Direction D>
+using IoDirectionState = std::conditional_t<D == Direction::Input,
+    InputStatementState, OutputStatementState>;
 
 struct FormattedStatementState {};
 
-template<bool isInput> struct ListDirectedStatementState {};
-template<> struct ListDirectedStatementState<false /*output*/> {
+// Common state for list-directed internal & external I/O
+template<Direction> struct ListDirectedStatementState {};
+template<> struct ListDirectedStatementState<Direction::Output> {
   static std::size_t RemainingSpaceInRecord(const ConnectionState &);
   bool NeedAdvance(const ConnectionState &, std::size_t) const;
   bool EmitLeadingSpaceOrAdvance(
       IoStatementState &, std::size_t, bool isCharacter = false);
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1);
   bool lastWasUndelimitedCharacter{false};
 };
+template<> class ListDirectedStatementState<Direction::Input> {
+public:
+  // Skips value separators, handles repetition and null values.
+  // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
+  // when a null value appears.
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1);
 
-template<bool isInput, typename CHAR = char>
+private:
+  int remaining_{0};  // for "r*" repetition
+  std::int64_t initialRecordNumber_;
+  std::int64_t initialPositionInRecord_;
+  bool isFirstItem_{true};  // leading separator implies null first item
+  bool hitSlash_{false};  // once '/' is seen, nullify further items
+  bool realPart_{false};
+  bool imaginaryPart_{false};
+};
+
+template<Direction DIR, typename CHAR = char>
 class InternalIoStatementState : public IoStatementBase,
-                                 public IoDirectionState<isInput> {
+                                 public IoDirectionState<DIR> {
 public:
   using CharType = CHAR;
-  using Buffer = std::conditional_t<isInput, const CharType *, CharType *>;
+  using Buffer =
+      std::conditional_t<DIR == Direction::Input, const CharType *, CharType *>;
   InternalIoStatementState(Buffer, std::size_t,
       const char *sourceFile = nullptr, int sourceLine = 0);
   InternalIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   int EndIoStatement();
   bool Emit(const CharType *, std::size_t chars /* not bytes */);
+  std::optional<char32_t> GetCurrentChar();
   bool AdvanceRecord(int = 1);
+  void BackspaceRecord();
   ConnectionState &GetConnectionState() { return unit_; }
   MutableModes &mutableModes() { return unit_.modes; }
+  void HandleRelativePosition(std::int64_t);
+  void HandleAbsolutePosition(std::int64_t);
 
 protected:
   bool free_{true};
-  InternalDescriptorUnit<isInput> unit_;
+  InternalDescriptorUnit<DIR> unit_;
 };
 
-template<bool isInput, typename CHAR>
+template<Direction DIR, typename CHAR>
 class InternalFormattedIoStatementState
-  : public InternalIoStatementState<isInput, CHAR>,
+  : public InternalIoStatementState<DIR, CHAR>,
     public FormattedStatementState {
 public:
   using CharType = CHAR;
-  using typename InternalIoStatementState<isInput, CharType>::Buffer;
+  using typename InternalIoStatementState<DIR, CharType>::Buffer;
   InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
       const CharType *format, std::size_t formatLength,
       const char *sourceFile = nullptr, int sourceLine = 0);
@@ -143,42 +185,34 @@ public:
       int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   int EndIoStatement();
-  DataEdit GetNextDataEdit(int maxRepeat = 1) {
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
-  bool HandleRelativePosition(std::int64_t);
-  bool HandleAbsolutePosition(std::int64_t);
 
 private:
   IoStatementState ioStatementState_;  // points to *this
-  using InternalIoStatementState<isInput, CharType>::unit_;
+  using InternalIoStatementState<DIR, CharType>::unit_;
   // format_ *must* be last; it may be partial someday
   FormatControl<InternalFormattedIoStatementState> format_;
 };
 
-template<bool isInput, typename CHAR>
-class InternalListIoStatementState
-  : public InternalIoStatementState<isInput, CHAR>,
-    public ListDirectedStatementState<isInput> {
+template<Direction DIR, typename CHAR>
+class InternalListIoStatementState : public InternalIoStatementState<DIR, CHAR>,
+                                     public ListDirectedStatementState<DIR> {
 public:
   using CharType = CHAR;
-  using typename InternalIoStatementState<isInput, CharType>::Buffer;
+  using typename InternalIoStatementState<DIR, CharType>::Buffer;
   InternalListIoStatementState(Buffer internal, std::size_t internalLength,
       const char *sourceFile = nullptr, int sourceLine = 0);
   InternalListIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
-  DataEdit GetNextDataEdit(int maxRepeat = 1) {
-    DataEdit edit;
-    edit.descriptor = DataEdit::ListDirected;
-    edit.repeat = maxRepeat;
-    edit.modes = InternalIoStatementState<isInput, CharType>::mutableModes();
-    return edit;
-  }
+  using ListDirectedStatementState<DIR>::GetNextDataEdit;
 
 private:
-  using InternalIoStatementState<isInput, CharType>::unit_;
   IoStatementState ioStatementState_;  // points to *this
+  using InternalIoStatementState<DIR, CharType>::unit_;
 };
 
 class ExternalIoStatementBase : public IoStatementBase {
@@ -189,29 +223,31 @@ public:
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
   int EndIoStatement();
+  ExternalFileUnit *GetExternalFileUnit() { return &unit_; }
 
 private:
   ExternalFileUnit &unit_;
 };
 
-template<bool isInput>
+template<Direction DIR>
 class ExternalIoStatementState : public ExternalIoStatementBase,
-                                 public IoDirectionState<isInput> {
+                                 public IoDirectionState<DIR> {
 public:
   using ExternalIoStatementBase::ExternalIoStatementBase;
   int EndIoStatement();
   bool Emit(const char *, std::size_t chars /* not bytes */);
   bool Emit(const char16_t *, std::size_t chars /* not bytes */);
   bool Emit(const char32_t *, std::size_t chars /* not bytes */);
+  std::optional<char32_t> GetCurrentChar();
   bool AdvanceRecord(int = 1);
-  bool HandleRelativePosition(std::int64_t);
-  bool HandleAbsolutePosition(std::int64_t);
+  void BackspaceRecord();
+  void HandleRelativePosition(std::int64_t);
+  void HandleAbsolutePosition(std::int64_t);
 };
 
-template<bool isInput, typename CHAR>
-class ExternalFormattedIoStatementState
-  : public ExternalIoStatementState<isInput>,
-    public FormattedStatementState {
+template<Direction DIR, typename CHAR>
+class ExternalFormattedIoStatementState : public ExternalIoStatementState<DIR>,
+                                          public FormattedStatementState {
 public:
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
@@ -219,7 +255,8 @@ public:
       int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
   int EndIoStatement();
-  DataEdit GetNextDataEdit(int maxRepeat = 1) {
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
 
@@ -231,25 +268,18 @@ private:
   FormatControl<ExternalFormattedIoStatementState> format_;
 };
 
-template<bool isInput>
-class ExternalListIoStatementState
-  : public ExternalIoStatementState<isInput>,
-    public ListDirectedStatementState<isInput> {
+template<Direction DIR>
+class ExternalListIoStatementState : public ExternalIoStatementState<DIR>,
+                                     public ListDirectedStatementState<DIR> {
 public:
-  using ExternalIoStatementState<isInput>::ExternalIoStatementState;
-  DataEdit GetNextDataEdit(int maxRepeat = 1) {
-    DataEdit edit;
-    edit.descriptor = DataEdit::ListDirected;
-    edit.repeat = maxRepeat;
-    edit.modes = ExternalIoStatementState<isInput>::mutableModes();
-    return edit;
-  }
+  using ExternalIoStatementState<DIR>::ExternalIoStatementState;
+  using ListDirectedStatementState<DIR>::GetNextDataEdit;
 };
 
-template<bool isInput>
-class UnformattedIoStatementState : public ExternalIoStatementState<isInput> {
+template<Direction DIR>
+class UnformattedIoStatementState : public ExternalIoStatementState<DIR> {
 public:
-  using ExternalIoStatementState<isInput>::ExternalIoStatementState;
+  using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   int EndIoStatement();
 };
 
@@ -300,18 +330,28 @@ private:
   ConnectionState connection_;
 };
 
-extern template class InternalIoStatementState<false>;
-extern template class InternalIoStatementState<true>;
-extern template class InternalFormattedIoStatementState<false>;
-extern template class InternalFormattedIoStatementState<true>;
-extern template class InternalListIoStatementState<false>;
-extern template class ExternalIoStatementState<false>;
-extern template class ExternalFormattedIoStatementState<false>;
-extern template class ExternalListIoStatementState<false>;
-extern template class UnformattedIoStatementState<false>;
-extern template class FormatControl<InternalFormattedIoStatementState<false>>;
-extern template class FormatControl<InternalFormattedIoStatementState<true>>;
-extern template class FormatControl<ExternalFormattedIoStatementState<false>>;
+extern template class InternalIoStatementState<Direction::Output>;
+extern template class InternalIoStatementState<Direction::Input>;
+extern template class InternalFormattedIoStatementState<Direction::Output>;
+extern template class InternalFormattedIoStatementState<Direction::Input>;
+extern template class InternalListIoStatementState<Direction::Output>;
+extern template class InternalListIoStatementState<Direction::Input>;
+extern template class ExternalIoStatementState<Direction::Output>;
+extern template class ExternalIoStatementState<Direction::Input>;
+extern template class ExternalFormattedIoStatementState<Direction::Output>;
+extern template class ExternalFormattedIoStatementState<Direction::Input>;
+extern template class ExternalListIoStatementState<Direction::Output>;
+extern template class ExternalListIoStatementState<Direction::Input>;
+extern template class UnformattedIoStatementState<Direction::Output>;
+extern template class UnformattedIoStatementState<Direction::Input>;
+extern template class FormatControl<
+    InternalFormattedIoStatementState<Direction::Output>>;
+extern template class FormatControl<
+    InternalFormattedIoStatementState<Direction::Input>>;
+extern template class FormatControl<
+    ExternalFormattedIoStatementState<Direction::Output>>;
+extern template class FormatControl<
+    ExternalFormattedIoStatementState<Direction::Input>>;
 
 }
 #endif  // FORTRAN_RUNTIME_IO_STMT_H_
