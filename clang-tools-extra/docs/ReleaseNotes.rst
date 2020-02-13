@@ -93,6 +93,11 @@ New checks
 
   Finds implementations of -dealloc in Objective-C categories.
 
+- New :doc:`misc-no-recursion
+  <clang-tidy/checks/misc-no-recursion>` check.
+
+  Finds recursive functions and diagnoses them.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
