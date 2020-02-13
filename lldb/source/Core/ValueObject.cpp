@@ -390,7 +390,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   else
     return compiler_type;
 
-  ConstString class_name(class_type.GetConstTypeName());
+  ConstString class_name(class_type.GetTypeName());
   if (!class_name)
     return compiler_type;
 

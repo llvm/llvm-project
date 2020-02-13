@@ -56,7 +56,7 @@ ConstString ValueObjectDynamicValue::GetTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
     if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetConstTypeName();
+      return GetCompilerType().GetTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -75,7 +75,7 @@ ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
     if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetConstQualifiedTypeName();
+      return GetCompilerType().GetTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
