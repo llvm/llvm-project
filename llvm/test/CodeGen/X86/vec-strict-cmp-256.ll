@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -O3 | FileCheck %s --check-prefixes=CHECK,AVX,AVX-64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=CHECK,AVX512-64
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512F-32
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -O3 | FileCheck %s --check-prefixes=CHECK,AVX512F-64
 
 define <8 x i32> @test_v8f32_oeq_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, <8 x float> %f2) #0 {
 ; AVX-32-LABEL: test_v8f32_oeq_q:
@@ -40,6 +42,34 @@ define <8 x i32> @test_v8f32_oeq_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpeqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_oeq_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_oeq_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -84,6 +114,34 @@ define <8 x i32> @test_v8f32_ogt_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmplt_oqps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ogt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplt_oqps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ogt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplt_oqps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -128,6 +186,34 @@ define <8 x i32> @test_v8f32_oge_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmple_oqps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_oge_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmple_oqps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_oge_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmple_oqps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -171,6 +257,34 @@ define <8 x i32> @test_v8f32_olt_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmplt_oqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_olt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplt_oqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_olt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplt_oqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -214,6 +328,34 @@ define <8 x i32> @test_v8f32_ole_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmple_oqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ole_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmple_oqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ole_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmple_oqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -257,6 +399,34 @@ define <8 x i32> @test_v8f32_one_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpneq_oqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_one_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_oqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_one_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_oqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -300,6 +470,34 @@ define <8 x i32> @test_v8f32_ord_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpordps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ord_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpordps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ord_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpordps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -343,6 +541,34 @@ define <8 x i32> @test_v8f32_ueq_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpeq_uqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ueq_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_uqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ueq_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_uqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -386,6 +612,34 @@ define <8 x i32> @test_v8f32_ugt_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnle_uqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ugt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnle_uqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ugt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnle_uqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -429,6 +683,34 @@ define <8 x i32> @test_v8f32_uge_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnlt_uqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_uge_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlt_uqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_uge_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlt_uqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -473,6 +755,34 @@ define <8 x i32> @test_v8f32_ult_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnle_uqps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ult_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnle_uqps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ult_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnle_uqps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -517,6 +827,34 @@ define <8 x i32> @test_v8f32_ule_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnlt_uqps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ule_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlt_uqps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ule_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlt_uqps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -560,6 +898,34 @@ define <8 x i32> @test_v8f32_une_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpneqps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_une_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneqps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_une_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneqps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -603,6 +969,34 @@ define <8 x i32> @test_v8f32_uno_q(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpunordps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_uno_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpunordps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_uno_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpunordps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
@@ -646,6 +1040,34 @@ define <4 x i64> @test_v4f64_oeq_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpeqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_oeq_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_oeq_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -690,6 +1112,34 @@ define <4 x i64> @test_v4f64_ogt_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmplt_oqpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ogt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplt_oqpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ogt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplt_oqpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -734,6 +1184,34 @@ define <4 x i64> @test_v4f64_oge_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmple_oqpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_oge_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmple_oqpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_oge_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmple_oqpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -777,6 +1255,34 @@ define <4 x i64> @test_v4f64_olt_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmplt_oqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_olt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplt_oqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_olt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplt_oqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -820,6 +1326,34 @@ define <4 x i64> @test_v4f64_ole_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmple_oqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ole_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmple_oqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ole_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmple_oqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -863,6 +1397,34 @@ define <4 x i64> @test_v4f64_one_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpneq_oqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_one_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_oqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_one_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_oqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -906,6 +1468,34 @@ define <4 x i64> @test_v4f64_ord_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpordpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ord_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpordpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ord_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpordpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -949,6 +1539,34 @@ define <4 x i64> @test_v4f64_ueq_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpeq_uqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ueq_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_uqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ueq_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_uqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -992,6 +1610,34 @@ define <4 x i64> @test_v4f64_ugt_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnle_uqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ugt_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnle_uqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ugt_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnle_uqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -1035,6 +1681,34 @@ define <4 x i64> @test_v4f64_uge_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnlt_uqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_uge_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlt_uqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_uge_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlt_uqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -1079,6 +1753,34 @@ define <4 x i64> @test_v4f64_ult_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnle_uqpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ult_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnle_uqpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ult_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnle_uqpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -1123,6 +1825,34 @@ define <4 x i64> @test_v4f64_ule_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnlt_uqpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ule_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlt_uqpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ule_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlt_uqpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -1166,6 +1896,34 @@ define <4 x i64> @test_v4f64_une_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpneqpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_une_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneqpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_une_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneqpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -1209,6 +1967,34 @@ define <4 x i64> @test_v4f64_uno_q(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpunordpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_uno_q:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpunordpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_uno_q:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpunordpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
@@ -1252,6 +2038,34 @@ define <8 x i32> @test_v8f32_oeq_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpeq_osps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_oeq_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_osps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_oeq_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_osps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -1296,6 +2110,34 @@ define <8 x i32> @test_v8f32_ogt_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpltps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ogt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpltps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ogt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpltps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -1340,6 +2182,34 @@ define <8 x i32> @test_v8f32_oge_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpleps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_oge_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpleps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_oge_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpleps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -1383,6 +2253,34 @@ define <8 x i32> @test_v8f32_olt_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpltps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_olt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpltps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_olt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpltps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -1426,6 +2324,34 @@ define <8 x i32> @test_v8f32_ole_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpleps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ole_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpleps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ole_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpleps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -1469,6 +2395,34 @@ define <8 x i32> @test_v8f32_one_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpneq_osps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_one_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_osps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_one_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_osps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -1512,6 +2466,34 @@ define <8 x i32> @test_v8f32_ord_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpord_sps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ord_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpord_sps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ord_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpord_sps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -1555,6 +2537,34 @@ define <8 x i32> @test_v8f32_ueq_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpeq_usps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ueq_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_usps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ueq_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_usps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -1598,6 +2608,34 @@ define <8 x i32> @test_v8f32_ugt_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnleps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ugt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnleps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ugt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnleps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -1641,6 +2679,34 @@ define <8 x i32> @test_v8f32_uge_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnltps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_uge_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnltps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_uge_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnltps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -1685,6 +2751,34 @@ define <8 x i32> @test_v8f32_ult_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnleps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ult_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnleps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ult_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnleps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -1729,6 +2823,34 @@ define <8 x i32> @test_v8f32_ule_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpnltps %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_ule_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnltps %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_ule_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnltps %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -1772,6 +2894,34 @@ define <8 x i32> @test_v8f32_une_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpneq_usps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_une_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_usps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_une_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_usps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -1815,6 +2965,34 @@ define <8 x i32> @test_v8f32_uno_s(<8 x i32> %a, <8 x i32> %b, <8 x float> %f1, 
 ; AVX512-64-NEXT:    vcmpunord_sps %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v8f32_uno_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovaps 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpunord_sps %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v8f32_uno_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpunord_sps %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <8 x i1> @llvm.experimental.constrained.fcmps.v8f32(
                                                <8 x float> %f1, <8 x float> %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
@@ -1858,6 +3036,34 @@ define <4 x i64> @test_v4f64_oeq_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpeq_ospd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_oeq_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_ospd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_oeq_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_ospd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"oeq",
                                                metadata !"fpexcept.strict") #0
@@ -1902,6 +3108,34 @@ define <4 x i64> @test_v4f64_ogt_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpltpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ogt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpltpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ogt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpltpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict") #0
@@ -1946,6 +3180,34 @@ define <4 x i64> @test_v4f64_oge_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmplepd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_oge_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplepd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_oge_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplepd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"oge",
                                                metadata !"fpexcept.strict") #0
@@ -1989,6 +3251,34 @@ define <4 x i64> @test_v4f64_olt_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpltpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_olt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpltpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_olt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpltpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"olt",
                                                metadata !"fpexcept.strict") #0
@@ -2032,6 +3322,34 @@ define <4 x i64> @test_v4f64_ole_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmplepd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ole_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmplepd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ole_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmplepd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ole",
                                                metadata !"fpexcept.strict") #0
@@ -2075,6 +3393,34 @@ define <4 x i64> @test_v4f64_one_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpneq_ospd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_one_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_ospd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_one_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_ospd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"one",
                                                metadata !"fpexcept.strict") #0
@@ -2118,6 +3464,34 @@ define <4 x i64> @test_v4f64_ord_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpord_spd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ord_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpord_spd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ord_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpord_spd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ord",
                                                metadata !"fpexcept.strict") #0
@@ -2161,6 +3535,34 @@ define <4 x i64> @test_v4f64_ueq_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpeq_uspd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ueq_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpeq_uspd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ueq_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpeq_uspd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ueq",
                                                metadata !"fpexcept.strict") #0
@@ -2204,6 +3606,34 @@ define <4 x i64> @test_v4f64_ugt_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnlepd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ugt_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlepd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ugt_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlepd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ugt",
                                                metadata !"fpexcept.strict") #0
@@ -2247,6 +3677,34 @@ define <4 x i64> @test_v4f64_uge_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnltpd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_uge_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnltpd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_uge_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnltpd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"uge",
                                                metadata !"fpexcept.strict") #0
@@ -2291,6 +3749,34 @@ define <4 x i64> @test_v4f64_ult_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnlepd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ult_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnlepd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ult_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnlepd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ult",
                                                metadata !"fpexcept.strict") #0
@@ -2335,6 +3821,34 @@ define <4 x i64> @test_v4f64_ule_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpnltpd %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_ule_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpnltpd %zmm2, %zmm3, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_ule_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpnltpd %zmm2, %zmm3, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"ule",
                                                metadata !"fpexcept.strict") #0
@@ -2378,6 +3892,34 @@ define <4 x i64> @test_v4f64_une_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpneq_uspd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_une_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpneq_uspd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_une_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpneq_uspd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"une",
                                                metadata !"fpexcept.strict") #0
@@ -2421,6 +3963,34 @@ define <4 x i64> @test_v4f64_uno_s(<4 x i64> %a, <4 x i64> %b, <4 x double> %f1,
 ; AVX512-64-NEXT:    vcmpunord_spd %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_v4f64_uno_s:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    andl $-32, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
+; AVX512F-32-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-32-NEXT:    vmovapd 8(%ebp), %ymm3
+; AVX512F-32-NEXT:    vcmpunord_spd %zmm3, %zmm2, %k1
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: test_v4f64_uno_s:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-64-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-64-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-64-NEXT:    vcmpunord_spd %zmm3, %zmm2, %k1
+; AVX512F-64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-64-NEXT:    retq
   %cond = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f64(
                                                <4 x double> %f1, <4 x double> %f2, metadata !"uno",
                                                metadata !"fpexcept.strict") #0
