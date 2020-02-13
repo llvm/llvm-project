@@ -160,7 +160,7 @@ tools.extend([
 
 # The following tools are optional
 tools.extend([
-    ToolSubst('llvm-go', unresolved='ignore'),
+    ToolSubst('go', unresolved='ignore'),
     ToolSubst('llvm-mt', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch3', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch4', unresolved='ignore'),
