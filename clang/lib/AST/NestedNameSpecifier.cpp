@@ -482,9 +482,11 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
         (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
         (unsigned)(BufferSize + (End - Start)));
     char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
-    memcpy(NewBuffer, Buffer, BufferSize);
-    if (BufferCapacity)
-      free(Buffer);
+    if (Buffer) {
+      memcpy(NewBuffer, Buffer, BufferSize);
+      if (BufferCapacity)
+        free(Buffer);
+    }
     Buffer = NewBuffer;
     BufferCapacity = NewCapacity;
   }
