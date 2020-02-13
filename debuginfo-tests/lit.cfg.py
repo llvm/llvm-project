@@ -104,7 +104,7 @@ dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
 dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
 if lldb_path is not None:
-  dexter_test_cmd += ' --lldb-executable {}'.format(lldb_path)
+  dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
 tools.append(ToolSubst('%dexter', dexter_test_cmd))
 
 # For testing other bits of dexter that aren't under the "test" subcommand,

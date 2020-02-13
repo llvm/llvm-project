@@ -41,7 +41,7 @@ def _get_potential_debuggers():  # noqa
 
 
 def _warn_meaningless_option(context, option):
-    if context.options.list_debuggers:
+    if hasattr(context.options, 'list_debuggers'):
         return
 
     warn(context,
