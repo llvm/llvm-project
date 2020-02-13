@@ -1,5 +1,4 @@
 add_llvm_library(MLIRQuantOps
-  IR/DialectRegistration.cpp
   IR/QuantOps.cpp
   IR/QuantTypes.cpp
   IR/TypeDetail.h

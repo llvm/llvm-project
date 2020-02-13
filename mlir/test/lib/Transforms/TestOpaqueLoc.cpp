@@ -80,5 +80,9 @@ struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
 
 } // end anonymous namespace
 
-static PassRegistration<TestOpaqueLoc>
-    pass("test-opaque-loc", "Changes all leaf locations to opaque locations");
+namespace mlir {
+void registerTestOpaqueLoc() {
+  PassRegistration<TestOpaqueLoc> pass(
+      "test-opaque-loc", "Changes all leaf locations to opaque locations");
+}
+} // namespace mlir

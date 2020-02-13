@@ -27,6 +27,10 @@ struct TestAllReduceLoweringPass
 };
 } // namespace
 
-static PassRegistration<TestAllReduceLoweringPass>
-    pass("test-all-reduce-lowering",
-         "Lowers gpu.all-reduce ops within the GPU dialect.");
+namespace mlir {
+void registerTestAllReduceLoweringPass() {
+  PassRegistration<TestAllReduceLoweringPass> pass(
+      "test-all-reduce-lowering",
+      "Lowers gpu.all-reduce ops within the GPU dialect.");
+}
+} // namespace mlir

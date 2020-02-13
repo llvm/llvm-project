@@ -37,10 +37,6 @@ std::unique_ptr<Pass> createCSEPass();
 std::unique_ptr<OpPassBase<FuncOp>>
 createVectorizePass(ArrayRef<int64_t> virtualVectorSize);
 
-/// Creates a pass to allow independent testing of vectorizer functionality with
-/// FileCheck.
-std::unique_ptr<OpPassBase<FuncOp>> createVectorizerTestPass();
-
 /// Creates a loop unrolling pass with the provided parameters.
 /// 'getUnrollFactor' is a function callback for clients to supply a function
 /// that computes an unroll factor - the callback takes precedence over unroll
@@ -91,12 +87,6 @@ std::unique_ptr<OpPassBase<FuncOp>> createLowerAffinePass();
 std::unique_ptr<OpPassBase<FuncOp>>
 createLoopTilingPass(uint64_t cacheSizeBytes);
 
-/// Creates a pass that performs parametric tiling so that the outermost loops
-/// have the given fixed number of iterations.  Assumes outermost loop nests
-/// are permutable.
-std::unique_ptr<OpPassBase<FuncOp>>
-createSimpleParametricTilingPass(ArrayRef<int64_t> outerLoopSizes);
-
 /// Creates a pass that transforms perfectly nested loops with independent
 /// bounds into a single loop.
 std::unique_ptr<OpPassBase<FuncOp>> createLoopCoalescingPass();
@@ -116,11 +106,12 @@ std::unique_ptr<OpPassBase<FuncOp>> createMemRefDataFlowOptPass();
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
 
-/// Creates a pass which tests loop fusion utilities.
-std::unique_ptr<OpPassBase<FuncOp>> createTestLoopFusionPass();
+/// Creates a pass which prints the list of ops and the number of occurences in
+/// the module.
+std::unique_ptr<OpPassBase<ModuleOp>> createPrintOpStatsPass();
 
-/// Creates a pass which inlines calls and callable operations as defined by the
-/// CallGraph.
+/// Creates a pass which inlines calls and callable operations as defined by
+/// the CallGraph.
 std::unique_ptr<Pass> createInlinerPass();
 
 /// Creates a pass which delete symbol operations that are unreachable. This

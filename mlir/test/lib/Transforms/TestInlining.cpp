@@ -60,5 +60,8 @@ struct Inliner : public FunctionPass<Inliner> {
 };
 } // end anonymous namespace
 
-static PassRegistration<Inliner> pass("test-inline",
-                                      "Test inlining region calls");
+namespace mlir {
+void registerInliner() {
+  PassRegistration<Inliner>("test-inline", "Test inlining region calls");
+}
+} // namespace mlir

@@ -159,4 +159,3 @@ namespace NVVM {
 } // namespace NVVM
 } // namespace mlir
 
-static DialectRegistration<NVVMDialect> nvvmDialect;

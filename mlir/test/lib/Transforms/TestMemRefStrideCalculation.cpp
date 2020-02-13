@@ -50,5 +50,9 @@ void TestMemRefStrideCalculation::runOnFunction() {
   llvm::outs().flush();
 }
 
-static PassRegistration<TestMemRefStrideCalculation>
-    pass("test-memref-stride-calculation", "Test operation constant folding");
+namespace mlir {
+void registerTestMemRefStrideCalculation() {
+  PassRegistration<TestMemRefStrideCalculation> pass(
+      "test-memref-stride-calculation", "Test operation constant folding");
+}
+} // namespace mlir

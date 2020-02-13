@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: mlir-edsc-builder-api-test | FileCheck %s
+// RUN: mlir-edsc-builder-api-test | FileCheck %s -dump-input-on-failure
 
 #include "mlir/Dialect/AffineOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
@@ -37,6 +37,15 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 
 static MLIRContext &globalContext() {
+  static bool init_once = []() {
+    registerDialect<AffineOpsDialect>();
+    registerDialect<linalg::LinalgDialect>();
+    registerDialect<loop::LoopOpsDialect>();
+    registerDialect<StandardOpsDialect>();
+    registerDialect<vector::VectorOpsDialect>();
+    return true;
+  }();
+  (void)init_once;
   static thread_local MLIRContext context;
   return context;
 }

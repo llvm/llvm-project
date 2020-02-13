@@ -30,5 +30,3 @@ namespace omp {
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
 } // namespace omp
 } // namespace mlir
-
-static DialectRegistration<OpenMPDialect> ompDialect;
