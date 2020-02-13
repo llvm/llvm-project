@@ -3641,8 +3641,11 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
                                      Fn);
   } else {
-    // Use llvm function name.
     Name = Fn->getName();
+
+    if (const auto *BD = dyn_cast<BlockDecl>(D))
+      LinkageName = Name;
+
     Flags |= llvm::DINode::FlagPrototyped;
   }
   if (Name.startswith("\01"))
