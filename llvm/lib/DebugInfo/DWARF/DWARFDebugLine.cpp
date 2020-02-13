@@ -331,10 +331,11 @@ Error DWARFDebugLine::Prologue::parse(
     // Treat this error as unrecoverable - we cannot be sure what any of
     // the data represents including the length field, so cannot skip it or make
     // any reasonable assumptions.
-    return createStringError(errc::not_supported,
-                       "parsing line table prologue at offset 0x%8.8" PRIx64
-                       " found unsupported version 0x%2.2" PRIx16,
-                       PrologueOffset, getVersion());
+    return createStringError(
+        errc::not_supported,
+        "parsing line table prologue at offset 0x%8.8" PRIx64
+        " found unsupported version %" PRIu16,
+        PrologueOffset, getVersion());
 
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(OffsetPtr);
