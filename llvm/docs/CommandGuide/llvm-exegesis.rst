@@ -175,7 +175,8 @@ OPTIONS
 
 .. option:: -opcode-index=<LLVM opcode index>
 
- Specify the opcode to measure, by index. See example 1 for details.
+ Specify the opcode to measure, by index. Specifying `-1` will result
+ in measuring every existing opcode. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
 .. option:: -opcode-name=<opcode name 1>,<opcode name 2>,...
