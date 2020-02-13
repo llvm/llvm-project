@@ -559,3 +559,47 @@ entry:
 }
 
 declare float @llvm.ceil.f32(float)
+
+define dso_local double @test_rint(double %d) local_unnamed_addr {
+; BE-LABEL: test_rint:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    xsrdpic f1, f1
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: test_rint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsrdpic f1, f1
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: test_rint:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    xsrdpic f1, f1
+; FAST-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.rint.f64(double %d)
+  ret double %0
+}
+
+declare double @llvm.rint.f64(double)
+
+define dso_local float @test_rintf(float %f) local_unnamed_addr {
+; BE-LABEL: test_rintf:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    xsrdpic f1, f1
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: test_rintf:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsrdpic f1, f1
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: test_rintf:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    xsrdpic f1, f1
+; FAST-NEXT:    blr
+entry:
+  %0 = tail call float @llvm.rint.f32(float %f)
+  ret float %0
+}
+
+declare float @llvm.rint.f32(float)
