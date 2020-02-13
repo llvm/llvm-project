@@ -267,6 +267,17 @@ public:
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       Block = TSD->Cache.allocate(ClassId);
+      // If the allocation failed, the most likely reason with a 64-bit primary
+      // is the region being full. In that event, retry once using the
+      // immediately larger class (except if the failing class was already the
+      // largest). This will waste some memory but will allow the application to
+      // not fail.
+      if (SCUDO_ANDROID) {
+        if (UNLIKELY(!Block)) {
+          if (ClassId < SizeClassMap::LargestClassId)
+            Block = TSD->Cache.allocate(++ClassId);
+        }
+      }
       if (UnlockRequired)
         TSD->unlock();
     } else {
