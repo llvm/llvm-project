@@ -37,15 +37,15 @@
 # RUN:    | FileCheck -check-prefix=ERR2 %s
 # ERR2: invalid argument: --section-start .text=1Q0000
 
-# RUN: not ld.lld %t.o -Ttext=1w0000 -o %t6 2>&1 \
+# RUN: not ld.lld %t.o -Ttext=1w0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR3 %s
 # ERR3: invalid argument: -Ttext=1w0000
 
-# RUN: not ld.lld %t.o -Tbss=1w0000 -o %t6 2>&1 \
+# RUN: not ld.lld %t.o -Tbss=1w0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR4 %s
 # ERR4: invalid argument: -Tbss=1w0000
 
-# RUN: not ld.lld %t.o -Tdata=1w0000 -o %t6 2>&1 \
+# RUN: not ld.lld %t.o -Tdata=1w0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR5 %s
 # ERR5: invalid argument: -Tdata=1w0000
 

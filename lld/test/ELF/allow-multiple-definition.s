@@ -2,8 +2,8 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/allow-multiple-definition.s -o %t2
-# RUN: not ld.lld %t1 %t2 -o %t3
-# RUN: not ld.lld --allow-multiple-definition --no-allow-multiple-definition %t1 %t2 -o %t3
+# RUN: not ld.lld %t1 %t2 -o /dev/null
+# RUN: not ld.lld --allow-multiple-definition --no-allow-multiple-definition %t1 %t2 -o /dev/null
 # RUN: ld.lld --allow-multiple-definition --fatal-warnings %t1 %t2 -o %t3
 # RUN: ld.lld --allow-multiple-definition --fatal-warnings %t2 %t1 -o %t4
 # RUN: llvm-objdump -d %t3 | FileCheck %s

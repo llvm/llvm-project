@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux -dwarf-version=5 %s -o %t.o
-# RUN: not ld.lld %t.o -o %t1 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # Check we do not crash and able to report the source location.
 

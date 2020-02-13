@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o %t1.bc %s
 ; RUN: llvm-as -o %t2.bc %S/Inputs/irmover-error.ll
-; RUN: not ld.lld %t1.bc %t2.bc -o %t 2>&1 | FileCheck %s
+; RUN: not ld.lld %t1.bc %t2.bc -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: linking module flags 'foo': IDs have conflicting values
 

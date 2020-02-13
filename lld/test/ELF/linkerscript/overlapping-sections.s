@@ -5,7 +5,7 @@
 # RUN:   .sec1 0x8000 : AT(0x8000) { sec1_start = .; *(.first_sec) sec1_end = .;} \
 # RUN:   .sec2 0x8800 : AT(0x8080) { sec2_start = .; *(.second_sec) sec2_end = .;} \
 # RUN: }" > %t-lma.script
-# RUN: not ld.lld -o %t.so --script %t-lma.script %t.o -shared 2>&1 | FileCheck %s -check-prefix LMA-OVERLAP-ERR
+# RUN: not ld.lld -o /dev/null --script %t-lma.script %t.o -shared 2>&1 | FileCheck %s -check-prefix LMA-OVERLAP-ERR
 # LMA-OVERLAP-ERR:      error: section .sec1 load address range overlaps with .sec2
 # LMA-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
 # LMA-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8080, 0x817F]
@@ -36,7 +36,7 @@
 # RUN:   .sec1 0x8000 : AT(0x8000) { sec1_start = .; *(.first_sec) sec1_end = .;} \
 # RUN:   .sec2 0x8020 : AT(0x8800) { sec2_start = .; *(.second_sec) sec2_end = .;} \
 # RUN: }" > %t-vaddr.script
-# RUN: not ld.lld -o %t.so --script %t-vaddr.script %t.o -shared 2>&1 | FileCheck %s -check-prefix VADDR-OVERLAP-ERR
+# RUN: not ld.lld -o /dev/null --script %t-vaddr.script %t.o -shared 2>&1 | FileCheck %s -check-prefix VADDR-OVERLAP-ERR
 # VADDR-OVERLAP-ERR:      error: section .sec1 virtual address range overlaps with .sec2
 # VADDR-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
 # VADDR-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8020, 0x811F]
@@ -63,7 +63,7 @@
 # RUN:   .sec2 0x8040 : { sec2_start = .; *(.second_sec) sec2_end = .;} \
 # RUN: }" > %t-both-overlap.script
 
-# RUN: not ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared 2>&1 | FileCheck %s -check-prefix BOTH-OVERLAP-ERR
+# RUN: not ld.lld -o /dev/null --script %t-both-overlap.script %t.o -shared 2>&1 | FileCheck %s -check-prefix BOTH-OVERLAP-ERR
 
 # BOTH-OVERLAP-ERR:      error: section .sec1 file range overlaps with .sec2
 # BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x2000, 0x20FF]

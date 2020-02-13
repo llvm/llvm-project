@@ -3,12 +3,12 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-no-split-stack.s -o %t2.o
 
-# RUN: not ld.lld --defsym __morestack=0x10010000 %t1.o %t2.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld --defsym __morestack=0x10010000 %t1.o %t2.o -o /dev/null 2>&1 | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-no-split-stack.s -o %t2.o
 
-# RUN: not ld.lld --defsym __morestack=0x10010000 %t1.o %t2.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld --defsym __morestack=0x10010000 %t1.o %t2.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: {{.*}}.o:(.text): wrong_regs (with -fsplit-stack) calls nss_callee (without -fsplit-stack), but couldn't adjust its prologue
 
