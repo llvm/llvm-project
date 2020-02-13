@@ -48,7 +48,7 @@ class MemoryCacheTestCase(TestBase):
 
         # Check the value of my_ints[0] is the same as set in main.cpp.
         line = self.res.GetOutput().splitlines()[100]
-        self.assertTrue(0x00000042 == int(line.split(':')[1], 0))
+        self.assertEquals(0x00000042, int(line.split(':')[1], 0))
 
         # Change the value of my_ints[0] in memory.
         self.runCmd("memory write -s 4 `&my_ints` AA")
@@ -59,4 +59,4 @@ class MemoryCacheTestCase(TestBase):
 
         # Check the value of my_ints[0] have been updated correctly.
         line = self.res.GetOutput().splitlines()[100]
-        self.assertTrue(0x000000AA == int(line.split(':')[1], 0))
+        self.assertEquals(0x000000AA, int(line.split(':')[1], 0))

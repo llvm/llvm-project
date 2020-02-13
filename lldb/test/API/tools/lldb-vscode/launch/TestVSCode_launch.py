@@ -102,7 +102,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             if line.startswith(prefix):
                 found = True
-                self.assertTrue(program_parent_dir == line[len(prefix):],
+                self.assertEquals(program_parent_dir, line[len(prefix):],
                                 "lldb-vscode working dir '%s' == '%s'" % (
                                     program_parent_dir, line[6:]))
         self.assertTrue(found, "verified lldb-vscode working directory")
@@ -127,7 +127,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             if line.startswith(prefix):
                 found = True
                 quoted_path = '"%s"' % (program_dir)
-                self.assertTrue(quoted_path == line[len(prefix):],
+                self.assertEquals(quoted_path, line[len(prefix):],
                                 "lldb-vscode working dir %s == %s" % (
                                     quoted_path, line[6:]))
         self.assertTrue(found, 'found "sourcePath" in console output')
@@ -144,7 +144,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
         # Now get the STDOUT and verify our program argument is correct
         output = self.get_stdout()
-        self.assertTrue(output is None or len(output) == 0,
+        self.assertEquals(output, None,
                         "expect no program output")
 
     @skipIfWindows
@@ -296,7 +296,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Set 2 breakoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEquals(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
 
         # Continue after launch and hit the first breakpoint.

@@ -25,7 +25,7 @@ class TestVarPath(TestBase):
     def verify_point(self, frame, var_name, var_typename, x_value, y_value):
         v = frame.GetValueForVariablePath(var_name)
         self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (var_name))
-        self.assertTrue(v.GetType().GetName() == var_typename, 
+        self.assertEquals(v.GetType().GetName(), var_typename, 
                         "Make sure '%s' has type '%s'" % (var_name, var_typename))
 
         if '*' in var_typename:
@@ -43,15 +43,15 @@ class TestVarPath(TestBase):
 
         v = frame.GetValueForVariablePath(valid_x_path)
         self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (valid_x_path))
-        self.assertTrue(v.GetValue() == str(x_value), "Make sure '%s' has a value of %i" % (valid_x_path, x_value))
-        self.assertTrue(v.GetType().GetName() == "int", "Make sure '%s' has type 'int'" % (valid_x_path))
+        self.assertEquals(v.GetValue(), str(x_value), "Make sure '%s' has a value of %i" % (valid_x_path, x_value))
+        self.assertEquals(v.GetType().GetName(), "int", "Make sure '%s' has type 'int'" % (valid_x_path))
         v = frame.GetValueForVariablePath(invalid_x_path)
         self.assertTrue(v.GetError().Fail(), "Make sure we don't find '%s'" % (invalid_x_path))
 
         v = frame.GetValueForVariablePath(valid_y_path)
         self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (valid_y_path))
-        self.assertTrue(v.GetValue() == str(y_value), "Make sure '%s' has a value of %i" % (valid_y_path, y_value))
-        self.assertTrue(v.GetType().GetName() == "int", "Make sure '%s' has type 'int'" % (valid_y_path))
+        self.assertEquals(v.GetValue(), str(y_value), "Make sure '%s' has a value of %i" % (valid_y_path, y_value))
+        self.assertEquals(v.GetType().GetName(), "int", "Make sure '%s' has type 'int'" % (valid_y_path))
         v = frame.GetValueForVariablePath(invalid_y_path)
         self.assertTrue(v.GetError().Fail(), "Make sure we don't find '%s'" % (invalid_y_path))
 

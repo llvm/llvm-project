@@ -55,7 +55,7 @@ class TestCPPExceptionBreakpoint (TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, exception_bkpt)
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEquals(len(thread_list), 1,
                         "One thread stopped at the exception breakpoint.")
 
     def do_dummy_target_cpp_exception_bkpt(self):
@@ -82,5 +82,5 @@ class TestCPPExceptionBreakpoint (TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
            process, exception_bkpt)
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEquals(len(thread_list), 1,
                        "One thread stopped at the exception breakpoint.")

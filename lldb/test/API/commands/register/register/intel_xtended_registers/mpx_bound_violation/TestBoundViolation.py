@@ -48,5 +48,5 @@ class RegisterCommandsTestCase(TestBase):
                                    'fault address:', 'lower bound:', 'upper bound:'])
 
         self.runCmd("continue")
-        self.assertTrue(process.GetState() == lldb.eStateExited,
+        self.assertEquals(process.GetState(), lldb.eStateExited,
                         PROCESS_EXITED)

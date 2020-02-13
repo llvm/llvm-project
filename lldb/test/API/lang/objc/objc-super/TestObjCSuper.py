@@ -47,7 +47,7 @@ class TestObjCSuperMethod(TestBase):
         self.assertTrue(
             len(thread_list) != 0,
             "No thread stopped at our breakpoint.")
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEquals(len(thread_list), 1,
                         "More than one thread stopped at our breakpoint.")
 
         # Now make sure we can call a function in the class method we've
@@ -57,8 +57,8 @@ class TestObjCSuperMethod(TestBase):
 
         cmd_value = frame.EvaluateExpression("[self get]")
         self.assertTrue(cmd_value.IsValid())
-        self.assertTrue(cmd_value.GetValueAsUnsigned() == 2)
+        self.assertEquals(cmd_value.GetValueAsUnsigned(), 2)
 
         cmd_value = frame.EvaluateExpression("[super get]")
         self.assertTrue(cmd_value.IsValid())
-        self.assertTrue(cmd_value.GetValueAsUnsigned() == 1)
+        self.assertEquals(cmd_value.GetValueAsUnsigned(), 1)

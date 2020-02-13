@@ -112,7 +112,7 @@ class TestGdbRemoteThreadsInStopReply(
         pcs_text = results["thread-pcs"]
         thread_ids = threads_text.split(",")
         pcs = pcs_text.split(",")
-        self.assertTrue(len(thread_ids) == len(pcs))
+        self.assertEquals(len(thread_ids), len(pcs))
 
         thread_pcs = dict()
         for i in range(0, len(pcs)):

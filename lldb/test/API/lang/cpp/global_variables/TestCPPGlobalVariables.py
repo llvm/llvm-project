@@ -31,9 +31,9 @@ class GlobalVariablesCppTestCase(TestBase):
 
         # Check that we can access g_file_global_int by its mangled name
         addr = target.EvaluateExpression("&abc::g_file_global_int").GetValueAsUnsigned()
-        self.assertTrue(addr != 0)
+        self.assertNotEqual(addr, 0)
         mangled = lldb.SBAddress(addr, target).GetSymbol().GetMangledName()
-        self.assertTrue(mangled != None)
+        self.assertNotEqual(mangled, None)
         gv = target.FindFirstGlobalVariable(mangled)
         self.assertTrue(gv.IsValid())
         self.assertEqual(gv.GetName(), "abc::g_file_global_int")

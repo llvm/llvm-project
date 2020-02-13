@@ -42,7 +42,7 @@ class ObjCDynamicValueTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         var = self.frame().FindVariable("foo")
@@ -60,5 +60,5 @@ class ObjCDynamicValueTestCase(TestBase):
         self.assertTrue(var_pte_type.GetDirectBaseClassAtIndex(
             0).IsValid(), "Foo * has a valid base class")
 
-        self.assertTrue(var_ptr_type.GetDirectBaseClassAtIndex(0).GetName() == var_pte_type.GetDirectBaseClassAtIndex(
+        self.assertEquals(var_ptr_type.GetDirectBaseClassAtIndex(0).GetName(), var_pte_type.GetDirectBaseClassAtIndex(
             0).GetName(), "Foo and its pointer type don't agree on their base class")

@@ -39,7 +39,7 @@ class FindAppInMacOSAppBundle(TestBase):
         self.assertTrue(exe_module_spec.GetFilename(), "TestApp")
 
         bkpt = target.BreakpointCreateBySourceRegex("Set a breakpoint here", self.main_source_file)
-        self.assertTrue(bkpt.GetNumLocations() == 1, "Couldn't set a breakpoint in the main app")
+        self.assertEquals(bkpt.GetNumLocations(), 1, "Couldn't set a breakpoint in the main app")
 
         if lldbplatformutil.getPlatform() == "macosx":
             launch_info = lldb.SBLaunchInfo(None)
@@ -53,6 +53,6 @@ class FindAppInMacOSAppBundle(TestBase):
             # Frame #0 should be at our breakpoint.
             threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
 
-            self.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
+            self.assertEquals(len(threads), 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
 
 
