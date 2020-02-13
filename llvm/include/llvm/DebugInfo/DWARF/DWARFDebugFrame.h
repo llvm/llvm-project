@@ -223,14 +223,14 @@ private:
 /// DWARF Frame Description Entry (FDE)
 class FDE : public FrameEntry {
 public:
-  FDE(uint64_t Offset, uint64_t Length, int64_t LinkedCIEOffset,
+  FDE(uint64_t Offset, uint64_t Length, uint64_t CIEPointer,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
       Optional<uint64_t> LSDAAddress, Triple::ArchType Arch)
       : FrameEntry(FK_FDE, Offset, Length,
                    Cie ? Cie->getCodeAlignmentFactor() : 0,
                    Cie ? Cie->getDataAlignmentFactor() : 0,
                    Arch),
-        LinkedCIEOffset(LinkedCIEOffset), InitialLocation(InitialLocation),
+        CIEPointer(CIEPointer), InitialLocation(InitialLocation),
         AddressRange(AddressRange), LinkedCIE(Cie), LSDAAddress(LSDAAddress) {}
 
   ~FDE() override = default;
@@ -246,8 +246,11 @@ public:
   static bool classof(const FrameEntry *FE) { return FE->getKind() == FK_FDE; }
 
 private:
-  /// The following fields are defined in section 6.4.1 of the DWARF standard v3
-  const uint64_t LinkedCIEOffset;
+  /// The following fields are defined in section 6.4.1 of the DWARFv3 standard.
+  /// Note that CIE pointers in EH FDEs, unlike DWARF FDEs, contain relative
+  /// offsets to the linked CIEs. See the following link for more info:
+  /// https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+  const uint64_t CIEPointer;
   const uint64_t InitialLocation;
   const uint64_t AddressRange;
   const CIE *LinkedCIE;
