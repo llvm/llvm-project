@@ -73,9 +73,11 @@ define i32 @f64libcalls(double %x, double %y, i32 %z) {
  %e = call double @llvm.log.f64(double %d)
  ; CHECK: f64.call $push{{[0-9]}}=, exp
  %f = call double @llvm.exp.f64(double %e)
+ ; CHECK: f64.call $push{{[0-9]}}=, cbrt
+ %g = call fast double @llvm.pow.f64(double %f, double 0x3FD5555555555555)
  ; CHECK: i32.call $push{{[0-9]}}=, lround
- %g = call i32 @llvm.lround(double %f)
- ret i32 %g
+ %h = call i32 @llvm.lround(double %g)
+ ret i32 %h
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see
