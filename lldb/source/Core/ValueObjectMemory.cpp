@@ -117,7 +117,7 @@ CompilerType ValueObjectMemory::GetCompilerTypeImpl() {
 ConstString ValueObjectMemory::GetTypeName() {
   if (m_type_sp)
     return m_type_sp->GetName();
-  return m_compiler_type.GetConstTypeName();
+  return m_compiler_type.GetTypeName();
 }
 
 ConstString ValueObjectMemory::GetDisplayTypeName() {
