@@ -212,6 +212,14 @@ static void mulRegionBuilder(ArrayRef<BlockArgument> args) {
   linalg_yield((a * b).getValue());
 }
 
+void mlir::edsc::ops::mulRegionBuilder(ArrayRef<BlockArgument> args) {
+  using edsc::op::operator+;
+  using edsc::op::operator*;
+  assert(args.size() == 2 && "expected 2 block arguments");
+  ValueHandle a(args[0]), b(args[1]);
+  linalg_yield((a * b).getValue());
+}
+
 void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgument> args) {
   using edsc::op::operator+;
   using edsc::op::operator*;
@@ -291,7 +299,8 @@ Operation *mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
 }
 
 Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          ValueHandle vC) {
+                                          ValueHandle vC,
+                                          MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -300,12 +309,13 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
     {IteratorType::Parallel, IteratorType::Parallel, IteratorType::Reduction},
     {A({m, k}), B({k, n})},
     {C({m, n})},
-    macRegionBuilder);
+    regionBuilder);
   // clang-format on
 }
 
 Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          RankedTensorType tC) {
+                                          RankedTensorType tC,
+                                          MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -314,12 +324,13 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
     {IteratorType::Parallel, IteratorType::Parallel, IteratorType::Reduction},
     {A({m, k}), B({k, n})},
     {C({m, n})},
-    mulRegionBuilder);
+    regionBuilder);
   // clang-format on
 }
 
 Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          ValueHandle vC, RankedTensorType tD) {
+                                          ValueHandle vC, RankedTensorType tD,
+                                          MatmulRegionBuilder regionBuilder) {
   // clang-format off
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
@@ -328,7 +339,7 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
     {IteratorType::Parallel, IteratorType::Parallel, IteratorType::Reduction},
     {A({m, k}), B({k, n}), C({m, n})},
     {D({m, n})},
-    macRegionBuilder);
+    regionBuilder);
   // clang-format on
 }
 
