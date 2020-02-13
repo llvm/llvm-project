@@ -192,16 +192,16 @@ TEST_FUNC(builder_blocks) {
       // b2 has not yet been constructed, need to come back later.
       // This is a byproduct of non-structured control-flow.
   );
-  BlockBuilder(&b2, {&arg3, &arg4})([&] { br(b1, {arg3, arg4}); });
+  BlockBuilder(&b2, {&arg3, &arg4})([&] { std_br(b1, {arg3, arg4}); });
   // The insertion point within the toplevel function is now past b2, we will
   // need to get back the entry block.
   // This is what happens with unstructured control-flow..
   BlockBuilder(b1, Append())([&] {
     r = arg1 + arg2;
-    br(b2, {arg1, r});
+    std_br(b2, {arg1, r});
   });
   // Get back to entry block and add a branch into b1
-  BlockBuilder(functionBlock, Append())([&] { br(b1, {c1, c2}); });
+  BlockBuilder(functionBlock, Append())([&] { std_br(b1, {c1, c2}); });
 
   // clang-format off
   // CHECK-LABEL: @builder_blocks
@@ -234,15 +234,15 @@ TEST_FUNC(builder_blocks_eager) {
   BlockHandle b1, b2;
   { // Toplevel function scope.
     // Build a new block for b1 eagerly.
-    br(&b1, {&arg1, &arg2}, {c1, c2});
+    std_br(&b1, {&arg1, &arg2}, {c1, c2});
     // Construct a new block b2 explicitly with a branch into b1.
     BlockBuilder(&b2, {&arg3, &arg4})([&]{
-        br(b1, {arg3, arg4});
+        std_br(b1, {arg3, arg4});
     });
     /// And come back to append into b1 once b2 exists.
     BlockBuilder(b1, Append())([&]{
         r = arg1 + arg2;
-        br(b2, {arg1, r});
+        std_br(b2, {arg1, r});
     });
   }
 
@@ -278,7 +278,7 @@ TEST_FUNC(builder_cond_branch) {
   BlockBuilder(&b2, {&arg2, &arg3})([&] { std_ret(); });
   // Get back to entry block and add a conditional branch
   BlockBuilder(functionBlock, Append())([&] {
-    cond_br(funcArg, b1, {c32}, b2, {c64, c42});
+    std_cond_br(funcArg, b1, {c32}, b2, {c64, c42});
   });
 
   // clang-format off
@@ -311,7 +311,7 @@ TEST_FUNC(builder_cond_branch_eager) {
 
   // clang-format off
   BlockHandle b1, b2;
-  cond_br(funcArg, &b1, {&arg1}, {c32}, &b2, {&arg2, &arg3}, {c64, c42});
+  std_cond_br(funcArg, &b1, {&arg1}, {c32}, &b2, {&arg2, &arg3}, {c64, c42});
   BlockBuilder(b1, Append())([]{
       std_ret();
   });
