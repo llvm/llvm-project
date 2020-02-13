@@ -218,15 +218,15 @@ _start:
 # RUN:   --check-prefix=INVRSP
 # INVRSP: invalid response file quoting: patatino
 
-# RUN: not ld.lld %t.foo -o %t2 2>&1 | \
+# RUN: not ld.lld %t.foo -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=MISSING %s
 # MISSING: cannot open {{.*}}.foo: {{[Nn]}}o such file or directory
 
-# RUN: not ld.lld -o %t2 2>&1 | \
+# RUN: not ld.lld -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=NO_INPUT %s
 # NO_INPUT: ld.lld{{.*}}: no input files
 
-# RUN: not ld.lld %t.no.such.file -o %t2 2>&1 | \
+# RUN: not ld.lld %t.no.such.file -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=CANNOT_OPEN %s
 # CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
 
@@ -237,12 +237,12 @@ _start:
 # UNKNOWN: unknown argument '--foo'
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: not ld.lld %t %t -o %t2 2>&1 | FileCheck --check-prefix=DUP %s
+# RUN: not ld.lld %t %t -o /dev/null 2>&1 | FileCheck --check-prefix=DUP %s
 # DUP:      duplicate symbol: _start
 # DUP-NEXT: >>> defined at {{.*}}:(.text+0x0)
 # DUP-NEXT: >>> defined at {{.*}}:(.text+0x0)
 
-# RUN: not ld.lld %t -o %t -m wrong_emul_fbsd 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
+# RUN: not ld.lld %t -o /dev/null -m wrong_emul_fbsd 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
 # UNKNOWN_EMUL: unknown emulation: wrong_emul_fbsd
 
 # RUN: not ld.lld %t --lto-partitions=0 2>&1 | FileCheck --check-prefix=NOTHREADS %s

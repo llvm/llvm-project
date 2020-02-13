@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
-# RUN: not ld.lld %t1.o %t1.o -o %t2 2>&1 | FileCheck -check-prefix=DEMANGLE %s
+# RUN: not ld.lld %t1.o %t1.o -o /dev/null 2>&1 | FileCheck -check-prefix=DEMANGLE %s
 
 # DEMANGLE:       duplicate symbol: mul(double, double)
 # DEMANGLE-NEXT:  >>> defined at {{.*}}:(.text+0x0)
@@ -10,7 +10,7 @@
 # DEMANGLE-NEXT:  >>> defined at {{.*}}:(.text+0x0)
 # DEMANGLE-NEXT:  >>> defined at {{.*}}:(.text+0x0)
 
-# RUN: not ld.lld %t1.o %t1.o -o %t2 --no-demangle 2>&1 | \
+# RUN: not ld.lld %t1.o %t1.o -o /dev/null --no-demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=NO_DEMANGLE %s
 
 # NO_DEMANGLE:      duplicate symbol: _Z3muldd
@@ -20,15 +20,15 @@
 # NO_DEMANGLE-NEXT: >>> defined at {{.*}}:(.text+0x0)
 # NO_DEMANGLE-NEXT: >>> defined at {{.*}}:(.text+0x0)
 
-# RUN: not ld.lld %t1.o %t1.o -o %t2 --demangle --no-demangle 2>&1 | \
+# RUN: not ld.lld %t1.o %t1.o -o /dev/null --demangle --no-demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=NO_DEMANGLE %s
-# RUN: not ld.lld %t1.o %t1.o -o %t2 --no-demangle --demangle 2>&1 | \
+# RUN: not ld.lld %t1.o %t1.o -o /dev/null --no-demangle --demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=DEMANGLE %s
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/conflict.s -o %t2.o
 # RUN: rm -f %t3.a
 # RUN: llvm-ar rcs %t3.a %t2.o
-# RUN: not ld.lld %t1.o %t3.a -u baz -o %t2 2>&1 | FileCheck -check-prefix=ARCHIVE %s
+# RUN: not ld.lld %t1.o %t3.a -u baz -o /dev/null 2>&1 | FileCheck -check-prefix=ARCHIVE %s
 
 # ARCHIVE:      duplicate symbol: foo
 # ARCHIVE-NEXT: >>> defined at {{.*}}:(.text+0x0)

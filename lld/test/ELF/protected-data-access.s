@@ -6,7 +6,7 @@
 # RUN: ld.lld %t2.o -o %t2.so -shared
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t.o
 
-# RUN: not ld.lld %t.o %t2.so -o %t 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: not ld.lld %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 # ERR: error: cannot preempt symbol: foo
 
 ## Allow that if --ignore-data-address-equality is specified.

@@ -33,7 +33,7 @@
 # DEFCOMM-NEXT:   Section: COMMON
 # DEFCOMM-NEXT: }
 
-# RUN: not ld.lld -shared --no-define-common %t1.o -o %t 2>&1 | FileCheck --check-prefix=ERROR %s
+# RUN: not ld.lld -shared --no-define-common %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR %s
 # ERROR: error: -no-define-common not supported in non relocatable output
 
 .comm common,4,4

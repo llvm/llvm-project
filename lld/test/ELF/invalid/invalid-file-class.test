@@ -12,8 +12,8 @@
 # RUN: echo -e -n "\x7f\x45\x4c\x46\x00\x01\x01\x03\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00" > %t/invalid.o
 
 # RUN: llvm-ar --format=gnu cr %t/invalid-class.a %t/invalid.o
-# RUN: not ld.lld -whole-archive %t/invalid-class.a -o %t2 2>&1 | FileCheck %s
+# RUN: not ld.lld -whole-archive %t/invalid-class.a -o /dev/null 2>&1 | FileCheck %s
 # CHECK: invalid-class.a(invalid.o): corrupted ELF file: invalid file class
 
-# RUN: not ld.lld %t/invalid.o -o %t2 2>&1 | FileCheck %s --check-prefix=OBJ
+# RUN: not ld.lld %t/invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJ
 # OBJ: invalid.o: corrupted ELF file: invalid file class
