@@ -316,20 +316,6 @@ static std::string GetDedupTokenFromCmdOutput(const std::string &S) {
   return S.substr(Beg, End - Beg);
 }
 
-// Return true on success, false otherwise.
-static bool ExecuteCommandWithPopen(const Command &Cmd, std::string *CmdOutput) {
-  FILE *Pipe = OpenProcessPipe(Cmd.toString().c_str(), "r");
-  if (!Pipe)
-    return false;
-
-  if (CmdOutput) {
-    char TmpBuffer[128];
-    while (fgets(TmpBuffer, sizeof(TmpBuffer), Pipe))
-      CmdOutput->append(TmpBuffer);
-  }
-  return CloseProcessPipe(Pipe) == 0;
-}
-
 int CleanseCrashInput(const Vector<std::string> &Args,
                        const FuzzingOptions &Options) {
   if (Inputs->size() != 1 || !Flags.exact_artifact_path) {
@@ -417,7 +403,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
 
     Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
     std::string CmdOutput;
-    bool Success = ExecuteCommandWithPopen(Cmd, &CmdOutput);
+    bool Success = ExecuteCommand(Cmd, &CmdOutput);
     if (Success) {
       Printf("ERROR: the input %s did not crash\n", CurrentFilePath.c_str());
       exit(1);
@@ -437,7 +423,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     Cmd.addFlag("exact_artifact_path", ArtifactPath);
     Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
     CmdOutput.clear();
-    Success = ExecuteCommandWithPopen(Cmd, &CmdOutput);
+    Success = ExecuteCommand(Cmd, &CmdOutput);
     Printf("%s", CmdOutput.c_str());
     if (Success) {
       if (Flags.exact_artifact_path) {
