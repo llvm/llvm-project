@@ -799,12 +799,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
       setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Legal);
+      setOperationAction(ISD::FRINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::f64, Legal);
+      setOperationAction(ISD::FRINT, MVT::f64, Legal);
 
       setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
 
       setOperationAction(ISD::MUL, MVT::v2f64, Legal);
       setOperationAction(ISD::FMA, MVT::v2f64, Legal);

@@ -2563,6 +2563,14 @@ def : Pat<(f32 (fceil f32:$S)),
 def : Pat<(f32 (ftrunc f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIZ
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(f32 (frint f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSRDPIC
+                                   (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+def : Pat<(v4f32 (frint v4f32:$S)), (v4f32 (XVRSPIC $S))>;
+
+// Rounding for double precision.
+def : Pat<(f64 (frint f64:$S)), (f64 (XSRDPIC $S))>;
+def : Pat<(v2f64 (frint v2f64:$S)), (v2f64 (XVRDPIC $S))>;
 }
 
 // Materialize a zero-vector of long long
