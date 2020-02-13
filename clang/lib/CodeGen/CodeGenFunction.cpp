@@ -32,6 +32,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
@@ -104,6 +105,14 @@ CodeGenFunction::~CodeGenFunction() {
 
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
+
+  // If we have an OpenMPIRBuilder we want to finalize functions (incl.
+  // outlining etc) at some point. Doing it once the function codegen is done
+  // seems to be a reasonable spot. We do it here, as opposed to the deletion
+  // time of the CodeGenModule, because we have to ensure the IR has not yet
+  // been "emitted" to the outside, thus, modifications are still sensible.
+  if (llvm::OpenMPIRBuilder *OMPBuilder = CGM.getOpenMPIRBuilder())
+    OMPBuilder->finalize();
 }
 
 // Map the LangOption for rounding mode into
