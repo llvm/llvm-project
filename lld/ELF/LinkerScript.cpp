@@ -246,32 +246,30 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
   return changed;
 }
 
-// This method is used to handle INSERT AFTER statement. Here we rebuild
-// the list of script commands to mix sections inserted into.
+// Process INSERT [AFTER|BEFORE] commands. For each command, we move the
+// specified output section to the designated place.
 void LinkerScript::processInsertCommands() {
-  std::vector<BaseCommand *> v;
-  auto insert = [&](std::vector<BaseCommand *> &from) {
-    v.insert(v.end(), from.begin(), from.end());
-    from.clear();
-  };
-
-  for (BaseCommand *base : sectionCommands) {
-    if (auto *os = dyn_cast<OutputSection>(base)) {
-      insert(insertBeforeCommands[os->name]);
-      v.push_back(base);
-      insert(insertAfterCommands[os->name]);
+  for (const InsertCommand &cmd : insertCommands) {
+    // If cmd.os is empty, it may have been discarded by
+    // adjustSectionsBeforeSorting(). We do not handle such output sections.
+    auto from = llvm::find(sectionCommands, cmd.os);
+    if (from == sectionCommands.end())
       continue;
+    sectionCommands.erase(from);
+
+    auto insertPos = llvm::find_if(sectionCommands, [&cmd](BaseCommand *base) {
+      auto *to = dyn_cast<OutputSection>(base);
+      return to != nullptr && to->name == cmd.where;
+    });
+    if (insertPos == sectionCommands.end()) {
+      error("unable to insert " + cmd.os->name +
+            (cmd.isAfter ? " after " : " before ") + cmd.where);
+    } else {
+      if (cmd.isAfter)
+        ++insertPos;
+      sectionCommands.insert(insertPos, cmd.os);
     }
-    v.push_back(base);
   }
-
-  for (auto &cmds : {insertBeforeCommands, insertAfterCommands})
-    for (const std::pair<StringRef, std::vector<BaseCommand *>> &p : cmds)
-      if (!p.second.empty())
-        error("unable to INSERT AFTER/BEFORE " + p.first +
-              ": section not defined");
-
-  sectionCommands = std::move(v);
 }
 
 // Symbols defined in script should not be inlined by LTO. At the same time

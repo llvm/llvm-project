@@ -208,6 +208,12 @@ struct ByteCommand : BaseCommand {
   unsigned size;
 };
 
+struct InsertCommand {
+  OutputSection *os;
+  bool isAfter;
+  StringRef where;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -311,10 +317,9 @@ public:
   // A list of symbols referenced by the script.
   std::vector<llvm::StringRef> referencedSymbols;
 
-  // Used to implement INSERT [AFTER|BEFORE]. Contains commands that need
-  // to be inserted into SECTIONS commands list.
-  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> insertAfterCommands;
-  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> insertBeforeCommands;
+  // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
+  // to be reordered.
+  std::vector<InsertCommand> insertCommands;
 };
 
 extern LinkerScript *script;
