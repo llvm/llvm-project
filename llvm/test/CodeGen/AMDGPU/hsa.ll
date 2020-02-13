@@ -19,8 +19,7 @@
 ; ELF: }
 
 ; ELF: SHT_NOTE
-; ELF: Flags [ (0x2)
-; ELF: SHF_ALLOC (0x2)
+; ELF: Flags [ (0x0)
 ; ELF: ]
 ; ELF: SectionData (
 ; ELF: 0000: 04000000 08000000 01000000 414D4400
