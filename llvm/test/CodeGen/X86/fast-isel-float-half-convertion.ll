@@ -1,4 +1,5 @@
 ; RUN: llc -fast-isel -fast-isel-abort=1 -asm-verbose=false -mtriple=x86_64-unknown-unknown -mattr=+f16c < %s | FileCheck %s
+; RUN: llc -fast-isel -fast-isel-abort=1 -asm-verbose=false -mtriple=x86_64-unknown-unknown -mattr=+avx512vl < %s | FileCheck %s
 
 ; Verify that fast-isel correctly expands float-half conversions.
 
