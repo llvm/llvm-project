@@ -7527,7 +7527,8 @@ ChangeStatus Attributor::run() {
     for (auto &V : ToBeDeletedInsts) {
       if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
         CGModifiedFunctions.insert(I->getFunction());
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        if (!I->getType()->isVoidTy())
+          I->replaceAllUsesWith(UndefValue::get(I->getType()));
         if (!isa<PHINode>(I) && isInstructionTriviallyDead(I))
           DeadInsts.push_back(I);
         else
@@ -8251,9 +8252,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     A.identifyDefaultAbstractAttributes(*F);
   }
 
+  Module &M = *Functions.front()->getParent();
   ChangeStatus Changed = A.run();
-  assert(!verifyModule(*Functions.front()->getParent(), &errs()) &&
-         "Module verification failed!");
+  assert(!verifyModule(M, &errs()) && "Module verification failed!");
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
                     << " functions, result: " << Changed << ".\n");
   return Changed == ChangeStatus::CHANGED;
