@@ -190,13 +190,6 @@ const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
                                         CallingConv::ID /*CC*/) const {
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-  if (MF.getFunction().hasFnAttribute("interrupt")) {
-    if (Subtarget.hasStdExtD())
-      return CSR_XLEN_F64_Interrupt_RegMask;
-    if (Subtarget.hasStdExtF())
-      return CSR_XLEN_F32_Interrupt_RegMask;
-    return CSR_Interrupt_RegMask;
-  }
 
   switch (Subtarget.getTargetABI()) {
   default:
