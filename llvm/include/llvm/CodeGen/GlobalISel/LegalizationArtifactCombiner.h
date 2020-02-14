@@ -280,9 +280,36 @@ public:
     }
   }
 
+  /// Try to replace DstReg with SrcReg or build a COPY instruction
+  /// depending on the register constraints.
+  static void replaceRegOrBuildCopy(Register DstReg, Register SrcReg,
+                                    MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &Builder,
+                                    SmallVectorImpl<Register> &UpdatedDefs,
+                                    GISelObserverWrapper &Observer) {
+    if (!llvm::canReplaceReg(DstReg, SrcReg, MRI)) {
+      Builder.buildCopy(DstReg, SrcReg);
+      UpdatedDefs.push_back(DstReg);
+      return;
+    }
+    SmallVector<MachineInstr *, 4> UseMIs;
+    // Get the users and notify the observer before replacing.
+    for (auto &UseMI : MRI.use_instructions(DstReg)) {
+      UseMIs.push_back(&UseMI);
+      Observer.changingInstr(UseMI);
+    }
+    // Replace the registers.
+    MRI.replaceRegWith(DstReg, SrcReg);
+    UpdatedDefs.push_back(SrcReg);
+    // Notify the observer that we changed the instructions.
+    for (auto *UseMI : UseMIs)
+      Observer.changedInstr(*UseMI);
+  }
+
   bool tryCombineMerges(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
-                        SmallVectorImpl<Register> &UpdatedDefs) {
+                        SmallVectorImpl<Register> &UpdatedDefs,
+                        GISelObserverWrapper &Observer) {
     assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
     unsigned NumDefs = MI.getNumOperands() - 1;
@@ -395,10 +422,12 @@ public:
              "Bitcast and the other kinds of conversions should "
              "have happened earlier");
 
+      Builder.setInstr(MI);
       for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
-        Register NewDef = MergeI->getOperand(Idx + 1).getReg();
-        MRI.replaceRegWith(MI.getOperand(Idx).getReg(), NewDef);
-        UpdatedDefs.push_back(NewDef);
+        Register DstReg = MI.getOperand(Idx).getReg();
+        Register SrcReg = MergeI->getOperand(Idx + 1).getReg();
+        replaceRegOrBuildCopy(DstReg, SrcReg, MRI, Builder, UpdatedDefs,
+                              Observer);
       }
     }
 
@@ -498,7 +527,7 @@ public:
       Changed = tryCombineSExt(MI, DeadInsts, UpdatedDefs);
       break;
     case TargetOpcode::G_UNMERGE_VALUES:
-      Changed = tryCombineMerges(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineMerges(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_EXTRACT:
       Changed = tryCombineExtract(MI, DeadInsts, UpdatedDefs);

@@ -53,6 +53,7 @@ macro(test_fuzzer stdlib)
 
     set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
     set(LIBFUZZER_TEST_APPLE_PLATFORM "osx")
+    set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
 
     set(LIBFUZZER_TEST_STDLIB ${stdlib})
 
@@ -113,6 +114,7 @@ if (APPLE)
       set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
       set(LIBFUZZER_TEST_APPLE_PLATFORM "${platform}")
       set(LIBFUZZER_TEST_TARGET_ARCH "${arch}")
+      set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
       configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py

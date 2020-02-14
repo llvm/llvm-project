@@ -1,4 +1,5 @@
 add_llvm_library(MLIRTestTransforms
+  TestAffineDataCopy.cpp
   TestAllReduceLowering.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp

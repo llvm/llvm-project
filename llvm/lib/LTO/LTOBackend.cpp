@@ -375,7 +375,8 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 void splitCodeGen(const Config &C, TargetMachine *TM, AddStreamFn AddStream,
                   unsigned ParallelCodeGenParallelismLevel,
                   std::unique_ptr<Module> Mod) {
-  ThreadPool CodegenThreadPool(ParallelCodeGenParallelismLevel);
+  ThreadPool CodegenThreadPool(
+      heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 

@@ -11,7 +11,7 @@
 #include "ABISysV_arm.h"
 #include "lldb/Core/PluginManager.h"
 
-LLDB_PLUGIN(ABIARM)
+LLDB_PLUGIN_DEFINE(ABIARM)
 
 void ABIARM::Initialize() {
   ABISysV_arm::Initialize();

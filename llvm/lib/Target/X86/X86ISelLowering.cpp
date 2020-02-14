@@ -11704,7 +11704,7 @@ static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
   return RotateAmt;
 }
 
-/// Lower shuffle using ISD::ROTL rotations.
+/// Lower shuffle using X86ISD::VROTLI rotations.
 static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
                                        ArrayRef<int> Mask,
                                        const X86Subtarget &Subtarget,
@@ -11716,25 +11716,46 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   assert(EltSizeInBits < 64 && "Can't rotate 64-bit integers");
 
   // Only XOP + AVX512 targets have bit rotation instructions.
+  // If we at least have SSSE3 (PSHUFB) then we shouldn't attempt to use this.
   bool IsLegal =
       (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
-  if (!IsLegal)
+  if (!IsLegal && Subtarget.hasSSE3())
     return SDValue();
 
   // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
-  int MinSubElts = Subtarget.hasXOP() ? 2 : std::max(32 / EltSizeInBits, 2);
+  int MinSubElts = Subtarget.hasAVX512() ? std::max(32 / EltSizeInBits, 2) : 2;
   int MaxSubElts = 64 / EltSizeInBits;
   for (int NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
     int RotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
     if (RotateAmt < 0)
       continue;
-    int RotateAmtInBits = RotateAmt * EltSizeInBits;
+
     int NumElts = VT.getVectorNumElements();
     MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
     MVT RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
+
+    // For pre-SSSE3 targets, if we are shuffling vXi8 elts then ISD::ROTL,
+    // expanded to OR(SRL,SHL), will be more efficient, but if they can
+    // widen to vXi16 or more then existing lowering should will be better.
+    int RotateAmtInBits = RotateAmt * EltSizeInBits;
+    if (!IsLegal) {
+      if ((RotateAmtInBits % 16) == 0)
+        return SDValue();
+      // TODO: Use getTargetVShiftByConstNode.
+      unsigned ShlAmt = RotateAmtInBits;
+      unsigned SrlAmt = RotateSVT.getScalarSizeInBits() - RotateAmtInBits;
+      V1 = DAG.getBitcast(RotateVT, V1);
+      SDValue SHL = DAG.getNode(X86ISD::VSHLI, DL, RotateVT, V1,
+                                DAG.getTargetConstant(ShlAmt, DL, MVT::i8));
+      SDValue SRL = DAG.getNode(X86ISD::VSRLI, DL, RotateVT, V1,
+                                DAG.getTargetConstant(SrlAmt, DL, MVT::i8));
+      SDValue Rot = DAG.getNode(ISD::OR, DL, RotateVT, SHL, SRL);
+      return DAG.getBitcast(VT, Rot);
+    }
+
     SDValue Rot =
-        DAG.getNode(ISD::ROTL, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
-                    DAG.getConstant(RotateAmtInBits, DL, RotateVT));
+        DAG.getNode(X86ISD::VROTLI, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
+                    DAG.getTargetConstant(RotateAmtInBits, DL, MVT::i8));
     return DAG.getBitcast(VT, Rot);
   }
 

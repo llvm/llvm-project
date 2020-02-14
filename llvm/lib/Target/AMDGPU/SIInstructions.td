@@ -1782,8 +1782,8 @@ def : GCNPat <
 def : GCNPat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 24)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 8)))
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 24)),
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 8)))
 >;
 
 // FIXME: This should have been narrowed to i32 during legalization.
@@ -1809,8 +1809,9 @@ def : GCNPat <
   sub1)
 >;
 
-
-let SubtargetPredicate = isGFX8Plus in {
+// FIXME: The AddedComplexity should not be needed, but in GlobalISel
+// the BFI pattern ends up taking precedence without it.
+let SubtargetPredicate = isGFX8Plus, AddedComplexity = 1 in {
 // Magic number: 3 | (2 << 8) | (1 << 16) | (0 << 24)
 //
 // My reading of the manual suggests we should be using src0 for the
@@ -1831,6 +1832,24 @@ def : GCNPat <
   (V_PERM_B32 (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub0),
               (S_MOV_B32 (i32 0x00010203))),
   sub1)
+>;
+
+// Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
+// The 12s emit 0s.
+def : GCNPat <
+  (i16 (bswap i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+def : GCNPat <
+  (i32 (zext (bswap i16:$a))),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+// Magic number: 1 | (0 << 8) | (3 << 16) | (2 << 24)
+def : GCNPat <
+  (v2i16 (bswap v2i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x02030001)))
 >;
 
 }
@@ -2189,6 +2208,12 @@ class AMDGPUGenericInstruction : GenericInstruction {
 }
 
 def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_RCP_IFLAG : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;

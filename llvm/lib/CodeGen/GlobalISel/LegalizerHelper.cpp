@@ -2487,6 +2487,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerFPTOUI(MI, TypeIdx, Ty);
   case G_FPTOSI:
     return lowerFPTOSI(MI);
+  case G_FPTRUNC:
+    return lowerFPTRUNC(MI, TypeIdx, Ty);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -4474,6 +4476,128 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPTOSI(MachineInstr &MI) {
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+// f64 -> f16 conversion using round-to-nearest-even rounding mode.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
+    return UnableToLegalize;
+
+  const unsigned ExpMask = 0x7ff;
+  const unsigned ExpBiasf64 = 1023;
+  const unsigned ExpBiasf16 = 15;
+  const LLT S32 = LLT::scalar(32);
+  const LLT S1 = LLT::scalar(1);
+
+  auto Unmerge = MIRBuilder.buildUnmerge(S32, Src);
+  Register U = Unmerge.getReg(0);
+  Register UH = Unmerge.getReg(1);
+
+  auto E = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 20));
+
+  // Subtract the fp64 exponent bias (1023) to get the real exponent and
+  // add the f16 bias (15) to get the biased exponent for the f16 format.
+  E = MIRBuilder.buildAdd(
+    S32, E, MIRBuilder.buildConstant(S32, -ExpBiasf64 + ExpBiasf16));
+  E = MIRBuilder.buildAnd(S32, E, MIRBuilder.buildConstant(S32, ExpMask));
+
+  auto M = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 8));
+  M = MIRBuilder.buildAnd(S32, M, MIRBuilder.buildConstant(S32, 0xffe));
+
+  auto MaskedSig = MIRBuilder.buildAnd(S32, UH,
+                                       MIRBuilder.buildConstant(S32, 0x1ff));
+  MaskedSig = MIRBuilder.buildOr(S32, MaskedSig, U);
+
+  auto Zero = MIRBuilder.buildConstant(S32, 0);
+  auto SigCmpNE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, MaskedSig, Zero);
+  auto Lo40Set = MIRBuilder.buildZExt(S32, SigCmpNE0);
+  M = MIRBuilder.buildOr(S32, M, Lo40Set);
+
+  // (M != 0 ? 0x0200 : 0) | 0x7c00;
+  auto Bits0x200 = MIRBuilder.buildConstant(S32, 0x0200);
+  auto CmpM_NE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, M, Zero);
+  auto SelectCC = MIRBuilder.buildSelect(S32, CmpM_NE0, Bits0x200, Zero);
+
+  auto Bits0x7c00 = MIRBuilder.buildConstant(S32, 0x7c00);
+  auto I = MIRBuilder.buildOr(S32, SelectCC, Bits0x7c00);
+
+  // N = M | (E << 12);
+  auto EShl12 = MIRBuilder.buildShl(S32, E, MIRBuilder.buildConstant(S32, 12));
+  auto N = MIRBuilder.buildOr(S32, M, EShl12);
+
+  // B = clamp(1-E, 0, 13);
+  auto One = MIRBuilder.buildConstant(S32, 1);
+  auto OneSubExp = MIRBuilder.buildSub(S32, One, E);
+  auto B = MIRBuilder.buildSMax(S32, OneSubExp, Zero);
+  B = MIRBuilder.buildSMin(S32, B, MIRBuilder.buildConstant(S32, 13));
+
+  auto SigSetHigh = MIRBuilder.buildOr(S32, M,
+                                       MIRBuilder.buildConstant(S32, 0x1000));
+
+  auto D = MIRBuilder.buildLShr(S32, SigSetHigh, B);
+  auto D0 = MIRBuilder.buildShl(S32, D, B);
+
+  auto D0_NE_SigSetHigh = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1,
+                                             D0, SigSetHigh);
+  auto D1 = MIRBuilder.buildZExt(S32, D0_NE_SigSetHigh);
+  D = MIRBuilder.buildOr(S32, D, D1);
+
+  auto CmpELtOne = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, E, One);
+  auto V = MIRBuilder.buildSelect(S32, CmpELtOne, D, N);
+
+  auto VLow3 = MIRBuilder.buildAnd(S32, V, MIRBuilder.buildConstant(S32, 7));
+  V = MIRBuilder.buildLShr(S32, V, MIRBuilder.buildConstant(S32, 2));
+
+  auto VLow3Eq3 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, VLow3,
+                                       MIRBuilder.buildConstant(S32, 3));
+  auto V0 = MIRBuilder.buildZExt(S32, VLow3Eq3);
+
+  auto VLow3Gt5 = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, S1, VLow3,
+                                       MIRBuilder.buildConstant(S32, 5));
+  auto V1 = MIRBuilder.buildZExt(S32, VLow3Gt5);
+
+  V1 = MIRBuilder.buildOr(S32, V0, V1);
+  V = MIRBuilder.buildAdd(S32, V, V1);
+
+  auto CmpEGt30 = MIRBuilder.buildICmp(CmpInst::ICMP_SGT,  S1,
+                                       E, MIRBuilder.buildConstant(S32, 30));
+  V = MIRBuilder.buildSelect(S32, CmpEGt30,
+                             MIRBuilder.buildConstant(S32, 0x7c00), V);
+
+  auto CmpEGt1039 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1,
+                                         E, MIRBuilder.buildConstant(S32, 1039));
+  V = MIRBuilder.buildSelect(S32, CmpEGt1039, I, V);
+
+  // Extract the sign bit.
+  auto Sign = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 16));
+  Sign = MIRBuilder.buildAnd(S32, Sign, MIRBuilder.buildConstant(S32, 0x8000));
+
+  // Insert the sign bit
+  V = MIRBuilder.buildOr(S32, Sign, V);
+
+  MIRBuilder.buildTrunc(Dst, V);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  const LLT S64 = LLT::scalar(64);
+  const LLT S16 = LLT::scalar(16);
+
+  if (DstTy.getScalarType() == S16 && SrcTy.getScalarType() == S64)
+    return lowerFPTRUNC_F64_TO_F16(MI);
+
+  return UnableToLegalize;
 }
 
 static CmpInst::Predicate minMaxToCompare(unsigned Opc) {

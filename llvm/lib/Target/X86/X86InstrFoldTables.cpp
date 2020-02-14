@@ -5651,7 +5651,7 @@ struct X86MemUnfoldTable {
       addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
     for (const X86MemoryFoldTableEntry &Entry : BroadcastFoldTable3)
-      // Index 2, folded broadcast
+      // Index 3, folded broadcast
       addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
     // Sort the memory->reg unfold table.

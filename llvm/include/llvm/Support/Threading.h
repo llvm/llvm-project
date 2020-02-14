@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_THREADING_H
 #define LLVM_SUPPORT_THREADING_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
@@ -143,20 +144,52 @@ void llvm_execute_on_thread_async(
 #endif
   }
 
-  /// Get the amount of currency to use for tasks requiring significant
-  /// memory or other resources. Currently based on physical cores, if
-  /// available for the host system, otherwise falls back to
-  /// thread::hardware_concurrency().
-  /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
-  unsigned heavyweight_hardware_concurrency();
+  /// This tells how a thread pool will be used
+  class ThreadPoolStrategy {
+  public:
+    // The default value (0) means all available threads should be used,
+    // excluding affinity mask. If set, this value only represents a suggested
+    // high bound, the runtime might choose a lower value (not higher).
+    unsigned ThreadsRequested = 0;
 
-  /// Get the number of threads that the current program can execute
-  /// concurrently. On some systems std::thread::hardware_concurrency() returns
-  /// the total number of cores, without taking affinity into consideration.
-  /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF.
-  /// Fallback to std::thread::hardware_concurrency() if sched_getaffinity is
-  /// not available.
-  unsigned hardware_concurrency();
+    // If SMT is active, use hyper threads. If false, there will be only one
+    // std::thread per core.
+    bool UseHyperThreads = true;
+
+    /// Retrieves the max available threads for the current strategy. This
+    /// accounts for affinity masks and takes advantage of all CPU sockets.
+    unsigned compute_thread_count() const;
+
+    /// Assign the current thread to an ideal hardware CPU or NUMA node. In a
+    /// multi-socket system, this ensures threads are assigned to all CPU
+    /// sockets. \p ThreadPoolNum represents a number bounded by [0,
+    /// compute_thread_count()).
+    void apply_thread_strategy(unsigned ThreadPoolNum) const;
+  };
+
+  /// Returns a thread strategy for tasks requiring significant memory or other
+  /// resources. To be used for workloads where hardware_concurrency() proves to
+  /// be less efficient. Avoid this strategy if doing lots of I/O. Currently
+  /// based on physical cores, if available for the host system, otherwise falls
+  /// back to hardware_concurrency(). Returns 1 when LLVM is configured with
+  /// LLVM_ENABLE_THREADS = OFF
+  inline ThreadPoolStrategy
+  heavyweight_hardware_concurrency(unsigned ThreadCount = 0) {
+    ThreadPoolStrategy S;
+    S.UseHyperThreads = false;
+    S.ThreadsRequested = ThreadCount;
+    return S;
+  }
+
+  /// Returns a default thread strategy where all available hardware ressources
+  /// are to be used, except for those initially excluded by an affinity mask.
+  /// This function takes affinity into consideration. Returns 1 when LLVM is
+  /// configured with LLVM_ENABLE_THREADS=OFF.
+  inline ThreadPoolStrategy hardware_concurrency(unsigned ThreadCount = 0) {
+    ThreadPoolStrategy S;
+    S.ThreadsRequested = ThreadCount;
+    return S;
+  }
 
   /// Return the current thread id, as used in various OS system calls.
   /// Note that not all platforms guarantee that the value returned will be
@@ -183,6 +216,14 @@ void llvm_execute_on_thread_async(
   /// purposes, and as with setting a thread's name no indication of whether
   /// the operation succeeded or failed is returned.
   void get_thread_name(SmallVectorImpl<char> &Name);
+
+  /// Returns a mask that represents on which hardware thread, core, CPU, NUMA
+  /// group, the calling thread can be executed. On Windows, threads cannot
+  /// cross CPU boundaries.
+  llvm::BitVector get_thread_affinity_mask();
+
+  /// Returns how many physical CPUs or NUMA groups the system has.
+  unsigned get_cpus();
 
   enum class ThreadPriority {
     Background = 0,

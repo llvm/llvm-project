@@ -570,9 +570,15 @@ and then trying to fix emergent problems in-tree is problematic for a variety
 of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
-they can be proven stable, and later moved to non-experimental. The difference
-between both classes is that experimental targets are not built by default
-(need to be added to -DLLVM_TARGETS_TO_BUILD at CMake time).
+they can be proven stable, and later moved to non-experimental. The differences
+between both classes are:
+
+* Experimental targets are not built by default (they need to be explicitly
+  enabled at CMake time).
+
+* Test failures, bugs, and build breakages that only appear when the
+  experimental target is enabled, caused by changes unrelated to the target, are
+  the responsibility of the community behind the target to fix.
 
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 

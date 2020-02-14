@@ -31,7 +31,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABISysV_i386)
+LLDB_PLUGIN_DEFINE(ABISysV_i386)
 
 //   This source file uses the following document as a reference:
 //====================================================================

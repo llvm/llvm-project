@@ -134,8 +134,8 @@ namespace options {
   static unsigned OptLevel = 2;
   // Default parallelism of 0 used to indicate that user did not specify.
   // Actual parallelism default value depends on implementation.
-  // Currently only affects ThinLTO, where the default is
-  // llvm::heavyweight_hardware_concurrency.
+  // Currently only affects ThinLTO, where the default is the max cores in the
+  // system.
   static unsigned Parallelism = 0;
   // Default regular LTO codegen parallelism (number of partitions).
   static unsigned ParallelCodeGenParallelismLevel = 1;

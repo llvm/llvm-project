@@ -436,7 +436,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FPTRUNC)
     .legalFor({{S32, S64}, {S16, S32}})
-    .scalarize(0);
+    .scalarize(0)
+    .lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})
@@ -597,7 +598,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .widenScalarToNextPow2(1, 32);
 
-  // TODO: Expand for > s32
   getActionDefinitionsBuilder({G_BSWAP, G_BITREVERSE})
     .legalFor({S32})
     .clampScalar(0, S32, S32)

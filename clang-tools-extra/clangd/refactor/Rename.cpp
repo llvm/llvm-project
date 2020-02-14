@@ -13,6 +13,7 @@
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "Trace.h"
 #include "index/SymbolCollector.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -124,6 +125,7 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
                                           StringRef MainFilePath,
                                           const SymbolIndex *Index,
                                           bool CrossFile) {
+  trace::Span Tracer("Renameable");
   // Filter out symbols that are unsupported in both rename modes.
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
@@ -225,6 +227,7 @@ llvm::Error makeError(ReasonToReject Reason) {
 // Return all rename occurrences in the main file.
 std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
                                                       const NamedDecl &ND) {
+  trace::Span Tracer("FindOccurrenceeWithinFile");
   // If the cursor is at the underlying CXXRecordDecl of the
   // ClassTemplateDecl, ND will be the CXXRecordDecl. In this case, we need to
   // get the primary template maunally.
@@ -260,6 +263,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
                  llvm::StringRef NewName) {
+  trace::Span Tracer("RenameWithinFile");
   const SourceManager &SM = AST.getSourceManager();
 
   tooling::Replacements FilteredChanges;
@@ -319,6 +323,7 @@ std::vector<const CXXConstructorDecl *> getConstructors(const NamedDecl *ND) {
 llvm::Expected<llvm::StringMap<std::vector<Range>>>
 findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                            llvm::StringRef MainFile, const SymbolIndex &Index) {
+  trace::Span Tracer("FindOccurrencesOutsideFile");
   RefsRequest RQuest;
   RQuest.IDs.insert(*getSymbolID(&RenameDecl));
   // Classes and their constructors are different symbols, and have different
@@ -361,6 +366,9 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
     auto &Ranges = FileAndOccurrences.getValue();
     llvm::sort(Ranges);
     Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+
+    SPAN_ATTACH(Tracer, FileAndOccurrences.first(),
+                static_cast<int64_t>(Ranges.size()));
   }
   return AffectedFiles;
 }
@@ -381,6 +389,7 @@ llvm::Expected<FileEdits> renameOutsideFile(
     const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     llvm::StringRef NewName, const SymbolIndex &Index,
     llvm::function_ref<llvm::Expected<std::string>(PathRef)> GetFileContent) {
+  trace::Span Tracer("RenameOutsideFile");
   auto AffectedFiles =
       findOccurrencesOutsideFile(RenameDecl, MainFilePath, Index);
   if (!AffectedFiles)
@@ -463,6 +472,7 @@ void findNearMiss(
 } // namespace
 
 llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
+  trace::Span Tracer("Rename flow");
   ParsedAST &AST = RInputs.AST;
   const SourceManager &SM = AST.getSourceManager();
   llvm::StringRef MainFileCode = SM.getBufferData(SM.getMainFileID());
@@ -555,6 +565,11 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
                                      std::vector<Range> Occurrences,
                                      llvm::StringRef NewName) {
+  trace::Span Tracer("BuildRenameEdit");
+  SPAN_ATTACH(Tracer, "file_path", AbsFilePath);
+  SPAN_ATTACH(Tracer, "rename_occurrences",
+              static_cast<int64_t>(Occurrences.size()));
+
   assert(std::is_sorted(Occurrences.begin(), Occurrences.end()));
   assert(std::unique(Occurrences.begin(), Occurrences.end()) ==
              Occurrences.end() &&
@@ -618,6 +633,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 llvm::Optional<std::vector<Range>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts) {
+  trace::Span Tracer("AdjustRenameRanges");
   assert(!Indexed.empty());
   assert(std::is_sorted(Indexed.begin(), Indexed.end()));
   std::vector<Range> Lexed =
@@ -628,12 +644,16 @@ adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
 
 llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
                                                    ArrayRef<Range> Lexed) {
+  trace::Span Tracer("GetMappedRanges");
   assert(!Indexed.empty());
   assert(std::is_sorted(Indexed.begin(), Indexed.end()));
   assert(std::is_sorted(Lexed.begin(), Lexed.end()));
 
   if (Indexed.size() > Lexed.size()) {
     vlog("The number of lexed occurrences is less than indexed occurrences");
+    SPAN_ATTACH(
+        Tracer, "error",
+        "The number of lexed occurrences is less than indexed occurrences");
     return llvm::None;
   }
   // Fast check for the special subset case.
@@ -660,15 +680,18 @@ llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
                });
   if (HasMultiple) {
     vlog("The best near miss is not unique.");
+    SPAN_ATTACH(Tracer, "error", "The best near miss is not unique");
     return llvm::None;
   }
   if (Best.empty()) {
     vlog("Didn't find a near miss.");
+    SPAN_ATTACH(Tracer, "error", "Didn't find a near miss");
     return llvm::None;
   }
   std::vector<Range> Mapped;
   for (auto I : Best)
     Mapped.push_back(Lexed[I]);
+  SPAN_ATTACH(Tracer, "mapped_ranges", static_cast<int64_t>(Mapped.size()));
   return Mapped;
 }
 

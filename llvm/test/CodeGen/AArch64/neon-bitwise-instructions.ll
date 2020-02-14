@@ -61,8 +61,7 @@ define <8 x i8> @bsl8xi8_const(<8 x i8> %a, <8 x i8> %b)  {
 ; CHECK-LABEL: bsl8xi8_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 -1, i8 -1, i8 0, i8 0, i8 -1, i8 -1, i8 0, i8 0 >
 	%tmp2 = and <8 x i8> %b, < i8 0, i8 0, i8 -1, i8 -1, i8 0, i8 0, i8 -1, i8 -1 >
@@ -74,8 +73,7 @@ define <16 x i8> @bsl16xi8_const(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: bsl16xi8_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0 >
 	%tmp2 = and <16 x i8> %b, < i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1 >
@@ -664,8 +662,7 @@ define <2 x i32> @bsl2xi32_const(<2 x i32> %a, <2 x i32> %b)  {
 ; CHECK-LABEL: bsl2xi32_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 -1, i32 0 >
 	%tmp2 = and <2 x i32> %b, < i32 0, i32 -1 >
@@ -678,8 +675,7 @@ define <4 x i16> @bsl4xi16_const(<4 x i16> %a, <4 x i16> %b)  {
 ; CHECK-LABEL: bsl4xi16_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 -1, i16 0, i16 -1,i16 0 >
 	%tmp2 = and <4 x i16> %b, < i16 0, i16 -1,i16 0, i16 -1 >
@@ -691,8 +687,7 @@ define <1 x i64> @bsl1xi64_const(<1 x i64> %a, <1 x i64> %b)  {
 ; CHECK-LABEL: bsl1xi64_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d2, #0xffffffffffffff00
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <1 x i64> %a, < i64 -256 >
 	%tmp2 = and <1 x i64> %b, < i64 255 >
@@ -704,8 +699,7 @@ define <4 x i32> @bsl4xi32_const(<4 x i32> %a, <4 x i32> %b)  {
 ; CHECK-LABEL: bsl4xi32_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 -1, i32 0, i32 -1, i32 0 >
 	%tmp2 = and <4 x i32> %b, < i32 0, i32 -1, i32 0, i32 -1 >
@@ -717,8 +711,7 @@ define <8 x i16> @bsl8xi16_const(<8 x i16> %a, <8 x i16> %b)  {
 ; CHECK-LABEL: bsl8xi16_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 -1, i16 -1, i16 0,i16 0, i16 -1, i16 -1, i16 0,i16 0 >
 	%tmp2 = and <8 x i16> %b, < i16 0, i16 0, i16 -1, i16 -1, i16 0, i16 0, i16 -1, i16 -1 >
@@ -731,8 +724,7 @@ define <2 x i64> @bsl2xi64_const(<2 x i64> %a, <2 x i64> %b)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI75_0
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI75_0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -1, i64 0 >
 	%tmp2 = and <2 x i64> %b, < i64 0, i64 -1 >

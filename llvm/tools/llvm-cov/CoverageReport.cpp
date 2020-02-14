@@ -356,11 +356,8 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
-    NumThreads =
-        std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
-                              unsigned(Files.size())));
-
-  ThreadPool Pool(NumThreads);
+    NumThreads = Files.size();
+  ThreadPool Pool(heavyweight_hardware_concurrency(NumThreads));
 
   std::vector<FileCoverageSummary> FileReports;
   FileReports.reserve(Files.size());

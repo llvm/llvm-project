@@ -391,15 +391,9 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
 static bool RegisterMatches(unsigned Consumer, unsigned Producer,
                             unsigned Producer2) {
-  if (Consumer == Producer)
-    return true;
-  if (Consumer == Producer2)
-    return true;
-  // Calculate if we're a single vector consumer referencing a double producer
-  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
-    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
-      return ((Consumer - Hexagon::V0) >> 1) == (Producer - Hexagon::W0);
-  return false;
+  return (Consumer == Producer) || (Consumer == Producer2) ||
+         HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(Producer,
+                                                             Consumer);
 }
 
 /// EncodeSingleInstruction - Emit a single
@@ -735,7 +729,8 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     unsigned SOffset = 0;
     unsigned VOffset = 0;
     unsigned UseReg = MO.getReg();
-    unsigned DefReg1, DefReg2;
+    unsigned DefReg1 = Hexagon::NoRegister;
+    unsigned DefReg2 = Hexagon::NoRegister;
 
     auto Instrs = HexagonMCInstrInfo::bundleInstructions(*State.Bundle);
     const MCOperand *I = Instrs.begin() + State.Index - 1;
@@ -746,7 +741,8 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
 
-      DefReg1 = DefReg2 = 0;
+      DefReg1 = Hexagon::NoRegister;
+      DefReg2 = Hexagon::NoRegister;
       ++SOffset;
       if (HexagonMCInstrInfo::isVector(MCII, Inst)) {
         // Vector instructions don't count scalars.

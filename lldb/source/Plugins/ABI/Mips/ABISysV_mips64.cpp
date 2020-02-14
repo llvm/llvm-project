@@ -32,7 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABISysV_mips64)
+LLDB_PLUGIN_DEFINE(ABISysV_mips64)
 
 enum dwarf_regnums {
   dwarf_r0 = 0,

@@ -19,6 +19,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopFusionUtils.h"
+#include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -53,19 +54,6 @@ struct TestLoopFusion : public FunctionPass<TestLoopFusion> {
 };
 
 } // end anonymous namespace
-
-// Gathers all AffineForOps in 'block' at 'currLoopDepth' in 'depthToLoops'.
-static void
-gatherLoops(Block *block, unsigned currLoopDepth,
-            DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops) {
-  auto &loopsAtDepth = depthToLoops[currLoopDepth];
-  for (auto &op : *block) {
-    if (auto forOp = dyn_cast<AffineForOp>(op)) {
-      loopsAtDepth.push_back(forOp);
-      gatherLoops(forOp.getBody(), currLoopDepth + 1, depthToLoops);
-    }
-  }
-}
 
 // Run fusion dependence check on 'loops[i]' and 'loops[j]' at loop depths
 // in range ['loopDepth' + 1, 'maxLoopDepth'].
@@ -194,8 +182,7 @@ void TestLoopFusion::runOnFunction() {
     do {
       depthToLoops.clear();
       // Gather all AffineForOps by loop depth.
-      for (auto &block : getFunction())
-        gatherLoops(&block, /*currLoopDepth=*/0, depthToLoops);
+      gatherLoops(getFunction(), depthToLoops);
 
       // Try to fuse all combinations of src/dst loop nests in 'depthToLoops'.
     } while (iterateLoops(depthToLoops, testLoopFusionTransformation,
@@ -204,8 +191,7 @@ void TestLoopFusion::runOnFunction() {
   }
 
   // Gather all AffineForOps by loop depth.
-  for (Block &block : getFunction())
-    gatherLoops(&block, /*currLoopDepth=*/0, depthToLoops);
+  gatherLoops(getFunction(), depthToLoops);
 
   // Run tests on all combinations of src/dst loop nests in 'depthToLoops'.
   if (clTestDependenceCheck)

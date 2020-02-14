@@ -16,7 +16,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
-LLDB_PLUGIN(ObjectFileBreakpad)
+LLDB_PLUGIN_DEFINE(ObjectFileBreakpad)
 
 namespace {
 struct Header {

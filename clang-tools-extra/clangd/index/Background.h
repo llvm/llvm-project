@@ -135,7 +135,7 @@ public:
       Context BackgroundContext, const FileSystemProvider &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
-      size_t ThreadPoolSize = llvm::heavyweight_hardware_concurrency(),
+      size_t ThreadPoolSize = 0, // 0 = use all hardware threads
       std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr);
   ~BackgroundIndex(); // Blocks while the current task finishes.
 

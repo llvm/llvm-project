@@ -26,7 +26,7 @@ class ThinLtoModuleIndex {
 public:
   ThinLtoModuleIndex(ExecutionSession &ES, unsigned ParseModuleThreads)
       : ES(ES), CombinedSummaryIndex(HaveGVs),
-        ParseModuleWorkers(ParseModuleThreads),
+        ParseModuleWorkers(llvm::hardware_concurrency(ParseModuleThreads)),
         NumParseModuleThreads(ParseModuleThreads) {}
 
   Error add(StringRef InputPath);

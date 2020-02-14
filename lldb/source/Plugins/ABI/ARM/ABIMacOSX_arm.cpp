@@ -34,7 +34,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABIMacOSX_arm)
+LLDB_PLUGIN_DEFINE(ABIMacOSX_arm)
 
 static RegisterInfo g_register_infos[] = {
     //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME

@@ -56,7 +56,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ProcessFreeBSD)
+LLDB_PLUGIN_DEFINE(ProcessFreeBSD)
 
 namespace {
 UnixSignalsSP &GetFreeBSDSignals() {

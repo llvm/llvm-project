@@ -11,7 +11,7 @@
 #include "ABISysV_arm64.h"
 #include "lldb/Core/PluginManager.h"
 
-LLDB_PLUGIN(ABIAArch64)
+LLDB_PLUGIN_DEFINE(ABIAArch64)
 
 void ABIAArch64::Initialize() {
   ABISysV_arm64::Initialize();

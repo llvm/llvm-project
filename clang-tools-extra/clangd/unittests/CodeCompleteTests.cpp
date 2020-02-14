@@ -481,7 +481,7 @@ TEST(CompletionTest, Kinds) {
               AllOf(Has("function", CompletionItemKind::Function),
                     Has("variable", CompletionItemKind::Variable),
                     Has("int", CompletionItemKind::Keyword),
-                    Has("Struct", CompletionItemKind::Class),
+                    Has("Struct", CompletionItemKind::Struct),
                     Has("MACRO", CompletionItemKind::Text),
                     Has("indexFunction", CompletionItemKind::Function),
                     Has("indexVariable", CompletionItemKind::Variable),
@@ -529,6 +529,17 @@ TEST(CompletionTest, Kinds) {
           AllOf(Named("complete_variable"), Kind(CompletionItemKind::Variable)),
           AllOf(Named("complete_static_member"),
                 Kind(CompletionItemKind::Property))));
+
+   Results = completions(
+      R"cpp(
+        enum Color {
+          Red
+        };
+        Color u = ^
+      )cpp");
+   EXPECT_THAT(Results.Completions,
+               Contains(
+                   AllOf(Named("Red"), Kind(CompletionItemKind::EnumMember))));
 }
 
 TEST(CompletionTest, NoDuplicates) {

@@ -1294,9 +1294,28 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
                                          SMLoc IDLoc) {
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  std::string r = "r";
-  std::string v = "v";
-  std::string Colon = ":";
+  const std::string r = "r";
+  const std::string v = "v";
+  const std::string Colon = ":";
+  using RegPairVals = std::pair<unsigned, unsigned>;
+  auto GetRegPair = [this, r](RegPairVals RegPair) {
+    const std::string R1 = r + utostr(RegPair.first);
+    const std::string R2 = r + utostr(RegPair.second);
+
+    return std::make_pair(matchRegister(R1), matchRegister(R2));
+  };
+  auto GetScalarRegs = [RI, GetRegPair](unsigned RegPair) {
+    const unsigned Lower = RI->getEncodingValue(RegPair);
+    const RegPairVals RegPair_ = std::make_pair(Lower + 1, Lower);
+
+    return GetRegPair(RegPair_);
+  };
+  auto GetVecRegs = [GetRegPair](unsigned VecRegPair) {
+    const RegPairVals RegPair =
+        HexagonMCInstrInfo::GetVecRegPairIndices(VecRegPair);
+
+    return GetRegPair(RegPair);
+  };
 
   bool is32bit = false; // used to distinguish between CONST32 and CONST64
   switch (Inst.getOpcode()) {
@@ -1388,14 +1407,9 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {
     MCOperand &MO = Inst.getOperand(1);
-    unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + utostr(RegPairNum + 1);
-    StringRef Reg1(R1);
-    MO.setReg(matchRegister(Reg1));
-    // Add a new operand for the second register in the pair.
-    std::string R2 = r + utostr(RegPairNum);
-    StringRef Reg2(R2);
-    Inst.addOperand(MCOperand::createReg(matchRegister(Reg2)));
+    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    MO.setReg(RegPair.first);
+    Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode(Hexagon::A2_combinew);
     break;
   }
@@ -1403,14 +1417,9 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpt:
   case Hexagon::A2_tfrpf: {
     MCOperand &MO = Inst.getOperand(2);
-    unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + utostr(RegPairNum + 1);
-    StringRef Reg1(R1);
-    MO.setReg(matchRegister(Reg1));
-    // Add a new operand for the second register in the pair.
-    std::string R2 = r + utostr(RegPairNum);
-    StringRef Reg2(R2);
-    Inst.addOperand(MCOperand::createReg(matchRegister(Reg2)));
+    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    MO.setReg(RegPair.first);
+    Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrpt)
                        ? Hexagon::C2_ccombinewt
                        : Hexagon::C2_ccombinewf);
@@ -1419,14 +1428,9 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrptnew:
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = Inst.getOperand(2);
-    unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + utostr(RegPairNum + 1);
-    StringRef Reg1(R1);
-    MO.setReg(matchRegister(Reg1));
-    // Add a new operand for the second register in the pair.
-    std::string R2 = r + utostr(RegPairNum);
-    StringRef Reg2(R2);
-    Inst.addOperand(MCOperand::createReg(matchRegister(Reg2)));
+    const std::pair<unsigned, unsigned> RegPair = GetScalarRegs(MO.getReg());
+    MO.setReg(RegPair.first);
+    Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrptnew)
                        ? Hexagon::C2_ccombinewnewt
                        : Hexagon::C2_ccombinewnewf);
@@ -1436,12 +1440,9 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Vdd = $Vss" to "$Vdd = vcombine($Vs, $Vt)"
   case Hexagon::V6_vassignp: {
     MCOperand &MO = Inst.getOperand(1);
-    unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = v + utostr(RegPairNum + 1);
-    MO.setReg(MatchRegisterName(R1));
-    // Add a new operand for the second register in the pair.
-    std::string R2 = v + utostr(RegPairNum);
-    Inst.addOperand(MCOperand::createReg(MatchRegisterName(R2)));
+    const std::pair<unsigned, unsigned> RegPair = GetVecRegs(MO.getReg());
+    MO.setReg(RegPair.first);
+    Inst.addOperand(MCOperand::createReg(RegPair.second));
     Inst.setOpcode(Hexagon::V6_vcombine);
     break;
   }

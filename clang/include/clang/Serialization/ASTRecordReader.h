@@ -22,6 +22,7 @@
 #include "llvm/ADT/APSInt.h"
 
 namespace clang {
+struct OMPTraitInfo;
 
 /// An object for streaming information from a record.
 class ASTRecordReader
@@ -257,6 +258,9 @@ public:
   CXXTemporary *readCXXTemporary() {
     return Reader->ReadCXXTemporary(*F, Record, Idx);
   }
+
+  /// Read an OMPTraitInfo object, advancing Idx.
+  OMPTraitInfo *readOMPTraitInfo();
 
   /// Read an OpenMP clause, advancing Idx.
   OMPClause *readOMPClause();

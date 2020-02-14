@@ -43,7 +43,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-LLDB_PLUGIN(CPlusPlusLanguage)
+LLDB_PLUGIN_DEFINE(CPlusPlusLanguage)
 
 void CPlusPlusLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "C++ Language",

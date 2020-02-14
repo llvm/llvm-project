@@ -532,6 +532,10 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
   return F->second;
 }
 
+llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {
+  return makeArrayRef(VectRegRev);
+}
+
 namespace {
 class HexagonMCInstrAnalysis : public MCInstrAnalysis {
 public:
