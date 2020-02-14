@@ -125,7 +125,7 @@ def NVVM_MmaOp :
   Arguments<(ins Variadic<LLVM_Type>:$args)> {
   string llvmBuilder = [{
     $res = createIntrinsicCall(
-        builder, llvm::Intrinsic::nvvm_mma_m8n8k4_row_row_f32_f32, $args);
+        builder, llvm::Intrinsic::nvvm_mma_m8n8k4_row_col_f32_f32, $args);
   }];
   let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
   let verifier = [{ return ::verify(*this); }];
