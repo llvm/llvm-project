@@ -62,7 +62,9 @@ public:
   void releaseToOS() {}
 };
 
-template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19>
+template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19,
+          s32 MinReleaseToOsIntervalMs = INT32_MIN,
+          s32 MaxReleaseToOsIntervalMs = INT32_MAX>
 class MapAllocatorCache {
 public:
   // Fuchsia doesn't allow releasing Secondary blocks yet. Note that 0 length
@@ -71,7 +73,7 @@ public:
   static_assert(!SCUDO_FUCHSIA || MaxEntriesCount == 0U, "");
 
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
-    ReleaseToOsIntervalMs = ReleaseToOsInterval;
+    setReleaseToOsIntervalMs(ReleaseToOsInterval);
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -105,11 +107,11 @@ public:
         }
       }
     }
+    s32 Interval;
     if (EmptyCache)
       empty();
-    else if (ReleaseToOsIntervalMs >= 0)
-      releaseOlderThan(Time -
-                       static_cast<u64>(ReleaseToOsIntervalMs) * 1000000);
+    else if ((Interval = getReleaseToOsIntervalMs()) >= 0)
+      releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
     return EntryCached;
   }
 
@@ -140,6 +142,15 @@ public:
 
   static bool canCache(uptr Size) {
     return MaxEntriesCount != 0U && Size <= MaxEntrySize;
+  }
+
+  void setReleaseToOsIntervalMs(s32 Interval) {
+    if (Interval >= MaxReleaseToOsIntervalMs) {
+      Interval = MaxReleaseToOsIntervalMs;
+    } else if (Interval <= MinReleaseToOsIntervalMs) {
+      Interval = MinReleaseToOsIntervalMs;
+    }
+    atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
   }
 
   void releaseToOS() { releaseOlderThan(UINT64_MAX); }
@@ -189,6 +200,10 @@ private:
     }
   }
 
+  s32 getReleaseToOsIntervalMs() {
+    return atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
+  }
+
   struct CachedBlock {
     uptr Block;
     uptr BlockEnd;
@@ -203,7 +218,7 @@ private:
   u32 EntriesCount;
   uptr LargestSize;
   u32 IsFullEvents;
-  s32 ReleaseToOsIntervalMs;
+  atomic_s32 ReleaseToOsIntervalMs;
 };
 
 template <class CacheT> class MapAllocator {
@@ -250,6 +265,10 @@ public:
   }
 
   static uptr canCache(uptr Size) { return CacheT::canCache(Size); }
+
+  void setReleaseToOsIntervalMs(s32 Interval) {
+    Cache.setReleaseToOsIntervalMs(Interval);
+  }
 
   void releaseToOS() { Cache.releaseToOS(); }
 
