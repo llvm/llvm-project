@@ -1390,9 +1390,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     VCCZCorrect = false;
   else if (!ST->partialVCCWritesUpdateVCCZ())
     // vccz could be incorrect at a basic block boundary if a predecessor wrote
-    // to vcc_lo or vcc_hi, but let's assume that doesn't happen unless and
-    // until we find a case where it does.
-    VCCZCorrect = true;
+    // to vcc_lo or vcc_hi.
+    VCCZCorrect = false;
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
