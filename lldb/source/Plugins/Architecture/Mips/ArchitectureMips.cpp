@@ -21,7 +21,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-LLDB_PLUGIN(ArchitectureMips)
+LLDB_PLUGIN_DEFINE(ArchitectureMips)
 
 ConstString ArchitectureMips::GetPluginNameStatic() {
   return ConstString("mips");

@@ -11,7 +11,7 @@
 #include "ABISysV_mips64.h"
 #include "lldb/Core/PluginManager.h"
 
-LLDB_PLUGIN(ABIMips)
+LLDB_PLUGIN_DEFINE(ABIMips)
 
 void ABIMips::Initialize() {
   ABISysV_mips::Initialize();

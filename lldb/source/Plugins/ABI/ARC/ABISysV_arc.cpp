@@ -55,7 +55,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABISysV_arc)
+LLDB_PLUGIN_DEFINE(ABISysV_arc)
 
 namespace {
 namespace dwarf {

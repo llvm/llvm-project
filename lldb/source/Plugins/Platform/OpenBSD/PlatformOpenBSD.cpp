@@ -34,7 +34,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_openbsd;
 
-LLDB_PLUGIN(PlatformOpenBSD)
+LLDB_PLUGIN_DEFINE(PlatformOpenBSD)
 
 static uint32_t g_initialize_count = 0;
 
