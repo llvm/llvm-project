@@ -41,4 +41,15 @@ TEST_F(StringSetTest, InsertAndCountStringMapEntry) {
   Element->Destroy();
 }
 
+TEST_F(StringSetTest, EmptyString) {
+  // Verify that the empty string can by successfully inserted
+  StringSet<> Set;
+  size_t Count = Set.count("");
+  EXPECT_EQ(Count, 0UL);
+
+  Set.insert("");
+  Count = Set.count("");
+  EXPECT_EQ(Count, 1UL);
+}
+
 } // end anonymous namespace
