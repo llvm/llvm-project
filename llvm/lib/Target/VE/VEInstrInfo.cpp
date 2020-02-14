@@ -12,6 +12,7 @@
 
 #include "VEInstrInfo.h"
 #include "VE.h"
+#include "VEMachineFunctionInfo.h"
 #include "VESubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -402,6 +403,25 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         .addMemOperand(MMO);
   } else
     report_fatal_error("Can't load this register from stack slot");
+}
+
+Register VEInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
+  VEMachineFunctionInfo *VEFI = MF->getInfo<VEMachineFunctionInfo>();
+  Register GlobalBaseReg = VEFI->getGlobalBaseReg();
+  if (GlobalBaseReg != 0)
+    return GlobalBaseReg;
+
+  // We use %s15 (%got) as a global base register
+  GlobalBaseReg = VE::SX15;
+
+  // Insert a pseudo instruction to set the GlobalBaseReg into the first
+  // MBB of the function
+  MachineBasicBlock &FirstMBB = MF->front();
+  MachineBasicBlock::iterator MBBI = FirstMBB.begin();
+  DebugLoc dl;
+  BuildMI(FirstMBB, MBBI, dl, get(VE::GETGOT), GlobalBaseReg);
+  VEFI->setGlobalBaseReg(GlobalBaseReg);
+  return GlobalBaseReg;
 }
 
 bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
