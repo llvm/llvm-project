@@ -1556,7 +1556,7 @@ llvm::Optional<uint64_t> SymbolFileDWARF::GetDWOId() {
   return {};
 }
 
-std::unique_ptr<SymbolFileDWARFDwo>
+std::shared_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     DWARFUnit &unit, const DWARFDebugInfoEntry &cu_die) {
   // If this is a Darwin-style debug map (non-.dSYM) symbol file,
@@ -1611,7 +1611,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (dwo_obj_file == nullptr)
     return nullptr;
 
-  return std::make_unique<SymbolFileDWARFDwo>(*this, dwo_obj_file,
+  return std::make_shared<SymbolFileDWARFDwo>(*this, dwo_obj_file,
                                               dwarf_cu->GetID());
 }
 

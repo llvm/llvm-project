@@ -49,13 +49,17 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
   SymbolFileDWARF::LoadSectionData(sect_type, data);
 }
 
-DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  if (!m_cu)
-    m_cu = ComputeCompileUnit();
-  return m_cu;
+DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
+  DWARFCompileUnit *cu = FindSingleCompileUnit();
+  if (!cu)
+    return nullptr;
+  if (hash !=
+      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0))
+    return nullptr;
+  return cu;
 }
 
-DWARFCompileUnit *SymbolFileDWARFDwo::ComputeCompileUnit() {
+DWARFCompileUnit *SymbolFileDWARFDwo::FindSingleCompileUnit() {
   DWARFDebugInfo *debug_info = DebugInfo();
   if (!debug_info)
     return nullptr;
@@ -77,11 +81,6 @@ DWARFCompileUnit *SymbolFileDWARFDwo::ComputeCompileUnit() {
     }
   }
   return cu;
-}
-
-DWARFUnit *
-SymbolFileDWARFDwo::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
-  return GetCompileUnit();
 }
 
 SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
