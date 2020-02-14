@@ -264,6 +264,18 @@ struct OperationFormat {
 //===----------------------------------------------------------------------===//
 // Parser Gen
 
+/// Returns if we can format the given attribute as an EnumAttr in the parser
+/// format.
+static bool canFormatEnumAttr(const NamedAttribute *attr) {
+  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&attr->attr);
+  if (!enumAttr)
+    return false;
+
+  // The attribute must have a valid underlying type and a constant builder.
+  return !enumAttr->getUnderlyingType().empty() &&
+         !enumAttr->getConstBuilderTemplate().empty();
+}
+
 /// The code snippet used to generate a parser call for an attribute.
 ///
 /// {0}: The storage type of the attribute.
@@ -273,6 +285,30 @@ const char *const attrParserCode = R"(
   {0} {1}Attr;
   if (parser.parseAttribute({1}Attr{2}, "{1}", result.attributes))
     return failure();
+)";
+
+/// The code snippet used to generate a parser call for an enum attribute.
+///
+/// {0}: The name of the attribute.
+/// {1}: The c++ namespace for the enum symbolize functions.
+/// {2}: The function to symbolize a string of the enum.
+/// {3}: The constant builder call to create an attribute of the enum type.
+const char *const enumAttrParserCode = R"(
+  {
+    StringAttr attrVal;
+    SmallVector<NamedAttribute, 1> attrStorage;
+    auto loc = parser.getCurrentLocation();
+    if (parser.parseAttribute(attrVal, parser.getBuilder().getNoneType(),
+                              "{0}", attrStorage))
+      return failure();
+
+    auto attrOptional = {1}::{2}(attrVal.getValue());
+    if (!attrOptional)
+      return parser.emitError(loc, "invalid ")
+             << "{0} attribute specification: " << attrVal;
+
+    result.addAttribute("{0}", {3});
+  }
 )";
 
 /// The code snippet used to generate a parser call for an operand.
@@ -382,6 +418,24 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
       /// Arguments.
     } else if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
       const NamedAttribute *var = attr->getVar();
+
+      // Check to see if we can parse this as an enum attribute.
+      if (canFormatEnumAttr(var)) {
+        const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+
+        // Generate the code for building an attribute for this enum.
+        std::string attrBuilderStr;
+        {
+          llvm::raw_string_ostream os(attrBuilderStr);
+          os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
+                      "attrOptional.getValue()");
+        }
+
+        body << formatv(enumAttrParserCode, var->name,
+                        enumAttr.getCppNamespace(),
+                        enumAttr.getStringToSymbolFnName(), attrBuilderStr);
+        continue;
+      }
 
       // If this attribute has a buildable type, use that when parsing the
       // attribute.
@@ -637,7 +691,15 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
     if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
       const NamedAttribute *var = attr->getVar();
 
-      // Elide the attribute type if it is buildable..
+      // If we are formatting as a enum, symbolize the attribute as a string.
+      if (canFormatEnumAttr(var)) {
+        const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
+        body << "  p << \"\\\"\" << " << enumAttr.getSymbolToStringFnName()
+             << "(" << var->name << "()) << \"\\\"\";\n";
+        continue;
+      }
+
+      // Elide the attribute type if it is buildable.
       Optional<Type> attrType = var->attr.getValueType();
       if (attrType && attrType->getBuilderCall())
         body << "  p.printAttributeWithoutType(" << var->name << "Attr());\n";
