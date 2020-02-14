@@ -864,7 +864,7 @@ add_subdirectory(utils/hmaptool)
 
 if(CLANG_BUILT_STANDALONE)
   llvm_distribution_add_targets()
-  process_llvm_pass_plugins()
+  process_llvm_pass_plugins(NO_GEN)
 endif()
 
 configure_file(

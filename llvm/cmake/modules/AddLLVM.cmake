@@ -894,26 +894,28 @@ function(add_llvm_pass_plugin name)
 
 endfunction(add_llvm_pass_plugin)
 
-# Generate X Macro file for extension handling. It provides a
-# HANDLE_EXTENSION(extension_namespace, ExtensionProject) call for each extension
-# allowing client code to define HANDLE_EXTENSION to have a specific code be run for
-# each extension.
+# process_llvm_pass_plugins([NO_GEN])
 #
-# Also correctly set lib dependencies between plugins and tools.
+# Correctly set lib dependencies between plugins and tools, based on tools
+# registered with the ENABLE_PLUGINS option.
+#
+# Unless NO_GEN option is set, also generate X Macro file for extension
+# handling. It provides a HANDLE_EXTENSION(extension_namespace, ExtensionProject)
+# call for each extension allowing client code to define
+# HANDLE_EXTENSION to have a specific code be run for each extension.
+#
 function(process_llvm_pass_plugins)
+  cmake_parse_arguments(ARG
+      "NO_GEN" "" ""
+    ${ARGN})
+
+  # Add static plugins to each plugin target.
   get_property(LLVM_EXTENSIONS GLOBAL PROPERTY LLVM_COMPILE_EXTENSIONS)
-  file(WRITE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
   foreach(llvm_extension ${LLVM_EXTENSIONS})
+    string(TOUPPER ${llvm_extension} llvm_extension_upper)
     string(TOLOWER ${llvm_extension} llvm_extension_lower)
 
-    string(TOUPPER ${llvm_extension} llvm_extension_upper)
-    string(SUBSTRING ${llvm_extension_upper} 0 1 llvm_extension_upper_first)
-    string(SUBSTRING ${llvm_extension_lower} 1 -1 llvm_extension_lower_tail)
-    string(CONCAT llvm_extension_project ${llvm_extension_upper_first} ${llvm_extension_lower_tail})
-
     if(LLVM_${llvm_extension_upper}_LINK_INTO_TOOLS)
-      file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
-
       get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
       foreach(llvm_plugin_target ${llvm_plugin_targets})
         set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
@@ -922,15 +924,32 @@ function(process_llvm_pass_plugins)
     else()
       add_llvm_library(${llvm_extension_lower} MODULE obj.${llvm_extension_lower})
     endif()
-
   endforeach()
-  file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
 
-  # only replace if there's an actual change
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp"
-    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
-  file(REMOVE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+  # Eventually generate the extension header.
+  if(NOT ARG_NO_GEN)
+      file(WRITE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
+      foreach(llvm_extension ${LLVM_EXTENSIONS})
+        string(TOLOWER ${llvm_extension} llvm_extension_lower)
+
+        string(TOUPPER ${llvm_extension} llvm_extension_upper)
+        string(SUBSTRING ${llvm_extension_upper} 0 1 llvm_extension_upper_first)
+        string(SUBSTRING ${llvm_extension_lower} 1 -1 llvm_extension_lower_tail)
+        string(CONCAT llvm_extension_project ${llvm_extension_upper_first} ${llvm_extension_lower_tail})
+
+        if(LLVM_${llvm_extension_upper}_LINK_INTO_TOOLS)
+          file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
+        endif()
+
+      endforeach()
+      file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
+
+      # only replace if there's an actual change
+      execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp"
+        "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
+      file(REMOVE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+  endif()
 endfunction()
 
 function(export_executable_symbols target)
