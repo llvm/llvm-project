@@ -353,7 +353,7 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.getOS() == llvm::Triple::CloudABI;
 }
 
-void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
+void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
