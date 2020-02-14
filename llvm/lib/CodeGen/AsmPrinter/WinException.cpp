@@ -203,7 +203,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 
     // We want our funclet's entry point to be aligned such that no nops will be
     // present after the label.
-    Asm->EmitAlignment(std::max(Asm->MF->getAlignment(), MBB.getAlignment()),
+    Asm->emitAlignment(std::max(Asm->MF->getAlignment(), MBB.getAlignment()),
                        &F);
 
     // Now that we've emitted the alignment directive, point at our funclet.

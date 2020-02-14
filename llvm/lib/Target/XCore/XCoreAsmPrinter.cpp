@@ -72,7 +72,7 @@ namespace {
                                const char *ExtraCode, raw_ostream &O) override;
 
     void emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV);
-    void EmitGlobalVariable(const GlobalVariable *GV) override;
+    void emitGlobalVariable(const GlobalVariable *GV) override;
 
     void emitFunctionEntryLabel() override;
     void EmitInstruction(const MachineInstr *MI) override;
@@ -104,10 +104,9 @@ void XCoreAsmPrinter::emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV) {
   }
 }
 
-void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Check to see if this is a special global used by LLVM, if so, emit it.
-  if (!GV->hasInitializer() ||
-      EmitSpecialLLVMGlobal(GV))
+  if (!GV->hasInitializer() || emitSpecialLLVMGlobal(GV))
     return;
 
   const DataLayout &DL = getDataLayout();
@@ -143,7 +142,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     llvm_unreachable("Unknown linkage type!");
   }
 
-  EmitAlignment(std::max(Alignment, Align(4)), GV);
+  emitAlignment(std::max(Alignment, Align(4)), GV);
 
   if (GV->isThreadLocal()) {
     report_fatal_error("TLS is not supported by this target!");
@@ -155,7 +154,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
   OutStreamer->EmitLabel(GVSym);
 
-  EmitGlobalConstant(DL, C);
+  emitGlobalConstant(DL, C);
   // The ABI requires that unsigned scalar types smaller than 32 bits
   // are padded to 32 bits.
   if (Size < 4)

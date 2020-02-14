@@ -499,7 +499,7 @@ protected:
 
   void emitGlobals();
 
-  void EmitGlobalVariable(const GlobalVariable *GV);
+  void emitGlobalVariable(const GlobalVariable *GV);
 
   GenericValue getConstantValue(const Constant *C);
   void LoadValueFromMemory(GenericValue &Result, GenericValue *Ptr,

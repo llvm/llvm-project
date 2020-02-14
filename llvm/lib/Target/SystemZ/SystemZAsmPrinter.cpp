@@ -685,8 +685,8 @@ getModifierVariantKind(SystemZCP::SystemZCPModifier Modifier) {
   llvm_unreachable("Invalid SystemCPModifier!");
 }
 
-void SystemZAsmPrinter::
-EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
+void SystemZAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
   auto *ZCPV = static_cast<SystemZConstantPoolValue*>(MCPV);
 
   const MCExpr *Expr =

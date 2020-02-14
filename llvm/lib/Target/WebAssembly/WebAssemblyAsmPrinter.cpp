@@ -277,12 +277,12 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   OutStreamer->PopSection();
 }
 
-void WebAssemblyAsmPrinter::EmitConstantPool() {
+void WebAssemblyAsmPrinter::emitConstantPool() {
   assert(MF->getConstantPool()->getConstants().empty() &&
          "WebAssembly disables constant pools");
 }
 
-void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
+void WebAssemblyAsmPrinter::emitJumpTableInfo() {
   // Nothing to do; jump tables are incorporated into the instruction stream.
 }
 

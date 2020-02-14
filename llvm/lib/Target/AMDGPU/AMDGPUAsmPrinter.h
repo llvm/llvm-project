@@ -131,7 +131,7 @@ public:
 
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
 
-  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
 
   void emitStartOfAsmFile(Module &M) override;
 

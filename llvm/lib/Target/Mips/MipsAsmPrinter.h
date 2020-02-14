@@ -126,11 +126,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void EmitConstantPool() override {
+  void emitConstantPool() override {
     bool UsingConstantPools =
       (Subtarget->inMips16Mode() && Subtarget->useConstantIslands());
     if (!UsingConstantPools)
-      AsmPrinter::EmitConstantPool();
+      AsmPrinter::emitConstantPool();
     // we emit constant pools customly!
   }
 
