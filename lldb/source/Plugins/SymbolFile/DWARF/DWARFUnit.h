@@ -277,7 +277,7 @@ protected:
   }
 
   SymbolFileDWARF &m_dwarf;
-  std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
+  std::shared_ptr<DWARFUnit> m_dwo;
   DWARFUnitHeader m_header;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;

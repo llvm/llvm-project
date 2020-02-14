@@ -157,7 +157,8 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
 
   if (S.NumCompileThreads > 0) {
     TransformLayer->setCloneToNewContextOnEmit(true);
-    CompileThreads = std::make_unique<ThreadPool>(S.NumCompileThreads);
+    CompileThreads =
+        std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
     ES->setDispatchMaterialization(
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
           // FIXME: Switch to move capture once we have c++14.

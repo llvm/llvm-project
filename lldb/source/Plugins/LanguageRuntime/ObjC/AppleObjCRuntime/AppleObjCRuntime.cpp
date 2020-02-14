@@ -44,7 +44,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(AppleObjCRuntime)
+LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
 char AppleObjCRuntime::ID = 0;
 

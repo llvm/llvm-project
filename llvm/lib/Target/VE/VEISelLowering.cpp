@@ -312,16 +312,42 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
 
-  assert(!isPositionIndependent() && "TODO PIC");
+  bool IsPICCall = isPositionIndependent();
+
+  // PC-relative references to external symbols should go through $stub.
+  // If so, we need to prepare GlobalBaseReg first.
+  const TargetMachine &TM = DAG.getTarget();
+  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+  const GlobalValue *GV = nullptr;
+  auto *CalleeG = dyn_cast<GlobalAddressSDNode>(Callee);
+  if (CalleeG)
+    GV = CalleeG->getGlobal();
+  bool Local = TM.shouldAssumeDSOLocal(*Mod, GV);
+  bool UsePlt = !Local;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Turn GlobalAddress/ExternalSymbol node into a value node
   // containing the address of them here.
-  if (isa<GlobalAddressSDNode>(Callee)) {
-    Callee =
-        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
-  } else if (isa<ExternalSymbolSDNode>(Callee)) {
-    Callee =
-        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  if (CalleeG) {
+    if (IsPICCall) {
+      if (UsePlt)
+        Subtarget->getInstrInfo()->getGlobalBaseReg(&MF);
+      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, 0);
+      Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
+    } else {
+      Callee =
+          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    }
+  } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    if (IsPICCall) {
+      if (UsePlt)
+        Subtarget->getInstrInfo()->getGlobalBaseReg(&MF);
+      Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
+      Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
+    } else {
+      Callee =
+          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    }
   }
 
   RegsToPass.push_back(std::make_pair(VE::SX12, Callee));
@@ -613,8 +639,10 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
     TARGET_NODE_CASE(Lo)
     TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(GETFUNPLT)
     TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(RET_FLAG)
+    TARGET_NODE_CASE(GLOBAL_BASE_REG)
   }
 #undef TARGET_NODE_CASE
   return nullptr;
@@ -658,8 +686,43 @@ SDValue VETargetLowering::makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
 // or ExternalSymbol SDNode.
 SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  EVT PtrVT = Op.getValueType();
 
-  assert(!isPositionIndependent() && "TODO implement PIC");
+  // Handle PIC mode first. VE needs a got load for every variable!
+  if (isPositionIndependent()) {
+    // GLOBAL_BASE_REG codegen'ed with call. Inform MFI that this
+    // function has calls.
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+    MFI.setHasCalls(true);
+    auto GlobalN = dyn_cast<GlobalAddressSDNode>(Op);
+
+    if (isa<ConstantPoolSDNode>(Op) ||
+        (GlobalN && GlobalN->getGlobal()->hasLocalLinkage())) {
+      // Create following instructions for local linkage PIC code.
+      //     lea %s35, %gotoff_lo(.LCPI0_0)
+      //     and %s35, %s35, (32)0
+      //     lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35)
+      //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
+      // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+      SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
+                                  VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+      SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
+      return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
+    }
+    // Create following instructions for not local linkage PIC code.
+    //     lea %s35, %got_lo(.LCPI0_0)
+    //     and %s35, %s35, (32)0
+    //     lea.sl %s35, %got_hi(.LCPI0_0)(%s35)
+    //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
+    //     ld     %s35, (,%s35)
+    // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+    SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
+                                VEMCExpr::VK_VE_GOT_LO32, DAG);
+    SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
+    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
+    return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), AbsAddr,
+                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
 
   // This is one of the absolute code models.
   switch (getTargetMachine().getCodeModel()) {

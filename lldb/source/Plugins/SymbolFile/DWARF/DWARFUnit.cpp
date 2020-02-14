@@ -188,7 +188,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
       // simultaneously. We also don't need to do that as the dwo file will
       // contain a superset of information. So, we don't even attempt to parse
       // any remaining DIEs.
-      if (m_dwo_symbol_file) {
+      if (m_dwo) {
         m_die_array.front().SetHasChildren(false);
         break;
       }
@@ -249,10 +249,8 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
   m_die_array.shrink_to_fit();
 
-  if (m_dwo_symbol_file) {
-    DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
-    dwo_cu->ExtractDIEsIfNeeded();
-  }
+  if (m_dwo)
+    m_dwo->ExtractDIEsIfNeeded();
 }
 
 // This is used when a split dwarf is enabled.
@@ -339,12 +337,14 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   if (m_is_dwo)
     return;
 
-  std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
+  std::shared_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
       m_dwarf.GetDwoSymbolFileForCompileUnit(*this, cu_die);
   if (!dwo_symbol_file)
     return;
 
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
+  uint64_t main_dwo_id =
+      cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
+  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
@@ -352,16 +352,6 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid())
     return; // Can't fetch the compile unit DIE from the dwo file.
-
-  uint64_t main_dwo_id =
-      cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
-  uint64_t sub_dwo_id =
-      dwo_cu_die.GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0);
-  if (main_dwo_id != sub_dwo_id)
-    return; // The 2 dwo ID isn't match. Don't use the dwo file as it belongs to
-  // a differectn compilation.
-
-  m_dwo_symbol_file = std::move(dwo_symbol_file);
 
   // Here for DWO CU we want to use the address base set in the skeleton unit
   // (DW_AT_addr_base) if it is available and use the DW_AT_GNU_addr_base
@@ -376,21 +366,22 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   if (GetVersion() <= 4 && gnu_ranges_base)
     dwo_cu->SetRangesBase(*gnu_ranges_base);
-  else if (m_dwo_symbol_file->GetDWARFContext()
+  else if (dwo_symbol_file->GetDWARFContext()
                .getOrLoadRngListsData()
                .GetByteSize() > 0)
     dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
 
-  if (GetVersion() >= 5 && m_dwo_symbol_file->GetDWARFContext()
-                                   .getOrLoadLocListsData()
-                                   .GetByteSize() > 0)
+  if (GetVersion() >= 5 &&
+      dwo_symbol_file->GetDWARFContext().getOrLoadLocListsData().GetByteSize() >
+          0)
     dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
-  for (size_t i = 0; i < m_dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
-    DWARFUnit *unit = m_dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
+  for (size_t i = 0; i < dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
+    DWARFUnit *unit = dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
     SetDwoStrOffsetsBase(unit);
   }
+  m_dwo = std::shared_ptr<DWARFUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
 DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
@@ -507,8 +498,8 @@ void DWARFUnit::ClearDIEsRWLocked() {
   m_die_array.clear();
   m_die_array.shrink_to_fit();
 
-  if (m_dwo_symbol_file)
-    m_dwo_symbol_file->GetCompileUnit()->ClearDIEsRWLocked();
+  if (m_dwo)
+    m_dwo->ClearDIEsRWLocked();
 }
 
 lldb::ByteOrder DWARFUnit::GetByteOrder() const {
@@ -549,8 +540,9 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 }
 
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
-  if (SymbolFileDWARFDwo *dwo = GetDwoSymbolFile())
-    return *dwo->GetCompileUnit();
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return *m_dwo;
   return *this;
 }
 
@@ -755,7 +747,9 @@ void DWARFUnit::ComputeAbsolutePath() {
 
 SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() {
   ExtractUnitDIEIfNeeded();
-  return m_dwo_symbol_file.get();
+  if (m_dwo)
+    return &llvm::cast<SymbolFileDWARFDwo>(m_dwo->GetSymbolFileDWARF());
+  return nullptr;
 }
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
@@ -765,11 +759,10 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
     if (die)
       die->BuildFunctionAddressRangeTable(this, m_func_aranges_up.get());
 
-    if (m_dwo_symbol_file) {
-      DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
-      const DWARFDebugInfoEntry *dwo_die = dwo_cu->DIEPtr();
+    if (m_dwo) {
+      const DWARFDebugInfoEntry *dwo_die = m_dwo->DIEPtr();
       if (dwo_die)
-        dwo_die->BuildFunctionAddressRangeTable(dwo_cu,
+        dwo_die->BuildFunctionAddressRangeTable(m_dwo.get(),
                                                 m_func_aranges_up.get());
     }
 

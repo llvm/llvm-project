@@ -175,9 +175,9 @@ namespace {
 
   struct LowOverheadLoop {
 
-    MachineLoop *ML = nullptr;
-    MachineLoopInfo *MLI = nullptr;
-    ReachingDefAnalysis *RDA = nullptr;
+    MachineLoop &ML;
+    MachineLoopInfo &MLI;
+    ReachingDefAnalysis &RDA;
     MachineFunction *MF = nullptr;
     MachineInstr *InsertPt = nullptr;
     MachineInstr *Start = nullptr;
@@ -191,9 +191,9 @@ namespace {
     bool Revert = false;
     bool CannotTailPredicate = false;
 
-    LowOverheadLoop(MachineLoop *ML, MachineLoopInfo *MLI,
-                    ReachingDefAnalysis *RDA) : ML(ML), MLI(MLI), RDA(RDA) {
-      MF = ML->getHeader()->getParent();
+    LowOverheadLoop(MachineLoop &ML, MachineLoopInfo &MLI,
+                    ReachingDefAnalysis &RDA) : ML(ML), MLI(MLI), RDA(RDA) {
+      MF = ML.getHeader()->getParent();
     }
 
     // If this is an MVE instruction, check that we know how to use tail
@@ -209,7 +209,7 @@ namespace {
       // For now, let's keep things really simple and only support a single
       // block for tail predication.
       return !Revert && FoundAllComponents() && VCTP &&
-             !CannotTailPredicate && ML->getNumBlocks() == 1;
+             !CannotTailPredicate && ML.getNumBlocks() == 1;
     }
 
     bool ValidateTailPredicate(MachineInstr *StartInsertPt);
@@ -333,19 +333,19 @@ MachineInstr *LowOverheadLoop::isSafeToDefineLR() {
   // Find an insertion point:
   // - Is there a (mov lr, Count) before Start? If so, and nothing else writes
   //   to Count before Start, we can insert at that mov.
-  if (auto *LRDef = RDA->getReachingMIDef(Start, ARM::LR))
-    if (IsMoveLR(LRDef) && RDA->hasSameReachingDef(Start, LRDef, CountReg))
+  if (auto *LRDef = RDA.getReachingMIDef(Start, ARM::LR))
+    if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
       return LRDef;
 
   // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
   //   to Count after Start, we can insert at that mov.
-  if (auto *LRDef = RDA->getLocalLiveOutMIDef(MBB, ARM::LR))
-    if (IsMoveLR(LRDef) && RDA->hasSameReachingDef(Start, LRDef, CountReg))
+  if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR))
+    if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
       return LRDef;
 
   // We've found no suitable LR def and Start doesn't use LR directly. Can we
   // just define LR anyway?
-  return RDA->isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
+  return RDA.isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
 }
 
 bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
@@ -382,7 +382,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // If the register is defined within loop, then we can't perform TP.
   // TODO: Check whether this is just a mov of a register that would be
   // available.
-  if (RDA->hasLocalDefBefore(VCTP, NumElements)) {
+  if (RDA.hasLocalDefBefore(VCTP, NumElements)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: VCTP operand is defined in the loop.\n");
     return false;
   }
@@ -393,14 +393,14 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // TODO: On failing to move an instruction, check if the count is provided by
   // a mov and whether we can use the mov operand directly.
   MachineBasicBlock *InsertBB = StartInsertPt->getParent();
-  if (!RDA->isReachingDefLiveOut(StartInsertPt, NumElements)) {
-    if (auto *ElemDef = RDA->getLocalLiveOutMIDef(InsertBB, NumElements)) {
-      if (RDA->isSafeToMoveForwards(ElemDef, StartInsertPt)) {
+  if (!RDA.isReachingDefLiveOut(StartInsertPt, NumElements)) {
+    if (auto *ElemDef = RDA.getLocalLiveOutMIDef(InsertBB, NumElements)) {
+      if (RDA.isSafeToMoveForwards(ElemDef, StartInsertPt)) {
         ElemDef->removeFromParent();
         InsertBB->insert(MachineBasicBlock::iterator(StartInsertPt), ElemDef);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
                    << *ElemDef);
-      } else if (RDA->isSafeToMoveBackwards(StartInsertPt, ElemDef)) {
+      } else if (RDA.isSafeToMoveBackwards(StartInsertPt, ElemDef)) {
         StartInsertPt->removeFromParent();
         InsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
                               StartInsertPt);
@@ -419,7 +419,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                       Register NumElements) {
     // NumElements is redefined in this block.
-    if (RDA->hasLocalDefBefore(&MBB->back(), NumElements))
+    if (RDA.hasLocalDefBefore(&MBB->back(), NumElements))
       return true;
 
     // Don't continue searching up through multiple predecessors.
@@ -430,7 +430,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   };
 
   // First, find the block that looks like the preheader.
-  MachineBasicBlock *MBB = MLI->findLoopPreheader(ML, true);
+  MachineBasicBlock *MBB = MLI.findLoopPreheader(&ML, true);
   if (!MBB) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Didn't find preheader.\n");
     return false;
@@ -467,12 +467,12 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   };
 
   MBB = VCTP->getParent();
-  if (MachineInstr *Def = RDA->getReachingMIDef(&MBB->back(), NumElements)) {
+  if (MachineInstr *Def = RDA.getReachingMIDef(&MBB->back(), NumElements)) {
     SmallPtrSet<MachineInstr*, 2> ElementChain;
     SmallPtrSet<MachineInstr*, 2> Ignore = { VCTP };
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
 
-    if (RDA->isSafeToRemove(Def, ElementChain, Ignore)) {
+    if (RDA.isSafeToRemove(Def, ElementChain, Ignore)) {
       bool FoundSub = false;
 
       for (auto *MI : ElementChain) {
@@ -505,7 +505,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
 
   // TODO Maybe there's cases where the target doesn't have to be the header,
   // but for now be safe and revert.
-  if (End->getOperand(1).getMBB() != ML->getHeader()) {
+  if (End->getOperand(1).getMBB() != ML.getHeader()) {
     LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targetting header.\n");
     Revert = true;
     return;
@@ -513,8 +513,8 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
 
   // The WLS and LE instructions have 12-bits for the label offset. WLS
   // requires a positive offset, while LE uses negative.
-  if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML->getHeader()) ||
-      !BBUtils->isBBInRange(End, ML->getHeader(), 4094)) {
+  if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML.getHeader()) ||
+      !BBUtils->isBBInRange(End, ML.getHeader(), 4094)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: LE offset is out-of-range\n");
     Revert = true;
     return;
@@ -544,7 +544,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
     return;
   }
 
-  assert(ML->getBlocks().size() == 1 &&
+  assert(ML.getBlocks().size() == 1 &&
          "Shouldn't be processing a loop with more than one block");
   CannotTailPredicate = !ValidateTailPredicate(InsertPt);
   LLVM_DEBUG(if (CannotTailPredicate)
@@ -682,7 +682,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return nullptr;
   };
 
-  LowOverheadLoop LoLoop(ML, MLI, RDA);
+  LowOverheadLoop LoLoop(*ML, *MLI, *RDA);
   // Search the preheader for the start intrinsic.
   // FIXME: I don't see why we shouldn't be supporting multiple predecessors
   // with potentially multiple set.loop.iterations, so we need to enable this.
@@ -1073,7 +1073,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     }
   }
 
-  PostOrderLoopTraversal DFS(*LoLoop.ML, *MLI);
+  PostOrderLoopTraversal DFS(LoLoop.ML, *MLI);
   DFS.ProcessLoop();
   const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
   for (auto *MBB : PostOrder) {

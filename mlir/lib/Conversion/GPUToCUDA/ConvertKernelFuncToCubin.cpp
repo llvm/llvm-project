@@ -57,9 +57,10 @@ public:
     gpu::GPUModuleOp module = getOperation();
 
     // Make sure the NVPTX target is initialized.
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmPrinters();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
 
     auto llvmModule = translateModuleToNVVMIR(module);
     if (!llvmModule)

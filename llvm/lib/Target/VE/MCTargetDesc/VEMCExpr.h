@@ -26,6 +26,14 @@ public:
     VK_VE_None,
     VK_VE_HI32,
     VK_VE_LO32,
+    VK_VE_PC_HI32,
+    VK_VE_PC_LO32,
+    VK_VE_GOT_HI32,
+    VK_VE_GOT_LO32,
+    VK_VE_GOTOFF_HI32,
+    VK_VE_GOTOFF_LO32,
+    VK_VE_PLT_HI32,
+    VK_VE_PLT_LO32,
   };
 
 private:

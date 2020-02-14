@@ -842,13 +842,7 @@ std::string renderTUAction(const TUAction &Action) {
 } // namespace
 
 unsigned getDefaultAsyncThreadsCount() {
-  unsigned HardwareConcurrency = llvm::heavyweight_hardware_concurrency();
-  // heavyweight_hardware_concurrency may fall back to hardware_concurrency.
-  // C++ standard says that hardware_concurrency() may return 0; fallback to 1
-  // worker thread in that case.
-  if (HardwareConcurrency == 0)
-    return 1;
-  return HardwareConcurrency;
+  return llvm::heavyweight_hardware_concurrency().compute_thread_count();
 }
 
 FileStatus TUStatus::render(PathRef File) const {

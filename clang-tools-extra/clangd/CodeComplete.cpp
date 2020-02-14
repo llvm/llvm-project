@@ -87,9 +87,8 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Text;
   case SK::Enum:
     return CompletionItemKind::Enum;
-  // FIXME(ioeric): use LSP struct instead of class when it is suppoted in the
-  // protocol.
   case SK::Struct:
+    return CompletionItemKind::Struct;
   case SK::Class:
   case SK::Protocol:
   case SK::Extension:
@@ -102,18 +101,16 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   case SK::Using:
     return CompletionItemKind::Reference;
   case SK::Function:
-  // FIXME(ioeric): this should probably be an operator. This should be fixed
-  // when `Operator` is support type in the protocol.
   case SK::ConversionFunction:
     return CompletionItemKind::Function;
   case SK::Variable:
   case SK::Parameter:
+  case SK::NonTypeTemplateParm:
     return CompletionItemKind::Variable;
   case SK::Field:
     return CompletionItemKind::Field;
-  // FIXME(ioeric): use LSP enum constant when it is supported in the protocol.
   case SK::EnumConstant:
-    return CompletionItemKind::Value;
+    return CompletionItemKind::EnumMember;
   case SK::InstanceMethod:
   case SK::ClassMethod:
   case SK::StaticMethod:
@@ -125,6 +122,9 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Property;
   case SK::Constructor:
     return CompletionItemKind::Constructor;
+  case SK::TemplateTypeParm:
+  case SK::TemplateTemplateParm:
+    return CompletionItemKind::TypeParameter;
   }
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
 }

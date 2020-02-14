@@ -1287,7 +1287,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::MVNImsl:           return "AArch64ISD::MVNImsl";
   case AArch64ISD::BICi:              return "AArch64ISD::BICi";
   case AArch64ISD::ORRi:              return "AArch64ISD::ORRi";
-  case AArch64ISD::BSL:               return "AArch64ISD::BSL";
+  case AArch64ISD::BSP:               return "AArch64ISD::BSP";
   case AArch64ISD::NEG:               return "AArch64ISD::NEG";
   case AArch64ISD::EXTR:              return "AArch64ISD::EXTR";
   case AArch64ISD::ZIP1:              return "AArch64ISD::ZIP1";
@@ -10229,7 +10229,7 @@ static SDValue tryCombineToBSL(SDNode *N,
       }
 
       if (FoundMatch)
-        return DAG.getNode(AArch64ISD::BSL, DL, VT, SDValue(BVN0, 0),
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, SDValue(BVN0, 0),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
     }
 

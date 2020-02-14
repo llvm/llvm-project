@@ -13,7 +13,7 @@
 #include "ABIWindows_x86_64.h"
 #include "lldb/Core/PluginManager.h"
 
-LLDB_PLUGIN(ABIX86)
+LLDB_PLUGIN_DEFINE(ABIX86)
 
 void ABIX86::Initialize() {
   ABIMacOSX_i386::Initialize();

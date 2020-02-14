@@ -8,11 +8,13 @@
 
 #include "llvm/Support/ThreadPool.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 
 #include "gtest/gtest.h"
 
@@ -68,6 +70,8 @@ protected:
   }
 
   void SetUp() override { MainThreadReady = false; }
+
+  void TestAllThreads(ThreadPoolStrategy S);
 
   std::condition_variable WaitMainThread;
   std::mutex WaitMainThreadMutex;
@@ -131,7 +135,7 @@ TEST_F(ThreadPoolTest, Async) {
 
 TEST_F(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool{2};
+  ThreadPool Pool(hardware_concurrency(2));
   std::atomic_int i{0};
   Pool.async([this, &i] {
     waitForMainThread();
@@ -162,3 +166,45 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
   }
   ASSERT_EQ(5, checked_in);
 }
+
+#if LLVM_ENABLE_THREADS == 1
+
+void ThreadPoolTest::TestAllThreads(ThreadPoolStrategy S) {
+  // FIXME: Skip these tests on non-Windows because multi-socket system were not
+  // tested on Unix yet, and llvm::get_thread_affinity_mask() isn't implemented
+  // for Unix.
+  Triple Host(Triple::normalize(sys::getProcessTriple()));
+  if (!Host.isOSWindows())
+    return;
+
+  llvm::DenseSet<llvm::BitVector> ThreadsUsed;
+  std::mutex Lock;
+  unsigned Threads = 0;
+  {
+    ThreadPool Pool(S);
+    Threads = Pool.getThreadCount();
+    for (size_t I = 0; I < 10000; ++I) {
+      Pool.async([&] {
+        waitForMainThread();
+        std::lock_guard<std::mutex> Guard(Lock);
+        auto Mask = llvm::get_thread_affinity_mask();
+        ThreadsUsed.insert(Mask);
+      });
+    }
+    ASSERT_EQ(true, ThreadsUsed.empty());
+    setMainThreadReady();
+  }
+  ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
+}
+
+TEST_F(ThreadPoolTest, AllThreads_UseAllRessources) {
+  CHECK_UNSUPPORTED();
+  TestAllThreads({});
+}
+
+TEST_F(ThreadPoolTest, AllThreads_OneThreadPerCore) {
+  CHECK_UNSUPPORTED();
+  TestAllThreads(llvm::heavyweight_hardware_concurrency());
+}
+
+#endif

@@ -129,3 +129,20 @@ body: |
     $vgpr0_vgpr1 = COPY %1
 ...
 
+---
+name: bswap_s64
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: bswap_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[UV1]]
+    ; CHECK: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[UV]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BSWAP]](s32), [[BSWAP1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_BSWAP %0
+    $vgpr0_vgpr1 = COPY %1
+...

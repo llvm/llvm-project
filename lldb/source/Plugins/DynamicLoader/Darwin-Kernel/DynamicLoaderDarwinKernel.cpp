@@ -44,7 +44,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(DynamicLoaderDarwinKernel)
+LLDB_PLUGIN_DEFINE(DynamicLoaderDarwinKernel)
 
 // Progressively greater amounts of scanning we will allow For some targets
 // very early in startup, we can't do any random reads of memory or we can

@@ -28,7 +28,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::wasm;
 
-LLDB_PLUGIN(ObjectFileWasm)
+LLDB_PLUGIN_DEFINE(ObjectFileWasm)
 
 static const uint32_t kWasmHeaderSize =
     sizeof(llvm::wasm::WasmMagic) + sizeof(llvm::wasm::WasmVersion);

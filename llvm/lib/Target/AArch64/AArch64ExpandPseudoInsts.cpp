@@ -429,6 +429,57 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   default:
     break;
 
+  case AArch64::BSPv8i8:
+  case AArch64::BSPv16i8: {
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg == MI.getOperand(3).getReg()) {
+      // Expand to BIT
+      BuildMI(MBB, MBBI, MI.getDebugLoc(),
+              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BITv8i8
+                                                  : AArch64::BITv16i8))
+          .add(MI.getOperand(0))
+          .add(MI.getOperand(3))
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(1));
+    } else if (DstReg == MI.getOperand(2).getReg()) {
+      // Expand to BIF
+      BuildMI(MBB, MBBI, MI.getDebugLoc(),
+              TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BIFv8i8
+                                                  : AArch64::BIFv16i8))
+          .add(MI.getOperand(0))
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(3))
+          .add(MI.getOperand(1));
+    } else {
+      // Expand to BSL, use additional move if required
+      if (DstReg == MI.getOperand(1).getReg()) {
+        BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                    : AArch64::BSLv16i8))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(1))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(3));
+      } else {
+        BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
+                                                    : AArch64::ORRv16i8))
+            .addReg(DstReg)
+            .add(MI.getOperand(1))
+            .add(MI.getOperand(1));
+        BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
+                                                    : AArch64::BSLv16i8))
+            .add(MI.getOperand(0))
+            .addReg(DstReg)
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(3));
+      }
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+
   case AArch64::ADDWrr:
   case AArch64::SUBWrr:
   case AArch64::ADDXrr:

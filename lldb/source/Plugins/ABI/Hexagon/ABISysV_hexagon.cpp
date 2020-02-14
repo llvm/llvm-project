@@ -32,7 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABISysV_hexagon)
+LLDB_PLUGIN_DEFINE(ABISysV_hexagon)
 
 static RegisterInfo g_register_infos[] = {
     // hexagon-core.xml

@@ -227,7 +227,8 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
     AddStreamFn AddStream, NativeObjectCache Cache)>;
 
 /// This ThinBackend runs the individual backend jobs in-process.
-ThinBackend createInProcessThinBackend(unsigned ParallelismLevel);
+/// The default value means to use one job per hardware core (not hyper-thread).
+ThinBackend createInProcessThinBackend(unsigned ParallelismLevel = 0);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
