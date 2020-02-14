@@ -163,7 +163,7 @@ public:
 
   const MCExpr *lowerConstant(const Constant *CV) override;
 
-  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
 
   void emitFunctionDescriptor() override;
 
@@ -1583,7 +1583,7 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
   return PPCAsmPrinter::lowerConstant(CV);
 }
 
-void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   ValidateGV(GV);
 
   // Create the symbol, set its storage class.
@@ -1632,9 +1632,9 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   MCSymbol *EmittedInitSym = GVSym;
   emitLinkage(GV, EmittedInitSym);
-  EmitAlignment(getGVAlignment(GV, DL), GV);
+  emitAlignment(getGVAlignment(GV, DL), GV);
   OutStreamer->EmitLabel(EmittedInitSym);
-  EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 
 void PPCAIXAsmPrinter::emitFunctionDescriptor() {

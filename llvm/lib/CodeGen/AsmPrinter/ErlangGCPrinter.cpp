@@ -72,7 +72,7 @@ void ErlangGCPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
      **/
 
     // Align to address width.
-    AP.EmitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
+    AP.emitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
 
     // Emit PointCount.
     OS.AddComment("safe point count");

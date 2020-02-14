@@ -33,7 +33,7 @@ public:
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void EmitInstruction(const MachineInstr *MI) override;
-  void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;

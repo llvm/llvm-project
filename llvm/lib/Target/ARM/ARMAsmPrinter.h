@@ -84,21 +84,21 @@ public:
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                         const MCSubtargetInfo *EndInfo) const override;
 
-  void EmitJumpTableAddrs(const MachineInstr *MI);
-  void EmitJumpTableInsts(const MachineInstr *MI);
-  void EmitJumpTableTBInst(const MachineInstr *MI, unsigned OffsetWidth);
+  void emitJumpTableAddrs(const MachineInstr *MI);
+  void emitJumpTableInsts(const MachineInstr *MI);
+  void emitJumpTableTBInst(const MachineInstr *MI, unsigned OffsetWidth);
   void EmitInstruction(const MachineInstr *MI) override;
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  void EmitConstantPool() override {
+  void emitConstantPool() override {
     // we emit constant pools customly!
   }
   void emitFunctionBodyEnd() override;
   void emitFunctionEntryLabel() override;
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
-  void EmitXXStructor(const DataLayout &DL, const Constant *CV) override;
-  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
 
@@ -150,7 +150,7 @@ private:
 public:
   /// EmitMachineConstantPoolValue - Print a machine constantpool value to
   /// the .s file.
-  void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 };
 } // end namespace llvm
 

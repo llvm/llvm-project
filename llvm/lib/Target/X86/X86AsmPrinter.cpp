@@ -597,7 +597,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
       // Emitting note header.
       int WordSize = TT.isArch64Bit() ? 8 : 4;
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8));
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8));
       OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
       OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
       OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
@@ -607,7 +607,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
       OutStreamer->EmitIntValue(4, 4);               // data size
       OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);

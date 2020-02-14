@@ -76,7 +76,7 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->EmitLabel(CurrentFnSym);
 }
 
-void ARMAsmPrinter::EmitXXStructor(const DataLayout &DL, const Constant *CV) {
+void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   uint64_t Size = getDataLayout().getTypeAllocSize(CV->getType());
   assert(Size && "C++ constructor pointer had zero size!");
 
@@ -93,11 +93,11 @@ void ARMAsmPrinter::EmitXXStructor(const DataLayout &DL, const Constant *CV) {
   OutStreamer->EmitValue(E, Size);
 }
 
-void ARMAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (PromotedGlobals.count(GV))
     // The global was promoted into a constant pool. It should not be emitted.
     return;
-  AsmPrinter::EmitGlobalVariable(GV);
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
 /// runOnMachineFunction - This uses the EmitInstruction()
@@ -168,7 +168,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // relatively easy to exceed the thumb branch range within a TU.
   if (! ThumbIndirectPads.empty()) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
-    EmitAlignment(Align(2));
+    emitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
       OutStreamer->EmitLabel(TIP.second);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
@@ -526,7 +526,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(Align(4));
+      emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -539,7 +539,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getThreadLocalPointerSection());
-      EmitAlignment(Align(4));
+      emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -856,8 +856,8 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
   llvm_unreachable("unexpected target");
 }
 
-void ARMAsmPrinter::
-EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
+void ARMAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
   const DataLayout &DL = getDataLayout();
   int Size = DL.getTypeAllocSize(MCPV->getType());
 
@@ -881,7 +881,7 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
         EmittedPromotedGlobalLabels.insert(GV);
       }
     }
-    return EmitGlobalConstant(DL, ACPC->getPromotedGlobalInit());
+    return emitGlobalConstant(DL, ACPC->getPromotedGlobalInit());
   }
 
   MCSymbol *MCSym;
@@ -935,13 +935,13 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
   OutStreamer->EmitValue(Expr, Size);
 }
 
-void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
+void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(Align(4));
+  emitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -981,13 +981,13 @@ void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
   OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
 }
 
-void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
+void ARMAsmPrinter::emitJumpTableInsts(const MachineInstr *MI) {
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(Align(4));
+  emitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -1009,14 +1009,14 @@ void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
   }
 }
 
-void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
+void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
                                         unsigned OffsetWidth) {
   assert((OffsetWidth == 1 || OffsetWidth == 2) && "invalid tbb/tbh width");
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   if (Subtarget->isThumb1Only())
-    EmitAlignment(Align(4));
+    emitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
@@ -1059,7 +1059,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
   OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
 
   // Make sure the next instruction is 2-byte aligned.
-  EmitAlignment(Align(2));
+  emitAlignment(Align(2));
 }
 
 void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
@@ -1629,20 +1629,20 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     const MachineConstantPoolEntry &MCPE = MCP->getConstants()[CPIdx];
     if (MCPE.isMachineConstantPoolEntry())
-      EmitMachineConstantPoolValue(MCPE.Val.MachineCPVal);
+      emitMachineConstantPoolValue(MCPE.Val.MachineCPVal);
     else
-      EmitGlobalConstant(DL, MCPE.Val.ConstVal);
+      emitGlobalConstant(DL, MCPE.Val.ConstVal);
     return;
   }
   case ARM::JUMPTABLE_ADDRS:
-    EmitJumpTableAddrs(MI);
+    emitJumpTableAddrs(MI);
     return;
   case ARM::JUMPTABLE_INSTS:
-    EmitJumpTableInsts(MI);
+    emitJumpTableInsts(MI);
     return;
   case ARM::JUMPTABLE_TBB:
   case ARM::JUMPTABLE_TBH:
-    EmitJumpTableTBInst(MI, MI->getOpcode() == ARM::JUMPTABLE_TBB ? 1 : 2);
+    emitJumpTableTBInst(MI, MI->getOpcode() == ARM::JUMPTABLE_TBB ? 1 : 2);
     return;
   case ARM::t2BR_JT: {
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tMOVr)
