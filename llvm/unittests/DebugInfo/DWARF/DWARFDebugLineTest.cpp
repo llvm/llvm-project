@@ -640,6 +640,100 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
+TEST_F(DebugLineBasicFixture,
+       ErrorForUnsupportedAddressSizeInSetAddressLength) {
+  // Use DWARF v4, and 0 for data extractor address size so that the address
+  // size is derived from the opcode length.
+  if (!setupGenerator(4, 0))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  // 4 == length of the extended opcode, i.e. 1 for the opcode itself and 3 for
+  // the Half (2) + Byte (1) operand, representing the unsupported address size.
+  LT.addExtendedOpcode(4, DW_LNE_set_address,
+                       {{0x1234, LineTable::Half}, {0x56, LineTable::Byte}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // Special opcode to ensure the address has changed between the first and last
+  // row in the sequence. Without this, the sequence will not be recorded.
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "address size 0x03 of DW_LNE_set_address opcode at offset 0x00000030 is "
+      "unsupported",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+  // Show that the set address opcode is ignored in this case.
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0);
+}
+
+TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
+  // Use DWARF v4, and 0 for data extractor address size so that the address
+  // size is derived from the opcode length.
+  if (!setupGenerator(4, 0))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  // Specifically use an operand size that has a trailing byte of a supported
+  // size (8), so that any potential truncation would result in a valid size.
+  std::vector<LineTable::ValueAndLength> Operands(0x108);
+  LT.addExtendedOpcode(Operands.size() + 1, DW_LNE_set_address, Operands);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "address size 0x108 of DW_LNE_set_address opcode at offset 0x00000031 is "
+      "unsupported",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+}
+
+TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
+  // Use 0 for data extractor address size so that it does not clash with the
+  // header address size.
+  if (!setupGenerator(5, 0))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  // AddressSize + 1 == length of the extended opcode, i.e. 1 for the opcode
+  // itself and 9 for the Quad (8) + Byte (1) operand representing the
+  // unsupported address size.
+  uint8_t AddressSize = 9;
+  LT.addExtendedOpcode(AddressSize + 1, DW_LNE_set_address,
+                       {{0x12345678, LineTable::Quad}, {0, LineTable::Byte}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  // Special opcode to ensure the address has changed between the first and last
+  // row in the sequence. Without this, the sequence will not be recorded.
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+  Prologue.FormParams.AddrSize = AddressSize;
+  LT.setPrologue(Prologue);
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "address size 0x09 of DW_LNE_set_address opcode at offset 0x00000038 is "
+      "unsupported",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+  // Show that the set address opcode is ignored in this case.
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0);
+}
+
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
   if (!setupGenerator())
     return;
