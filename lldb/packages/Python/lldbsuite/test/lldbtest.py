@@ -2397,7 +2397,7 @@ FileCheck output:
         eval_result = frame.EvaluateExpression(expr)
 
         if error_msg:
-            self.assertFalse(eval_result.IsValid())
+            self.assertFalse(eval_result.IsValid(), "Unexpected success with result: '" + str(eval_result) + "'")
             self.assertEqual(error_msg, eval_result.GetError().GetCString())
             return
 
