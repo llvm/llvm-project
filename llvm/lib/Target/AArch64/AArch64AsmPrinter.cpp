@@ -559,7 +559,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
       OutStreamer->SwitchSection(
           OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
                                      SectionKind::getMetadata()));
-      EmitAlignment(Align(8));
+      emitAlignment(Align(8));
 
       for (auto &Stub : Stubs)
         emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
