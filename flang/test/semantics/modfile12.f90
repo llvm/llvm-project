@@ -9,7 +9,6 @@ module m
   end type
   type(t(a+3,:)), allocatable :: z
   class(t(a+4,:)), allocatable :: z2
-  type(*), allocatable :: z3
   class(*), allocatable :: z4
   real*2 :: f
   complex*32 :: g
@@ -24,6 +23,9 @@ contains
   end
   subroutine bar(x)
     real :: x(..)
+  end
+  subroutine baz(x)
+    type(*) :: x
   end
 end
 
@@ -42,7 +44,6 @@ end
 !  end type
 !  type(t(c=4_4,d=:)),allocatable::z
 !  class(t(c=5_4,d=:)),allocatable::z2
-!  type(*),allocatable::z3
 !  class(*),allocatable::z4
 !  real(2)::f
 !  complex(16)::g
@@ -57,5 +58,8 @@ end
 !  end
 !  subroutine bar(x)
 !    real(4)::x(..)
+!  end
+!  subroutine baz(x)
+!    type(*)::x
 !  end
 !end

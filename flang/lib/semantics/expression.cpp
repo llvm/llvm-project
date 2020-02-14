@@ -2344,7 +2344,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
   if (!x.typedExpr) {
     FixMisparsedFunctionReference(context_, x.u);
     MaybeExpr result;
-    if (AssumedTypeDummy(x)) {
+    if (AssumedTypeDummy(x)) {  // C710
       Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
     } else {
       if constexpr (std::is_same_v<PARSED, parser::Expr>) {

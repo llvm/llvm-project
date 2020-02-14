@@ -59,6 +59,7 @@ private:
   void CheckObjectEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckArraySpec(const Symbol &, const ArraySpec &);
   void CheckProcEntity(const Symbol &, const ProcEntityDetails &);
+  void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
   void CheckGeneric(const Symbol &, const GenericDetails &);
   std::optional<std::vector<Procedure>> Characterize(const SymbolVector &);
@@ -293,11 +294,56 @@ void CheckHelper::CheckValue(
   }
 }
 
+void CheckHelper::CheckAssumedTypeEntity(  // C709
+    const Symbol &symbol, const ObjectEntityDetails &details) {
+  if (const DeclTypeSpec * type{symbol.GetType()};
+      type && type->category() == DeclTypeSpec::TypeStar) {
+    if (!symbol.IsDummy()) {
+      messages_.Say(
+          "Assumed-type entity '%s' must be a dummy argument"_err_en_US,
+          symbol.name());
+    } else {
+      if (symbol.attrs().test(Attr::ALLOCATABLE)) {
+        messages_.Say("Assumed-type argument '%s' cannot have the ALLOCATABLE"
+                      " attribute"_err_en_US,
+            symbol.name());
+      }
+      if (symbol.attrs().test(Attr::POINTER)) {
+        messages_.Say("Assumed-type argument '%s' cannot have the POINTER"
+                      " attribute"_err_en_US,
+            symbol.name());
+      }
+      if (symbol.attrs().test(Attr::VALUE)) {
+        messages_.Say("Assumed-type argument '%s' cannot have the VALUE"
+                      " attribute"_err_en_US,
+            symbol.name());
+      }
+      if (symbol.attrs().test(Attr::INTENT_OUT)) {
+        messages_.Say(
+            "Assumed-type argument '%s' cannot be INTENT(OUT)"_err_en_US,
+            symbol.name());
+      }
+      if (IsCoarray(symbol)) {
+        messages_.Say(
+            "Assumed-type argument '%s' cannot be a coarray"_err_en_US,
+            symbol.name());
+      }
+      if (details.IsArray() &&
+          !(details.IsAssumedShape() || details.IsAssumedSize())) {
+        messages_.Say("Assumed-type argument '%s' must be assumed shape"
+                      " or assumed size array"_err_en_US,
+            symbol.name());
+      }
+    }
+  }
+}
+
 void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
   CheckArraySpec(symbol, details.shape());
   Check(details.shape());
   Check(details.coshape());
+  CheckAssumedTypeEntity(symbol, details);
   if (!details.coshape().empty()) {
     if (IsAllocatable(symbol)) {
       if (!details.coshape().IsDeferredShape()) {  // C827
@@ -373,7 +419,8 @@ void CheckHelper::CheckObjectEntity(
   }
   if (const DeclTypeSpec * type{details.type()}) {  // C708
     if (type->IsPolymorphic() &&
-        !(IsAllocatableOrPointer(symbol) || symbol.IsDummy())) {
+        !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
+            symbol.IsDummy())) {
       messages_.Say("CLASS entity '%s' must be a dummy argument or have "
                     "ALLOCATABLE or POINTER attribute"_err_en_US,
           symbol.name());

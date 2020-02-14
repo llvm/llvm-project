@@ -91,7 +91,7 @@ module iso_c_binding
 
   function c_loc(x)
     type(c_ptr) :: c_loc
-    type(*), intent(in) :: x
+    type(*), dimension(:), intent(in) :: x
     c_loc = c_ptr(loc(x))
   end function c_loc
 

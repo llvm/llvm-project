@@ -102,6 +102,7 @@ set(ERROR_TESTS
   resolve69.f90
   resolve70.f90
   resolve71.f90
+  resolve72.f90
   stop01.f90
   structconst01.f90
   structconst02.f90
@@ -195,6 +196,7 @@ set(ERROR_TESTS
   call12.f90
   call13.f90
   call14.f90
+  call15.f90
   forall01.f90
   misc-declarations.f90
   separate-module-procs.f90
