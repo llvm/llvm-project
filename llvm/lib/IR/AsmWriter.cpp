@@ -4197,9 +4197,15 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
     return;
   }
 
-  assert(Attr.hasAttribute(Attribute::ByVal) && "unexpected type attr");
+  assert(Attr.hasAttribute(Attribute::ByVal) ||
+         Attr.hasAttribute(Attribute::Preallocated) && "unexpected type attr");
 
-  Out << "byval";
+  if (Attr.hasAttribute(Attribute::ByVal)) {
+    Out << "byval";
+  } else {
+    Out << "preallocated";
+  }
+
   if (Type *Ty = Attr.getValueAsType()) {
     Out << '(';
     TypePrinter.print(Ty, Out);

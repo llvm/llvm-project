@@ -83,12 +83,14 @@ public:
   /// Known operand bundle tag IDs, which always have the same value.  All
   /// operand bundle tags that LLVM has special knowledge of are listed here.
   /// Additionally, this scheme allows LLVM to efficiently check for specific
-  /// operand bundle tags without comparing strings.
+  /// operand bundle tags without comparing strings. Keep this in sync with
+  /// LLVMContext::LLVMContext().
   enum : unsigned {
     OB_deopt = 0,         // "deopt"
     OB_funclet = 1,       // "funclet"
     OB_gc_transition = 2, // "gc-transition"
     OB_cfguardtarget = 3, // "cfguardtarget"
+    OB_preallocated = 4,  // "preallocated"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
