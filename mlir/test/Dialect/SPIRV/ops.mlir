@@ -289,7 +289,7 @@ func @control_barrier_0() -> () {
 // -----
 
 func @control_barrier_1() -> () {
-  // expected-error @+1 {{invalid scope attribute specification: "Something"}}
+  // expected-error @+1 {{invalid execution_scope attribute specification: "Something"}}
   spv.ControlBarrier "Something", "Device", "Acquire|UniformMemory"
   return
 }
