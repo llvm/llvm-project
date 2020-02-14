@@ -116,7 +116,3 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
                 "breakpoint event is has a line number")
         self.assertTrue("foo.cpp" in breakpoint['source']['path'],
                 "breakpoint event path contains foo.cpp")
-
-        output = self.get_console() # REMOVE PRIOR TO CHECKIN
-        with open("/tmp/b", "w") as f:
-            f.write(output)

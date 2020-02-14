@@ -29,10 +29,7 @@ public:
 
   ~SymbolFileDWARFDwo() override = default;
 
-  DWARFCompileUnit *GetCompileUnit();
-
-  DWARFUnit *
-  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
   size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                  DIEArray &method_die_offsets) override;
@@ -68,10 +65,11 @@ protected:
 
   SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
-  DWARFCompileUnit *ComputeCompileUnit();
+  /// If this file contains exactly one compile unit, this function will return
+  /// it. Otherwise it returns nullptr.
+  DWARFCompileUnit *FindSingleCompileUnit();
 
   SymbolFileDWARF &m_base_symbol_file;
-  DWARFCompileUnit *m_cu = nullptr;
 };
 
 #endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_

@@ -249,8 +249,13 @@ TEST(IndexTest, IndexTypeParmDecls) {
   Index->Symbols.clear();
   tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
   EXPECT_THAT(Index->Symbols,
-              AllOf(Contains(QName("Foo::T")), Contains(QName("Foo::I")),
-                    Contains(QName("Foo::C")), Contains(QName("Foo::NoRef"))));
+              AllOf(Contains(AllOf(QName("Foo::T"),
+                                   Kind(SymbolKind::TemplateTypeParm))),
+                    Contains(AllOf(QName("Foo::I"),
+                                   Kind(SymbolKind::NonTypeTemplateParm))),
+                    Contains(AllOf(QName("Foo::C"),
+                                   Kind(SymbolKind::TemplateTemplateParm))),
+                    Contains(QName("Foo::NoRef"))));
 }
 
 TEST(IndexTest, UsingDecls) {

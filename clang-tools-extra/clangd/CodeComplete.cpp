@@ -108,6 +108,7 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Function;
   case SK::Variable:
   case SK::Parameter:
+  case SK::NonTypeTemplateParm:
     return CompletionItemKind::Variable;
   case SK::Field:
     return CompletionItemKind::Field;
@@ -125,6 +126,9 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Property;
   case SK::Constructor:
     return CompletionItemKind::Constructor;
+  case SK::TemplateTypeParm:
+  case SK::TemplateTemplateParm:
+    return CompletionItemKind::TypeParameter;
   }
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
 }

@@ -81,9 +81,9 @@ RecordStreamer::const_iterator RecordStreamer::begin() {
 
 RecordStreamer::const_iterator RecordStreamer::end() { return Symbols.end(); }
 
-void RecordStreamer::EmitInstruction(const MCInst &Inst,
+void RecordStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
-  MCStreamer::EmitInstruction(Inst, STI);
+  MCStreamer::emitInstruction(Inst, STI);
 }
 
 void RecordStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {

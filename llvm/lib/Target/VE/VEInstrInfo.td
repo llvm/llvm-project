@@ -210,6 +210,13 @@ def call          : SDNode<"VEISD::CALL", SDT_SPCall,
 
 def retflag       : SDNode<"VEISD::RET_FLAG", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def getGOT        : Operand<iPTR>;
+
+// GETFUNPLT for PIC
+def GetFunPLT : SDNode<"VEISD::GETFUNPLT", SDTIntUnaryOp>;
+
+
 //===----------------------------------------------------------------------===//
 // VE Flag Conditions
 //===----------------------------------------------------------------------===//
@@ -262,6 +269,17 @@ multiclass RMm<string opcStr, bits<8>opc,
     let cy = 0;
     let sy = 0;
     let cz = 1;
+    let hasSideEffects = 0;
+  }
+  def zii : RM<
+    opc, (outs RC:$sx), (ins immOp:$sy, immOp2:$imm32),
+    !strconcat(opcStr, " $sx, ${imm32}(${sy})"),
+    [/* Not define DAG pattern here to avoid llvm uses LEAzii for all add
+        instructions.
+        (set Ty:$sx, (OpNode (Ty simm7:$sy), (Ty simm32:$imm32))) */]> {
+    let cy = 0;
+    let cz = 0;
+    let sz = 0;
     let hasSideEffects = 0;
   }
   def zzi : RM<
@@ -1031,6 +1049,11 @@ def MONC : RR<
     0x3F, (outs), (ins),
     "monc">;
 
+// Save Instruction Counter
+
+let cx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 /* , Uses = [IC] */ in
+def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
+
 //===----------------------------------------------------------------------===//
 // Instructions for CodeGenOnly
 //===----------------------------------------------------------------------===//
@@ -1207,6 +1230,23 @@ def : Pat<(brcc cond:$cond, f64:$l, f64:$r, bb:$addr),
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
+
+// GETGOT for PIC
+let Defs = [SX15 /* %got */, SX16 /* %plt */], hasSideEffects = 0 in {
+  def GETGOT : Pseudo<(outs getGOT:$getpcseq), (ins), "$getpcseq">;
+}
+
+// GETFUNPLT for PIC
+let hasSideEffects = 0 in
+def GETFUNPLT : Pseudo<(outs I64:$dst), (ins i64imm:$addr),
+                       "$dst, $addr",
+                       [(set iPTR:$dst, (GetFunPLT tglobaladdr:$addr))] >;
+
+def : Pat<(GetFunPLT tglobaladdr:$dst),
+          (GETFUNPLT tglobaladdr:$dst)>;
+def : Pat<(GetFunPLT texternalsym:$dst),
+          (GETFUNPLT texternalsym:$dst)>;
+
 
 let Defs = [SX11], Uses = [SX11], hasSideEffects = 0 in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt, i64imm:$amt2),

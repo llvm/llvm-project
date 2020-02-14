@@ -426,7 +426,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // EHABI). In this case LSDASection will be NULL.
   if (LSDASection)
     Asm->OutStreamer->SwitchSection(LSDASection);
-  Asm->EmitAlignment(Align(4));
+  Asm->emitAlignment(Align(4));
 
   // Emit the LSDA.
   MCSymbol *GCCETSym =
@@ -436,8 +436,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   Asm->OutStreamer->EmitLabel(Asm->getCurExceptionSym());
 
   // Emit the LSDA header.
-  Asm->EmitEncodingByte(dwarf::DW_EH_PE_omit, "@LPStart");
-  Asm->EmitEncodingByte(TTypeEncoding, "@TType");
+  Asm->emitEncodingByte(dwarf::DW_EH_PE_omit, "@LPStart");
+  Asm->emitEncodingByte(TTypeEncoding, "@TType");
 
   MCSymbol *TTBaseLabel = nullptr;
   if (HaveTTData) {
@@ -456,7 +456,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // Emit the landing pad call site table.
   MCSymbol *CstBeginLabel = Asm->createTempSymbol("cst_begin");
   MCSymbol *CstEndLabel = Asm->createTempSymbol("cst_end");
-  Asm->EmitEncodingByte(CallSiteEncoding, "Call site");
+  Asm->emitEncodingByte(CallSiteEncoding, "Call site");
   Asm->emitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
   Asm->OutStreamer->EmitLabel(CstBeginLabel);
 
@@ -602,11 +602,11 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   }
 
   if (HaveTTData) {
-    Asm->EmitAlignment(Align(4));
+    Asm->emitAlignment(Align(4));
     emitTypeInfos(TTypeEncoding, TTBaseLabel);
   }
 
-  Asm->EmitAlignment(Align(4));
+  Asm->emitAlignment(Align(4));
   return GCCETSym;
 }
 
@@ -629,7 +629,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
                                           TypeInfos.rend())) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
-    Asm->EmitTTypeReference(GV, TTypeEncoding);
+    Asm->emitTTypeReference(GV, TTypeEncoding);
   }
 
   Asm->OutStreamer->EmitLabel(TTBaseLabel);

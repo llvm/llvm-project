@@ -33,9 +33,9 @@ MipsELFStreamer::MipsELFStreamer(MCContext &Context,
       std::unique_ptr<MipsRegInfoRecord>(RegInfoRecord));
 }
 
-void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
+void MipsELFStreamer::emitInstruction(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCELFStreamer::EmitInstruction(Inst, STI);
+  MCELFStreamer::emitInstruction(Inst, STI);
 
   MCContext &Context = getContext();
   const MCRegisterInfo *MCRegInfo = Context.getRegisterInfo();
@@ -53,18 +53,18 @@ void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
   createPendingLabelRelocs();
 }
 
-void MipsELFStreamer::EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+void MipsELFStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.Begin = getContext().createTempSymbol();
   MCELFStreamer::EmitLabel(Frame.Begin);
 }
 
-MCSymbol *MipsELFStreamer::EmitCFILabel() {
+MCSymbol *MipsELFStreamer::emitCFILabel() {
   MCSymbol *Label = getContext().createTempSymbol("cfi", true);
   MCELFStreamer::EmitLabel(Label);
   return Label;
 }
 
-void MipsELFStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
+void MipsELFStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = getContext().createTempSymbol();
   MCELFStreamer::EmitLabel(Frame.End);
 }

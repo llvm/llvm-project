@@ -24,29 +24,22 @@
 
 #include <string>
 
-LLDB_PLUGIN_DECLARE(ABIMacOSX_arm64)
-LLDB_PLUGIN_DECLARE(ABISysV_arm64)
-LLDB_PLUGIN_DECLARE(ABIMacOSX_arm)
-LLDB_PLUGIN_DECLARE(ABISysV_arm)
-LLDB_PLUGIN_DECLARE(ABISysV_arc)
-LLDB_PLUGIN_DECLARE(ABISysV_hexagon)
-LLDB_PLUGIN_DECLARE(ABISysV_mips)
-LLDB_PLUGIN_DECLARE(ABISysV_mips64)
-LLDB_PLUGIN_DECLARE(ABISysV_ppc)
-LLDB_PLUGIN_DECLARE(ABISysV_ppc64)
-LLDB_PLUGIN_DECLARE(ABISysV_s390x)
-LLDB_PLUGIN_DECLARE(ABIMacOSX_i386)
-LLDB_PLUGIN_DECLARE(ABISysV_i386)
-LLDB_PLUGIN_DECLARE(ABISysV_x86_64)
-LLDB_PLUGIN_DECLARE(ABIWindows_x86_64)
-LLDB_PLUGIN_DECLARE(ObjectFileBreakpad)
-LLDB_PLUGIN_DECLARE(ObjectFileELF)
-LLDB_PLUGIN_DECLARE(ObjectFileMachO)
-LLDB_PLUGIN_DECLARE(ObjectFilePECOFF)
-LLDB_PLUGIN_DECLARE(ObjectFileWasm)
-LLDB_PLUGIN_DECLARE(ObjectContainerBSDArchive)
-LLDB_PLUGIN_DECLARE(ObjectContainerUniversalMachO)
-LLDB_PLUGIN_DECLARE(ScriptInterpreterNone)
+LLDB_PLUGIN_DECLARE(ABIAArch64);
+LLDB_PLUGIN_DECLARE(ABIARM);
+LLDB_PLUGIN_DECLARE(ABISysV_arc);
+LLDB_PLUGIN_DECLARE(ABISysV_hexagon);
+LLDB_PLUGIN_DECLARE(ABIMips);
+LLDB_PLUGIN_DECLARE(ABIPowerPC);
+LLDB_PLUGIN_DECLARE(ABISysV_s390x);
+LLDB_PLUGIN_DECLARE(ABIX86);
+LLDB_PLUGIN_DECLARE(ObjectFileBreakpad);
+LLDB_PLUGIN_DECLARE(ObjectFileELF);
+LLDB_PLUGIN_DECLARE(ObjectFileMachO);
+LLDB_PLUGIN_DECLARE(ObjectFilePECOFF);
+LLDB_PLUGIN_DECLARE(ObjectFileWasm);
+LLDB_PLUGIN_DECLARE(ObjectContainerBSDArchive);
+LLDB_PLUGIN_DECLARE(ObjectContainerUniversalMachO);
+LLDB_PLUGIN_DECLARE(ScriptInterpreterNone);
 #if LLDB_ENABLE_PYTHON
 LLDB_PLUGIN_DECLARE(OperatingSystemPython)
 LLDB_PLUGIN_DECLARE(ScriptInterpreterPython)
@@ -120,26 +113,14 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
-#define LLDB_PROCESS_AArch64(op)                                               \
-  op(ABIMacOSX_arm64);                                                         \
-  op(ABISysV_arm64);
-#define LLDB_PROCESS_ARM(op)                                                   \
-  op(ABIMacOSX_arm);                                                           \
-  op(ABISysV_arm);
+#define LLDB_PROCESS_AArch64(op) op(ABIAArch64);
+#define LLDB_PROCESS_ARM(op) op(ABIARM);
 #define LLDB_PROCESS_ARC(op) op(ABISysV_arc);
 #define LLDB_PROCESS_Hexagon(op) op(ABISysV_hexagon);
-#define LLDB_PROCESS_Mips(op)                                                  \
-  op(ABISysV_mips);                                                            \
-  op(ABISysV_mips64);
-#define LLDB_PROCESS_PowerPC(op)                                               \
-  op(ABISysV_ppc);                                                             \
-  op(ABISysV_ppc64);
+#define LLDB_PROCESS_Mips(op) op(ABIMips);
+#define LLDB_PROCESS_PowerPC(op) op(ABIPowerPC);
 #define LLDB_PROCESS_SystemZ(op) op(ABISysV_s390x);
-#define LLDB_PROCESS_X86(op)                                                   \
-  op(ABIMacOSX_i386);                                                          \
-  op(ABISysV_i386);                                                            \
-  op(ABISysV_x86_64);                                                          \
-  op(ABIWindows_x86_64);
+#define LLDB_PROCESS_X86(op) op(ABIX86);
 
 #define LLDB_PROCESS_AMDGPU(op)
 #define LLDB_PROCESS_AVR(op)

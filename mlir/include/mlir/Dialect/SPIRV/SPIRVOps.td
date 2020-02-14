@@ -162,6 +162,10 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
   let verifier = [{ return verifyMemorySemantics(*this); }];
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = [{
+    $execution_scope `,` $memory_scope `,` $memory_semantics attr-dict
+  }];
 }
 
 // -----
@@ -319,6 +323,8 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
   let verifier = [{ return verifyMemorySemantics(*this); }];
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = "$memory_scope `,` $memory_semantics attr-dict";
 }
 
 // -----

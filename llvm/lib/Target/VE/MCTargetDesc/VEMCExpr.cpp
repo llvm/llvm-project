@@ -46,6 +46,14 @@ bool VEMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind) {
 
   case VK_VE_HI32:
   case VK_VE_LO32:
+  case VK_VE_PC_HI32:
+  case VK_VE_PC_LO32:
+  case VK_VE_GOT_HI32:
+  case VK_VE_GOT_LO32:
+  case VK_VE_GOTOFF_HI32:
+  case VK_VE_GOTOFF_LO32:
+  case VK_VE_PLT_HI32:
+  case VK_VE_PLT_LO32:
     return false; // OS << "@<text>(";  break;
   }
   return true;
@@ -61,6 +69,30 @@ void VEMCExpr::printVariantKindSuffix(raw_ostream &OS, VariantKind Kind) {
   case VK_VE_LO32:
     OS << "@lo";
     break;
+  case VK_VE_PC_HI32:
+    OS << "@pc_hi";
+    break;
+  case VK_VE_PC_LO32:
+    OS << "@pc_lo";
+    break;
+  case VK_VE_GOT_HI32:
+    OS << "@got_hi";
+    break;
+  case VK_VE_GOT_LO32:
+    OS << "@got_lo";
+    break;
+  case VK_VE_GOTOFF_HI32:
+    OS << "@gotoff_hi";
+    break;
+  case VK_VE_GOTOFF_LO32:
+    OS << "@gotoff_lo";
+    break;
+  case VK_VE_PLT_HI32:
+    OS << "@plt_hi";
+    break;
+  case VK_VE_PLT_LO32:
+    OS << "@plt_lo";
+    break;
   }
 }
 
@@ -68,6 +100,14 @@ VEMCExpr::VariantKind VEMCExpr::parseVariantKind(StringRef name) {
   return StringSwitch<VEMCExpr::VariantKind>(name)
       .Case("hi", VK_VE_HI32)
       .Case("lo", VK_VE_LO32)
+      .Case("pc_hi", VK_VE_PC_HI32)
+      .Case("pc_lo", VK_VE_PC_LO32)
+      .Case("got_hi", VK_VE_GOT_HI32)
+      .Case("got_lo", VK_VE_GOT_LO32)
+      .Case("gotoff_hi", VK_VE_GOTOFF_HI32)
+      .Case("gotoff_lo", VK_VE_GOTOFF_LO32)
+      .Case("plt_hi", VK_VE_PLT_HI32)
+      .Case("plt_lo", VK_VE_PLT_LO32)
       .Default(VK_VE_None);
 }
 
@@ -79,6 +119,22 @@ VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
     return VE::fixup_ve_hi32;
   case VK_VE_LO32:
     return VE::fixup_ve_lo32;
+  case VK_VE_PC_HI32:
+    return VE::fixup_ve_pc_hi32;
+  case VK_VE_PC_LO32:
+    return VE::fixup_ve_pc_lo32;
+  case VK_VE_GOT_HI32:
+    return VE::fixup_ve_got_hi32;
+  case VK_VE_GOT_LO32:
+    return VE::fixup_ve_got_lo32;
+  case VK_VE_GOTOFF_HI32:
+    return VE::fixup_ve_gotoff_hi32;
+  case VK_VE_GOTOFF_LO32:
+    return VE::fixup_ve_gotoff_lo32;
+  case VK_VE_PLT_HI32:
+    return VE::fixup_ve_plt_hi32;
+  case VK_VE_PLT_LO32:
+    return VE::fixup_ve_plt_lo32;
   }
 }
 

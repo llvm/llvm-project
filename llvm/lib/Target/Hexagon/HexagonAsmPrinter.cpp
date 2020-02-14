@@ -740,7 +740,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 }
 
 /// Print out a single Hexagon MI to the current output stream.
-void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
   MCB.addOperand(MCOperand::createImm(0));
@@ -768,7 +768,7 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   assert(Ok); (void)Ok;
   if (HexagonMCInstrInfo::bundleSize(MCB) == 0)
     return;
-  OutStreamer->EmitInstruction(MCB, getSubtargetInfo());
+  OutStreamer->emitInstruction(MCB, getSubtargetInfo());
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {

@@ -22,6 +22,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -1271,6 +1272,15 @@ TEST(DeclPrinter, TestTemplateArgumentList15) {
     "A",
     "Z<sizeof...(T)> A"));
     // Should be: with semicolon
+}
+
+TEST(DeclPrinter, TestTemplateArgumentList16) {
+  llvm::StringLiteral Code = "template<typename T1, int NT1, typename T2 = "
+                             "bool, int NT2 = 5> struct Z {};";
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T1", "typename T1"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
 }
 
 TEST(DeclPrinter, TestStaticAssert1) {

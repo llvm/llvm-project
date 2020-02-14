@@ -58,8 +58,8 @@ class MCAsmStreamer final : public MCStreamer {
   unsigned UseDwarfDirectory : 1;
 
   void EmitRegisterName(int64_t Register);
-  void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
-  void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
@@ -288,28 +288,28 @@ public:
   void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
 
   void EmitIdent(StringRef IdentString) override;
-  void EmitCFIBKeyFrame() override;
-  void EmitCFISections(bool EH, bool Debug) override;
-  void EmitCFIDefCfa(int64_t Register, int64_t Offset) override;
-  void EmitCFIDefCfaOffset(int64_t Offset) override;
-  void EmitCFIDefCfaRegister(int64_t Register) override;
-  void EmitCFIOffset(int64_t Register, int64_t Offset) override;
-  void EmitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
-  void EmitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
-  void EmitCFIRememberState() override;
-  void EmitCFIRestoreState() override;
-  void EmitCFIRestore(int64_t Register) override;
-  void EmitCFISameValue(int64_t Register) override;
-  void EmitCFIRelOffset(int64_t Register, int64_t Offset) override;
-  void EmitCFIAdjustCfaOffset(int64_t Adjustment) override;
-  void EmitCFIEscape(StringRef Values) override;
-  void EmitCFIGnuArgsSize(int64_t Size) override;
-  void EmitCFISignalFrame() override;
-  void EmitCFIUndefined(int64_t Register) override;
-  void EmitCFIRegister(int64_t Register1, int64_t Register2) override;
-  void EmitCFIWindowSave() override;
-  void EmitCFINegateRAState() override;
-  void EmitCFIReturnColumn(int64_t Register) override;
+  void emitCFIBKeyFrame() override;
+  void emitCFISections(bool EH, bool Debug) override;
+  void emitCFIDefCfa(int64_t Register, int64_t Offset) override;
+  void emitCFIDefCfaOffset(int64_t Offset) override;
+  void emitCFIDefCfaRegister(int64_t Register) override;
+  void emitCFIOffset(int64_t Register, int64_t Offset) override;
+  void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
+  void emitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
+  void emitCFIRememberState() override;
+  void emitCFIRestoreState() override;
+  void emitCFIRestore(int64_t Register) override;
+  void emitCFISameValue(int64_t Register) override;
+  void emitCFIRelOffset(int64_t Register, int64_t Offset) override;
+  void emitCFIAdjustCfaOffset(int64_t Adjustment) override;
+  void emitCFIEscape(StringRef Values) override;
+  void emitCFIGnuArgsSize(int64_t Size) override;
+  void emitCFISignalFrame() override;
+  void emitCFIUndefined(int64_t Register) override;
+  void emitCFIRegister(int64_t Register1, int64_t Register2) override;
+  void emitCFIWindowSave() override;
+  void emitCFINegateRAState() override;
+  void emitCFIReturnColumn(int64_t Register) override;
 
   void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void EmitWinCFIEndProc(SMLoc Loc) override;
@@ -334,7 +334,7 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
 
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void EmitBundleAlignMode(unsigned AlignPow2) override;
   void EmitBundleLock(bool AlignToEnd) override;
@@ -1523,8 +1523,8 @@ void MCAsmStreamer::EmitIdent(StringRef IdentString) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFISections(bool EH, bool Debug) {
-  MCStreamer::EmitCFISections(EH, Debug);
+void MCAsmStreamer::emitCFISections(bool EH, bool Debug) {
+  MCStreamer::emitCFISections(EH, Debug);
   OS << "\t.cfi_sections ";
   if (EH) {
     OS << ".eh_frame";
@@ -1537,15 +1537,15 @@ void MCAsmStreamer::EmitCFISections(bool EH, bool Debug) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+void MCAsmStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   OS << "\t.cfi_startproc";
   if (Frame.IsSimple)
     OS << " simple";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
-  MCStreamer::EmitCFIEndProcImpl(Frame);
+void MCAsmStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
+  MCStreamer::emitCFIEndProcImpl(Frame);
   OS << "\t.cfi_endproc";
   EmitEOL();
 }
@@ -1564,16 +1564,16 @@ void MCAsmStreamer::EmitRegisterName(int64_t Register) {
   OS << Register;
 }
 
-void MCAsmStreamer::EmitCFIDefCfa(int64_t Register, int64_t Offset) {
-  MCStreamer::EmitCFIDefCfa(Register, Offset);
+void MCAsmStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset) {
+  MCStreamer::emitCFIDefCfa(Register, Offset);
   OS << "\t.cfi_def_cfa ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIDefCfaOffset(int64_t Offset) {
-  MCStreamer::EmitCFIDefCfaOffset(Offset);
+void MCAsmStreamer::emitCFIDefCfaOffset(int64_t Offset) {
+  MCStreamer::emitCFIDefCfaOffset(Offset);
   OS << "\t.cfi_def_cfa_offset " << Offset;
   EmitEOL();
 }
@@ -1588,14 +1588,14 @@ static void PrintCFIEscape(llvm::formatted_raw_ostream &OS, StringRef Values) {
   }
 }
 
-void MCAsmStreamer::EmitCFIEscape(StringRef Values) {
-  MCStreamer::EmitCFIEscape(Values);
+void MCAsmStreamer::emitCFIEscape(StringRef Values) {
+  MCStreamer::emitCFIEscape(Values);
   PrintCFIEscape(OS, Values);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIGnuArgsSize(int64_t Size) {
-  MCStreamer::EmitCFIGnuArgsSize(Size);
+void MCAsmStreamer::emitCFIGnuArgsSize(int64_t Size) {
+  MCStreamer::emitCFIGnuArgsSize(Size);
 
   uint8_t Buffer[16] = { dwarf::DW_CFA_GNU_args_size };
   unsigned Len = encodeULEB128(Size, Buffer + 1) + 1;
@@ -1604,114 +1604,114 @@ void MCAsmStreamer::EmitCFIGnuArgsSize(int64_t Size) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIDefCfaRegister(int64_t Register) {
-  MCStreamer::EmitCFIDefCfaRegister(Register);
+void MCAsmStreamer::emitCFIDefCfaRegister(int64_t Register) {
+  MCStreamer::emitCFIDefCfaRegister(Register);
   OS << "\t.cfi_def_cfa_register ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIOffset(int64_t Register, int64_t Offset) {
-  this->MCStreamer::EmitCFIOffset(Register, Offset);
+void MCAsmStreamer::emitCFIOffset(int64_t Register, int64_t Offset) {
+  this->MCStreamer::emitCFIOffset(Register, Offset);
   OS << "\t.cfi_offset ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIPersonality(const MCSymbol *Sym,
+void MCAsmStreamer::emitCFIPersonality(const MCSymbol *Sym,
                                        unsigned Encoding) {
-  MCStreamer::EmitCFIPersonality(Sym, Encoding);
+  MCStreamer::emitCFIPersonality(Sym, Encoding);
   OS << "\t.cfi_personality " << Encoding << ", ";
   Sym->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFILsda(const MCSymbol *Sym, unsigned Encoding) {
-  MCStreamer::EmitCFILsda(Sym, Encoding);
+void MCAsmStreamer::emitCFILsda(const MCSymbol *Sym, unsigned Encoding) {
+  MCStreamer::emitCFILsda(Sym, Encoding);
   OS << "\t.cfi_lsda " << Encoding << ", ";
   Sym->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIRememberState() {
-  MCStreamer::EmitCFIRememberState();
+void MCAsmStreamer::emitCFIRememberState() {
+  MCStreamer::emitCFIRememberState();
   OS << "\t.cfi_remember_state";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIRestoreState() {
-  MCStreamer::EmitCFIRestoreState();
+void MCAsmStreamer::emitCFIRestoreState() {
+  MCStreamer::emitCFIRestoreState();
   OS << "\t.cfi_restore_state";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIRestore(int64_t Register) {
-  MCStreamer::EmitCFIRestore(Register);
+void MCAsmStreamer::emitCFIRestore(int64_t Register) {
+  MCStreamer::emitCFIRestore(Register);
   OS << "\t.cfi_restore ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFISameValue(int64_t Register) {
-  MCStreamer::EmitCFISameValue(Register);
+void MCAsmStreamer::emitCFISameValue(int64_t Register) {
+  MCStreamer::emitCFISameValue(Register);
   OS << "\t.cfi_same_value ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIRelOffset(int64_t Register, int64_t Offset) {
-  MCStreamer::EmitCFIRelOffset(Register, Offset);
+void MCAsmStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset) {
+  MCStreamer::emitCFIRelOffset(Register, Offset);
   OS << "\t.cfi_rel_offset ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIAdjustCfaOffset(int64_t Adjustment) {
-  MCStreamer::EmitCFIAdjustCfaOffset(Adjustment);
+void MCAsmStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment) {
+  MCStreamer::emitCFIAdjustCfaOffset(Adjustment);
   OS << "\t.cfi_adjust_cfa_offset " << Adjustment;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFISignalFrame() {
-  MCStreamer::EmitCFISignalFrame();
+void MCAsmStreamer::emitCFISignalFrame() {
+  MCStreamer::emitCFISignalFrame();
   OS << "\t.cfi_signal_frame";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIUndefined(int64_t Register) {
-  MCStreamer::EmitCFIUndefined(Register);
+void MCAsmStreamer::emitCFIUndefined(int64_t Register) {
+  MCStreamer::emitCFIUndefined(Register);
   OS << "\t.cfi_undefined " << Register;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIRegister(int64_t Register1, int64_t Register2) {
-  MCStreamer::EmitCFIRegister(Register1, Register2);
+void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2) {
+  MCStreamer::emitCFIRegister(Register1, Register2);
   OS << "\t.cfi_register " << Register1 << ", " << Register2;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIWindowSave() {
-  MCStreamer::EmitCFIWindowSave();
+void MCAsmStreamer::emitCFIWindowSave() {
+  MCStreamer::emitCFIWindowSave();
   OS << "\t.cfi_window_save";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFINegateRAState() {
-  MCStreamer::EmitCFINegateRAState();
+void MCAsmStreamer::emitCFINegateRAState() {
+  MCStreamer::emitCFINegateRAState();
   OS << "\t.cfi_negate_ra_state";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIReturnColumn(int64_t Register) {
-  MCStreamer::EmitCFIReturnColumn(Register);
+void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
+  MCStreamer::emitCFIReturnColumn(Register);
   OS << "\t.cfi_return_column " << Register;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCFIBKeyFrame() {
-  MCStreamer::EmitCFIBKeyFrame();
+void MCAsmStreamer::emitCFIBKeyFrame() {
+  MCStreamer::emitCFIBKeyFrame();
   OS << "\t.cfi_b_key_frame";
   EmitEOL();
 }
@@ -1947,7 +1947,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
   }
 }
 
-void MCAsmStreamer::EmitInstruction(const MCInst &Inst,
+void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");

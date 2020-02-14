@@ -76,6 +76,8 @@ public:
                             const TargetRegisterInfo *TRI) const override;
   /// } Stack Spill & Reload
 
+  Register getGlobalBaseReg(MachineFunction *MF) const;
+
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 

@@ -56,6 +56,10 @@ enum class SymbolKind : uint8_t {
   Using,
 
   CommentTag,
+
+  TemplateTypeParm,
+  TemplateTemplateParm,
+  NonTypeTemplateParm,
 };
 
 enum class SymbolLanguage : uint8_t {

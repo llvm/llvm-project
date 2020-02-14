@@ -48,7 +48,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
 private:
   BTFDebug *BTF;
@@ -137,7 +137,7 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void BPFAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
 
   if (!BTF || !BTF->InstLower(MI, TmpInst)) {

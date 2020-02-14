@@ -492,7 +492,7 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
 
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
-    Out.EmitInstruction(MCB, STI);
+    Out.emitInstruction(MCB, STI);
   } else
     return true; // Error
 

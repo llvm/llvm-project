@@ -90,8 +90,10 @@ inline void registerAllPasses() {
 
   // CUDA
   createConvertGpuLaunchFuncToCudaCallsPass();
+#if MLIR_CUDA_CONVERSIONS_ENABLED
   createConvertGPUKernelToCubinPass(
       [](const std::string &, Location, StringRef) { return nullptr; });
+#endif
   createLowerGpuOpsToNVVMOpsPass();
 
   // Linalg

@@ -691,3 +691,38 @@ void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc)
    return;
   emitFlush(Loc);
 }
+
+void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
+  // Build call kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
+  // global_tid);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident)};
+
+  // Ignore return result until untied tasks are supported.
+  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_omp_taskwait),
+                     Args);
+}
+
+void OpenMPIRBuilder::CreateTaskwait(const LocationDescription &Loc) {
+  if (!updateToLocation(Loc))
+    return;
+  emitTaskwaitImpl(Loc);
+}
+
+void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
+  // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Constant *I32Null = ConstantInt::getNullValue(Int32);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), I32Null};
+
+  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_omp_taskyield),
+                     Args);
+}
+
+void OpenMPIRBuilder::CreateTaskyield(const LocationDescription &Loc) {
+  if (!updateToLocation(Loc))
+    return;
+  emitTaskyieldImpl(Loc);
+}

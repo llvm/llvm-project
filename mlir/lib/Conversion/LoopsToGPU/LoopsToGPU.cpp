@@ -595,7 +595,7 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
     return val.getParentRegion()->isAncestor(launchOp.getParentRegion());
   };
 
-  auto ensureLaunchIndependent = [&launchOp, &rewriter,
+  auto ensureLaunchIndependent = [&rewriter,
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
