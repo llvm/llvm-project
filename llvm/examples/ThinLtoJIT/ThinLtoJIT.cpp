@@ -262,7 +262,8 @@ void ThinLtoJIT::setupLayers(JITTargetMachineBuilder JTMB,
   OnDemandLayer->setPartitionFunction(CompileOnDemandLayer::compileWholeModule);
 
   // Delegate compilation to the thread pool.
-  CompileThreads = std::make_unique<ThreadPool>(NumCompileThreads);
+  CompileThreads = std::make_unique<ThreadPool>(
+      llvm::hardware_concurrency(NumCompileThreads));
   ES.setDispatchMaterialization(
       [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
         if (IsTrivialModule(MU.get())) {
