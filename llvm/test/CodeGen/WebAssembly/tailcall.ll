@@ -209,7 +209,37 @@ define i1 @mismatched_return_trunc() {
   ret i1 %u
 }
 
+; Stack-allocated arguments inhibit tail calls
 
+; CHECK-LABEL: stack_arg:
+; CHECK: i32.call
+define i32 @stack_arg(i32* %x) {
+  %a = alloca i32
+  %v = tail call i32 @stack_arg(i32* %a)
+  ret i32 %v
+}
+
+; CHECK-LABEL: stack_arg_gep:
+; CHECK: i32.call
+define i32 @stack_arg_gep(i32* %x) {
+  %a = alloca { i32, i32 }
+  %p = getelementptr { i32, i32 }, { i32, i32 }* %a, i32 0, i32 1
+  %v = tail call i32 @stack_arg_gep(i32* %p)
+  ret i32 %v
+}
+
+; CHECK-LABEL: stack_arg_cast:
+; CHECK: global.get $push{{[0-9]+}}=, __stack_pointer
+; CHECK: global.set __stack_pointer, $pop{{[0-9]+}}
+; FAST: i32.call ${{[0-9]+}}=, stack_arg_cast, $pop{{[0-9]+}}
+; CHECK: global.set __stack_pointer, $pop{{[0-9]+}}
+; SLOW: return_call stack_arg_cast, ${{[0-9]+}}
+define i32 @stack_arg_cast(i32 %x) {
+  %a = alloca [64 x i32]
+  %i = ptrtoint [64 x i32]* %a to i32
+  %v = tail call i32 @stack_arg_cast(i32 %i)
+  ret i32 %v
+}
 
 ; Check that the signatures generated for external indirectly
 ; return-called functions include the proper return types

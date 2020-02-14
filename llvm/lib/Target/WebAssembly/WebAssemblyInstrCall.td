@@ -74,7 +74,7 @@ defm CALL_VOID :
     [(WebAssemblycall0 (i32 imm:$callee))],
     "call    \t$callee", "call\t$callee", 0x10>;
 
-let isReturn = 1 in
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RET_CALL :
   I<(outs), (ins function32_op:$callee, variable_ops),
     (outs), (ins function32_op:$callee),
