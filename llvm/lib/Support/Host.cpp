@@ -1326,7 +1326,7 @@ int computeHostNumPhysicalCores() {
   }
   return count;
 }
-#elif defined(_WIN32)
+#elif defined(_WIN32) && LLVM_THREADS_ENABLED
 // Defined in llvm/lib/Support/Windows/Threading.inc
 int computeHostNumPhysicalCores();
 #else
