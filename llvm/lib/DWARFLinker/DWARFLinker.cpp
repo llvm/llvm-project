@@ -1017,7 +1017,8 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   } else if (AttrSpec.Attr == dwarf::DW_AT_call_return_pc) {
     // Relocate a return PC address within a call site entry.
     if (Die.getTag() == dwarf::DW_TAG_call_site)
-      Addr += Info.PCOffset;
+      Addr = (Info.OrigCallReturnPc ? Info.OrigCallReturnPc : Addr) +
+             Info.PCOffset;
   }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
@@ -1280,6 +1281,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(
     // inlining function.
     AttrInfo.OrigLowPc = dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc),
                                           std::numeric_limits<uint64_t>::max());
+    AttrInfo.OrigCallReturnPc =
+        dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_return_pc), 0);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
