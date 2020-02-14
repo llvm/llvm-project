@@ -106,6 +106,8 @@ class MockGDBServerResponder:
             return self.cont()
         if packet.startswith("vCont;c"):
             return self.vCont(packet)
+        if packet[0] == "A":
+            return self.A(packet)
         if packet[0] == "g":
             return self.readRegisters()
         if packet[0] == "G":
@@ -200,6 +202,9 @@ class MockGDBServerResponder:
 
     def vCont(self, packet):
         raise self.UnexpectedPacketException()
+
+    def A(self, packet):
+        return ""
 
     def readRegisters(self):
         return "00000000" * self.registerCount
