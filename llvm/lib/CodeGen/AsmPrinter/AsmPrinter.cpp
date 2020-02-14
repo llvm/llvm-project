@@ -231,7 +231,7 @@ const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
 }
 
 void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
-  S.EmitInstruction(Inst, getSubtargetInfo());
+  S.emitInstruction(Inst, getSubtargetInfo());
 }
 
 void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
@@ -1141,13 +1141,13 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::DBG_VALUE:
         if (isVerbose()) {
           if (!emitDebugValueComment(&MI, *this))
-            EmitInstruction(&MI);
+            emitInstruction(&MI);
         }
         break;
       case TargetOpcode::DBG_LABEL:
         if (isVerbose()) {
           if (!emitDebugLabelComment(&MI, *this))
-            EmitInstruction(&MI);
+            emitInstruction(&MI);
         }
         break;
       case TargetOpcode::IMPLICIT_DEF:
@@ -1157,7 +1157,7 @@ void AsmPrinter::emitFunctionBody() {
         if (isVerbose()) emitKill(&MI, *this);
         break;
       default:
-        EmitInstruction(&MI);
+        emitInstruction(&MI);
         break;
       }
 

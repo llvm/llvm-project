@@ -41,7 +41,7 @@ public:
   /// \p Inst is actually emitted. For example, we can inspect the operands and
   /// gather sufficient information that allows us to reason about the register
   /// usage for the translation unit.
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Overriding this function allows us to record all labels that should be
   /// marked as microMIPS. Based on this data marking is done in
@@ -61,9 +61,9 @@ public:
 
   // Overriding these functions allows us to avoid recording of these labels
   // in EmitLabel and later marking them as microMIPS.
-  void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
-  void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  MCSymbol *EmitCFILabel() override;
+  void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  MCSymbol *emitCFILabel() override;
 
   /// Emits all the option records stored up until the point it's called.
   void EmitMipsOptionRecords();

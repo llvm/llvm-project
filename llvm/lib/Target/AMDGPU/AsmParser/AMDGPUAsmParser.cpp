@@ -3606,7 +3606,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return true;
     }
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.emitInstruction(Inst, getSTI());
     return false;
 
   case Match_MissingFeature:

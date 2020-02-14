@@ -430,7 +430,7 @@ public:
   virtual void emitBasicBlockEnd(const MachineBasicBlock &MBB);
 
   /// Targets should implement this to emit instructions.
-  virtual void EmitInstruction(const MachineInstr *) {
+  virtual void emitInstruction(const MachineInstr *) {
     llvm_unreachable("EmitInstruction not implemented");
   }
 

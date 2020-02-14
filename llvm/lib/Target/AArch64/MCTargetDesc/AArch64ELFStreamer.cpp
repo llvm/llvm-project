@@ -102,10 +102,10 @@ public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     EmitA64MappingSymbol();
-    MCELFStreamer::EmitInstruction(Inst, STI);
+    MCELFStreamer::emitInstruction(Inst, STI);
   }
 
   /// Emit a 32-bit value as an instruction. This is only used for the .inst

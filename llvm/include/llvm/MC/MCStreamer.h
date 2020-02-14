@@ -233,8 +233,8 @@ class MCStreamer {
 protected:
   MCStreamer(MCContext &Ctx);
 
-  virtual void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
-  virtual void EmitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
+  virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
+  virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
 
   WinEH::FrameInfo *getCurrentWinFrameInfo() {
     return CurrentWinFrameInfo;
@@ -279,7 +279,7 @@ public:
 
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
-  virtual MCSymbol *EmitCFILabel();
+  virtual MCSymbol *emitCFILabel();
 
   /// Retreive the current frame info if one is available and it is not yet
   /// closed. Otherwise, issue an error and return null.
@@ -847,7 +847,7 @@ public:
                                        Optional<StringRef> Source,
                                        unsigned CUID = 0);
 
-  virtual void EmitCFIBKeyFrame();
+  virtual void emitCFIBKeyFrame();
 
   /// This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
@@ -937,29 +937,29 @@ public:
                                                const MCSymbol *Lo);
 
   virtual MCSymbol *getDwarfLineTableSymbol(unsigned CUID);
-  virtual void EmitCFISections(bool EH, bool Debug);
-  void EmitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
-  void EmitCFIEndProc();
-  virtual void EmitCFIDefCfa(int64_t Register, int64_t Offset);
-  virtual void EmitCFIDefCfaOffset(int64_t Offset);
-  virtual void EmitCFIDefCfaRegister(int64_t Register);
-  virtual void EmitCFIOffset(int64_t Register, int64_t Offset);
-  virtual void EmitCFIPersonality(const MCSymbol *Sym, unsigned Encoding);
-  virtual void EmitCFILsda(const MCSymbol *Sym, unsigned Encoding);
-  virtual void EmitCFIRememberState();
-  virtual void EmitCFIRestoreState();
-  virtual void EmitCFISameValue(int64_t Register);
-  virtual void EmitCFIRestore(int64_t Register);
-  virtual void EmitCFIRelOffset(int64_t Register, int64_t Offset);
-  virtual void EmitCFIAdjustCfaOffset(int64_t Adjustment);
-  virtual void EmitCFIEscape(StringRef Values);
-  virtual void EmitCFIReturnColumn(int64_t Register);
-  virtual void EmitCFIGnuArgsSize(int64_t Size);
-  virtual void EmitCFISignalFrame();
-  virtual void EmitCFIUndefined(int64_t Register);
-  virtual void EmitCFIRegister(int64_t Register1, int64_t Register2);
-  virtual void EmitCFIWindowSave();
-  virtual void EmitCFINegateRAState();
+  virtual void emitCFISections(bool EH, bool Debug);
+  void emitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
+  void emitCFIEndProc();
+  virtual void emitCFIDefCfa(int64_t Register, int64_t Offset);
+  virtual void emitCFIDefCfaOffset(int64_t Offset);
+  virtual void emitCFIDefCfaRegister(int64_t Register);
+  virtual void emitCFIOffset(int64_t Register, int64_t Offset);
+  virtual void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding);
+  virtual void emitCFILsda(const MCSymbol *Sym, unsigned Encoding);
+  virtual void emitCFIRememberState();
+  virtual void emitCFIRestoreState();
+  virtual void emitCFISameValue(int64_t Register);
+  virtual void emitCFIRestore(int64_t Register);
+  virtual void emitCFIRelOffset(int64_t Register, int64_t Offset);
+  virtual void emitCFIAdjustCfaOffset(int64_t Adjustment);
+  virtual void emitCFIEscape(StringRef Values);
+  virtual void emitCFIReturnColumn(int64_t Register);
+  virtual void emitCFIGnuArgsSize(int64_t Size);
+  virtual void emitCFISignalFrame();
+  virtual void emitCFIUndefined(int64_t Register);
+  virtual void emitCFIRegister(int64_t Register1, int64_t Register2);
+  virtual void emitCFIWindowSave();
+  virtual void emitCFINegateRAState();
 
   virtual void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void EmitWinCFIEndProc(SMLoc Loc = SMLoc());
@@ -1010,7 +1010,7 @@ public:
   virtual void EmitAddrsigSym(const MCSymbol *Sym) {}
 
   /// Emit the given \p Instruction into the current section.
-  virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
+  virtual void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
 
   /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The

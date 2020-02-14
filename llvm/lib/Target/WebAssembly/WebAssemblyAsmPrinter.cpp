@@ -315,7 +315,7 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   AsmPrinter::emitFunctionBodyStart();
 }
 
-void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
 
   switch (MI->getOpcode()) {

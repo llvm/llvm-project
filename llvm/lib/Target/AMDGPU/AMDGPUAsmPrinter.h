@@ -121,7 +121,7 @@ public:
                                    const MachineInstr *MI);
 
   /// Implemented in AMDGPUMCInstLower.cpp
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
   void emitFunctionBodyStart() override;
 

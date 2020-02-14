@@ -141,7 +141,7 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
   Visiting.erase(GV);
 }
 
-void NVPTXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst Inst;
   lowerToMCInst(MI, Inst);
   EmitToStreamer(*OutStreamer, Inst);

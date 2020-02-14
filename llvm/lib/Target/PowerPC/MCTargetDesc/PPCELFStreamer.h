@@ -37,7 +37,7 @@ public:
                  std::unique_ptr<MCObjectWriter> OW,
                  std::unique_ptr<MCCodeEmitter> Emitter);
 
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   // EmitLabel updates LastLabel and LastLabelLoc when a new label is emitted.
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;

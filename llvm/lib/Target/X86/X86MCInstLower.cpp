@@ -121,7 +121,7 @@ void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
 }
 
 void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-  OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
+  OutStreamer->emitInstruction(Inst, getSubtargetInfo());
   SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
 }
 
@@ -1077,7 +1077,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                         const MCSubtargetInfo &STI) {
   if (!Is64Bit) {
     // TODO Do additional checking if the CPU supports multi-byte nops.
-    OS.EmitInstruction(MCInstBuilder(X86::NOOP), STI);
+    OS.emitInstruction(MCInstBuilder(X86::NOOP), STI);
     return 1;
   }
 
@@ -1156,14 +1156,14 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
   switch (Opc) {
   default: llvm_unreachable("Unexpected opcode");
   case X86::NOOP:
-    OS.EmitInstruction(MCInstBuilder(Opc), STI);
+    OS.emitInstruction(MCInstBuilder(Opc), STI);
     break;
   case X86::XCHG16ar:
-    OS.EmitInstruction(MCInstBuilder(Opc).addReg(X86::AX).addReg(X86::AX), STI);
+    OS.emitInstruction(MCInstBuilder(Opc).addReg(X86::AX).addReg(X86::AX), STI);
     break;
   case X86::NOOPL:
   case X86::NOOPW:
-    OS.EmitInstruction(MCInstBuilder(Opc)
+    OS.emitInstruction(MCInstBuilder(Opc)
                            .addReg(BaseReg)
                            .addImm(ScaleVal)
                            .addReg(IndexReg)
@@ -1238,7 +1238,7 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
     MCInst CallInst;
     CallInst.setOpcode(CallOpcode);
     CallInst.addOperand(CallTargetMCOp);
-    OutStreamer->EmitInstruction(CallInst, getSubtargetInfo());
+    OutStreamer->emitInstruction(CallInst, getSubtargetInfo());
   }
 
   // Record our statepoint node in the same section used by STACKMAP
@@ -1283,7 +1283,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
       MI.addOperand(MaybeOperand.getValue());
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
-  OutStreamer->EmitInstruction(MI, getSubtargetInfo());
+  OutStreamer->emitInstruction(MI, getSubtargetInfo());
 }
 
 void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
@@ -1335,7 +1335,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
     }
   }
 
-  OutStreamer->EmitInstruction(MCI, getSubtargetInfo());
+  OutStreamer->emitInstruction(MCI, getSubtargetInfo());
 }
 
 // Lower a stackmap of the form:
@@ -1681,7 +1681,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       Ret.addOperand(MaybeOperand.getValue());
-  OutStreamer->EmitInstruction(Ret, getSubtargetInfo());
+  OutStreamer->emitInstruction(Ret, getSubtargetInfo());
   EmitNops(*OutStreamer, 10, Subtarget->is64Bit(), getSubtargetInfo());
   recordSled(CurSled, MI, SledKind::FUNCTION_EXIT);
 }
@@ -1720,7 +1720,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       TC.addOperand(MaybeOperand.getValue());
-  OutStreamer->EmitInstruction(TC, getSubtargetInfo());
+  OutStreamer->emitInstruction(TC, getSubtargetInfo());
 }
 
 // Returns instruction preceding MBBI in MachineFunction.
@@ -1964,7 +1964,7 @@ static unsigned getRegisterWidth(const MCOperandInfo &Info) {
   llvm_unreachable("Unknown register class!");
 }
 
-void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();
@@ -2137,7 +2137,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     int stackGrowth = -RI->getSlotSize();
 
     if (HasActiveDwarfFrame && !hasFP) {
-      OutStreamer->EmitCFIAdjustCfaOffset(-stackGrowth);
+      OutStreamer->emitCFIAdjustCfaOffset(-stackGrowth);
     }
 
     // Emit the label.
@@ -2148,7 +2148,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
         MCInstBuilder(X86::POP32r).addReg(MI->getOperand(0).getReg()));
 
     if (HasActiveDwarfFrame && !hasFP) {
-      OutStreamer->EmitCFIAdjustCfaOffset(stackGrowth);
+      OutStreamer->emitCFIAdjustCfaOffset(stackGrowth);
     }
     return;
   }
@@ -2655,7 +2655,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // after it.
     SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
     // Then emit the call
-    OutStreamer->EmitInstruction(TmpInst, getSubtargetInfo());
+    OutStreamer->emitInstruction(TmpInst, getSubtargetInfo());
     return;
   }
 

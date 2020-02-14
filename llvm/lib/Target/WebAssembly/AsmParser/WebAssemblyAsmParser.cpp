@@ -839,7 +839,7 @@ public:
         if (Op0.getImm() == -1)
           Op0.setImm(Align);
       }
-      Out.EmitInstruction(Inst, getSTI());
+      Out.emitInstruction(Inst, getSTI());
       if (CurrentState == EndFunction) {
         onEndOfFunction();
       } else {

@@ -659,7 +659,7 @@ bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
-    Out.EmitInstruction(Inst, SubtargetInfo);
+    Out.emitInstruction(Inst, SubtargetInfo);
     Opcode = Inst.getOpcode();
     return false;
   case Match_MissingFeature:

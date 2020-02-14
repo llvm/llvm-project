@@ -46,7 +46,7 @@ public:
 
   StringRef getPassName() const override { return "VE Assembly Printer"; }
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
   static const char *getRegisterName(unsigned RegNo) {
     return VEInstPrinter::getRegisterName(RegNo);
@@ -54,7 +54,7 @@ public:
 };
 } // end of anonymous namespace
 
-void VEAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void VEAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   switch (MI->getOpcode()) {
   default:

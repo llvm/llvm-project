@@ -50,10 +50,10 @@ class MCObjectStreamer : public MCStreamer {
   SmallVector<PendingMCFixup, 2> PendingFixups;
 
   virtual void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
-  void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
-  void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  MCSymbol *EmitCFILabel() override;
-  void EmitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
+  void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  MCSymbol *emitCFILabel() override;
+  void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
   void resolvePendingFixups();
 
 protected:
@@ -70,7 +70,7 @@ public:
   bool isIntegratedAssemblerRequired() const override { return true; }
 
   void EmitFrames(MCAsmBackend *MAB);
-  void EmitCFISections(bool EH, bool Debug) override;
+  void emitCFISections(bool EH, bool Debug) override;
 
   MCFragment *getCurrentFragment() const;
 
@@ -123,7 +123,7 @@ public:
   void emitSLEB128Value(const MCExpr *Value) override;
   void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.

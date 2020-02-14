@@ -1315,9 +1315,9 @@ public:
   const MCSymbol &EmitCIE(const MCDwarfFrameInfo &F);
   void EmitFDE(const MCSymbol &cieStart, const MCDwarfFrameInfo &frame,
                bool LastInSection, const MCSymbol &SectionStart);
-  void EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
+  void emitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
                            MCSymbol *BaseLabel);
-  void EmitCFIInstruction(const MCCFIInstruction &Instr);
+  void emitCFIInstruction(const MCCFIInstruction &Instr);
 };
 
 } // end anonymous namespace
@@ -1326,7 +1326,7 @@ static void emitEncodingByte(MCObjectStreamer &Streamer, unsigned Encoding) {
   Streamer.EmitIntValue(Encoding, 1);
 }
 
-void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
+void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   int dataAlignmentFactor = getDataAlignmentFactor(Streamer);
   auto *MRI = Streamer.getContext().getRegisterInfo();
 
@@ -1458,7 +1458,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
 }
 
 /// Emit frame instructions to describe the layout of the frame.
-void FrameEmitterImpl::EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
+void FrameEmitterImpl::emitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
                                            MCSymbol *BaseLabel) {
   for (const MCCFIInstruction &Instr : Instrs) {
     MCSymbol *Label = Instr.getLabel();
@@ -1474,7 +1474,7 @@ void FrameEmitterImpl::EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
       }
     }
 
-    EmitCFIInstruction(Instr);
+    emitCFIInstruction(Instr);
   }
 }
 
@@ -1661,7 +1661,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   if (!Frame.IsSimple) {
     const std::vector<MCCFIInstruction> &Instructions =
         MAI->getInitialFrameState();
-    EmitCFIInstructions(Instructions, nullptr);
+    emitCFIInstructions(Instructions, nullptr);
   }
 
   InitialCFAOffset = CFAOffset;
@@ -1731,7 +1731,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   }
 
   // Call Frame Instructions
-  EmitCFIInstructions(frame.Instructions, frame.Begin);
+  emitCFIInstructions(frame.Instructions, frame.Begin);
 
   // Padding
   // The size of a .eh_frame section has to be a multiple of the alignment
