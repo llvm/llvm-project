@@ -46,7 +46,7 @@ This is an example workflow and configuration to get and build the LLVM source:
    * ``cd build``
    * ``cmake -G <generator> [options] ../llvm``
 
-     Some common generators are:
+     Some common build system generators are:
 
      * ``Ninja`` --- for generating `Ninja <https://ninja-build.org>`_
        build files. Most llvm developers use Ninja.
@@ -75,9 +75,11 @@ This is an example workflow and configuration to get and build the LLVM source:
      * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
        (default is Yes for Debug builds, No for all other build types).
 
-   * Run your build tool of choice!
+   * ``cmake --build . [--target <target>]`` or the build system specified
+     above directly.
 
-     * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
+     * The default target (i.e. ``cmake --build .`` or ``make``) will build all of
+       LLVM.
 
      * The ``check-all`` target (i.e. ``ninja check-all``) will run the
        regression tests to ensure everything is in working order.
@@ -85,10 +87,10 @@ This is an example workflow and configuration to get and build the LLVM source:
      * CMake will generate build targets for each tool and library, and most
        LLVM sub-projects generate their own ``check-<project>`` target.
 
-     * Running a serial build will be *slow*.  To improve speed, try running a
-       parallel build. That's done by default in Ninja; for ``make``, use
-       ``make -j NNN`` (NNN is the number of parallel jobs, use e.g. number of
-       CPUs you have.)
+     * Running a serial build will be **slow**.  To improve speed, try running a
+       parallel build. That's done by default in Ninja; for ``make``, use the
+       option ``-j NN``, where ``NN`` is the number of parallel jobs, e.g. the
+       number of available CPUs.
 
    * For more information see `CMake <CMake.html>`__
 
