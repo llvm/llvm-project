@@ -921,8 +921,8 @@ protected:
       assert(mapping.hasValue() && "unexpected deletion of function argument");
 
       SmallString<8> name;
-      for (size_t j = mapping->inputNo; j < mapping->size; ++j) {
-        impl::getArgAttrName(j, name);
+      for (size_t j = 0; j < mapping->size; ++j) {
+        impl::getArgAttrName(mapping->inputNo + j, name);
         attributes.push_back(rewriter.getNamedAttr(name, attr));
       }
     }
