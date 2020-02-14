@@ -620,17 +620,41 @@ defm MVE_VADDVu8  : MVE_VADDV_A<"u8",  0b1, 0b00>;
 defm MVE_VADDVu16 : MVE_VADDV_A<"u16", 0b1, 0b01>;
 defm MVE_VADDVu32 : MVE_VADDV_A<"u32", 0b1, 0b10>;
 
+def ARMVADDVs       : SDNode<"ARMISD::VADDVs", SDTVecReduce>;
+def ARMVADDVu       : SDNode<"ARMISD::VADDVu", SDTVecReduce>;
+
 let Predicates = [HasMVEInt] in {
-  def : Pat<(i32 (vecreduce_add (v4i32 MQPR:$src))), (i32 (MVE_VADDVu32no_acc $src))>;
-  def : Pat<(i32 (vecreduce_add (v8i16 MQPR:$src))), (i32 (MVE_VADDVu16no_acc $src))>;
-  def : Pat<(i32 (vecreduce_add (v16i8 MQPR:$src))), (i32 (MVE_VADDVu8no_acc $src))>;
-  def : Pat<(i32 (add (i32 (vecreduce_add (v4i32 MQPR:$src1))), (i32 tGPR:$src2))),
+  def : Pat<(i32 (vecreduce_add (v4i32 MQPR:$src))),
+            (i32 (MVE_VADDVu32no_acc $src))>;
+  def : Pat<(i32 (vecreduce_add (v8i16 MQPR:$src))),
+            (i32 (MVE_VADDVu16no_acc $src))>;
+  def : Pat<(i32 (vecreduce_add (v16i8 MQPR:$src))),
+            (i32 (MVE_VADDVu8no_acc $src))>;
+
+  def : Pat<(i32 (ARMVADDVs (v8i16 MQPR:$src))),
+            (i32 (MVE_VADDVs16no_acc $src))>;
+  def : Pat<(i32 (ARMVADDVu (v8i16 MQPR:$src))),
+            (i32 (MVE_VADDVu16no_acc $src))>;
+  def : Pat<(i32 (ARMVADDVs (v16i8 MQPR:$src))),
+            (i32 (MVE_VADDVs8no_acc $src))>;
+  def : Pat<(i32 (ARMVADDVu (v16i8 MQPR:$src))),
+            (i32 (MVE_VADDVu8no_acc $src))>;
+
+  def : Pat<(i32 (add (i32 (vecreduce_add (v4i32 MQPR:$src1))), (i32 tGPREven:$src2))),
             (i32 (MVE_VADDVu32acc $src2, $src1))>;
-  def : Pat<(i32 (add (i32 (vecreduce_add (v8i16 MQPR:$src1))), (i32 tGPR:$src2))),
+  def : Pat<(i32 (add (i32 (vecreduce_add (v8i16 MQPR:$src1))), (i32 tGPREven:$src2))),
             (i32 (MVE_VADDVu16acc $src2, $src1))>;
-  def : Pat<(i32 (add (i32 (vecreduce_add (v16i8 MQPR:$src1))), (i32 tGPR:$src2))),
+  def : Pat<(i32 (add (i32 (vecreduce_add (v16i8 MQPR:$src1))), (i32 tGPREven:$src2))),
             (i32 (MVE_VADDVu8acc $src2, $src1))>;
 
+  def : Pat<(i32 (add (i32 (ARMVADDVs (v8i16 MQPR:$src1))), (i32 tGPREven:$src2))),
+            (i32 (MVE_VADDVs16acc $src2, $src1))>;
+  def : Pat<(i32 (add (i32 (ARMVADDVu (v8i16 MQPR:$src1))), (i32 tGPREven:$src2))),
+            (i32 (MVE_VADDVu16acc $src2, $src1))>;
+  def : Pat<(i32 (add (i32 (ARMVADDVs (v16i8 MQPR:$src1))), (i32 tGPREven:$src2))),
+            (i32 (MVE_VADDVs8acc $src2, $src1))>;
+  def : Pat<(i32 (add (i32 (ARMVADDVu (v16i8 MQPR:$src1))), (i32 tGPREven:$src2))),
+            (i32 (MVE_VADDVu8acc $src2, $src1))>;
 }
 
 class MVE_VADDLV<string iname, string suffix, dag iops, string cstr,
