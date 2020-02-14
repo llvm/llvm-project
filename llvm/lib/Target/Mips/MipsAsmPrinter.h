@@ -134,7 +134,7 @@ public:
     // we emit constant pools customly!
   }
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
   void printSavedRegsBitmask();
   void emitFrameDirective();
   const char *getCurrentABIString() const;

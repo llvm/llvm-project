@@ -1135,7 +1135,7 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   }
 
   // Emit as a regular instruction.
-  Parser.getStreamer().EmitInstruction(Inst, getSTI());
+  Parser.getStreamer().emitInstruction(Inst, getSTI());
 
   return false;
 }
@@ -1288,7 +1288,7 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.emitInstruction(Inst, getSTI());
     return false;
 
   case Match_MissingFeature: {

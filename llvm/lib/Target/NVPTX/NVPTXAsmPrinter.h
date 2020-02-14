@@ -206,7 +206,7 @@ private:
   void emitFunctionBodyEnd() override;
   void emitImplicitDef(const MachineInstr *MI) const override;
 
-  void EmitInstruction(const MachineInstr *) override;
+  void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);

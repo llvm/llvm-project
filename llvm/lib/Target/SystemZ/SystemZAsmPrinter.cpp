@@ -124,7 +124,7 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(0);
 }
 
-void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
@@ -522,7 +522,6 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, LoweredMI);
 }
 
-
 // Emit the largest nop instruction smaller than or equal to NumBytes
 // bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
@@ -532,22 +531,22 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
     return 0;
   }
   else if (NumBytes < 4) {
-    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BCRAsm)
-                                  .addImm(0).addReg(SystemZ::R0D), STI);
+    OutStreamer.emitInstruction(
+        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D), STI);
     return 2;
   }
   else if (NumBytes < 6) {
-    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BCAsm)
-                                  .addImm(0).addReg(0).addImm(0).addReg(0),
-                                STI);
+    OutStreamer.emitInstruction(
+        MCInstBuilder(SystemZ::BCAsm).addImm(0).addReg(0).addImm(0).addReg(0),
+        STI);
     return 4;
   }
   else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
     OutStreamer.EmitLabel(DotSym);
-    OutStreamer.EmitInstruction(MCInstBuilder(SystemZ::BRCLAsm)
-                                  .addImm(0).addExpr(Dot), STI);
+    OutStreamer.emitInstruction(
+        MCInstBuilder(SystemZ::BRCLAsm).addImm(0).addExpr(Dot), STI);
     return 6;
   }
 }
@@ -573,8 +572,9 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op =
       MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_PLT, Ctx);
-  OutStreamer->EmitInstruction(MCInstBuilder(SystemZ::BRASL)
-                       .addReg(SystemZ::R0D).addExpr(Op), getSubtargetInfo());
+  OutStreamer->emitInstruction(
+      MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R0D).addExpr(Op),
+      getSubtargetInfo());
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {

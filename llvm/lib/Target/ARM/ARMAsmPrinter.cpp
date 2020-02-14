@@ -100,7 +100,7 @@ void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   AsmPrinter::emitGlobalVariable(GV);
 }
 
-/// runOnMachineFunction - This uses the EmitInstruction()
+/// runOnMachineFunction - This uses the emitInstruction()
 /// method to print assembly for each instruction.
 ///
 bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
@@ -1242,7 +1242,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 // instructions) auto-generated.
 #include "ARMGenMCPseudoLowering.inc"
 
-void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);

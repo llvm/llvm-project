@@ -44,7 +44,7 @@ public:
 
   void EmitByte(unsigned char C, raw_ostream &OS) const;
 
-  void EmitInstruction(uint64_t Val, unsigned Size, const MCSubtargetInfo &STI,
+  void emitInstruction(uint64_t Val, unsigned Size, const MCSubtargetInfo &STI,
                        raw_ostream &OS) const;
 
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,

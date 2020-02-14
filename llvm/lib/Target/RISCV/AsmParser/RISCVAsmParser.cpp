@@ -1682,7 +1682,7 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
   if (Res)
     ++RISCVNumInstrsCompressed;
-  S.EmitInstruction((Res ? CInst : Inst), getSTI());
+  S.emitInstruction((Res ? CInst : Inst), getSTI());
 }
 
 void RISCVAsmParser::emitLoadImm(Register DestReg, int64_t Value,

@@ -930,9 +930,9 @@ private:
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
-  /// Wrapper around MCStreamer::EmitInstruction(). Possibly adds
+  /// Wrapper around MCStreamer::emitInstruction(). Possibly adds
   /// instrumentation around Inst.
-  void EmitInstruction(MCInst &Inst, OperandVector &Operands, MCStreamer &Out);
+  void emitInstruction(MCInst &Inst, OperandVector &Operands, MCStreamer &Out);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -3149,9 +3149,9 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
 
 static const char *getSubtargetFeatureName(uint64_t Val);
 
-void X86AsmParser::EmitInstruction(MCInst &Inst, OperandVector &Operands,
+void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
-  Out.EmitInstruction(Inst, getSTI());
+  Out.emitInstruction(Inst, getSTI());
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -3186,7 +3186,7 @@ void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
     Inst.setOpcode(X86::WAIT);
     Inst.setLoc(IDLoc);
     if (!MatchingInlineAsm)
-      EmitInstruction(Inst, Operands, Out);
+      emitInstruction(Inst, Operands, Out);
     Operands[0] = X86Operand::CreateToken(Repl, IDLoc);
   }
 }
@@ -3293,7 +3293,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
     Inst.setLoc(IDLoc);
     if (!MatchingInlineAsm)
-      EmitInstruction(Inst, Operands, Out);
+      emitInstruction(Inst, Operands, Out);
     Opcode = Inst.getOpcode();
     return false;
   case Match_InvalidImmUnsignedi4: {
@@ -3362,7 +3362,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (NumSuccessfulMatches == 1) {
     Inst.setLoc(IDLoc);
     if (!MatchingInlineAsm)
-      EmitInstruction(Inst, Operands, Out);
+      emitInstruction(Inst, Operands, Out);
     Opcode = Inst.getOpcode();
     return false;
   }
@@ -3615,7 +3615,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
         ;
     Inst.setLoc(IDLoc);
     if (!MatchingInlineAsm)
-      EmitInstruction(Inst, Operands, Out);
+      emitInstruction(Inst, Operands, Out);
     Opcode = Inst.getOpcode();
     return false;
   } else if (NumSuccessfulMatches > 1) {

@@ -602,7 +602,7 @@ bool SparcAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     for (const MCInst &I : Instructions) {
-      Out.EmitInstruction(I, getSTI());
+      Out.emitInstruction(I, getSTI());
     }
     return false;
   }
