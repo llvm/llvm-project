@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Testing 7.6 enum
 
   ! OK

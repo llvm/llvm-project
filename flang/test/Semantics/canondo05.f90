@@ -1,5 +1,6 @@
-! RUN: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
-! XXXRUN: ${F18} -fopenmp -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! RUN: %S/test_any.sh %s %flang %t
+! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! XXXEXEC: ${F18} -fopenmp -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
 ! CHECK-NOT: do *[1-9]
 
 program P

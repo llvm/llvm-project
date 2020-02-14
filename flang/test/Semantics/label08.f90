@@ -1,6 +1,7 @@
+! RUN: %S/test_any.sh %s %flang %t
 ! negative test -- invalid labels, out of range
 
-! RUN: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
 ! CHECK: CYCLE construct-name is not in scope
 ! CHECK: IF construct name unexpected
 ! CHECK: unnamed IF statement

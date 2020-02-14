@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 subroutine s1
   type :: t
     integer :: i

@@ -1,3 +1,4 @@
+! RUN: %S/test_folding.sh %s %flang %t
 ! Test folding of LBOUND and UBOUND
 
 module m

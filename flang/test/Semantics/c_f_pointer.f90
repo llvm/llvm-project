@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Enforce 18.2.3.3
 
 program test

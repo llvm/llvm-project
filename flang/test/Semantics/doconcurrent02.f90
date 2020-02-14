@@ -1,7 +1,8 @@
+! RUN: %S/test_any.sh %s %flang %t
 ! negative tests: we don't want DO CONCURRENT semantics constraints checked
 ! when the loops are not DO CONCURRENT
 
-! RUN: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
 ! CHECK-NOT: image control statement not allowed in DO CONCURRENT
 ! CHECK-NOT: RETURN not allowed in DO CONCURRENT
 ! CHECK-NOT: call to impure procedure in DO CONCURRENT not allowed

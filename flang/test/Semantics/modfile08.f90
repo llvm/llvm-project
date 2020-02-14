@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Check modfile generation for external declarations
 module m
   real, external :: a

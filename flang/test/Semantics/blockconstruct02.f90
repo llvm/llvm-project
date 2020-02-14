@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! C1108  --  Save statement in a BLOCK construct shall not conatin a
 !            saved-entity-list that does not specify a common-block-name
 

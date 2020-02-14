@@ -1,3 +1,4 @@
+! RUN: %S/test_folding.sh %s %flang %t
 ! Test transformational intrinsic function folding
 
 module m

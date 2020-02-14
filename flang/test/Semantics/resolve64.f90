@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 !OPTIONS: -flogical-abbreviations -fxor-operator
 
 ! Like m4 in resolve63 but compiled with different options.

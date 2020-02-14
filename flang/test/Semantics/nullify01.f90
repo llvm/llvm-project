@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Test that NULLIFY works
 
 Module share

@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Verify miscellaneous bugs
 
 ! The function result must be declared after the dummy arguments

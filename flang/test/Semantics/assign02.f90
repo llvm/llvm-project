@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Pointer assignment constraints 10.2.2.2
 
 module m1

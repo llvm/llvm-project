@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 program p1
   integer(8) :: a, b, c, d
   pointer(a, b)

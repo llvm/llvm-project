@@ -1,3 +1,4 @@
+! RUN: %S/test_folding.sh %s %flang %t
 ! Test folding of IS_CONTIGUOUS on simply contiguous items (9.5.4)
 ! When IS_CONTIGUOUS() is constant, it's .TRUE.
 

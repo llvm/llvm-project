@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 !OPTIONS: -fopenmp
 
 ! 2.4 An array section designates a subset of the elements in an array. Although

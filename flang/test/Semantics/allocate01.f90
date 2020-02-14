@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Check for semantic errors in ALLOCATE statements
 
 ! Creating a symbol that allocate should accept

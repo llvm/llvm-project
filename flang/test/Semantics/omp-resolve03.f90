@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 !OPTIONS: -fopenmp
 
 ! 2.15.3 Although variables in common blocks can be accessed by use association

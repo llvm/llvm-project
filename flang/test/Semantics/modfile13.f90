@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 module m
   character(2) :: z
   character(len=3) :: y

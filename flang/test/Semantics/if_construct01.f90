@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Simple check that if constructs are ok.
 
 if (a < b) then

@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 !OPTIONS: -fopenmp
 
 ! 2.15.1.1 Predetermined rules for associated do-loops index variable

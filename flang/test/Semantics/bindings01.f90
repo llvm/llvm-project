@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
 ! and C779-C785.
 

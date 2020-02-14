@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 module m
   logical b
   bind(C) :: /cb2/

@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 !ERROR: No explicit type declared for 'f'
 function f()
   implicit none

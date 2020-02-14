@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Functions cannot use alt return
 
 REAL FUNCTION altreturn01(X)

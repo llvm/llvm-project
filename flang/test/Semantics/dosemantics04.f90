@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! C1123 -- Expressions in DO CONCURRENT header cannot reference variables
 ! declared in the same header
 PROGRAM dosemantics04

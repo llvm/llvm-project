@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Test declarations with coarray-spec
 
 ! Different ways of declaring the same coarray.

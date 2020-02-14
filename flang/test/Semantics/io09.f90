@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
   !ERROR: String edit descriptor in READ format expression
   read(*,'("abc")')
 

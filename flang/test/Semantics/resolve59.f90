@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Testing 15.6.2.2 point 4 (What function-name refers to depending on the
 ! presence of RESULT).
 

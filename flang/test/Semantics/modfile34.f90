@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Test resolution of type-bound generics.
 
 module m1

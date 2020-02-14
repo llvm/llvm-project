@@ -1,4 +1,5 @@
-! RUN: ${F18} -funparse-with-symbols %s -o /dev/null 2>&1 | grep -v 'procedure conflicts' | ${FileCheck} %s
+! RUN: %S/test_any.sh %s %flang %t
+! EXEC: ${F18} -funparse-with-symbols %s -o /dev/null 2>&1 | grep -v 'procedure conflicts' | ${FileCheck} %s
 ! CHECK-NOT: error:[[:space:]]
 
 ! FIXME: filter out the array/function syntax issues (procedure conflicts)

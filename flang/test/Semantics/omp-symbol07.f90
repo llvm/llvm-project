@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 !OPTIONS: -fopenmp
 
 ! Generic tests

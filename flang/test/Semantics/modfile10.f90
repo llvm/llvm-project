@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Test writing procedure bindings in a derived type.
 
 module m

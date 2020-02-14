@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! C1131 -- check valid and invalid DO loop naming
 
 PROGRAM C1131

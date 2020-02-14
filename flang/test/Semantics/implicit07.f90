@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 implicit none(external)
 external x
 call x

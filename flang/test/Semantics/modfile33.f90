@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Resolution of user-defined operators in expressions.
 ! Test by using generic function in a specification expression that needs
 ! to be written to a .mod file.

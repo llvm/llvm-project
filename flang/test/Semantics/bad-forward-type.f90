@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Forward references to derived types (error cases)
 
 !ERROR: The derived type 'undef' was forward-referenced but not defined

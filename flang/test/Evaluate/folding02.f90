@@ -1,3 +1,4 @@
+! RUN: %S/test_folding.sh %s %flang %t
 ! Check intrinsic function folding with host runtime library
 
 module m

@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! NULL() intrinsic function error tests
 
 subroutine test

@@ -1,3 +1,5 @@
+! RUN: %S/test_errors.sh %s %flang %t
+!XFAIL: *
 ! OPTIONS: -fopenmp
 
 ! Check OpenMP 2.17 Nesting of Regions

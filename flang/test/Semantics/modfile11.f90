@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 module m
   type t1(a, b, c)
     integer, kind :: a

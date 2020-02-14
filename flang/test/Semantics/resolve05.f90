@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 program p
   integer :: p ! this is ok
 end

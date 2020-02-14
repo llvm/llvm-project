@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! OPTIONS: -fopenmp
 
 ! Check the association between OpenMPLoopConstruct and DoConstruct

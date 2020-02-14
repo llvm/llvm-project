@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 ! Forward references to derived types (non-error cases)
 
 !DEF: /main MainProgram

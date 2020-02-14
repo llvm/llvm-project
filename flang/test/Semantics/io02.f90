@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
   integer :: unit10 = 10
   integer :: unit11 = 11
 

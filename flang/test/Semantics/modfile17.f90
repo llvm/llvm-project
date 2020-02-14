@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Tests parameterized derived type instantiation with KIND parameters
 
 module m

@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Check correct modfile generation for type with private component.
 module m
   integer :: i

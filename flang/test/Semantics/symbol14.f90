@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 ! "Bare" uses of type parameters and components
 
  !DEF: /MainProgram1/t1 DerivedType

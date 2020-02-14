@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! C708 An entity declared with the CLASS keyword shall be a dummy argument 
 ! or have the ALLOCATABLE or POINTER attribute.
 subroutine s()

@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
  !DEF: /MainProgram1/jk1 ObjectEntity INTEGER(1)
  integer(kind=1) jk1
  !DEF: /MainProgram1/js1 ObjectEntity INTEGER(1)

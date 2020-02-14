@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 subroutine test1
   !ERROR: Generic interface 'foo' has both a function and a subroutine
   interface foo

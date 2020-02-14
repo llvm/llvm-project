@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C945_a(srca, srcb, srcc, src_complex, src_logical, &

@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Test extension: RETURN from main program
 
 return !ok

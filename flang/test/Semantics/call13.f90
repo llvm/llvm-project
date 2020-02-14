@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Test 15.4.2.2 constraints and restrictions for calls to implicit
 ! interfaces
 

@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 module m
   abstract interface
     subroutine foo

@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 !OPTIONS: -fopenmp
 
 ! 2.15.2 threadprivate Directive

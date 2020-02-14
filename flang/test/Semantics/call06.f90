@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Test 15.5.2.6 constraints and restrictions for ALLOCATABLE
 ! dummy arguments.
 

@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Check for various alt return error conditions
 
        SUBROUTINE TEST (N, *, *)

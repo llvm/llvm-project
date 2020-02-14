@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 subroutine forall1
   real :: a(9)
   !ERROR: 'i' is already declared in this scoping unit

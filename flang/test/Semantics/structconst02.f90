@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Error tests for structure constructors: per-component type
 ! (in)compatibility.
 

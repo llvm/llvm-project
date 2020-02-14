@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Tests for C760:
 ! The passed-object dummy argument shall be a scalar, nonpointer, nonallocatable
 ! dummy data object with the same declared type as the type being defined;

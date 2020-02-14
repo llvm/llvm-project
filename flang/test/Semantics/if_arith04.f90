@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Make sure arithmetic if expressions are non-complex numeric exprs.
 
 INTEGER I

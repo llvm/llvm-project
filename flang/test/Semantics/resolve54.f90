@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Tests based on examples in C.10.6
 
 ! C.10.6(10)

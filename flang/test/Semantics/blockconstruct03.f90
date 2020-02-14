@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Tests implemented for this standard:
 !            Block Construct
 ! C1109

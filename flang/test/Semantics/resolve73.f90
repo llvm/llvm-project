@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! C721 A type-param-value of * shall be used only
 ! * to declare a dummy argument,
 ! * to declare a named constant,

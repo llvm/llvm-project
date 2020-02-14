@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 !C1117
 
 subroutine test1(a, i)

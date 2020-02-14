@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 module m1
   implicit none
 contains

@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Intrinsics SELECTED_INT_KIND, SELECTED_REAL_KIND, PRECISION, RANGE,
 ! RADIX, DIGITS
 

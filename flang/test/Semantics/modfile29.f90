@@ -1,3 +1,4 @@
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Check that implicitly typed entities get a type in the module file.
 
 module m

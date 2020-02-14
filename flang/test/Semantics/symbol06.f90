@@ -1,3 +1,4 @@
+! RUN: %S/test_symbols.sh %s %flang %t
 !DEF: /main MainProgram
 program main
  !DEF: /main/t1 DerivedType

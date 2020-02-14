@@ -1,7 +1,8 @@
+! RUN: %S/test_any.sh %s %flang %t
 ! Error test -- DO loop uses obsolete loop termination statement
 ! See R1131 and C1131
 
-! RUN: ${F18} -funparse-with-symbols -Mstandard %s 2>&1 | ${FileCheck} %s
+! EXEC: ${F18} -funparse-with-symbols -Mstandard %s 2>&1 | ${FileCheck} %s
 ! CHECK: A DO loop should terminate with an END DO or CONTINUE
 
 program endDo

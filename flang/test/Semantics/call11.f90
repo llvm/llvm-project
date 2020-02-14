@@ -1,3 +1,4 @@
+! RUN: %S/test_errors.sh %s %flang %t
 ! Test 15.7 C1591 & others: contexts requiring pure subprograms
 
 module m
