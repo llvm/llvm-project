@@ -268,8 +268,7 @@ int main(int argc, const char **argv) {
   Error = false;
   llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::ThreadPool Pool(ExecutorConcurrency == 0 ? llvm::hardware_concurrency()
-                                                 : ExecutorConcurrency);
+  llvm::ThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;

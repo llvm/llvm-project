@@ -37,7 +37,8 @@ protected:
     // Initially this is only testing detection of the number of
     // physical cores, which is currently only supported/tested for
     // x86_64 Linux and Darwin.
-    return (Host.getArch() == Triple::x86_64 &&
+    return Host.isOSWindows() ||
+           (Host.getArch() == Triple::x86_64 &&
             (Host.isOSDarwin() || Host.getOS() == Triple::Linux));
   }
 

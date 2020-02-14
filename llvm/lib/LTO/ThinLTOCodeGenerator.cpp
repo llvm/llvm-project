@@ -80,8 +80,8 @@ extern cl::opt<std::string> RemarksFormat;
 
 namespace {
 
-static cl::opt<int>
-    ThreadCount("threads", cl::init(llvm::heavyweight_hardware_concurrency()));
+// Default to using one job per hardware core in the system
+static cl::opt<int> ThreadCount("threads", cl::init(0));
 
 // Simple helper to save temporary files for debug.
 static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
@@ -1042,7 +1042,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Parallel optimizer + codegen
   {
-    ThreadPool Pool(ThreadCount);
+    ThreadPool Pool(heavyweight_hardware_concurrency(ThreadCount));
     for (auto IndexCount : ModulesOrdering) {
       auto &Mod = Modules[IndexCount];
       Pool.async([&](int count) {

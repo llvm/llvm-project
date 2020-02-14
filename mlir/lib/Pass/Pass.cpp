@@ -411,7 +411,8 @@ void OpToOpPassAdaptorParallel::runOnOperation() {
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
   if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs))
-    asyncExecutors.assign(llvm::hardware_concurrency(), mgrs);
+    asyncExecutors.assign(llvm::hardware_concurrency().compute_thread_count(),
+                          mgrs);
 
   // Run a prepass over the module to collect the operations to execute over.
   // This ensures that an analysis manager exists for each operation, as well as
