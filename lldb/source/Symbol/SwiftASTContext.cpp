@@ -3415,6 +3415,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   registerIRGenRequestFunctions(m_ast_context_ap->evaluator);
 
   registerIRGenSILTransforms(*m_ast_context_ap);
+  registerTBDGenRequestFunctions(m_ast_context_ap->evaluator);
 
   GetASTMap().Insert(m_ast_context_ap.get(), this);
 
