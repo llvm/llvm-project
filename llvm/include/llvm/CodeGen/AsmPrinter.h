@@ -354,30 +354,30 @@ public:
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
   /// which have been "spilled to memory" by the code generator.
-  virtual void EmitConstantPool();
+  virtual void emitConstantPool();
 
   /// Print assembly representations of the jump tables used by the current
   /// function to the current output stream.
-  virtual void EmitJumpTableInfo();
+  virtual void emitJumpTableInfo();
 
   /// Emit the specified global variable to the .s file.
-  virtual void EmitGlobalVariable(const GlobalVariable *GV);
+  virtual void emitGlobalVariable(const GlobalVariable *GV);
 
   /// Check to see if the specified global is a special global used by LLVM. If
   /// so, emit it and return true, otherwise do nothing and return false.
-  bool EmitSpecialLLVMGlobal(const GlobalVariable *GV);
+  bool emitSpecialLLVMGlobal(const GlobalVariable *GV);
 
   /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  void EmitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
+  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
 
   /// Print a general LLVM constant to the .s file.
-  void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);
+  void emitGlobalConstant(const DataLayout &DL, const Constant *CV);
 
   /// Unnamed constant global variables solely contaning a pointer to
   /// another globals variable act like a global variable "proxy", or GOT
@@ -443,12 +443,12 @@ public:
     llvm_unreachable("Function descriptor is target-specific.");
   }
 
-  virtual void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
+  virtual void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
 
   /// Targets can override this to change how global constants that are part of
   /// a C++ static/global constructor list are emitted.
-  virtual void EmitXXStructor(const DataLayout &DL, const Constant *CV) {
-    EmitGlobalConstant(DL, CV);
+  virtual void emitXXStructor(const DataLayout &DL, const Constant *CV) {
+    emitGlobalConstant(DL, CV);
   }
 
   /// Return true if the basic block has exactly one predecessor and the control
@@ -549,13 +549,13 @@ public:
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.
   /// Desc is a string saying what the encoding is specifying (e.g. "LSDA").
-  void EmitEncodingByte(unsigned Val, const char *Desc = nullptr) const;
+  void emitEncodingByte(unsigned Val, const char *Desc = nullptr) const;
 
   /// Return the size of the encoding in bytes.
   unsigned GetSizeOfEncodedValue(unsigned Encoding) const;
 
   /// Emit reference to a ttype global with a specified encoding.
-  void EmitTTypeReference(const GlobalValue *GV, unsigned Encoding) const;
+  void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) const;
 
   /// Emit a reference to a symbol for use in dwarf. Different object formats
   /// represent this in different ways. Some use a relocation others encode
@@ -683,14 +683,14 @@ private:
 
   /// Emit a blob of inline asm to the output streamer.
   void
-  EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+  emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                 const MCTargetOptions &MCOptions,
                 const MDNode *LocMDNode = nullptr,
                 InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT) const;
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
-  void EmitInlineAsm(const MachineInstr *MI) const;
+  void emitInlineAsm(const MachineInstr *MI) const;
 
   /// Add inline assembly info to the diagnostics machinery, so we can
   /// emit file and position info. Returns SrcMgr memory buffer position.
@@ -701,14 +701,14 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void EmitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
-  void EmitLLVMUsedList(const ConstantArray *InitList);
+  void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
-  void EmitModuleIdents(Module &M);
+  void emitModuleIdents(Module &M);
   /// Emit bytes for llvm.commandline metadata.
-  void EmitModuleCommandLines(Module &M);
-  void EmitXXStructorList(const DataLayout &DL, const Constant *List,
+  void emitModuleCommandLines(Module &M);
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
 
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);

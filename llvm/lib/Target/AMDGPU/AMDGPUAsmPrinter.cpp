@@ -276,7 +276,7 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   AsmPrinter::emitBasicBlockStart(MBB);
 }
 
-void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     if (GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer())) {
       OutContext.reportError({},
@@ -310,7 +310,7 @@ void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     return;
   }
 
-  AsmPrinter::EmitGlobalVariable(GV);
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {

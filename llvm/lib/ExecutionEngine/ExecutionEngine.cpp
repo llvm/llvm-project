@@ -582,7 +582,7 @@ void *ExecutionEngine::getPointerToGlobal(const GlobalValue *GV) {
   // Global variable might have been added since interpreter started.
   if (GlobalVariable *GVar =
           const_cast<GlobalVariable *>(dyn_cast<GlobalVariable>(GV)))
-    EmitGlobalVariable(GVar);
+    emitGlobalVariable(GVar);
   else
     llvm_unreachable("Global hasn't had an address allocated yet!");
 
@@ -1276,7 +1276,7 @@ void ExecutionEngine::emitGlobals() {
             if (GVEntry != &GV)  // Not the canonical variable.
               continue;
         }
-        EmitGlobalVariable(&GV);
+        emitGlobalVariable(&GV);
       }
     }
   }
@@ -1285,7 +1285,7 @@ void ExecutionEngine::emitGlobals() {
 // EmitGlobalVariable - This method emits the specified global variable to the
 // address specified in GlobalAddresses, or allocates new memory if it's not
 // already in the map.
-void ExecutionEngine::EmitGlobalVariable(const GlobalVariable *GV) {
+void ExecutionEngine::emitGlobalVariable(const GlobalVariable *GV) {
   void *GA = getPointerToGlobalIfAvailable(GV);
 
   if (!GA) {

@@ -106,7 +106,7 @@ static const char *DecodeDWARFEncoding(unsigned Encoding) {
 /// encoding.  If verbose assembly output is enabled, we output comments
 /// describing the encoding.  Desc is an optional string saying what the
 /// encoding is specifying (e.g. "LSDA").
-void AsmPrinter::EmitEncodingByte(unsigned Val, const char *Desc) const {
+void AsmPrinter::emitEncodingByte(unsigned Val, const char *Desc) const {
   if (isVerbose()) {
     if (Desc)
       OutStreamer->AddComment(Twine(Desc) + " Encoding = " +
@@ -137,7 +137,7 @@ unsigned AsmPrinter::GetSizeOfEncodedValue(unsigned Encoding) const {
   }
 }
 
-void AsmPrinter::EmitTTypeReference(const GlobalValue *GV,
+void AsmPrinter::emitTTypeReference(const GlobalValue *GV,
                                     unsigned Encoding) const {
   if (GV) {
     const TargetLoweringObjectFile &TLOF = getObjFileLowering();

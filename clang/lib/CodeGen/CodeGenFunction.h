@@ -2827,7 +2827,7 @@ public:
   PeepholeProtection protectFromPeepholes(RValue rvalue);
   void unprotectFromPeepholes(PeepholeProtection protection);
 
-  void EmitAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+  void emitAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
                                     SourceLocation Loc,
                                     SourceLocation AssumptionLoc,
                                     llvm::Value *Alignment,
@@ -2835,13 +2835,14 @@ public:
                                     llvm::Value *TheCheck,
                                     llvm::Instruction *Assumption);
 
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
+  void emitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
                                SourceLocation Loc, SourceLocation AssumptionLoc,
                                llvm::Value *Alignment,
                                llvm::Value *OffsetValue = nullptr);
 
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, const Expr *E,
-                               SourceLocation AssumptionLoc, llvm::Value *Alignment,
+  void emitAlignmentAssumption(llvm::Value *PtrValue, const Expr *E,
+                               SourceLocation AssumptionLoc,
+                               llvm::Value *Alignment,
                                llvm::Value *OffsetValue = nullptr);
 
   //===--------------------------------------------------------------------===//
