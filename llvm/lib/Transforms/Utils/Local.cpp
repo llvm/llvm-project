@@ -485,19 +485,15 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
     I.eraseFromParent();
   }
 }
-void llvm::setDbgVariableUndef(DbgVariableIntrinsic *DVI) {
-  Value *DbgValue = DVI->getVariableLocation(false);
-  Value *Undef = UndefValue::get(DbgValue ? DbgValue->getType()
-                                          : Type::getInt1Ty(DVI->getContext()));
-  DVI->setOperand(
-      0, MetadataAsValue::get(DVI->getContext(), ValueAsMetadata::get(Undef)));
-}
 
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, I);
-  for (auto *DII : DbgUsers)
-    setDbgVariableUndef(DII);
+  for (auto *DII : DbgUsers) {
+    Value *Undef = UndefValue::get(I->getType());
+    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
+                                            ValueAsMetadata::get(Undef)));
+  }
   return !DbgUsers.empty();
 }
 
@@ -1044,19 +1040,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       assert(PN->use_empty() && "There shouldn't be any uses here!");
       PN->eraseFromParent();
     }
-    // If Succ has multiple predecessors, each debug intrinsic in BB may or may
-    // not be valid when we reach Succ, so the debug variable should be set
-    // undef since its value is unknown.
-    Instruction *DbgInsertPoint = Succ->getFirstNonPHI();
-    while (DbgInfoIntrinsic *DI = dyn_cast<DbgInfoIntrinsic>(&BB->front())) {
-      if (auto DVI = dyn_cast<DbgVariableIntrinsic>(DI)) {
-        if (!isa<DbgDeclareInst>(DVI))
-          setDbgVariableUndef(DVI);
-        DVI->moveBefore(DbgInsertPoint);
-      } else {
-        break;
-      }
-    }
   }
 
   // If the unconditional branch we replaced contains llvm.loop metadata, we
@@ -1564,8 +1547,8 @@ void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
 }
 
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
-                             Instruction *InsertBefore, DIBuilder &Builder,
-                             uint8_t DIExprFlags, int Offset) {
+                             DIBuilder &Builder, uint8_t DIExprFlags,
+                             int Offset) {
   auto DbgAddrs = FindDbgAddrUses(Address);
   for (DbgVariableIntrinsic *DII : DbgAddrs) {
     DebugLoc Loc = DII->getDebugLoc();
@@ -1573,21 +1556,12 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
-    // Insert llvm.dbg.declare immediately before InsertBefore, and remove old
+    // Insert llvm.dbg.declare immediately before DII, and remove old
     // llvm.dbg.declare.
-    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
-    if (DII == InsertBefore)
-      InsertBefore = InsertBefore->getNextNode();
+    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, DII);
     DII->eraseFromParent();
   }
   return !DbgAddrs.empty();
-}
-
-bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                      DIBuilder &Builder, uint8_t DIExprFlags,
-                                      int Offset) {
-  return replaceDbgDeclare(AI, NewAllocaAddress, AI->getNextNode(), Builder,
-                           DIExprFlags, Offset);
 }
 
 static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
