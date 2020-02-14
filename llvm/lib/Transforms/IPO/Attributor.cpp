@@ -3065,6 +3065,9 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
+    A.checkForAllInstructions([](Instruction &) { return true; }, *this,
+                              {Instruction::Ret});
+
     auto PredForCallSite = [&](AbstractCallSite ACS) {
       if (ACS.isCallbackCall() || !ACS.getInstruction())
         return false;
@@ -7504,9 +7507,15 @@ ChangeStatus Attributor::run() {
   NumAttributesValidFixpoint += NumAtFixpoint;
 
   (void)NumFinalAAs;
-  assert(NumFinalAAs == AllAbstractAttributes.size() &&
-         "Expected the final number of abstract attributes to remain "
-         "unchanged!");
+  if (NumFinalAAs != AllAbstractAttributes.size()) {
+    for (unsigned u = NumFinalAAs; u < AllAbstractAttributes.size(); ++u)
+      errs() << "Unexpected abstract attribute: " << *AllAbstractAttributes[u]
+             << " :: "
+             << AllAbstractAttributes[u]->getIRPosition().getAssociatedValue()
+             << "\n";
+    llvm_unreachable("Expected the final number of abstract attributes to "
+                     "remain unchanged!");
+  }
 
   // Delete stuff at the end to avoid invalid references and a nice order.
   {
