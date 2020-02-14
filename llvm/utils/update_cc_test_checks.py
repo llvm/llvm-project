@@ -292,10 +292,10 @@ def main():
                                  False, args.function_signature)
       output_lines.append(line.rstrip('\n'))
 
-    # Update the test file.
-    with open(filename, 'w') as f:
-      for line in output_lines:
-        f.write(line + '\n')
+
+    common.debug('Writing %d lines to %s...' % (len(output_lines), filename))
+    with open(filename, 'wb') as f:
+      f.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
 
   return 0
 
