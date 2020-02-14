@@ -42,6 +42,10 @@ entry:
 ; CHECK: define void @_Z3fn5v()
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %agg.tmp.sroa.3.i = alloca [20 x i8], align 4
+; CHECK-NEXT:   br label %while.body
+; CHECK:      while.body:
+; CHECK-NEXT:   bitcast
+; CHECK-NEXT:   llvm.lifetime.start
 ; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3.i,
   %agg.tmp.sroa.3 = alloca [20 x i8], align 4
   tail call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
