@@ -72,12 +72,12 @@ namespace {
                                const char *ExtraCode, raw_ostream &O) override;
 
     void emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV);
-    void EmitGlobalVariable(const GlobalVariable *GV) override;
+    void emitGlobalVariable(const GlobalVariable *GV) override;
 
-    void EmitFunctionEntryLabel() override;
-    void EmitInstruction(const MachineInstr *MI) override;
-    void EmitFunctionBodyStart() override;
-    void EmitFunctionBodyEnd() override;
+    void emitFunctionEntryLabel() override;
+    void emitInstruction(const MachineInstr *MI) override;
+    void emitFunctionBodyStart() override;
+    void emitFunctionBodyEnd() override;
   };
 } // end of anonymous namespace
 
@@ -104,10 +104,9 @@ void XCoreAsmPrinter::emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV) {
   }
 }
 
-void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Check to see if this is a special global used by LLVM, if so, emit it.
-  if (!GV->hasInitializer() ||
-      EmitSpecialLLVMGlobal(GV))
+  if (!GV->hasInitializer() || emitSpecialLLVMGlobal(GV))
     return;
 
   const DataLayout &DL = getDataLayout();
@@ -143,7 +142,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     llvm_unreachable("Unknown linkage type!");
   }
 
-  EmitAlignment(std::max(Alignment, Align(4)), GV);
+  emitAlignment(std::max(Alignment, Align(4)), GV);
 
   if (GV->isThreadLocal()) {
     report_fatal_error("TLS is not supported by this target!");
@@ -155,7 +154,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
   OutStreamer->EmitLabel(GVSym);
 
-  EmitGlobalConstant(DL, C);
+  emitGlobalConstant(DL, C);
   // The ABI requires that unsigned scalar types smaller than 32 bits
   // are padded to 32 bits.
   if (Size < 4)
@@ -165,18 +164,18 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   getTargetStreamer().emitCCBottomData(GVSym->getName());
 }
 
-void XCoreAsmPrinter::EmitFunctionBodyStart() {
+void XCoreAsmPrinter::emitFunctionBodyStart() {
   MCInstLowering.Initialize(&MF->getContext());
 }
 
 /// EmitFunctionBodyEnd - Targets can override this to emit stuff after
 /// the last basic block in the function.
-void XCoreAsmPrinter::EmitFunctionBodyEnd() {
+void XCoreAsmPrinter::emitFunctionBodyEnd() {
   // Emit function end directives
   getTargetStreamer().emitCCBottomFunction(CurrentFnSym->getName());
 }
 
-void XCoreAsmPrinter::EmitFunctionEntryLabel() {
+void XCoreAsmPrinter::emitFunctionEntryLabel() {
   // Mark the start of the function
   getTargetStreamer().emitCCTopFunction(CurrentFnSym->getName());
   OutStreamer->EmitLabel(CurrentFnSym);
@@ -256,7 +255,7 @@ bool XCoreAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void XCoreAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

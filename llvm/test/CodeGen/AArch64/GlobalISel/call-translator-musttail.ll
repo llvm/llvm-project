@@ -1,4 +1,4 @@
-; RUN: not llc %s -mtriple aarch64-apple-darwin -debug-only=aarch64-call-lowering -global-isel -global-isel-abort=2 -o - 2>&1 | FileCheck %s
+; RUN: not --crash llc %s -mtriple aarch64-apple-darwin -debug-only=aarch64-call-lowering -global-isel -global-isel-abort=2 -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Verify that we fall back to SelectionDAG, and error out when we can't tail call musttail functions

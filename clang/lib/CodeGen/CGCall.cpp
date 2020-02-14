@@ -3906,7 +3906,7 @@ public:
   void EmitAsAnAssumption(SourceLocation Loc, QualType RetTy, RValue &Ret) {
     if (!AA)
       return;
-    CGF.EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc,
+    CGF.emitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc,
                                 AA->getLocation(), Alignment, OffsetCI);
     AA = nullptr; // We're done. Disallow doing anything else.
   }

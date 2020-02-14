@@ -1,7 +1,7 @@
 ; RUN: llc -march=lanai < %s | FileCheck %s
 ; RUN: llc -march=lanai < %s -code-model=small  | FileCheck -check-prefix CHECK-SMALL %s
-; RUN: not llc -march=lanai < %s -code-model=tiny 2>&1 | FileCheck -check-prefix CHECK-TINY %s
-; RUN: not llc -march=lanai < %s -code-model=kernel 2>&1 | FileCheck -check-prefix CHECK-KERNEL %s
+; RUN: not --crash llc -march=lanai < %s -code-model=tiny 2>&1 | FileCheck -check-prefix CHECK-TINY %s
+; RUN: not --crash llc -march=lanai < %s -code-model=kernel 2>&1 | FileCheck -check-prefix CHECK-KERNEL %s
 
 ; CHECK-TINY: Target does not support the tiny CodeModel
 ; CHECK-KERNEL: Target does not support the kernel CodeModel

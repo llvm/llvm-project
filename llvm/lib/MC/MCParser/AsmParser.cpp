@@ -875,7 +875,7 @@ bool AsmParser::enabledGenDwarfForAssembly() {
                                           /*Cksum=*/None, /*Source=*/None);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
-    getContext().setGenDwarfFileNumber(getStreamer().EmitDwarfFileDirective(
+    getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
         /*CUID=*/0, getContext().getCompilationDir(), RootFile.Name,
         RootFile.Checksum, RootFile.Source));
   }
@@ -2249,7 +2249,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // current Dwarf File is for the CppHashFilename if not then emit the
     // Dwarf File table for it and adjust the line number for the .loc.
     if (!CppHashInfo.Filename.empty()) {
-      unsigned FileNumber = getStreamer().EmitDwarfFileDirective(
+      unsigned FileNumber = getStreamer().emitDwarfFileDirective(
           0, StringRef(), CppHashInfo.Filename);
       getContext().setGenDwarfFileNumber(FileNumber);
 
@@ -2258,7 +2258,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Line = CppHashInfo.LineNumber - 1 + (Line - CppHashLocLineNo);
     }
 
-    getStreamer().EmitDwarfLocDirective(
+    getStreamer().emitDwarfLocDirective(
         getContext().getGenDwarfFileNumber(), Line, 0,
         DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0,
         StringRef());
@@ -3573,7 +3573,7 @@ bool AsmParser::parseDirectiveLoc() {
   if (parseMany(parseLocOp, false /*hasComma*/))
     return true;
 
-  getStreamer().EmitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,
+  getStreamer().emitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,
                                       Isa, Discriminator, StringRef());
 
   return false;
@@ -4050,7 +4050,7 @@ bool AsmParser::parseDirectiveCFISections() {
       Debug = true;
   }
 
-  getStreamer().EmitCFISections(EH, Debug);
+  getStreamer().emitCFISections(EH, Debug);
   return false;
 }
 
@@ -4070,14 +4070,14 @@ bool AsmParser::parseDirectiveCFIStartProc() {
   // expansion which can *ONLY* happen if Clang's cc1as is the API consumer.
   // Tools like llvm-mc on the other hand are not affected by it, and report
   // correct context information.
-  getStreamer().EmitCFIStartProc(!Simple.empty(), Lexer.getLoc());
+  getStreamer().emitCFIStartProc(!Simple.empty(), Lexer.getLoc());
   return false;
 }
 
 /// parseDirectiveCFIEndProc
 /// ::= .cfi_endproc
 bool AsmParser::parseDirectiveCFIEndProc() {
-  getStreamer().EmitCFIEndProc();
+  getStreamer().emitCFIEndProc();
   return false;
 }
 
@@ -4105,7 +4105,7 @@ bool AsmParser::parseDirectiveCFIDefCfa(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().EmitCFIDefCfa(Register, Offset);
+  getStreamer().emitCFIDefCfa(Register, Offset);
   return false;
 }
 
@@ -4116,7 +4116,7 @@ bool AsmParser::parseDirectiveCFIDefCfaOffset() {
   if (parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().EmitCFIDefCfaOffset(Offset);
+  getStreamer().emitCFIDefCfaOffset(Offset);
   return false;
 }
 
@@ -4129,14 +4129,14 @@ bool AsmParser::parseDirectiveCFIRegister(SMLoc DirectiveLoc) {
       parseRegisterOrRegisterNumber(Register2, DirectiveLoc))
     return true;
 
-  getStreamer().EmitCFIRegister(Register1, Register2);
+  getStreamer().emitCFIRegister(Register1, Register2);
   return false;
 }
 
 /// parseDirectiveCFIWindowSave
 /// ::= .cfi_window_save
 bool AsmParser::parseDirectiveCFIWindowSave() {
-  getStreamer().EmitCFIWindowSave();
+  getStreamer().emitCFIWindowSave();
   return false;
 }
 
@@ -4147,7 +4147,7 @@ bool AsmParser::parseDirectiveCFIAdjustCfaOffset() {
   if (parseAbsoluteExpression(Adjustment))
     return true;
 
-  getStreamer().EmitCFIAdjustCfaOffset(Adjustment);
+  getStreamer().emitCFIAdjustCfaOffset(Adjustment);
   return false;
 }
 
@@ -4158,7 +4158,7 @@ bool AsmParser::parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().EmitCFIDefCfaRegister(Register);
+  getStreamer().emitCFIDefCfaRegister(Register);
   return false;
 }
 
@@ -4173,7 +4173,7 @@ bool AsmParser::parseDirectiveCFIOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().EmitCFIOffset(Register, Offset);
+  getStreamer().emitCFIOffset(Register, Offset);
   return false;
 }
 
@@ -4187,7 +4187,7 @@ bool AsmParser::parseDirectiveCFIRelOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().EmitCFIRelOffset(Register, Offset);
+  getStreamer().emitCFIRelOffset(Register, Offset);
   return false;
 }
 
@@ -4233,23 +4233,23 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (IsPersonality)
-    getStreamer().EmitCFIPersonality(Sym, Encoding);
+    getStreamer().emitCFIPersonality(Sym, Encoding);
   else
-    getStreamer().EmitCFILsda(Sym, Encoding);
+    getStreamer().emitCFILsda(Sym, Encoding);
   return false;
 }
 
 /// parseDirectiveCFIRememberState
 /// ::= .cfi_remember_state
 bool AsmParser::parseDirectiveCFIRememberState() {
-  getStreamer().EmitCFIRememberState();
+  getStreamer().emitCFIRememberState();
   return false;
 }
 
 /// parseDirectiveCFIRestoreState
 /// ::= .cfi_remember_state
 bool AsmParser::parseDirectiveCFIRestoreState() {
-  getStreamer().EmitCFIRestoreState();
+  getStreamer().emitCFIRestoreState();
   return false;
 }
 
@@ -4261,7 +4261,7 @@ bool AsmParser::parseDirectiveCFISameValue(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().EmitCFISameValue(Register);
+  getStreamer().emitCFISameValue(Register);
   return false;
 }
 
@@ -4272,7 +4272,7 @@ bool AsmParser::parseDirectiveCFIRestore(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().EmitCFIRestore(Register);
+  getStreamer().emitCFIRestore(Register);
   return false;
 }
 
@@ -4295,7 +4295,7 @@ bool AsmParser::parseDirectiveCFIEscape() {
     Values.push_back((uint8_t)CurrValue);
   }
 
-  getStreamer().EmitCFIEscape(Values);
+  getStreamer().emitCFIEscape(Values);
   return false;
 }
 
@@ -4305,7 +4305,7 @@ bool AsmParser::parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc) {
   int64_t Register = 0;
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
-  getStreamer().EmitCFIReturnColumn(Register);
+  getStreamer().emitCFIReturnColumn(Register);
   return false;
 }
 
@@ -4316,7 +4316,7 @@ bool AsmParser::parseDirectiveCFISignalFrame() {
                  "unexpected token in '.cfi_signal_frame'"))
     return true;
 
-  getStreamer().EmitCFISignalFrame();
+  getStreamer().emitCFISignalFrame();
   return false;
 }
 
@@ -4328,7 +4328,7 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().EmitCFIUndefined(Register);
+  getStreamer().emitCFIUndefined(Register);
   return false;
 }
 
@@ -4831,9 +4831,9 @@ bool AsmParser::parseDirectiveLEB128(bool Signed) {
     if (parseExpression(Value))
       return true;
     if (Signed)
-      getStreamer().EmitSLEB128Value(Value);
+      getStreamer().emitSLEB128Value(Value);
     else
-      getStreamer().EmitULEB128Value(Value);
+      getStreamer().emitULEB128Value(Value);
     return false;
   };
 

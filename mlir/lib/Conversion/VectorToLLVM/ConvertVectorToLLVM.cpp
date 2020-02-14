@@ -340,6 +340,33 @@ public:
   }
 };
 
+// TODO(ajcbik): merge Reduction and ReductionV2
+class VectorReductionV2OpConversion : public LLVMOpLowering {
+public:
+  explicit VectorReductionV2OpConversion(MLIRContext *context,
+                                         LLVMTypeConverter &typeConverter)
+      : LLVMOpLowering(vector::ReductionV2Op::getOperationName(), context,
+                       typeConverter) {}
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto reductionOp = cast<vector::ReductionV2Op>(op);
+    auto kind = reductionOp.kind();
+    Type eltType = reductionOp.dest().getType();
+    Type llvmType = lowering.convertType(eltType);
+    if (kind == "add") {
+      rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fadd>(
+          op, llvmType, operands[1], operands[0]);
+      return matchSuccess();
+    } else if (kind == "mul") {
+      rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fmul>(
+          op, llvmType, operands[1], operands[0]);
+      return matchSuccess();
+    }
+    return matchFailure();
+  }
+};
+
 class VectorShuffleOpConversion : public LLVMOpLowering {
 public:
   explicit VectorShuffleOpConversion(MLIRContext *context,
@@ -1125,11 +1152,12 @@ void mlir::populateVectorToLLVMConversionPatterns(
                   VectorInsertStridedSliceOpSameRankRewritePattern,
                   VectorStridedSliceOpConversion>(ctx);
   patterns.insert<VectorBroadcastOpConversion, VectorReductionOpConversion,
-                  VectorShuffleOpConversion, VectorExtractElementOpConversion,
-                  VectorExtractOpConversion, VectorFMAOp1DConversion,
-                  VectorInsertElementOpConversion, VectorInsertOpConversion,
-                  VectorOuterProductOpConversion, VectorTypeCastOpConversion,
-                  VectorPrintOpConversion>(ctx, converter);
+                  VectorReductionV2OpConversion, VectorShuffleOpConversion,
+                  VectorExtractElementOpConversion, VectorExtractOpConversion,
+                  VectorFMAOp1DConversion, VectorInsertElementOpConversion,
+                  VectorInsertOpConversion, VectorOuterProductOpConversion,
+                  VectorTypeCastOpConversion, VectorPrintOpConversion>(
+      ctx, converter);
 }
 
 namespace {
@@ -1139,11 +1167,12 @@ struct LowerVectorToLLVMPass : public ModulePass<LowerVectorToLLVMPass> {
 } // namespace
 
 void LowerVectorToLLVMPass::runOnModule() {
-  // Perform progressive lowering of operations on "slices".
-  // Folding and DCE get rid of all non-leaking tuple ops.
+  // Perform progressive lowering of operations on "slices" and
+  // all contraction operations. Also applies folding and DCE.
   {
     OwningRewritePatternList patterns;
     populateVectorSlicesLoweringPatterns(patterns, &getContext());
+    populateVectorContractLoweringPatterns(patterns, &getContext());
     applyPatternsGreedily(getModule(), patterns);
   }
 

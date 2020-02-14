@@ -329,6 +329,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
 bool ContinuationIndenter::mustBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
+      Current.is(TT_LambdaLBrace)) {
+    auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
+    return (LambdaBodyLength > getColumnLimit(State));
+  }
   if (Current.MustBreakBefore || Current.is(TT_InlineASMColon))
     return true;
   if (State.Stack.back().BreakBeforeClosingBrace &&
@@ -1081,6 +1086,18 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   return State.Stack.back().Indent;
 }
 
+static bool hasNestedBlockInlined(const FormatToken *Previous,
+                                  const FormatToken &Current,
+                                  const FormatStyle &Style) {
+  if (Previous->isNot(tok::l_paren))
+    return true;
+  if (Previous->ParameterCount > 1)
+    return true;
+
+  // Also a nested block if contains a lambda inside function with 1 parameter
+  return (Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLSquare));
+}
+
 unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                                                     bool DryRun, bool Newline) {
   assert(State.Stack.size());
@@ -1183,8 +1200,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
        Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr)) &&
       !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
     State.Stack.back().NestedBlockInlined =
-        !Newline &&
-        (Previous->isNot(tok::l_paren) || Previous->ParameterCount > 1);
+        !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }
 
   moveStatePastFakeLParens(State, Newline);
@@ -1421,7 +1437,21 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       ParenState(&Current, NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = BreakBeforeParameter;
-  State.Stack.back().HasMultipleNestedBlocks = Current.BlockParameterCount > 1;
+  State.Stack.back().HasMultipleNestedBlocks = (Current.BlockParameterCount > 1);
+
+  if (Style.BraceWrapping.BeforeLambdaBody &&
+      Current.Next != nullptr && Current.Tok.is(tok::l_paren)) {
+    // Search for any parameter that is a lambda
+    FormatToken const *next = Current.Next;
+    while (next != nullptr) {
+      if (next->is(TT_LambdaLSquare)) {
+        State.Stack.back().HasMultipleNestedBlocks = true;
+        break;
+      }
+      next = next->Next;
+    }
+  }
+
   State.Stack.back().IsInsideObjCArrayLiteral =
       Current.is(TT_ArrayInitializerLSquare) && Current.Previous &&
       Current.Previous->is(tok::at);

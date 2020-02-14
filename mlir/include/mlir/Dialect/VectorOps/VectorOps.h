@@ -54,6 +54,12 @@ void populateVectorToVectorTransformationPatterns(
 void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
                                           MLIRContext *context);
 
+/// Collect a set of vector contraction transformation patterns
+/// that express all vector.contract ops in terms of more elementary
+/// extraction and reduction ops.
+void populateVectorContractLoweringPatterns(OwningRewritePatternList &patterns,
+                                            MLIRContext *context);
+
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
 

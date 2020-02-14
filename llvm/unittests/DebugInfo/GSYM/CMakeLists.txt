@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
+  DebugInfoDWARF
   DebugInfoGSYM
   MC
   Support
+  ObjectYAML
   )
 
 add_llvm_unittest(DebugInfoGSYMTests

@@ -46,12 +46,12 @@ void ARMException::beginFunction(const MachineFunction *MF) {
   if (MoveType == AsmPrinter::CFI_M_Debug) {
     if (!hasEmittedCFISections) {
       if (Asm->needsOnlyDebugCFIMoves())
-        Asm->OutStreamer->EmitCFISections(false, true);
+        Asm->OutStreamer->emitCFISections(false, true);
       hasEmittedCFISections = true;
     }
 
     shouldEmitCFI = true;
-    Asm->OutStreamer->EmitCFIStartProc(false);
+    Asm->OutStreamer->emitCFIStartProc(false);
   }
 }
 
@@ -109,7 +109,7 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding,
   for (const GlobalValue *GV : reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
-    Asm->EmitTTypeReference(GV, TTypeEncoding);
+    Asm->emitTTypeReference(GV, TTypeEncoding);
   }
 
   Asm->OutStreamer->EmitLabel(TTBaseLabel);
@@ -129,7 +129,7 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding,
         Asm->OutStreamer->AddComment("FilterInfo " + Twine(Entry));
     }
 
-    Asm->EmitTTypeReference((TypeID == 0 ? nullptr : TypeInfos[TypeID - 1]),
+    Asm->emitTTypeReference((TypeID == 0 ? nullptr : TypeInfos[TypeID - 1]),
                             TTypeEncoding);
   }
 }

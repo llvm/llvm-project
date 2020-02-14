@@ -309,7 +309,7 @@ bool AVRAsmParser::missingFeature(llvm::SMLoc const &Loc,
 
 bool AVRAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.EmitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, STI);
 
   return false;
 }

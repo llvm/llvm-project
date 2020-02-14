@@ -1,4 +1,4 @@
-; RUN: not llc -mcpu=mips32 -march=mipsel -relocation-model=static < %s 2>%t
+; RUN: not --crash llc -mcpu=mips32 -march=mipsel -relocation-model=static < %s 2>%t
 ; RUN: FileCheck %s < %t
 
 ; CHECK: LLVM ERROR: "interrupt" attribute is not supported on pre-MIPS32R2 or MIPS16 targets.

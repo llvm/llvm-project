@@ -474,14 +474,14 @@ public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     if (IsThumb)
       EmitThumbMappingSymbol();
     else
       EmitARMMappingSymbol();
 
-    MCELFStreamer::EmitInstruction(Inst, STI);
+    MCELFStreamer::emitInstruction(Inst, STI);
   }
 
   void emitInst(uint32_t Inst, char Suffix) {
@@ -647,7 +647,7 @@ private:
                          uint64_t Offset) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    EmitLabelAtPos(Symbol, Loc, F, Offset);
+    emitLabelAtPos(Symbol, Loc, F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);
@@ -1101,18 +1101,18 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   // emit each field as its type (ULEB or String)
   for (size_t i = 0; i < Contents.size(); ++i) {
     AttributeItem item = Contents[i];
-    Streamer.EmitULEB128IntValue(item.Tag);
+    Streamer.emitULEB128IntValue(item.Tag);
     switch (item.Type) {
     default: llvm_unreachable("Invalid attribute type");
     case AttributeItem::NumericAttribute:
-      Streamer.EmitULEB128IntValue(item.IntValue);
+      Streamer.emitULEB128IntValue(item.IntValue);
       break;
     case AttributeItem::TextAttribute:
       Streamer.EmitBytes(item.StringValue);
       Streamer.EmitIntValue(0, 1); // '\0'
       break;
     case AttributeItem::NumericAndTextAttributes:
-      Streamer.EmitULEB128IntValue(item.IntValue);
+      Streamer.emitULEB128IntValue(item.IntValue);
       Streamer.EmitBytes(item.StringValue);
       Streamer.EmitIntValue(0, 1); // '\0'
       break;

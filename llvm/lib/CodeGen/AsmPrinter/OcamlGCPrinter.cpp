@@ -129,7 +129,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
     report_fatal_error(" Too much descriptor for ocaml GC");
   }
   AP.emitInt16(NumDescriptors);
-  AP.EmitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
+  AP.emitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
 
   for (GCModuleInfo::FuncInfoVec::iterator I = Info.funcinfo_begin(),
                                            IE = Info.funcinfo_end();
@@ -180,7 +180,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
         AP.emitInt16(K->StackOffset);
       }
 
-      AP.EmitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
+      AP.emitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
     }
   }
 }

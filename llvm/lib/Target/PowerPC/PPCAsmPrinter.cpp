@@ -100,7 +100,7 @@ public:
     return AsmPrinter::doInitialization(M);
   }
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
   /// This function is for PrintAsmOperand and PrintAsmMemoryOperand,
   /// invoked by EmitMSInlineAsmStr and EmitGCCInlineAsmStr only.
@@ -113,7 +113,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 
-  void EmitEndOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
 
   void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
@@ -138,13 +138,13 @@ public:
   }
 
   bool doFinalization(Module &M) override;
-  void EmitStartOfAsmFile(Module &M) override;
+  void emitStartOfAsmFile(Module &M) override;
 
-  void EmitFunctionEntryLabel() override;
+  void emitFunctionEntryLabel() override;
 
-  void EmitFunctionBodyStart() override;
-  void EmitFunctionBodyEnd() override;
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitFunctionBodyStart() override;
+  void emitFunctionBodyEnd() override;
+  void emitInstruction(const MachineInstr *MI) override;
 };
 
 class PPCAIXAsmPrinter : public PPCAsmPrinter {
@@ -163,11 +163,11 @@ public:
 
   const MCExpr *lowerConstant(const Constant *CV) override;
 
-  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
 
-  void EmitFunctionDescriptor() override;
+  void emitFunctionDescriptor() override;
 
-  void EmitEndOfAsmFile(Module &) override;
+  void emitEndOfAsmFile(Module &) override;
 };
 
 } // end anonymous namespace
@@ -317,7 +317,7 @@ MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym) {
   return TOCEntry;
 }
 
-void PPCAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void PPCAsmPrinter::emitEndOfAsmFile(Module &M) {
   emitStackMaps(SM);
 }
 
@@ -512,7 +512,7 @@ MCSymbol *PPCAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
-void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
@@ -1149,13 +1149,13 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (!Subtarget->isPPC64())
-    return PPCAsmPrinter::EmitInstruction(MI);
+    return PPCAsmPrinter::emitInstruction(MI);
 
   switch (MI->getOpcode()) {
   default:
-    return PPCAsmPrinter::EmitInstruction(MI);
+    return PPCAsmPrinter::emitInstruction(MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     // .begin:
     //   b .end # lis 0, FuncId[16..32]
@@ -1287,7 +1287,7 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
 }
 
-void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
+void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
@@ -1298,10 +1298,10 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
 
   if (static_cast<const PPCTargetMachine &>(TM).isPPC64() ||
       !isPositionIndependent())
-    return AsmPrinter::EmitStartOfAsmFile(M);
+    return AsmPrinter::emitStartOfAsmFile(M);
 
   if (M.getPICLevel() == PICLevel::SmallPIC)
-    return AsmPrinter::EmitStartOfAsmFile(M);
+    return AsmPrinter::emitStartOfAsmFile(M);
 
   OutStreamer->SwitchSection(OutContext.getELFSection(
       ".got2", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC));
@@ -1323,12 +1323,12 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
   OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
 }
 
-void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
+void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   // linux/ppc32 - Normal entry label.
   if (!Subtarget->isPPC64() &&
       (!isPositionIndependent() ||
        MF->getFunction().getParent()->getPICLevel() == PICLevel::SmallPIC))
-    return AsmPrinter::EmitFunctionEntryLabel();
+    return AsmPrinter::emitFunctionEntryLabel();
 
   if (!Subtarget->isPPC64()) {
     const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
@@ -1347,7 +1347,7 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
       OutStreamer->EmitLabel(CurrentFnSym);
       return;
     } else
-      return AsmPrinter::EmitFunctionEntryLabel();
+      return AsmPrinter::emitFunctionEntryLabel();
   }
 
   // ELFv2 ABI - Normal entry label.
@@ -1371,7 +1371,7 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
       OutStreamer->EmitLabel(PPCFI->getTOCOffsetSymbol());
       OutStreamer->EmitValue(TOCDeltaExpr, 8);
     }
-    return AsmPrinter::EmitFunctionEntryLabel();
+    return AsmPrinter::emitFunctionEntryLabel();
   }
 
   // Emit an official procedure descriptor.
@@ -1433,7 +1433,7 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
 }
 
 /// EmitFunctionBodyStart - Emit a global entry point prefix for ELFv2.
-void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
+void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
   // In the ELFv2 ABI, in functions that use the TOC register, we need to
   // provide two entry points.  The ABI guarantees that when calling the
   // local entry point, r2 is set up by the caller to contain the TOC base
@@ -1530,7 +1530,7 @@ void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
 /// EmitFunctionBodyEnd - Print the traceback table before the .size
 /// directive.
 ///
-void PPCLinuxAsmPrinter::EmitFunctionBodyEnd() {
+void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
   // Only the 64-bit target requires a traceback table.  For now,
   // we only emit the word of zeroes that GDB requires to find
   // the end of the function, and zeroes for the eight-byte
@@ -1583,7 +1583,7 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
   return PPCAsmPrinter::lowerConstant(CV);
 }
 
-void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   ValidateGV(GV);
 
   // Create the symbol, set its storage class.
@@ -1631,13 +1631,13 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
 
   MCSymbol *EmittedInitSym = GVSym;
-  EmitLinkage(GV, EmittedInitSym);
-  EmitAlignment(getGVAlignment(GV, DL), GV);
+  emitLinkage(GV, EmittedInitSym);
+  emitAlignment(getGVAlignment(GV, DL), GV);
   OutStreamer->EmitLabel(EmittedInitSym);
-  EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 
-void PPCAIXAsmPrinter::EmitFunctionDescriptor() {
+void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   const DataLayout &DL = getDataLayout();
   const unsigned PointerSize = DL.getPointerSizeInBits() == 64 ? 8 : 4;
 
@@ -1661,7 +1661,7 @@ void PPCAIXAsmPrinter::EmitFunctionDescriptor() {
   OutStreamer->SwitchSection(Current.first, Current.second);
 }
 
-void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   // If there are no functions in this module, we will never need to reference
   // the TOC base.
   if (M.empty())

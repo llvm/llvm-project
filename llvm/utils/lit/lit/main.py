@@ -21,10 +21,6 @@ import lit.util
 def main(builtin_params={}):
     opts = lit.cl_arguments.parse_args()
 
-    if opts.show_version:
-        print("lit %s" % lit.__version__)
-        return
-
     params = create_params(builtin_params, opts.user_params)
     is_windows = platform.system() == 'Windows'
 

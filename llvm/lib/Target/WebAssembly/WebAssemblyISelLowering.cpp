@@ -648,32 +648,51 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     fail(DL, DAG, "WebAssembly doesn't support patch point yet");
 
   if (CLI.IsTailCall) {
-    bool MustTail = CLI.CS && CLI.CS.isMustTailCall();
-    if (Subtarget->hasTailCall() && !CLI.IsVarArg) {
-      // Do not tail call unless caller and callee return types match
-      const Function &F = MF.getFunction();
-      const TargetMachine &TM = getTargetMachine();
-      Type *RetTy = F.getReturnType();
-      SmallVector<MVT, 4> CallerRetTys;
-      SmallVector<MVT, 4> CalleeRetTys;
-      computeLegalValueVTs(F, TM, RetTy, CallerRetTys);
-      computeLegalValueVTs(F, TM, CLI.RetTy, CalleeRetTys);
-      bool TypesMatch = CallerRetTys.size() == CalleeRetTys.size() &&
-                        std::equal(CallerRetTys.begin(), CallerRetTys.end(),
-                                   CalleeRetTys.begin());
-      if (!TypesMatch) {
-        // musttail in this case would be an LLVM IR validation failure
-        assert(!MustTail);
-        CLI.IsTailCall = false;
-      }
-    } else {
+    auto NoTail = [&](const char *Msg) {
+      if (CLI.CS && CLI.CS.isMustTailCall())
+        fail(DL, DAG, Msg);
       CLI.IsTailCall = false;
-      if (MustTail) {
-        if (CLI.IsVarArg) {
-          // The return would pop the argument buffer
-          fail(DL, DAG, "WebAssembly does not support varargs tail calls");
-        } else {
-          fail(DL, DAG, "WebAssembly 'tail-call' feature not enabled");
+    };
+
+    if (!Subtarget->hasTailCall())
+      NoTail("WebAssembly 'tail-call' feature not enabled");
+
+    // Varargs calls cannot be tail calls because the buffer is on the stack
+    if (CLI.IsVarArg)
+      NoTail("WebAssembly does not support varargs tail calls");
+
+    // Do not tail call unless caller and callee return types match
+    const Function &F = MF.getFunction();
+    const TargetMachine &TM = getTargetMachine();
+    Type *RetTy = F.getReturnType();
+    SmallVector<MVT, 4> CallerRetTys;
+    SmallVector<MVT, 4> CalleeRetTys;
+    computeLegalValueVTs(F, TM, RetTy, CallerRetTys);
+    computeLegalValueVTs(F, TM, CLI.RetTy, CalleeRetTys);
+    bool TypesMatch = CallerRetTys.size() == CalleeRetTys.size() &&
+                      std::equal(CallerRetTys.begin(), CallerRetTys.end(),
+                                 CalleeRetTys.begin());
+    if (!TypesMatch)
+      NoTail("WebAssembly tail call requires caller and callee return types to "
+             "match");
+
+    // If pointers to local stack values are passed, we cannot tail call
+    if (CLI.CS) {
+      for (auto &Arg : CLI.CS.args()) {
+        Value *Val = Arg.get();
+        // Trace the value back through pointer operations
+        while (true) {
+          Value *Src = Val->stripPointerCastsAndAliases();
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(Src))
+            Src = GEP->getPointerOperand();
+          if (Val == Src)
+            break;
+          Val = Src;
+        }
+        if (isa<AllocaInst>(Val)) {
+          NoTail(
+              "WebAssembly does not support tail calling with stack arguments");
+          break;
         }
       }
     }

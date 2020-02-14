@@ -57,13 +57,13 @@ public:
   // AsmPrinter Implementation.
   //===------------------------------------------------------------------===//
 
-  void EmitEndOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
-  void EmitJumpTableInfo() override;
-  void EmitConstantPool() override;
-  void EmitFunctionBodyStart() override;
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitJumpTableInfo() override;
+  void emitConstantPool() override;
+  void emitFunctionBodyStart() override;
+  void emitInstruction(const MachineInstr *MI) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,

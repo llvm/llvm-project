@@ -35,7 +35,7 @@ public:
 
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
-  void EmitInstruction(const MCInst &Instruction,
+  void emitInstruction(const MCInst &Instruction,
                        const MCSubtargetInfo &STI) override {
     Result->Key.Instructions.push_back(Instruction);
   }

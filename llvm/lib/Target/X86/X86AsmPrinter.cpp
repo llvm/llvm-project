@@ -76,7 +76,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Emit the rest of the function body.
-  EmitFunctionBody();
+  emitFunctionBody();
 
   // Emit the XRay table for this function.
   emitXRayTable();
@@ -87,7 +87,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-void X86AsmPrinter::EmitFunctionBodyStart() {
+void X86AsmPrinter::emitFunctionBodyStart() {
   if (EmitFPOData) {
     if (auto *XTS =
         static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -97,7 +97,7 @@ void X86AsmPrinter::EmitFunctionBodyStart() {
   }
 }
 
-void X86AsmPrinter::EmitFunctionBodyEnd() {
+void X86AsmPrinter::emitFunctionBodyEnd() {
   if (EmitFPOData) {
     if (auto *XTS =
             static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -575,7 +575,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
+void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
@@ -597,7 +597,7 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
       // Emitting note header.
       int WordSize = TT.isArch64Bit() ? 8 : 4;
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8));
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8));
       OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
       OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
       OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
@@ -607,7 +607,7 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
       OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
       OutStreamer->EmitIntValue(4, 4);               // data size
       OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);
@@ -698,7 +698,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
   }
 }
 
-void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
+void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {

@@ -9,6 +9,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
@@ -18,6 +20,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Testing/Support/Error.h"
@@ -1398,4 +1401,1151 @@ TEST(GSYMTest, TestGsymLookups) {
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8}));
+}
+
+
+TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
+  // Create a single compile unit with a single function and make sure it gets
+  // converted to DWARF correctly. The function's address range is in where
+  // DW_AT_low_pc and DW_AT_high_pc are both addresses.
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+  debug_info:
+    - Length:
+        TotalLength:     52
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000000
+          Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
+}
+
+TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
+  // Create a single compile unit with a single function and make sure it gets
+  // converted to DWARF correctly. The function's address range is in where
+  // DW_AT_low_pc is an address and the DW_AT_high_pc is an offset.
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+  debug_info:
+    - Length:
+        TotalLength:     44
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000000
+          Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
+}
+
+TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
+  // Sometimes the compiler will omit the mangled name in the DWARF for static
+  // and member functions of classes and structs. This test verifies that the
+  // fully qualified name of the method is computed and used as the string for
+  // the function in the GSYM in these cases. Otherwise we might just get a
+  // function name like "erase" instead of "std::vector<int>::erase".
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - Foo
+    - dump
+    - this
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_structure_type
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+    - Code:            0x00000003
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+    - Code:            0x00000004
+      Tag:             DW_TAG_formal_parameter
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_artificial
+          Form:            DW_FORM_flag_present
+  debug_info:
+    - Length:
+        TotalLength:     68
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000011
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000016
+            - Value:           0x0000000000000022
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000000
+          Values:
+        - AbbrCode:        0x00000000
+          Values:
+        - AbbrCode:        0x00000000
+          Values:
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "Foo::dump");
+}
+
+TEST(GSYMTest, TestDWARFTextRanges) {
+  // Linkers don't understand DWARF, they just like to concatenate and
+  // relocate data within the DWARF sections. This means that if a function
+  // gets dead stripped, and if those functions use an offset as the
+  // DW_AT_high_pc, we can end up with many functions at address zero. The
+  // DwarfTransformer allows clients to specify valid .text address ranges
+  // and any addresses of any functions must fall within those ranges if any
+  // have been specified. This means that an object file can calcuate the
+  // address ranges within the binary where code lives and set these ranges
+  // as constraints in the DwarfTransformer. ObjectFile instances can
+  // add a address ranges of sections that have executable permissions. This
+  // keeps bad information from being added to a GSYM file and causing issues
+  // when symbolicating.
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+    - dead_stripped
+    - dead_stripped2
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+  debug_info:
+    - Length:
+        TotalLength:     78
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000100
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000020
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000040
+        - AbbrCode:        0x00000000
+          Values:
+
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  // Only allow addresses between [0x1000 - 0x2000) to be linked into the
+  // GSYM.
+  AddressRanges TextRanges;
+  TextRanges.insert(AddressRange(0x1000, 0x2000));
+  DT.SetValidTextRanges(TextRanges);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "main");
+}
+
+TEST(GSYMTest, TestDWARFInlineInfo) {
+  // Make sure we parse the line table and inline information correctly from
+  // DWARF.
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+    - inline1
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+        - Attribute:       DW_AT_stmt_list
+          Form:            DW_FORM_sec_offset
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000003
+      Tag:             DW_TAG_inlined_subroutine
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_call_file
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_call_line
+          Form:            DW_FORM_data4
+  debug_info:
+    - Length:
+        TotalLength:     74
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000001100
+            - Value:           0x0000000000000100
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000A
+        - AbbrCode:        0x00000000
+          Values:
+        - AbbrCode:        0x00000000
+          Values:
+  debug_line:
+    - Length:
+        TotalLength:     96
+      Version:         2
+      PrologueLength:  46
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - /tmp
+      Files:
+        - Name:            main.c
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            4096
+        - Opcode:          DW_LNS_copy
+          Data:            4096
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            2
+        - Opcode:          DW_LNS_copy
+          Data:            2
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            128
+        - Opcode:          DW_LNS_copy
+          Data:            128
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            1
+        - Opcode:          DW_LNS_copy
+          Data:            1
+        - Opcode:          DW_LNS_advance_pc
+          Data:            3584
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            3584
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            3584
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  EXPECT_TRUE(ExpFI->Inline.hasValue());
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "main");
+
+    // Verify inline info is correct when doing lookups.
+  auto LR = GR->lookup(0x1000);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1100-1);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
+
+  LR = GR->lookup(0x1100);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
+                         SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1180-1);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
+                         SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1180);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21},
+                         SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1200-1);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21},
+                         SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1200);
+  ASSERT_THAT_EXPECTED(LR, Succeeded());
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11}));
+}
+
+
+TEST(GSYMTest, TestDWARFNoLines) {
+  // Check that if a DW_TAG_subprogram doesn't have line table entries that
+  // we fall back and use the DW_AT_decl_file and DW_AT_decl_line to at least
+  // point to the function definition. This DWARF file has 4 functions:
+  //  "lines_no_decl": has line table entries, no DW_AT_decl_file/line attrs.
+  //  "lines_with_decl": has line table entries and has DW_AT_decl_file/line,
+  //                     make sure we don't use DW_AT_decl_file/line and make
+  //                     sure there is a line table.
+  //  "no_lines_no_decl": no line table entries and no DW_AT_decl_file/line,
+  //                      make sure there is no line table for this function.
+  //  "no_lines_with_decl": no line table and has DW_AT_decl_file/line, make
+  //                        sure we have one line table entry that starts at
+  //                        the function start address and the decl file and
+  //                        line.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.c")
+  //               DW_AT_low_pc	(0x0000000000001000)
+  //               DW_AT_high_pc	(0x0000000000002000)
+  //               DW_AT_language	(DW_LANG_C_plus_plus)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000022:   DW_TAG_subprogram
+  //                 DW_AT_name	("lines_no_decl")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000002000)
+  //
+  // 0x00000033:   DW_TAG_subprogram
+  //                 DW_AT_name	("lines_with_decl")
+  //                 DW_AT_low_pc	(0x0000000000002000)
+  //                 DW_AT_high_pc	(0x0000000000003000)
+  //                 DW_AT_decl_file	("/tmp/main.c")
+  //                 DW_AT_decl_line	(20)
+  //
+  // 0x00000046:   DW_TAG_subprogram
+  //                 DW_AT_name	("no_lines_no_decl")
+  //                 DW_AT_low_pc	(0x0000000000003000)
+  //                 DW_AT_high_pc	(0x0000000000004000)
+  //
+  // 0x00000057:   DW_TAG_subprogram
+  //                 DW_AT_name	("no_lines_with_decl")
+  //                 DW_AT_low_pc	(0x0000000000004000)
+  //                 DW_AT_high_pc	(0x0000000000005000)
+  //                 DW_AT_decl_file	("/tmp/main.c")
+  //                 DW_AT_decl_line	(40)
+  //
+  // 0x0000006a:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - lines_no_decl
+    - lines_with_decl
+    - no_lines_no_decl
+    - no_lines_with_decl
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+        - Attribute:       DW_AT_stmt_list
+          Form:            DW_FORM_sec_offset
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000003
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+  debug_info:
+    - Length:
+        TotalLength:     103
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000001B
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000014
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000002B
+            - Value:           0x0000000000003000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000003C
+            - Value:           0x0000000000004000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000028
+        - AbbrCode:        0x00000000
+          Values:          []
+  debug_line:
+    - Length:
+        TotalLength:     92
+      Version:         2
+      PrologueLength:  34
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.c
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            512
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            3584
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            8192
+        - Opcode:          DW_LNS_advance_line
+          SData:           20
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            512
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            3584
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  EXPECT_EQ(GR->getNumAddresses(), 4u);
+
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "lines_no_decl");
+  // Make sure have two line table entries and that get the first line entry
+  // correct.
+  EXPECT_EQ(ExpFI->OptLineTable->size(), 2u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x1000u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 11u);
+
+  ExpFI = GR->getFunctionInfo(0x2000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x3000));
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "lines_with_decl");
+  // Make sure have two line table entries and that we don't use line 20
+  // from the DW_AT_decl_file/line as a line table entry.
+  EXPECT_EQ(ExpFI->OptLineTable->size(), 2u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x2000u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 21u);
+
+  ExpFI = GR->getFunctionInfo(0x3000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x4000));
+  // Make sure we have no line table.
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "no_lines_no_decl");
+
+  ExpFI = GR->getFunctionInfo(0x4000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x4000, 0x5000));
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "no_lines_with_decl");
+  // Make sure we have one line table entry that uses the DW_AT_decl_file/line
+  // as the one and only line entry.
+  EXPECT_EQ(ExpFI->OptLineTable->size(), 1u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Addr, 0x4000u);
+  EXPECT_EQ(ExpFI->OptLineTable->first()->Line, 40u);
+}
+
+
+TEST(GSYMTest, TestDWARFDeadStripAddr4) {
+  // Check that various techniques that compilers use for dead code stripping
+  // work for 4 byte addresses. Make sure we keep the good functions and
+  // strip any functions whose name starts with "stripped".
+  //
+  // 1 - Compilers might set the low PC to -1 (UINT32_MAX) for compile unit
+  //     with 4 byte addresses ("stripped1")
+  // 2 - Set the low and high PC to the same value ("stripped2")
+  // 3 - Have the high PC lower than the low PC ("stripped3")
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.c")
+  //               DW_AT_low_pc	(0x0000000000001000)
+  //               DW_AT_high_pc	(0x0000000000002000)
+  //               DW_AT_language	(DW_LANG_C_plus_plus)
+  //
+  // 0x0000001a:   DW_TAG_subprogram
+  //                 DW_AT_name	("main")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000002000)
+  //
+  // 0x00000027:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped1")
+  //                 DW_AT_low_pc	(0x00000000ffffffff)
+  //                 DW_AT_high_pc	(0x0000000100000000)
+  //
+  // 0x00000034:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped2")
+  //                 DW_AT_low_pc	(0x0000000000003000)
+  //                 DW_AT_high_pc	(0x0000000000003000)
+  //
+  // 0x00000041:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped3")
+  //                 DW_AT_low_pc	(0x0000000000004000)
+  //                 DW_AT_high_pc	(0x0000000000003fff)
+  //
+  // 0x0000004e:   NULL
+
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - main
+    - stripped1
+    - stripped2
+    - stripped3
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000003
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+  debug_info:
+    - Length:
+        TotalLength:     75
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        4
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x00000000FFFFFFFF
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000001C
+            - Value:           0x0000000000003000
+            - Value:           0x0000000000003000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000026
+            - Value:           0x0000000000004000
+            - Value:           0x0000000000003FFF
+        - AbbrCode:        0x00000000
+          Values:          []
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 4);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  // Test that the only function that made it was the "main" function.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "main");
+}
+
+TEST(GSYMTest, TestDWARFDeadStripAddr8) {
+  // Check that various techniques that compilers use for dead code stripping
+  // work for 4 byte addresses. Make sure we keep the good functions and
+  // strip any functions whose name starts with "stripped".
+  //
+  // 1 - Compilers might set the low PC to -1 (UINT64_MAX) for compile unit
+  //     with 8 byte addresses ("stripped1")
+  // 2 - Set the low and high PC to the same value ("stripped2")
+  // 3 - Have the high PC lower than the low PC ("stripped3")
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.c")
+  //               DW_AT_low_pc	(0x0000000000001000)
+  //               DW_AT_high_pc	(0x0000000000002000)
+  //               DW_AT_language	(DW_LANG_C_plus_plus)
+  //
+  // 0x0000001e:   DW_TAG_subprogram
+  //                 DW_AT_name	("main")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000002000)
+  //
+  // 0x0000002f:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped1")
+  //                 DW_AT_low_pc	(0xffffffffffffffff)
+  //                 DW_AT_high_pc	(0x0000000000000000)
+  //
+  // 0x00000040:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped2")
+  //                 DW_AT_low_pc	(0x0000000000003000)
+  //                 DW_AT_high_pc	(0x0000000000003000)
+  //
+  // 0x00000055:   DW_TAG_subprogram
+  //                 DW_AT_name	("stripped3")
+  //                 DW_AT_low_pc	(0x0000000000004000)
+  //                 DW_AT_high_pc	(0x0000000000003fff)
+  //
+  // 0x0000006a:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - main
+    - stripped1
+    - stripped2
+    - stripped3
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000003
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_addr
+  debug_info:
+    - Length:
+        TotalLength:     103
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0xFFFFFFFFFFFFFFFF
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000001C
+            - Value:           0x0000000000003000
+            - Value:           0x0000000000003000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000026
+            - Value:           0x0000000000004000
+            - Value:           0x0000000000003FFF
+        - AbbrCode:        0x00000000
+          Values:          []
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, OS, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+
+  // Test that the only function that made it was the "main" function.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "main");
 }

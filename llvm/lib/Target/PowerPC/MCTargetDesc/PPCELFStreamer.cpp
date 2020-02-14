@@ -44,14 +44,14 @@ PPCELFStreamer::PPCELFStreamer(MCContext &Context,
                     std::move(Emitter)), LastLabel(NULL) {
 }
 
-void PPCELFStreamer::EmitInstruction(const MCInst &Inst,
+void PPCELFStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
   PPCMCCodeEmitter *Emitter =
       static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
 
   // Special handling is only for prefixed instructions.
   if (!Emitter->isPrefixedInstruction(Inst)) {
-    MCELFStreamer::EmitInstruction(Inst, STI);
+    MCELFStreamer::emitInstruction(Inst, STI);
     return;
   }
 
@@ -71,7 +71,7 @@ void PPCELFStreamer::EmitInstruction(const MCInst &Inst,
   // Since the previous emit created a new fragment then adding this instruction
   // also forces the addition of a new fragment. Inst is now the first
   // instruction in that new fragment.
-  MCELFStreamer::EmitInstruction(Inst, STI);
+  MCELFStreamer::emitInstruction(Inst, STI);
 
   // The above instruction is forced to start a new fragment because it
   // comes after a code alignment fragment. Get that new fragment.

@@ -2164,7 +2164,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       AlignmentCI = ConstantInt::get(AlignmentCI->getType(),
                                      llvm::Value::MaximumAlignment);
 
-    EmitAlignmentAssumption(PtrValue, Ptr,
+    emitAlignmentAssumption(PtrValue, Ptr,
                             /*The expr loc is sufficient.*/ SourceLocation(),
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
@@ -14555,7 +14555,7 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
     Result = Builder.CreatePointerCast(Result, Args.SrcType);
     // Emit an alignment assumption to ensure that the new alignment is
     // propagated to loads/stores, etc.
-    EmitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
+    emitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
   }
   assert(Result->getType() == Args.SrcType);
   return RValue::get(Result);

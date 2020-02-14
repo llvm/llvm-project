@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj %s \
+# RUN: not --crash llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj %s \
 # RUN: 2>&1 | FileCheck %s
         
 _stext:
