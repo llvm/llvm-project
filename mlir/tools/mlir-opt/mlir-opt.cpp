@@ -34,6 +34,7 @@ void registerPassManagerTestPass();
 void registerPatternsTestPass();
 void registerSimpleParametricTilingPass();
 void registerSymbolTestPasses();
+void registerTestAffineDataCopyPass();
 void registerTestAllReduceLoweringPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
@@ -85,6 +86,7 @@ void registerTestPasses() {
   registerPatternsTestPass();
   registerSimpleParametricTilingPass();
   registerSymbolTestPasses();
+  registerTestAffineDataCopyPass();
   registerTestAllReduceLoweringPass();
   registerTestCallGraphPass();
   registerTestConstantFold();
