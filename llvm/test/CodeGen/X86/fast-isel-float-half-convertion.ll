@@ -15,7 +15,7 @@ entry:
 
 define float @test_fp16_to_fp32(i32 %a) {
 ; CHECK-LABEL: test_fp16_to_fp32:
-; CHECK: movswl %di, %eax
+; CHECK: movzwl %di, %eax
 ; CHECK-NEXT: vmovd %eax, %xmm0
 ; CHECK-NEXT: vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT: retq
