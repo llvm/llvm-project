@@ -495,7 +495,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
 
   size_t elementIndex = index().getZExtValue();
-  return structAttr.getValue()[elementIndex];
+  return structAttr[elementIndex];
 }
 ```
 

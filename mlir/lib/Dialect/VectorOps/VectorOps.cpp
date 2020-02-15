@@ -1143,7 +1143,7 @@ static Type inferStridedSliceOpResultType(VectorType vectorType,
   shape.reserve(vectorType.getRank());
   unsigned idx = 0;
   for (unsigned e = offsets.size(); idx < e; ++idx)
-    shape.push_back(sizes.getValue()[idx].cast<IntegerAttr>().getInt());
+    shape.push_back(sizes[idx].cast<IntegerAttr>().getInt());
   for (unsigned e = vectorType.getShape().size(); idx < e; ++idx)
     shape.push_back(vectorType.getShape()[idx]);
 

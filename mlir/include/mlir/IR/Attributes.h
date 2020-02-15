@@ -204,6 +204,7 @@ public:
   static ArrayAttr get(ArrayRef<Attribute> value, MLIRContext *context);
 
   ArrayRef<Attribute> getValue() const;
+  Attribute operator[](unsigned idx) const;
 
   /// Support range iteration.
   using iterator = llvm::ArrayRef<Attribute>::iterator;
