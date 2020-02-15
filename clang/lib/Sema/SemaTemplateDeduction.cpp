@@ -1818,7 +1818,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
         // If this is a base class, try to perform template argument
         // deduction from it.
         if (NextT != RecordT) {
-          TemplateDeductionInfo BaseInfo(Info.getLocation());
+          TemplateDeductionInfo BaseInfo(TemplateDeductionInfo::ForBase, Info);
           Sema::TemplateDeductionResult BaseResult =
               DeduceTemplateArguments(S, TemplateParams, SpecParam,
                                       QualType(NextT, 0), BaseInfo, Deduced);
