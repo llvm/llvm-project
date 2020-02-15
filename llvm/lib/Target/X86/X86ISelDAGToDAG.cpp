@@ -4756,31 +4756,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N1 = Node->getOperand(1);
 
     unsigned Opc, MOpc;
-    bool isSigned = Opcode == ISD::SMUL_LOHI;
-    if (!isSigned) {
-      switch (NVT.SimpleTy) {
-      default: llvm_unreachable("Unsupported VT!");
-      case MVT::i32: Opc = X86::MUL32r; MOpc = X86::MUL32m; break;
-      case MVT::i64: Opc = X86::MUL64r; MOpc = X86::MUL64m; break;
-      }
-    } else {
-      switch (NVT.SimpleTy) {
-      default: llvm_unreachable("Unsupported VT!");
-      case MVT::i32: Opc = X86::IMUL32r; MOpc = X86::IMUL32m; break;
-      case MVT::i64: Opc = X86::IMUL64r; MOpc = X86::IMUL64m; break;
-      }
-    }
-
-    unsigned SrcReg, LoReg, HiReg;
-    switch (Opc) {
-    default: llvm_unreachable("Unknown MUL opcode!");
-    case X86::IMUL32r:
-    case X86::MUL32r:
-      SrcReg = LoReg = X86::EAX; HiReg = X86::EDX;
+    unsigned LoReg, HiReg;
+    bool IsSigned = Opcode == ISD::SMUL_LOHI;
+    switch (NVT.SimpleTy) {
+    default: llvm_unreachable("Unsupported VT!");
+    case MVT::i32:
+      Opc  = IsSigned ? X86::IMUL32r : X86::MUL32r;
+      MOpc = IsSigned ? X86::IMUL32m : X86::MUL32m;
+      LoReg = X86::EAX; HiReg = X86::EDX;
       break;
-    case X86::IMUL64r:
-    case X86::MUL64r:
-      SrcReg = LoReg = X86::RAX; HiReg = X86::RDX;
+    case MVT::i64:
+      Opc  = IsSigned ? X86::IMUL64r : X86::MUL64r;
+      MOpc = IsSigned ? X86::IMUL64m : X86::MUL64m;
+      LoReg = X86::RAX; HiReg = X86::RDX;
       break;
     }
 
@@ -4793,7 +4781,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         std::swap(N0, N1);
     }
 
-    SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, SrcReg,
+    SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
     if (foldedLoad) {
       SDValue Chain;
