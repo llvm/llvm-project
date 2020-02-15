@@ -169,6 +169,7 @@ __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_flush, false, Void, IdentPtr)
 __OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
 __OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
+__OMP_RTL(__kmpc_omp_taskwait, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
           /* Int */ Int32)
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)

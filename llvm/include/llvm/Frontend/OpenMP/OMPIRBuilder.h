@@ -176,6 +176,11 @@ public:
   /// \param Loc The location where the flush directive was encountered
   void CreateFlush(const LocationDescription &Loc);
 
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  void CreateTaskwait(const LocationDescription& Loc);
+
   ///}
 
 
@@ -240,6 +245,11 @@ private:
            FinalizationStack.back().IsCancellable &&
            FinalizationStack.back().DK == DK;
   }
+
+  /// Generate a taskwait runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitTaskwaitImpl(const LocationDescription &Loc);
 
   /// Return the current thread ID.
   ///
