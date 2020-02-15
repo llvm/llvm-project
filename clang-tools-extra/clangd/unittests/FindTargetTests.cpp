@@ -215,8 +215,7 @@ TEST_F(TargetDeclTest, NestedNameSpecifier) {
     template <typename T>
     int x = [[T::]]y;
   )cpp";
-  // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
-  EXPECT_DECLS("NestedNameSpecifierLoc", "");
+  EXPECT_DECLS("NestedNameSpecifierLoc", "typename T");
 
   Code = R"cpp(
     namespace a { int x; }
@@ -256,8 +255,7 @@ TEST_F(TargetDeclTest, Types) {
     template<class T>
     void foo() { [[T]] x; }
   )cpp";
-  // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
-  EXPECT_DECLS("TemplateTypeParmTypeLoc", "");
+  EXPECT_DECLS("TemplateTypeParmTypeLoc", "class T");
   Flags.clear();
 
   // FIXME: Auto-completion in a template requires disabling delayed template
@@ -290,8 +288,7 @@ TEST_F(TargetDeclTest, Types) {
       static const int size = sizeof...([[E]]);
     };
   )cpp";
-  // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
-  EXPECT_DECLS("SizeOfPackExpr", "");
+  EXPECT_DECLS("SizeOfPackExpr", "typename ...E");
 
   Code = R"cpp(
     template <typename T>
