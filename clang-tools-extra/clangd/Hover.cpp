@@ -115,15 +115,6 @@ std::string printDefinition(const Decl *D) {
   return Definition;
 }
 
-void printParams(llvm::raw_ostream &OS,
-                 const std::vector<HoverInfo::Param> &Params) {
-  for (size_t I = 0, E = Params.size(); I != E; ++I) {
-    if (I)
-      OS << ", ";
-    OS << Params.at(I);
-  }
-}
-
 std::string printType(QualType QT, const PrintingPolicy &Policy) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
@@ -131,6 +122,43 @@ std::string printType(QualType QT, const PrintingPolicy &Policy) {
   while (const auto *DT = QT->getAs<DecltypeType>())
     QT = DT->getUnderlyingType();
   return QT.getAsString(Policy);
+}
+
+std::string printType(const TemplateTypeParmDecl *TTP) {
+  std::string Res = TTP->wasDeclaredWithTypename() ? "typename" : "class";
+  if (TTP->isParameterPack())
+    Res += "...";
+  return Res;
+}
+
+std::string printType(const NonTypeTemplateParmDecl *NTTP,
+                      const PrintingPolicy &PP) {
+  std::string Res = printType(NTTP->getType(), PP);
+  if (NTTP->isParameterPack())
+    Res += "...";
+  return Res;
+}
+
+std::string printType(const TemplateTemplateParmDecl *TTP,
+                      const PrintingPolicy &PP) {
+  std::string Res;
+  llvm::raw_string_ostream OS(Res);
+  OS << "template <";
+  llvm::StringRef Sep = "";
+  for (const Decl *Param : *TTP->getTemplateParameters()) {
+    OS << Sep;
+    Sep = ", ";
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
+      OS << printType(TTP);
+    else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+      OS << printType(NTTP, PP);
+    else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param))
+      OS << printType(TTPD, PP);
+  }
+  // FIXME: TemplateTemplateParameter doesn't store the info on whether this
+  // param was a "typename" or "class".
+  OS << "> class";
+  return OS.str();
 }
 
 std::vector<HoverInfo::Param>
@@ -142,21 +170,18 @@ fetchTemplateParameters(const TemplateParameterList *Params,
   for (const Decl *Param : *Params) {
     HoverInfo::Param P;
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
-      P.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
-      if (TTP->isParameterPack())
-        *P.Type += "...";
+      P.Type = printType(TTP);
 
       if (!TTP->getName().empty())
         P.Name = TTP->getNameAsString();
+
       if (TTP->hasDefaultArgument())
         P.Default = TTP->getDefaultArgument().getAsString(PP);
     } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      P.Type = printType(NTTP, PP);
+
       if (IdentifierInfo *II = NTTP->getIdentifier())
         P.Name = II->getName().str();
-
-      P.Type = printType(NTTP->getType(), PP);
-      if (NTTP->isParameterPack())
-        *P.Type += "...";
 
       if (NTTP->hasDefaultArgument()) {
         P.Default.emplace();
@@ -164,16 +189,11 @@ fetchTemplateParameters(const TemplateParameterList *Params,
         NTTP->getDefaultArgument()->printPretty(Out, nullptr, PP);
       }
     } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-      P.Type.emplace();
-      llvm::raw_string_ostream OS(*P.Type);
-      OS << "template <";
-      printParams(OS,
-                  fetchTemplateParameters(TTPD->getTemplateParameters(), PP));
-      OS << "> class"; // FIXME: TemplateTemplateParameter doesn't store the
-                       // info on whether this param was a "typename" or
-                       // "class".
+      P.Type = printType(TTPD, PP);
+
       if (!TTPD->getName().empty())
         P.Name = TTPD->getNameAsString();
+
       if (TTPD->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
@@ -385,6 +405,10 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
     fillFunctionTypeAndParams(HI, D, FD, Policy);
   else if (const auto *VD = dyn_cast<ValueDecl>(D))
     HI.Type = printType(VD->getType(), Policy);
+  else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D))
+    HI.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
+  else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D))
+    HI.Type = printType(TTP, Policy);
 
   // Fill in value with evaluated initializer if possible.
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
