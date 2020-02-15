@@ -11,6 +11,14 @@ declare_args() {
   #        out/gn/bin/llvm-undname ...`
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
+
+  # If set, puts relative paths in debug info.
+  # Makes the build output independent of the build directory, but makes
+  # most debuggers harder to use. See "Getting to local determinism" and
+  # "Getting debuggers to work well with locally deterministic builds" in
+  # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
+  # for more information.
+  use_relative_paths_in_debug_info = false
 }
 
 assert(!llvm_build_instrumented_coverage || is_clang,
@@ -167,6 +175,37 @@ config("compiler_defaults") {
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
     ldflags += [ "-fprofile-instr-generate" ]
+  }
+
+  # Deterministic build setup, see
+  # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
+  if (current_os == "win") {
+    ldflags += [ "/pdbaltpath:%_PDB%" ]
+  }
+  if (is_clang) {
+    cflags += [
+      "-no-canonical-prefixes",
+      "-Werror=date-time",
+    ]
+    if (current_os == "win") {
+      cflags += [
+        "-fmsc-version=1916",
+        "/X",
+      ]
+    }
+    if (current_os == "win" && use_lld) {
+      cflags += [ "/Brepro" ]
+      ldflags += [
+        "/Brepro",
+        "/lldignoreenv",
+      ]
+    }
+    if (use_relative_paths_in_debug_info) {
+      cflags += [
+        "-fdebug-compilation-dir",
+        ".",
+      ]
+    }
   }
 }
 
