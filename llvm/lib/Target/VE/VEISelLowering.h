@@ -27,8 +27,10 @@ enum NodeType : unsigned {
   Hi,
   Lo, // Hi/Lo operations, typically on a global address.
 
+  GETFUNPLT,       // load function address through %plt insturction
   CALL,            // A call instruction.
-  RET_FLAG, // Return with a flag operand.
+  RET_FLAG,        // Return with a flag operand.
+  GLOBAL_BASE_REG, // Global base reg for PIC.
 };
 }
 

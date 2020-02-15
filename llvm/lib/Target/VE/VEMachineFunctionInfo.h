@@ -20,6 +20,8 @@ class VEMachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
 
 private:
+  Register GlobalBaseReg;
+
   /// VarArgsFrameOffset - Frame offset to start of varargs area.
   int VarArgsFrameOffset;
 
@@ -27,9 +29,13 @@ private:
   bool IsLeafProc;
 
 public:
-  VEMachineFunctionInfo() : VarArgsFrameOffset(0), IsLeafProc(false) {}
+  VEMachineFunctionInfo()
+      : GlobalBaseReg(), VarArgsFrameOffset(0), IsLeafProc(false) {}
   explicit VEMachineFunctionInfo(MachineFunction &MF)
-      : VarArgsFrameOffset(0), IsLeafProc(false) {}
+      : GlobalBaseReg(), VarArgsFrameOffset(0), IsLeafProc(false) {}
+
+  Register getGlobalBaseReg() const { return GlobalBaseReg; }
+  void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
 
   int getVarArgsFrameOffset() const { return VarArgsFrameOffset; }
   void setVarArgsFrameOffset(int Offset) { VarArgsFrameOffset = Offset; }
