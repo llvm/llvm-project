@@ -662,6 +662,16 @@ public:
       getPointer()->clearBitsNotInMask(Mask, MaskWords);
   }
 
+  void invalid() {
+    assert(empty());
+    X = (uintptr_t)-1;
+  }
+  bool isInvalid() const { return X == (uintptr_t)-1; }
+
+  ArrayRef<uintptr_t> getData() const {
+    return isSmall() ? makeArrayRef(X) : getPointer()->getData();
+  }
+
 private:
   template <bool AddBits, bool InvertMask>
   void applyMask(const uint32_t *Mask, unsigned MaskWords) {
@@ -699,6 +709,23 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
   return Result;
 }
 
+template <> struct DenseMapInfo<SmallBitVector> {
+  static inline SmallBitVector getEmptyKey() { return SmallBitVector(); }
+  static inline SmallBitVector getTombstoneKey() {
+    SmallBitVector V;
+    V.invalid();
+    return V;
+  }
+  static unsigned getHashValue(const SmallBitVector &V) {
+    return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
+        std::make_pair(V.size(), V.getData()));
+  }
+  static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {
+    if (LHS.isInvalid() || RHS.isInvalid())
+      return LHS.isInvalid() == RHS.isInvalid();
+    return LHS == RHS;
+  }
+};
 } // end namespace llvm
 
 namespace std {
