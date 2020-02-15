@@ -3096,6 +3096,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_INTRINSIC_TRUNC:
+  case AMDGPU::G_BSWAP: // TODO: Somehow expand for scalar?
   case AMDGPU::G_AMDGPU_FFBH_U32:
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
@@ -3182,7 +3183,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_BITCAST:
   case AMDGPU::G_INTTOPTR:
   case AMDGPU::G_PTRTOINT:
-  case AMDGPU::G_BSWAP:
   case AMDGPU::G_BITREVERSE:
   case AMDGPU::G_FABS:
   case AMDGPU::G_FNEG: {

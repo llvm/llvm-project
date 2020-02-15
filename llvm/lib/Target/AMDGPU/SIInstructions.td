@@ -1782,8 +1782,8 @@ def : GCNPat <
 def : GCNPat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 24)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 8)))
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 24)),
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 8)))
 >;
 
 // FIXME: This should have been narrowed to i32 during legalization.
@@ -1809,8 +1809,9 @@ def : GCNPat <
   sub1)
 >;
 
-
-let SubtargetPredicate = isGFX8Plus in {
+// FIXME: The AddedComplexity should not be needed, but in GlobalISel
+// the BFI pattern ends up taking precedence without it.
+let SubtargetPredicate = isGFX8Plus, AddedComplexity = 1 in {
 // Magic number: 3 | (2 << 8) | (1 << 16) | (0 << 24)
 //
 // My reading of the manual suggests we should be using src0 for the

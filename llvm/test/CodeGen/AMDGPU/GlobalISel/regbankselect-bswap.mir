@@ -11,7 +11,8 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: bswap_i32_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[BSWAP:%[0-9]+]]:sgpr(s32) = G_BSWAP [[COPY]]
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[BSWAP:%[0-9]+]]:vgpr(s32) = G_BSWAP [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_BSWAP %0
 ...
