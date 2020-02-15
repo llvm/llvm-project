@@ -59,9 +59,9 @@ def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
-def X86comi    : SDNode<"X86ISD::COMI",      SDTX86CmpTest>;
-def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86CmpTest>;
-def X86cmps    : SDNode<"X86ISD::FSETCC",     SDTX86Cmps>;
+def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
+def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
+def X86cmps    : SDNode<"X86ISD::FSETCC",    SDTX86Cmps>;
 def X86pshufb  : SDNode<"X86ISD::PSHUFB",
                  SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i8>, SDTCisSameAs<0,1>,
                                       SDTCisSameAs<0,2>]>>;

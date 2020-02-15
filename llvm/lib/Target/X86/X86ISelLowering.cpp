@@ -21169,7 +21169,7 @@ static std::pair<SDValue, SDValue> EmitCmp(SDValue Op0, SDValue Op1,
                       dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
       return std::make_pair(Res, Res.getValue(1));
     }
-    return std::make_pair(DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1),
+    return std::make_pair(DAG.getNode(X86ISD::FCMP, dl, MVT::i32, Op0, Op1),
                           SDValue());
   }
 
@@ -22344,7 +22344,8 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
 /// Return true if opcode is a X86 logical comparison.
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getOpcode();
-  if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI)
+  if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI ||
+      Opc == X86ISD::FCMP)
     return true;
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
@@ -23295,7 +23296,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
           (void)NewBR;
           Dest = FalseBB;
 
-          SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
+          SDValue Cmp = DAG.getNode(X86ISD::FCMP, dl, MVT::i32,
                                     Cond.getOperand(0), Cond.getOperand(1));
           CC = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
           Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
@@ -23310,7 +23311,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // For FCMP_UNE, we can emit
       // two branches instead of an explicit OR instruction with a
       // separate test.
-      SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
+      SDValue Cmp = DAG.getNode(X86ISD::FCMP, dl, MVT::i32,
                                 Cond.getOperand(0), Cond.getOperand(1));
       CC = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
       Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
@@ -29947,6 +29948,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(BT)
   NODE_NAME_CASE(CMP)
+  NODE_NAME_CASE(FCMP)
   NODE_NAME_CASE(STRICT_FCMP)
   NODE_NAME_CASE(STRICT_FCMPS)
   NODE_NAME_CASE(COMI)
@@ -40372,7 +40374,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
     SDLoc DL(N);
 
     // The SETCCs should both refer to the same CMP.
-    if (CMP0.getOpcode() != X86ISD::CMP || CMP0 != CMP1)
+    if (CMP0.getOpcode() != X86ISD::FCMP || CMP0 != CMP1)
       return SDValue();
 
     SDValue CMP00 = CMP0->getOperand(0);
