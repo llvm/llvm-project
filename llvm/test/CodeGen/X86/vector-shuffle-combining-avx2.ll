@@ -464,10 +464,17 @@ define <32 x i8> @combine_pshufb_as_pshufhw(<32 x i8> %a0) {
 }
 
 define <32 x i8> @combine_pshufb_not_as_pshufw(<32 x i8> %a0) {
-; CHECK-LABEL: combine_pshufb_not_as_pshufw:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13,18,19,16,17,22,23,20,21,26,27,24,25,30,31,28,29]
-; CHECK-NEXT:    ret{{[l|q]}}
+; AVX2-LABEL: combine_pshufb_not_as_pshufw:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13,18,19,16,17,22,23,20,21,26,27,24,25,30,31,28,29]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_pshufb_not_as_pshufw:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vprold $16, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
   %res0 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 2, i8 3, i8 0, i8 1, i8 6, i8 7, i8 4, i8 5, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 2, i8 3, i8 0, i8 1, i8 6, i8 7, i8 4, i8 5, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
   %res1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %res0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 10, i8 11, i8 8, i8 9, i8 14, i8 15, i8 12, i8 13, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 10, i8 11, i8 8, i8 9, i8 14, i8 15, i8 12, i8 13>)
   ret <32 x i8> %res1

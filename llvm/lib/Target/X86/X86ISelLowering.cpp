@@ -11704,23 +11704,11 @@ static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
   return RotateAmt;
 }
 
-/// Lower shuffle using X86ISD::VROTLI rotations.
-static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
-                                       ArrayRef<int> Mask,
-                                       const X86Subtarget &Subtarget,
-                                       SelectionDAG &DAG) {
+static int matchShuffleAsBitRotate(MVT &RotateVT, int EltSizeInBits,
+                                   const X86Subtarget &Subtarget,
+                                   ArrayRef<int> Mask) {
   assert(!isNoopShuffleMask(Mask) && "We shouldn't lower no-op shuffles!");
-
-  MVT SVT = VT.getScalarType();
-  int EltSizeInBits = SVT.getScalarSizeInBits();
   assert(EltSizeInBits < 64 && "Can't rotate 64-bit integers");
-
-  // Only XOP + AVX512 targets have bit rotation instructions.
-  // If we at least have SSSE3 (PSHUFB) then we shouldn't attempt to use this.
-  bool IsLegal =
-      (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
-  if (!IsLegal && Subtarget.hasSSE3())
-    return SDValue();
 
   // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
   int MinSubElts = Subtarget.hasAVX512() ? std::max(32 / EltSizeInBits, 2) : 2;
@@ -11730,36 +11718,55 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
     if (RotateAmt < 0)
       continue;
 
-    int NumElts = VT.getVectorNumElements();
+    int NumElts = Mask.size();
     MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
-    MVT RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
+    RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
+    return RotateAmt * EltSizeInBits;
+  }
 
-    // For pre-SSSE3 targets, if we are shuffling vXi8 elts then ISD::ROTL,
-    // expanded to OR(SRL,SHL), will be more efficient, but if they can
-    // widen to vXi16 or more then existing lowering should will be better.
-    int RotateAmtInBits = RotateAmt * EltSizeInBits;
-    if (!IsLegal) {
-      if ((RotateAmtInBits % 16) == 0)
-        return SDValue();
-      // TODO: Use getTargetVShiftByConstNode.
-      unsigned ShlAmt = RotateAmtInBits;
-      unsigned SrlAmt = RotateSVT.getScalarSizeInBits() - RotateAmtInBits;
-      V1 = DAG.getBitcast(RotateVT, V1);
-      SDValue SHL = DAG.getNode(X86ISD::VSHLI, DL, RotateVT, V1,
-                                DAG.getTargetConstant(ShlAmt, DL, MVT::i8));
-      SDValue SRL = DAG.getNode(X86ISD::VSRLI, DL, RotateVT, V1,
-                                DAG.getTargetConstant(SrlAmt, DL, MVT::i8));
-      SDValue Rot = DAG.getNode(ISD::OR, DL, RotateVT, SHL, SRL);
-      return DAG.getBitcast(VT, Rot);
-    }
+  return -1;
+}
 
-    SDValue Rot =
-        DAG.getNode(X86ISD::VROTLI, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
-                    DAG.getTargetConstant(RotateAmtInBits, DL, MVT::i8));
+/// Lower shuffle using X86ISD::VROTLI rotations.
+static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
+                                       ArrayRef<int> Mask,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  // Only XOP + AVX512 targets have bit rotation instructions.
+  // If we at least have SSSE3 (PSHUFB) then we shouldn't attempt to use this.
+  bool IsLegal =
+      (VT.is128BitVector() && Subtarget.hasXOP()) || Subtarget.hasAVX512();
+  if (!IsLegal && Subtarget.hasSSE3())
+    return SDValue();
+
+  MVT RotateVT;
+  int RotateAmt = matchShuffleAsBitRotate(RotateVT, VT.getScalarSizeInBits(),
+                                          Subtarget, Mask);
+  if (RotateAmt < 0)
+    return SDValue();
+
+  // For pre-SSSE3 targets, if we are shuffling vXi8 elts then ISD::ROTL,
+  // expanded to OR(SRL,SHL), will be more efficient, but if they can
+  // widen to vXi16 or more then existing lowering should will be better.
+  if (!IsLegal) {
+    if ((RotateAmt % 16) == 0)
+      return SDValue();
+    // TODO: Use getTargetVShiftByConstNode.
+    unsigned ShlAmt = RotateAmt;
+    unsigned SrlAmt = RotateVT.getScalarSizeInBits() - RotateAmt;
+    V1 = DAG.getBitcast(RotateVT, V1);
+    SDValue SHL = DAG.getNode(X86ISD::VSHLI, DL, RotateVT, V1,
+                              DAG.getTargetConstant(ShlAmt, DL, MVT::i8));
+    SDValue SRL = DAG.getNode(X86ISD::VSRLI, DL, RotateVT, V1,
+                              DAG.getTargetConstant(SrlAmt, DL, MVT::i8));
+    SDValue Rot = DAG.getNode(ISD::OR, DL, RotateVT, SHL, SRL);
     return DAG.getBitcast(VT, Rot);
   }
 
-  return SDValue();
+  SDValue Rot =
+      DAG.getNode(X86ISD::VROTLI, DL, RotateVT, DAG.getBitcast(RotateVT, V1),
+                  DAG.getTargetConstant(RotateAmt, DL, MVT::i8));
+  return DAG.getBitcast(VT, Rot);
 }
 
 /// Try to lower a vector shuffle as a byte rotation.
@@ -33534,6 +33541,19 @@ static bool matchUnaryPermuteShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                        Mask, 0, Zeroable, Subtarget);
     if (0 < ShiftAmt) {
       PermuteImm = (unsigned)ShiftAmt;
+      return true;
+    }
+  }
+
+  // Attempt to match against bit rotates.
+  if (!ContainsZeros && AllowIntDomain && MaskScalarSizeInBits < 64 &&
+      ((MaskVT.is128BitVector() && Subtarget.hasXOP()) ||
+       Subtarget.hasAVX512())) {
+    int RotateAmt = matchShuffleAsBitRotate(ShuffleVT, MaskScalarSizeInBits,
+                                            Subtarget, Mask);
+    if (0 < RotateAmt) {
+      Shuffle = X86ISD::VROTLI;
+      PermuteImm = (unsigned)RotateAmt;
       return true;
     }
   }
