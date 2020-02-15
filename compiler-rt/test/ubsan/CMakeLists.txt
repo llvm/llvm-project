@@ -43,6 +43,10 @@ endif()
 
 foreach(arch ${UBSAN_TEST_ARCH})
   set(UBSAN_TEST_TARGET_ARCH ${arch})
+  if (APPLE)
+    set(UBSAN_TEST_APPLE_PLATFORM "osx")
+    set(UBSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
+  endif()
   get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
   add_ubsan_testsuites("Standalone" ubsan ${arch})
 
@@ -73,8 +77,10 @@ macro(add_ubsan_device_testsuite test_mode sanitizer platform arch)
   set(UBSAN_TEST_USE_THINLTO "False")
   if (APPLE)
     set(UBSAN_TEST_APPLE_PLATFORM "${platform}")
+    set(UBSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
   else()
     unset(UBSAN_TEST_APPLE_PLATFORM)
+    unset(UBSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG)
   endif()
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

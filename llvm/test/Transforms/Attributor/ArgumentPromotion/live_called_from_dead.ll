@@ -15,23 +15,14 @@ define internal void @dead() {
 }
 
 define internal i32 @test(i32* %X, i32* %Y) {
-; OLDPM-LABEL: define {{[^@]+}}@test
-; OLDPM-SAME: (i32* noalias nocapture nofree writeonly align 4 [[X:%.*]])
-; OLDPM-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
-; OLDPM:       live:
-; OLDPM-NEXT:    store i32 0, i32* [[X]], align 4
-; OLDPM-NEXT:    ret i32 undef
-; OLDPM:       dead:
-; OLDPM-NEXT:    unreachable
-;
-; NEWPM_MODULE-LABEL: define {{[^@]+}}@test
-; NEWPM_MODULE-SAME: (i32* noalias nocapture nofree writeonly align 4 [[X:%.*]])
-; NEWPM_MODULE-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
-; NEWPM_MODULE:       live:
-; NEWPM_MODULE-NEXT:    store i32 0, i32* [[X]], align 4
-; NEWPM_MODULE-NEXT:    ret i32 undef
-; NEWPM_MODULE:       dead:
-; NEWPM_MODULE-NEXT:    unreachable
+; OLDPM_CGSCC-LABEL: define {{[^@]+}}@test
+; OLDPM_CGSCC-SAME: (i32* noalias nocapture nofree writeonly align 4 [[X:%.*]])
+; OLDPM_CGSCC-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
+; OLDPM_CGSCC:       live:
+; OLDPM_CGSCC-NEXT:    store i32 0, i32* [[X]], align 4
+; OLDPM_CGSCC-NEXT:    ret i32 undef
+; OLDPM_CGSCC:       dead:
+; OLDPM_CGSCC-NEXT:    unreachable
 ;
 ; NEWPM_CGSCC-LABEL: define {{[^@]+}}@test
 ; NEWPM_CGSCC-SAME: (i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[X:%.*]])
@@ -52,26 +43,18 @@ dead:
   ret i32 1
 }
 
-; FIXME: This function should not be writeonly because only stack memory is written. Once we realize that @caller can be deleted.
-
 define internal i32 @caller(i32* %B) {
-; OLDPM_MODULE-LABEL: define {{[^@]+}}@caller()
-; OLDPM_MODULE-NEXT:    [[A:%.*]] = alloca i32
-; OLDPM_MODULE-NEXT:    store i32 1, i32* [[A]], align 4
-; OLDPM_MODULE-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
-; OLDPM_MODULE-NEXT:    ret i32 undef
-;
 ; OLDPM_CGSCC-LABEL: define {{[^@]+}}@caller()
 ; OLDPM_CGSCC-NEXT:    [[A:%.*]] = alloca i32
 ; OLDPM_CGSCC-NEXT:    store i32 1, i32* [[A]], align 4
 ; OLDPM_CGSCC-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; OLDPM_CGSCC-NEXT:    ret i32 0
 ;
-; NEWPM-LABEL: define {{[^@]+}}@caller()
-; NEWPM-NEXT:    [[A:%.*]] = alloca i32
-; NEWPM-NEXT:    store i32 1, i32* [[A]], align 4
-; NEWPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
-; NEWPM-NEXT:    ret i32 undef
+; NEWPM_CGSCC-LABEL: define {{[^@]+}}@caller()
+; NEWPM_CGSCC-NEXT:    [[A:%.*]] = alloca i32
+; NEWPM_CGSCC-NEXT:    store i32 1, i32* [[A]], align 4
+; NEWPM_CGSCC-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
+; NEWPM_CGSCC-NEXT:    ret i32 undef
 ;
   %A = alloca i32
   store i32 1, i32* %A
@@ -83,7 +66,6 @@ define i32 @callercaller() {
 ; CHECK-LABEL: define {{[^@]+}}@callercaller()
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 2, i32* [[B]], align 4
-; CHECK-NEXT:    [[X:%.*]] = call i32 @caller()
 ; CHECK-NEXT:    ret i32 0
 ;
   %B = alloca i32

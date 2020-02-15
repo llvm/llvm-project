@@ -883,9 +883,9 @@ void MipsTargetELFStreamer::finish() {
       if (Alignment) {
         OS.SwitchSection(&Section);
         if (Section.UseCodeAlign())
-          OS.EmitCodeAlignment(Alignment, Alignment);
+          OS.emitCodeAlignment(Alignment, Alignment);
         else
-          OS.EmitValueToAlignment(Alignment, 0, 1, Alignment);
+          OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
       }
     }
   }
@@ -997,17 +997,17 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
 
   OS.SwitchSection(Sec);
 
-  OS.EmitValueImpl(ExprRef, 4);
+  OS.emitValueImpl(ExprRef, 4);
 
-  OS.EmitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
-  OS.EmitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
+  OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
+  OS.emitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
 
-  OS.EmitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
-  OS.EmitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
+  OS.emitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
+  OS.emitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
 
-  OS.EmitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
-  OS.EmitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
-  OS.EmitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
+  OS.emitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
+  OS.emitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
+  OS.emitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
 
   // The .end directive marks the end of a procedure. Invalidate
   // the information gathered up until this point.
@@ -1017,7 +1017,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
 
   // .end also implicitly sets the size.
   MCSymbol *CurPCSym = Context.createTempSymbol();
-  OS.EmitLabel(CurPCSym);
+  OS.emitLabel(CurPCSym);
   const MCExpr *Size = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
       ExprRef, Context);

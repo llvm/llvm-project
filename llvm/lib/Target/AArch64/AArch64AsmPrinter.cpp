@@ -226,16 +226,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
 
   // Emit the note header.
   emitAlignment(Align(8));
-  OutStreamer->EmitIntValue(4, 4);     // data size for "GNU\0"
-  OutStreamer->EmitIntValue(4 * 4, 4); // Elf_Prop size
-  OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
-  OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+  OutStreamer->emitIntValue(4, 4);     // data size for "GNU\0"
+  OutStreamer->emitIntValue(4 * 4, 4); // Elf_Prop size
+  OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
+  OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
   // Emit the PAC/BTI properties.
-  OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
-  OutStreamer->EmitIntValue(4, 4);     // data size
-  OutStreamer->EmitIntValue(Flags, 4); // data
-  OutStreamer->EmitIntValue(0, 4);     // pad
+  OutStreamer->emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
+  OutStreamer->emitIntValue(4, 4);     // data size
+  OutStreamer->emitIntValue(Flags, 4); // data
+  OutStreamer->emitIntValue(0, 4);     // pad
 
   OutStreamer->endSection(Nt);
   OutStreamer->SwitchSection(Cur);
@@ -290,9 +290,9 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   //   ;DATA: higher 32 bits of the address of the trampoline
   //   LDP X0, X30, [SP], #16 ; pop X0 and the link register from the stack
   //
-  OutStreamer->EmitCodeAlignment(4);
+  OutStreamer->emitCodeAlignment(4);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
   // Emit "B #32" instruction, which jumps over the next 28 bytes.
@@ -303,7 +303,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   for (int8_t I = 0; I < NoopsInSledCount; I++)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 
-  OutStreamer->EmitLabel(Target);
+  OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind);
 }
 
@@ -363,10 +363,10 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
         Sym->getName()));
 
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Weak);
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Hidden);
-    OutStreamer->EmitLabel(Sym);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
+    OutStreamer->emitLabel(Sym);
 
     OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
                                      .addReg(AArch64::X16)
@@ -396,10 +396,10 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                              OutContext)),
         *STI);
     MCSymbol *ReturnSym = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(ReturnSym);
+    OutStreamer->emitLabel(ReturnSym);
     OutStreamer->emitInstruction(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
-    OutStreamer->EmitLabel(HandleMismatchOrPartialSym);
+    OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
     if (IsShort) {
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSWri)
@@ -465,7 +465,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
               .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
           *STI);
 
-      OutStreamer->EmitLabel(HandleMismatchSym);
+      OutStreamer->emitLabel(HandleMismatchSym);
     }
 
     OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
@@ -528,7 +528,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
   emitStackMaps(SM);
 }
@@ -543,7 +543,7 @@ void AArch64AsmPrinter::EmitLOHs() {
              "Label hasn't been inserted for LOH related instruction");
       MCArgs.push_back(LabelIt->second);
     }
-    OutStreamer->EmitLOHDirective(D.getKind(), MCArgs);
+    OutStreamer->emitLOHDirective(D.getKind(), MCArgs);
     MCArgs.clear();
   }
 }
@@ -783,7 +783,7 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
 
     unsigned Size = AFI->getJumpTableEntrySize(JTI);
     emitAlignment(Align(Size));
-    OutStreamer->EmitLabel(GetJTISymbol(JTI));
+    OutStreamer->emitLabel(GetJTISymbol(JTI));
 
     for (auto *JTBB : JTBBs)
       emitJumpTableEntry(MJTI, JTBB, JTI);
@@ -811,7 +811,7 @@ void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
         Value, MCConstantExpr::create(2, OutContext), OutContext);
   }
 
-  OutStreamer->EmitValue(Value, Size);
+  OutStreamer->emitValue(Value, Size);
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
@@ -867,7 +867,7 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer.EmitLabel(MILabel);
+  OutStreamer.emitLabel(MILabel);
 
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
@@ -897,7 +897,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                         const MachineInstr &MI) {
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer.EmitLabel(MILabel);
+  OutStreamer.emitLabel(MILabel);
   SM.recordPatchPoint(*MILabel, MI);
 
   PatchPointOpers Opers(&MI);
@@ -991,7 +991,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbol *LOHLabel = createTempSymbol("loh");
     // Associate the instruction with the label
     LOHInstToLabel[MI] = LOHLabel;
-    OutStreamer->EmitLabel(LOHLabel);
+    OutStreamer->emitLabel(LOHLabel);
   }
 
   AArch64TargetStreamer *TS =
@@ -1014,7 +1014,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);
         CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
-        OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+        OutStreamer->emitLabel(CurrentPatchableFunctionEntrySym);
         return;
       }
     }
@@ -1067,7 +1067,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       SmallString<128> TmpStr;
       raw_svector_ostream OS(TmpStr);
       PrintDebugValueComment(MI, OS);
-      OutStreamer->EmitRawText(StringRef(OS.str()));
+      OutStreamer->emitRawText(StringRef(OS.str()));
     }
     return;
 

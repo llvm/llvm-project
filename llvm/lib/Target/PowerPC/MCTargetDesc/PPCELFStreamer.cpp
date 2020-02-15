@@ -65,7 +65,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   // all of the nops required as part of the alignment operation. In the cases
   // when no nops are added then The fragment is still created but it remains
   // empty.
-  EmitCodeAlignment(64, 4);
+  emitCodeAlignment(64, 4);
 
   // Emit the instruction.
   // Since the previous emit created a new fragment then adding this instruction
@@ -93,10 +93,10 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   }
 }
 
-void PPCELFStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+void PPCELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   LastLabel = Symbol;
   LastLabelLoc = Loc;
-  MCELFStreamer::EmitLabel(Symbol);
+  MCELFStreamer::emitLabel(Symbol);
 }
 
 MCELFStreamer *llvm::createPPCELFStreamer(

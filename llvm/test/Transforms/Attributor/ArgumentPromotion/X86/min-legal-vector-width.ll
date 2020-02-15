@@ -29,7 +29,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
@@ -71,7 +71,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
@@ -113,7 +113,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
@@ -155,7 +155,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
@@ -195,7 +195,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 32 dereferenceable(64) [[TMP]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
 ; CHECK-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
@@ -234,7 +234,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 32 dereferenceable(64) [[TMP]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
 ; CHECK-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
@@ -275,7 +275,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32
@@ -317,7 +317,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 32

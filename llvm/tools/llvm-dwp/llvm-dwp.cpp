@@ -90,7 +90,7 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   while (Offset < Size) {
     auto OldOffset = Data.getU32(&Offset);
     auto NewOffset = OffsetRemapping[OldOffset];
-    Out.EmitIntValue(NewOffset, 4);
+    Out.emitIntValue(NewOffset, 4);
   }
 }
 
@@ -235,7 +235,7 @@ static void addAllTypesFromDWP(
       ++I;
     }
     auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    Out.EmitBytes(Types.substr(
+    Out.emitBytes(Types.substr(
         C.Offset - TUEntry.Contributions[DW_SECT_TYPES - DW_SECT_INFO].Offset,
         C.Length));
     C.Offset = TypesOffset;
@@ -272,7 +272,7 @@ static void addAllTypes(MCStreamer &Out,
       if (!P.second)
         continue;
 
-      Out.EmitBytes(Types.substr(PrevOffset, C.Length));
+      Out.emitBytes(Types.substr(PrevOffset, C.Length));
       TypesOffset += C.Length;
     }
   }
@@ -285,7 +285,7 @@ writeIndexTable(MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
   for (const auto &E : IndexEntries)
     for (size_t i = 0; i != array_lengthof(E.second.Contributions); ++i)
       if (ContributionOffsets[i])
-        Out.EmitIntValue(E.second.Contributions[i].*Field, 4);
+        Out.emitIntValue(E.second.Contributions[i].*Field, 4);
 }
 
 static void
@@ -317,23 +317,23 @@ writeIndex(MCStreamer &Out, MCSection *Section,
   }
 
   Out.SwitchSection(Section);
-  Out.EmitIntValue(2, 4);                   // Version
-  Out.EmitIntValue(Columns, 4);             // Columns
-  Out.EmitIntValue(IndexEntries.size(), 4); // Num Units
-  Out.EmitIntValue(Buckets.size(), 4);      // Num Buckets
+  Out.emitIntValue(2, 4);                   // Version
+  Out.emitIntValue(Columns, 4);             // Columns
+  Out.emitIntValue(IndexEntries.size(), 4); // Num Units
+  Out.emitIntValue(Buckets.size(), 4);      // Num Buckets
 
   // Write the signatures.
   for (const auto &I : Buckets)
-    Out.EmitIntValue(I ? IndexEntries.begin()[I - 1].first : 0, 8);
+    Out.emitIntValue(I ? IndexEntries.begin()[I - 1].first : 0, 8);
 
   // Write the indexes.
   for (const auto &I : Buckets)
-    Out.EmitIntValue(I, 4);
+    Out.emitIntValue(I, 4);
 
   // Write the column headers (which sections will appear in the table)
   for (size_t i = 0; i != ContributionOffsets.size(); ++i)
     if (ContributionOffsets[i])
-      Out.EmitIntValue(i + DW_SECT_INFO, 4);
+      Out.emitIntValue(i + DW_SECT_INFO, 4);
 
   // Write the offsets.
   writeIndexTable(Out, ContributionOffsets, IndexEntries,
@@ -458,7 +458,7 @@ static Error handleSection(
     CurTUIndexSection = Contents;
   else {
     Out.SwitchSection(OutSection);
-    Out.EmitBytes(Contents);
+    Out.emitBytes(Contents);
   }
   return Error::success();
 }

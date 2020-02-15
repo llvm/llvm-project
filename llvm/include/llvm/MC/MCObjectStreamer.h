@@ -113,15 +113,15 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                               uint64_t Offset);
-  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
-  void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
-  void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
@@ -129,14 +129,14 @@ public:
   /// can change its size during relaxation.
   virtual void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
-  void EmitBundleAlignMode(unsigned AlignPow2) override;
-  void EmitBundleLock(bool AlignToEnd) override;
-  void EmitBundleUnlock() override;
-  void EmitBytes(StringRef Data) override;
-  void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleLock(bool AlignToEnd) override;
+  void emitBundleUnlock() override;
+  void emitBytes(StringRef Data) override;
+  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void EmitCodeAlignment(unsigned ByteAlignment,
+  void emitCodeAlignment(unsigned ByteAlignment,
                          unsigned MaxBytesToEmit = 0) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
@@ -164,13 +164,13 @@ public:
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
   void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
-  void EmitDTPRel32Value(const MCExpr *Value) override;
-  void EmitDTPRel64Value(const MCExpr *Value) override;
-  void EmitTPRel32Value(const MCExpr *Value) override;
-  void EmitTPRel64Value(const MCExpr *Value) override;
-  void EmitGPRel32Value(const MCExpr *Value) override;
-  void EmitGPRel64Value(const MCExpr *Value) override;
-  bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+  void emitDTPRel32Value(const MCExpr *Value) override;
+  void emitDTPRel64Value(const MCExpr *Value) override;
+  void emitTPRel32Value(const MCExpr *Value) override;
+  void emitTPRel64Value(const MCExpr *Value) override;
+  void emitGPRel32Value(const MCExpr *Value) override;
+  void emitGPRel64Value(const MCExpr *Value) override;
+  bool emitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc,
                           const MCSubtargetInfo &STI) override;
   using MCStreamer::emitFill;
@@ -178,10 +178,10 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
-  void EmitFileDirective(StringRef Filename) override;
+  void emitFileDirective(StringRef Filename) override;
 
-  void EmitAddrsig() override;
-  void EmitAddrsigSym(const MCSymbol *Sym) override;
+  void emitAddrsig() override;
+  void emitAddrsigSym(const MCSymbol *Sym) override;
 
   void FinishImpl() override;
 

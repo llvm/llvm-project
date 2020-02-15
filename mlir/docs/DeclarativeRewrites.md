@@ -400,7 +400,7 @@ handy methods on `mlir::Builder`.
 example and decompose the array attribute into two attributes:
 
 ```tablegen
-class getNthAttr<int n> : NativeCodeCall<"$_self.getValue()[" # n # "]">;
+class getNthAttr<int n> : NativeCodeCall<"$_self[" # n # "]">;
 
 def : Pat<(OneAttrOp $attr),
           (TwoAttrOp (getNthAttr<0>:$attr), (getNthAttr<1>:$attr)>;

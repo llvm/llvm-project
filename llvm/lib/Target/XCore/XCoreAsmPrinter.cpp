@@ -93,13 +93,13 @@ void XCoreAsmPrinter::emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV) {
 
     MCSymbol *SymGlob = OutContext.getOrCreateSymbol(
                           Twine(Sym->getName() + StringRef(".globound")));
-    OutStreamer->EmitSymbolAttribute(SymGlob, MCSA_Global);
-    OutStreamer->EmitAssignment(SymGlob,
+    OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Global);
+    OutStreamer->emitAssignment(SymGlob,
                                 MCConstantExpr::create(ATy->getNumElements(),
                                                        OutContext));
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage()) {
-      OutStreamer->EmitSymbolAttribute(SymGlob, MCSA_Weak);
+      OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Weak);
     }
   }
 }
@@ -129,11 +129,11 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   case GlobalValue::ExternalLinkage:
   case GlobalValue::CommonLinkage:
     emitArrayBound(GVSym, GV);
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
 
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage())
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Weak);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Weak);
     LLVM_FALLTHROUGH;
   case GlobalValue::InternalLinkage:
   case GlobalValue::PrivateLinkage:
@@ -149,16 +149,16 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
   unsigned Size = DL.getTypeAllocSize(C->getType());
   if (MAI->hasDotTypeDotSizeDirective()) {
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }
-  OutStreamer->EmitLabel(GVSym);
+  OutStreamer->emitLabel(GVSym);
 
   emitGlobalConstant(DL, C);
   // The ABI requires that unsigned scalar types smaller than 32 bits
   // are padded to 32 bits.
   if (Size < 4)
-    OutStreamer->EmitZeros(4 - Size);
+    OutStreamer->emitZeros(4 - Size);
 
   // Mark the end of the global
   getTargetStreamer().emitCCBottomData(GVSym->getName());
@@ -178,7 +178,7 @@ void XCoreAsmPrinter::emitFunctionBodyEnd() {
 void XCoreAsmPrinter::emitFunctionEntryLabel() {
   // Mark the start of the function
   getTargetStreamer().emitCCTopFunction(CurrentFnSym->getName());
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
 void XCoreAsmPrinter::
@@ -267,7 +267,7 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
       O << "\tmov "
         << XCoreInstPrinter::getRegisterName(MI->getOperand(0).getReg()) << ", "
         << XCoreInstPrinter::getRegisterName(MI->getOperand(1).getReg());
-      OutStreamer->EmitRawText(O.str());
+      OutStreamer->emitRawText(O.str());
       return;
     }
     break;
@@ -280,7 +280,7 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
     else
       printInlineJT32(MI, 0, O);
     O << '\n';
-    OutStreamer->EmitRawText(O.str());
+    OutStreamer->emitRawText(O.str());
     return;
   }
 

@@ -264,10 +264,9 @@ e:
 ; undef of a previous instruction.
 define i32 @cond_br_on_undef3() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef3(
-; ATTRIBUTOR-NEXT:    %cond = icmp ne i32 1, undef
-; ATTRIBUTOR-NEXT:    br i1 %cond, label %t, label %e
+; ATTRIBUTOR-NEXT:    br label %t
 ; ATTRIBUTOR:       t:
-; ATTRIBUTOR-NEXT:    unreachable
+; ATTRIBUTOR-NEXT:    ret i32 1
 ; ATTRIBUTOR:       e:
 ; ATTRIBUTOR-NEXT:    unreachable
 

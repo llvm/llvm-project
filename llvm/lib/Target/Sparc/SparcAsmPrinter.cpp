@@ -233,15 +233,15 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   //   or  <MO>, %lo(_GLOBAL_OFFSET_TABLE_+(<EndLabel>-<StartLabel>))), <MO>
   //   add <MO>, %o7, <MO>
 
-  OutStreamer->EmitLabel(StartLabel);
+  OutStreamer->emitLabel(StartLabel);
   MCOperand Callee =  createPCXCallOP(EndLabel, OutContext);
   EmitCall(*OutStreamer, Callee, STI);
-  OutStreamer->EmitLabel(SethiLabel);
+  OutStreamer->emitLabel(SethiLabel);
   MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC22,
                                        GOTLabel, StartLabel, SethiLabel,
                                        OutContext);
   EmitSETHI(*OutStreamer, hiImm, MCRegOP, STI);
-  OutStreamer->EmitLabel(EndLabel);
+  OutStreamer->emitLabel(EndLabel);
   MCOperand loImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC10,
                                        GOTLabel, StartLabel, EndLabel,
                                        OutContext);

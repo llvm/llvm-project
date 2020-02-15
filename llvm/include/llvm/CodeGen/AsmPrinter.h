@@ -288,9 +288,6 @@ public:
   // All the sleds to be emitted.
   SmallVector<XRayFunctionEntry, 4> Sleds;
 
-  // A unique ID used for ELF sections associated with a particular function.
-  unsigned XRayFnUniqueID = 0;
-
   // Helper function to record a given XRay sled.
   void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind,
                   uint8_t Version = 0);
@@ -298,7 +295,6 @@ public:
   /// Emit a table with all XRay instrumentation points.
   void emitXRayTable();
 
-  DenseMap<const MCSection *, unsigned> PatchableFunctionEntryID;
   void emitPatchableFunctionEntries();
 
   //===------------------------------------------------------------------===//

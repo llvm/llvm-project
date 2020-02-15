@@ -56,7 +56,7 @@ def OpH : NS_Op<"op_for_arr_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpH::verify()
-// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>().getValue()[0].cast<IntegerAttr>().getInt() == 8)))))
+// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() == 8)))))
 // CHECK-SAME:    return emitOpError("attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8");
 
 def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
@@ -64,7 +64,7 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpI::verify()
-// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>().getValue()[0].cast<IntegerAttr>().getInt() >= 8)))))
+// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() >= 8)))))
 // CHECK-SAME:    return emitOpError("attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8");
 
 def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [

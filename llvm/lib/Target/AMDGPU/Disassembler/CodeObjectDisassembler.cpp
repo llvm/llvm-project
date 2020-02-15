@@ -83,7 +83,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
       AsmStreamer->EmitDirectiveHSACodeObjectVersion(
         Version->major_version,
         Version->minor_version);
-      AsmStreamer->getStreamer().EmitRawText("");
+      AsmStreamer->getStreamer().emitRawText("");
       break;
     }
 
@@ -99,7 +99,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
         Isa->stepping,
         Isa->getVendorName(),
         Isa->getArchitectureName());
-      AsmStreamer->getStreamer().EmitRawText("");
+      AsmStreamer->getStreamer().emitRawText("");
       break;
     }
     }
@@ -184,12 +184,12 @@ CodeObjectDisassembler::printFunctions(const HSACodeObject *CodeObject,
         return errorToErrorCode(KernelCodeTOr.takeError());
 
       AsmStreamer->EmitAMDGPUSymbolType(*NameEr, Kernel->getType());
-      AsmStreamer->getStreamer().EmitRawText("");
+      AsmStreamer->getStreamer().emitRawText("");
 
-      AsmStreamer->getStreamer().EmitRawText(*NameEr + ":");
+      AsmStreamer->getStreamer().emitRawText(*NameEr + ":");
 
       AsmStreamer->EmitAMDKernelCodeT(*(*KernelCodeTOr));
-      AsmStreamer->getStreamer().EmitRawText("");
+      AsmStreamer->getStreamer().emitRawText("");
 
       Address += (*KernelCodeTOr)->kernel_code_entry_byte_offset;
     } else {
@@ -198,9 +198,9 @@ CodeObjectDisassembler::printFunctions(const HSACodeObject *CodeObject,
       MCSymbolELF *Symbol = cast<MCSymbolELF>(
           AsmStreamer->getStreamer().getContext().getOrCreateSymbol(Name));
       Symbol->setType(ELF::STT_FUNC);
-      AsmStreamer->getStreamer().EmitSymbolAttribute(Symbol,
+      AsmStreamer->getStreamer().emitSymbolAttribute(Symbol,
                                                      MCSA_ELF_TypeFunction);
-      AsmStreamer->getStreamer().EmitLabel(Symbol);
+      AsmStreamer->getStreamer().emitLabel(Symbol);
     }
 
     auto CodeOr = CodeObject->getCode(Function);
@@ -231,7 +231,7 @@ void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
 
   Bytes = trimTrailingZeroes(Bytes, 256);
 
-  AsmStreamer->getStreamer().EmitRawText("// Disassembly:");
+  AsmStreamer->getStreamer().emitRawText("// Disassembly:");
   SmallString<40> InstStr, CommentStr, OutStr;
   for (uint64_t Index = 0; Index < Bytes.size();) {
     ArrayRef<uint8_t> Code = Bytes.slice(Index);
@@ -275,12 +275,12 @@ void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
     if (!CS.str().empty())
       OS << " // " << CS.str();
 
-    AsmStreamer->getStreamer().EmitRawText(std::string(OS.str()));
+    AsmStreamer->getStreamer().emitRawText(std::string(OS.str()));
 
     Address += EatenBytesNum;
     Index += EatenBytesNum;
   }
-  AsmStreamer->getStreamer().EmitRawText("");
+  AsmStreamer->getStreamer().emitRawText("");
 }
 
 std::error_code CodeObjectDisassembler::Disassemble(MemoryBufferRef Buffer,

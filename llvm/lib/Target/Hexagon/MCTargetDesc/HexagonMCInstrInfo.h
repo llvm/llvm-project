@@ -351,6 +351,16 @@ bool subInstWouldBeExtended(MCInst const &potentialDuplex);
 unsigned SubregisterBit(unsigned Consumer, unsigned Producer,
                         unsigned Producer2);
 
+bool IsVecRegSingle(unsigned VecReg);
+bool IsVecRegPair(unsigned VecReg);
+bool IsReverseVecRegPair(unsigned VecReg);
+bool IsSingleConsumerRefPairProducer(unsigned Producer, unsigned Consumer);
+
+/// Returns an ordered pair of the constituent register ordinals for
+/// each of the elements of \a VecRegPair.  For example, Hexagon::W0 ("v0:1")
+/// returns { 0, 1 } and Hexagon::W1 ("v3:2") returns { 3, 2 }.
+std::pair<unsigned, unsigned> GetVecRegPairIndices(unsigned VecRegPair);
+
 // Attempt to find and replace compound pairs
 void tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                  MCContext &Context, MCInst &MCI);

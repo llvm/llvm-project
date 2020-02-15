@@ -20,12 +20,12 @@ define i32 @test0-range-check(i32* %p) {
 ;
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    ret i32 [[A]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-range-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
@@ -40,7 +40,7 @@ define i32 @test0-range-check(i32* %p) {
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test0-range-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; MODULE-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; MODULE-NEXT:    ret i32 [[A]]
 ; CGSCC-LABEL: define {{[^@]+}}@test0-range-check
 ; CGSCC-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
@@ -65,7 +65,7 @@ define void @use3(i1, i1, i1) {
 define void @test0-icmp-check(i32* %p){
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; OLD_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; OLD_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -112,7 +112,7 @@ define void @test0-icmp-check(i32* %p){
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; NEW_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; NEW_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -293,7 +293,7 @@ define void @test0-icmp-check(i32* %p){
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test0-icmp-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; MODULE-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; MODULE-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; MODULE-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; MODULE-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -505,13 +505,13 @@ define i32 @test1(i32* %p) {
 define i1 @test1-check(i32* %p) {
 ; OLD_PM-LABEL: define {{[^@]+}}@test1-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; OLD_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; OLD_PM-NEXT:    ret i1 [[CMP]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test1-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; NEW_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; NEW_PM-NEXT:    ret i1 [[CMP]]
 ;
@@ -529,7 +529,7 @@ define i1 @test1-check(i32* %p) {
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test1-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; MODULE-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; MODULE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; MODULE-NEXT:    ret i1 [[CMP]]
 ; CGSCC-LABEL: define {{[^@]+}}@test1-check
@@ -722,6 +722,23 @@ define internal i32 @r1(i32) local_unnamed_addr {
 ; CGSCC_OLD_PM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
 ; CGSCC_OLD_PM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 100
 ; CGSCC_OLD_PM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP5]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@r1
+; CGSCC_NEW_PM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr
+; CGSCC_NEW_PM-NEXT:    br label [[TMP4:%.*]]
+; CGSCC_NEW_PM:       2:
+; CGSCC_NEW_PM-NEXT:    br label [[F:%.*]]
+; CGSCC_NEW_PM:       3:
+; CGSCC_NEW_PM-NEXT:    unreachable
+; CGSCC_NEW_PM:       f:
+; CGSCC_NEW_PM-NEXT:    ret i32 10
+; CGSCC_NEW_PM:       4:
+; CGSCC_NEW_PM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP4]] ]
+; CGSCC_NEW_PM-NEXT:    [[TMP6:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP7:%.*]], [[TMP4]] ]
+; CGSCC_NEW_PM-NEXT:    [[TMP7]] = add nuw nsw i32 [[TMP5]], [[TMP6]]
+; CGSCC_NEW_PM-NEXT:    [[TMP8]] = add nuw nsw i32 [[TMP5]], 1
+; CGSCC_NEW_PM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 100
+; CGSCC_NEW_PM-NEXT:    br i1 [[TMP9]], label [[TMP2:%.*]], label [[TMP4]]
 ;
   br label %5
 
@@ -1130,6 +1147,131 @@ entry:
 }
 
 ; }
+
+define i1 @f_fcmp(float %a, float %b) {
+; CHECK-LABEL: define {{[^@]+}}@f_fcmp
+; CHECK-SAME: (float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge float [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %r = fcmp uge float %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @d_fcmp(double %a, double %b) {
+; CHECK-LABEL: define {{[^@]+}}@d_fcmp
+; CHECK-SAME: (double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq double [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %r = fcmp oeq double %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @dp_icmp(double* %a, double* %b) {
+; CHECK-LABEL: define {{[^@]+}}@dp_icmp
+; CHECK-SAME: (double* nofree readnone [[A:%.*]], double* nofree readnone [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sge double* [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %r = icmp sge double* %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @ip_icmp(i8* %a, i8* %b) {
+; CHECK-LABEL: define {{[^@]+}}@ip_icmp
+; CHECK-SAME: (i8* nofree readnone [[A:%.*]], i8* nofree readnone [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8* [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
+  %r = icmp ult i8* %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, double* %dpa, double* %dpb, i8* %ipa, i8* %ipb) {
+; CHECK-LABEL: define {{[^@]+}}@fcmp_caller
+; CHECK-SAME: (float [[FA:%.*]], float [[FB:%.*]], double [[DA:%.*]], double [[DB:%.*]], double* nofree readnone [[DPA:%.*]], double* nofree readnone [[DPB:%.*]], i8* nofree readnone [[IPA:%.*]], i8* nofree readnone [[IPB:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = call i1 @f_fcmp(float [[FA]], float [[FB]])
+; CHECK-NEXT:    [[R2:%.*]] = call i1 @d_fcmp(double [[DA]], double [[DB]])
+; CHECK-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(double* noalias nofree readnone [[DPA]], double* noalias nofree readnone [[DPB]])
+; CHECK-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(i8* noalias nofree readnone [[IPA]], i8* noalias nofree readnone [[IPB]])
+; CHECK-NEXT:    [[O1:%.*]] = or i1 [[R1]], [[R2]]
+; CHECK-NEXT:    [[O2:%.*]] = or i1 [[R3]], [[R4]]
+; CHECK-NEXT:    [[O3:%.*]] = or i1 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i1 [[O3]]
+;
+  %r1 = call i1 @f_fcmp(float %fa, float %fb)
+  %r2 = call i1 @d_fcmp(double %da, double %db)
+  %r3 = call i1 @dp_icmp(double* %dpa, double* %dpb)
+  %r4 = call i1 @ip_icmp(i8* %ipa, i8* %ipb)
+  %o1 = or i1 %r1, %r2
+  %o2 = or i1 %r3, %r4
+  %o3 = or i1 %o1, %o2
+  ret i1 %o3
+}
+
+define i8 @ret_two() {
+; CHECK-LABEL: define {{[^@]+}}@ret_two()
+; CHECK-NEXT:    ret i8 2
+;
+  ret i8 2
+}
+define i8 @ret_undef() {
+; CHECK-LABEL: define {{[^@]+}}@ret_undef()
+; CHECK-NEXT:    ret i8 undef
+;
+  ret i8 undef
+}
+
+; Verify we collapse undef to a value and return something non-undef here.
+define i8 @undef_collapse_1() {
+; CHECK-LABEL: define {{[^@]+}}@undef_collapse_1()
+; CHECK-NEXT:    ret i8 0
+;
+  %c = call i8 @ret_undef()
+  %s = shl i8 %c, 2
+  ret i8 %s
+}
+
+; Verify we collapse undef to a value and return something non-undef here.
+define i8 @undef_collapse_2() {
+; CHECK-LABEL: define {{[^@]+}}@undef_collapse_2()
+; CHECK-NEXT:    ret i8 0
+;
+  %c = call i8 @ret_two()
+  %s = shl i8 undef, %c
+  ret i8 %s
+}
+
+define i8 @undef_collapse_caller() {
+; OLD_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; OLD_PM-NEXT:    ret i8 0
+;
+; NEW_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; NEW_PM-NEXT:    ret i8 0
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; CGSCC_OLD_PM-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1()
+; CGSCC_OLD_PM-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2()
+; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = add i8 [[C1]], [[C2]]
+; CGSCC_OLD_PM-NEXT:    ret i8 [[A]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; CGSCC_NEW_PM-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1()
+; CGSCC_NEW_PM-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2()
+; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = add i8 [[C1]], [[C2]]
+; CGSCC_NEW_PM-NEXT:    ret i8 [[A]]
+;
+  %c1 = call i8 @undef_collapse_1()
+  %c2 = call i8 @undef_collapse_2()
+  %a = add i8 %c1, %c2
+  ret i8 %a
+}
+
 
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}

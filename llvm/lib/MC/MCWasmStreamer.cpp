@@ -49,7 +49,7 @@ void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
   DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
 }
 
-void MCWasmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   // Let the target do whatever target specific stuff it needs to do.
   getAssembler().getBackend().handleAssemblerFlag(Flag);
 
@@ -69,7 +69,7 @@ void MCWasmStreamer::ChangeSection(MCSection *Section,
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCWasmStreamer::EmitWeakReference(MCSymbol *Alias,
+void MCWasmStreamer::emitWeakReference(MCSymbol *Alias,
                                        const MCSymbol *Symbol) {
   getAssembler().registerSymbol(*Symbol);
   const MCExpr *Value = MCSymbolRefExpr::create(
@@ -77,7 +77,7 @@ void MCWasmStreamer::EmitWeakReference(MCSymbol *Alias,
   Alias->setVariableValue(Value);
 }
 
-bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
+bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
 
   auto *Symbol = cast<MCSymbolWasm>(S);
@@ -134,7 +134,7 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   return true;
 }
 
-void MCWasmStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       unsigned ByteAlignment) {
   llvm_unreachable("Common symbols are not yet implemented for Wasm");
 }
@@ -143,24 +143,24 @@ void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   cast<MCSymbolWasm>(Symbol)->setSize(Value);
 }
 
-void MCWasmStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                            unsigned ByteAlignment) {
   llvm_unreachable("Local common symbols are not yet implemented for Wasm");
 }
 
-void MCWasmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
+void MCWasmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                    SMLoc Loc) {
-  MCObjectStreamer::EmitValueImpl(Value, Size, Loc);
+  MCObjectStreamer::emitValueImpl(Value, Size, Loc);
 }
 
-void MCWasmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCWasmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                           unsigned ValueSize,
                                           unsigned MaxBytesToEmit) {
-  MCObjectStreamer::EmitValueToAlignment(ByteAlignment, Value, ValueSize,
+  MCObjectStreamer::emitValueToAlignment(ByteAlignment, Value, ValueSize,
                                          MaxBytesToEmit);
 }
 
-void MCWasmStreamer::EmitIdent(StringRef IdentString) {
+void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // TODO(sbc): Add the ident section once we support mergable strings
   // sections in the object format
 }
@@ -209,21 +209,21 @@ MCStreamer *llvm::createWasmStreamer(MCContext &Context,
   return S;
 }
 
-void MCWasmStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCWasmStreamer::emitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("Generic Wasm doesn't support this directive");
 }
 
-void MCWasmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("Wasm doesn't support this directive");
 }
 
-void MCWasmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCWasmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                   uint64_t Size, unsigned ByteAlignment,
                                   SMLoc Loc) {
   llvm_unreachable("Wasm doesn't support this directive");
 }
 
-void MCWasmStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                     uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("Wasm doesn't support this directive");
 }

@@ -276,6 +276,13 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // constrained classes first. The value has to be in the range [0,63].
   int AllocationPriority = 0;
 
+  // Weight override for register pressure calculation. This is the value
+  // TargetRegisterClass::getRegClassWeight() will return. The weight is in
+  // units of pressure for this register class. If unset tablegen will
+  // calculate a weight based on a number of register units in this register
+  // class registers. The weight is per register.
+  int Weight = ?;
+
   // The diagnostic type to present when referencing this operand in a match
   // failure error message. If this is empty, the default Match_InvalidOperand
   // diagnostic type will be used. If this is "<name>", a Match_<name> enum

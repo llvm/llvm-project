@@ -338,7 +338,7 @@ PlatformNetBSD::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
     } else
       LLDB_LOG(log, "not using process STDIO pty");
   } else {
-    LLDB_LOG(log, "process launch failed: {0}", error);
+    LLDB_LOG(log, "{0}", error);
     // FIXME figure out appropriate cleanup here.  Do we delete the target? Do
     // we delete the process?  Does our caller do that?
   }

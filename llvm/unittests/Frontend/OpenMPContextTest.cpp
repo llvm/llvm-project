@@ -38,12 +38,11 @@ TEST_F(OpenMPContextTest, RoundTripAndAssociation) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   EXPECT_EQ(TraitProperty::Enum,                                               \
             getOpenMPContextTraitPropertyKind(                                 \
-                TraitSet::TraitSetEnum, TraitSelector::TraitSelectorEnum,      \
+                TraitSet::TraitSetEnum,                                        \
                 getOpenMPContextTraitPropertyName(TraitProperty::Enum)));      \
-  EXPECT_EQ(                                                                   \
-      Str,                                                                     \
-      getOpenMPContextTraitPropertyName(getOpenMPContextTraitPropertyKind(     \
-          TraitSet::TraitSetEnum, TraitSelector::TraitSelectorEnum, Str)));    \
+  EXPECT_EQ(Str, getOpenMPContextTraitPropertyName(                            \
+                     getOpenMPContextTraitPropertyKind(TraitSet::TraitSetEnum, \
+                                                       Str)));                 \
   EXPECT_EQ(TraitSet::TraitSetEnum,                                            \
             getOpenMPContextTraitSetForProperty(TraitProperty::Enum));         \
   EXPECT_EQ(TraitSelector::TraitSelectorEnum,                                  \

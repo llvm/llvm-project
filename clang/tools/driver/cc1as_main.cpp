@@ -498,7 +498,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
     Str.get()->SwitchSection(AsmLabel);
-    Str.get()->EmitZeros(1);
+    Str.get()->emitZeros(1);
   }
 
   // Assembly to object compilation should leverage assembly info.

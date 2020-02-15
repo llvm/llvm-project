@@ -20,11 +20,6 @@
 
 using namespace llvm;
 
-R600RegisterInfo::R600RegisterInfo() : R600GenRegisterInfo(0) {
-  RCW.RegWeight = 0;
-  RCW.WeightLimit = 0;
-}
-
 #define GET_REGINFO_TARGET_DESC
 #include "R600GenRegisterInfo.inc"
 
@@ -97,11 +92,6 @@ const TargetRegisterClass * R600RegisterInfo::getCFGStructurizerRegClass(
   default:
   case MVT::i32: return &R600::R600_TReg32RegClass;
   }
-}
-
-const RegClassWeight &R600RegisterInfo::getRegClassWeight(
-  const TargetRegisterClass *RC) const {
-  return RCW;
 }
 
 bool R600RegisterInfo::isPhysRegLiveAcrossClauses(unsigned Reg) const {

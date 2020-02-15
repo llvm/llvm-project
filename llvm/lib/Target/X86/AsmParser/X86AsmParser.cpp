@@ -3737,9 +3737,9 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (Section->UseCodeAlign())
-    getStreamer().EmitCodeAlignment(2, 0);
+    getStreamer().emitCodeAlignment(2, 0);
   else
-    getStreamer().EmitValueToAlignment(2, 0, 1, 0);
+    getStreamer().emitValueToAlignment(2, 0, 1, 0);
   return false;
 }
 
@@ -3752,7 +3752,7 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Parser.Lex();
     if (!is16BitMode()) {
       SwitchMode(X86::Mode16Bit);
-      getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
     }
   } else if (IDVal == ".code16gcc") {
     // .code16gcc parses as if in 32-bit mode, but emits code in 16-bit mode.
@@ -3760,19 +3760,19 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Code16GCC = true;
     if (!is16BitMode()) {
       SwitchMode(X86::Mode16Bit);
-      getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
     }
   } else if (IDVal == ".code32") {
     Parser.Lex();
     if (!is32BitMode()) {
       SwitchMode(X86::Mode32Bit);
-      getParser().getStreamer().EmitAssemblerFlag(MCAF_Code32);
+      getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
     }
   } else if (IDVal == ".code64") {
     Parser.Lex();
     if (!is64BitMode()) {
       SwitchMode(X86::Mode64Bit);
-      getParser().getStreamer().EmitAssemblerFlag(MCAF_Code64);
+      getParser().getStreamer().emitAssemblerFlag(MCAF_Code64);
     }
   } else {
     Error(L, "unknown directive " + IDVal);

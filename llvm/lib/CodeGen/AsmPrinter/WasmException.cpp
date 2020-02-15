@@ -27,7 +27,7 @@ void WasmException::endModule() {
   Mangler::getNameWithPrefix(NameStr, "__cpp_exception", Asm->getDataLayout());
   if (Asm->OutContext.lookupSymbol(NameStr)) {
     MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol("__cpp_exception");
-    Asm->OutStreamer->EmitLabel(ExceptionSym);
+    Asm->OutStreamer->emitLabel(ExceptionSym);
   }
 }
 
@@ -58,7 +58,7 @@ void WasmException::endFunction(const MachineFunction *MF) {
   // end marker and set the size as the difference between the start end the end
   // marker.
   MCSymbol *LSDAEndLabel = Asm->createTempSymbol("GCC_except_table_end");
-  Asm->OutStreamer->EmitLabel(LSDAEndLabel);
+  Asm->OutStreamer->emitLabel(LSDAEndLabel);
   MCContext &OutContext = Asm->OutStreamer->getContext();
   const MCExpr *SizeExp = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(LSDAEndLabel, OutContext),

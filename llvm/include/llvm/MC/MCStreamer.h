@@ -242,7 +242,7 @@ protected:
 
   virtual void EmitWindowsUnwindTables();
 
-  virtual void EmitRawTextImpl(StringRef String);
+  virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
@@ -453,37 +453,37 @@ public:
   /// used in an assignment.
   // FIXME: These emission are non-const because we mutate the symbol to
   // add the section we're emitting it to later.
-  virtual void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc());
+  virtual void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc());
 
-  virtual void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
+  virtual void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
   /// Note in the output the specified \p Flag.
-  virtual void EmitAssemblerFlag(MCAssemblerFlag Flag);
+  virtual void emitAssemblerFlag(MCAssemblerFlag Flag);
 
   /// Emit the given list \p Options of strings as linker
   /// options into the output.
-  virtual void EmitLinkerOptions(ArrayRef<std::string> Kind) {}
+  virtual void emitLinkerOptions(ArrayRef<std::string> Kind) {}
 
   /// Note in the output the specified region \p Kind.
-  virtual void EmitDataRegion(MCDataRegionType Kind) {}
+  virtual void emitDataRegion(MCDataRegionType Kind) {}
 
   /// Specify the Mach-O minimum deployment target version.
-  virtual void EmitVersionMin(MCVersionMinType Type, unsigned Major,
+  virtual void emitVersionMin(MCVersionMinType Type, unsigned Major,
                               unsigned Minor, unsigned Update,
                               VersionTuple SDKVersion) {}
 
   /// Emit/Specify Mach-O build version command.
   /// \p Platform should be one of MachO::PlatformType.
-  virtual void EmitBuildVersion(unsigned Platform, unsigned Major,
+  virtual void emitBuildVersion(unsigned Platform, unsigned Major,
                                 unsigned Minor, unsigned Update,
                                 VersionTuple SDKVersion) {}
 
-  void EmitVersionForTarget(const Triple &Target,
+  void emitVersionForTarget(const Triple &Target,
                             const VersionTuple &SDKVersion);
 
   /// Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).
-  virtual void EmitThumbFunc(MCSymbol *Func);
+  virtual void emitThumbFunc(MCSymbol *Func);
 
   /// Emit an assignment of \p Value to \p Symbol.
   ///
@@ -496,7 +496,7 @@ public:
   ///
   /// \param Symbol - The symbol being assigned to.
   /// \param Value - The value for the symbol.
-  virtual void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value);
+  virtual void emitAssignment(MCSymbol *Symbol, const MCExpr *Value);
 
   /// Emit an weak reference from \p Alias to \p Symbol.
   ///
@@ -505,17 +505,17 @@ public:
   ///
   /// \param Alias - The alias that is being created.
   /// \param Symbol - The symbol being aliased.
-  virtual void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol);
+  virtual void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol);
 
   /// Add the given \p Attribute to \p Symbol.
-  virtual bool EmitSymbolAttribute(MCSymbol *Symbol,
+  virtual bool emitSymbolAttribute(MCSymbol *Symbol,
                                    MCSymbolAttr Attribute) = 0;
 
   /// Set the \p DescValue for the \p Symbol.
   ///
   /// \param Symbol - The symbol to have its n_desc field set.
   /// \param DescValue - The value to set into the n_desc field.
-  virtual void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue);
+  virtual void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue);
 
   /// Start emitting COFF symbol definition
   ///
@@ -562,7 +562,7 @@ public:
   /// \param CsectSym - Csect name for the block of storage.
   /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a
   /// power of 2.
-  virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+  virtual void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                           MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
@@ -583,7 +583,7 @@ public:
 
   /// Emit a Linker Optimization Hint (LOH) directive.
   /// \param Args - Arguments of the LOH.
-  virtual void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {}
+  virtual void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {}
 
   /// Emit a common symbol.
   ///
@@ -591,7 +591,7 @@ public:
   /// \param Size - The size of the common symbol.
   /// \param ByteAlignment - The alignment of the symbol if
   /// non-zero. This must be a power of 2.
-  virtual void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  virtual void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                 unsigned ByteAlignment) = 0;
 
   /// Emit a local common (.lcomm) symbol.
@@ -599,7 +599,7 @@ public:
   /// \param Symbol - The common symbol to emit.
   /// \param Size - The size of the common symbol.
   /// \param ByteAlignment - The alignment of the common symbol in bytes.
-  virtual void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  virtual void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                      unsigned ByteAlignment);
 
   /// Emit the zerofill section and an optional symbol.
@@ -609,7 +609,7 @@ public:
   /// \param Size - The size of the zerofill symbol.
   /// \param ByteAlignment - The alignment of the zerofill symbol if
   /// non-zero. This must be a power of 2 on some targets.
-  virtual void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+  virtual void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                             uint64_t Size = 0, unsigned ByteAlignment = 0,
                             SMLoc Loc = SMLoc()) = 0;
 
@@ -620,7 +620,7 @@ public:
   /// \param Size - The size of the symbol.
   /// \param ByteAlignment - The alignment of the thread local common symbol
   /// if non-zero.  This must be a power of 2 on some targets.
-  virtual void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+  virtual void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                               uint64_t Size, unsigned ByteAlignment = 0);
 
   /// @}
@@ -631,11 +631,11 @@ public:
   ///
   /// This is used to implement assembler directives such as .byte, .ascii,
   /// etc.
-  virtual void EmitBytes(StringRef Data);
+  virtual void emitBytes(StringRef Data);
 
   /// Functionally identical to EmitBytes. When emitting textual assembly, this
   /// method uses .byte directives instead of .ascii or .asciz for readability.
-  virtual void EmitBinaryData(StringRef Data);
+  virtual void emitBinaryData(StringRef Data);
 
   /// Emit the expression \p Value into the output as a native
   /// integer of the given \p Size bytes.
@@ -647,27 +647,27 @@ public:
   /// \param Size - The size of the integer (in bytes) to emit. This must
   /// match a native machine width.
   /// \param Loc - The location of the expression for error reporting.
-  virtual void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  virtual void emitValueImpl(const MCExpr *Value, unsigned Size,
                              SMLoc Loc = SMLoc());
 
-  void EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
+  void emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
 
   /// Special case of EmitValue that avoids the client having
   /// to pass in a MCExpr for constant integers.
-  virtual void EmitIntValue(uint64_t Value, unsigned Size);
+  virtual void emitIntValue(uint64_t Value, unsigned Size);
 
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
   /// modes.
-  virtual void EmitIntValueInHex(uint64_t Value, unsigned Size) {
-    EmitIntValue(Value, Size);
+  virtual void emitIntValueInHex(uint64_t Value, unsigned Size) {
+    emitIntValue(Value, Size);
   }
 
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
   /// modes, pads the field with leading zeros to Size width
-  virtual void EmitIntValueInHexWithPadding(uint64_t Value, unsigned Size) {
-    EmitIntValue(Value, Size);
+  virtual void emitIntValueInHexWithPadding(uint64_t Value, unsigned Size) {
+    emitIntValue(Value, Size);
   }
 
   virtual void emitULEB128Value(const MCExpr *Value);
@@ -684,7 +684,7 @@ public:
 
   /// Special case of EmitValue that avoids the client having to pass in
   /// a MCExpr for MCSymbols.
-  void EmitSymbolValue(const MCSymbol *Sym, unsigned Size,
+  void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
 
   /// Emit the expression \p Value into the output as a dtprel
@@ -692,42 +692,42 @@ public:
   ///
   /// This is used to implement assembler directives such as .dtpreldword on
   /// targets that support them.
-  virtual void EmitDTPRel64Value(const MCExpr *Value);
+  virtual void emitDTPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a dtprel
   /// (32-bit DTP relative) value.
   ///
   /// This is used to implement assembler directives such as .dtprelword on
   /// targets that support them.
-  virtual void EmitDTPRel32Value(const MCExpr *Value);
+  virtual void emitDTPRel32Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a tprel
   /// (64-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tpreldword on
   /// targets that support them.
-  virtual void EmitTPRel64Value(const MCExpr *Value);
+  virtual void emitTPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a tprel
   /// (32-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tprelword on
   /// targets that support them.
-  virtual void EmitTPRel32Value(const MCExpr *Value);
+  virtual void emitTPRel32Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a gprel64 (64-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gpdword on
   /// targets that support them.
-  virtual void EmitGPRel64Value(const MCExpr *Value);
+  virtual void emitGPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a gprel32 (32-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gprel32 on
   /// targets that support them.
-  virtual void EmitGPRel32Value(const MCExpr *Value);
+  virtual void emitGPRel32Value(const MCExpr *Value);
 
   /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
@@ -756,7 +756,7 @@ public:
 
   /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.
-  void EmitZeros(uint64_t NumBytes);
+  void emitZeros(uint64_t NumBytes);
 
   /// Emit some number of copies of \p Value until the byte alignment \p
   /// ByteAlignment is reached.
@@ -775,7 +775,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  virtual void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                                     unsigned ValueSize = 1,
                                     unsigned MaxBytesToEmit = 0);
 
@@ -789,7 +789,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void EmitCodeAlignment(unsigned ByteAlignment,
+  virtual void emitCodeAlignment(unsigned ByteAlignment,
                                  unsigned MaxBytesToEmit = 0);
 
   /// Emit some number of copies of \p Value until the byte offset \p
@@ -813,11 +813,11 @@ public:
 
   /// Switch to a new logical file.  This is used to implement the '.file
   /// "foo.c"' assembler directive.
-  virtual void EmitFileDirective(StringRef Filename);
+  virtual void emitFileDirective(StringRef Filename);
 
   /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.
-  virtual void EmitIdent(StringRef IdentString) {}
+  virtual void emitIdent(StringRef IdentString) {}
 
   /// Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
@@ -995,19 +995,19 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void EmitSyntaxDirective();
+  virtual void emitSyntaxDirective();
 
   /// Emit a .reloc directive.
   /// Returns true if the relocation could not be emitted because Name is not
   /// known.
-  virtual bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+  virtual bool emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                   const MCExpr *Expr, SMLoc Loc,
                                   const MCSubtargetInfo &STI) {
     return true;
   }
 
-  virtual void EmitAddrsig() {}
-  virtual void EmitAddrsigSym(const MCSymbol *Sym) {}
+  virtual void emitAddrsig() {}
+  virtual void emitAddrsigSym(const MCSymbol *Sym) {}
 
   /// Emit the given \p Instruction into the current section.
   virtual void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
@@ -1015,21 +1015,21 @@ public:
   /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The
   /// value 0 means turn the bundle alignment off.
-  virtual void EmitBundleAlignMode(unsigned AlignPow2);
+  virtual void emitBundleAlignMode(unsigned AlignPow2);
 
   /// The following instructions are a bundle-locked group.
   ///
   /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
   ///                     the end of a bundle.
-  virtual void EmitBundleLock(bool AlignToEnd);
+  virtual void emitBundleLock(bool AlignToEnd);
 
   /// Ends a bundle-locked group.
-  virtual void EmitBundleUnlock();
+  virtual void emitBundleUnlock();
 
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by
   /// the hasRawTextSupport() predicate.  By default this aborts.
-  void EmitRawText(const Twine &String);
+  void emitRawText(const Twine &String);
 
   /// Streamer specific finalization.
   virtual void FinishImpl();

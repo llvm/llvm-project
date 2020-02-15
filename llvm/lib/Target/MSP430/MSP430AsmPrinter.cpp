@@ -169,7 +169,7 @@ void MSP430AsmPrinter::EmitInterruptVectorSection(MachineFunction &ISR) {
   OutStreamer->SwitchSection(IV);
 
   const MCSymbol *FunctionSymbol = getSymbol(F);
-  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   OutStreamer->SwitchSection(Cur);
 }
 

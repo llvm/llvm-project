@@ -427,7 +427,7 @@ void AMDGPUTargetELFStreamer::finish() {
   if (Blob.empty())
     return;
   EmitNote(Vendor, MCConstantExpr::create(Blob.size(), getContext()), Type,
-           [&](MCELFStreamer &OS) { OS.EmitBytes(Blob); });
+           [&](MCELFStreamer &OS) { OS.emitBytes(Blob); });
 }
 
 void AMDGPUTargetELFStreamer::EmitNote(
@@ -441,13 +441,13 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.PushSection();
   S.SwitchSection(Context.getELFSection(
     ElfNote::SectionName, ELF::SHT_NOTE, ELF::SHF_ALLOC));
-  S.EmitIntValue(NameSZ, 4);                                  // namesz
-  S.EmitValue(DescSZ, 4);                                     // descz
-  S.EmitIntValue(NoteType, 4);                                // type
-  S.EmitBytes(Name);                                          // name
-  S.EmitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitIntValue(NameSZ, 4);                                  // namesz
+  S.emitValue(DescSZ, 4);                                     // descz
+  S.emitIntValue(NoteType, 4);                                // type
+  S.emitBytes(Name);                                          // name
+  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   EmitDesc(S);                                                // desc
-  S.EmitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   S.PopSection();
 }
 
@@ -458,8 +458,8 @@ void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(8, getContext()),
            ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
-             OS.EmitIntValue(Major, 4);
-             OS.EmitIntValue(Minor, 4);
+             OS.emitIntValue(Major, 4);
+             OS.emitIntValue(Minor, 4);
            });
 }
 
@@ -478,15 +478,15 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
            ElfNote::NT_AMDGPU_HSA_ISA, [&](MCELFStreamer &OS) {
-             OS.EmitIntValue(VendorNameSize, 2);
-             OS.EmitIntValue(ArchNameSize, 2);
-             OS.EmitIntValue(Major, 4);
-             OS.EmitIntValue(Minor, 4);
-             OS.EmitIntValue(Stepping, 4);
-             OS.EmitBytes(VendorName);
-             OS.EmitIntValue(0, 1); // NULL terminate VendorName
-             OS.EmitBytes(ArchName);
-             OS.EmitIntValue(0, 1); // NULL terminte ArchName
+             OS.emitIntValue(VendorNameSize, 2);
+             OS.emitIntValue(ArchNameSize, 2);
+             OS.emitIntValue(Major, 4);
+             OS.emitIntValue(Minor, 4);
+             OS.emitIntValue(Stepping, 4);
+             OS.emitBytes(VendorName);
+             OS.emitIntValue(0, 1); // NULL terminate VendorName
+             OS.emitBytes(ArchName);
+             OS.emitIntValue(0, 1); // NULL terminte ArchName
            });
 }
 
@@ -495,7 +495,7 @@ AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  OS.EmitBytes(StringRef((const char*)&Header, sizeof(Header)));
+  OS.emitBytes(StringRef((const char*)&Header, sizeof(Header)));
   OS.PopSection();
 }
 
@@ -539,9 +539,9 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
 
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_ISA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
-             OS.EmitBytes(IsaVersionString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescBegin);
+             OS.emitBytes(IsaVersionString);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -566,9 +566,9 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
 
   EmitNote(ElfNote::NoteNameV3, DescSZ, ELF::NT_AMDGPU_METADATA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
-             OS.EmitBytes(HSAMetadataString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescBegin);
+             OS.emitBytes(HSAMetadataString);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -590,9 +590,9 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
 
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_HSA_METADATA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
-             OS.EmitBytes(HSAMetadataString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescBegin);
+             OS.emitBytes(HSAMetadataString);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -602,9 +602,9 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  OS.EmitValueToAlignment(64, Encoded_s_code_end, 4);
+  OS.emitValueToAlignment(64, Encoded_s_code_end, 4);
   for (unsigned I = 0; I < 48; ++I)
-    OS.EmitIntValue(Encoded_s_code_end, 4);
+    OS.emitIntValue(Encoded_s_code_end, 4);
   OS.PopSection();
   return true;
 }
@@ -637,22 +637,22 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   if (KernelCodeSymbol->getVisibility() == ELF::STV_DEFAULT)
     KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
-  Streamer.EmitLabel(KernelDescriptorSymbol);
-  Streamer.EmitBytes(StringRef(
+  Streamer.emitLabel(KernelDescriptorSymbol);
+  Streamer.emitBytes(StringRef(
       (const char*)&(KernelDescriptor),
       offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset)));
   // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
   // expression being created is:
   //   (start of kernel code) - (start of kernel descriptor)
   // It implies R_AMDGPU_REL64, but ends up being R_AMDGPU_ABS64.
-  Streamer.EmitValue(MCBinaryExpr::createSub(
+  Streamer.emitValue(MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(
           KernelCodeSymbol, MCSymbolRefExpr::VK_AMDGPU_REL64, Context),
       MCSymbolRefExpr::create(
           KernelDescriptorSymbol, MCSymbolRefExpr::VK_None, Context),
       Context),
       sizeof(KernelDescriptor.kernel_code_entry_byte_offset));
-  Streamer.EmitBytes(StringRef(
+  Streamer.emitBytes(StringRef(
       (const char*)&(KernelDescriptor) +
           offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) +
           sizeof(KernelDescriptor.kernel_code_entry_byte_offset),

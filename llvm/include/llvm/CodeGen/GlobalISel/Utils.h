@@ -61,7 +61,7 @@ Register constrainOperandRegClass(const MachineFunction &MF,
                                   const RegisterBankInfo &RBI,
                                   MachineInstr &InsertPt,
                                   const TargetRegisterClass &RegClass,
-                                  const MachineOperand &RegMO, unsigned OpIdx);
+                                  const MachineOperand &RegMO);
 
 /// Try to constrain Reg so that it is usable by argument OpIdx of the
 /// provided MCInstrDesc \p II. If this fails, create a new virtual
@@ -93,6 +93,11 @@ bool constrainSelectedInstRegOperands(MachineInstr &I,
                                       const TargetInstrInfo &TII,
                                       const TargetRegisterInfo &TRI,
                                       const RegisterBankInfo &RBI);
+
+/// Check if DstReg can be replaced with SrcReg depending on the register
+/// constraints.
+bool canReplaceReg(Register DstReg, Register SrcReg, MachineRegisterInfo &MRI);
+
 /// Check whether an instruction \p MI is dead: it only defines dead virtual
 /// registers, and doesn't have other side effects.
 bool isTriviallyDead(const MachineInstr &MI, const MachineRegisterInfo &MRI);

@@ -8,7 +8,7 @@ int foo(void);
 
 #pragma omp declare variant(foo) match(xxx={}, yyy={ccc})
 #pragma omp declare variant(foo) match(xxx={vvv})
-#pragma omp declare variant(foo) match(implementation={vendor(llvm)}, device={kind(fpga)})
+#pragma omp declare variant(foo) match(implementation={vendor(score(0):llvm)}, device={kind(fpga)})
 #pragma omp declare variant(foo) match(implementation={vendor(llvm), xxx})
 #pragma omp declare variant(foo) match(implementation={vendor(unknown)}, device={kind(gpu)})
 #pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm, xxx, ibm)}, device={kind(cpu, nohost)})
@@ -19,8 +19,8 @@ int bar(void);
 // CHECK:      int foo();
 // CHECK-NEXT: #pragma omp declare variant(foo) match(device={kind(nohost)})
 // CHECK-NEXT: #pragma omp declare variant(foo) match(device={kind(host)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(5):ibm, xxx)},device={kind(cpu, nohost)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):unknown)},device={kind(gpu)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):llvm)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):llvm)},device={kind(fpga)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm)}, device={kind(cpu, nohost)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(unknown)}, device={kind(gpu)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(llvm)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0): llvm)}, device={kind(fpga)})
 // CHECK-NEXT: int bar();

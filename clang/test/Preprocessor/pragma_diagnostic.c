@@ -35,19 +35,19 @@
 #endif
 
 // Testing pragma clang diagnostic with -Weverything
-void ppo(){} // First test that we do not diagnose on this.
+void ppo(void){} // First test that we do not diagnose on this.
 
 #pragma clang diagnostic warning "-Weverything"
-void ppp(){} // expected-warning {{no previous prototype for function 'ppp'}}
+void ppp(void){} // expected-warning {{no previous prototype for function 'ppp'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 
 #pragma clang diagnostic ignored "-Weverything" // Reset it.
-void ppq(){}
+void ppq(void){}
 
 #pragma clang diagnostic error "-Weverything" // Now set to error
-void ppr(){} // expected-error {{no previous prototype for function 'ppr'}}
+void ppr(void){} // expected-error {{no previous prototype for function 'ppr'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 
 #pragma clang diagnostic warning "-Weverything" // This should not be effective
-void pps(){} // expected-error {{no previous prototype for function 'pps'}}
+void pps(void){} // expected-error {{no previous prototype for function 'pps'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}

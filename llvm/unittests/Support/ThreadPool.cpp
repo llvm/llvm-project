@@ -179,10 +179,8 @@ void ThreadPoolTest::TestAllThreads(ThreadPoolStrategy S) {
 
   llvm::DenseSet<llvm::BitVector> ThreadsUsed;
   std::mutex Lock;
-  unsigned Threads = 0;
   {
     ThreadPool Pool(S);
-    Threads = Pool.getThreadCount();
     for (size_t I = 0; I < 10000; ++I) {
       Pool.async([&] {
         waitForMainThread();

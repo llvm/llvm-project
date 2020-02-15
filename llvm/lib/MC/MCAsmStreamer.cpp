@@ -95,7 +95,7 @@ public:
     EmitCommentsAndEOL();
   }
 
-  void EmitSyntaxDirective() override;
+  void emitSyntaxDirective() override;
 
   void EmitCommentsAndEOL();
 
@@ -140,23 +140,23 @@ public:
   void emitELFSymverDirective(StringRef AliasName,
                               const MCSymbol *Aliasee) override;
 
-  void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
-  void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void EmitLinkerOptions(ArrayRef<std::string> Options) override;
-  void EmitDataRegion(MCDataRegionType Kind) override;
-  void EmitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
+  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitLinkerOptions(ArrayRef<std::string> Options) override;
+  void emitDataRegion(MCDataRegionType Kind) override;
+  void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
                       unsigned Update, VersionTuple SDKVersion) override;
-  void EmitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+  void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
-  void EmitThumbFunc(MCSymbol *Func) override;
+  void emitThumbFunc(MCSymbol *Func) override;
 
-  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
-  void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
-  void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
+  void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override;
   void EmitCOFFSymbolStorageClass(int StorageClass) override;
   void EmitCOFFSymbolType(int Type) override;
@@ -166,11 +166,11 @@ public:
   void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
-  void EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+  void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym,
                                   unsigned ByteAlign) override;
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
-  void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
 
   /// Emit a local common (.lcomm) symbol.
@@ -178,38 +178,38 @@ public:
   /// @param Symbol - The common symbol to emit.
   /// @param Size - The size of the common symbol.
   /// @param ByteAlignment - The alignment of the common symbol in bytes.
-  void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
 
-  void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, unsigned ByteAlignment = 0,
                     SMLoc Loc = SMLoc()) override;
 
-  void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
+  void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
 
-  void EmitBinaryData(StringRef Data) override;
+  void emitBinaryData(StringRef Data) override;
 
-  void EmitBytes(StringRef Data) override;
+  void emitBytes(StringRef Data) override;
 
-  void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
-  void EmitIntValue(uint64_t Value, unsigned Size) override;
-  void EmitIntValueInHex(uint64_t Value, unsigned Size) override;
-  void EmitIntValueInHexWithPadding(uint64_t Value, unsigned Size) override;
+  void emitIntValue(uint64_t Value, unsigned Size) override;
+  void emitIntValueInHex(uint64_t Value, unsigned Size) override;
+  void emitIntValueInHexWithPadding(uint64_t Value, unsigned Size) override;
 
   void emitULEB128Value(const MCExpr *Value) override;
 
   void emitSLEB128Value(const MCExpr *Value) override;
 
-  void EmitDTPRel32Value(const MCExpr *Value) override;
-  void EmitDTPRel64Value(const MCExpr *Value) override;
-  void EmitTPRel32Value(const MCExpr *Value) override;
-  void EmitTPRel64Value(const MCExpr *Value) override;
+  void emitDTPRel32Value(const MCExpr *Value) override;
+  void emitDTPRel64Value(const MCExpr *Value) override;
+  void emitTPRel32Value(const MCExpr *Value) override;
+  void emitTPRel64Value(const MCExpr *Value) override;
 
-  void EmitGPRel64Value(const MCExpr *Value) override;
+  void emitGPRel64Value(const MCExpr *Value) override;
 
-  void EmitGPRel32Value(const MCExpr *Value) override;
+  void emitGPRel32Value(const MCExpr *Value) override;
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
@@ -217,18 +217,18 @@ public:
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
 
-  void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void EmitCodeAlignment(unsigned ByteAlignment,
+  void emitCodeAlignment(unsigned ByteAlignment,
                          unsigned MaxBytesToEmit = 0) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
                          SMLoc Loc) override;
 
-  void EmitFileDirective(StringRef Filename) override;
+  void emitFileDirective(StringRef Filename) override;
   Expected<unsigned> tryEmitDwarfFileDirective(unsigned FileNo,
                                                StringRef Directory,
                                                StringRef Filename,
@@ -287,7 +287,7 @@ public:
   void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
   void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
 
-  void EmitIdent(StringRef IdentString) override;
+  void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFISections(bool EH, bool Debug) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset) override;
@@ -336,21 +336,21 @@ public:
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
-  void EmitBundleAlignMode(unsigned AlignPow2) override;
-  void EmitBundleLock(bool AlignToEnd) override;
-  void EmitBundleUnlock() override;
+  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleLock(bool AlignToEnd) override;
+  void emitBundleUnlock() override;
 
-  bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+  bool emitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc,
                           const MCSubtargetInfo &STI) override;
 
-  void EmitAddrsig() override;
-  void EmitAddrsigSym(const MCSymbol *Sym) override;
+  void emitAddrsig() override;
+  void emitAddrsigSym(const MCSymbol *Sym) override;
 
   /// If this file is backed by an assembly streamer, this dumps the specified
   /// string in the output .s file. This capability is indicated by the
   /// hasRawTextSupport() predicate.
-  void EmitRawTextImpl(StringRef String) override;
+  void emitRawTextImpl(StringRef String) override;
 
   void FinishImpl() override;
 };
@@ -464,8 +464,8 @@ void MCAsmStreamer::emitELFSymverDirective(StringRef AliasName,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitLabel(Symbol, Loc);
+void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::emitLabel(Symbol, Loc);
 
   Symbol->print(OS, MAI);
   OS << MAI->getLabelSuffix();
@@ -473,7 +473,7 @@ void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
+void MCAsmStreamer::emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
   StringRef str = MCLOHIdToName(Kind);
 
 #ifndef NDEBUG
@@ -493,7 +493,7 @@ void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   switch (Flag) {
   case MCAF_SyntaxUnified:         OS << "\t.syntax unified"; break;
   case MCAF_SubsectionsViaSymbols: OS << ".subsections_via_symbols"; break;
@@ -504,7 +504,7 @@ void MCAsmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLinkerOptions(ArrayRef<std::string> Options) {
+void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
   assert(!Options.empty() && "At least one option is required!");
   OS << "\t.linker_option \"" << Options[0] << '"';
   for (ArrayRef<std::string>::iterator it = Options.begin() + 1,
@@ -514,7 +514,7 @@ void MCAsmStreamer::EmitLinkerOptions(ArrayRef<std::string> Options) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDataRegion(MCDataRegionType Kind) {
+void MCAsmStreamer::emitDataRegion(MCDataRegionType Kind) {
   if (!MAI->doesSupportDataRegionDirectives())
     return;
   switch (Kind) {
@@ -550,7 +550,7 @@ static void EmitSDKVersionSuffix(raw_ostream &OS,
   }
 }
 
-void MCAsmStreamer::EmitVersionMin(MCVersionMinType Type, unsigned Major,
+void MCAsmStreamer::emitVersionMin(MCVersionMinType Type, unsigned Major,
                                    unsigned Minor, unsigned Update,
                                    VersionTuple SDKVersion) {
   OS << '\t' << getVersionMinDirective(Type) << ' ' << Major << ", " << Minor;
@@ -575,7 +575,7 @@ static const char *getPlatformName(MachO::PlatformType Type) {
   llvm_unreachable("Invalid Mach-O platform type");
 }
 
-void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
+void MCAsmStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
   const char *PlatformName = getPlatformName((MachO::PlatformType)Platform);
@@ -586,7 +586,7 @@ void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
   // This needs to emit to a temporary string to get properly quoted
   // MCSymbols when they have spaces in them.
   OS << "\t.thumb_func";
@@ -598,7 +598,7 @@ void MCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   // Do not emit a .set on inlined target assignments.
   bool EmitSet = true;
   if (auto *E = dyn_cast<MCTargetExpr>(Value))
@@ -613,10 +613,10 @@ void MCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     EmitEOL();
   }
 
-  MCStreamer::EmitAssignment(Symbol, Value);
+  MCStreamer::emitAssignment(Symbol, Value);
 }
 
-void MCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
+void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
   OS << ".weakref ";
   Alias->print(OS, MAI);
   OS << ", ";
@@ -624,7 +624,7 @@ void MCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
   EmitEOL();
 }
 
-bool MCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
+bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
                                         MCSymbolAttr Attribute) {
   switch (Attribute) {
   case MCSA_Invalid: llvm_unreachable("Invalid symbol attribute");
@@ -691,14 +691,14 @@ bool MCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
   return true;
 }
 
-void MCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   OS << ".desc" << ' ';
   Symbol->print(OS, MAI);
   OS << ',' << DescValue;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitSyntaxDirective() {
+void MCAsmStreamer::emitSyntaxDirective() {
   if (MAI->getAssemblerDialect() == 1) {
     OS << "\t.intel_syntax noprefix";
     EmitEOL();
@@ -769,7 +769,7 @@ void MCAsmStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
 // We need an XCOFF-specific version of this directive as the AIX syntax
 // requires a QualName argument identifying the csect name and storage mapping
 // class to appear before the alignment if we are specifying it.
-void MCAsmStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
+void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                uint64_t Size,
                                                MCSymbol *CsectSym,
                                                unsigned ByteAlignment) {
@@ -795,7 +795,7 @@ void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                      unsigned ByteAlignment) {
   OS << "\t.comm\t";
   Symbol->print(OS, MAI);
@@ -810,7 +810,7 @@ void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                           unsigned ByteAlign) {
   OS << "\t.lcomm\t";
   Symbol->print(OS, MAI);
@@ -832,7 +832,7 @@ void MCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, unsigned ByteAlignment,
                                  SMLoc Loc) {
   if (Symbol)
@@ -861,7 +861,7 @@ void MCAsmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
 // .tbss sym, size, align
 // This depends that the symbol has already been mangled from the original,
 // e.g. _a.
-void MCAsmStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, unsigned ByteAlignment) {
   AssignFragment(Symbol, &Section->getDummyFragment());
 
@@ -918,7 +918,7 @@ static void PrintQuotedString(StringRef Data, raw_ostream &OS) {
   OS << '"';
 }
 
-void MCAsmStreamer::EmitBytes(StringRef Data) {
+void MCAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
   if (Data.empty()) return;
@@ -952,7 +952,7 @@ void MCAsmStreamer::EmitBytes(StringRef Data) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitBinaryData(StringRef Data) {
+void MCAsmStreamer::emitBinaryData(StringRef Data) {
   // This is binary data. Print it in a grid of hex bytes for readability.
   const size_t Cols = 4;
   for (size_t I = 0, EI = alignTo(Data.size(), Cols); I < EI; I += Cols) {
@@ -966,20 +966,20 @@ void MCAsmStreamer::EmitBinaryData(StringRef Data) {
   }
 }
 
-void MCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext()), Size);
+void MCAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  emitValue(MCConstantExpr::create(Value, getContext()), Size);
 }
 
-void MCAsmStreamer::EmitIntValueInHex(uint64_t Value, unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext(), true), Size);
+void MCAsmStreamer::emitIntValueInHex(uint64_t Value, unsigned Size) {
+  emitValue(MCConstantExpr::create(Value, getContext(), true), Size);
 }
 
-void MCAsmStreamer::EmitIntValueInHexWithPadding(uint64_t Value,
+void MCAsmStreamer::emitIntValueInHexWithPadding(uint64_t Value,
                                                  unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext(), true, Size), Size);
+  emitValue(MCConstantExpr::create(Value, getContext(), true, Size), Size);
 }
 
-void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
+void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                   SMLoc Loc) {
   assert(Size <= 8 && "Invalid size");
   assert(getCurrentSectionOnly() &&
@@ -1021,7 +1021,7 @@ void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
                          std::numeric_limits<unsigned long long>::digits) &&
              "undefined behavior");
       ValueToEmit &= ~0ULL >> Shift;
-      EmitIntValue(ValueToEmit, EmissionSize);
+      emitIntValue(ValueToEmit, EmissionSize);
       Emitted += EmissionSize;
     }
     return;
@@ -1059,42 +1059,42 @@ void MCAsmStreamer::emitSLEB128Value(const MCExpr *Value) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
   assert(MAI->getDTPRel64Directive() != nullptr);
   OS << MAI->getDTPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
   assert(MAI->getDTPRel32Directive() != nullptr);
   OS << MAI->getDTPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitTPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
   assert(MAI->getTPRel64Directive() != nullptr);
   OS << MAI->getTPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitTPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
   assert(MAI->getTPRel32Directive() != nullptr);
   OS << MAI->getTPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitGPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
   assert(MAI->getGPRel64Directive() != nullptr);
   OS << MAI->getGPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitGPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
   assert(MAI->getGPRel32Directive() != nullptr);
   OS << MAI->getGPRel32Directive();
   Value->print(OS, MAI);
@@ -1141,7 +1141,7 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCAsmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (MAI->useDotAlignForAlignment()) {
@@ -1203,10 +1203,10 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCodeAlignment(unsigned ByteAlignment,
+void MCAsmStreamer::emitCodeAlignment(unsigned ByteAlignment,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
-  EmitValueToAlignment(ByteAlignment, MAI->getTextAlignFillValue(),
+  emitValueToAlignment(ByteAlignment, MAI->getTextAlignFillValue(),
                        1, MaxBytesToEmit);
 }
 
@@ -1220,7 +1220,7 @@ void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
+void MCAsmStreamer::emitFileDirective(StringRef Filename) {
   assert(MAI->hasSingleParameterDotFile());
   OS << "\t.file\t";
   PrintQuotedString(Filename, OS);
@@ -1284,7 +1284,7 @@ Expected<unsigned> MCAsmStreamer::tryEmitDwarfFileDirective(
   if (MCTargetStreamer *TS = getTargetStreamer())
     TS->emitDwarfFileDirective(OS1.str());
   else
-    EmitRawText(OS1.str());
+    emitRawText(OS1.str());
 
   return FileNo;
 }
@@ -1310,7 +1310,7 @@ void MCAsmStreamer::emitDwarfFile0Directive(StringRef Directory,
   if (MCTargetStreamer *TS = getTargetStreamer())
     TS->emitDwarfFileDirective(OS1.str());
   else
-    EmitRawText(OS1.str());
+    emitRawText(OS1.str());
 }
 
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -1516,7 +1516,7 @@ void MCAsmStreamer::EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitIdent(StringRef IdentString) {
+void MCAsmStreamer::emitIdent(StringRef IdentString) {
   assert(MAI->hasIdentDirective() && ".ident directive not supported");
   OS << "\t.ident\t";
   PrintQuotedString(IdentString, OS);
@@ -1973,24 +1973,24 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitBundleAlignMode(unsigned AlignPow2) {
+void MCAsmStreamer::emitBundleAlignMode(unsigned AlignPow2) {
   OS << "\t.bundle_align_mode " << AlignPow2;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitBundleLock(bool AlignToEnd) {
+void MCAsmStreamer::emitBundleLock(bool AlignToEnd) {
   OS << "\t.bundle_lock";
   if (AlignToEnd)
     OS << " align_to_end";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitBundleUnlock() {
+void MCAsmStreamer::emitBundleUnlock() {
   OS << "\t.bundle_unlock";
   EmitEOL();
 }
 
-bool MCAsmStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+bool MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                        const MCExpr *Expr, SMLoc,
                                        const MCSubtargetInfo &STI) {
   OS << "\t.reloc ";
@@ -2004,12 +2004,12 @@ bool MCAsmStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   return false;
 }
 
-void MCAsmStreamer::EmitAddrsig() {
+void MCAsmStreamer::emitAddrsig() {
   OS << "\t.addrsig";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitAddrsigSym(const MCSymbol *Sym) {
+void MCAsmStreamer::emitAddrsigSym(const MCSymbol *Sym) {
   OS << "\t.addrsig_sym ";
   Sym->print(OS, MAI);
   EmitEOL();
@@ -2018,7 +2018,7 @@ void MCAsmStreamer::EmitAddrsigSym(const MCSymbol *Sym) {
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
-void MCAsmStreamer::EmitRawTextImpl(StringRef String) {
+void MCAsmStreamer::emitRawTextImpl(StringRef String) {
   if (!String.empty() && String.back() == '\n')
     String = String.substr(0, String.size()-1);
   OS << String;
@@ -2038,7 +2038,7 @@ void MCAsmStreamer::FinishImpl() {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {
       SwitchSection(getContext().getObjectFileInfo()->getDwarfLineSection());
-      EmitLabel(Label);
+      emitLabel(Label);
     }
   }
 }
