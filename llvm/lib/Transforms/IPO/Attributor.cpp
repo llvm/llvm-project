@@ -6256,7 +6256,7 @@ protected:
     AccessKind Kind;
 
     bool operator==(const AccessInfo &RHS) const {
-      return I == RHS.I & Ptr == RHS.Ptr & Kind == RHS.Kind;
+      return I == RHS.I && Ptr == RHS.Ptr && Kind == RHS.Kind;
     }
     bool operator()(const AccessInfo &LHS, const AccessInfo &RHS) const {
       if (LHS.I != RHS.I)
