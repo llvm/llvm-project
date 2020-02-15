@@ -670,7 +670,7 @@ TEST_F(DebugLineBasicFixture,
   ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
   // Show that the set address opcode is ignored in this case.
-  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
@@ -731,7 +731,7 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
   ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
   // Show that the set address opcode is ignored in this case.
-  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
