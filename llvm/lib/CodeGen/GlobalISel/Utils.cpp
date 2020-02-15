@@ -155,6 +155,20 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
   return true;
 }
 
+bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
+                         MachineRegisterInfo &MRI) {
+  // Give up if either DstReg or SrcReg  is a physical register.
+  if (DstReg.isPhysical() || SrcReg.isPhysical())
+    return false;
+  // Give up if the types don't match.
+  if (MRI.getType(DstReg) != MRI.getType(SrcReg))
+    return false;
+  // Replace if either DstReg has no constraints or the register
+  // constraints match.
+  return !MRI.getRegClassOrRegBank(DstReg) ||
+         MRI.getRegClassOrRegBank(DstReg) == MRI.getRegClassOrRegBank(SrcReg);
+}
+
 bool llvm::isTriviallyDead(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI) {
   // If we can move an instruction, we can remove it.  Otherwise, it has
