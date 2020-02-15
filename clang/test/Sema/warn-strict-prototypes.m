@@ -10,7 +10,7 @@
 
 @end
 
-void foo() {
+void foo() { // expected-warning {{this old-style function definition is not preceded by a prototype}}
   void (^block)() = // expected-warning {{this block declaration is not a prototype}}
                     ^void(int arg) { // no warning
   };
