@@ -307,13 +307,13 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
-        static_assert(_Extent > 0, "span<T,N>[].front() on empty span");
+        _LIBCPP_ASSERT(!empty(), "span<T, N>::front() on empty span");
         return __data[0];
     }
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference back() const noexcept
     {
-        static_assert(_Extent > 0, "span<T,N>[].back() on empty span");
+        _LIBCPP_ASSERT(!empty(), "span<T, N>::back() on empty span");
         return __data[size()-1];
     }
 
