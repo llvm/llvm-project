@@ -13,7 +13,9 @@
 #ifndef LLVM_SUPPORT_THREAD_POOL_H
 #define LLVM_SUPPORT_THREAD_POOL_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
 
 #include <future>
@@ -38,12 +40,11 @@ public:
   using TaskTy = std::function<void()>;
   using PackagedTaskTy = std::packaged_task<void()>;
 
-  /// Construct a pool with the number of threads found by
-  /// hardware_concurrency().
-  ThreadPool();
-
-  /// Construct a pool of \p ThreadCount threads
-  ThreadPool(unsigned ThreadCount);
+  /// Construct a pool using the hardware strategy \p S for mapping hardware
+  /// execution resources (threads, cores, CPUs)
+  /// Defaults to using the maximum execution resources in the system, but
+  /// excluding any resources contained in the affinity mask.
+  ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
 
   /// Blocking destructor: the pool will wait for all the threads to complete.
   ~ThreadPool();
@@ -67,6 +68,8 @@ public:
   /// Blocking wait for all the threads to complete and the queue to be empty.
   /// It is an error to try to add new tasks while blocking on this call.
   void wait();
+
+  unsigned getThreadCount() const { return ThreadCount; }
 
 private:
   /// Asynchronous submission of a task to the pool. The returned future can be
@@ -94,6 +97,8 @@ private:
   /// Signal for the destruction of the pool, asking thread to exit.
   bool EnableFlag;
 #endif
+
+  unsigned ThreadCount;
 };
 }
 

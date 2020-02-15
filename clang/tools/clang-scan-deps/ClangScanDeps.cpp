@@ -485,15 +485,9 @@ int main(int argc, const char **argv) {
 
   DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
                                     SkipExcludedPPRanges);
-#if LLVM_ENABLE_THREADS
-  unsigned NumWorkers =
-      NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
-#else
-  unsigned NumWorkers = 1;
-#endif
-  llvm::ThreadPool Pool(NumWorkers);
+  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < NumWorkers; ++I)
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
   std::vector<SingleCommandCompilationDatabase> Inputs;
@@ -508,9 +502,9 @@ int main(int argc, const char **argv) {
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << NumWorkers << " workers\n";
+                 << " files using " << Pool.getThreadCount() << " workers\n";
   }
-  for (unsigned I = 0; I < NumWorkers; ++I) {
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
     Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;

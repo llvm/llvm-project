@@ -307,8 +307,11 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
-    NumThreads =
-        std::min(hardware_concurrency(), unsigned((Inputs.size() + 1) / 2));
+    NumThreads = std::min(hardware_concurrency().compute_thread_count(),
+                          unsigned((Inputs.size() + 1) / 2));
+  // FIXME: There's a bug here, where setting NumThreads = Inputs.size() fails
+  // the merge_empty_profile.test because the InstrProfWriter.ProfileKind isn't
+  // merged, thus the emitted file ends up with a PF_Unknown kind.
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
@@ -320,7 +323,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     for (const auto &Input : Inputs)
       loadInput(Input, Remapper, Contexts[0].get());
   } else {
-    ThreadPool Pool(NumThreads);
+    ThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;

@@ -477,8 +477,7 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
     : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
   if (!Backend)
-    this->Backend =
-        createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
+    this->Backend = createInProcessThinBackend();
 }
 
 LTO::LTO(Config Conf, ThinBackend Backend,
@@ -1095,7 +1094,8 @@ public:
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, NativeObjectCache Cache)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
-        BackendThreadPool(ThinLTOParallelismLevel),
+        BackendThreadPool(
+            heavyweight_hardware_concurrency(ThinLTOParallelismLevel)),
         AddStream(std::move(AddStream)), Cache(std::move(Cache)) {
     for (auto &Name : CombinedIndex.cfiFunctionDefs())
       CfiFunctionDefs.insert(

@@ -148,9 +148,10 @@ BackgroundIndex::BackgroundIndex(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {
             enqueue(ChangedFiles);
           })) {
-  assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
+  assert(Rebuilder.TUsBeforeFirstBuild > 0 &&
+         "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
-  for (unsigned I = 0; I < ThreadPoolSize; ++I) {
+  for (unsigned I = 0; I < Rebuilder.TUsBeforeFirstBuild; ++I) {
     ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1), [this] {
       WithContext Ctx(this->BackgroundContext.clone());
       Queue.work([&] { Rebuilder.idle(); });
