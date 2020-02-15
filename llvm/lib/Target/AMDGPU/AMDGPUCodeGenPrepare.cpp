@@ -231,7 +231,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<LegacyDivergenceAnalysis>();
-    AU.setPreservesAll();
+
+    // FIXME: Division expansion needs to preserve the dominator tree.
+    if (!ExpandDiv64InIR)
+      AU.setPreservesAll();
  }
 };
 
