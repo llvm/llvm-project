@@ -7481,6 +7481,10 @@ ChangeStatus Attributor::run() {
       LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
                         << " instead of " << *OldV << "\n");
       U->set(NewV);
+      // Do not modify call instructions outside the SCC.
+      if (auto *CB = dyn_cast<CallBase>(OldV))
+        if (!Functions.count(CB->getCaller()))
+          continue;
       if (Instruction *I = dyn_cast<Instruction>(OldV)) {
         CGModifiedFunctions.insert(I->getFunction());
         if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
