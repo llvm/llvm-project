@@ -543,7 +543,7 @@ func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, 
 // CHECK:         affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}} : memref<1xi32>
 // CHECK:         affine.for %{{.*}} =
 
-// ----
+// -----
 
 #map3 = affine_map<(d0) -> (d0)>
 #map12 = affine_map<(d0) -> (d0 + 3)>
@@ -551,6 +551,7 @@ func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, 
 #map15 = affine_map<(d0, d1) -> ((d0 + d1 * 72) mod 2304 - (((d0 + d1 * 72) mod 2304) floordiv 1152) * 1151 - ((((d0 + d1 * 72) mod 2304) mod 1152) floordiv 9) * 9 - (((((d0 + d1 * 72) mod 2304) mod 1152) mod 9) floordiv 3) * 3)>
 #map16 = affine_map<(d0, d1) -> (((((d0 + d1 * 72) mod 2304) mod 1152) floordiv 9) floordiv 8)>
 // Test for test case in b/128303048 #4.
+// CHECK-LABEL: func @test_memref_bounds
 func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: memref<144x9xvector<8x128xf32>>, %arg2: memref<2xvector<8x128xf32>>) -> (memref<144x9xvector<8x128xf32>>, memref<2xvector<8x128xf32>>) {
   %c0 = constant 0 : index
   affine.for %i8 = 0 to 9 step 3 {
