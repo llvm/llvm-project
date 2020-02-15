@@ -171,7 +171,6 @@ protected:
 
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection = nullptr;
-  mutable DenseMap<const MCSymbol *, unsigned> StackSizesUniquing;
 
   // ELF specific sections.
   MCSection *DataRelROSection = nullptr;
