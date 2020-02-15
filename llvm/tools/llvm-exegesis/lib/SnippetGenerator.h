@@ -165,8 +165,8 @@ class CombinationGenerator {
     // Initialize the per-variable state to refer to the possible choices for
     // that variable.
     VariablesState.reserve(VariablesChoices.size());
-    for (ArrayRef<choice_type> VariablesChoices : VariablesChoices)
-      VariablesState.emplace_back(VariablesChoices);
+    for (ArrayRef<choice_type> VC : VariablesChoices)
+      VariablesState.emplace_back(VC);
 
     // Temporary buffer to store each combination before performing Callback.
     SmallVector<choice_type, variable_smallsize> CurrentCombination;
