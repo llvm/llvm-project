@@ -171,6 +171,7 @@ public:
                  Value *IfCondition, Value *NumThreads,
                  omp::ProcBindKind ProcBind, bool IsCancellable);
 
+
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
@@ -180,6 +181,11 @@ public:
   ///
   /// \param Loc The location where the taskwait directive was encountered.
   void CreateTaskwait(const LocationDescription& Loc);
+
+  /// Generator for '#omp taskyield'
+  ///
+  /// \param Loc The location where the taskyield directive was encountered.
+  void CreateTaskyield(const LocationDescription& Loc);
 
   ///}
 
@@ -250,6 +256,11 @@ private:
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
   void emitTaskwaitImpl(const LocationDescription &Loc);
+
+  /// Generate a taskyield runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitTaskyieldImpl(const LocationDescription &Loc);
 
   /// Return the current thread ID.
   ///
