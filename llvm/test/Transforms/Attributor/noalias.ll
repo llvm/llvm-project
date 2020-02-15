@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=4 < %s | FileCheck %s
+; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 < %s | FileCheck %s
 
 ; TEST 1 - negative.
 
@@ -328,5 +328,23 @@ define void @test13_use_alias(){
   call void @use_i8_internal(i8* %c2a)
   call void @use_i8_internal(i8* %c2b)
   ret void
+}
+
+; TEST 14 i2p casts
+define internal i32 @p2i(i32* %arg) {
+  %p2i = ptrtoint i32* %arg to i32
+  ret i32 %p2i
+}
+
+define i32 @i2p(i32* %arg) {
+  %c = call i32 @p2i(i32* %arg)
+  %i2p = inttoptr i32 %c to i8*
+  %bc = bitcast i8* %i2p to i32*
+  %call = call i32 @ret(i32* %bc)
+  ret i32 %call
+}
+define internal i32 @ret(i32* %arg) {
+  %l = load i32, i32* %arg
+  ret i32 %l
 }
 
