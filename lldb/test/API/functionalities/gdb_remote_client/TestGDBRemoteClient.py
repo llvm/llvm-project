@@ -72,7 +72,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         error = lldb.SBError()
         target.Launch(lldb.SBListener(), None, None, None, None, None,
                 None, 0, True, error)
-        self.assertEquals("process launch failed: 'A' packet returned an error: 71", error.GetCString())
+        self.assertEquals("'A' packet returned an error: 71", error.GetCString())
 
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""
