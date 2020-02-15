@@ -47,7 +47,7 @@ int main(int, char**)
 {
     // On some systems char is unsigned.
     // If that is the case, we should just test signed char twice.
-    typedef typename std::conditional<
+    typedef std::conditional<
         std::is_signed<char>::value, char, signed char
     >::type SignedChar;
 
@@ -63,10 +63,10 @@ int main(int, char**)
 
     // Here there is no guarantee that int is larger than int8_t so we
     // use a helper type trait to conditional test against int.
-    test_abs<std::int8_t, typename correct_size_int<std::int8_t>::type>();
-    test_abs<std::int16_t, typename correct_size_int<std::int16_t>::type>();
-    test_abs<std::int32_t, typename correct_size_int<std::int32_t>::type>();
-    test_abs<std::int64_t, typename correct_size_int<std::int64_t>::type>();
+    test_abs<std::int8_t, correct_size_int<std::int8_t>::type>();
+    test_abs<std::int16_t, correct_size_int<std::int16_t>::type>();
+    test_abs<std::int32_t, correct_size_int<std::int32_t>::type>();
+    test_abs<std::int64_t, correct_size_int<std::int64_t>::type>();
 
     test_abs<long double, long double>();
     test_abs<double, double>();
