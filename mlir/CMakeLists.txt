@@ -44,6 +44,8 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
 else()
   set(MLIR_CUDA_CONVERSIONS_ENABLED 0)
 endif()
+# TODO: we should use a config.h file like LLVM does
+add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_CUDA_CONVERSIONS_ENABLED})
 
 set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
 
