@@ -433,8 +433,8 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
 
 MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group) {
   return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
-                              SectionKind::getReadOnly(), 4, Group, ~0,
-                              nullptr);
+                              SectionKind::getReadOnly(), 4, Group,
+                              MCSection::NonUniqueID, nullptr);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

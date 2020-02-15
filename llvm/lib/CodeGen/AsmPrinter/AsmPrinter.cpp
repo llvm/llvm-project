@@ -1670,8 +1670,9 @@ bool AsmPrinter::doFinalization(Module &M) {
           GV.getVisibility() != GlobalValue::DefaultVisibility)
         continue;
 
-      OutStreamer->SwitchSection(OutContext.getELFSection(
-          ".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0, "", ++UniqueID));
+      OutStreamer->SwitchSection(
+          OutContext.getELFSection(".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0,
+                                   "", ++UniqueID, nullptr));
       OutStreamer->emitBytes(GV.getPartition());
       OutStreamer->EmitZeros(1);
       OutStreamer->EmitValue(
