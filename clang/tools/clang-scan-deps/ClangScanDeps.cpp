@@ -18,6 +18,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
 #include <thread>
@@ -490,6 +491,7 @@ int main(int argc, const char **argv) {
 #else
   unsigned NumWorkers = 1;
 #endif
+  llvm::ThreadPool Pool(NumWorkers);
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
@@ -499,7 +501,6 @@ int main(int argc, const char **argv) {
        AdjustingCompilations->getAllCompileCommands())
     Inputs.emplace_back(Cmd);
 
-  std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
   std::mutex Lock;
@@ -510,8 +511,8 @@ int main(int argc, const char **argv) {
                  << " files using " << NumWorkers << " workers\n";
   }
   for (unsigned I = 0; I < NumWorkers; ++I) {
-    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
-                   &DependencyOS, &Errs]() {
+    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
+                &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
         const SingleCommandCompilationDatabase *Input;
@@ -543,16 +544,9 @@ int main(int argc, const char **argv) {
             HadErrors = true;
         }
       }
-    };
-#if LLVM_ENABLE_THREADS
-    WorkerThreads.emplace_back(std::move(Worker));
-#else
-    // Run the worker without spawning a thread when threads are disabled.
-    Worker();
-#endif
+    });
   }
-  for (auto &W : WorkerThreads)
-    W.join();
+  Pool.wait();
 
   if (Format == ScanningOutputFormat::Full)
     FD.printFullOutput(llvm::outs());
