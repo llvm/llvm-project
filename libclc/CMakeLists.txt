@@ -2,6 +2,16 @@ cmake_minimum_required( VERSION 3.9.2 )
 
 project( libclc VERSION 0.2.0 LANGUAGES CXX )
 include( GNUInstallDirs )
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  amdgcn-amdhsa/lib/SOURCES;
+  amdgcn/lib/SOURCES;
+  amdgcn-mesa3d/lib/SOURCES;
+  amdgpu/lib/SOURCES;
+  generic/lib/SOURCES;
+  ptx/lib/SOURCES;
+  ptx-nvidiacl/lib/SOURCES;
+  r600/lib/SOURCES
+)
 
 # List of all targets
 set( LIBCLC_TARGETS_ALL
