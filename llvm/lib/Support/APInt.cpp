@@ -675,15 +675,11 @@ APInt APInt::byteSwap() const {
     return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
   if (BitWidth == 32)
     return APInt(BitWidth, ByteSwap_32(unsigned(U.VAL)));
-  if (BitWidth == 48) {
-    unsigned Tmp1 = unsigned(U.VAL >> 16);
-    Tmp1 = ByteSwap_32(Tmp1);
-    uint16_t Tmp2 = uint16_t(U.VAL);
-    Tmp2 = ByteSwap_16(Tmp2);
-    return APInt(BitWidth, (uint64_t(Tmp2) << 32) | Tmp1);
+  if (BitWidth <= 64) {
+    uint64_t Tmp1 = ByteSwap_64(U.VAL);
+    Tmp1 >>= (64 - BitWidth);
+    return APInt(BitWidth, Tmp1);
   }
-  if (BitWidth == 64)
-    return APInt(BitWidth, ByteSwap_64(U.VAL));
 
   APInt Result(getNumWords() * APINT_BITS_PER_WORD, 0);
   for (unsigned I = 0, N = getNumWords(); I != N; ++I)
