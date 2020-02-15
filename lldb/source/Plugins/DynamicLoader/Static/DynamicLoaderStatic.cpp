@@ -17,7 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(DynamicLoaderStatic)
+LLDB_PLUGIN_DEFINE(DynamicLoaderStatic)
 
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to

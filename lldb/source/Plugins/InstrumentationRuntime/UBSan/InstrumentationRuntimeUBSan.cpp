@@ -36,7 +36,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(InstrumentationRuntimeUBSan)
+LLDB_PLUGIN_DEFINE(InstrumentationRuntimeUBSan)
 
 InstrumentationRuntimeUBSan::~InstrumentationRuntimeUBSan() { Deactivate(); }
 
