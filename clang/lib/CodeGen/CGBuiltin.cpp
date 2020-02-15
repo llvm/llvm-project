@@ -10633,33 +10633,103 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
 Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
-  assert(BuiltinID == BPF::BI__builtin_preserve_field_info &&
-         "unexpected ARM builtin");
+  assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
+          BuiltinID == BPF::BI__builtin_btf_type_id) &&
+         "unexpected BPF builtin");
 
-  const Expr *Arg = E->getArg(0);
-  bool IsBitField = Arg->IgnoreParens()->getObjectKind() == OK_BitField;
+  switch (BuiltinID) {
+  default:
+    llvm_unreachable("Unexpected BPF builtin");
+  case BPF::BI__builtin_preserve_field_info: {
+    const Expr *Arg = E->getArg(0);
+    bool IsBitField = Arg->IgnoreParens()->getObjectKind() == OK_BitField;
 
-  if (!getDebugInfo()) {
-    CGM.Error(E->getExprLoc(), "using builtin_preserve_field_info() without -g");
-    return IsBitField ? EmitLValue(Arg).getBitFieldPointer()
-                      : EmitLValue(Arg).getPointer(*this);
+    if (!getDebugInfo()) {
+      CGM.Error(E->getExprLoc(),
+                "using __builtin_preserve_field_info() without -g");
+      return IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                        : EmitLValue(Arg).getPointer(*this);
+    }
+
+    // Enable underlying preserve_*_access_index() generation.
+    bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+    IsInPreservedAIRegion = true;
+    Value *FieldAddr = IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                                  : EmitLValue(Arg).getPointer(*this);
+    IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+
+    ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
+    Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
+
+    // Built the IR for the preserve_field_info intrinsic.
+    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
+        &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
+        {FieldAddr->getType()});
+    return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
   }
+  case BPF::BI__builtin_btf_type_id: {
+    Value *FieldVal = nullptr;
 
-  // Enable underlying preserve_*_access_index() generation.
-  bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
-  IsInPreservedAIRegion = true;
-  Value *FieldAddr = IsBitField ? EmitLValue(Arg).getBitFieldPointer()
-                                : EmitLValue(Arg).getPointer(*this);
-  IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    // The LValue cannot be converted Value in order to be used as the function
+    // parameter. If it is a structure, it is the "alloca" result of the LValue
+    // (a pointer) is used in the parameter. If it is a simple type,
+    // the value will be loaded from its corresponding "alloca" and used as
+    // the parameter. In our case, let us just get a pointer of the LValue
+    // since we do not really use the parameter. The purpose of parameter
+    // is to prevent the generated IR llvm.bpf.btf.type.id intrinsic call,
+    // which carries metadata, from being changed.
+    bool IsLValue = E->getArg(0)->isLValue();
+    if (IsLValue)
+      FieldVal = EmitLValue(E->getArg(0)).getPointer(*this);
+    else
+      FieldVal = EmitScalarExpr(E->getArg(0));
 
-  ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
-  Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
+    if (!getDebugInfo()) {
+      CGM.Error(E->getExprLoc(), "using __builtin_btf_type_id() without -g");
+      return nullptr;
+    }
 
-  // Built the IR for the preserve_field_info intrinsic.
-  llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
-      &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
-      {FieldAddr->getType()});
-  return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
+    // Generate debuginfo type for the first argument.
+    llvm::DIType *DbgInfo =
+        getDebugInfo()->getOrCreateStandaloneType(E->getArg(0)->getType(),
+                                                  E->getArg(0)->getExprLoc());
+
+    ConstantInt *Flag = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
+    Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
+
+    // Built the IR for the btf_type_id intrinsic.
+    //
+    // In the above, we converted LValue argument to a pointer to LValue.
+    // For example, the following
+    //   int v;
+    //   C1: __builtin_btf_type_id(v, flag);
+    // will be converted to
+    //   L1: llvm.bpf.btf.type.id(&v, flag)
+    // This makes it hard to differentiate from
+    //   C2: __builtin_btf_type_id(&v, flag);
+    // to
+    //   L2: llvm.bpf.btf.type.id(&v, flag)
+    //
+    // If both C1 and C2 are present in the code, the llvm may later
+    // on do CSE on L1 and L2, which will result in incorrect tagged types.
+    //
+    // The C1->L1 transformation only happens if the argument of
+    // __builtin_btf_type_id() is a LValue. So Let us put whether
+    // the argument is an LValue or not into generated IR. This should
+    // prevent potential CSE from causing debuginfo type loss.
+    //
+    // The generated IR intrinsics will hence look like
+    //   L1: llvm.bpf.btf.type.id(&v, 1, flag) !di_type_for_{v};
+    //   L2: llvm.bpf.btf.type.id(&v, 0, flag) !di_type_for_{&v};
+    Constant *CV = ConstantInt::get(IntTy, IsLValue);
+    llvm::Function *FnBtfTypeId = llvm::Intrinsic::getDeclaration(
+        &CGM.getModule(), llvm::Intrinsic::bpf_btf_type_id,
+        {FieldVal->getType(), CV->getType()});
+    CallInst *Fn = Builder.CreateCall(FnBtfTypeId, {FieldVal, CV, FlagValue});
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+    return Fn;
+  }
+  }
 }
 
 llvm::Value *CodeGenFunction::

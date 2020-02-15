@@ -23,4 +23,7 @@ let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
   def int_bpf_preserve_field_info : GCCBuiltin<"__builtin_bpf_preserve_field_info">,
               Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_i64_ty],
               [IntrNoMem, ImmArg<1>]>;
+  def int_bpf_btf_type_id : GCCBuiltin<"__builtin_bpf_btf_type_id">,
+              Intrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_any_ty, llvm_i64_ty],
+              [IntrNoMem]>;
 }
