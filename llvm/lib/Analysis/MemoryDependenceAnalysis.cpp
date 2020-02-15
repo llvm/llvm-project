@@ -902,6 +902,11 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
     Instruction *QueryInst, const MemoryLocation &Loc, bool isLoad,
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries) {
 
+  bool isInvariantLoad = false;
+
+  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
+    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
   NonLocalDepInfo::iterator Entry = std::upper_bound(
@@ -912,6 +917,13 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
   NonLocalDepEntry *ExistingResult = nullptr;
   if (Entry != Cache->begin() + NumSortedEntries && Entry->getBB() == BB)
     ExistingResult = &*Entry;
+
+  // Use cached result for invariant load only if there is no dependency for non
+  // invariant load. In this case invariant load can not have any dependency as
+  // well.
+  if (ExistingResult && isInvariantLoad &&
+      !ExistingResult->getResult().isNonFuncLocal())
+    ExistingResult = nullptr;
 
   // If we have a cached entry, and it is non-dirty, use it as the value for
   // this dependency.
@@ -940,6 +952,10 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
   // Scan the block for the dependency.
   MemDepResult Dep =
       getPointerDependencyFrom(Loc, isLoad, ScanPos, BB, QueryInst);
+
+  // Don't cache results for invariant load.
+  if (isInvariantLoad)
+    return Dep;
 
   // If we had a dirty entry for the block, update it.  Otherwise, just add
   // a new entry.
@@ -1029,6 +1045,10 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   InitialNLPI.Size = Loc.Size;
   InitialNLPI.AATags = Loc.AATags;
 
+  bool isInvariantLoad = false;
+  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
+    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+
   // Get the NLPI for CacheKey, inserting one into the map if it doesn't
   // already have one.
   std::pair<CachedNonLocalPointerInfo::iterator, bool> Pair =
@@ -1037,7 +1057,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
   // If we already have a cache entry for this CacheKey, we may need to do some
   // work to reconcile the cache entry and the current query.
-  if (!Pair.second) {
+  // Invariant loads don't participate in caching. Thus no need to reconcile.
+  if (!isInvariantLoad && !Pair.second) {
     if (CacheInfo->Size != Loc.Size) {
       bool ThrowOutEverything;
       if (CacheInfo->Size.hasValue() && Loc.Size.hasValue()) {
@@ -1093,7 +1114,10 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
   // If we have valid cached information for exactly the block we are
   // investigating, just return it with no recomputation.
-  if (CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
+  // Don't use cached information for invariant loads since it is valid for
+  // non-invariant loads only.
+  if (!isInvariantLoad &&
+      CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
     // We have a fully cached result for this query then we can just return the
     // cached results and populate the visited set.  However, we have to verify
     // that we don't already have conflicting results for these blocks.  Check
@@ -1129,14 +1153,18 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     return true;
   }
 
-  // Otherwise, either this is a new block, a block with an invalid cache
-  // pointer or one that we're about to invalidate by putting more info into it
-  // than its valid cache info.  If empty, the result will be valid cache info,
-  // otherwise it isn't.
-  if (Cache->empty())
-    CacheInfo->Pair = BBSkipFirstBlockPair(StartBB, SkipFirstBlock);
-  else
-    CacheInfo->Pair = BBSkipFirstBlockPair();
+  // Invariant loads don't affect cache in any way thus no need to update
+  // CacheInfo as well.
+  if (!isInvariantLoad) {
+    // Otherwise, either this is a new block, a block with an invalid cache
+    // pointer or one that we're about to invalidate by putting more info into
+    // it than its valid cache info.  If empty, the result will be valid cache
+    // info, otherwise it isn't.
+    if (Cache->empty())
+      CacheInfo->Pair = BBSkipFirstBlockPair(StartBB, SkipFirstBlock);
+    else
+      CacheInfo->Pair = BBSkipFirstBlockPair();
+  }
 
   SmallVector<BasicBlock *, 32> Worklist;
   Worklist.push_back(StartBB);
@@ -1377,22 +1405,26 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     if (SkipFirstBlock)
       return false;
 
-    bool foundBlock = false;
-    for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
-      if (I.getBB() != BB)
-        continue;
+    // Results of invariant loads are not cached thus no need to update cached
+    // information.
+    if (!isInvariantLoad) {
+      bool foundBlock = false;
+      for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
+        if (I.getBB() != BB)
+          continue;
 
-      assert((GotWorklistLimit || I.getResult().isNonLocal() ||
-              !DT.isReachableFromEntry(BB)) &&
-             "Should only be here with transparent block");
-      foundBlock = true;
-      I.setResult(MemDepResult::getUnknown());
-      Result.push_back(
-          NonLocalDepResult(I.getBB(), I.getResult(), Pointer.getAddr()));
-      break;
+        assert((GotWorklistLimit || I.getResult().isNonLocal() ||
+                !DT.isReachableFromEntry(BB)) &&
+               "Should only be here with transparent block");
+        foundBlock = true;
+        I.setResult(MemDepResult::getUnknown());
+        Result.push_back(
+            NonLocalDepResult(I.getBB(), I.getResult(), Pointer.getAddr()));
+        break;
+      }
+      (void)foundBlock; (void)GotWorklistLimit;
+      assert((foundBlock || GotWorklistLimit) && "Current block not in cache?");
     }
-    (void)foundBlock; (void)GotWorklistLimit;
-    assert((foundBlock || GotWorklistLimit) && "Current block not in cache?");
   }
 
   // Okay, we're done now.  If we added new values to the cache, re-sort it.
