@@ -1815,6 +1815,14 @@ TEST(APIntTest, SelfMoveAssignment) {
 #endif
 #endif // _MSC_VER
 
+TEST(APIntTest, byteSwap) {
+  EXPECT_EQ(0x00000000, APInt(16, 0x0000).byteSwap());
+  EXPECT_EQ(0x0000010f, APInt(16, 0x0f01).byteSwap());
+  EXPECT_EQ(0x117700ff, APInt(32, 0xff007711).byteSwap());
+  EXPECT_EQ(0x050403020100ULL, APInt(48, 0x000102030405ULL).byteSwap());
+  EXPECT_EQ(0xff050403020100aaULL, APInt(64, 0xaa000102030405ffULL).byteSwap());
+}
+
 TEST(APIntTest, reverseBits) {
   EXPECT_EQ(1, APInt(1, 1).reverseBits());
   EXPECT_EQ(0, APInt(1, 0).reverseBits());
