@@ -380,8 +380,9 @@ if(APPLE)
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.
   set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
+  set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
   if(NOT SANITIZER_MIN_OSX_VERSION)
-    string(REGEX MATCH "-mmacosx-version-min=([.0-9]+)"
+    string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
            MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
     if(MACOSX_VERSION_MIN_FLAG)
       set(SANITIZER_MIN_OSX_VERSION "${CMAKE_MATCH_1}")
@@ -415,10 +416,10 @@ if(APPLE)
 
   set(DARWIN_osx_CFLAGS
     ${DARWIN_COMMON_CFLAGS}
-    -mmacosx-version-min=${SANITIZER_MIN_OSX_VERSION})
+    ${DARWIN_osx_MIN_VER_FLAG}=${SANITIZER_MIN_OSX_VERSION})
   set(DARWIN_osx_LINK_FLAGS
     ${DARWIN_COMMON_LINK_FLAGS}
-    -mmacosx-version-min=${SANITIZER_MIN_OSX_VERSION})
+    ${DARWIN_osx_MIN_VER_FLAG}=${SANITIZER_MIN_OSX_VERSION})
 
   if(DARWIN_osx_SYSROOT)
     list(APPEND DARWIN_osx_CFLAGS -isysroot ${DARWIN_osx_SYSROOT})
