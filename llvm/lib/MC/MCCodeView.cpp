@@ -209,7 +209,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
   // user-provided file number.  Each entry may be a variable number of bytes
   // determined by the checksum kind and size.
   for (auto File : Files) {
-    OS.EmitAssignment(File.ChecksumTableOffset,
+    OS.emitAssignment(File.ChecksumTableOffset,
                       MCConstantExpr::create(CurrentOffset, Ctx));
     CurrentOffset += 4; // String table offset.
     if (!File.ChecksumKind) {
@@ -231,7 +231,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
     }
     OS.EmitIntValue(static_cast<uint8_t>(File.Checksum.size()), 1);
     OS.EmitIntValue(File.ChecksumKind, 1);
-    OS.EmitBytes(toStringRef(File.Checksum));
+    OS.emitBytes(toStringRef(File.Checksum));
     OS.EmitValueToAlignment(4);
   }
 

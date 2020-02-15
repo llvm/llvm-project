@@ -80,7 +80,7 @@ void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {
   default:
     llvm_unreachable("Invalid Suffix");
   }
-  getStreamer().EmitBytes(StringRef(Buffer, Size));
+  getStreamer().emitBytes(StringRef(Buffer, Size));
 }
 
 // The remaining callbacks should be handled separately by each

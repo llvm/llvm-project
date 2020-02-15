@@ -229,7 +229,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->EmitIntValue(4, 4);     // data size for "GNU\0"
   OutStreamer->EmitIntValue(4 * 4, 4); // Elf_Prop size
   OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
-  OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+  OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
   // Emit the PAC/BTI properties.
   OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
@@ -363,9 +363,9 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
         Sym->getName()));
 
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Weak);
-    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Hidden);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
     OutStreamer->EmitLabel(Sym);
 
     OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
@@ -528,7 +528,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
   emitStackMaps(SM);
 }
@@ -543,7 +543,7 @@ void AArch64AsmPrinter::EmitLOHs() {
              "Label hasn't been inserted for LOH related instruction");
       MCArgs.push_back(LabelIt->second);
     }
-    OutStreamer->EmitLOHDirective(D.getKind(), MCArgs);
+    OutStreamer->emitLOHDirective(D.getKind(), MCArgs);
     MCArgs.clear();
   }
 }

@@ -277,7 +277,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // use the directive, where it would need the same conditionalization
   // anyway.
   const Triple &Target = TM.getTargetTriple();
-  OutStreamer->EmitVersionForTarget(Target, M.getSDKVersion());
+  OutStreamer->emitVersionForTarget(Target, M.getSDKVersion());
 
   // Allow the target to emit any magic that it wants at the start of the file.
   emitStartOfAsmFile(M);
@@ -407,31 +407,31 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   case GlobalValue::WeakODRLinkage:
     if (MAI->hasWeakDefDirective()) {
       // .globl _foo
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
 
       if (!canBeHidden(GV, *MAI))
         // .weak_definition _foo
-        OutStreamer->EmitSymbolAttribute(GVSym, MCSA_WeakDefinition);
+        OutStreamer->emitSymbolAttribute(GVSym, MCSA_WeakDefinition);
       else
-        OutStreamer->EmitSymbolAttribute(GVSym, MCSA_WeakDefAutoPrivate);
+        OutStreamer->emitSymbolAttribute(GVSym, MCSA_WeakDefAutoPrivate);
     } else if (MAI->hasLinkOnceDirective()) {
       // .globl _foo
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
       //NOTE: linkonce is handled by the section the symbol was assigned to.
     } else {
       // .weak _foo
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Weak);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Weak);
     }
     return;
   case GlobalValue::ExternalLinkage:
     // If external, declare as a global symbol: .globl _foo
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
     return;
   case GlobalValue::PrivateLinkage:
     return;
   case GlobalValue::InternalLinkage:
     if (MAI->hasDotLGloblDirective())
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_LGlobal);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_LGlobal);
     return;
   case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
@@ -512,7 +512,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
                        "' is already defined");
 
   if (MAI->hasDotTypeDotSizeDirective())
-    OutStreamer->EmitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
 
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
 
@@ -537,7 +537,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // .comm _foo, 42, 4
     const bool SupportsAlignment =
         getObjFileLowering().getCommDirectiveSupportsAlignment();
-    OutStreamer->EmitCommonSymbol(GVSym, Size,
+    OutStreamer->emitCommonSymbol(GVSym, Size,
                                   SupportsAlignment ? Alignment.value() : 0);
     return;
   }
@@ -553,7 +553,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
     // .zerofill __DATA, __bss, _foo, 400, 5
-    OutStreamer->EmitZerofill(TheSection, GVSym, Size, Alignment.value());
+    OutStreamer->emitZerofill(TheSection, GVSym, Size, Alignment.value());
     return;
   }
 
@@ -572,16 +572,16 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // Prefer to simply fall back to .local / .comm in this case.
     if (MAI->getLCOMMDirectiveAlignmentType() != LCOMM::NoAlignment) {
       // .lcomm _foo, 42
-      OutStreamer->EmitLocalCommonSymbol(GVSym, Size, Alignment.value());
+      OutStreamer->emitLocalCommonSymbol(GVSym, Size, Alignment.value());
       return;
     }
 
     // .local _foo
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Local);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_Local);
     // .comm _foo, 42, 4
     const bool SupportsAlignment =
         getObjFileLowering().getCommDirectiveSupportsAlignment();
-    OutStreamer->EmitCommonSymbol(GVSym, Size,
+    OutStreamer->emitCommonSymbol(GVSym, Size,
                                   SupportsAlignment ? Alignment.value() : 0);
     return;
   }
@@ -694,10 +694,10 @@ void AsmPrinter::emitFunctionHeader() {
     emitAlignment(MF->getAlignment(), &F);
 
   if (MAI->hasDotTypeDotSizeDirective())
-    OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
+    OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
 
   if (F.hasFnAttribute(Attribute::Cold))
-    OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_Cold);
+    OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
   if (isVerbose()) {
     F.printAsOperand(OutStreamer->GetCommentOS(),
@@ -718,7 +718,7 @@ void AsmPrinter::emitFunctionHeader() {
       emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
 
       // Emit an .alt_entry directive for the actual function symbol.
-      OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
+      OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
     } else {
       emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
     }
@@ -760,7 +760,7 @@ void AsmPrinter::emitFunctionHeader() {
     if (MAI->useAssignmentForEHBegin()) {
       MCSymbol *CurPos = OutContext.createTempSymbol();
       OutStreamer->EmitLabel(CurPos);
-      OutStreamer->EmitAssignment(CurrentFnBegin,
+      OutStreamer->emitAssignment(CurrentFnBegin,
                                  MCSymbolRefExpr::create(CurPos, OutContext));
     } else {
       OutStreamer->EmitLabel(CurrentFnBegin);
@@ -1022,7 +1022,7 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
   int FrameOffset = MI.getOperand(1).getImm();
 
   // Emit a symbol assignment.
-  OutStreamer->EmitAssignment(FrameAllocSym,
+  OutStreamer->emitAssignment(FrameAllocSym,
                              MCConstantExpr::create(FrameOffset, OutContext));
 }
 
@@ -1351,9 +1351,9 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   MCSymbol *Name = getSymbol(&GIS);
 
   if (GIS.hasExternalLinkage() || !MAI->getWeakRefDirective())
-    OutStreamer->EmitSymbolAttribute(Name, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
   else if (GIS.hasWeakLinkage() || GIS.hasLinkOnceLinkage())
-    OutStreamer->EmitSymbolAttribute(Name, MCSA_WeakReference);
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
   else
     assert(GIS.hasLocalLinkage() && "Invalid alias or ifunc linkage");
 
@@ -1370,7 +1370,7 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
   if (IsFunction)
-    OutStreamer->EmitSymbolAttribute(Name, isa<GlobalIFunc>(GIS)
+    OutStreamer->emitSymbolAttribute(Name, isa<GlobalIFunc>(GIS)
                                                ? MCSA_ELF_TypeIndFunction
                                                : MCSA_ELF_TypeFunction);
 
@@ -1379,13 +1379,13 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   const MCExpr *Expr = lowerConstant(GIS.getIndirectSymbol());
 
   if (isa<GlobalAlias>(&GIS) && MAI->hasAltEntry() && isa<MCBinaryExpr>(Expr))
-    OutStreamer->EmitSymbolAttribute(Name, MCSA_AltEntry);
+    OutStreamer->emitSymbolAttribute(Name, MCSA_AltEntry);
 
   // Emit the directives as assignments aka .set:
-  OutStreamer->EmitAssignment(Name, Expr);
+  OutStreamer->emitAssignment(Name, Expr);
   MCSymbol *LocalAlias = getSymbolPreferLocal(GIS);
   if (LocalAlias != Name)
-    OutStreamer->EmitAssignment(LocalAlias, Expr);
+    OutStreamer->emitAssignment(LocalAlias, Expr);
 
   if (auto *GA = dyn_cast<GlobalAlias>(&GIS)) {
     // If the aliasee does not correspond to a symbol in the output, i.e. the
@@ -1428,7 +1428,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
       OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->SwitchSection(RemarksSection);
 
-  OutStreamer->EmitBinaryData(OS.str());
+  OutStreamer->emitBinaryData(OS.str());
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
@@ -1509,7 +1509,7 @@ bool AsmPrinter::doFinalization(Module &M) {
             SectionKind::getReadOnly(), Stub.first->getName(),
             COFF::IMAGE_COMDAT_SELECT_ANY));
         emitAlignment(Align(DL.getPointerSize()));
-        OutStreamer->EmitSymbolAttribute(Stub.first, MCSA_Global);
+        OutStreamer->emitSymbolAttribute(Stub.first, MCSA_Global);
         OutStreamer->EmitLabel(Stub.first);
         OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
                                      DL.getPointerSize());
@@ -1537,7 +1537,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     for (const auto &GO : M.global_objects()) {
       if (!GO.hasExternalWeakLinkage())
         continue;
-      OutStreamer->EmitSymbolAttribute(getSymbol(&GO), MCSA_WeakReference);
+      OutStreamer->emitSymbolAttribute(getSymbol(&GO), MCSA_WeakReference);
     }
   }
 
@@ -1618,7 +1618,7 @@ bool AsmPrinter::doFinalization(Module &M) {
       OS.flush();
       if (!Flags.empty()) {
         OutStreamer->SwitchSection(TLOF.getDrectveSection());
-        OutStreamer->EmitBytes(Flags);
+        OutStreamer->emitBytes(Flags);
       }
       Flags.clear();
     }
@@ -1644,7 +1644,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
           if (!Flags.empty()) {
             OutStreamer->SwitchSection(TLOF.getDrectveSection());
-            OutStreamer->EmitBytes(Flags);
+            OutStreamer->emitBytes(Flags);
           }
           Flags.clear();
         }
@@ -1672,7 +1672,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
       OutStreamer->SwitchSection(OutContext.getELFSection(
           ".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0, "", ++UniqueID));
-      OutStreamer->EmitBytes(GV.getPartition());
+      OutStreamer->emitBytes(GV.getPartition());
       OutStreamer->EmitZeros(1);
       OutStreamer->EmitValue(
           MCSymbolRefExpr::create(getSymbol(&GV), OutContext),
@@ -1875,7 +1875,7 @@ void AsmPrinter::emitJumpTableInfo() {
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
   if (!JTInDiffSection)
-    OutStreamer->EmitDataRegion(MCDR_DataRegionJT32);
+    OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
   for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
@@ -1898,7 +1898,7 @@ void AsmPrinter::emitJumpTableInfo() {
         // .set LJTSet, LBB32-base
         const MCExpr *LHS =
           MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-        OutStreamer->EmitAssignment(GetJTSetSymbol(JTI, MBB->getNumber()),
+        OutStreamer->emitAssignment(GetJTSetSymbol(JTI, MBB->getNumber()),
                                     MCBinaryExpr::createSub(LHS, Base,
                                                             OutContext));
       }
@@ -1925,7 +1925,7 @@ void AsmPrinter::emitJumpTableInfo() {
       emitJumpTableEntry(MJTI, JTBBs[ii], JTI);
   }
   if (!JTInDiffSection)
-    OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+    OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
 /// EmitJumpTableEntry - Emit a jump table entry for the specified MBB to the
@@ -2036,7 +2036,7 @@ void AsmPrinter::emitLLVMUsedList(const ConstantArray *InitList) {
     const GlobalValue *GV =
       dyn_cast<GlobalValue>(InitList->getOperand(i)->stripPointerCasts());
     if (GV)
-      OutStreamer->EmitSymbolAttribute(getSymbol(GV), MCSA_NoDeadStrip);
+      OutStreamer->emitSymbolAttribute(getSymbol(GV), MCSA_NoDeadStrip);
   }
 }
 
@@ -2149,7 +2149,7 @@ void AsmPrinter::emitModuleCommandLines(Module &M) {
     assert(N->getNumOperands() == 1 &&
            "llvm.commandline metadata entry can have only one operand");
     const MDString *S = cast<MDString>(N->getOperand(0));
-    OutStreamer->EmitBytes(S->getString());
+    OutStreamer->emitBytes(S->getString());
     OutStreamer->EmitZeros(1);
   }
   OutStreamer->PopSection();
@@ -2456,7 +2456,7 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
 
   // If this can be emitted with .ascii/.asciz, emit it as such.
   if (CDS->isString())
-    return AP.OutStreamer->EmitBytes(CDS->getAsString());
+    return AP.OutStreamer->emitBytes(CDS->getAsString());
 
   // Otherwise, emit the values in successive locations.
   unsigned ElementByteSize = CDS->getElementByteSize();
@@ -2877,7 +2877,7 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
               getObjFileLowering().getSectionForConstant(DL, Kind, C, Align))) {
         if (MCSymbol *Sym = S->getCOMDATSymbol()) {
           if (Sym->isUndefined())
-            OutStreamer->EmitSymbolAttribute(Sym, MCSA_Global);
+            OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
           return Sym;
         }
       }
@@ -3062,7 +3062,7 @@ void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
   }
 
   if (Attr != MCSA_Invalid)
-    OutStreamer->EmitSymbolAttribute(Sym, Attr);
+    OutStreamer->emitSymbolAttribute(Sym, Attr);
 }
 
 /// isBlockOnlyReachableByFallthough - Return true if the basic block has
@@ -3166,10 +3166,10 @@ void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
   Out->EmitSymbolValue(Sled, Bytes);
   Out->EmitSymbolValue(CurrentFnSym, Bytes);
   auto Kind8 = static_cast<uint8_t>(Kind);
-  Out->EmitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
-  Out->EmitBinaryData(
+  Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
+  Out->emitBinaryData(
       StringRef(reinterpret_cast<const char *>(&AlwaysInstrument), 1));
-  Out->EmitBinaryData(StringRef(reinterpret_cast<const char *>(&Version), 1));
+  Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Version), 1));
   auto Padding = (4 * Bytes) - ((2 * Bytes) + 3);
   assert(Padding >= 0 && "Instrumentation map entry > 4 * Word Size");
   Out->EmitZeros(Padding);

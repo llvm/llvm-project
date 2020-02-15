@@ -10648,7 +10648,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
   return false;
 }
 
@@ -10661,7 +10661,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
 
   if (isThumb())
     SwitchMode();
-  getParser().getStreamer().EmitAssemblerFlag(MCAF_Code32);
+  getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   return false;
 }
 
@@ -10673,7 +10673,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().EmitThumbFunc(Symbol);
+    getParser().getStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -10693,7 +10693,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().EmitThumbFunc(Func);
+      getParser().getStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseToken(AsmToken::EndOfStatement,
                      "unexpected token in '.thumb_func' directive"))
@@ -10757,14 +10757,14 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
 
     if (!isThumb())
       SwitchMode();
-    getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+    getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
   } else {
     if (!hasARM())
       return Error(L, "target does not support ARM mode");
 
     if (isThumb())
       SwitchMode();
-    getParser().getStreamer().EmitAssemblerFlag(MCAF_Code32);
+    getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   }
 
   return false;
@@ -10817,7 +10817,7 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
       SwitchMode();
     } else {
       // Mode switch forced, because the new arch doesn't support the old mode.
-      getParser().getStreamer().EmitAssemblerFlag(isThumb() ? MCAF_Code16
+      getParser().getStreamer().emitAssemblerFlag(isThumb() ? MCAF_Code16
                                                             : MCAF_Code32);
       // Warn about the implcit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following

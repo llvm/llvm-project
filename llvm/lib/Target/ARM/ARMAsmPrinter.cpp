@@ -63,15 +63,15 @@ void ARMAsmPrinter::emitFunctionBodyEnd() {
   if (!InConstantPool)
     return;
   InConstantPool = false;
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
 void ARMAsmPrinter::emitFunctionEntryLabel() {
   if (AFI->isThumbFunction()) {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
-    OutStreamer->EmitThumbFunc(CurrentFnSym);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitThumbFunc(CurrentFnSym);
   } else {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code32);
+    OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
   OutStreamer->EmitLabel(CurrentFnSym);
 }
@@ -167,7 +167,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // These are created per function, rather than per TU, since it's
   // relatively easy to exceed the thumb branch range within a TU.
   if (! ThumbIndirectPads.empty()) {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
     emitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
       OutStreamer->EmitLabel(TIP.second);
@@ -467,14 +467,14 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);
   if (!EndInfo || WasThumb != isThumb(*EndInfo)) {
-    OutStreamer->EmitAssemblerFlag(WasThumb ? MCAF_Code16 : MCAF_Code32);
+    OutStreamer->emitAssemblerFlag(WasThumb ? MCAF_Code16 : MCAF_Code32);
   }
 }
 
 void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   // Use unified assembler syntax.
-  OutStreamer->EmitAssemblerFlag(MCAF_SyntaxUnified);
+  OutStreamer->emitAssemblerFlag(MCAF_SyntaxUnified);
 
   // Emit ARM Build Attributes
   if (TT.isOSBinFormatELF())
@@ -484,7 +484,7 @@ void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   // if we're thumb for the purposes of the top level code16 assembler
   // flag.
   if (!M.getModuleInlineAsm().empty() && TT.isThumb())
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
 }
 
 static void
@@ -493,7 +493,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
   // L_foo$stub:
   OutStreamer.EmitLabel(StubLabel);
   //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+  OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
   if (MCSym.getInt())
     // External to current translation unit.
@@ -553,7 +553,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
 
   // The last attribute to be emitted is ABI_optimization_goals
@@ -948,7 +948,7 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
   OutStreamer->EmitLabel(JTISymbol);
 
   // Mark the jump table as data-in-code.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionJT32);
+  OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -978,7 +978,7 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
     OutStreamer->EmitValue(Expr, 4);
   }
   // Mark the end of jump table data-in-code region.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
 void ARMAsmPrinter::emitJumpTableInsts(const MachineInstr *MI) {
@@ -1027,7 +1027,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
   // Mark the jump table as data-in-code.
-  OutStreamer->EmitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
+  OutStreamer->emitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
                                                : MCDR_DataRegionJT16);
 
   for (auto MBB : JTBBs) {
@@ -1056,7 +1056,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   // Mark the end of jump table data-in-code region. 32-bit offsets use
   // actual branch instructions here, so we don't mark those as a data-region
   // at all.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 
   // Make sure the next instruction is 2-byte aligned.
   emitAlignment(Align(2));
@@ -1253,7 +1253,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
-    OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+    OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
     InConstantPool = false;
   }
 
@@ -1621,7 +1621,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // If this is the first entry of the pool, mark it.
     if (!InConstantPool) {
-      OutStreamer->EmitDataRegion(MCDR_DataRegion);
+      OutStreamer->emitDataRegion(MCDR_DataRegion);
       InConstantPool = true;
     }
 

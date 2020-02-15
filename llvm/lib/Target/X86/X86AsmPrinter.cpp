@@ -601,7 +601,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
       OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
       OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
-      OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+      OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
       // Emitting an Elf_Prop for the CET properties.
       OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
@@ -639,8 +639,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("cfguard"))
       Feat00Flags |= 0x800; // Object is CFG-aware.
 
-    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->EmitAssignment(
+    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
   OutStreamer->EmitSyntaxDirective();
@@ -649,7 +649,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
   if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
 }
 
 static void
@@ -658,7 +658,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
   // L_foo$stub:
   OutStreamer.EmitLabel(StubLabel);
   //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+  OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
   if (MCSym.getInt())
     // External to current translation unit.
@@ -715,7 +715,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   } else if (TT.isOSBinFormatCOFF()) {
     if (MMI->usesMSVCFloatingPoint()) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
@@ -734,7 +734,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       StringRef SymbolName =
           (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
-      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;
     }
     emitStackMaps(SM);

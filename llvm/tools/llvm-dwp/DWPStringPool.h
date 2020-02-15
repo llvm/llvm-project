@@ -44,7 +44,7 @@ public:
     auto Pair = Pool.insert(std::make_pair(Str, Offset));
     if (Pair.second) {
       Out.SwitchSection(Sec);
-      Out.EmitBytes(StringRef(Str, Length));
+      Out.emitBytes(StringRef(Str, Length));
       Offset += Length;
     }
 

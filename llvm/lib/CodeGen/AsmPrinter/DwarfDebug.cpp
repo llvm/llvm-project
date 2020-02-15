@@ -2200,7 +2200,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     }
 
     Asm->OutStreamer->AddComment("External Name");
-    Asm->OutStreamer->EmitBytes(StringRef(Name, GI.getKeyLength() + 1));
+    Asm->OutStreamer->emitBytes(StringRef(Name, GI.getKeyLength() + 1));
   }
 
   Asm->OutStreamer->AddComment("End Mark");
@@ -2811,11 +2811,11 @@ void DwarfDebug::emitMacro(DIMacro &M) {
   Asm->emitULEB128(M.getLine());
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
-  Asm->OutStreamer->EmitBytes(Name);
+  Asm->OutStreamer->emitBytes(Name);
   if (!Value.empty()) {
     // There should be one space between macro name and macro value.
     Asm->emitInt8(' ');
-    Asm->OutStreamer->EmitBytes(Value);
+    Asm->OutStreamer->emitBytes(Value);
   }
   Asm->emitInt8('\0');
 }

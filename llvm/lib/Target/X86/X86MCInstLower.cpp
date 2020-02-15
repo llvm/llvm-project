@@ -297,7 +297,7 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
       // local labels. This is only safe when the symbols are in the same
       // section so we are restricting it to jumptable references.
       MCSymbol *Label = Ctx.createTempSymbol();
-      AsmPrinter.OutStreamer->EmitAssignment(Label, Expr);
+      AsmPrinter.OutStreamer->emitAssignment(Label, Expr);
       Expr = MCSymbolRefExpr::create(Label, Ctx);
     }
     break;
@@ -1151,7 +1151,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
   unsigned NumPrefixes = std::min(NumBytes - NopSize, 5U);
   NopSize += NumPrefixes;
   for (unsigned i = 0; i != NumPrefixes; ++i)
-    OS.EmitBytes("\x66");
+    OS.emitBytes("\x66");
 
   switch (Opc) {
   default: llvm_unreachable("Unexpected opcode");
@@ -1451,7 +1451,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBinaryData("\xeb\x0f");
+  OutStreamer->emitBinaryData("\xeb\x0f");
 
   // The default C calling convention will place two arguments into %rcx and
   // %rdx -- so we only work with those.
@@ -1547,7 +1547,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBinaryData("\xeb\x14");
+  OutStreamer->emitBinaryData("\xeb\x14");
 
   // An x86-64 convention may place three arguments into %rcx, %rdx, and R8,
   // so we'll work with those. Or we may be called via SystemV, in which case
@@ -1649,7 +1649,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBytes("\xeb\x09");
+  OutStreamer->emitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
   recordSled(CurSled, MI, SledKind::FUNCTION_ENTER);
 }
@@ -1704,7 +1704,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBytes("\xeb\x09");
+  OutStreamer->emitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
   OutStreamer->EmitLabel(Target);
   recordSled(CurSled, MI, SledKind::TAIL_CALL);

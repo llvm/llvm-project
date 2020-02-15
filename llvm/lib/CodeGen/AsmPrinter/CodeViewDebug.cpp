@@ -101,13 +101,13 @@ public:
   CVMCAdapter(MCStreamer &OS, TypeCollection &TypeTable)
       : OS(&OS), TypeTable(TypeTable) {}
 
-  void EmitBytes(StringRef Data) { OS->EmitBytes(Data); }
+  void emitBytes(StringRef Data) { OS->emitBytes(Data); }
 
   void EmitIntValue(uint64_t Value, unsigned Size) {
     OS->EmitIntValueInHex(Value, Size);
   }
 
-  void EmitBinaryData(StringRef Data) { OS->EmitBinaryData(Data); }
+  void emitBinaryData(StringRef Data) { OS->emitBinaryData(Data); }
 
   void AddComment(const Twine &T) { OS->AddComment(T); }
 
@@ -631,7 +631,7 @@ emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
   SmallString<32> NullTerminatedString(
       S.take_front(MaxRecordLength - MaxFixedRecordLength - 1));
   NullTerminatedString.push_back('\0');
-  OS.EmitBytes(NullTerminatedString);
+  OS.emitBytes(NullTerminatedString);
 }
 
 void CodeViewDebug::emitTypeInformation() {
@@ -696,7 +696,7 @@ void CodeViewDebug::emitTypeGlobalHashes() {
     assert(GHR.Hash.size() == 8);
     StringRef S(reinterpret_cast<const char *>(GHR.Hash.data()),
                 GHR.Hash.size());
-    OS.EmitBinaryData(S);
+    OS.emitBinaryData(S);
   }
 }
 
@@ -1095,7 +1095,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
         // nice .asciz directive.
         StringRef Str = cast<MDString>(MD)->getString();
         assert(Str.data()[Str.size()] == '\0' && "non-nullterminated MDString");
-        OS.EmitBytes(StringRef(Str.data(), Str.size() + 1));
+        OS.emitBytes(StringRef(Str.data(), Str.size() + 1));
       }
       endSymbolRecord(AnnotEnd);
     }
@@ -3116,7 +3116,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     CodeViewRecordIO IO(Writer);
     cantFail(IO.mapEncodedInteger(Val));
     StringRef SRef((char *)data, Writer.getOffset());
-    OS.EmitBinaryData(SRef);
+    OS.emitBinaryData(SRef);
 
     OS.AddComment("Name");
     const DIScope *Scope = DIGV->getScope();

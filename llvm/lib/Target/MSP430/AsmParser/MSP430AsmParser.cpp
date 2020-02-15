@@ -431,7 +431,7 @@ bool MSP430AsmParser::ParseDirectiveRefSym(AsmToken DirectiveID) {
       return TokError("expected identifier in directive");
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    getStreamer().EmitSymbolAttribute(Sym, MCSA_Global);
+    getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
     return false;
 }
 

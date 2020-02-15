@@ -391,7 +391,7 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
   assert(AugmentationStringSize % 4 == 0);
   Asm->emitInt32(AugmentationStringSize);
   Asm->OutStreamer->AddComment("Header: augmentation string");
-  Asm->OutStreamer->EmitBytes({AugmentationString, AugmentationStringSize});
+  Asm->OutStreamer->emitBytes({AugmentationString, AugmentationStringSize});
 }
 
 template <typename DataT>
