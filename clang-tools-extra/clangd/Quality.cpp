@@ -129,6 +129,8 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Extension:
   case index::SymbolKind::Union:
   case index::SymbolKind::TypeAlias:
+  case index::SymbolKind::TemplateTypeParm:
+  case index::SymbolKind::TemplateTemplateParm:
     return SymbolQualitySignals::Type;
   case index::SymbolKind::Function:
   case index::SymbolKind::ClassMethod:
@@ -147,6 +149,7 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Field:
   case index::SymbolKind::EnumConstant:
   case index::SymbolKind::Parameter:
+  case index::SymbolKind::NonTypeTemplateParm:
     return SymbolQualitySignals::Variable;
   case index::SymbolKind::Using:
   case index::SymbolKind::Module:
