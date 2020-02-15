@@ -64,9 +64,18 @@ static cl::opt<bool> UseMul24Intrin(
   cl::ReallyHidden,
   cl::init(true));
 
+// Legalize 64-bit division by using the generic IR expansion.
 static cl::opt<bool> ExpandDiv64InIR(
   "amdgpu-codegenprepare-expand-div64",
   cl::desc("Expand 64-bit division in AMDGPUCodeGenPrepare"),
+  cl::ReallyHidden,
+  cl::init(false));
+
+// Leave all division operations as they are. This supersedes ExpandDiv64InIR
+// and is used for testing the legalizer.
+static cl::opt<bool> DisableIDivExpand(
+  "amdgpu-codegenprepare-disable-idiv-expansion",
+  cl::desc("Prevent expanding integer division in AMDGPUCodeGenPrepare"),
   cl::ReallyHidden,
   cl::init(false));
 
@@ -1203,7 +1212,8 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
 
   if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
        Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      ScalarSize <= 64) {
+      ScalarSize <= 64 &&
+      !DisableIDivExpand) {
     Value *Num = I.getOperand(0);
     Value *Den = I.getOperand(1);
     IRBuilder<> Builder(&I);
