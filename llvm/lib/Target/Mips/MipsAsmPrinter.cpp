@@ -185,7 +185,7 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
   }
 }
 
-void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();
@@ -280,7 +280,7 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     //
     if (I->isPseudo() && !Subtarget->inMips16Mode()
         && !isLongBranchPseudo(I->getOpcode()))
-      llvm_unreachable("Pseudo opcode found in EmitInstruction()");
+      llvm_unreachable("Pseudo opcode found in emitInstruction()");
 
     MCInst TmpInst0;
     MCInstLowering.Lower(&*I, TmpInst0);
@@ -860,7 +860,7 @@ void MipsAsmPrinter::EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol) {
   I.setOpcode(Mips::JAL);
   I.addOperand(
       MCOperand::createExpr(MCSymbolRefExpr::create(Symbol, OutContext)));
-  OutStreamer->EmitInstruction(I, STI);
+  OutStreamer->emitInstruction(I, STI);
 }
 
 void MipsAsmPrinter::EmitInstrReg(const MCSubtargetInfo &STI, unsigned Opcode,
@@ -868,7 +868,7 @@ void MipsAsmPrinter::EmitInstrReg(const MCSubtargetInfo &STI, unsigned Opcode,
   MCInst I;
   I.setOpcode(Opcode);
   I.addOperand(MCOperand::createReg(Reg));
-  OutStreamer->EmitInstruction(I, STI);
+  OutStreamer->emitInstruction(I, STI);
 }
 
 void MipsAsmPrinter::EmitInstrRegReg(const MCSubtargetInfo &STI,
@@ -888,7 +888,7 @@ void MipsAsmPrinter::EmitInstrRegReg(const MCSubtargetInfo &STI,
   I.setOpcode(Opcode);
   I.addOperand(MCOperand::createReg(Reg1));
   I.addOperand(MCOperand::createReg(Reg2));
-  OutStreamer->EmitInstruction(I, STI);
+  OutStreamer->emitInstruction(I, STI);
 }
 
 void MipsAsmPrinter::EmitInstrRegRegReg(const MCSubtargetInfo &STI,
@@ -899,7 +899,7 @@ void MipsAsmPrinter::EmitInstrRegRegReg(const MCSubtargetInfo &STI,
   I.addOperand(MCOperand::createReg(Reg1));
   I.addOperand(MCOperand::createReg(Reg2));
   I.addOperand(MCOperand::createReg(Reg3));
-  OutStreamer->EmitInstruction(I, STI);
+  OutStreamer->emitInstruction(I, STI);
 }
 
 void MipsAsmPrinter::EmitMovFPIntPair(const MCSubtargetInfo &STI,

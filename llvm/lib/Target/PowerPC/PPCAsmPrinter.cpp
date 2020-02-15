@@ -100,7 +100,7 @@ public:
     return AsmPrinter::doInitialization(M);
   }
 
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
   /// This function is for PrintAsmOperand and PrintAsmMemoryOperand,
   /// invoked by EmitMSInlineAsmStr and EmitGCCInlineAsmStr only.
@@ -144,7 +144,7 @@ public:
 
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 };
 
 class PPCAIXAsmPrinter : public PPCAsmPrinter {
@@ -512,7 +512,7 @@ MCSymbol *PPCAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
-void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
@@ -1149,13 +1149,13 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (!Subtarget->isPPC64())
-    return PPCAsmPrinter::EmitInstruction(MI);
+    return PPCAsmPrinter::emitInstruction(MI);
 
   switch (MI->getOpcode()) {
   default:
-    return PPCAsmPrinter::EmitInstruction(MI);
+    return PPCAsmPrinter::emitInstruction(MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     // .begin:
     //   b .end # lis 0, FuncId[16..32]

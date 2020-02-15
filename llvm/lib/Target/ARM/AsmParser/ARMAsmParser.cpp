@@ -245,12 +245,12 @@ class ARMAsmParser : public MCTargetAsmParser {
     ITInst.setOpcode(ARM::t2IT);
     ITInst.addOperand(MCOperand::createImm(ITState.Cond));
     ITInst.addOperand(MCOperand::createImm(ITState.Mask));
-    Out.EmitInstruction(ITInst, getSTI());
+    Out.emitInstruction(ITInst, getSTI());
 
     // Emit the conditonal instructions
     assert(PendingConditionalInsts.size() <= 4);
     for (const MCInst &Inst : PendingConditionalInsts) {
-      Out.EmitInstruction(Inst, getSTI());
+      Out.emitInstruction(Inst, getSTI());
     }
     PendingConditionalInsts.clear();
 
@@ -10521,7 +10521,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       if (isITBlockFull() || isITBlockTerminator(Inst))
         flushPendingInstructions(Out);
     } else {
-      Out.EmitInstruction(Inst, getSTI());
+      Out.emitInstruction(Inst, getSTI());
     }
     return false;
   case Match_NearMisses:

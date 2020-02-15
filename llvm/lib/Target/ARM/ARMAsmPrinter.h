@@ -87,7 +87,7 @@ public:
   void emitJumpTableAddrs(const MachineInstr *MI);
   void emitJumpTableInsts(const MachineInstr *MI);
   void emitJumpTableTBInst(const MachineInstr *MI, unsigned OffsetWidth);
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void emitConstantPool() override {

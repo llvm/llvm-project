@@ -210,40 +210,40 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   default:
     llvm_unreachable("Unexpected instruction");
   case MCCFIInstruction::OpDefCfaOffset:
-    OutStreamer->EmitCFIDefCfaOffset(Inst.getOffset());
+    OutStreamer->emitCFIDefCfaOffset(Inst.getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
-    OutStreamer->EmitCFIAdjustCfaOffset(Inst.getOffset());
+    OutStreamer->emitCFIAdjustCfaOffset(Inst.getOffset());
     break;
   case MCCFIInstruction::OpDefCfa:
-    OutStreamer->EmitCFIDefCfa(Inst.getRegister(), Inst.getOffset());
+    OutStreamer->emitCFIDefCfa(Inst.getRegister(), Inst.getOffset());
     break;
   case MCCFIInstruction::OpDefCfaRegister:
-    OutStreamer->EmitCFIDefCfaRegister(Inst.getRegister());
+    OutStreamer->emitCFIDefCfaRegister(Inst.getRegister());
     break;
   case MCCFIInstruction::OpOffset:
-    OutStreamer->EmitCFIOffset(Inst.getRegister(), Inst.getOffset());
+    OutStreamer->emitCFIOffset(Inst.getRegister(), Inst.getOffset());
     break;
   case MCCFIInstruction::OpRegister:
-    OutStreamer->EmitCFIRegister(Inst.getRegister(), Inst.getRegister2());
+    OutStreamer->emitCFIRegister(Inst.getRegister(), Inst.getRegister2());
     break;
   case MCCFIInstruction::OpWindowSave:
-    OutStreamer->EmitCFIWindowSave();
+    OutStreamer->emitCFIWindowSave();
     break;
   case MCCFIInstruction::OpNegateRAState:
-    OutStreamer->EmitCFINegateRAState();
+    OutStreamer->emitCFINegateRAState();
     break;
   case MCCFIInstruction::OpSameValue:
-    OutStreamer->EmitCFISameValue(Inst.getRegister());
+    OutStreamer->emitCFISameValue(Inst.getRegister());
     break;
   case MCCFIInstruction::OpGnuArgsSize:
-    OutStreamer->EmitCFIGnuArgsSize(Inst.getOffset());
+    OutStreamer->emitCFIGnuArgsSize(Inst.getOffset());
     break;
   case MCCFIInstruction::OpEscape:
-    OutStreamer->EmitCFIEscape(Inst.getValues());
+    OutStreamer->emitCFIEscape(Inst.getValues());
     break;
   case MCCFIInstruction::OpRestore:
-    OutStreamer->EmitCFIRestore(Inst.getRegister());
+    OutStreamer->emitCFIRestore(Inst.getRegister());
     break;
   }
 }

@@ -105,7 +105,7 @@ private:
     MaskInst.addOperand(MCOperand::createReg(AddrReg));
     MaskInst.addOperand(MCOperand::createReg(AddrReg));
     MaskInst.addOperand(MCOperand::createReg(MaskReg));
-    MipsELFStreamer::EmitInstruction(MaskInst, STI);
+    MipsELFStreamer::emitInstruction(MaskInst, STI);
   }
 
   // Sandbox indirect branch or return instruction by inserting mask operation
@@ -115,7 +115,7 @@ private:
 
     EmitBundleLock(false);
     emitMask(AddrReg, IndirectBranchMaskReg, STI);
-    MipsELFStreamer::EmitInstruction(MI, STI);
+    MipsELFStreamer::emitInstruction(MI, STI);
     EmitBundleUnlock();
   }
 
@@ -130,7 +130,7 @@ private:
       unsigned BaseReg = MI.getOperand(AddrIdx).getReg();
       emitMask(BaseReg, LoadStoreStackMaskReg, STI);
     }
-    MipsELFStreamer::EmitInstruction(MI, STI);
+    MipsELFStreamer::emitInstruction(MI, STI);
     if (MaskAfter) {
       // Sandbox SP change.
       unsigned SPReg = MI.getOperand(0).getReg();
@@ -143,7 +143,7 @@ private:
 public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer.  We override it to mask dangerous instructions.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     // Sandbox indirect jumps.
     if (isIndirectJump(Inst)) {
@@ -186,20 +186,20 @@ public:
         unsigned TargetReg = Inst.getOperand(1).getReg();
         emitMask(TargetReg, IndirectBranchMaskReg, STI);
       }
-      MipsELFStreamer::EmitInstruction(Inst, STI);
+      MipsELFStreamer::emitInstruction(Inst, STI);
       PendingCall = true;
       return;
     }
     if (PendingCall) {
       // Finish the sandboxing sequence by emitting branch delay.
-      MipsELFStreamer::EmitInstruction(Inst, STI);
+      MipsELFStreamer::emitInstruction(Inst, STI);
       EmitBundleUnlock();
       PendingCall = false;
       return;
     }
 
     // None of the sandboxing applies, just emit the instruction.
-    MipsELFStreamer::EmitInstruction(Inst, STI);
+    MipsELFStreamer::emitInstruction(Inst, STI);
   }
 };
 

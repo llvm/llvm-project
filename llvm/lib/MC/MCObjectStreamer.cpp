@@ -219,8 +219,8 @@ void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
 
-void MCObjectStreamer::EmitCFISections(bool EH, bool Debug) {
-  MCStreamer::EmitCFISections(EH, Debug);
+void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
+  MCStreamer::emitCFISections(EH, Debug);
   EmitEHFrame = EH;
   EmitDebugFrame = Debug;
 }
@@ -250,19 +250,19 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   DF->getContents().resize(DF->getContents().size() + Size, 0);
 }
 
-MCSymbol *MCObjectStreamer::EmitCFILabel() {
+MCSymbol *MCObjectStreamer::emitCFILabel() {
   MCSymbol *Label = getContext().createTempSymbol("cfi", true);
   EmitLabel(Label);
   return Label;
 }
 
-void MCObjectStreamer::EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+void MCObjectStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   // We need to create a local symbol to avoid relocations.
   Frame.Begin = getContext().createTempSymbol();
   EmitLabel(Frame.Begin);
 }
 
-void MCObjectStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
+void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = getContext().createTempSymbol();
   EmitLabel(Frame.End);
 }
@@ -365,16 +365,16 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
   return Sec.hasInstructions();
 }
 
-void MCObjectStreamer::EmitInstruction(const MCInst &Inst,
+void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   getAssembler().getBackend().alignBranchesBegin(*this, Inst);
-  EmitInstructionImpl(Inst, STI);
+  emitInstructionImpl(Inst, STI);
   getAssembler().getBackend().alignBranchesEnd(*this, Inst);
 }
 
-void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
+void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
                                            const MCSubtargetInfo &STI) {
-  MCStreamer::EmitInstruction(Inst, STI);
+  MCStreamer::emitInstruction(Inst, STI);
 
   MCSection *Sec = getCurrentSectionOnly();
   Sec->setHasInstructions(true);

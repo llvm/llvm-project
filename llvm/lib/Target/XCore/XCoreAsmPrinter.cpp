@@ -75,7 +75,7 @@ namespace {
     void emitGlobalVariable(const GlobalVariable *GV) override;
 
     void emitFunctionEntryLabel() override;
-    void EmitInstruction(const MachineInstr *MI) override;
+    void emitInstruction(const MachineInstr *MI) override;
     void emitFunctionBodyStart() override;
     void emitFunctionBodyEnd() override;
   };
@@ -255,7 +255,7 @@ bool XCoreAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void XCoreAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

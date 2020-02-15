@@ -474,14 +474,14 @@ public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     if (IsThumb)
       EmitThumbMappingSymbol();
     else
       EmitARMMappingSymbol();
 
-    MCELFStreamer::EmitInstruction(Inst, STI);
+    MCELFStreamer::emitInstruction(Inst, STI);
   }
 
   void emitInst(uint32_t Inst, char Suffix) {
