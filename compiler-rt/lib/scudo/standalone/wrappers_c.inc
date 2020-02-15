@@ -157,7 +157,18 @@ void SCUDO_PREFIX(malloc_postinit)() {
 
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, UNUSED int value) {
   if (param == M_DECAY_TIME) {
-    // TODO(kostyak): set release_to_os_interval_ms accordingly.
+    if (SCUDO_ANDROID) {
+      if (value == 0) {
+        // Will set the release values to their minimum values.
+        value = INT32_MIN;
+      } else {
+        // Will set the release values to their maximum values.
+        value = INT32_MAX;
+      }
+    }
+
+    SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,
+                              static_cast<scudo::sptr>(value));
     return 1;
   } else if (param == M_PURGE) {
     SCUDO_ALLOCATOR.releaseToOS();
