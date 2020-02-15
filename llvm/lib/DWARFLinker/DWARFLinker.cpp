@@ -2446,7 +2446,7 @@ bool DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(2);
+    ThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();

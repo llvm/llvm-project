@@ -21,7 +21,8 @@ TEST(Threading, PhysicalConcurrency) {
   auto Num = heavyweight_hardware_concurrency();
   // Since Num is unsigned this will also catch us trying to
   // return -1.
-  ASSERT_LE(Num, thread::hardware_concurrency());
+  ASSERT_LE(Num.compute_thread_count(),
+            hardware_concurrency().compute_thread_count());
 }
 
 #if LLVM_ENABLE_THREADS

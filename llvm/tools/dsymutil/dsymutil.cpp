@@ -258,7 +258,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());
   else
-    Options.LinkOpts.Threads = thread::hardware_concurrency();
+    Options.LinkOpts.Threads = 0; // Use all available hardware threads
 
   if (Options.DumpDebugMap || Options.LinkOpts.Verbose)
     Options.LinkOpts.Threads = 1;
@@ -541,9 +541,10 @@ int main(int argc, char **argv) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder;
 
-    unsigned ThreadCount =
-        std::min<unsigned>(Options.LinkOpts.Threads, DebugMapPtrsOrErr->size());
-    ThreadPool Threads(ThreadCount);
+    unsigned ThreadCount = Options.LinkOpts.Threads;
+    if (!ThreadCount)
+      ThreadCount = DebugMapPtrsOrErr->size();
+    ThreadPool Threads(hardware_concurrency(ThreadCount));
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
