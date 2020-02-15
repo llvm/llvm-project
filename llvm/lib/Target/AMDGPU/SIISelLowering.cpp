@@ -365,6 +365,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // FIXME: This should be narrowed to i32, but that only happens if i64 is
   // illegal.
+  // FIXME: Should lower sub-i32 bswaps to bit-ops without v_perm_b32.
   setOperationAction(ISD::BSWAP, MVT::i64, Legal);
   setOperationAction(ISD::BSWAP, MVT::i32, Legal);
 
@@ -467,7 +468,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, MVT::i16, Promote);
     setOperationAction(ISD::UREM, MVT::i16, Promote);
 
-    setOperationAction(ISD::BSWAP, MVT::i16, Promote);
     setOperationAction(ISD::BITREVERSE, MVT::i16, Promote);
 
     setOperationAction(ISD::CTTZ, MVT::i16, Promote);
@@ -548,6 +548,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         }
       }
     }
+
+    // v_perm_b32 can handle either of these.
+    setOperationAction(ISD::BSWAP, MVT::i16, Legal);
+    setOperationAction(ISD::BSWAP, MVT::v2i16, Legal);
+    setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
 
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, MVT::v2i16, Legal);
@@ -3909,7 +3914,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
                                              SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4f16);
+  assert(VT == MVT::v4f16 || VT == MVT::v4i16);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -4018,6 +4023,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCANONICALIZE:
+  case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:

@@ -1834,6 +1834,24 @@ def : GCNPat <
   sub1)
 >;
 
+// Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
+// The 12s emit 0s.
+def : GCNPat <
+  (i16 (bswap i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+def : GCNPat <
+  (i32 (zext (bswap i16:$a))),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+// Magic number: 1 | (0 << 8) | (3 << 16) | (2 << 24)
+def : GCNPat <
+  (v2i16 (bswap v2i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x02030001)))
+>;
+
 }
 
 let OtherPredicates = [NoFP16Denormals] in {
