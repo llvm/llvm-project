@@ -1706,13 +1706,16 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   // Get the function symbol.
-  if (TM.getTargetTriple().isOSAIX()) {
+  if (!MAI->needsFunctionDescriptors()) {
+    CurrentFnSym = getSymbol(&MF.getFunction());
+  } else {
+    assert(TM.getTargetTriple().isOSAIX() &&
+           "Only AIX uses the function descriptor hooks.");
     // AIX is unique here in that the name of the symbol emitted for the
     // function body does not have the same name as the source function's
     // C-linkage name.
-    assert(MAI->needsFunctionDescriptors() && "AIX ABI is descriptor based.");
     assert(CurrentFnDescSym && "The function descriptor symbol needs to be"
-		                           " initalized first.");
+                               " initalized first.");
 
     // Get the function entry point symbol.
     CurrentFnSym =
@@ -1722,8 +1725,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     MCSectionXCOFF *FnEntryPointSec =
         cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
     cast<MCSymbolXCOFF>(CurrentFnSym)->setContainingCsect(FnEntryPointSec);
-  } else {
-    CurrentFnSym = getSymbol(&MF.getFunction());
   }
 
   CurrentFnSymForSize = CurrentFnSym;
