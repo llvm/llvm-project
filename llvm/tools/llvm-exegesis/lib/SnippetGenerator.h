@@ -162,6 +162,23 @@ class CombinationGenerator {
     SmallVector<WrappingIterator<choice_type>, variable_smallsize>
         VariablesState;
 
+    // 'increment' of the the whole VariablesState is defined identically to the
+    // increment of a number: starting from the least significant element,
+    // increment it, and if it wrapped, then propagate that carry by also
+    // incrementing next (more significant) element.
+    auto IncrementState =
+        [](MutableArrayRef<WrappingIterator<choice_type>> VariablesState)
+        -> bool {
+      for (WrappingIterator<choice_type> &Variable :
+           llvm::reverse(VariablesState)) {
+        bool Wrapped = ++Variable;
+        if (!Wrapped)
+          return false; // There you go, next combination is ready.
+        // We have carry - increment more significant variable next..
+      }
+      return true; // MSB variable wrapped, no more unique combinations.
+    };
+
     // Initialize the per-variable state to refer to the possible choices for
     // that variable.
     VariablesState.reserve(VariablesChoices.size());
@@ -179,23 +196,9 @@ class CombinationGenerator {
       // And pass the new combination into callback, as intended.
       if (/*Abort=*/Callback(CurrentCombination))
         return;
-
-      // 'increment' the whole VariablesState, much like you would increment
-      // a number: starting from the least significant element, increment it,
-      // and if it wrapped, then propagate that carry by also incrementing next
-      // (more significant) element.
-      for (WrappingIterator<choice_type> &VariableState :
-           llvm::reverse(VariablesState)) {
-        bool Wrapped = ++VariableState;
-        if (!Wrapped)
-          break;
-
-        if (VariablesState.begin() == &VariableState)
-          return; // The "most significant" variable has wrapped, which means
-                  // that we have produced all the combinations.
-
-        // We have carry - increment more significant variable next..
-      }
+      // And tick the state to next combination, which will be unique.
+      if (IncrementState(VariablesState))
+        return; // All combinations produced.
     }
   };
 
