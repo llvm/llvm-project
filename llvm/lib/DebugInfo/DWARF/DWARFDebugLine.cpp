@@ -665,7 +665,9 @@ Error DWARFDebugLine::LineTable::parse(
         // from the size of the operand.
         {
           uint8_t ExtractorAddressSize = DebugLineData.getAddressSize();
-          if (ExtractorAddressSize != Len - 1 && ExtractorAddressSize != 0)
+          uint64_t OpcodeAddressSize = Len - 1;
+          if (ExtractorAddressSize != OpcodeAddressSize &&
+              ExtractorAddressSize != 0)
             RecoverableErrorHandler(createStringError(
                 errc::invalid_argument,
                 "mismatching address size at offset 0x%8.8" PRIx64
@@ -673,14 +675,26 @@ Error DWARFDebugLine::LineTable::parse(
                 ExtOffset, ExtractorAddressSize, Len - 1));
 
           // Assume that the line table is correct and temporarily override the
-          // address size.
-          DebugLineData.setAddressSize(Len - 1);
-          State.Row.Address.Address = DebugLineData.getRelocatedAddress(
-              OffsetPtr, &State.Row.Address.SectionIndex);
+          // address size. If the size is unsupported, give up trying to read
+          // the address and continue to the next opcode.
+          if (OpcodeAddressSize != 1 && OpcodeAddressSize != 2 &&
+              OpcodeAddressSize != 4 && OpcodeAddressSize != 8) {
+            RecoverableErrorHandler(createStringError(
+                errc::invalid_argument,
+                "address size 0x%2.2" PRIx64
+                " of DW_LNE_set_address opcode at offset 0x%8.8" PRIx64
+                " is unsupported",
+                OpcodeAddressSize, ExtOffset));
+            *OffsetPtr += OpcodeAddressSize;
+          } else {
+            DebugLineData.setAddressSize(OpcodeAddressSize);
+            State.Row.Address.Address = DebugLineData.getRelocatedAddress(
+                OffsetPtr, &State.Row.Address.SectionIndex);
 
-          // Restore the address size if the extractor already had it.
-          if (ExtractorAddressSize != 0)
-            DebugLineData.setAddressSize(ExtractorAddressSize);
+            // Restore the address size if the extractor already had it.
+            if (ExtractorAddressSize != 0)
+              DebugLineData.setAddressSize(ExtractorAddressSize);
+          }
 
           if (OS)
             *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address.Address);
