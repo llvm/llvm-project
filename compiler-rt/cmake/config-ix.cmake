@@ -342,21 +342,33 @@ if(APPLE)
 
   if(COMPILER_RT_ENABLE_IOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS ios)
+    set(DARWIN_ios_MIN_VER 9.0)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
     set(DARWIN_ios_SANITIZER_MIN_VER_FLAG
-      ${DARWIN_ios_MIN_VER_FLAG}=9.0)
+      ${DARWIN_ios_MIN_VER_FLAG}=${DARWIN_ios_MIN_VER})
+    set(DARWIN_iossim_MIN_VER_FLAG -mios-simulator-version-min)
+    set(DARWIN_iossim_SANITIZER_MIN_VER_FLAG
+      ${DARWIN_iossim_MIN_VER_FLAG}=${DARWIN_ios_MIN_VER})
   endif()
   if(COMPILER_RT_ENABLE_WATCHOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS watchos)
+    set(DARWIN_watchos_MIN_VER 2.0)
     set(DARWIN_watchos_MIN_VER_FLAG -mwatchos-version-min)
     set(DARWIN_watchos_SANITIZER_MIN_VER_FLAG
-      ${DARWIN_watchos_MIN_VER_FLAG}=2.0)
+      ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_MIN_VER})
+    set(DARWIN_watchossim_MIN_VER_FLAG -mwatchos-simulator-version-min)
+    set(DARWIN_watchossim_SANITIZER_MIN_VER_FLAG
+      ${DARWIN_watchossim_MIN_VER_FLAG}=${DARWIN_watchos_MIN_VER})
   endif()
   if(COMPILER_RT_ENABLE_TVOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS tvos)
+    set(DARWIN_tvos_MIN_VER 9.0)
     set(DARWIN_tvos_MIN_VER_FLAG -mtvos-version-min)
     set(DARWIN_tvos_SANITIZER_MIN_VER_FLAG
-      ${DARWIN_tvos_MIN_VER_FLAG}=9.0)
+      ${DARWIN_tvos_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
+    set(DARWIN_tvossim_MIN_VER_FLAG -mtvos-simulator-version-min)
+    set(DARWIN_tvossim_SANITIZER_MIN_VER_FLAG
+      ${DARWIN_tvossim_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
   endif()
 
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
@@ -431,11 +443,11 @@ if(APPLE)
       if(DARWIN_${platform}sim_SYSROOT)
         set(DARWIN_${platform}sim_CFLAGS
           ${DARWIN_COMMON_CFLAGS}
-          ${DARWIN_${platform}_SANITIZER_MIN_VER_FLAG}
+          ${DARWIN_${platform}sim_SANITIZER_MIN_VER_FLAG}
           -isysroot ${DARWIN_${platform}sim_SYSROOT})
         set(DARWIN_${platform}sim_LINK_FLAGS
           ${DARWIN_COMMON_LINK_FLAGS}
-          ${DARWIN_${platform}_SANITIZER_MIN_VER_FLAG}
+          ${DARWIN_${platform}sim_SANITIZER_MIN_VER_FLAG}
           -isysroot ${DARWIN_${platform}sim_SYSROOT})
 
         set(DARWIN_${platform}sim_SKIP_CC_KEXT On)
