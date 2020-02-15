@@ -50,6 +50,30 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         target.AttachToProcessWithID(lldb.SBListener(), 47, error)
         self.assertEquals(error_msg, error.GetCString())
 
+    def test_launch_fail(self):
+        class MyResponder(MockGDBServerResponder):
+            # Pretend we don't have any process during the initial queries.
+            def qC(self):
+                return "E42"
+
+            def qfThreadInfo(self):
+                return "OK" # No threads.
+
+            # Then, when we are asked to attach, error out.
+            def A(self, packet):
+                return "E47"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process, [lldb.eStateConnected])
+
+        error = lldb.SBError()
+        target.Launch(lldb.SBListener(), None, None, None, None, None,
+                None, 0, True, error)
+        self.assertEquals("process launch failed: 'A' packet returned an error: 71", error.GetCString())
+
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""
         self.dbg.HandleCommand(
