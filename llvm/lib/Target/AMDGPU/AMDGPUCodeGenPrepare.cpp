@@ -39,6 +39,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -62,6 +63,12 @@ static cl::opt<bool> UseMul24Intrin(
   cl::desc("Introduce mul24 intrinsics in AMDGPUCodeGenPrepare"),
   cl::ReallyHidden,
   cl::init(true));
+
+static cl::opt<bool> ExpandDiv64InIR(
+  "amdgpu-codegenprepare-expand-div64",
+  cl::desc("Expand 64-bit division in AMDGPUCodeGenPrepare"),
+  cl::ReallyHidden,
+  cl::init(false));
 
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
@@ -160,15 +167,26 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
+  int getDivNumBits(BinaryOperator &I,
+                    Value *Num, Value *Den,
+                    unsigned AtLeast, bool Signed) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
                         Value *Num, Value *Den,
                         bool IsDiv, bool IsSigned) const;
 
+  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
+                            Value *Num, Value *Den, unsigned NumBits,
+                            bool IsDiv, bool IsSigned) const;
+
   /// Expands 32 bit div or rem.
   Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
                         Value *Num, Value *Den) const;
+
+  Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I,
+                        Value *Num, Value *Den) const;
+  void expandDivRem64(BinaryOperator &I) const;
 
   /// Widen a scalar load.
   ///
@@ -806,30 +824,49 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
   return getMul64(Builder, LHS, RHS).second;
 }
 
+/// Figure out how many bits are really needed for this ddivision. \p AtLeast is
+/// an optimization hint to bypass the second ComputeNumSignBits call if we the
+/// first one is insufficient. Returns -1 on failure.
+int AMDGPUCodeGenPrepare::getDivNumBits(BinaryOperator &I,
+                                        Value *Num, Value *Den,
+                                        unsigned AtLeast, bool IsSigned) const {
+  const DataLayout &DL = Mod->getDataLayout();
+  unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
+  if (LHSSignBits < AtLeast)
+    return -1;
+
+  unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
+  if (RHSSignBits < AtLeast)
+    return -1;
+
+  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
+  unsigned DivBits = Num->getType()->getScalarSizeInBits() - SignBits;
+  if (IsSigned)
+    ++DivBits;
+  return DivBits;
+}
+
 // The fractional part of a float is enough to accurately represent up to
 // a 24-bit signed integer.
-Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
+Value *AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
                                             BinaryOperator &I,
                                             Value *Num, Value *Den,
                                             bool IsDiv, bool IsSigned) const {
-  assert(Num->getType()->isIntegerTy(32));
-
-  const DataLayout &DL = Mod->getDataLayout();
-  unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
-  if (LHSSignBits < 9)
+  int DivBits = getDivNumBits(I, Num, Den, 9, IsSigned);
+  if (DivBits == -1)
     return nullptr;
+  return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
+}
 
-  unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
-  if (RHSSignBits < 9)
-    return nullptr;
-
-
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  unsigned DivBits = 32 - SignBits;
-  if (IsSigned)
-    ++DivBits;
-
+Value *AMDGPUCodeGenPrepare::expandDivRem24Impl(IRBuilder<> &Builder,
+                                                BinaryOperator &I,
+                                                Value *Num, Value *Den,
+                                                unsigned DivBits,
+                                                bool IsDiv, bool IsSigned) const {
   Type *I32Ty = Builder.getInt32Ty();
+  Num = Builder.CreateTrunc(Num, I32Ty);
+  Den = Builder.CreateTrunc(Den, I32Ty);
+
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
   Value *JQ = One;
@@ -901,13 +938,18 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
     Res = Builder.CreateSub(Num, Rem);
   }
 
-  // Extend in register from the number of bits this divide really is.
-  if (IsSigned) {
-    Res = Builder.CreateShl(Res, 32 - DivBits);
-    Res = Builder.CreateAShr(Res, 32 - DivBits);
-  } else {
-    ConstantInt *TruncMask = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
-    Res = Builder.CreateAnd(Res, TruncMask);
+  if (DivBits != 0 && DivBits < 32) {
+    // Extend in register from the number of bits this divide really is.
+    if (IsSigned) {
+      int InRegBits = 32 - DivBits;
+
+      Res = Builder.CreateShl(Res, InRegBits);
+      Res = Builder.CreateAShr(Res, InRegBits);
+    } else {
+      ConstantInt *TruncMask
+        = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
+      Res = Builder.CreateAnd(Res, TruncMask);
+    }
   }
 
   return Res;
@@ -981,8 +1023,8 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   }
 
   if (Value *Res = expandDivRem24(Builder, I, Num, Den, IsDiv, IsSigned)) {
-    Res = Builder.CreateTrunc(Res, Ty);
-    return Res;
+    return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
+                      Builder.CreateZExtOrTrunc(Res, Ty);
   }
 
   ConstantInt *Zero = Builder.getInt32(0);
@@ -1093,6 +1135,53 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   return Res;
 }
 
+Value *AMDGPUCodeGenPrepare::shrinkDivRem64(IRBuilder<> &Builder,
+                                            BinaryOperator &I,
+                                            Value *Num, Value *Den) const {
+  if (!ExpandDiv64InIR && divHasSpecialOptimization(I, Num, Den))
+    return nullptr;  // Keep it for later optimization.
+
+  Instruction::BinaryOps Opc = I.getOpcode();
+
+  bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
+  bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
+
+  int NumDivBits = getDivNumBits(I, Num, Den, 32, IsSigned);
+  if (NumDivBits == -1)
+    return nullptr;
+
+  Value *Narrowed = nullptr;
+  if (NumDivBits <= 24) {
+    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
+                                  IsDiv, IsSigned);
+  } else if (NumDivBits <= 32) {
+    Narrowed = expandDivRem32(Builder, I, Num, Den);
+  }
+
+  if (Narrowed) {
+    return IsSigned ? Builder.CreateSExt(Narrowed, Num->getType()) :
+                      Builder.CreateZExt(Narrowed, Num->getType());
+  }
+
+  return nullptr;
+}
+
+void AMDGPUCodeGenPrepare::expandDivRem64(BinaryOperator &I) const {
+  Instruction::BinaryOps Opc = I.getOpcode();
+  // Do the general expansion.
+  if (Opc == Instruction::UDiv || Opc == Instruction::SDiv) {
+    expandDivisionUpTo64Bits(&I);
+    return;
+  }
+
+  if (Opc == Instruction::URem || Opc == Instruction::SRem) {
+    expandRemainderUpTo64Bits(&I);
+    return;
+  }
+
+  llvm_unreachable("not a division");
+}
+
 bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
   if (foldBinOpIntoSelect(I))
     return true;
@@ -1108,9 +1197,13 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
   Instruction::BinaryOps Opc = I.getOpcode();
   Type *Ty = I.getType();
   Value *NewDiv = nullptr;
+  unsigned ScalarSize = Ty->getScalarSizeInBits();
+
+  SmallVector<BinaryOperator *, 8> Div64ToExpand;
+
   if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
        Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      Ty->getScalarSizeInBits() <= 32) {
+      ScalarSize <= 64) {
     Value *Num = I.getOperand(0);
     Value *Den = I.getOperand(1);
     IRBuilder<> Builder(&I);
@@ -1122,18 +1215,48 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
       for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
         Value *NumEltN = Builder.CreateExtractElement(Num, N);
         Value *DenEltN = Builder.CreateExtractElement(Den, N);
-        Value *NewElt = expandDivRem32(Builder, I, NumEltN, DenEltN);
-        if (!NewElt)
-          NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
+
+        Value *NewElt;
+        if (ScalarSize <= 32) {
+          NewElt = expandDivRem32(Builder, I, NumEltN, DenEltN);
+          if (!NewElt)
+            NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
+        } else {
+          // See if this 64-bit division can be shrunk to 32/24-bits before
+          // producing the general expansion.
+          NewElt = shrinkDivRem64(Builder, I, NumEltN, DenEltN);
+          if (!NewElt) {
+            // The general 64-bit expansion introduces control flow and doesn't
+            // return the new value. Just insert a scalar copy and defer
+            // expanding it.
+            NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
+            Div64ToExpand.push_back(cast<BinaryOperator>(NewElt));
+          }
+        }
+
         NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, N);
       }
     } else {
-      NewDiv = expandDivRem32(Builder, I, Num, Den);
+      if (ScalarSize <= 32)
+        NewDiv = expandDivRem32(Builder, I, Num, Den);
+      else {
+        NewDiv = shrinkDivRem64(Builder, I, Num, Den);
+        if (!NewDiv)
+          Div64ToExpand.push_back(&I);
+      }
     }
 
     if (NewDiv) {
       I.replaceAllUsesWith(NewDiv);
       I.eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  if (ExpandDiv64InIR) {
+    // TODO: We get much worse code in specially handled constant cases.
+    for (BinaryOperator *Div : Div64ToExpand) {
+      expandDivRem64(*Div);
       Changed = true;
     }
   }
@@ -1255,11 +1378,25 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
   bool MadeChange = false;
 
-  for (BasicBlock &BB : F) {
+  Function::iterator NextBB;
+  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; FI = NextBB) {
+    BasicBlock *BB = &*FI;
+    NextBB = std::next(FI);
+
     BasicBlock::iterator Next;
-    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; I = Next) {
+    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; I = Next) {
       Next = std::next(I);
+
       MadeChange |= visit(*I);
+
+      if (Next != E) { // Control flow changed
+        BasicBlock *NextInstBB = Next->getParent();
+        if (NextInstBB != BB) {
+          BB = NextInstBB;
+          E = BB->end();
+          FE = F.end();
+        }
+      }
     }
   }
 
