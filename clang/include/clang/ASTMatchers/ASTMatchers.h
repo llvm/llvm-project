@@ -7049,7 +7049,7 @@ extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
 ///
 /// ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
 AST_MATCHER(OMPDefaultClause, isNoneKind) {
-  return Node.getDefaultKind() == OMPC_DEFAULT_none;
+  return Node.getDefaultKind() == llvm::omp::OMP_DEFAULT_none;
 }
 
 /// Matches if the OpenMP ``default`` clause has ``shared`` kind specified.
@@ -7064,7 +7064,7 @@ AST_MATCHER(OMPDefaultClause, isNoneKind) {
 ///
 /// ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.
 AST_MATCHER(OMPDefaultClause, isSharedKind) {
-  return Node.getDefaultKind() == OMPC_DEFAULT_shared;
+  return Node.getDefaultKind() == llvm::omp::OMP_DEFAULT_shared;
 }
 
 /// Matches if the OpenMP directive is allowed to contain the specified OpenMP

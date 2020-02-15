@@ -49,6 +49,16 @@ enum class RuntimeFunction {
 #define OMP_RTL(Enum, ...) constexpr auto Enum = omp::RuntimeFunction::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
+/// IDs for the different default kinds.
+enum class DefaultKind {
+#define OMP_DEFAULT_KIND(Enum, Str) Enum,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+};
+
+#define OMP_DEFAULT_KIND(Enum, ...)                                            \
+  constexpr auto Enum = omp::DefaultKind::Enum;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+
 /// IDs for the different proc bind kinds.
 enum class ProcBindKind {
 #define OMP_PROC_BIND_KIND(Enum, Str, Value) Enum = Value,

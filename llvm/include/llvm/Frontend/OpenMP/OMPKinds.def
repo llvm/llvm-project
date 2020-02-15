@@ -344,6 +344,25 @@ __OMP_CANCEL_KIND(taskgroup, 4)
 
 ///}
 
+/// Default kinds
+///
+///{
+
+#ifndef OMP_DEFAULT_KIND
+#define OMP_DEFAULT_KIND(Enum, Str)
+#endif
+
+#define __OMP_DEFAULT_KIND(Name) OMP_DEFAULT_KIND(OMP_DEFAULT_##Name, #Name)
+
+__OMP_DEFAULT_KIND(none)
+__OMP_DEFAULT_KIND(shared)
+__OMP_DEFAULT_KIND(unknown)
+
+#undef __OMP_DEFAULT_KIND
+#undef OMP_DEFAULT_KIND
+
+///}
+
 /// Proc bind kinds
 ///
 ///{
