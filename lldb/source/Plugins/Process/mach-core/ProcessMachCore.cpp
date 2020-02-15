@@ -44,7 +44,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ProcessMachCore)
+LLDB_PLUGIN_DEFINE(ProcessMachCore)
 
 ConstString ProcessMachCore::GetPluginNameStatic() {
   static ConstString g_name("mach-o-core");

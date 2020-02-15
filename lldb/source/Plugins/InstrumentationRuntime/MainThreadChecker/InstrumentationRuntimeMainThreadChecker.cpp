@@ -32,7 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(InstrumentationRuntimeMainThreadChecker)
+LLDB_PLUGIN_DEFINE(InstrumentationRuntimeMainThreadChecker)
 
 InstrumentationRuntimeMainThreadChecker::
     ~InstrumentationRuntimeMainThreadChecker() {

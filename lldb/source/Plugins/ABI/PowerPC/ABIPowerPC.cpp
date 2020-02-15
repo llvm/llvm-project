@@ -11,7 +11,7 @@
 #include "ABISysV_ppc64.h"
 #include "lldb/Core/PluginManager.h"
 
-LLDB_PLUGIN(ABIPowerPC)
+LLDB_PLUGIN_DEFINE(ABIPowerPC)
 
 void ABIPowerPC::Initialize() {
   ABISysV_ppc::Initialize();

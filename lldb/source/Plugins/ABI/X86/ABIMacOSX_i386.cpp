@@ -29,7 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN(ABIMacOSX_i386)
+LLDB_PLUGIN_DEFINE(ABIMacOSX_i386)
 
 enum {
   ehframe_eax = 0,
