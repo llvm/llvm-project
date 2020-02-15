@@ -374,9 +374,9 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; VI-LABEL: missing_truncate_promote_bswap:
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x10203
+; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = trunc i32 %arg to i16
@@ -400,9 +400,8 @@ define i16 @v_bswap_i16(i16 %src) {
 ; VI-LABEL: v_bswap_i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x10203
+; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   ret i16 %bswap
@@ -422,9 +421,8 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; VI-LABEL: v_bswap_i16_zext_to_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x10203
+; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = zext i16 %bswap to i32
@@ -445,9 +443,9 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; VI-LABEL: v_bswap_i16_sext_to_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x10203
+; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; VI-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = sext i16 %bswap to i32
@@ -474,11 +472,8 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; VI-LABEL: v_bswap_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; VI-NEXT:    s_mov_b32 s4, 0x10203
-; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
+; VI-NEXT:    s_mov_b32 s4, 0x2030001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
   ret <2 x i16> %bswap
@@ -508,13 +503,9 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; VI-LABEL: v_bswap_v3i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s4, 0x10203
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
-; VI-NEXT:    v_perm_b32 v2, 0, v2, s4
+; VI-NEXT:    s_mov_b32 s4, 0x2030001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <3 x i16> @llvm.bswap.v3i16(<3 x i16> %src)
   ret <3 x i16> %bswap
@@ -551,15 +542,9 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ; VI-LABEL: v_bswap_v4i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; VI-NEXT:    s_mov_b32 s4, 0x10203
-; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; VI-NEXT:    v_perm_b32 v2, 0, v2, s4
-; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
-; VI-NEXT:    v_perm_b32 v3, 0, v3, s4
+; VI-NEXT:    s_mov_b32 s4, 0x2030001
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %src)
   ret <4 x i16> %bswap
