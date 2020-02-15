@@ -2648,8 +2648,8 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       ResultReg = fastEmitInst_extractsubreg(MVT::i16, ResultReg, true, RegIdx);
     } else {
       assert(Op->getType()->isIntegerTy(16) && "Expected a 16-bit integer!");
-      // Explicitly sign-extend the input to 32-bit.
-      InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::SIGN_EXTEND, InputReg,
+      // Explicitly zero-extend the input to 32-bit.
+      InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::ZERO_EXTEND, InputReg,
                             /*Kill=*/false);
 
       // The following SCALAR_TO_VECTOR will be expanded into a VMOVDI2PDIrr.
