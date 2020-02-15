@@ -58,7 +58,7 @@ void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,
                     const InputInfo &Output, const char *OutFile);
 
-void AddGoldPlugin(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
+void addLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs, const InputInfo &Output,
                    const InputInfo &Input, bool IsThinLTO);
 
