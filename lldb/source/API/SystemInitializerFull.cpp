@@ -32,29 +32,22 @@
 
 #include <string>
 
-LLDB_PLUGIN_DECLARE(ABIMacOSX_arm64)
-LLDB_PLUGIN_DECLARE(ABISysV_arm64)
-LLDB_PLUGIN_DECLARE(ABIMacOSX_arm)
-LLDB_PLUGIN_DECLARE(ABISysV_arm)
-LLDB_PLUGIN_DECLARE(ABISysV_arc)
-LLDB_PLUGIN_DECLARE(ABISysV_hexagon)
-LLDB_PLUGIN_DECLARE(ABISysV_mips)
-LLDB_PLUGIN_DECLARE(ABISysV_mips64)
-LLDB_PLUGIN_DECLARE(ABISysV_ppc)
-LLDB_PLUGIN_DECLARE(ABISysV_ppc64)
-LLDB_PLUGIN_DECLARE(ABISysV_s390x)
-LLDB_PLUGIN_DECLARE(ABIMacOSX_i386)
-LLDB_PLUGIN_DECLARE(ABISysV_i386)
-LLDB_PLUGIN_DECLARE(ABISysV_x86_64)
-LLDB_PLUGIN_DECLARE(ABIWindows_x86_64)
-LLDB_PLUGIN_DECLARE(ObjectFileBreakpad)
-LLDB_PLUGIN_DECLARE(ObjectFileELF)
-LLDB_PLUGIN_DECLARE(ObjectFileMachO)
-LLDB_PLUGIN_DECLARE(ObjectFilePECOFF)
-LLDB_PLUGIN_DECLARE(ObjectFileWasm)
-LLDB_PLUGIN_DECLARE(ObjectContainerBSDArchive)
-LLDB_PLUGIN_DECLARE(ObjectContainerUniversalMachO)
-LLDB_PLUGIN_DECLARE(ScriptInterpreterNone)
+LLDB_PLUGIN_DECLARE(ABIAArch64);
+LLDB_PLUGIN_DECLARE(ABIARM);
+LLDB_PLUGIN_DECLARE(ABISysV_arc);
+LLDB_PLUGIN_DECLARE(ABISysV_hexagon);
+LLDB_PLUGIN_DECLARE(ABIMips);
+LLDB_PLUGIN_DECLARE(ABIPowerPC);
+LLDB_PLUGIN_DECLARE(ABISysV_s390x);
+LLDB_PLUGIN_DECLARE(ABIX86);
+LLDB_PLUGIN_DECLARE(ObjectFileBreakpad);
+LLDB_PLUGIN_DECLARE(ObjectFileELF);
+LLDB_PLUGIN_DECLARE(ObjectFileMachO);
+LLDB_PLUGIN_DECLARE(ObjectFilePECOFF);
+LLDB_PLUGIN_DECLARE(ObjectFileWasm);
+LLDB_PLUGIN_DECLARE(ObjectContainerBSDArchive);
+LLDB_PLUGIN_DECLARE(ObjectContainerUniversalMachO);
+LLDB_PLUGIN_DECLARE(ScriptInterpreterNone);
 #if LLDB_ENABLE_PYTHON
 LLDB_PLUGIN_DECLARE(OperatingSystemPython)
 LLDB_PLUGIN_DECLARE(ScriptInterpreterPython)
@@ -122,6 +115,17 @@ LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
 
+// BEGIN SWIFT
+#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
+LLDB_PLUGIN_DECLARE(SwiftLanguage)
+LLDB_PLUGIN_DECLARE(SwiftLanguageRuntime)
+LLDB_PLUGIN_DECLARE(SwiftREPL)
+#endif
+}
+LLDB_PLUGIN_DECLARE(SwiftASTContext);
+LLDB_PLUGIN_DECLARE(SwiftRuntimeReporting);
+// END SWIFT
+
 using namespace lldb_private;
 
 SystemInitializerFull::SystemInitializerFull() {}
@@ -131,41 +135,33 @@ SystemInitializerFull::~SystemInitializerFull() {}
 // BEGIN SWIFT
 static void SwiftInitialize() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-  SwiftLanguage::Initialize();
-  SwiftLanguageRuntime::Initialize();
-  SwiftREPL::Initialize();
+  LLDB_PLUGIN_INITIALIZE(SwiftLanguage);
+  LLDB_PLUGIN_INITIALIZE(SwiftLanguageRuntime);
+  LLDB_PLUGIN_INITIALIZE(SwiftREPL);
 #endif
+  LLDB_PLUGIN_INITIALIZE(SwiftASTContext);
+  LLDB_PLUGIN_INITIALIZE(SwiftRuntimeReporting);
 }
 
 static void SwiftTerminate() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-  SwiftLanguage::Terminate();
-  SwiftLanguageRuntime::Terminate();
-  SwiftREPL::Terminate();
+  LLDB_PLUGIN_TERMINATE(SwiftLanguage);
+  LLDB_PLUGIN_TERMINATE(SwiftLanguageRuntime);
+  LLDB_PLUGIN_TERMINATE(SwiftREPL);
 #endif
+  LLDB_PLUGIN_TERMINATE(SwiftASTContext);
+  LLDB_PLUGIN_TERMINATE(SwiftRuntimeReporting);
 }
 // END SWIFT
 
-#define LLDB_PROCESS_AArch64(op)                                               \
-  op(ABIMacOSX_arm64);                                                         \
-  op(ABISysV_arm64);
-#define LLDB_PROCESS_ARM(op)                                                   \
-  op(ABIMacOSX_arm);                                                           \
-  op(ABISysV_arm);
+#define LLDB_PROCESS_AArch64(op) op(ABIAArch64);
+#define LLDB_PROCESS_ARM(op) op(ABIARM);
 #define LLDB_PROCESS_ARC(op) op(ABISysV_arc);
 #define LLDB_PROCESS_Hexagon(op) op(ABISysV_hexagon);
-#define LLDB_PROCESS_Mips(op)                                                  \
-  op(ABISysV_mips);                                                            \
-  op(ABISysV_mips64);
-#define LLDB_PROCESS_PowerPC(op)                                               \
-  op(ABISysV_ppc);                                                             \
-  op(ABISysV_ppc64);
+#define LLDB_PROCESS_Mips(op) op(ABIMips);
+#define LLDB_PROCESS_PowerPC(op) op(ABIPowerPC);
 #define LLDB_PROCESS_SystemZ(op) op(ABISysV_s390x);
-#define LLDB_PROCESS_X86(op)                                                   \
-  op(ABIMacOSX_i386);                                                          \
-  op(ABISysV_i386);                                                            \
-  op(ABISysV_x86_64);                                                          \
-  op(ABIWindows_x86_64);
+#define LLDB_PROCESS_X86(op) op(ABIX86);
 
 #define LLDB_PROCESS_AMDGPU(op)
 #define LLDB_PROCESS_AVR(op)
@@ -220,10 +216,6 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   LLDB_PLUGIN_INITIALIZE(TypeSystemClang);
 
-  // BEGIN SWIFT
-  SwiftASTContext::Initialize();
-  // END SWIFT
-
 #define LLVM_TARGET(t) LLDB_PROCESS_##t(LLDB_PLUGIN_INITIALIZE)
 #include "llvm/Config/Targets.def"
 
@@ -242,9 +234,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeTSan);
   LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeUBSan);
   LLDB_PLUGIN_INITIALIZE(InstrumentationRuntimeMainThreadChecker);
-  // BEGIN SWIFT
-  SwiftRuntimeReporting::Initialize();
-  // END SWIFT
 
   LLDB_PLUGIN_INITIALIZE(SymbolVendorELF);
   LLDB_PLUGIN_INITIALIZE(SymbolFileBreakpad);
@@ -320,9 +309,6 @@ void SystemInitializerFull::Terminate() {
   PluginManager::Terminate();
 
   LLDB_PLUGIN_TERMINATE(TypeSystemClang);
-  // BEGIN SWIFT
-  SwiftASTContext::Terminate();
-  // END SWIFT
 
   LLDB_PLUGIN_TERMINATE(ArchitectureArm);
   LLDB_PLUGIN_TERMINATE(ArchitectureMips);
@@ -343,9 +329,6 @@ void SystemInitializerFull::Terminate() {
   LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeTSan);
   LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeUBSan);
   LLDB_PLUGIN_TERMINATE(InstrumentationRuntimeMainThreadChecker);
-  // BEGIN SWIFT
-  SwiftRuntimeReporting::Terminate();
-  // END SWIFT
 
   LLDB_PLUGIN_TERMINATE(SymbolVendorWasm);
   LLDB_PLUGIN_TERMINATE(SymbolVendorELF);

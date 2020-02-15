@@ -1,4 +1,5 @@
 add_lldb_library(lldbPluginABIMips PLUGIN
+  ABIMips.cpp
   ABISysV_mips.cpp
   ABISysV_mips64.cpp
 
