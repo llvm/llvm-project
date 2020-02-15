@@ -200,6 +200,14 @@ add_dependencies(check-lldb lldb-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb misc")
 add_dependencies(check-lldb check-lldb-lit)
 
+# BEGIN SWIFT MOD
+add_lit_testsuite(check-lldb-swift
+  "Running swift tests"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ARGS "--filter=[sS]wift"
+  DEPENDS lldb-test-deps)
+# END SWIFT MOD
+
 # Add a lit test suite that runs the API & shell test while capturing a
 # reproducer.
 add_lit_testsuite(check-lldb-reproducers-capture
