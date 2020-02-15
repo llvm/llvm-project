@@ -2957,11 +2957,6 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       }
     }
     m_process_sp->RestoreProcessEvents();
-  } else {
-    Status error2;
-    error2.SetErrorStringWithFormat("process launch failed: %s",
-                                    error.AsCString());
-    error = error2;
   }
   return error;
 }
