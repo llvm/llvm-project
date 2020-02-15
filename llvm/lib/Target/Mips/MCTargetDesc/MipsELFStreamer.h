@@ -57,7 +57,7 @@ public:
   /// candidates for marking as microMIPS when .word/.long/.4byte etc
   /// directives are emitted.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
-  void EmitIntValue(uint64_t Value, unsigned Size) override;
+  void emitIntValue(uint64_t Value, unsigned Size) override;
 
   // Overriding these functions allows us to avoid recording of these labels
   // in EmitLabel and later marking them as microMIPS.

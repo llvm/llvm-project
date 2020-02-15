@@ -103,8 +103,8 @@ public:
 
   void emitBytes(StringRef Data) { OS->emitBytes(Data); }
 
-  void EmitIntValue(uint64_t Value, unsigned Size) {
-    OS->EmitIntValueInHex(Value, Size);
+  void emitIntValue(uint64_t Value, unsigned Size) {
+    OS->emitIntValueInHex(Value, Size);
   }
 
   void emitBinaryData(StringRef Data) { OS->emitBinaryData(Data); }
@@ -551,7 +551,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
 void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitValueToAlignment(4);
   OS.AddComment("Debug section magic");
-  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
+  OS.emitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 }
 
 void CodeViewDebug::endModule() {
@@ -676,11 +676,11 @@ void CodeViewDebug::emitTypeGlobalHashes() {
 
   OS.emitValueToAlignment(4);
   OS.AddComment("Magic");
-  OS.EmitIntValue(COFF::DEBUG_HASHES_SECTION_MAGIC, 4);
+  OS.emitIntValue(COFF::DEBUG_HASHES_SECTION_MAGIC, 4);
   OS.AddComment("Section Version");
-  OS.EmitIntValue(0, 2);
+  OS.emitIntValue(0, 2);
   OS.AddComment("Hash Algorithm");
-  OS.EmitIntValue(uint16_t(GlobalTypeHashAlg::SHA1_8), 2);
+  OS.emitIntValue(uint16_t(GlobalTypeHashAlg::SHA1_8), 2);
 
   TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
   for (const auto &GHR : TypeTable.hashes()) {
@@ -775,16 +775,16 @@ void CodeViewDebug::emitCompilerInformation() {
   // TODO:  Figure out which other flags need to be set.
 
   OS.AddComment("Flags and language");
-  OS.EmitIntValue(Flags, 4);
+  OS.emitIntValue(Flags, 4);
 
   OS.AddComment("CPUType");
-  OS.EmitIntValue(static_cast<uint64_t>(TheCPU), 2);
+  OS.emitIntValue(static_cast<uint64_t>(TheCPU), 2);
 
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
   for (int N = 0; N < 4; ++N)
-    OS.EmitIntValue(FrontVer.Part[N], 2);
+    OS.emitIntValue(FrontVer.Part[N], 2);
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
@@ -797,7 +797,7 @@ void CodeViewDebug::emitCompilerInformation() {
   Version BackVer = {{ Major, 0, 0, 0 }};
   OS.AddComment("Backend version");
   for (int N = 0; N < 4; ++N)
-    OS.EmitIntValue(BackVer.Part[N], 2);
+    OS.emitIntValue(BackVer.Part[N], 2);
 
   OS.AddComment("Null-terminated compiler version string");
   emitNullTerminatedSymbolName(OS, CompilerVersion);
@@ -841,7 +841,7 @@ void CodeViewDebug::emitBuildInfo() {
   MCSymbol *BISubsecEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
   MCSymbol *BIEnd = beginSymbolRecord(SymbolKind::S_BUILDINFO);
   OS.AddComment("LF_BUILDINFO index");
-  OS.EmitIntValue(BuildInfoIndex.getIndex(), 4);
+  OS.emitIntValue(BuildInfoIndex.getIndex(), 4);
   endSymbolRecord(BIEnd);
   endCVSubsection(BISubsecEnd);
 }
@@ -858,7 +858,7 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   // for instance, will display a warning that the breakpoints are not valid if
   // the pdb does not match the source.
   OS.AddComment("Inlinee lines signature");
-  OS.EmitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
+  OS.emitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
 
   for (const DISubprogram *SP : InlinedSubprograms) {
     assert(TypeIndices.count({SP, nullptr}));
@@ -870,11 +870,11 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
     OS.AddBlankLine();
     OS.AddComment("Type index of inlined function");
-    OS.EmitIntValue(InlineeIdx.getIndex(), 4);
+    OS.emitIntValue(InlineeIdx.getIndex(), 4);
     OS.AddComment("Offset into filechecksum table");
     OS.EmitCVFileChecksumOffsetDirective(FileId);
     OS.AddComment("Starting line number");
-    OS.EmitIntValue(SP->getLine(), 4);
+    OS.emitIntValue(SP->getLine(), 4);
   }
 
   endCVSubsection(InlineEnd);
@@ -890,11 +890,11 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   MCSymbol *InlineEnd = beginSymbolRecord(SymbolKind::S_INLINESITE);
 
   OS.AddComment("PtrParent");
-  OS.EmitIntValue(0, 4);
+  OS.emitIntValue(0, 4);
   OS.AddComment("PtrEnd");
-  OS.EmitIntValue(0, 4);
+  OS.emitIntValue(0, 4);
   OS.AddComment("Inlinee type index");
-  OS.EmitIntValue(InlineeIdx.getIndex(), 4);
+  OS.emitIntValue(InlineeIdx.getIndex(), 4);
 
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();
@@ -953,11 +953,11 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   // Emit S_THUNK32
   MCSymbol *ThunkRecordEnd = beginSymbolRecord(SymbolKind::S_THUNK32);
   OS.AddComment("PtrParent");
-  OS.EmitIntValue(0, 4);
+  OS.emitIntValue(0, 4);
   OS.AddComment("PtrEnd");
-  OS.EmitIntValue(0, 4);
+  OS.emitIntValue(0, 4);
   OS.AddComment("PtrNext");
-  OS.EmitIntValue(0, 4);
+  OS.emitIntValue(0, 4);
   OS.AddComment("Thunk section relative address");
   OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
   OS.AddComment("Thunk section index");
@@ -965,7 +965,7 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(FI.End, Fn, 2);
   OS.AddComment("Ordinal");
-  OS.EmitIntValue(unsigned(ordinal), 1);
+  OS.emitIntValue(unsigned(ordinal), 1);
   OS.AddComment("Function name");
   emitNullTerminatedSymbolName(OS, FuncName);
   // Additional fields specific to the thunk ordinal would go here.
@@ -1023,27 +1023,27 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
     // These fields are filled in by tools like CVPACK which run after the fact.
     OS.AddComment("PtrParent");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("PtrEnd");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("PtrNext");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     // This is the important bit that tells the debugger where the function
     // code is located and what's its size:
     OS.AddComment("Code size");
     OS.emitAbsoluteSymbolDiff(FI.End, Fn, 4);
     OS.AddComment("Offset after prologue");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("Offset before epilogue");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("Function type index");
-    OS.EmitIntValue(getFuncIdForSubprogram(GV->getSubprogram()).getIndex(), 4);
+    OS.emitIntValue(getFuncIdForSubprogram(GV->getSubprogram()).getIndex(), 4);
     OS.AddComment("Function section relative address");
     OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
     OS.AddComment("Function section index");
     OS.EmitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
-    OS.EmitIntValue(0, 1);
+    OS.emitIntValue(0, 1);
     // Emit the function display name as a null-terminated string.
     OS.AddComment("Function name");
     // Truncate the name so we won't overflow the record length field.
@@ -1053,19 +1053,19 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     MCSymbol *FrameProcEnd = beginSymbolRecord(SymbolKind::S_FRAMEPROC);
     // Subtract out the CSR size since MSVC excludes that and we include it.
     OS.AddComment("FrameSize");
-    OS.EmitIntValue(FI.FrameSize - FI.CSRSize, 4);
+    OS.emitIntValue(FI.FrameSize - FI.CSRSize, 4);
     OS.AddComment("Padding");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("Offset of padding");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("Bytes of callee saved registers");
-    OS.EmitIntValue(FI.CSRSize, 4);
+    OS.emitIntValue(FI.CSRSize, 4);
     OS.AddComment("Exception handler offset");
-    OS.EmitIntValue(0, 4);
+    OS.emitIntValue(0, 4);
     OS.AddComment("Exception handler section");
-    OS.EmitIntValue(0, 2);
+    OS.emitIntValue(0, 2);
     OS.AddComment("Flags (defines frame register)");
-    OS.EmitIntValue(uint32_t(FI.FrameProcOpts), 4);
+    OS.emitIntValue(uint32_t(FI.FrameProcOpts), 4);
     endSymbolRecord(FrameProcEnd);
 
     emitLocalVariableList(FI, FI.Locals);
@@ -1089,7 +1089,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       OS.EmitCOFFSecRel32(Label, /*Offset=*/0);
       // FIXME: Make sure we don't overflow the max record size.
       OS.EmitCOFFSectionIndex(Label);
-      OS.EmitIntValue(Strs->getNumOperands(), 2);
+      OS.emitIntValue(Strs->getNumOperands(), 2);
       for (Metadata *MD : Strs->operands()) {
         // MDStrings are null terminated, so we can do EmitBytes and get the
         // nice .asciz directive.
@@ -1112,7 +1112,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       OS.AddComment("Call instruction length");
       OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
       OS.AddComment("Type index");
-      OS.EmitIntValue(getCompleteTypeIndex(DITy).getIndex(), 4);
+      OS.emitIntValue(getCompleteTypeIndex(DITy).getIndex(), 4);
       endSymbolRecord(HeapAllocEnd);
     }
 
@@ -2626,9 +2626,9 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   TypeIndex TI = Var.UseReferenceType
                      ? getTypeIndexForReferenceTo(Var.DIVar->getType())
                      : getCompleteTypeIndex(Var.DIVar->getType());
-  OS.EmitIntValue(TI.getIndex(), 4);
+  OS.emitIntValue(TI.getIndex(), 4);
   OS.AddComment("Flags");
-  OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);
+  OS.emitIntValue(static_cast<uint16_t>(Flags), 2);
   // Truncate the name so we won't overflow the record length field.
   emitNullTerminatedSymbolName(OS, Var.DIVar->getName());
   endSymbolRecord(LocalEnd);
@@ -2705,9 +2705,9 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
                                      const FunctionInfo& FI) {
   MCSymbol *RecordEnd = beginSymbolRecord(SymbolKind::S_BLOCK32);
   OS.AddComment("PtrParent");
-  OS.EmitIntValue(0, 4);                                  // PtrParent
+  OS.emitIntValue(0, 4);                                  // PtrParent
   OS.AddComment("PtrEnd");
-  OS.EmitIntValue(0, 4);                                  // PtrEnd
+  OS.emitIntValue(0, 4);                                  // PtrEnd
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4);   // Code Size
   OS.AddComment("Function section relative address");
@@ -2915,7 +2915,7 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
 MCSymbol *CodeViewDebug::beginCVSubsection(DebugSubsectionKind Kind) {
   MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
            *EndLabel = MMI->getContext().createTempSymbol();
-  OS.EmitIntValue(unsigned(Kind), 4);
+  OS.emitIntValue(unsigned(Kind), 4);
   OS.AddComment("Subsection size");
   OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
   OS.emitLabel(BeginLabel);
@@ -2943,7 +2943,7 @@ MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
   OS.emitLabel(BeginLabel);
   if (OS.isVerboseAsm())
     OS.AddComment("Record kind: " + getSymbolName(SymKind));
-  OS.EmitIntValue(unsigned(SymKind), 2);
+  OS.emitIntValue(unsigned(SymKind), 2);
   return EndLabel;
 }
 
@@ -2958,10 +2958,10 @@ void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
 
 void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
   OS.AddComment("Record length");
-  OS.EmitIntValue(2, 2);
+  OS.emitIntValue(2, 2);
   if (OS.isVerboseAsm())
     OS.AddComment("Record kind: " + getSymbolName(EndKind));
-  OS.EmitIntValue(unsigned(EndKind), 2); // Record Kind
+  OS.emitIntValue(unsigned(EndKind), 2); // Record Kind
 }
 
 void CodeViewDebug::emitDebugInfoForUDTs(
@@ -2972,7 +2972,7 @@ void CodeViewDebug::emitDebugInfoForUDTs(
 
     MCSymbol *UDTRecordEnd = beginSymbolRecord(SymbolKind::S_UDT);
     OS.AddComment("Type");
-    OS.EmitIntValue(getCompleteTypeIndex(T).getIndex(), 4);
+    OS.emitIntValue(getCompleteTypeIndex(T).getIndex(), 4);
     emitNullTerminatedSymbolName(OS, UDT.first);
     endSymbolRecord(UDTRecordEnd);
   }
@@ -3088,7 +3088,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
                                                       : SymbolKind::S_GDATA32);
     MCSymbol *DataEnd = beginSymbolRecord(DataSym);
     OS.AddComment("Type");
-    OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
+    OS.emitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
     OS.AddComment("DataOffset");
     OS.EmitCOFFSecRel32(GVSym, /*Offset=*/0);
     OS.AddComment("Segment");
@@ -3107,7 +3107,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
 
     MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
     OS.AddComment("Type");
-    OS.EmitIntValue(getTypeIndex(DIGV->getType()).getIndex(), 4);
+    OS.emitIntValue(getTypeIndex(DIGV->getType()).getIndex(), 4);
     OS.AddComment("Value");
 
     // Encoded integers shouldn't need more than 10 bytes.

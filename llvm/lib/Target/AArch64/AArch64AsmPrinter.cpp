@@ -226,16 +226,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
 
   // Emit the note header.
   emitAlignment(Align(8));
-  OutStreamer->EmitIntValue(4, 4);     // data size for "GNU\0"
-  OutStreamer->EmitIntValue(4 * 4, 4); // Elf_Prop size
-  OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
+  OutStreamer->emitIntValue(4, 4);     // data size for "GNU\0"
+  OutStreamer->emitIntValue(4 * 4, 4); // Elf_Prop size
+  OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
   OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
   // Emit the PAC/BTI properties.
-  OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
-  OutStreamer->EmitIntValue(4, 4);     // data size
-  OutStreamer->EmitIntValue(Flags, 4); // data
-  OutStreamer->EmitIntValue(0, 4);     // pad
+  OutStreamer->emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
+  OutStreamer->emitIntValue(4, 4);     // data size
+  OutStreamer->emitIntValue(Flags, 4); // data
+  OutStreamer->emitIntValue(0, 4);     // pad
 
   OutStreamer->endSection(Nt);
   OutStreamer->SwitchSection(Cur);
@@ -811,7 +811,7 @@ void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
         Value, MCConstantExpr::create(2, OutContext), OutContext);
   }
 
-  OutStreamer->EmitValue(Value, Size);
+  OutStreamer->emitValue(Value, Size);
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset

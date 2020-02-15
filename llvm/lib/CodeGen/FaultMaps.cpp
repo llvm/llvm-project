@@ -62,12 +62,12 @@ void FaultMaps::serializeToFaultMapSection() {
   LLVM_DEBUG(dbgs() << "********** Fault Map Output **********\n");
 
   // Header
-  OS.EmitIntValue(FaultMapVersion, 1); // Version.
-  OS.EmitIntValue(0, 1);               // Reserved.
-  OS.EmitIntValue(0, 2);               // Reserved.
+  OS.emitIntValue(FaultMapVersion, 1); // Version.
+  OS.emitIntValue(0, 1);               // Reserved.
+  OS.emitIntValue(0, 2);               // Reserved.
 
   LLVM_DEBUG(dbgs() << WFMP << "#functions = " << FunctionInfos.size() << "\n");
-  OS.EmitIntValue(FunctionInfos.size(), 4);
+  OS.emitIntValue(FunctionInfos.size(), 4);
 
   LLVM_DEBUG(dbgs() << WFMP << "functions:\n");
 
@@ -83,22 +83,22 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
   OS.emitSymbolValue(FnLabel, 8);
 
   LLVM_DEBUG(dbgs() << WFMP << "  #faulting PCs: " << FFI.size() << "\n");
-  OS.EmitIntValue(FFI.size(), 4);
+  OS.emitIntValue(FFI.size(), 4);
 
-  OS.EmitIntValue(0, 4); // Reserved
+  OS.emitIntValue(0, 4); // Reserved
 
   for (auto &Fault : FFI) {
     LLVM_DEBUG(dbgs() << WFMP << "    fault type: "
                       << faultTypeToString(Fault.Kind) << "\n");
-    OS.EmitIntValue(Fault.Kind, 4);
+    OS.emitIntValue(Fault.Kind, 4);
 
     LLVM_DEBUG(dbgs() << WFMP << "    faulting PC offset: "
                       << *Fault.FaultingOffsetExpr << "\n");
-    OS.EmitValue(Fault.FaultingOffsetExpr, 4);
+    OS.emitValue(Fault.FaultingOffsetExpr, 4);
 
     LLVM_DEBUG(dbgs() << WFMP << "    fault handler PC offset: "
                       << *Fault.HandlerOffsetExpr << "\n");
-    OS.EmitValue(Fault.HandlerOffsetExpr, 4);
+    OS.emitValue(Fault.HandlerOffsetExpr, 4);
   }
 }
 

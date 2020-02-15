@@ -102,8 +102,8 @@ void MipsELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   Labels.clear();
 }
 
-void MipsELFStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
-  MCELFStreamer::EmitIntValue(Value, Size);
+void MipsELFStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  MCELFStreamer::emitIntValue(Value, Size);
   Labels.clear();
 }
 

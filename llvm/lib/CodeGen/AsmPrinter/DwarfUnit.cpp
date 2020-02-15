@@ -1667,10 +1667,10 @@ void DwarfTypeUnit::emitHeader(bool UseOffsets) {
                               DD->useSplitDwarf() ? dwarf::DW_UT_split_type
                                                   : dwarf::DW_UT_type);
   Asm->OutStreamer->AddComment("Type Signature");
-  Asm->OutStreamer->EmitIntValue(TypeSignature, sizeof(TypeSignature));
+  Asm->OutStreamer->emitIntValue(TypeSignature, sizeof(TypeSignature));
   Asm->OutStreamer->AddComment("Type DIE Offset");
   // In a skeleton type unit there is no type DIE so emit a zero offset.
-  Asm->OutStreamer->EmitIntValue(Ty ? Ty->getOffset() : 0,
+  Asm->OutStreamer->emitIntValue(Ty ? Ty->getOffset() : 0,
                                  sizeof(Ty->getOffset()));
 }
 

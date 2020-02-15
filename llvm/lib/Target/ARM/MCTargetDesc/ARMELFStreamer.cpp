@@ -1079,7 +1079,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
     Streamer.SwitchSection(AttributeSection);
 
     // Format version
-    Streamer.EmitIntValue(0x41, 1);
+    Streamer.emitIntValue(0x41, 1);
   }
 
   // Vendor size + Vendor name + '\0'
@@ -1090,12 +1090,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
 
   const size_t ContentsSize = calculateContentSize();
 
-  Streamer.EmitIntValue(VendorHeaderSize + TagHeaderSize + ContentsSize, 4);
+  Streamer.emitIntValue(VendorHeaderSize + TagHeaderSize + ContentsSize, 4);
   Streamer.emitBytes(CurrentVendor);
-  Streamer.EmitIntValue(0, 1); // '\0'
+  Streamer.emitIntValue(0, 1); // '\0'
 
-  Streamer.EmitIntValue(ARMBuildAttrs::File, 1);
-  Streamer.EmitIntValue(TagHeaderSize + ContentsSize, 4);
+  Streamer.emitIntValue(ARMBuildAttrs::File, 1);
+  Streamer.emitIntValue(TagHeaderSize + ContentsSize, 4);
 
   // Size should have been accounted for already, now
   // emit each field as its type (ULEB or String)
@@ -1109,12 +1109,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
       break;
     case AttributeItem::TextAttribute:
       Streamer.emitBytes(item.StringValue);
-      Streamer.EmitIntValue(0, 1); // '\0'
+      Streamer.emitIntValue(0, 1); // '\0'
       break;
     case AttributeItem::NumericAndTextAttributes:
       Streamer.emitULEB128IntValue(item.IntValue);
       Streamer.emitBytes(item.StringValue);
-      Streamer.EmitIntValue(0, 1); // '\0'
+      Streamer.emitIntValue(0, 1); // '\0'
       break;
     }
   }
@@ -1272,17 +1272,17 @@ void ARMELFStreamer::emitFnEnd() {
                             MCSymbolRefExpr::VK_ARM_PREL31,
                             getContext());
 
-  EmitValue(FnStartRef, 4);
+  emitValue(FnStartRef, 4);
 
   if (CantUnwind) {
-    EmitIntValue(ARM::EHABI::EXIDX_CANTUNWIND, 4);
+    emitIntValue(ARM::EHABI::EXIDX_CANTUNWIND, 4);
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
     const MCSymbolRefExpr *ExTabEntryRef =
       MCSymbolRefExpr::create(ExTab,
                               MCSymbolRefExpr::VK_ARM_PREL31,
                               getContext());
-    EmitValue(ExTabEntryRef, 4);
+    emitValue(ExTabEntryRef, 4);
   } else {
     // For the __aeabi_unwind_cpp_pr0, we have to emit the unwind opcodes in
     // the second word of exception index table entry.  The size of the unwind
@@ -1295,7 +1295,7 @@ void ARMELFStreamer::emitFnEnd() {
                       Opcodes[1] << 8 |
                       Opcodes[2] << 16 |
                       Opcodes[3] << 24;
-    EmitIntValue(Intval, Opcodes.size());
+    emitIntValue(Intval, Opcodes.size());
   }
 
   // Switch to the section containing FnStart
@@ -1363,7 +1363,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
                               MCSymbolRefExpr::VK_ARM_PREL31,
                               getContext());
 
-    EmitValue(PersonalityRef, 4);
+    emitValue(PersonalityRef, 4);
   }
 
   // Emit unwind opcodes
@@ -1374,7 +1374,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
                       Opcodes[I + 1] << 8 |
                       Opcodes[I + 2] << 16 |
                       Opcodes[I + 3] << 24;
-    EmitIntValue(Intval, 4);
+    emitIntValue(Intval, 4);
   }
 
   // According to ARM EHABI section 9.2, if the __aeabi_unwind_cpp_pr1() or
@@ -1385,7 +1385,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   // In case that the .handlerdata directive is not specified by the
   // programmer, we should emit zero to terminate the handler data.
   if (NoHandlerData && !Personality)
-    EmitIntValue(0, 4);
+    emitIntValue(0, 4);
 }
 
 void ARMELFStreamer::emitHandlerData() { FlushUnwindOpcodes(false); }

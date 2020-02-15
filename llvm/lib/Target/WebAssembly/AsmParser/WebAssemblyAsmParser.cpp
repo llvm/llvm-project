@@ -792,7 +792,7 @@ public:
         return error("Cannot parse .int expression: ", Lexer.getTok());
       size_t NumBits = 0;
       DirectiveID.getString().drop_front(4).getAsInteger(10, NumBits);
-      Out.EmitValue(Val, NumBits / 8, End);
+      Out.emitValue(Val, NumBits / 8, End);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 

@@ -90,7 +90,7 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
                                              : MCSymbolRefExpr::VK_None),
                                             OutContext);
 
-  OutStreamer->EmitValue(E, Size);
+  OutStreamer->emitValue(E, Size);
 }
 
 void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
@@ -497,7 +497,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4/*size*/);
   else
     // Internal to current translation unit.
     //
@@ -505,7 +505,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
     // pointers need to be indirect and pc-rel. We accomplish this by
     // using NLPs; however, sometimes the types are local to the file.
     // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
+    OutStreamer.emitValue(
         MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
         4 /*size*/);
 }
@@ -932,7 +932,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     }
     Expr = MCBinaryExpr::createSub(Expr, PCRelExpr, OutContext);
   }
-  OutStreamer->EmitValue(Expr, Size);
+  OutStreamer->emitValue(Expr, Size);
 }
 
 void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
@@ -975,7 +975,7 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
     else if (AFI->isThumbFunction())
       Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(1,OutContext),
                                      OutContext);
-    OutStreamer->EmitValue(Expr, 4);
+    OutStreamer->emitValue(Expr, 4);
   }
   // Mark the end of jump table data-in-code region.
   OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
@@ -1051,7 +1051,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
     Expr = MCBinaryExpr::createSub(MBBSymbolExpr, Expr, OutContext);
     Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(2, OutContext),
                                    OutContext);
-    OutStreamer->EmitValue(Expr, OffsetWidth);
+    OutStreamer->emitValue(Expr, OffsetWidth);
   }
   // Mark the end of jump table data-in-code region. 32-bit offsets use
   // actual branch instructions here, so we don't mark those as a data-region

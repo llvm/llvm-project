@@ -125,6 +125,6 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
       if (UseRelativeOffsets)
         Asm.emitDwarfStringOffset(Entry->getValue());
       else
-        Asm.OutStreamer->EmitIntValue(Entry->getValue().Offset, size);
+        Asm.OutStreamer->emitIntValue(Entry->getValue().Offset, size);
   }
 }
