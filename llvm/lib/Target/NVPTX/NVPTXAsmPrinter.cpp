@@ -437,7 +437,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
 void NVPTXAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   AsmPrinter::emitBasicBlockStart(MBB);
   if (isLoopHeaderOfNoUnroll(MBB))
-    OutStreamer->EmitRawText(StringRef("\t.pragma \"nounroll\";\n"));
+    OutStreamer->emitRawText(StringRef("\t.pragma \"nounroll\";\n"));
 }
 
 void NVPTXAsmPrinter::emitFunctionEntryLabel() {
@@ -467,11 +467,11 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
-  OutStreamer->EmitRawText(O.str());
+  OutStreamer->emitRawText(O.str());
 
   VRegMapping.clear();
   // Emit open brace for function body.
-  OutStreamer->EmitRawText(StringRef("{\n"));
+  OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (MMI && MMI->hasDebugInfo())
@@ -485,7 +485,7 @@ bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
   // debug labels/data after the last basic block.
   // We need to emit the closing brace here because we don't have function that
   // finished emission of the function body.
-  OutStreamer->EmitRawText(StringRef("}\n"));
+  OutStreamer->emitRawText(StringRef("}\n"));
   return Result;
 }
 
@@ -493,7 +493,7 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
-  OutStreamer->EmitRawText(O.str());
+  OutStreamer->emitRawText(O.str());
 }
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
@@ -792,13 +792,13 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
 
   // Emit header before any dwarf directives are emitted below.
   emitHeader(M, OS1, *STI);
-  OutStreamer->EmitRawText(OS1.str());
+  OutStreamer->emitRawText(OS1.str());
 
   // Emit module-level inline asm if it exists.
   if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->AddBlankLine();
-    OutStreamer->EmitRawText(StringRef(M.getModuleInlineAsm()));
+    OutStreamer->emitRawText(StringRef(M.getModuleInlineAsm()));
     OutStreamer->AddBlankLine();
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->AddBlankLine();
@@ -838,7 +838,7 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
 
   OS2 << '\n';
 
-  OutStreamer->EmitRawText(OS2.str());
+  OutStreamer->emitRawText(OS2.str());
 }
 
 void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
@@ -929,7 +929,7 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
         ->closeLastSection();
     // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->EmitRawText("\t.section\t.debug_loc\t{\t}");
+    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
   }
 
   // Output last DWARF .file directives, if any.
@@ -1684,7 +1684,7 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
     }
   }
 
-  OutStreamer->EmitRawText(O.str());
+  OutStreamer->emitRawText(O.str());
 }
 
 void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {

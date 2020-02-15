@@ -113,10 +113,10 @@ private:
   void sandboxIndirectJump(const MCInst &MI, const MCSubtargetInfo &STI) {
     unsigned AddrReg = MI.getOperand(0).getReg();
 
-    EmitBundleLock(false);
+    emitBundleLock(false);
     emitMask(AddrReg, IndirectBranchMaskReg, STI);
     MipsELFStreamer::emitInstruction(MI, STI);
-    EmitBundleUnlock();
+    emitBundleUnlock();
   }
 
   // Sandbox memory access or SP change.  Insert mask operation before and/or
@@ -124,7 +124,7 @@ private:
   void sandboxLoadStoreStackChange(const MCInst &MI, unsigned AddrIdx,
                                    const MCSubtargetInfo &STI, bool MaskBefore,
                                    bool MaskAfter) {
-    EmitBundleLock(false);
+    emitBundleLock(false);
     if (MaskBefore) {
       // Sandbox memory access.
       unsigned BaseReg = MI.getOperand(AddrIdx).getReg();
@@ -137,7 +137,7 @@ private:
       assert((Mips::SP == SPReg) && "Unexpected stack-pointer register.");
       emitMask(SPReg, LoadStoreStackMaskReg, STI);
     }
-    EmitBundleUnlock();
+    emitBundleUnlock();
   }
 
 public:
@@ -181,7 +181,7 @@ public:
         report_fatal_error("Dangerous instruction in branch delay slot!");
 
       // Start the sandboxing sequence by emitting call.
-      EmitBundleLock(true);
+      emitBundleLock(true);
       if (IsIndirectCall) {
         unsigned TargetReg = Inst.getOperand(1).getReg();
         emitMask(TargetReg, IndirectBranchMaskReg, STI);
@@ -193,7 +193,7 @@ public:
     if (PendingCall) {
       // Finish the sandboxing sequence by emitting branch delay.
       MipsELFStreamer::emitInstruction(Inst, STI);
-      EmitBundleUnlock();
+      emitBundleUnlock();
       PendingCall = false;
       return;
     }
@@ -270,7 +270,7 @@ MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context,
     S->getAssembler().setRelaxAll(true);
 
   // Set bundle-alignment as required by the NaCl ABI for the target.
-  S->EmitBundleAlignMode(Log2(MIPS_NACL_BUNDLE_ALIGN));
+  S->emitBundleAlignMode(Log2(MIPS_NACL_BUNDLE_ALIGN));
 
   return S;
 }

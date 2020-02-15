@@ -1067,7 +1067,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       SmallString<128> TmpStr;
       raw_svector_ostream OS(TmpStr);
       PrintDebugValueComment(MI, OS);
-      OutStreamer->EmitRawText(StringRef(OS.str()));
+      OutStreamer->emitRawText(StringRef(OS.str()));
     }
     return;
 

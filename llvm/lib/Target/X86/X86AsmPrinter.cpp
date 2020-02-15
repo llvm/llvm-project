@@ -643,7 +643,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
-  OutStreamer->EmitSyntaxDirective();
+  OutStreamer->emitSyntaxDirective();
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
