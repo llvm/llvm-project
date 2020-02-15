@@ -1153,3 +1153,29 @@ define <16 x float> @fabs_v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 declare <16 x float> @llvm.fabs.v16f32(<16 x float> %p)
+
+define <16 x i32> @masked_inc_test(<16 x i32> %i, <16 x i32> %mask1) nounwind readnone {
+; CHECK-LABEL: masked_inc_test:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %mask = icmp ne <16 x i32> %mask1, zeroinitializer
+  %x = add <16 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %r = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> %i
+  ret <16 x i32> %r
+}
+
+define <16 x i32> @masked_dec_test(<16 x i32> %i, <16 x i32> %mask1) nounwind readnone {
+; CHECK-LABEL: masked_dec_test:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %mask = icmp ne <16 x i32> %mask1, zeroinitializer
+  %x = sub <16 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %r = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> %i
+  ret <16 x i32> %r
+}
