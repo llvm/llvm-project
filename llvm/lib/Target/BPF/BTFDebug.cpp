@@ -967,7 +967,7 @@ void BTFDebug::processReloc(const MachineOperand &MO) {
     auto *GVar = dyn_cast<GlobalVariable>(GVal);
     if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
       MCSymbol *ORSym = OS.getContext().createTempSymbol();
-      OS.EmitLabel(ORSym);
+      OS.emitLabel(ORSym);
 
       MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
       DIType *Ty = dyn_cast<DIType>(MDN);
@@ -1040,7 +1040,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
 
   // Create a temporary label to remember the insn for lineinfo.
   MCSymbol *LineSym = OS.getContext().createTempSymbol();
-  OS.EmitLabel(LineSym);
+  OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
   auto SP = DL.get()->getScope()->getSubprogram();

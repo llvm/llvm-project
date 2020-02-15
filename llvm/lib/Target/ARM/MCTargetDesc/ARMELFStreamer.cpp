@@ -543,7 +543,7 @@ public:
   /// This is one of the functions used to emit data into an ELF section, so the
   /// ARM streamer overrides it to add the appropriate mapping symbol ($d) if
   /// necessary.
-  void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
+  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
       if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
@@ -553,7 +553,7 @@ public:
     }
 
     emitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
+    MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
   void emitAssemblerFlag(MCAssemblerFlag Flag) override {
@@ -636,7 +636,7 @@ private:
   void EmitMappingSymbol(StringRef Name) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    EmitLabel(Symbol);
+    emitLabel(Symbol);
 
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
@@ -1207,7 +1207,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
 
   // Switch to .ARM.extab or .ARM.exidx section
   SwitchSection(EHSection);
-  EmitCodeAlignment(4);
+  emitCodeAlignment(4);
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {
@@ -1246,7 +1246,7 @@ void ARMELFStreamer::EHReset() {
 void ARMELFStreamer::emitFnStart() {
   assert(FnStart == nullptr);
   FnStart = getContext().createTempSymbol();
-  EmitLabel(FnStart);
+  emitLabel(FnStart);
 }
 
 void ARMELFStreamer::emitFnEnd() {
@@ -1354,7 +1354,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   // Create .ARM.extab label for offset in .ARM.exidx
   assert(!ExTab);
   ExTab = getContext().createTempSymbol();
-  EmitLabel(ExTab);
+  emitLabel(ExTab);
 
   // Emit personality
   if (Personality) {

@@ -326,7 +326,7 @@ void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
   
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
 
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
@@ -355,7 +355,7 @@ void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
 void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
 
   SM.recordPatchPoint(*MILabel, MI);
   PatchPointOpers Opers(&MI);
@@ -591,7 +591,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
                        .addExpr(MCSymbolRefExpr::create(PICBase, OutContext)));
 
     // Emit the label.
-    OutStreamer->EmitLabel(PICBase);
+    OutStreamer->emitLabel(PICBase);
     return;
   }
   case PPC::UpdateGBR: {
@@ -935,9 +935,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(GOTSymbol, OutContext),
                                 MCSymbolRefExpr::create(GOTRef, OutContext),
         OutContext);
-    OutStreamer->EmitLabel(GOTRef);
+    OutStreamer->emitLabel(GOTRef);
     OutStreamer->EmitValue(OffsExpr, 4);
-    OutStreamer->EmitLabel(NextInstr);
+    OutStreamer->emitLabel(NextInstr);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR)
                                  .addReg(MI->getOperand(0).getReg()));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LWZ)
@@ -1170,7 +1170,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // of instructions change.
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(BeginOfSled);
+    OutStreamer->emitLabel(BeginOfSled);
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(PPC::B).addExpr(
                        MCSymbolRefExpr::create(EndOfSled, OutContext)));
@@ -1185,7 +1185,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
                            OutContext.getOrCreateSymbol("__xray_FunctionEntry"),
                            OutContext)));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
-    OutStreamer->EmitLabel(EndOfSled);
+    OutStreamer->emitLabel(EndOfSled);
     recordSled(BeginOfSled, *MI, SledKind::FUNCTION_ENTER);
     break;
   }
@@ -1256,9 +1256,9 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    OutStreamer->EmitCodeAlignment(8);
+    OutStreamer->emitCodeAlignment(8);
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(BeginOfSled);
+    OutStreamer->emitLabel(BeginOfSled);
     EmitToStreamer(*OutStreamer, RetInst);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
     EmitToStreamer(
@@ -1273,7 +1273,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
     EmitToStreamer(*OutStreamer, RetInst);
     if (IsConditional)
-      OutStreamer->EmitLabel(FallthroughLabel);
+      OutStreamer->emitLabel(FallthroughLabel);
     recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT);
     break;
   }
@@ -1309,7 +1309,7 @@ void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
   MCSymbol *TOCSym = OutContext.getOrCreateSymbol(Twine(".LTOC"));
   MCSymbol *CurrentPos = OutContext.createTempSymbol();
 
-  OutStreamer->EmitLabel(CurrentPos);
+  OutStreamer->emitLabel(CurrentPos);
 
   // The GOT pointer points to the middle of the GOT, in order to reference the
   // entire 64kB range.  0x8000 is the midpoint.
@@ -1335,7 +1335,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
     if (PPCFI->usesPICBase() && !Subtarget->isSecurePlt()) {
       MCSymbol *RelocSymbol = PPCFI->getPICOffsetSymbol();
       MCSymbol *PICBase = MF->getPICBaseSymbol();
-      OutStreamer->EmitLabel(RelocSymbol);
+      OutStreamer->emitLabel(RelocSymbol);
 
       const MCExpr *OffsExpr =
         MCBinaryExpr::createSub(
@@ -1344,7 +1344,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
                                   MCSymbolRefExpr::create(PICBase, OutContext),
           OutContext);
       OutStreamer->EmitValue(OffsExpr, 4);
-      OutStreamer->EmitLabel(CurrentFnSym);
+      OutStreamer->emitLabel(CurrentFnSym);
       return;
     } else
       return AsmPrinter::emitFunctionEntryLabel();
@@ -1368,7 +1368,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
                                                         OutContext),
                                 OutContext);
 
-      OutStreamer->EmitLabel(PPCFI->getTOCOffsetSymbol());
+      OutStreamer->emitLabel(PPCFI->getTOCOffsetSymbol());
       OutStreamer->EmitValue(TOCDeltaExpr, 8);
     }
     return AsmPrinter::emitFunctionEntryLabel();
@@ -1379,8 +1379,8 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   MCSectionELF *Section = OutStreamer->getContext().getELFSection(
       ".opd", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
   OutStreamer->SwitchSection(Section);
-  OutStreamer->EmitLabel(CurrentFnSym);
-  OutStreamer->EmitValueToAlignment(8);
+  OutStreamer->emitLabel(CurrentFnSym);
+  OutStreamer->emitValueToAlignment(8);
   MCSymbol *Symbol1 = CurrentFnSymForSize;
   // Generates a R_PPC64_ADDR64 (from FK_DATA_8) relocation for the function
   // entry point.
@@ -1419,12 +1419,12 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
       const MCSymbol *const TOCEntryTarget = TOCMapPair.first;
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 
-      OutStreamer->EmitLabel(TOCEntryLabel);
+      OutStreamer->emitLabel(TOCEntryLabel);
       if (isPPC64) {
         TS.emitTCEntry(*TOCEntryTarget);
       } else {
-        OutStreamer->EmitValueToAlignment(4);
-        OutStreamer->EmitSymbolValue(TOCEntryTarget, 4);
+        OutStreamer->emitValueToAlignment(4);
+        OutStreamer->emitSymbolValue(TOCEntryTarget, 4);
       }
     }
   }
@@ -1474,7 +1474,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
     const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
 
     MCSymbol *GlobalEntryLabel = PPCFI->getGlobalEPSymbol();
-    OutStreamer->EmitLabel(GlobalEntryLabel);
+    OutStreamer->emitLabel(GlobalEntryLabel);
     const MCSymbolRefExpr *GlobalEntryLabelExp =
       MCSymbolRefExpr::create(GlobalEntryLabel, OutContext);
 
@@ -1512,7 +1512,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
     }
 
     MCSymbol *LocalEntryLabel = PPCFI->getLocalEPSymbol();
-    OutStreamer->EmitLabel(LocalEntryLabel);
+    OutStreamer->emitLabel(LocalEntryLabel);
     const MCSymbolRefExpr *LocalEntryLabelExp =
        MCSymbolRefExpr::create(LocalEntryLabel, OutContext);
     const MCExpr *LocalOffsetExp =
@@ -1633,7 +1633,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   MCSymbol *EmittedInitSym = GVSym;
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(getGVAlignment(GV, DL), GV);
-  OutStreamer->EmitLabel(EmittedInitSym);
+  OutStreamer->emitLabel(EmittedInitSym);
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 
@@ -1645,7 +1645,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   // Emit function descriptor.
   OutStreamer->SwitchSection(
       cast<MCSymbolXCOFF>(CurrentFnDescSym)->getContainingCsect());
-  OutStreamer->EmitLabel(CurrentFnDescSym);
+  OutStreamer->emitLabel(CurrentFnDescSym);
   // Emit function entry point address.
   OutStreamer->EmitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
@@ -1690,7 +1690,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     cast<MCSymbolXCOFF>(I.second)->setContainingCsect(TCEntry);
     OutStreamer->SwitchSection(TCEntry);
 
-    OutStreamer->EmitLabel(I.second);
+    OutStreamer->emitLabel(I.second);
     TS.emitTCEntry(*I.first);
   }
 }

@@ -141,7 +141,7 @@ public:
                               const MCSymbol *Aliasee) override;
 
   void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
@@ -192,7 +192,7 @@ public:
 
   void emitBytes(StringRef Data) override;
 
-  void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
   void EmitIntValue(uint64_t Value, unsigned Size) override;
   void EmitIntValueInHex(uint64_t Value, unsigned Size) override;
@@ -202,14 +202,14 @@ public:
 
   void emitSLEB128Value(const MCExpr *Value) override;
 
-  void EmitDTPRel32Value(const MCExpr *Value) override;
-  void EmitDTPRel64Value(const MCExpr *Value) override;
-  void EmitTPRel32Value(const MCExpr *Value) override;
-  void EmitTPRel64Value(const MCExpr *Value) override;
+  void emitDTPRel32Value(const MCExpr *Value) override;
+  void emitDTPRel64Value(const MCExpr *Value) override;
+  void emitTPRel32Value(const MCExpr *Value) override;
+  void emitTPRel64Value(const MCExpr *Value) override;
 
-  void EmitGPRel64Value(const MCExpr *Value) override;
+  void emitGPRel64Value(const MCExpr *Value) override;
 
-  void EmitGPRel32Value(const MCExpr *Value) override;
+  void emitGPRel32Value(const MCExpr *Value) override;
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
@@ -217,11 +217,11 @@ public:
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
 
-  void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void EmitCodeAlignment(unsigned ByteAlignment,
+  void emitCodeAlignment(unsigned ByteAlignment,
                          unsigned MaxBytesToEmit = 0) override;
 
   void emitValueToOffset(const MCExpr *Offset,
@@ -464,8 +464,8 @@ void MCAsmStreamer::emitELFSymverDirective(StringRef AliasName,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitLabel(Symbol, Loc);
+void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::emitLabel(Symbol, Loc);
 
   Symbol->print(OS, MAI);
   OS << MAI->getLabelSuffix();
@@ -979,7 +979,7 @@ void MCAsmStreamer::EmitIntValueInHexWithPadding(uint64_t Value,
   EmitValue(MCConstantExpr::create(Value, getContext(), true, Size), Size);
 }
 
-void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
+void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                   SMLoc Loc) {
   assert(Size <= 8 && "Invalid size");
   assert(getCurrentSectionOnly() &&
@@ -1059,42 +1059,42 @@ void MCAsmStreamer::emitSLEB128Value(const MCExpr *Value) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
   assert(MAI->getDTPRel64Directive() != nullptr);
   OS << MAI->getDTPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
   assert(MAI->getDTPRel32Directive() != nullptr);
   OS << MAI->getDTPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitTPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
   assert(MAI->getTPRel64Directive() != nullptr);
   OS << MAI->getTPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitTPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
   assert(MAI->getTPRel32Directive() != nullptr);
   OS << MAI->getTPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitGPRel64Value(const MCExpr *Value) {
+void MCAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
   assert(MAI->getGPRel64Directive() != nullptr);
   OS << MAI->getGPRel64Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitGPRel32Value(const MCExpr *Value) {
+void MCAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
   assert(MAI->getGPRel32Directive() != nullptr);
   OS << MAI->getGPRel32Directive();
   Value->print(OS, MAI);
@@ -1141,7 +1141,7 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCAsmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (MAI->useDotAlignForAlignment()) {
@@ -1203,10 +1203,10 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCodeAlignment(unsigned ByteAlignment,
+void MCAsmStreamer::emitCodeAlignment(unsigned ByteAlignment,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
-  EmitValueToAlignment(ByteAlignment, MAI->getTextAlignFillValue(),
+  emitValueToAlignment(ByteAlignment, MAI->getTextAlignFillValue(),
                        1, MaxBytesToEmit);
 }
 
@@ -2038,7 +2038,7 @@ void MCAsmStreamer::FinishImpl() {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {
       SwitchSection(getContext().getObjectFileInfo()->getDwarfLineSection());
-      EmitLabel(Label);
+      emitLabel(Label);
     }
   }
 }

@@ -479,7 +479,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // that instead.
   case SystemZ::Trap: {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(DotSym);
+    OutStreamer->emitLabel(DotSym);
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
@@ -492,7 +492,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // to the relative immediate field of the jump instruction. (eg. "jo .+2")
   case SystemZ::CondTrap: {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(DotSym);
+    OutStreamer->emitLabel(DotSym);
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
@@ -544,7 +544,7 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
   else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
-    OutStreamer.EmitLabel(DotSym);
+    OutStreamer.emitLabel(DotSym);
     OutStreamer.emitInstruction(
         MCInstBuilder(SystemZ::BRCLAsm).addImm(0).addExpr(Dot), STI);
     return 6;
@@ -559,9 +559,9 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
     OutStreamer->PushSection();
     OutStreamer->SwitchSection(
         Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
-    OutStreamer->EmitSymbolValue(DotSym, 8);
+    OutStreamer->emitSymbolValue(DotSym, 8);
     OutStreamer->PopSection();
-    OutStreamer->EmitLabel(DotSym);
+    OutStreamer->emitLabel(DotSym);
   }
 
   if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
@@ -585,7 +585,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
   
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
@@ -618,7 +618,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
 
   SM.recordPatchPoint(*MILabel, MI);
   PatchPointOpers Opers(&MI);

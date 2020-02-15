@@ -453,7 +453,7 @@ public:
   /// used in an assignment.
   // FIXME: These emission are non-const because we mutate the symbol to
   // add the section we're emitting it to later.
-  virtual void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc());
+  virtual void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc());
 
   virtual void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
@@ -647,7 +647,7 @@ public:
   /// \param Size - The size of the integer (in bytes) to emit. This must
   /// match a native machine width.
   /// \param Loc - The location of the expression for error reporting.
-  virtual void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  virtual void emitValueImpl(const MCExpr *Value, unsigned Size,
                              SMLoc Loc = SMLoc());
 
   void EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
@@ -684,7 +684,7 @@ public:
 
   /// Special case of EmitValue that avoids the client having to pass in
   /// a MCExpr for MCSymbols.
-  void EmitSymbolValue(const MCSymbol *Sym, unsigned Size,
+  void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
 
   /// Emit the expression \p Value into the output as a dtprel
@@ -692,42 +692,42 @@ public:
   ///
   /// This is used to implement assembler directives such as .dtpreldword on
   /// targets that support them.
-  virtual void EmitDTPRel64Value(const MCExpr *Value);
+  virtual void emitDTPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a dtprel
   /// (32-bit DTP relative) value.
   ///
   /// This is used to implement assembler directives such as .dtprelword on
   /// targets that support them.
-  virtual void EmitDTPRel32Value(const MCExpr *Value);
+  virtual void emitDTPRel32Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a tprel
   /// (64-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tpreldword on
   /// targets that support them.
-  virtual void EmitTPRel64Value(const MCExpr *Value);
+  virtual void emitTPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a tprel
   /// (32-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tprelword on
   /// targets that support them.
-  virtual void EmitTPRel32Value(const MCExpr *Value);
+  virtual void emitTPRel32Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a gprel64 (64-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gpdword on
   /// targets that support them.
-  virtual void EmitGPRel64Value(const MCExpr *Value);
+  virtual void emitGPRel64Value(const MCExpr *Value);
 
   /// Emit the expression \p Value into the output as a gprel32 (32-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gprel32 on
   /// targets that support them.
-  virtual void EmitGPRel32Value(const MCExpr *Value);
+  virtual void emitGPRel32Value(const MCExpr *Value);
 
   /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
@@ -775,7 +775,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  virtual void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                                     unsigned ValueSize = 1,
                                     unsigned MaxBytesToEmit = 0);
 
@@ -789,7 +789,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void EmitCodeAlignment(unsigned ByteAlignment,
+  virtual void emitCodeAlignment(unsigned ByteAlignment,
                                  unsigned MaxBytesToEmit = 0);
 
   /// Emit some number of copies of \p Value until the byte offset \p

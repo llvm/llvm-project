@@ -290,9 +290,9 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   //   ;DATA: higher 32 bits of the address of the trampoline
   //   LDP X0, X30, [SP], #16 ; pop X0 and the link register from the stack
   //
-  OutStreamer->EmitCodeAlignment(4);
+  OutStreamer->emitCodeAlignment(4);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
   // Emit "B #32" instruction, which jumps over the next 28 bytes.
@@ -303,7 +303,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   for (int8_t I = 0; I < NoopsInSledCount; I++)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 
-  OutStreamer->EmitLabel(Target);
+  OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind);
 }
 
@@ -366,7 +366,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
-    OutStreamer->EmitLabel(Sym);
+    OutStreamer->emitLabel(Sym);
 
     OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
                                      .addReg(AArch64::X16)
@@ -396,10 +396,10 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                              OutContext)),
         *STI);
     MCSymbol *ReturnSym = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(ReturnSym);
+    OutStreamer->emitLabel(ReturnSym);
     OutStreamer->emitInstruction(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
-    OutStreamer->EmitLabel(HandleMismatchOrPartialSym);
+    OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
     if (IsShort) {
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSWri)
@@ -465,7 +465,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
               .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
           *STI);
 
-      OutStreamer->EmitLabel(HandleMismatchSym);
+      OutStreamer->emitLabel(HandleMismatchSym);
     }
 
     OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
@@ -783,7 +783,7 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
 
     unsigned Size = AFI->getJumpTableEntrySize(JTI);
     emitAlignment(Align(Size));
-    OutStreamer->EmitLabel(GetJTISymbol(JTI));
+    OutStreamer->emitLabel(GetJTISymbol(JTI));
 
     for (auto *JTBB : JTBBs)
       emitJumpTableEntry(MJTI, JTBB, JTI);
@@ -867,7 +867,7 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer.EmitLabel(MILabel);
+  OutStreamer.emitLabel(MILabel);
 
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
@@ -897,7 +897,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                         const MachineInstr &MI) {
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer.EmitLabel(MILabel);
+  OutStreamer.emitLabel(MILabel);
   SM.recordPatchPoint(*MILabel, MI);
 
   PatchPointOpers Opers(&MI);
@@ -991,7 +991,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbol *LOHLabel = createTempSymbol("loh");
     // Associate the instruction with the label
     LOHInstToLabel[MI] = LOHLabel;
-    OutStreamer->EmitLabel(LOHLabel);
+    OutStreamer->emitLabel(LOHLabel);
   }
 
   AArch64TargetStreamer *TS =
@@ -1014,7 +1014,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);
         CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
-        OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+        OutStreamer->emitLabel(CurrentPatchableFunctionEntrySym);
         return;
       }
     }

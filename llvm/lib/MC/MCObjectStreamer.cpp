@@ -225,9 +225,9 @@ void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
   EmitDebugFrame = Debug;
 }
 
-void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
+void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                      SMLoc Loc) {
-  MCStreamer::EmitValueImpl(Value, Size, Loc);
+  MCStreamer::emitValueImpl(Value, Size, Loc);
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -252,23 +252,23 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
 
 MCSymbol *MCObjectStreamer::emitCFILabel() {
   MCSymbol *Label = getContext().createTempSymbol("cfi", true);
-  EmitLabel(Label);
+  emitLabel(Label);
   return Label;
 }
 
 void MCObjectStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
   // We need to create a local symbol to avoid relocations.
   Frame.Begin = getContext().createTempSymbol();
-  EmitLabel(Frame.Begin);
+  emitLabel(Frame.Begin);
 }
 
 void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = getContext().createTempSymbol();
-  EmitLabel(Frame.End);
+  emitLabel(Frame.End);
 }
 
-void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitLabel(Symbol, Loc);
+void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::emitLabel(Symbol, Loc);
 
   getAssembler().registerSymbol(*Symbol);
 
@@ -295,7 +295,7 @@ void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
                                       MCFragment *F, uint64_t Offset) {
   assert(F->getParent() == getCurrentSectionOnly());
 
-  MCStreamer::EmitLabel(Symbol, Loc);
+  MCStreamer::emitLabel(Symbol, Loc);
   getAssembler().registerSymbol(*Symbol);
   auto *DF = dyn_cast_or_null<MCDataFragment>(F);
   Symbol->setOffset(Offset);
@@ -475,7 +475,7 @@ static void emitDwarfSetLineAddr(MCObjectStreamer &OS,
   OS.EmitIntValue(dwarf::DW_LNS_extended_op, 1);
   OS.emitULEB128IntValue(PointerSize + 1);
   OS.EmitIntValue(dwarf::DW_LNE_set_address, 1);
-  OS.EmitSymbolValue(Label, PointerSize);
+  OS.emitSymbolValue(Label, PointerSize);
 
   // emit the sequence for the LineDelta (from 1) and a zero address delta.
   MCDwarfLineAddr::Emit(&OS, Params, LineDelta, 0);
@@ -521,7 +521,7 @@ void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
 
   // Emit a label at the current position and record it in the CodeViewContext.
   MCSymbol *LineSym = getContext().createTempSymbol();
-  EmitLabel(LineSym);
+  emitLabel(LineSym);
   getContext().getCVContext().recordCVLoc(getContext(), LineSym, FunctionId,
                                           FileNo, Line, Column, PrologueEnd,
                                           IsStmt);
@@ -574,7 +574,7 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->getContents().append(Data.begin(), Data.end());
 }
 
-void MCObjectStreamer::EmitValueToAlignment(unsigned ByteAlignment,
+void MCObjectStreamer::emitValueToAlignment(unsigned ByteAlignment,
                                             int64_t Value,
                                             unsigned ValueSize,
                                             unsigned MaxBytesToEmit) {
@@ -588,9 +588,9 @@ void MCObjectStreamer::EmitValueToAlignment(unsigned ByteAlignment,
     CurSec->setAlignment(Align(ByteAlignment));
 }
 
-void MCObjectStreamer::EmitCodeAlignment(unsigned ByteAlignment,
+void MCObjectStreamer::emitCodeAlignment(unsigned ByteAlignment,
                                          unsigned MaxBytesToEmit) {
-  EmitValueToAlignment(ByteAlignment, 0, 1, MaxBytesToEmit);
+  emitValueToAlignment(ByteAlignment, 0, 1, MaxBytesToEmit);
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true);
 }
 
@@ -601,7 +601,7 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
 }
 
 // Associate DTPRel32 fixup with data and resize data area
-void MCObjectStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+void MCObjectStreamer::emitDTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -611,7 +611,7 @@ void MCObjectStreamer::EmitDTPRel32Value(const MCExpr *Value) {
 }
 
 // Associate DTPRel64 fixup with data and resize data area
-void MCObjectStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+void MCObjectStreamer::emitDTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -621,7 +621,7 @@ void MCObjectStreamer::EmitDTPRel64Value(const MCExpr *Value) {
 }
 
 // Associate TPRel32 fixup with data and resize data area
-void MCObjectStreamer::EmitTPRel32Value(const MCExpr *Value) {
+void MCObjectStreamer::emitTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -631,7 +631,7 @@ void MCObjectStreamer::EmitTPRel32Value(const MCExpr *Value) {
 }
 
 // Associate TPRel64 fixup with data and resize data area
-void MCObjectStreamer::EmitTPRel64Value(const MCExpr *Value) {
+void MCObjectStreamer::emitTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -641,7 +641,7 @@ void MCObjectStreamer::EmitTPRel64Value(const MCExpr *Value) {
 }
 
 // Associate GPRel32 fixup with data and resize data area
-void MCObjectStreamer::EmitGPRel32Value(const MCExpr *Value) {
+void MCObjectStreamer::emitGPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
@@ -651,7 +651,7 @@ void MCObjectStreamer::EmitGPRel32Value(const MCExpr *Value) {
 }
 
 // Associate GPRel64 fixup with data and resize data area
-void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
+void MCObjectStreamer::emitGPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 

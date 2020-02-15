@@ -47,7 +47,7 @@ public:
   RecordStreamer(MCContext &Context, const Module &M);
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,

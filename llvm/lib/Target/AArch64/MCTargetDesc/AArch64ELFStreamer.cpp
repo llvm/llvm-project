@@ -136,9 +136,9 @@ public:
   /// This is one of the functions used to emit data into an ELF section, so the
   /// AArch64 streamer overrides it to add the appropriate mapping symbol ($d)
   /// if necessary.
-  void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
+  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     emitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
+    MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
@@ -170,7 +170,7 @@ private:
   void EmitMappingSymbol(StringRef Name) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    EmitLabel(Symbol);
+    emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);

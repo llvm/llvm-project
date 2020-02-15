@@ -57,7 +57,7 @@ void FaultMaps::serializeToFaultMapSection() {
   OS.SwitchSection(FaultMapSection);
 
   // Emit a dummy symbol to force section inclusion.
-  OS.EmitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_FaultMaps")));
+  OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_FaultMaps")));
 
   LLVM_DEBUG(dbgs() << "********** Fault Map Output **********\n");
 
@@ -80,7 +80,7 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
   MCStreamer &OS = *AP.OutStreamer;
 
   LLVM_DEBUG(dbgs() << WFMP << "  function addr: " << *FnLabel << "\n");
-  OS.EmitSymbolValue(FnLabel, 8);
+  OS.emitSymbolValue(FnLabel, 8);
 
   LLVM_DEBUG(dbgs() << WFMP << "  #faulting PCs: " << FFI.size() << "\n");
   OS.EmitIntValue(FFI.size(), 4);

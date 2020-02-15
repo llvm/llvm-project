@@ -608,7 +608,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       OutStreamer->SwitchSection(TheSection);
 
       emitAlignment(Alignment, GV);
-      OutStreamer->EmitLabel(MangSym);
+      OutStreamer->emitLabel(MangSym);
 
       emitGlobalConstant(GV->getParent()->getDataLayout(),
                          GV->getInitializer());
@@ -622,17 +622,17 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     OutStreamer->SwitchSection(TLVSect);
     // Emit the linkage here.
     emitLinkage(GV, GVSym);
-    OutStreamer->EmitLabel(GVSym);
+    OutStreamer->emitLabel(GVSym);
 
     // Three pointers in size:
     //   - __tlv_bootstrap - used to make sure support exists
     //   - spare pointer, used when mapped by the runtime
     //   - pointer to mangled symbol above with initializer
     unsigned PtrSize = DL.getPointerTypeSize(GV->getType());
-    OutStreamer->EmitSymbolValue(GetExternalSymbolSymbol("_tlv_bootstrap"),
+    OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("_tlv_bootstrap"),
                                 PtrSize);
     OutStreamer->EmitIntValue(0, PtrSize);
-    OutStreamer->EmitSymbolValue(MangSym, PtrSize);
+    OutStreamer->emitSymbolValue(MangSym, PtrSize);
 
     OutStreamer->AddBlankLine();
     return;
@@ -645,10 +645,10 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(Alignment, GV);
 
-  OutStreamer->EmitLabel(EmittedInitSym);
+  OutStreamer->emitLabel(EmittedInitSym);
   MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
   if (LocalAlias != EmittedInitSym)
-    OutStreamer->EmitLabel(LocalAlias);
+    OutStreamer->emitLabel(LocalAlias);
 
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 
@@ -713,7 +713,7 @@ void AsmPrinter::emitFunctionHeader() {
       // and use the .alt_entry attribute to mark the function's real entry point
       // as an alternative entry point to the prefix-data symbol.
       MCSymbol *PrefixSym = OutContext.createLinkerPrivateTempSymbol();
-      OutStreamer->EmitLabel(PrefixSym);
+      OutStreamer->emitLabel(PrefixSym);
 
       emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
 
@@ -737,7 +737,7 @@ void AsmPrinter::emitFunctionHeader() {
   if (PatchableFunctionPrefix) {
     CurrentPatchableFunctionEntrySym =
         OutContext.createLinkerPrivateTempSymbol();
-    OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+    OutStreamer->emitLabel(CurrentPatchableFunctionEntrySym);
     emitNops(PatchableFunctionPrefix);
   } else if (PatchableFunctionEntry) {
     // May be reassigned when emitting the body, to reference the label after
@@ -759,11 +759,11 @@ void AsmPrinter::emitFunctionHeader() {
   if (CurrentFnBegin) {
     if (MAI->useAssignmentForEHBegin()) {
       MCSymbol *CurPos = OutContext.createTempSymbol();
-      OutStreamer->EmitLabel(CurPos);
+      OutStreamer->emitLabel(CurPos);
       OutStreamer->emitAssignment(CurrentFnBegin,
                                  MCSymbolRefExpr::create(CurPos, OutContext));
     } else {
-      OutStreamer->EmitLabel(CurrentFnBegin);
+      OutStreamer->emitLabel(CurrentFnBegin);
     }
   }
 
@@ -793,12 +793,12 @@ void AsmPrinter::emitFunctionEntryLabel() {
     report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
                        "' label emitted multiple times to assembly file");
 
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
     if (Sym != CurrentFnSym)
-      OutStreamer->EmitLabel(Sym);
+      OutStreamer->emitLabel(Sym);
   }
 }
 
@@ -1045,7 +1045,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   uint64_t StackSize = FrameInfo.getStackSize();
-  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->PopSection();
@@ -1108,7 +1108,7 @@ void AsmPrinter::emitFunctionBody() {
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
-        OutStreamer->EmitLabel(S);
+        OutStreamer->emitLabel(S);
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
@@ -1132,7 +1132,7 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::ANNOTATION_LABEL:
       case TargetOpcode::EH_LABEL:
       case TargetOpcode::GC_LABEL:
-        OutStreamer->EmitLabel(MI.getOperand(0).getMCSymbol());
+        OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::INLINEASM:
       case TargetOpcode::INLINEASM_BR:
@@ -1163,7 +1163,7 @@ void AsmPrinter::emitFunctionBody() {
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
-        OutStreamer->EmitLabel(S);
+        OutStreamer->emitLabel(S);
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
@@ -1216,7 +1216,7 @@ void AsmPrinter::emitFunctionBody() {
     if (Sym->isDefined())
       continue;
     OutStreamer->AddComment("Address of block that was removed by CodeGen");
-    OutStreamer->EmitLabel(Sym);
+    OutStreamer->emitLabel(Sym);
   }
 
   // Emit target-specific gunk after the function body.
@@ -1226,7 +1226,7 @@ void AsmPrinter::emitFunctionBody() {
       MAI->hasDotTypeDotSizeDirective()) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
-    OutStreamer->EmitLabel(CurrentFnEnd);
+    OutStreamer->emitLabel(CurrentFnEnd);
   }
 
   // If the target wants a .size directive for the size of the function, emit
@@ -1483,8 +1483,8 @@ bool AsmPrinter::doFinalization(Module &M) {
 
       emitAlignment(Align(DL.getPointerSize()));
       for (const auto &Stub : Stubs) {
-        OutStreamer->EmitLabel(Stub.first);
-        OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
+        OutStreamer->emitLabel(Stub.first);
+        OutStreamer->emitSymbolValue(Stub.second.getPointer(),
                                      DL.getPointerSize());
       }
     }
@@ -1510,8 +1510,8 @@ bool AsmPrinter::doFinalization(Module &M) {
             COFF::IMAGE_COMDAT_SELECT_ANY));
         emitAlignment(Align(DL.getPointerSize()));
         OutStreamer->emitSymbolAttribute(Stub.first, MCSA_Global);
-        OutStreamer->EmitLabel(Stub.first);
-        OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
+        OutStreamer->emitLabel(Stub.first);
+        OutStreamer->emitSymbolValue(Stub.second.getPointer(),
                                      DL.getPointerSize());
       }
     }
@@ -1583,10 +1583,10 @@ bool AsmPrinter::doFinalization(Module &M) {
 
     MCSymbol *AddrSymbol =
         OutContext.getOrCreateSymbol(StringRef("__morestack_addr"));
-    OutStreamer->EmitLabel(AddrSymbol);
+    OutStreamer->emitLabel(AddrSymbol);
 
     unsigned PtrSize = MAI->getCodePointerSize();
-    OutStreamer->EmitSymbolValue(GetExternalSymbolSymbol("__morestack"),
+    OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
                                  PtrSize);
   }
 
@@ -1838,7 +1838,7 @@ void AsmPrinter::emitConstantPool() {
       Type *Ty = CPE.getType();
       Offset = NewOffset + getDataLayout().getTypeAllocSize(Ty);
 
-      OutStreamer->EmitLabel(Sym);
+      OutStreamer->emitLabel(Sym);
       if (CPE.isMachineConstantPoolEntry())
         emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
       else
@@ -1912,14 +1912,14 @@ void AsmPrinter::emitJumpTableInfo() {
       // FIXME: This doesn't have to have any specific name, just any randomly
       // named and numbered local label started with 'l' would work.  Simplify
       // GetJTISymbol.
-      OutStreamer->EmitLabel(GetJTISymbol(JTI, true));
+      OutStreamer->emitLabel(GetJTISymbol(JTI, true));
 
     MCSymbol* JTISymbol = GetJTISymbol(JTI);
     if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
       cast<MCSymbolXCOFF>(JTISymbol)->setContainingCsect(
           cast<MCSectionXCOFF>(TLOF.getSectionForJumpTable(F, TM)));
     }
-    OutStreamer->EmitLabel(JTISymbol);
+    OutStreamer->emitLabel(JTISymbol);
 
     for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii)
       emitJumpTableEntry(MJTI, JTBBs[ii], JTI);
@@ -1952,7 +1952,7 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
     // with a relocation as gp-relative, e.g.:
     //     .gprel32 LBB123
     MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->EmitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
+    OutStreamer->emitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
     return;
   }
 
@@ -1961,7 +1961,7 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
     // with a relocation as gp-relative, e.g.:
     //     .gpdword LBB123
     MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->EmitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
+    OutStreamer->emitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
     return;
   }
 
@@ -2224,9 +2224,9 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV) const {
     return; // 1-byte aligned: no need to emit alignment.
 
   if (getCurrentSection()->getKind().isText())
-    OutStreamer->EmitCodeAlignment(Alignment.value());
+    OutStreamer->emitCodeAlignment(Alignment.value());
   else
-    OutStreamer->EmitValueToAlignment(Alignment.value());
+    OutStreamer->emitValueToAlignment(Alignment.value());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3009,7 +3009,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     // their corresponding BB's address taken in IR
     if (BB->hasAddressTaken())
       for (MCSymbol *Sym : MMI->getAddrLabelSymbolToEmit(BB))
-        OutStreamer->EmitLabel(Sym);
+        OutStreamer->emitLabel(Sym);
   }
 
   // Print some verbose block comments.
@@ -3038,7 +3038,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   } else {
     if (isVerbose() && MBB.hasLabelMustBeEmitted())
       OutStreamer->AddComment("Label of block must be emitted");
-    OutStreamer->EmitLabel(MBB.getSymbol());
+    OutStreamer->emitLabel(MBB.getSymbol());
   }
 }
 
@@ -3163,8 +3163,8 @@ void AsmPrinterHandler::markFunctionEnd() {}
 // into this table will be given to your handler as a patch point identifier.
 void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
                                          const MCSymbol *CurrentFnSym) const {
-  Out->EmitSymbolValue(Sled, Bytes);
-  Out->EmitSymbolValue(CurrentFnSym, Bytes);
+  Out->emitSymbolValue(Sled, Bytes);
+  Out->emitSymbolValue(CurrentFnSym, Bytes);
   auto Kind8 = static_cast<uint8_t>(Kind);
   Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
   Out->emitBinaryData(
@@ -3216,20 +3216,20 @@ void AsmPrinter::emitXRayTable() {
   // range of sleds associated with a function.
   MCSymbol *SledsStart = OutContext.createTempSymbol("xray_sleds_start", true);
   OutStreamer->SwitchSection(InstMap);
-  OutStreamer->EmitLabel(SledsStart);
+  OutStreamer->emitLabel(SledsStart);
   for (const auto &Sled : Sleds)
     Sled.emit(WordSizeBytes, OutStreamer.get(), CurrentFnSym);
   MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_sleds_end", true);
-  OutStreamer->EmitLabel(SledsEnd);
+  OutStreamer->emitLabel(SledsEnd);
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
   // Each entry here will be 2 * word size aligned, as we're writing down two
   // pointers. This should work for both 32-bit and 64-bit platforms.
   OutStreamer->SwitchSection(FnSledIndex);
-  OutStreamer->EmitCodeAlignment(2 * WordSizeBytes);
-  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes, false);
-  OutStreamer->EmitSymbolValue(SledsEnd, WordSizeBytes, false);
+  OutStreamer->emitCodeAlignment(2 * WordSizeBytes);
+  OutStreamer->emitSymbolValue(SledsStart, WordSizeBytes, false);
+  OutStreamer->emitSymbolValue(SledsEnd, WordSizeBytes, false);
   OutStreamer->SwitchSection(PrevSection);
   Sleds.clear();
 }
@@ -3285,7 +3285,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
           "__patchable_function_entries", ELF::SHT_PROGBITS, Flags));
     }
     emitAlignment(Align(PointerSize));
-    OutStreamer->EmitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
+    OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }
 }
 

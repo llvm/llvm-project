@@ -152,7 +152,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }
-  OutStreamer->EmitLabel(GVSym);
+  OutStreamer->emitLabel(GVSym);
 
   emitGlobalConstant(DL, C);
   // The ABI requires that unsigned scalar types smaller than 32 bits
@@ -178,7 +178,7 @@ void XCoreAsmPrinter::emitFunctionBodyEnd() {
 void XCoreAsmPrinter::emitFunctionEntryLabel() {
   // Mark the start of the function
   getTargetStreamer().emitCCTopFunction(CurrentFnSym->getName());
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
 void XCoreAsmPrinter::

@@ -15,7 +15,7 @@ namespace llvm {
 class HexagonTargetStreamer : public MCTargetStreamer {
 public:
   HexagonTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
-  virtual void EmitCodeAlignment(unsigned ByteAlignment,
+  virtual void emitCodeAlignment(unsigned ByteAlignment,
                                  unsigned MaxBytesToEmit = 0){};
   virtual void emitFAlign(unsigned Size, unsigned MaxBytesToEmit){};
   virtual void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,

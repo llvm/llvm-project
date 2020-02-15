@@ -73,7 +73,7 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
   } else {
     OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
 void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
@@ -170,7 +170,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitAssemblerFlag(MCAF_Code16);
     emitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
-      OutStreamer->EmitLabel(TIP.second);
+      OutStreamer->emitLabel(TIP.second);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
         .addReg(TIP.first)
         // Add predicate operands.
@@ -491,7 +491,7 @@ static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {
   // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.emitLabel(StubLabel);
   //   .indirect_symbol _foo
   OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
@@ -877,7 +877,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     for (const auto *GV : ACPC->promotedGlobals()) {
       if (!EmittedPromotedGlobalLabels.count(GV)) {
         MCSymbol *GVSym = getSymbol(GV);
-        OutStreamer->EmitLabel(GVSym);
+        OutStreamer->emitLabel(GVSym);
         EmittedPromotedGlobalLabels.insert(GV);
       }
     }
@@ -926,7 +926,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
       // We want "(<expr> - .)", but MC doesn't have a concept of the '.'
       // label, so just emit a local label end reference that instead.
       MCSymbol *DotSym = OutContext.createTempSymbol();
-      OutStreamer->EmitLabel(DotSym);
+      OutStreamer->emitLabel(DotSym);
       const MCExpr *DotExpr = MCSymbolRefExpr::create(DotSym, OutContext);
       PCRelExpr = MCBinaryExpr::createSub(PCRelExpr, DotExpr, OutContext);
     }
@@ -945,7 +945,7 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Mark the jump table as data-in-code.
   OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
@@ -991,7 +991,7 @@ void ARMAsmPrinter::emitJumpTableInsts(const MachineInstr *MI) {
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -1019,7 +1019,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
     emitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -1514,7 +1514,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a pseudo op for a label used by a branch future instruction
 
     // Emit the label.
-    OutStreamer->EmitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(0).getIndex(), OutContext));
     return;
@@ -1526,7 +1526,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1547,7 +1547,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1578,7 +1578,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // a PC-relative address at the ldr instruction.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1625,7 +1625,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       InConstantPool = true;
     }
 
-    OutStreamer->EmitLabel(GetCPISymbol(LabelId));
+    OutStreamer->emitLabel(GetCPISymbol(LabelId));
 
     const MachineConstantPoolEntry &MCPE = MCP->getConstants()[CPIdx];
     if (MCPE.isMachineConstantPoolEntry())
@@ -1657,7 +1657,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::t2TBH_JT: {
     unsigned Opc = MI->getOpcode() == ARM::t2TBB_JT ? ARM::t2TBB : ARM::t2TBH;
     // Lower and emit the PC label, then the instruction itself.
-    OutStreamer->EmitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
+    OutStreamer->emitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
     EmitToStreamer(*OutStreamer, MCInstBuilder(Opc)
                                      .addReg(MI->getOperand(0).getReg())
                                      .addReg(MI->getOperand(1).getReg())
@@ -1699,7 +1699,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->EmitCodeAlignment(4);
+      OutStreamer->emitCodeAlignment(4);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)
@@ -1741,7 +1741,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                      .addImm(ARMCC::AL)
                                      .addReg(0));
 
-    OutStreamer->EmitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
+    OutStreamer->emitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                      .addReg(ARM::PC)
                                      .addReg(ARM::PC)
@@ -1905,7 +1905,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    OutStreamer->EmitLabel(Label);
+    OutStreamer->emitLabel(Label);
     return;
   }
 

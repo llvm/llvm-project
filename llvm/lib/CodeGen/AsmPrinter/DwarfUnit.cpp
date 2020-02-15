@@ -1629,7 +1629,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
     EndLabel = Asm->createTempSymbol(Prefix + "end");
     Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
-    Asm->OutStreamer->EmitLabel(BeginLabel);
+    Asm->OutStreamer->emitLabel(BeginLabel);
   } else
     Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
 

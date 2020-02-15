@@ -82,7 +82,7 @@ public:
   /// @{
 
   void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
@@ -178,13 +178,13 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
     emitSymbolAttribute(EHSymbol, MCSA_PrivateExtern);
 }
 
-void MCMachOStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (getAssembler().isSymbolLinkerVisible(*Symbol))
     insert(new MCDataFragment());
 
-  MCObjectStreamer::EmitLabel(Symbol, Loc);
+  MCObjectStreamer::emitLabel(Symbol, Loc);
 
   // This causes the reference type flag to be cleared. Darwin 'as' was "trying"
   // to clear the weak reference and weak definition bits too, but the
@@ -212,7 +212,7 @@ void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
 void MCMachOStreamer::emitDataRegion(DataRegionData::KindTy Kind) {
   // Create a temporary label to mark the start of the data region.
   MCSymbol *Start = getContext().createTempSymbol();
-  EmitLabel(Start);
+  emitLabel(Start);
   // Record the region for the object writer to use.
   DataRegionData Data = { Kind, Start, nullptr };
   std::vector<DataRegionData> &Regions = getAssembler().getDataRegions();
@@ -226,7 +226,7 @@ void MCMachOStreamer::emitDataRegionEnd() {
   assert(!Data.End && "Mismatched .end_data_region!");
   // Create a temporary label to mark the end of the data region.
   Data.End = getContext().createTempSymbol();
-  EmitLabel(Data.End);
+  emitLabel(Data.End);
 }
 
 void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
@@ -438,8 +438,8 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 
   // The symbol may not be present, which only creates the section.
   if (Symbol) {
-    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
-    EmitLabel(Symbol);
+    emitValueToAlignment(ByteAlignment, 0, 1, 0);
+    emitLabel(Symbol);
     EmitZeros(Size);
   }
   PopSection();

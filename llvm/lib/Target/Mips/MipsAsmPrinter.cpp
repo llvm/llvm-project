@@ -178,7 +178,7 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
             (*OffsetExpr,
              Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
              CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
-        OutStreamer.EmitLabel(OffsetLabel);
+        OutStreamer.emitLabel(OffsetLabel);
         return;
       }
     }
@@ -222,7 +222,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
       InConstantPool = true;
     }
 
-    OutStreamer->EmitLabel(GetCPISymbol(LabelId));
+    OutStreamer->emitLabel(GetCPISymbol(LabelId));
 
     const MachineConstantPoolEntry &MCPE = MCP->getConstants()[CPIdx];
     if (MCPE.isMachineConstantPoolEntry())
@@ -419,7 +419,7 @@ void MipsAsmPrinter::emitFunctionEntryLabel() {
     TS.emitDirectiveSetNoMips16();
 
   TS.emitDirectiveEnt(*CurrentFnSym);
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
 /// EmitFunctionBodyStart - Targets can override this to emit stuff before
@@ -1054,7 +1054,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // .align 2
   //
-  OutStreamer->EmitValueToAlignment(4);
+  OutStreamer->emitValueToAlignment(4);
   MipsTargetStreamer &TS = getTargetStreamer();
   //
   // .set nomips16
@@ -1074,7 +1074,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   MCSymbol *MType =
       OutContext.getOrCreateSymbol("__call_stub_fp_" + Twine(Symbol));
   OutStreamer->emitSymbolAttribute(MType, MCSA_ELF_TypeFunction);
-  OutStreamer->EmitLabel(Stub);
+  OutStreamer->emitLabel(Stub);
 
   // Only handle non-pic for now.
   assert(!isPositionIndependent() &&
@@ -1113,7 +1113,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   EmitInstrReg(*STI, Mips::JR, Mips::S2);
 
   MCSymbol *Tmp = OutContext.createTempSymbol();
-  OutStreamer->EmitLabel(Tmp);
+  OutStreamer->emitLabel(Tmp);
   const MCSymbolRefExpr *E = MCSymbolRefExpr::create(Stub, OutContext);
   const MCSymbolRefExpr *T = MCSymbolRefExpr::create(Tmp, OutContext);
   const MCExpr *T_min_E = MCBinaryExpr::createSub(T, E, OutContext);
@@ -1203,9 +1203,9 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   //   LD       RA, 8(SP)
   //   DADDIU   SP, SP, 16
   //
-  OutStreamer->EmitCodeAlignment(4);
+  OutStreamer->emitCodeAlignment(4);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
@@ -1223,7 +1223,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
                                      .addReg(Mips::ZERO)
                                      .addImm(0));
 
-  OutStreamer->EmitLabel(Target);
+  OutStreamer->emitLabel(Target);
 
   if (!Subtarget->isGP64bit()) {
     EmitToStreamer(*OutStreamer,
@@ -1260,10 +1260,10 @@ void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
     if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
-        OutStreamer->EmitDTPRel32Value(MipsExpr->getSubExpr());
+        OutStreamer->emitDTPRel32Value(MipsExpr->getSubExpr());
         break;
       case 8:
-        OutStreamer->EmitDTPRel64Value(MipsExpr->getSubExpr());
+        OutStreamer->emitDTPRel64Value(MipsExpr->getSubExpr());
         break;
       default:
         llvm_unreachable("Unexpected size of expression value.");
