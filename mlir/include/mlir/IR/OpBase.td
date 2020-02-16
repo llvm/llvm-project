@@ -1503,6 +1503,10 @@ class OpInterface<string name> : OpInterfaceTrait<name> {
 
   // The list of methods defined by this interface.
   list<InterfaceMethod> methods = [];
+
+  // An optional code block containing extra declarations to place in the
+  // interface declaration.
+  code extraClassDeclaration = "";
 }
 
 // Whether to declare the op interface methods in the op's header. This class
