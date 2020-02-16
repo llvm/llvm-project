@@ -836,6 +836,9 @@ def IncompatibleExceptionSpec : DiagGroup<"incompatible-exception-spec">;
 def IntToVoidPointerCast : DiagGroup<"int-to-void-pointer-cast">;
 def IntToPointerCast : DiagGroup<"int-to-pointer-cast",
                                  [IntToVoidPointerCast]>;
+def VoidPointerToIntCast : DiagGroup<"void-pointer-to-int-cast">;
+def PointerToIntCast : DiagGroup<"pointer-to-int-cast",
+                                 [VoidPointerToIntCast]>;
 
 def Move : DiagGroup<"move", [
     PessimizingMove,

@@ -1961,7 +1961,7 @@ static void DiagnoseCallingConvCast(Sema &Self, const ExprResult &SrcExpr,
       << FD << DstCCName << FixItHint::CreateInsertion(NameLoc, CCAttrText);
 }
 
-static void checkIntToPointerCast(bool CStyle, SourceLocation Loc,
+static void checkIntToPointerCast(bool CStyle, const SourceRange &OpRange,
                                   const Expr *SrcExpr, QualType DestType,
                                   Sema &Self) {
   QualType SrcType = SrcExpr->getType();
@@ -1983,7 +1983,7 @@ static void checkIntToPointerCast(bool CStyle, SourceLocation Loc,
     unsigned Diag = DestType->isVoidPointerType() ?
                       diag::warn_int_to_void_pointer_cast
                     : diag::warn_int_to_pointer_cast;
-    Self.Diag(Loc, Diag) << SrcType << DestType;
+    Self.Diag(OpRange.getBegin(), Diag) << SrcType << DestType << OpRange;
   }
 }
 
@@ -2218,8 +2218,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
 
   if (SrcType->isIntegralOrEnumerationType()) {
     assert(destIsPtr && "One type must be a pointer");
-    checkIntToPointerCast(CStyle, OpRange.getBegin(), SrcExpr.get(), DestType,
-                          Self);
+    checkIntToPointerCast(CStyle, OpRange, SrcExpr.get(), DestType, Self);
     // C++ 5.2.10p5: A value of integral or enumeration type can be explicitly
     //   converted to a pointer.
     // C++ 5.2.10p9: [Note: ...a null pointer constant of integral type is not
@@ -2752,8 +2751,8 @@ void CastOperation::CheckCStyleCast() {
       SrcExpr = ExprError();
       return;
     }
-    checkIntToPointerCast(/* CStyle */ true, OpRange.getBegin(), SrcExpr.get(),
-                          DestType, Self);
+    checkIntToPointerCast(/* CStyle */ true, OpRange, SrcExpr.get(), DestType,
+                          Self);
   } else if (!SrcType->isArithmeticType()) {
     if (!DestType->isIntegralType(Self.Context) &&
         DestType->isArithmeticType()) {
@@ -2762,6 +2761,21 @@ void CastOperation::CheckCStyleCast() {
           << DestType << SrcExpr.get()->getSourceRange();
       SrcExpr = ExprError();
       return;
+    }
+
+    if ((Self.Context.getTypeSize(SrcType) >
+         Self.Context.getTypeSize(DestType))) {
+      // C 6.3.2.3p6: Any pointer type may be converted to an integer type.
+      // Except as previously specified, the result is implementation-defined.
+      // If the result cannot be represented in the integer type, the behavior
+      // is undefined. The result need not be in the range of values of any
+      // integer type.
+      unsigned Diag = Self.getLangOpts().MicrosoftExt
+                          ? diag::ext_ms_pointer_to_int_cast
+                          : SrcType->isVoidPointerType()
+                                ? diag::warn_void_pointer_to_int_cast
+                                : diag::warn_pointer_to_int_cast;
+      Self.Diag(OpRange.getBegin(), Diag) << SrcType << DestType << OpRange;
     }
   }
 
