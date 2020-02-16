@@ -521,7 +521,13 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  renameModuleForThinLTO(Mod, CombinedIndex);
+  // When linking an ELF shared object, dso_local should be dropped. We
+  // conservatively do this for -fpic.
+  bool ClearDSOLocalOnDeclarations =
+      TM->getTargetTriple().isOSBinFormatELF() &&
+      TM->getRelocationModel() != Reloc::Static &&
+      Mod.getPIELevel() == PIELevel::Default;
+  renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);
 
   dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
@@ -547,7 +553,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                                    /*IsImporting*/ true);
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader);
+  FunctionImporter Importer(CombinedIndex, ModuleLoader,
+                            ClearDSOLocalOnDeclarations);
   if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
     return Err;
 
