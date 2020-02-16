@@ -131,14 +131,15 @@ private:
 ///
 /// This is used to add additional items such as e.g. the llvm.loop.parallel
 /// metadata.
-class IRInserter final : public llvm::IRBuilderDefaultInserter {
+class IRInserter : protected llvm::IRBuilderDefaultInserter {
 public:
   IRInserter() = default;
   IRInserter(class ScopAnnotator &A) : Annotator(&A) {}
 
+protected:
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
-                    llvm::BasicBlock::iterator InsertPt) const override {
+                    llvm::BasicBlock::iterator InsertPt) const {
     llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
     if (Annotator)
       Annotator->annotate(I);
