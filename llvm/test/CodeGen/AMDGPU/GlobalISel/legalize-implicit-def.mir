@@ -410,11 +410,20 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v5s16
     ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<6 x s16>) = G_TRUNC [[DEF]](<6 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[TRUNC]](<6 x s16>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<6 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; CHECK: [[DEF1:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<8 x s16>) = G_TRUNC [[DEF1]](<8 x s32>)
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s16>) = G_INSERT [[TRUNC1]], [[EXTRACT]](<5 x s16>), 0
+    ; CHECK: [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>), [[UV6:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF1]](<8 x s32>)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
+    ; CHECK: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
+    ; CHECK: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
+    ; CHECK: [[TRUNC6:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV6]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>), [[TRUNC6]](<2 x s16>)
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s16>) = G_INSERT [[CONCAT_VECTORS1]], [[EXTRACT]](<5 x s16>), 0
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INSERT]](<8 x s16>)
     %0:_(<5 x s16>) = G_IMPLICIT_DEF
     %1:_(<8 x s16>) = G_IMPLICIT_DEF
@@ -429,10 +438,19 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v6s16
     ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<6 x s16>) = G_TRUNC [[DEF]](<6 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<6 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>)
     ; CHECK: [[DEF1:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<8 x s16>) = G_TRUNC [[DEF1]](<8 x s32>)
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s16>) = G_INSERT [[TRUNC1]], [[TRUNC]](<6 x s16>), 0
+    ; CHECK: [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>), [[UV6:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF1]](<8 x s32>)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
+    ; CHECK: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
+    ; CHECK: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
+    ; CHECK: [[TRUNC6:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV6]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>), [[TRUNC6]](<2 x s16>)
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s16>) = G_INSERT [[CONCAT_VECTORS1]], [[CONCAT_VECTORS]](<6 x s16>), 0
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INSERT]](<8 x s16>)
     %0:_(<6 x s16>) = G_IMPLICIT_DEF
     %1:_(<8 x s16>) = G_IMPLICIT_DEF
@@ -447,8 +465,13 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v8s16
     ; CHECK: [[DEF:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s16>) = G_TRUNC [[DEF]](<8 x s32>)
-    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[TRUNC]](<8 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<8 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<8 x s16>)
     %0:_(<8 x s16>) = G_IMPLICIT_DEF
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %0
 ...
