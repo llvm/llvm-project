@@ -181,7 +181,7 @@ class NamedArgument<string name, bit opt = 0, bit fake = 0> : Argument<name,
                                                                        opt,
                                                                        fake>;
 
-// An argument of a OMPDeclareVariantAttribute that represents the `match`
+// An argument of a OMPDeclareVariantAttr that represents the `match`
 // clause of the declare variant by keeping the information (incl. nesting) in
 // an OMPTraitInfo object.
 //
@@ -3366,7 +3366,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
   ];
   let AdditionalMembers = [{
-    ~OMPDeclareVariantAttr() { delete traitInfos; }
+    OMPTraitInfo &getTraitInfo() { return traitInfos; }
     void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
         const {
       if (const Expr *E = getVariantFuncRef()) {
@@ -3375,7 +3375,7 @@ def OMPDeclareVariant : InheritableAttr {
         OS << ")";
       }
       OS << " match(";
-      traitInfos->print(OS, Policy);
+      traitInfos.print(OS, Policy);
       OS << ")";
     }
   }];
