@@ -59,9 +59,9 @@ class Use;
 ///
 /// By default, this inserts the instruction at the insertion point.
 class IRBuilderDefaultInserter {
-  virtual void anchor();
-
 public:
+  virtual ~IRBuilderDefaultInserter();
+
   virtual void InsertHelper(Instruction *I, const Twine &Name,
                             BasicBlock *BB,
                             BasicBlock::iterator InsertPt) const {
@@ -74,9 +74,10 @@ public:
 /// performing the default insertion.
 class IRBuilderCallbackInserter : public IRBuilderDefaultInserter {
   std::function<void(Instruction *)> Callback;
-  virtual void anchor();
 
 public:
+  virtual ~IRBuilderCallbackInserter();
+
   IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
       : Callback(std::move(Callback)) {}
 

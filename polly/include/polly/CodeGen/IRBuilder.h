@@ -131,7 +131,7 @@ private:
 ///
 /// This is used to add additional items such as e.g. the llvm.loop.parallel
 /// metadata.
-class IRInserter : public llvm::IRBuilderDefaultInserter {
+class IRInserter final : public llvm::IRBuilderDefaultInserter {
 public:
   IRInserter() = default;
   IRInserter(class ScopAnnotator &A) : Annotator(&A) {}
