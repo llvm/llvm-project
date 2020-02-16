@@ -39,7 +39,7 @@ entry:
 define dso_local void @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @broker(i32* nofree nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* nonnull @callee, i32* nofree nonnull readonly align 4 dereferenceable(4) @gsh)
+; CHECK-NEXT:    call void @broker(i32* nofree nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* nonnull @callee, i32* nofree nonnull readonly align 4 dereferenceable(4) undef)
 ; CHECK-NEXT:    ret void
 ;
 entry:
