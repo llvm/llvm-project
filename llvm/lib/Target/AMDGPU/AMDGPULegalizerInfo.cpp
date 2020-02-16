@@ -1816,16 +1816,6 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   return true;
 }
 
-static bool isLegalVOP3PShuffleMask(ArrayRef<int> Mask) {
-  assert(Mask.size() == 2);
-
-  // If one half is undef, the other is trivially in the same reg.
-  if (Mask[0] == -1 || Mask[1] == -1)
-    return true;
-  return ((Mask[0] == 0 || Mask[0] == 1) && (Mask[1] == 0 || Mask[1] == 1)) ||
-         ((Mask[0] == 2 || Mask[0] == 3) && (Mask[1] == 2 || Mask[1] == 3));
-}
-
 bool AMDGPULegalizerInfo::legalizeShuffleVector(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B) const {
@@ -1837,7 +1827,7 @@ bool AMDGPULegalizerInfo::legalizeShuffleVector(
   LLT SrcTy = MRI.getType(Src0);
 
   if (SrcTy == V2S16 && DstTy == V2S16 &&
-      isLegalVOP3PShuffleMask(MI.getOperand(3).getShuffleMask()))
+      AMDGPU::isLegalVOP3PShuffleMask(MI.getOperand(3).getShuffleMask()))
     return true;
 
   MachineIRBuilder HelperBuilder(MI);

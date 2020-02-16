@@ -2100,6 +2100,155 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   return true;
 }
 
+static bool isZeroOrUndef(int X) {
+  return X == 0 || X == -1;
+}
+
+static bool isOneOrUndef(int X) {
+  return X == 1 || X == -1;
+}
+
+static bool isZeroOrOneOrUndef(int X) {
+  return X == 0 || X == 1 || X == -1;
+}
+
+// Normalize a VOP3P shuffle mask to refer to the low/high half of a single
+// 32-bit register.
+static Register normalizeVOP3PMask(int NewMask[2], Register Src0, Register Src1,
+                                   ArrayRef<int> Mask) {
+  NewMask[0] = Mask[0];
+  NewMask[1] = Mask[1];
+  if (isZeroOrOneOrUndef(Mask[0]) && isZeroOrOneOrUndef(Mask[1]))
+    return Src0;
+
+  assert(NewMask[0] == 2 || NewMask[0] == 3 || NewMask[0] == -1);
+  assert(NewMask[1] == 2 || NewMask[1] == 3 || NewMask[1] == -1);
+
+  // Shift the mask inputs to be 0/1;
+  NewMask[0] = NewMask[0] == -1 ? -1 : NewMask[0] - 2;
+  NewMask[1] = NewMask[1] == -1 ? -1 : NewMask[1] - 2;
+  return Src1;
+}
+
+// This is only legal with VOP3P instructions as an aid to op_sel matching.
+bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
+  MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src0Reg = MI.getOperand(1).getReg();
+  Register Src1Reg = MI.getOperand(2).getReg();
+  ArrayRef<int> ShufMask = MI.getOperand(3).getShuffleMask();
+
+  const LLT V2S16 = LLT::vector(2, 16);
+  if (MRI->getType(DstReg) != V2S16 || MRI->getType(Src0Reg) != V2S16)
+    return false;
+
+  if (!AMDGPU::isLegalVOP3PShuffleMask(ShufMask))
+    return false;
+
+  assert(ShufMask.size() == 2);
+  assert(STI.hasSDWA() && "no target has VOP3P but not SDWA");
+
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+  const TargetRegisterClass &RC = IsVALU ?
+    AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
+
+  // Handle the degenerate case which should have folded out.
+  if (ShufMask[0] == -1 && ShufMask[1] == -1) {
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), DstReg);
+
+    MI.eraseFromParent();
+    return RBI.constrainGenericRegister(DstReg, RC, *MRI);
+  }
+
+  // A legal VOP3P mask only reads one of the sources.
+  int Mask[2];
+  Register SrcVec = normalizeVOP3PMask(Mask, Src0Reg, Src1Reg, ShufMask);
+
+  if (!RBI.constrainGenericRegister(DstReg, RC, *MRI) ||
+      !RBI.constrainGenericRegister(SrcVec, RC, *MRI))
+    return false;
+
+  // TODO: This also should have been folded out
+  if (isZeroOrUndef(Mask[0]) && isOneOrUndef(Mask[1])) {
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::COPY), DstReg)
+      .addReg(SrcVec);
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (Mask[0] == 1 && Mask[1] == -1) {
+    if (IsVALU) {
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHRREV_B32_e64), DstReg)
+        .addImm(16)
+        .addReg(SrcVec);
+    } else {
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), DstReg)
+        .addReg(SrcVec)
+        .addImm(16);
+    }
+  } else if (isZeroOrUndef(Mask[0]) && Mask[1] == 0) {
+    if (IsVALU) {
+      // Write low half of the register into the high half.
+      MachineInstr *MovSDWA =
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
+        .addImm(0)                             // $src0_modifiers
+        .addReg(SrcVec)                        // $src0
+        .addImm(0)                             // $clamp
+        .addImm(AMDGPU::SDWA::WORD_1)          // $dst_sel
+        .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
+        .addImm(AMDGPU::SDWA::WORD_0)          // $src0_sel
+        .addReg(SrcVec, RegState::Implicit);
+      MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+    } else {
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), DstReg)
+        .addReg(SrcVec)
+        .addReg(SrcVec);
+    }
+  } else if (Mask[0] == 1 && Mask[1] == 1) {
+    if (IsVALU) {
+      // Write high half of the register into the low half.
+      MachineInstr *MovSDWA =
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
+        .addImm(0)                             // $src0_modifiers
+        .addReg(SrcVec)                        // $src0
+        .addImm(0)                             // $clamp
+        .addImm(AMDGPU::SDWA::WORD_0)          // $dst_sel
+        .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
+        .addImm(AMDGPU::SDWA::WORD_1)          // $src0_sel
+        .addReg(SrcVec, RegState::Implicit);
+      MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+    } else {
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_HH_B32_B16), DstReg)
+        .addReg(SrcVec)
+        .addReg(SrcVec);
+    }
+  } else if (Mask[0] == 1 && Mask[1] == 0) {
+    if (IsVALU) {
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_ALIGNBIT_B32), DstReg)
+        .addReg(SrcVec)
+        .addReg(SrcVec)
+        .addImm(16);
+    } else {
+      Register TmpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), TmpReg)
+        .addReg(SrcVec)
+        .addImm(16);
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), DstReg)
+        .addReg(TmpReg)
+        .addReg(SrcVec);
+    }
+  } else
+    llvm_unreachable("all shuffle masks should be handled");
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   if (I.isPHI())
     return selectPHI(I);
@@ -2202,6 +2351,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectG_INSERT_VECTOR_ELT(I);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return selectG_SHUFFLE_VECTOR(I);
   case AMDGPU::G_AMDGPU_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_ATOMIC_DEC:
     initM0(I);
