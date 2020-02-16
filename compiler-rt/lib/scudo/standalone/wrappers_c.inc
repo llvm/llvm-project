@@ -195,7 +195,7 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
       decltype(SCUDO_ALLOCATOR)::PrimaryT::SizeClassMap::MaxSize;
   auto *sizes = static_cast<scudo::uptr *>(
       SCUDO_PREFIX(calloc)(max_size, sizeof(scudo::uptr)));
-  auto callback = [](uintptr_t, size_t size, void* arg) {
+  auto callback = [](uintptr_t, size_t size, void *arg) {
     auto *sizes = reinterpret_cast<scudo::uptr *>(arg);
     if (size < max_size)
       sizes[size]++;
