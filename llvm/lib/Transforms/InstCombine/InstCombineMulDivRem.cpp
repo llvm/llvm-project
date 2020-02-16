@@ -563,8 +563,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       Y = Op0;
     }
     if (Log2) {
-      Log2->setArgOperand(0, X);
-      Log2->copyFastMathFlags(&I);
+      Value *Log2 = Builder.CreateUnaryIntrinsic(Intrinsic::log2, X, &I);
       Value *LogXTimesY = Builder.CreateFMulFMF(Log2, Y, &I);
       return BinaryOperator::CreateFSubFMF(LogXTimesY, Y, &I);
     }

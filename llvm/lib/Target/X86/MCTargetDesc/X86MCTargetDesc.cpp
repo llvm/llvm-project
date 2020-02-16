@@ -335,7 +335,10 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment()) {
-    MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+    if (Options.getAssemblyLanguage().equals_lower("masm"))
+      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+    else
+      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);

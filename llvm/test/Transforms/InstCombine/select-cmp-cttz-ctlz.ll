@@ -447,6 +447,101 @@ define <2 x i32> @test_cttz_not_bw_vec(<2 x i32> %x) {
   ret <2 x i32> %res
 }
 
+define i32 @test_multiuse_def(i32 %x, i32* %p) {
+; CHECK-LABEL: @test_multiuse_def(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    store i32 [[CT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[CT]]
+;
+  %ct = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %tobool = icmp ne i32 %x, 0
+  %cond = select i1 %tobool, i32 %ct, i32 32
+  store i32 %ct, i32* %p
+  ret i32 %cond
+}
+
+define i32 @test_multiuse_undef(i32 %x, i32* %p) {
+; CHECK-LABEL: @test_multiuse_undef(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !range !1
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 false), !range !1
+; CHECK-NEXT:    store i32 [[CT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %ct = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %tobool = icmp ne i32 %x, 0
+  %cond = select i1 %tobool, i32 %ct, i32 32
+  store i32 %ct, i32* %p
+  ret i32 %cond
+}
+
+define i64 @test_multiuse_zext_def(i32 %x, i64* %p) {
+; CHECK-LABEL: @test_multiuse_zext_def(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[CT]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 false), !range !1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    store i64 [[CONV]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %conv = zext i32 %ct to i64
+  %tobool = icmp ne i32 %x, 0
+  %cond = select i1 %tobool, i64 %conv, i64 32
+  store i64 %conv, i64* %p
+  ret i64 %cond
+}
+
+define i64 @test_multiuse_zext_undef(i32 %x, i64* %p) {
+; CHECK-LABEL: @test_multiuse_zext_undef(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range !1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[CT]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 false), !range !1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    store i64 [[CONV]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %conv = zext i32 %ct to i64
+  %tobool = icmp ne i32 %x, 0
+  %cond = select i1 %tobool, i64 %conv, i64 32
+  store i64 %conv, i64* %p
+  ret i64 %cond
+}
+
+define i16 @test_multiuse_trunc_def(i64 %x, i16 *%p) {
+; CHECK-LABEL: @test_multiuse_trunc_def(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range !2
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 false), !range !2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i16
+; CHECK-NEXT:    store i16 [[CONV]], i16* [[P:%.*]], align 2
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 false)
+  %conv = trunc i64 %ct to i16
+  %tobool = icmp ne i64 %x, 0
+  %cond = select i1 %tobool, i16 %conv, i16 64
+  store i16 %conv, i16* %p
+  ret i16 %cond
+}
+
+define i16 @test_multiuse_trunc_undef(i64 %x, i16 *%p) {
+; CHECK-LABEL: @test_multiuse_trunc_undef(
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true), !range !2
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X]], i1 false), !range !2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i16
+; CHECK-NEXT:    store i16 [[CONV]], i16* [[P:%.*]], align 2
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 true)
+  %conv = trunc i64 %ct to i16
+  %tobool = icmp ne i64 %x, 0
+  %cond = select i1 %tobool, i16 %conv, i16 64
+  store i16 %conv, i16* %p
+  ret i16 %cond
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)

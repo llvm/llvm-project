@@ -58,8 +58,9 @@ static bool foldExtractCmp(Instruction &I, const TargetTransformInfo &TTI) {
   // ((2 * extract) + scalar cmp) < (vector cmp + extract) ?
   int ExtractCost = TTI.getVectorInstrCost(Instruction::ExtractElement,
                                            VecTy, C->getZExtValue());
-  int ScalarCmpCost = TTI.getOperationCost(CmpOpcode, ScalarTy);
-  int VecCmpCost = TTI.getOperationCost(CmpOpcode, VecTy);
+  int ScalarCmpCost = TTI.getCmpSelInstrCost(CmpOpcode, ScalarTy, I.getType());
+  int VecCmpCost = TTI.getCmpSelInstrCost(CmpOpcode, VecTy,
+                                          CmpInst::makeCmpResultType(VecTy));
 
   int ScalarCost = 2 * ExtractCost + ScalarCmpCost;
   int VecCost = VecCmpCost + ExtractCost +

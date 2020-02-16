@@ -4683,7 +4683,7 @@ struct GEPOffsetAndOverflow {
 static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
                                                  llvm::LLVMContext &VMContext,
                                                  CodeGenModule &CGM,
-                                                 CGBuilderTy Builder) {
+                                                 CGBuilderTy &Builder) {
   const auto &DL = CGM.getDataLayout();
 
   // The total (signed) byte offset for the GEP.

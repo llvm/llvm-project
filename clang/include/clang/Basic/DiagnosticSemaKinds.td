@@ -3658,6 +3658,15 @@ def warn_int_to_pointer_cast : Warning<
 def warn_int_to_void_pointer_cast : Warning<
   "cast to %1 from smaller integer type %0">,
   InGroup<IntToVoidPointerCast>;
+def warn_pointer_to_int_cast : Warning<
+  "cast to smaller integer type %1 from %0">,
+  InGroup<PointerToIntCast>;
+def warn_void_pointer_to_int_cast : Warning<
+  "cast to smaller integer type %1 from %0">,
+  InGroup<VoidPointerToIntCast>;
+def ext_ms_pointer_to_int_cast : ExtWarn<
+  "cast to smaller integer type %1 from %0 is a Microsoft extension">,
+InGroup<MicrosoftCast>;
 
 def warn_attribute_ignored_for_field_of_type : Warning<
   "%0 attribute ignored for field of type %1">,

@@ -1270,7 +1270,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
                               const int LiveStart,
                               ArrayRef<Value *> BasePtrs,
                               Instruction *StatepointToken,
-                              IRBuilder<> Builder) {
+                              IRBuilder<> &Builder) {
   if (LiveVariables.empty())
     return;
 
