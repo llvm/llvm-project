@@ -227,7 +227,7 @@ Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
   if (Addr < Hdr->BaseAddress)
     return createStringError(std::errc::invalid_argument,
-                             "address 0x%" PRIx64 " not in GSYM", Addr);
+                             "address 0x%" PRIx64 " is not in GSYM", Addr);
   const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
   switch (Hdr->AddrOffSize) {
   case 1: return getAddressOffsetIndex<uint8_t>(AddrOffset);
@@ -255,7 +255,7 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
       if (ExpectedFI->Range.contains(Addr) || ExpectedFI->Range.size() == 0)
         return ExpectedFI;
       return createStringError(std::errc::invalid_argument,
-                                "address 0x%" PRIx64 " not in GSYM", Addr);
+                                "address 0x%" PRIx64 " is not in GSYM", Addr);
     }
   }
   return createStringError(std::errc::invalid_argument,
@@ -322,10 +322,10 @@ void GsymReader::dump(raw_ostream &OS) {
     dump(OS, getFile(I));
     OS << "\n";
   }
-  OS << "\n" << StrTab;
+  OS << "\n" << StrTab << "\n";
 
   for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
-    OS << "\nFunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
+    OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
     if (auto FI = getFunctionInfo(*getAddress(I)))
       dump(OS, *FI);
     else

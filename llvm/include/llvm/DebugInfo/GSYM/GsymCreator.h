@@ -140,6 +140,7 @@ class GsymCreator {
   DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
+  Optional<AddressRanges> ValidTextRanges;
   bool Finalized = false;
 
 public:
@@ -229,6 +230,38 @@ public:
   /// Get the current number of FunctionInfo objects contained in this
   /// object.
   size_t getNumFunctionInfos() const;
+
+  /// Set valid .text address ranges that all functions must be contained in.
+  void SetValidTextRanges(AddressRanges &TextRanges) {
+    ValidTextRanges = TextRanges;
+  }
+
+  /// Get the valid text ranges.
+  const Optional<AddressRanges> GetValidTextRanges() const {
+    return ValidTextRanges;
+  }
+
+  /// Check if an address is a valid code address.
+  ///
+  /// Any functions whose addresses do not exist within these function bounds
+  /// will not be converted into the final GSYM. This allows the object file
+  /// to figure out the valid file address ranges of all the code sections
+  /// and ensure we don't add invalid functions to the final output. Many
+  /// linkers have issues when dead stripping functions from DWARF debug info
+  /// where they set the DW_AT_low_pc to zero, but newer DWARF has the
+  /// DW_AT_high_pc as an offset from the DW_AT_low_pc and these size
+  /// attributes have no relocations that can be applied. This results in DWARF
+  /// where many functions have an DW_AT_low_pc of zero and a valid offset size
+  /// for DW_AT_high_pc. If we extract all valid ranges from an object file
+  /// that are marked with executable permissions, we can properly ensure that
+  /// these functions are removed.
+  ///
+  /// \param Addr An address to check.
+  ///
+  /// \returns True if the address is in the valid text ranges or if no valid
+  ///          text ranges have been set, false otherwise.
+  bool IsValidTextAddress(uint64_t Addr) const;
+
 };
 
 } // namespace gsym
