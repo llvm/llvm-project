@@ -2699,7 +2699,7 @@ struct AAMemoryLocation
   /// underlying accessed memory pointer) and it will return true if \p Pred
   /// holds every time.
   virtual bool checkForAllAccessesToMemoryKind(
-      const function_ref<bool(const Instruction &, const Value *, AccessKind,
+      const function_ref<bool(const Instruction *, const Value *, AccessKind,
                               MemoryLocationsKind)> &Pred,
       MemoryLocationsKind MLK) const = 0;
 
