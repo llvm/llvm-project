@@ -151,15 +151,15 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        kaddb	%k0, %k1, %k2
-# CHECK-NEXT:  1      3     1.00                        kaddw	%k0, %k1, %k2
+# CHECK-NEXT:  1      4     1.00                        kaddb	%k0, %k1, %k2
+# CHECK-NEXT:  1      4     1.00                        kaddw	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kandb	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kandnb	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        korb	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kxnorb	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kxorb	%k0, %k1, %k2
-# CHECK-NEXT:  1      3     1.00                        kshiftlb	$2, %k1, %k2
-# CHECK-NEXT:  1      3     1.00                        kshiftrb	$2, %k1, %k2
+# CHECK-NEXT:  1      4     1.00                        kshiftlb	$2, %k1, %k2
+# CHECK-NEXT:  1      4     1.00                        kshiftrb	$2, %k1, %k2
 # CHECK-NEXT:  1      1     0.50                        vandnpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vandnpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vandnpd	(%rax){1to8}, %zmm17, %zmm19
@@ -232,25 +232,25 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.50                        vorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      3     1.00                        vfpclasspd	$171, %zmm16, %k1
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspdz	$171, (%rax), %k1
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspd	$171, (%rax){1to8}, %k1
-# CHECK-NEXT:  1      3     1.00                        vfpclasspd	$171, %zmm16, %k1 {%k2}
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspdz	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspd	$171, (%rax){1to8}, %k1 {%k2}
-# CHECK-NEXT:  1      3     1.00                        vfpclassps	$171, %zmm16, %k1
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspsz	$171, (%rax), %k1
-# CHECK-NEXT:  2      11    0.50    *                   vfpclassps	$171, (%rax){1to16}, %k1
-# CHECK-NEXT:  1      3     1.00                        vfpclassps	$171, %zmm16, %k1 {%k2}
-# CHECK-NEXT:  2      11    0.50    *                   vfpclasspsz	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  2      11    0.50    *                   vfpclassps	$171, (%rax){1to16}, %k1 {%k2}
-# CHECK-NEXT:  1      3     1.00                        vfpclasssd	$171, %xmm16, %k1
-# CHECK-NEXT:  2      8     1.00    *                   vfpclasssd	$171, (%rax), %k1
-# CHECK-NEXT:  1      3     1.00                        vfpclasssd	$171, %xmm16, %k1 {%k2}
-# CHECK-NEXT:  2      8     1.00    *                   vfpclasssd	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  1      3     1.00                        vfpclassss	$171, %xmm16, %k1
+# CHECK-NEXT:  1      4     1.00                        vfpclasspd	$171, %zmm16, %k1
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspdz	$171, (%rax), %k1
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspd	$171, (%rax){1to8}, %k1
+# CHECK-NEXT:  1      4     1.00                        vfpclasspd	$171, %zmm16, %k1 {%k2}
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspdz	$171, (%rax), %k1 {%k2}
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspd	$171, (%rax){1to8}, %k1 {%k2}
+# CHECK-NEXT:  1      4     1.00                        vfpclassps	$171, %zmm16, %k1
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspsz	$171, (%rax), %k1
+# CHECK-NEXT:  2      11    1.00    *                   vfpclassps	$171, (%rax){1to16}, %k1
+# CHECK-NEXT:  1      4     1.00                        vfpclassps	$171, %zmm16, %k1 {%k2}
+# CHECK-NEXT:  2      11    1.00    *                   vfpclasspsz	$171, (%rax), %k1 {%k2}
+# CHECK-NEXT:  2      11    1.00    *                   vfpclassps	$171, (%rax){1to16}, %k1 {%k2}
+# CHECK-NEXT:  1      4     1.00                        vfpclasssd	$171, %xmm16, %k1
+# CHECK-NEXT:  2      9     1.00    *                   vfpclasssd	$171, (%rax), %k1
+# CHECK-NEXT:  1      4     1.00                        vfpclasssd	$171, %xmm16, %k1 {%k2}
+# CHECK-NEXT:  2      9     1.00    *                   vfpclasssd	$171, (%rax), %k1 {%k2}
+# CHECK-NEXT:  1      4     1.00                        vfpclassss	$171, %xmm16, %k1
 # CHECK-NEXT:  2      9     1.00    *                   vfpclassss	$171, (%rax), %k1
-# CHECK-NEXT:  1      3     1.00                        vfpclassss	$171, %xmm16, %k1 {%k2}
+# CHECK-NEXT:  1      4     1.00                        vfpclassss	$171, %xmm16, %k1 {%k2}
 # CHECK-NEXT:  2      9     1.00    *                   vfpclassss	$171, (%rax), %k1 {%k2}
 # CHECK-NEXT:  3      12    1.50                        vpmullq	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  4      19    1.00    *                   vpmullq	(%rax), %zmm17, %zmm19
@@ -291,7 +291,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     59.50  7.00   37.50  37.50   -     77.50   -      -
+# CHECK-NEXT:  -      -     55.50  7.00   37.50  37.50   -     81.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -377,17 +377,17 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclasspd	$171, %zmm16, %k1
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspdz	$171, (%rax), %k1
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspd	$171, (%rax){1to8}, %k1
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspdz	$171, (%rax), %k1
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspd	$171, (%rax){1to8}, %k1
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclasspd	$171, %zmm16, %k1 {%k2}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspdz	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspd	$171, (%rax){1to8}, %k1 {%k2}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspdz	$171, (%rax), %k1 {%k2}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspd	$171, (%rax){1to8}, %k1 {%k2}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclassps	$171, %zmm16, %k1
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspsz	$171, (%rax), %k1
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclassps	$171, (%rax){1to16}, %k1
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspsz	$171, (%rax), %k1
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclassps	$171, (%rax){1to16}, %k1
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclassps	$171, %zmm16, %k1 {%k2}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclasspsz	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vfpclassps	$171, (%rax){1to16}, %k1 {%k2}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasspsz	$171, (%rax), %k1 {%k2}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclassps	$171, (%rax){1to16}, %k1 {%k2}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclasssd	$171, %xmm16, %k1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclasssd	$171, (%rax), %k1
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclasssd	$171, %xmm16, %k1 {%k2}
