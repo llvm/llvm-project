@@ -289,3 +289,8 @@ size_t GsymCreator::getNumFunctionInfos() const{
   return Funcs.size();
 }
 
+bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
+  if (ValidTextRanges)
+    return ValidTextRanges->contains(Addr);
+  return true; // No valid text ranges has been set, so accept all ranges.
+}

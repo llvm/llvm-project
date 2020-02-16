@@ -6203,7 +6203,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).
   bool checkForAllAccessesToMemoryKind(
-      const function_ref<bool(const Instruction &, const Value *, AccessKind,
+      const function_ref<bool(const Instruction *, const Value *, AccessKind,
                               MemoryLocationsKind)> &Pred,
       MemoryLocationsKind RequestedMLK) const override {
     if (!isValidState())
@@ -6218,9 +6218,10 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
         continue;
 
       const auto &Accesses = AccessKindAccessesMap.lookup(CurMLK);
-      for (const AccessInfo &AI : Accesses)
-        if (!Pred(*AI.I, AI.Ptr, AI.Kind, CurMLK))
+      for (const AccessInfo &AI : Accesses) {
+        if (!Pred(AI.I, AI.Ptr, AI.Kind, CurMLK))
           return false;
+      }
     }
 
     return true;
@@ -6432,7 +6433,7 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
     // Now handle global memory if it might be accessed.
     bool HasGlobalAccesses = !(ICSAssumedNotAccessedLocs & NO_GLOBAL_MEM);
     if (HasGlobalAccesses) {
-      auto AccessPred = [&](const Instruction &, const Value *Ptr,
+      auto AccessPred = [&](const Instruction *, const Value *Ptr,
                             AccessKind Kind, MemoryLocationsKind MLK) {
         updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, MLK, &I,
                                   Ptr, Changed);
@@ -6566,9 +6567,9 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AAMemoryLocation>(*this, FnPos);
     bool Changed = false;
-    auto AccessPred = [&](const Instruction &I, const Value *Ptr,
+    auto AccessPred = [&](const Instruction *I, const Value *Ptr,
                           AccessKind Kind, MemoryLocationsKind MLK) {
-      updateStateAndAccessesMap(getState(), AccessKindAccessesMap, MLK, &I, Ptr,
+      updateStateAndAccessesMap(getState(), AccessKindAccessesMap, MLK, I, Ptr,
                                 Changed);
       return true;
     };

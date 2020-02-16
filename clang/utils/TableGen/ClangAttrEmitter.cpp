@@ -107,7 +107,7 @@ static std::string ReadPCHRecord(StringRef type) {
       .Case("IdentifierInfo *", "Record.readIdentifier()")
       .Case("StringRef", "Record.readString()")
       .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
-      .Case("OMPTraitInfo *", "Record.readOMPTraitInfo()")
+      .Case("OMPTraitInfo", "Record.readOMPTraitInfo()")
       .Default("Record.readInt()");
 }
 
@@ -131,7 +131,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
              .Case("StringRef", "AddString(" + std::string(name) + ");\n")
              .Case("ParamIdx",
                    "push_back(" + std::string(name) + ".serialize());\n")
-             .Case("OMPTraitInfo *",
+             .Case("OMPTraitInfo",
                    "writeOMPTraitInfo(" + std::string(name) + ");\n")
              .Default("push_back(" + std::string(name) + ");\n");
 }
@@ -363,8 +363,8 @@ namespace {
           OS << "    if (SA->get" << getUpperName() << "().isValid())\n  ";
         OS << "    OS << \" \" << SA->get" << getUpperName()
            << "().getSourceIndex();\n";
-      } else if (type == "OMPTraitInfo *") {
-        OS << "    OS << \" \" << *SA->get" << getUpperName() << "();\n";
+      } else if (type == "OMPTraitInfo") {
+        OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
       } else {
         llvm_unreachable("Unknown SimpleArgument type!");
       }
@@ -1314,7 +1314,7 @@ createArgument(const Record &Arg, StringRef Attr,
   else if (ArgName == "VersionArgument")
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
-    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo");
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.

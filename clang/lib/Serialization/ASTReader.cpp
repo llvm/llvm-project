@@ -12612,10 +12612,10 @@ void OMPClauseReader::VisitOMPOrderClause(OMPOrderClause *C) {
   C->setKindKwLoc(Record.readSourceLocation());
 }
 
-OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
-  OMPTraitInfo *TI = new OMPTraitInfo();
-  TI->Sets.resize(readUInt32());
-  for (auto &Set : TI->Sets) {
+OMPTraitInfo ASTRecordReader::readOMPTraitInfo() {
+  OMPTraitInfo TI;
+  TI.Sets.resize(readUInt32());
+  for (auto &Set : TI.Sets) {
     Set.Kind = readEnum<llvm::omp::TraitSet>();
     Set.Selectors.resize(readUInt32());
     for (auto &Selector : Set.Selectors) {

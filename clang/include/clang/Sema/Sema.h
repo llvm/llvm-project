@@ -10202,7 +10202,7 @@ public:
   /// must be used instead of the original one, specified in \p DG.
   /// \param TI The context traits associated with the function variant.
   void ActOnOpenMPDeclareVariantDirective(FunctionDecl *FD, Expr *VariantRef,
-                                          OMPTraitInfo *TI, SourceRange SR);
+                                          OMPTraitInfo &TI, SourceRange SR);
 
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                          Expr *Expr,
