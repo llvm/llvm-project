@@ -705,9 +705,10 @@ body: |
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
     ; SI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; SI: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
-    ; SI: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LSHR]](s64), [[LSHR1]](s64)
-    ; SI: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[BUILD_VECTOR2]](<2 x s64>)
-    ; SI: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[TRUNC]], [[BUILD_VECTOR]]
+    ; SI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; SI: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; SI: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; SI: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[AND]], [[AND1]]
     ; SI: $vgpr0_vgpr1 = COPY [[OR]](<2 x s32>)
     ; VI-LABEL: name: test_copysign_v2s32_v2s64
@@ -723,9 +724,10 @@ body: |
     ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
     ; VI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; VI: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
-    ; VI: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LSHR]](s64), [[LSHR1]](s64)
-    ; VI: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[BUILD_VECTOR2]](<2 x s64>)
-    ; VI: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[TRUNC]], [[BUILD_VECTOR]]
+    ; VI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; VI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; VI: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; VI: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; VI: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[AND]], [[AND1]]
     ; VI: $vgpr0_vgpr1 = COPY [[OR]](<2 x s32>)
     ; GFX9-LABEL: name: test_copysign_v2s32_v2s64
@@ -741,9 +743,10 @@ body: |
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
     ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; GFX9: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
-    ; GFX9: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[LSHR]](s64), [[LSHR1]](s64)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[BUILD_VECTOR2]](<2 x s64>)
-    ; GFX9: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[TRUNC]], [[BUILD_VECTOR]]
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; GFX9: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; GFX9: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; GFX9: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; GFX9: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[AND]], [[AND1]]
     ; GFX9: $vgpr0_vgpr1 = COPY [[OR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
