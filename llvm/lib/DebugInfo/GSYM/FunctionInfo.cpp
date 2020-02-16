@@ -223,6 +223,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     // location as best we can and return.
     SourceLocation SrcLoc;
     SrcLoc.Name = LR.FuncName;
+    SrcLoc.Offset = Addr - FuncAddr;
     LR.Locations.push_back(SrcLoc);
     return LR;
   }
@@ -235,6 +236,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
 
   SourceLocation SrcLoc;
   SrcLoc.Name = LR.FuncName;
+  SrcLoc.Offset = Addr - FuncAddr;
   SrcLoc.Dir = GR.getString(LineEntryFile->Dir);
   SrcLoc.Base = GR.getString(LineEntryFile->Base);
   SrcLoc.Line = LineEntry->Line;
