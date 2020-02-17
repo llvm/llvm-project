@@ -138,6 +138,8 @@ using StdIndexedValue =
 
 using folded_std_constant_index = folded::ValueBuilder<ConstantIndexOp>;
 using folded_std_constant_float = folded::ValueBuilder<ConstantFloatOp>;
+using folded_std_constant_int = folded::ValueBuilder<ConstantIntOp>;
+using folded_std_constant = folded::ValueBuilder<ConstantOp>;
 using folded_std_dim = folded::ValueBuilder<DimOp>;
 using folded_std_muli = folded::ValueBuilder<MulIOp>;
 } // namespace intrinsics
