@@ -228,9 +228,7 @@ static bool hasPrivateSubmodules(const Module *module) {
 }
 
 bool APINotesManager::loadCurrentModuleAPINotes(
-                   const Module *module,
-                   bool lookInModule,
-                   ArrayRef<std::string> searchPaths) {
+    Module *module, bool lookInModule, ArrayRef<std::string> searchPaths) {
   assert(!CurrentModuleReaders[0] &&
          "Already loaded API notes for the current module?");
 
@@ -252,8 +250,10 @@ bool APINotesManager::loadCurrentModuleAPINotes(
 
         // Try to load the API notes file.
         CurrentModuleReaders[numReaders] = loadAPINotes(file).release();
-        if (CurrentModuleReaders[numReaders])
+        if (CurrentModuleReaders[numReaders]) {
+          module->APINotesFile = file->getName().str();
           ++numReaders;
+        }
       }
     };
 
@@ -309,7 +309,11 @@ bool APINotesManager::loadCurrentModuleAPINotes(
     if (auto searchDir = fileMgr.getDirectory(searchPath)) {
       if (auto file = findAPINotesFile(*searchDir, moduleName)) {
         CurrentModuleReaders[0] = loadAPINotes(file).release();
-        return !getCurrentModuleReaders().empty();
+        if (!getCurrentModuleReaders().empty()) {
+          module->APINotesFile = file->getName().str();
+          return true;
+        }
+        return false;
       }
     }
   }
