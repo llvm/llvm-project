@@ -50,7 +50,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ProcessKDP)
+LLDB_PLUGIN_DEFINE_ADV(ProcessKDP, ProcessMacOSXKernel)
 
 namespace {
 

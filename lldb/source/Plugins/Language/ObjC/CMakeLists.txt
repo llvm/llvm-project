@@ -8,7 +8,7 @@ if (CXX_SUPPORTS_NO_NESTED_ANON_TYPES)
   set(EXTRA_CXXFLAGS ${EXTRA_CXXFLAGS} -Wno-nested-anon-types)
 endif ()
 
-add_lldb_library(lldbPluginObjCLanguage PLUGIN
+add_lldb_library(lldbPluginObjCLanguage 
   ObjCLanguage.cpp
   CF.cpp
   Cocoa.cpp
