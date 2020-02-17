@@ -47,15 +47,15 @@ bool CallGraphUpdater::finalize() {
 
     if (LCG && !ReplacedFunctions.count(DeadFn)) {
       // Taken mostly from the inliner:
-      FunctionAnalysisManager &FAM =
-          AM->getResult<FunctionAnalysisManagerCGSCCProxy>(*SCC, *LCG)
-              .getManager();
-
       LazyCallGraph::Node &N = LCG->get(*DeadFn);
       auto *DeadSCC = LCG->lookupSCC(N);
       assert(DeadSCC && DeadSCC->size() == 1 &&
              &DeadSCC->begin()->getFunction() == DeadFn);
       auto &DeadRC = DeadSCC->getOuterRefSCC();
+
+      FunctionAnalysisManager &FAM =
+          AM->getResult<FunctionAnalysisManagerCGSCCProxy>(*DeadSCC, *LCG)
+              .getManager();
 
       FAM.clear(*DeadFn, DeadFn->getName());
       AM->clear(*DeadSCC, DeadSCC->getName());

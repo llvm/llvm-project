@@ -39,7 +39,7 @@ entry:
 ;   return n;
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define i32 @load_monotonic(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %0)
 define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtable {
   %2 = load atomic i32, i32* %0 monotonic, align 4
@@ -53,7 +53,7 @@ define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtabl
 ;   atomic_load_explicit(num, memory_order_relaxed);
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define void @store_monotonic(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) %0)
 define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
   store atomic i32 10, i32* %0 monotonic, align 4
@@ -67,7 +67,7 @@ define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
 ;   return n;
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nounwind uwtable
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define i32 @load_acquire(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %0)
 define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable {
@@ -81,7 +81,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 ;   atomic_store_explicit(num, 10, memory_order_release);
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nounwind uwtable
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define void @load_release(i32* nocapture nofree writeonly align 4 %0)
 define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
@@ -91,7 +91,7 @@ define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
 
 ; TEST 6 - negative volatile, relaxed atomic
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nounwind uwtable
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define void @load_volatile_release(i32* nocapture nofree writeonly align 4 %0)
 define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable {
@@ -105,7 +105,7 @@ define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable
 ;   *num = 14;
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nounwind uwtable
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define void @volatile_store(i32* nofree align 4 %0)
 define void @volatile_store(i32* %0) norecurse nounwind uwtable {
@@ -120,7 +120,7 @@ define void @volatile_store(i32* %0) norecurse nounwind uwtable {
 ;   return n;
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind uwtable
+; ATTRIBUTOR: Function Attrs: argmemonly nofree norecurse nounwind uwtable
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define i32 @volatile_load(i32* nofree align 4 %0)
 define i32 @volatile_load(i32* %0) norecurse nounwind uwtable {
@@ -256,7 +256,7 @@ declare void @llvm.memset(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; It is odd to add nocapture but a result of the llvm.memcpy nocapture.
 ;
-; ATTRIBUTOR: Function Attrs: nounwind
+; ATTRIBUTOR: Function Attrs: argmemonly nounwind
 ; ATTRIBUTOR-NOT: nosync
 ; ATTRIBUTOR-NEXT: define i32 @memcpy_volatile(i8* nocapture writeonly %ptr1, i8* nocapture readonly %ptr2)
 define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
@@ -268,7 +268,7 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 
 ; It is odd to add nocapture but a result of the llvm.memset nocapture.
 ;
-; ATTRIBUTOR: Function Attrs: nosync
+; ATTRIBUTOR: Function Attrs: argmemonly nosync
 ; ATTRIBUTOR-NEXT: define i32 @memset_non_volatile(i8* nocapture writeonly %ptr1, i8 %val)
 define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)

@@ -243,23 +243,36 @@ define %struct.X* @complicated_args_nest() {
 
 @S = external global %struct.X
 define internal void @test_byval(%struct.X* byval %a) {
-; CHECK-LABEL: define {{[^@]+}}@test_byval
-; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
-; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
-; CHECK-NEXT:    store i8* null, i8** [[G0]], align 8
-; CHECK-NEXT:    ret void
-;
   %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0
   store i8* null, i8** %g0
   ret void
 }
 define void @complicated_args_byval() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval()
-; CHECK-NEXT:    call void @test_byval(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
 ; CHECK-NEXT:    ret void
 ;
   call void @test_byval(%struct.X* @S)
   ret void
+}
+
+define internal i8*@test_byval2(%struct.X* byval %a) {
+; CHECK-LABEL: define {{[^@]+}}@test_byval2
+; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[A:%.*]])
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
+; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
+; CHECK-NEXT:    ret i8* [[L]]
+;
+  %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0
+  %l = load i8*, i8** %g0
+  ret i8* %l
+}
+define i8* @complicated_args_byval2() {
+; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval2()
+; CHECK-NEXT:    [[C:%.*]] = call i8* @test_byval2(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
+; CHECK-NEXT:    ret i8* [[C]]
+;
+  %c = call i8* @test_byval2(%struct.X* @S)
+  ret i8* %c
 }
 
 define void @fixpoint_changed(i32* %p) {
