@@ -647,7 +647,7 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
 //
 // a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
 static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
-                              bool RcpIsAccurate, IRBuilder<> Builder,
+                              bool RcpIsAccurate, IRBuilder<> &Builder,
                               Module *Mod) {
 
   if (!AllowInaccurateRcp && !RcpIsAccurate)
@@ -706,7 +706,7 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
 //
 // NOTE: optimizeWithRcp should be tried first because rcp is the preference.
 static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
-                                   bool HasDenormals, IRBuilder<> Builder,
+                                   bool HasDenormals, IRBuilder<> &Builder,
                                    Module *Mod) {
   // fdiv.fast can achieve 2.5 ULP accuracy.
   if (ReqdAccuracy < 2.5f)
