@@ -1318,7 +1318,7 @@ void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
                             MCConstantExpr::create(0x8000, OutContext),
                             OutContext);
 
-  OutStreamer->EmitAssignment(TOCSym, tocExpr);
+  OutStreamer->emitAssignment(TOCSym, tocExpr);
 
   OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
 }
@@ -1626,7 +1626,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       OutStreamer->EmitXCOFFLocalCommonSymbol(
           GVSym, Size, Csect->getQualNameSymbol(), Align);
     else
-      OutStreamer->EmitCommonSymbol(Csect->getQualNameSymbol(), Size, Align);
+      OutStreamer->emitCommonSymbol(Csect->getQualNameSymbol(), Size, Align);
     return;
   }
 

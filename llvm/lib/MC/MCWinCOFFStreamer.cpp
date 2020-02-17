@@ -87,7 +87,7 @@ void MCWinCOFFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
   MCObjectStreamer::EmitLabel(Symbol, Loc);
 }
 
-void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   // Let the target do whatever target specific stuff it needs to do.
   getAssembler().getBackend().handleAssemblerFlag(Flag);
 
@@ -103,11 +103,11 @@ void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
   }
 }
 
-void MCWinCOFFStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCWinCOFFStreamer::emitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("not implemented");
 }
 
-bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
+bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   getAssembler().registerSymbol(*Symbol);
@@ -129,7 +129,7 @@ bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
   return true;
 }
 
-void MCWinCOFFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
@@ -262,7 +262,7 @@ void MCWinCOFFStreamer::EmitCOFFImgRel32(const MCSymbol *Symbol,
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
-void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
@@ -289,12 +289,12 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     PushSection();
     SwitchSection(MFI->getDrectveSection());
-    EmitBytes(Directive);
+    emitBytes(Directive);
     PopSection();
   }
 }
 
-void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
@@ -308,7 +308,7 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   PopSection();
 }
 
-void MCWinCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                      uint64_t Size, unsigned ByteAlignment,
                                      SMLoc Loc) {
   llvm_unreachable("not implemented");

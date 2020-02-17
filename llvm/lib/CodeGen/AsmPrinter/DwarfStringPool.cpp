@@ -105,7 +105,7 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     // Emit the string itself with a terminating null byte.
     Asm.OutStreamer->AddComment("string offset=" +
                                 Twine(Entry->getValue().Offset));
-    Asm.OutStreamer->EmitBytes(
+    Asm.OutStreamer->emitBytes(
         StringRef(Entry->getKeyData(), Entry->getKeyLength() + 1));
   }
 

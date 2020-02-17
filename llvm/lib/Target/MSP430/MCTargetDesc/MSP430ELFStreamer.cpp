@@ -47,7 +47,7 @@ MSP430TargetELFStreamer::MSP430TargetELFStreamer(MCStreamer &S,
   // Subsection length.
   Streamer.EmitIntValue(22, 4);
   // Vendor name string, zero-terminated.
-  Streamer.EmitBytes("mspabi");
+  Streamer.emitBytes("mspabi");
   Streamer.EmitIntValue(0, 1);
 
   // Attribute vector scope tag. 1 stands for the entire file.

@@ -167,7 +167,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSectionWasm *MySection =
           OutContext.getWasmSection(SectionName, SectionKind::getMetadata());
       OutStreamer->SwitchSection(MySection);
-      OutStreamer->EmitBytes(Contents->getString());
+      OutStreamer->emitBytes(Contents->getString());
       OutStreamer->PopSection();
     }
   }
@@ -214,13 +214,13 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
       if (Producers.second->empty())
         continue;
       OutStreamer->emitULEB128IntValue(strlen(Producers.first));
-      OutStreamer->EmitBytes(Producers.first);
+      OutStreamer->emitBytes(Producers.first);
       OutStreamer->emitULEB128IntValue(Producers.second->size());
       for (auto &Producer : *Producers.second) {
         OutStreamer->emitULEB128IntValue(Producer.first.size());
-        OutStreamer->EmitBytes(Producer.first);
+        OutStreamer->emitBytes(Producer.first);
         OutStreamer->emitULEB128IntValue(Producer.second.size());
-        OutStreamer->EmitBytes(Producer.second);
+        OutStreamer->emitBytes(Producer.second);
       }
     }
     OutStreamer->PopSection();
@@ -271,7 +271,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   for (auto &F : EmittedFeatures) {
     OutStreamer->EmitIntValue(F.Prefix, 1);
     OutStreamer->emitULEB128IntValue(F.Name.size());
-    OutStreamer->EmitBytes(F.Name);
+    OutStreamer->emitBytes(F.Name);
   }
 
   OutStreamer->PopSection();

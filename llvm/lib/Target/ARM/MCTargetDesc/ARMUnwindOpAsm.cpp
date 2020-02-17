@@ -134,7 +134,7 @@ void UnwindOpcodeAssembler::EmitSPOffset(int64_t Offset) {
     uint8_t Buff[16];
     Buff[0] = ARM::EHABI::UNWIND_OPCODE_INC_VSP_ULEB128;
     size_t ULEBSize = encodeULEB128((Offset - 0x204) >> 2, Buff + 1);
-    EmitBytes(Buff, ULEBSize + 1);
+    emitBytes(Buff, ULEBSize + 1);
   } else if (Offset > 0) {
     if (Offset > 0x100) {
       EmitInt8(ARM::EHABI::UNWIND_OPCODE_INC_VSP | 0x3fu);

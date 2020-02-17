@@ -272,7 +272,7 @@ void MCContext::setSymbolValue(MCStreamer &Streamer,
                               StringRef Sym,
                               uint64_t Val) {
   auto Symbol = getOrCreateSymbol(Sym);
-  Streamer.EmitAssignment(Symbol, MCConstantExpr::create(Val, *this));
+  Streamer.emitAssignment(Symbol, MCConstantExpr::create(Val, *this));
 }
 
 void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {

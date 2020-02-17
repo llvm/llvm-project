@@ -29,9 +29,9 @@ namespace codeview {
 
 class CodeViewRecordStreamer {
 public:
-  virtual void EmitBytes(StringRef Data) = 0;
+  virtual void emitBytes(StringRef Data) = 0;
   virtual void EmitIntValue(uint64_t Value, unsigned Size) = 0;
-  virtual void EmitBinaryData(StringRef Data) = 0;
+  virtual void emitBinaryData(StringRef Data) = 0;
   virtual void AddComment(const Twine &T) = 0;
   virtual void AddRawComment(const Twine &T) = 0;
   virtual bool isVerboseAsm() = 0;
@@ -81,7 +81,7 @@ public:
     if (isStreaming()) {
       StringRef BytesSR =
           StringRef((reinterpret_cast<const char *>(&Value)), sizeof(Value));
-      Streamer->EmitBytes(BytesSR);
+      Streamer->emitBytes(BytesSR);
       incrStreamedLen(sizeof(T));
       return Error::success();
     }

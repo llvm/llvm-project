@@ -93,13 +93,13 @@ void XCoreAsmPrinter::emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV) {
 
     MCSymbol *SymGlob = OutContext.getOrCreateSymbol(
                           Twine(Sym->getName() + StringRef(".globound")));
-    OutStreamer->EmitSymbolAttribute(SymGlob, MCSA_Global);
-    OutStreamer->EmitAssignment(SymGlob,
+    OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Global);
+    OutStreamer->emitAssignment(SymGlob,
                                 MCConstantExpr::create(ATy->getNumElements(),
                                                        OutContext));
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage()) {
-      OutStreamer->EmitSymbolAttribute(SymGlob, MCSA_Weak);
+      OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Weak);
     }
   }
 }
@@ -129,11 +129,11 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   case GlobalValue::ExternalLinkage:
   case GlobalValue::CommonLinkage:
     emitArrayBound(GVSym, GV);
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
 
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage())
-      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Weak);
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Weak);
     LLVM_FALLTHROUGH;
   case GlobalValue::InternalLinkage:
   case GlobalValue::PrivateLinkage:
@@ -149,7 +149,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
   unsigned Size = DL.getTypeAllocSize(C->getType());
   if (MAI->hasDotTypeDotSizeDirective()) {
-    OutStreamer->EmitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }
   OutStreamer->EmitLabel(GVSym);

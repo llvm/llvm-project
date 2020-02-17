@@ -202,7 +202,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && Opc != Mips::CONSTPOOL_ENTRY) {
-    OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+    OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
     InConstantPool = false;
   }
   if (Opc == Mips::CONSTPOOL_ENTRY) {
@@ -218,7 +218,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // If this is the first entry of the pool, mark it.
     if (!InConstantPool) {
-      OutStreamer->EmitDataRegion(MCDR_DataRegion);
+      OutStreamer->emitDataRegion(MCDR_DataRegion);
       InConstantPool = true;
     }
 
@@ -462,7 +462,7 @@ void MipsAsmPrinter::emitFunctionBodyEnd() {
   if (!InConstantPool)
     return;
   InConstantPool = false;
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
 void MipsAsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -990,7 +990,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // .global xxxx
   //
-  OutStreamer->EmitSymbolAttribute(MSymbol, MCSA_Global);
+  OutStreamer->emitSymbolAttribute(MSymbol, MCSA_Global);
   const char *RetType;
   //
   // make the comment field identifying the return and parameter
@@ -1073,7 +1073,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   TS.emitDirectiveEnt(*Stub);
   MCSymbol *MType =
       OutContext.getOrCreateSymbol("__call_stub_fp_" + Twine(Symbol));
-  OutStreamer->EmitSymbolAttribute(MType, MCSA_ELF_TypeFunction);
+  OutStreamer->emitSymbolAttribute(MType, MCSA_ELF_TypeFunction);
   OutStreamer->EmitLabel(Stub);
 
   // Only handle non-pic for now.

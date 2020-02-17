@@ -298,7 +298,7 @@ static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
     return Expr;
 
   MCSymbol *ABS = Context.createTempSymbol();
-  OS.EmitAssignment(ABS, Expr);
+  OS.emitAssignment(ABS, Expr);
   return MCSymbolRefExpr::create(ABS, Context);
 }
 
@@ -316,7 +316,7 @@ void MCDwarfLineStr::emitSection(MCStreamer *MCOS) {
   SmallString<0> Data;
   Data.resize(LineStrings.getSize());
   LineStrings.write((uint8_t *)Data.data());
-  MCOS->EmitBinaryData(Data.str());
+  MCOS->emitBinaryData(Data.str());
 }
 
 void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
@@ -332,16 +332,16 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
 void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
   // First the directory table.
   for (auto &Dir : MCDwarfDirs) {
-    MCOS->EmitBytes(Dir);                // The DirectoryName, and...
-    MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+    MCOS->emitBytes(Dir);                // The DirectoryName, and...
+    MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
   }
   MCOS->EmitIntValue(0, 1); // Terminate the directory list.
 
   // Second the file table.
   for (unsigned i = 1; i < MCDwarfFiles.size(); i++) {
     assert(!MCDwarfFiles[i].Name.empty());
-    MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName and...
-    MCOS->EmitBytes(StringRef("\0", 1));   // its null terminator.
+    MCOS->emitBytes(MCDwarfFiles[i].Name); // FileName and...
+    MCOS->emitBytes(StringRef("\0", 1));   // its null terminator.
     MCOS->emitULEB128IntValue(MCDwarfFiles[i].DirIndex); // Directory number.
     MCOS->EmitIntValue(0, 1); // Last modification timestamp (always 0).
     MCOS->EmitIntValue(0, 1); // File size (always 0).
@@ -356,13 +356,13 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
   if (LineStr)
     LineStr->emitRef(MCOS, DwarfFile.Name);
   else {
-    MCOS->EmitBytes(DwarfFile.Name);     // FileName and...
-    MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+    MCOS->emitBytes(DwarfFile.Name);     // FileName and...
+    MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
   }
   MCOS->emitULEB128IntValue(DwarfFile.DirIndex); // Directory number.
   if (EmitMD5) {
     const MD5::MD5Result &Cksum = *DwarfFile.Checksum;
-    MCOS->EmitBinaryData(
+    MCOS->emitBinaryData(
         StringRef(reinterpret_cast<const char *>(Cksum.Bytes.data()),
                   Cksum.Bytes.size()));
   }
@@ -370,9 +370,9 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
     if (LineStr)
       LineStr->emitRef(MCOS, DwarfFile.Source.getValueOr(StringRef()));
     else {
-      MCOS->EmitBytes(
+      MCOS->emitBytes(
           DwarfFile.Source.getValueOr(StringRef())); // Source and...
-      MCOS->EmitBytes(StringRef("\0", 1));           // its null terminator.
+      MCOS->emitBytes(StringRef("\0", 1));           // its null terminator.
     }
   }
 }
@@ -398,11 +398,11 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
       LineStr->emitRef(MCOS, Dir);
   } else {
     // The list of directory paths.  Compilation directory comes first.
-    MCOS->EmitBytes(CompDir);
-    MCOS->EmitBytes(StringRef("\0", 1));
+    MCOS->emitBytes(CompDir);
+    MCOS->emitBytes(StringRef("\0", 1));
     for (const auto &Dir : MCDwarfDirs) {
-      MCOS->EmitBytes(Dir);                // The DirectoryName, and...
-      MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+      MCOS->emitBytes(Dir);                // The DirectoryName, and...
+      MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
     }
   }
 
@@ -647,7 +647,7 @@ void MCDwarfLineAddr::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   SmallString<256> Tmp;
   raw_svector_ostream OS(Tmp);
   MCDwarfLineAddr::Encode(Context, Params, LineDelta, AddrDelta, OS);
-  MCOS->EmitBytes(OS.str());
+  MCOS->emitBytes(OS.str());
 }
 
 /// Given a special op, return the address skip amount (in units of
@@ -1013,8 +1013,8 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // and file table entries.
   const SmallVectorImpl<std::string> &MCDwarfDirs = context.getMCDwarfDirs();
   if (MCDwarfDirs.size() > 0) {
-    MCOS->EmitBytes(MCDwarfDirs[0]);
-    MCOS->EmitBytes(sys::path::get_separator());
+    MCOS->emitBytes(MCDwarfDirs[0]);
+    MCOS->emitBytes(sys::path::get_separator());
   }
   const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles = context.getMCDwarfFiles();
   // MCDwarfFiles might be empty if we have an empty source file.
@@ -1024,28 +1024,28 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
       MCDwarfFiles.empty()
           ? context.getMCDwarfLineTable(/*CUID=*/0).getRootFile()
           : MCDwarfFiles[1];
-  MCOS->EmitBytes(RootFile.Name);
+  MCOS->emitBytes(RootFile.Name);
   MCOS->EmitIntValue(0, 1); // NULL byte to terminate the string.
 
   // AT_comp_dir, the working directory the assembly was done in.
   if (!context.getCompilationDir().empty()) {
-    MCOS->EmitBytes(context.getCompilationDir());
+    MCOS->emitBytes(context.getCompilationDir());
     MCOS->EmitIntValue(0, 1); // NULL byte to terminate the string.
   }
 
   // AT_APPLE_flags, the command line arguments of the assembler tool.
   StringRef DwarfDebugFlags = context.getDwarfDebugFlags();
   if (!DwarfDebugFlags.empty()){
-    MCOS->EmitBytes(DwarfDebugFlags);
+    MCOS->emitBytes(DwarfDebugFlags);
     MCOS->EmitIntValue(0, 1); // NULL byte to terminate the string.
   }
 
   // AT_producer, the version of the assembler tool.
   StringRef DwarfDebugProducer = context.getDwarfDebugProducer();
   if (!DwarfDebugProducer.empty())
-    MCOS->EmitBytes(DwarfDebugProducer);
+    MCOS->emitBytes(DwarfDebugProducer);
   else
-    MCOS->EmitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
+    MCOS->emitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
   MCOS->EmitIntValue(0, 1); // NULL byte to terminate the string.
 
   // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
@@ -1062,7 +1062,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitULEB128IntValue(2);
 
     // AT_name, of the label without any leading underbar.
-    MCOS->EmitBytes(Entry.getName());
+    MCOS->emitBytes(Entry.getName());
     MCOS->EmitIntValue(0, 1); // NULL byte to terminate the string.
 
     // AT_decl_file, index into the file table.
@@ -1451,7 +1451,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     return;
 
   case MCCFIInstruction::OpEscape:
-    Streamer.EmitBytes(Instr.getValues());
+    Streamer.emitBytes(Instr.getValues());
     return;
   }
   llvm_unreachable("Unhandled case in switch");
@@ -1592,7 +1592,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
       Augmentation += "S";
     if (Frame.IsBKeyFrame)
       Augmentation += "B";
-    Streamer.EmitBytes(Augmentation);
+    Streamer.emitBytes(Augmentation);
   }
   Streamer.EmitIntValue(0, 1);
 
@@ -1894,7 +1894,7 @@ void MCDwarfFrameEmitter::EmitAdvanceLoc(MCObjectStreamer &Streamer,
   SmallString<256> Tmp;
   raw_svector_ostream OS(Tmp);
   MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OS);
-  Streamer.EmitBytes(OS.str());
+  Streamer.emitBytes(OS.str());
 }
 
 void MCDwarfFrameEmitter::EncodeAdvanceLoc(MCContext &Context,

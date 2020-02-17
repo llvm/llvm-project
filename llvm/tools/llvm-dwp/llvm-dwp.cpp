@@ -235,7 +235,7 @@ static void addAllTypesFromDWP(
       ++I;
     }
     auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    Out.EmitBytes(Types.substr(
+    Out.emitBytes(Types.substr(
         C.Offset - TUEntry.Contributions[DW_SECT_TYPES - DW_SECT_INFO].Offset,
         C.Length));
     C.Offset = TypesOffset;
@@ -272,7 +272,7 @@ static void addAllTypes(MCStreamer &Out,
       if (!P.second)
         continue;
 
-      Out.EmitBytes(Types.substr(PrevOffset, C.Length));
+      Out.emitBytes(Types.substr(PrevOffset, C.Length));
       TypesOffset += C.Length;
     }
   }
@@ -458,7 +458,7 @@ static Error handleSection(
     CurTUIndexSection = Contents;
   else {
     Out.SwitchSection(OutSection);
-    Out.EmitBytes(Contents);
+    Out.emitBytes(Contents);
   }
   return Error::success();
 }

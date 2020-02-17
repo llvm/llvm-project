@@ -327,7 +327,7 @@ void dwarfgen::LineTable::writePrologue(AsmPrinter &Asm) const {
 }
 
 static void writeCString(StringRef Str, AsmPrinter &Asm) {
-  Asm.OutStreamer->EmitBytes(Str);
+  Asm.OutStreamer->emitBytes(Str);
   Asm.emitInt8(0);
 }
 

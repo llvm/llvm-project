@@ -327,7 +327,7 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
   insert(new MCLEBFragment(*Value, true));
 }
 
-void MCObjectStreamer::EmitWeakReference(MCSymbol *Alias,
+void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
                                          const MCSymbol *Symbol) {
   report_fatal_error("This file format doesn't support weak aliases.");
 }
@@ -356,9 +356,9 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   return Created;
 }
 
-void MCObjectStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   getAssembler().registerSymbol(*Symbol);
-  MCStreamer::EmitAssignment(Symbol, Value);
+  MCStreamer::emitAssignment(Symbol, Value);
 }
 
 bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
@@ -567,7 +567,7 @@ void MCObjectStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
   getContext().getCVContext().emitFileChecksumOffset(*this, FileNo);
 }
 
-void MCObjectStreamer::EmitBytes(StringRef Data) {
+void MCObjectStreamer::emitBytes(StringRef Data) {
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
