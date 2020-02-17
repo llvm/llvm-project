@@ -395,7 +395,8 @@ opts::symbols::getDeclContext(SymbolFile &Symfile) {
   if (Context.empty())
     return CompilerDeclContext();
   VariableList List;
-  Symfile.FindGlobalVariables(ConstString(Context), nullptr, UINT32_MAX, List);
+  Symfile.FindGlobalVariables(ConstString(Context), CompilerDeclContext(),
+                              UINT32_MAX, List);
   if (List.Empty())
     return make_string_error("Context search didn't find a match.");
   if (List.GetSize() > 1)
@@ -442,8 +443,8 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
     Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
     if (!ContextOr)
       return ContextOr.takeError();
-    CompilerDeclContext *ContextPtr =
-        ContextOr->IsValid() ? &*ContextOr : nullptr;
+    const CompilerDeclContext &ContextPtr =
+        ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     List.Clear();
     Symfile.FindFunctions(ConstString(Name), ContextPtr, getFunctionNameFlags(),
@@ -498,8 +499,8 @@ Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
   if (!ContextOr)
     return ContextOr.takeError();
-  CompilerDeclContext *ContextPtr =
-      ContextOr->IsValid() ? &*ContextOr : nullptr;
+  const CompilerDeclContext &ContextPtr =
+      ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
   CompilerDeclContext Result =
       Symfile.FindNamespace(ConstString(Name), ContextPtr);
@@ -516,8 +517,8 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
   if (!ContextOr)
     return ContextOr.takeError();
-  CompilerDeclContext *ContextPtr =
-      ContextOr->IsValid() ? &*ContextOr : nullptr;
+  const CompilerDeclContext &ContextPtr =
+      ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
   LanguageSet languages;
   if (!Language.empty())
@@ -566,8 +567,8 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
     Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
     if (!ContextOr)
       return ContextOr.takeError();
-    CompilerDeclContext *ContextPtr =
-        ContextOr->IsValid() ? &*ContextOr : nullptr;
+    const CompilerDeclContext &ContextPtr =
+        ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     Symfile.FindGlobalVariables(ConstString(Name), ContextPtr, UINT32_MAX, List);
   }

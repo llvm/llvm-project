@@ -302,7 +302,7 @@ public:
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   void FindFunctions(ConstString name,
-                     const CompilerDeclContext *parent_decl_ctx,
+                     const CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask, bool symbols_ok,
                      bool inlines_ok, SymbolContextList &sc_list);
 
@@ -365,7 +365,7 @@ public:
   ///     A list of variables that gets the matches appended to.
   ///
   void FindGlobalVariables(ConstString name,
-                           const CompilerDeclContext *parent_decl_ctx,
+                           const CompilerDeclContext &parent_decl_ctx,
                            size_t max_matches, VariableList &variable_list);
 
   /// Find global and static variables by regular expression.
@@ -444,7 +444,7 @@ public:
   /// \param[out] type_list
   ///     A type list gets populated with any matches.
   void FindTypesInNamespace(ConstString type_name,
-                            const CompilerDeclContext *parent_decl_ctx,
+                            const CompilerDeclContext &parent_decl_ctx,
                             size_t max_matches, TypeList &type_list);
 
   /// Get const accessor for the module architecture.
@@ -1037,7 +1037,7 @@ private:
   Module(); // Only used internally by CreateJITModule ()
 
   void FindTypes_Impl(
-      ConstString name, const CompilerDeclContext *parent_decl_ctx,
+      ConstString name, const CompilerDeclContext &parent_decl_ctx,
       size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);
