@@ -7056,6 +7056,17 @@ static llvm::Value *ARMMVEVectorReinterpret(CGBuilderTy &Builder,
   }
 }
 
+static llvm::Value *VectorUnzip(CGBuilderTy &Builder, llvm::Value *V, bool Odd) {
+  // Make a shufflevector that extracts every other element of a vector (evens
+  // or odds, as desired).
+  SmallVector<uint32_t, 16> Indices;
+  unsigned InputElements = V->getType()->getVectorNumElements();
+  for (unsigned i = 0; i < InputElements; i += 2)
+    Indices.push_back(i + Odd);
+  return Builder.CreateShuffleVector(V, llvm::UndefValue::get(V->getType()),
+                                     Indices);
+}
+
 template<unsigned HighBit, unsigned OtherBits>
 static llvm::Value *ARMMVEConstantSplat(CGBuilderTy &Builder, llvm::Type *VT) {
   // MVE-specific helper function to make a vector splat of a constant such as

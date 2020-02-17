@@ -420,6 +420,13 @@ defm : float_int_conversions<f16, u16, fptoui, uitofp>;
 defm : float_int_conversions<f32, s32, fptosi, sitofp>;
 defm : float_int_conversions<f16, s16, fptosi, sitofp>;
 
+let params = [s8, u8, s16, u16] in {
+  def vmovlbq: Intrinsic<DblVector, (args Vector:$a),
+    (extend (unzip $a, 0), DblVector, (unsignedflag Scalar))>;
+  def vmovltq: Intrinsic<DblVector, (args Vector:$a),
+    (extend (unzip $a, 1), DblVector, (unsignedflag Scalar))>;
+}
+
 let params = T.Float in {
   def vrndq: Intrinsic<Vector, (args Vector:$a),
       (IRIntBase<"trunc", [Vector]> $a)>;
