@@ -35,7 +35,7 @@ performed on the Linalg IR and that have influenced its design:
 
 # High-Level Description of Linalg Ops<a name="linalg_ops"></a>
 Linalg takes at least some inspiration from all previously [listed prior
-art](#prior_art). The design enables the definition of ***CustomOps*** with
+art](https://github.com/llvm/llvm-project/blob/master/mlir/docs/RationaleLinalgDialect.md#prior_art). The design enables the definition of ***CustomOps*** with
 generic properties that enable [key transformations](#key_transformations),
 including lowering to scalar load/store and other operations or to external
 library calls and intrinsics.
