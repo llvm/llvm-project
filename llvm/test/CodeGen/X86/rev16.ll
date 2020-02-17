@@ -8,23 +8,15 @@ define i32 @rev16(i32 %a) {
 ; X86-LABEL: rev16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    andl $-16711936, %ecx # imm = 0xFF00FF00
-; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    rorl $16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rev16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    shrl $8, %edi
-; X64-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
-; X64-NEXT:    andl $16711935, %edi # imm = 0xFF00FF
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    rorl $16, %eax
 ; X64-NEXT:    retq
   %l8 = shl i32 %a, 8
   %r8 = lshr i32 %a, 8
@@ -104,23 +96,15 @@ define i32 @bswap_ror_commuted(i32 %a) {
 ; X86-LABEL: bswap_ror_commuted:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    andl $-16711936, %ecx # imm = 0xFF00FF00
-; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    bswapl %eax
+; X86-NEXT:    rorl $16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bswap_ror_commuted:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    shrl $8, %edi
-; X64-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
-; X64-NEXT:    andl $16711935, %edi # imm = 0xFF00FF
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    bswapl %eax
+; X64-NEXT:    rorl $16, %eax
 ; X64-NEXT:    retq
   %l8 = shl i32 %a, 8
   %r8 = lshr i32 %a, 8
@@ -241,8 +225,6 @@ define i32 @different_vars(i32 %a, i32 %b) {
   ret i32 %tmp
 }
 
-; TODO: another pattern that we are currently not matching
-;
 ; 0xff000000 = 4278190080
 ; 0x00ff0000 = 16711680
 ; 0x0000ff00 = 65280
