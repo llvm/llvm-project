@@ -2,13 +2,13 @@
 
 [TOC]
 
-MLIR is a multi-level representation, with [Regions](LangRef.md#regions) the
-multi-level aspect is structural in the IR. A lot of infrastructure within the
-compiler is built around this nesting structure, including the processing of
-operations within the [pass manager](WritingAPass.md#pass-manager). One
-advantage of the MLIR design is that it is able to process operations in
-parallel, utilizing multiple threads. This is possible due to a property of the
-IR known as [`IsolatedFromAbove`](Traits.md#isolatedfromabove).
+With [Regions](LangRef.md#regions), the multi-level aspect of MLIR is structural
+in the IR. A lot of infrastructure within the compiler is built around this
+nesting structure; including the processing of operations within the
+[pass manager](WritingAPass.md#pass-manager). One advantage of the MLIR design
+is that it is able to process operations in parallel, utilizing multiple
+threads. This is possible due to a property of the IR known as
+[`IsolatedFromAbove`](Traits.md#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in
@@ -37,8 +37,10 @@ link, or use, to the symbol. An example of a `Symbol` operation is
 
 ### Defining a Symbol
 
-A `Symbol` operation may use the `OpTrait::Symbol` trait, but have the following
-properties:
+A `Symbol` operation may use the `OpTrait::Symbol` trait to provide the
+necessary verification and accessors, but this is not required as some
+operations, such as `module`, conditionally define a symbol. `Symbol`s must have
+the following properties:
 
 *   A `StringAttr` attribute named
     'SymbolTable::getSymbolAttrName()'(`sym_name`).
@@ -57,7 +59,7 @@ Described above are `Symbol`s, which reside within a region of an operation
 defining a `SymbolTable`. A `SymbolTable` operation provides the container for
 the [`Symbol`](#symbol) operations. It verifies that all `Symbol` operations
 have a unique name, and provides facilities for looking up symbols by name.
-Operations defining a `SymbolTable` may use the `OpTrait::SymbolTable` trait.
+Operations defining a `SymbolTable` must use the `OpTrait::SymbolTable` trait.
 
 ### Referencing a Symbol
 
@@ -69,7 +71,7 @@ further resolve to a symbol nested within a different symbol table. When
 resolving a nested reference, each non-leaf reference must refer to a symbol
 operation that is also a [symbol table](#symbol-table).
 
-Below is an example of how an operation may reference a symbol operation:
+Below is an example of how an operation can reference a symbol operation:
 
 ```mlir
 // This `func` operation defines a symbol named `symbol`.
@@ -93,8 +95,8 @@ func @other_symbol() {
 // Here we define a nested symbol table. References within this operation will
 // not resolve to any symbols defined above.
 module {
-  // Error. We resolve references with respect to the closest parent symbol
-  // table, so this reference can't be resolved.
+  // Error. We resolve references with respect to the closest parent operation
+  // that defines a symbol table, so this reference can't be resolved.
   "foo.user"() {uses = [@symbol]} : () -> ()
 }
 
@@ -107,7 +109,7 @@ module @module_symbol {
 
 // Our `foo.user` operation may refer to the nested symbol, by resolving through
 // the parent.
-"foo.user"() {uses = [@module_symbol::@symbol]} : () -> ()
+"foo.user"() {uses = [@module_symbol::@nested_symbol]} : () -> ()
 ```
 
 Using an attribute, as opposed to an SSA value, has several benefits:
@@ -171,9 +173,9 @@ The following are a few of the utilities provided by the `SymbolTable`:
 
 Along with a name, a `Symbol` also has a `visibility` attached to it. The
 `visibility` of a symbol defines its structural reachability within the IR. A
-symbol may have one of the following visibilities:
+symbol has one of the following visibilities:
 
-*   Public
+*   Public (Default)
 
     -   The symbol may be referenced from outside of the visible IR. We cannot
         assume that all of the uses of this symbol are observable.
@@ -196,14 +198,14 @@ module @public_module {
   // externally; all uses are known to reside within parent regions.
   func @nested_function() attributes { sym_visibility = "nested" }
 
-  // This function cannot be accessed outside of 'public_module'
+  // This function cannot be accessed outside of 'public_module'.
   func @private_function() attributes { sym_visibility = "private" }
 }
 
-// This function can only be accessed from within the top-level module
+// This function can only be accessed from within the top-level module.
 func @private_function() attributes { sym_visibility = "private" }
 
-// This function may be referenced externally
+// This function may be referenced externally.
 func @public_function()
 
 "live.user"() {uses = [
