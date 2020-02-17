@@ -1426,6 +1426,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::STP:               return "AArch64ISD::STP";
   case AArch64ISD::STNP:              return "AArch64ISD::STNP";
   case AArch64ISD::DUP_PRED:          return "AArch64ISD::DUP_PRED";
+  case AArch64ISD::INDEX_VECTOR:      return "AArch64ISD::INDEX_VECTOR";
   }
   return nullptr;
 }
@@ -10918,6 +10919,21 @@ static SDValue LowerSVEIntReduction(SDNode *N, unsigned Opc,
   return SDValue();
 }
 
+static SDValue LowerSVEIntrinsicIndex(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  EVT ScalarTy = Op1.getValueType();
+
+  if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16)) {
+    Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
+    Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
+  }
+
+  return DAG.getNode(AArch64ISD::INDEX_VECTOR, DL, N->getValueType(0),
+                     Op1, Op2);
+}
+
 static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
   SDLoc dl(N);
   SDValue Scalar = N->getOperand(3);
@@ -11118,6 +11134,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return LowerSVEIntReduction(N, AArch64ISD::EORV_PRED, DAG);
   case Intrinsic::aarch64_sve_andv:
     return LowerSVEIntReduction(N, AArch64ISD::ANDV_PRED, DAG);
+  case Intrinsic::aarch64_sve_index:
+    return LowerSVEIntrinsicIndex(N, DAG);
   case Intrinsic::aarch64_sve_dup:
     return LowerSVEIntrinsicDUP(N, DAG);
   case Intrinsic::aarch64_sve_ext:

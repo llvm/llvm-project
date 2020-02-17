@@ -4386,11 +4386,20 @@ class sve_int_index_ii<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_index_ii<string asm> {
-  def _B : sve_int_index_ii<0b00, asm, ZPR8, simm5_32b>;
-  def _H : sve_int_index_ii<0b01, asm, ZPR16, simm5_32b>;
+multiclass sve_int_index_ii<string asm, SDPatternOperator op> {
+  def _B : sve_int_index_ii<0b00, asm, ZPR8, simm5_8b>;
+  def _H : sve_int_index_ii<0b01, asm, ZPR16, simm5_16b>;
   def _S : sve_int_index_ii<0b10, asm, ZPR32, simm5_32b>;
   def _D : sve_int_index_ii<0b11, asm, ZPR64, simm5_64b>;
+
+  def : Pat<(nxv16i8 (op simm5_8b:$imm5, simm5_8b:$imm5b)),
+            (!cast<Instruction>(NAME # "_B") simm5_8b:$imm5, simm5_8b:$imm5b)>;
+  def : Pat<(nxv8i16 (op simm5_16b:$imm5, simm5_16b:$imm5b)),
+            (!cast<Instruction>(NAME # "_H") simm5_16b:$imm5, simm5_16b:$imm5b)>;
+  def : Pat<(nxv4i32 (op simm5_32b:$imm5, simm5_32b:$imm5b)),
+            (!cast<Instruction>(NAME # "_S") simm5_32b:$imm5, simm5_32b:$imm5b)>;
+  def : Pat<(nxv2i64 (op simm5_64b:$imm5, simm5_64b:$imm5b)),
+            (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, simm5_64b:$imm5b)>;
 }
 
 class sve_int_index_ir<bits<2> sz8_64, string asm, ZPRRegOp zprty,
@@ -4410,11 +4419,20 @@ class sve_int_index_ir<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_index_ir<string asm> {
-  def _B : sve_int_index_ir<0b00, asm, ZPR8, GPR32, simm5_32b>;
-  def _H : sve_int_index_ir<0b01, asm, ZPR16, GPR32, simm5_32b>;
+multiclass sve_int_index_ir<string asm, SDPatternOperator op> {
+  def _B : sve_int_index_ir<0b00, asm, ZPR8, GPR32, simm5_8b>;
+  def _H : sve_int_index_ir<0b01, asm, ZPR16, GPR32, simm5_16b>;
   def _S : sve_int_index_ir<0b10, asm, ZPR32, GPR32, simm5_32b>;
   def _D : sve_int_index_ir<0b11, asm, ZPR64, GPR64, simm5_64b>;
+
+  def : Pat<(nxv16i8 (op simm5_8b:$imm5, GPR32:$Rm)),
+            (!cast<Instruction>(NAME # "_B") simm5_8b:$imm5, GPR32:$Rm)>;
+  def : Pat<(nxv8i16 (op simm5_16b:$imm5, GPR32:$Rm)),
+            (!cast<Instruction>(NAME # "_H") simm5_16b:$imm5, GPR32:$Rm)>;
+  def : Pat<(nxv4i32 (op simm5_32b:$imm5, GPR32:$Rm)),
+            (!cast<Instruction>(NAME # "_S") simm5_32b:$imm5, GPR32:$Rm)>;
+  def : Pat<(nxv2i64 (op simm5_64b:$imm5, GPR64:$Rm)),
+            (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, GPR64:$Rm)>;
 }
 
 class sve_int_index_ri<bits<2> sz8_64, string asm, ZPRRegOp zprty,
@@ -4434,11 +4452,20 @@ class sve_int_index_ri<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_index_ri<string asm> {
-  def _B : sve_int_index_ri<0b00, asm, ZPR8, GPR32, simm5_32b>;
-  def _H : sve_int_index_ri<0b01, asm, ZPR16, GPR32, simm5_32b>;
+multiclass sve_int_index_ri<string asm, SDPatternOperator op> {
+  def _B : sve_int_index_ri<0b00, asm, ZPR8, GPR32, simm5_8b>;
+  def _H : sve_int_index_ri<0b01, asm, ZPR16, GPR32, simm5_16b>;
   def _S : sve_int_index_ri<0b10, asm, ZPR32, GPR32, simm5_32b>;
   def _D : sve_int_index_ri<0b11, asm, ZPR64, GPR64, simm5_64b>;
+
+  def : Pat<(nxv16i8 (op GPR32:$Rm, simm5_8b:$imm5)),
+            (!cast<Instruction>(NAME # "_B") GPR32:$Rm, simm5_8b:$imm5)>;
+  def : Pat<(nxv8i16 (op GPR32:$Rm, simm5_16b:$imm5)),
+            (!cast<Instruction>(NAME # "_H") GPR32:$Rm, simm5_16b:$imm5)>;
+  def : Pat<(nxv4i32 (op GPR32:$Rm, simm5_32b:$imm5)),
+            (!cast<Instruction>(NAME # "_S") GPR32:$Rm, simm5_32b:$imm5)>;
+  def : Pat<(nxv2i64 (op GPR64:$Rm, simm5_64b:$imm5)),
+            (!cast<Instruction>(NAME # "_D") GPR64:$Rm, simm5_64b:$imm5)>;
 }
 
 class sve_int_index_rr<bits<2> sz8_64, string asm, ZPRRegOp zprty,
@@ -4458,11 +4485,16 @@ class sve_int_index_rr<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_index_rr<string asm> {
+multiclass sve_int_index_rr<string asm, SDPatternOperator op> {
   def _B : sve_int_index_rr<0b00, asm, ZPR8, GPR32>;
   def _H : sve_int_index_rr<0b01, asm, ZPR16, GPR32>;
   def _S : sve_int_index_rr<0b10, asm, ZPR32, GPR32>;
   def _D : sve_int_index_rr<0b11, asm, ZPR64, GPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i8, op, i32, i32, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i16, op, i32, i32, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i32, op, i32, i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i64, op, i64, i64, !cast<Instruction>(NAME # _D)>;
 }
 //
 //===----------------------------------------------------------------------===//

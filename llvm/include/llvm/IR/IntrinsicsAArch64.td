@@ -796,6 +796,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMPointerTo<0>],
                 [IntrArgMemOnly, NoCapture<2>]>;
 
+  class AdvSIMD_SVE_Index_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMVectorElementType<0>,
+                 LLVMVectorElementType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_Merged1VectorArg_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1236,6 +1242,8 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 //
 
 def int_aarch64_sve_dup : AdvSIMD_SVE_DUP_Intrinsic;
+
+def int_aarch64_sve_index : AdvSIMD_SVE_Index_Intrinsic;
 
 //
 // Integer arithmetic
