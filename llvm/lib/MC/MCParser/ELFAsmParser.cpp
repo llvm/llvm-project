@@ -646,7 +646,7 @@ EndStmt:
 
       if (!ELFSection->getBeginSymbol()) {
         MCSymbol *SectionStartSymbol = getContext().createTempSymbol();
-        getStreamer().EmitLabel(SectionStartSymbol);
+        getStreamer().emitLabel(SectionStartSymbol);
         ELFSection->setBeginSymbol(SectionStartSymbol);
       }
     }
@@ -802,7 +802,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   getStreamer().EmitIntValue(1, 4);             // type = NT_VERSION.
   getStreamer().emitBytes(Data);                // name.
   getStreamer().EmitIntValue(0, 1);             // terminate the string.
-  getStreamer().EmitValueToAlignment(4);        // ensure 4 byte alignment.
+  getStreamer().emitValueToAlignment(4);        // ensure 4 byte alignment.
   getStreamer().PopSection();
   return false;
 }

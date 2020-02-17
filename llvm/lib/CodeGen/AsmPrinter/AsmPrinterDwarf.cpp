@@ -160,7 +160,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
 
     // If the format uses relocations with dwarf, refer to the symbol directly.
     if (MAI->doesDwarfUseRelocationsAcrossSections()) {
-      OutStreamer->EmitSymbolValue(Label, 4);
+      OutStreamer->emitSymbolValue(Label, 4);
       return;
     }
   }

@@ -112,7 +112,7 @@ void ARMException::emitTypeInfos(unsigned TTypeEncoding,
     Asm->emitTTypeReference(GV, TTypeEncoding);
   }
 
-  Asm->OutStreamer->EmitLabel(TTBaseLabel);
+  Asm->OutStreamer->emitLabel(TTBaseLabel);
 
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {

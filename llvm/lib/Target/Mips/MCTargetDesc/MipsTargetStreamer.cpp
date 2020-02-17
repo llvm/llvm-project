@@ -883,9 +883,9 @@ void MipsTargetELFStreamer::finish() {
       if (Alignment) {
         OS.SwitchSection(&Section);
         if (Section.UseCodeAlign())
-          OS.EmitCodeAlignment(Alignment, Alignment);
+          OS.emitCodeAlignment(Alignment, Alignment);
         else
-          OS.EmitValueToAlignment(Alignment, 0, 1, Alignment);
+          OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
       }
     }
   }
@@ -997,7 +997,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
 
   OS.SwitchSection(Sec);
 
-  OS.EmitValueImpl(ExprRef, 4);
+  OS.emitValueImpl(ExprRef, 4);
 
   OS.EmitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
   OS.EmitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
@@ -1017,7 +1017,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
 
   // .end also implicitly sets the size.
   MCSymbol *CurPCSym = Context.createTempSymbol();
-  OS.EmitLabel(CurPCSym);
+  OS.emitLabel(CurPCSym);
   const MCExpr *Size = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
       ExprRef, Context);

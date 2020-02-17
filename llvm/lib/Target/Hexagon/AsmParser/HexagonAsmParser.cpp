@@ -1497,7 +1497,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->SwitchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().EmitCodeAlignment(byteSize, byteSize);
+      getStreamer().emitCodeAlignment(byteSize, byteSize);
 
       MCSymbol *Sym;
 
@@ -1507,7 +1507,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       if (Absolute) {
         Sym = getContext().getOrCreateSymbol(StringRef(myCharStr.c_str() + 16));
         if (Sym->isUndefined()) {
-          getStreamer().EmitLabel(Sym);
+          getStreamer().emitLabel(Sym);
           getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
           getStreamer().EmitIntValue(Value, byteSize);
         }
@@ -1529,7 +1529,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
         if (Sym->isUndefined()) {
           // case where symbol is not yet defined: emit symbol
-          getStreamer().EmitLabel(Sym);
+          getStreamer().emitLabel(Sym);
           getStreamer().emitSymbolAttribute(Sym, MCSA_Local);
           getStreamer().EmitValue(MO_1.getExpr(), 4);
         }

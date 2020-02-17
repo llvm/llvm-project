@@ -337,7 +337,7 @@ void AppleAccelTableWriter::emitData() const {
           PrevHash != Hash->HashValue)
         Asm->emitInt32(0);
       // Remember to emit the label for our offset.
-      Asm->OutStreamer->EmitLabel(Hash->Sym);
+      Asm->OutStreamer->emitLabel(Hash->Sym);
       Asm->OutStreamer->AddComment(Hash->Name.getString());
       Asm->emitDwarfStringOffset(Hash->Name);
       Asm->OutStreamer->AddComment("Num DIEs");
@@ -370,7 +370,7 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
   Asm->OutStreamer->AddComment("Header: unit length");
   Asm->emitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,
                            sizeof(uint32_t));
-  Asm->OutStreamer->EmitLabel(Ctx.ContributionStart);
+  Asm->OutStreamer->emitLabel(Ctx.ContributionStart);
   Asm->OutStreamer->AddComment("Header: version");
   Asm->emitInt16(Version);
   Asm->OutStreamer->AddComment("Header: padding");
@@ -453,7 +453,7 @@ void Dwarf5AccelTableWriter<DataT>::emitStringOffsets() const {
 
 template <typename DataT>
 void Dwarf5AccelTableWriter<DataT>::emitAbbrevs() const {
-  Asm->OutStreamer->EmitLabel(AbbrevStart);
+  Asm->OutStreamer->emitLabel(AbbrevStart);
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
     assert(Abbrev.first != 0);
@@ -469,7 +469,7 @@ void Dwarf5AccelTableWriter<DataT>::emitAbbrevs() const {
     Asm->emitULEB128(0, "End of abbrev");
   }
   Asm->emitULEB128(0, "End of abbrev list");
-  Asm->OutStreamer->EmitLabel(AbbrevEnd);
+  Asm->OutStreamer->emitLabel(AbbrevEnd);
 }
 
 template <typename DataT>
@@ -498,11 +498,11 @@ void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) const {
 }
 
 template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() const {
-  Asm->OutStreamer->EmitLabel(EntryPool);
+  Asm->OutStreamer->emitLabel(EntryPool);
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       // Remember to emit the label for our offset.
-      Asm->OutStreamer->EmitLabel(Hash->Sym);
+      Asm->OutStreamer->emitLabel(Hash->Sym);
       for (const auto *Value : Hash->Values)
         emitEntry(*static_cast<const DataT *>(Value));
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
@@ -537,8 +537,8 @@ template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emit() const {
   emitOffsets(EntryPool);
   emitAbbrevs();
   emitData();
-  Asm->OutStreamer->EmitValueToAlignment(4, 0);
-  Asm->OutStreamer->EmitLabel(ContributionEnd);
+  Asm->OutStreamer->emitValueToAlignment(4, 0);
+  Asm->OutStreamer->emitLabel(ContributionEnd);
 }
 
 void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,

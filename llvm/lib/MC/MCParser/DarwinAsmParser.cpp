@@ -492,7 +492,7 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
   // is no good reason for someone to intentionally emit incorrectly sized
   // values into the implicitly aligned sections.
   if (Align)
-    getStreamer().EmitValueToAlignment(Align);
+    getStreamer().emitValueToAlignment(Align);
 
   return false;
 }

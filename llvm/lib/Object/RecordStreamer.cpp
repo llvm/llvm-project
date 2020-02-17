@@ -86,8 +86,8 @@ void RecordStreamer::emitInstruction(const MCInst &Inst,
   MCStreamer::emitInstruction(Inst, STI);
 }
 
-void RecordStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitLabel(Symbol);
+void RecordStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::emitLabel(Symbol);
   markDefined(*Symbol);
 }
 

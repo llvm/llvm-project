@@ -442,7 +442,7 @@ void StackMaps::emitFunctionFrameRecords(MCStreamer &OS) {
     LLVM_DEBUG(dbgs() << WSMP << "function addr: " << FR.first
                       << " frame size: " << FR.second.StackSize
                       << " callsite count: " << FR.second.RecordCount << '\n');
-    OS.EmitSymbolValue(FR.first, 8);
+    OS.emitSymbolValue(FR.first, 8);
     OS.EmitIntValue(FR.second.StackSize, 8);
     OS.EmitIntValue(FR.second.RecordCount, 8);
   }
@@ -528,7 +528,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     }
 
     // Emit alignment to 8 byte.
-    OS.EmitValueToAlignment(8);
+    OS.emitValueToAlignment(8);
 
     // Num live-out registers and padding to align to 4 byte.
     OS.EmitIntValue(0, 2);
@@ -540,7 +540,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
       OS.EmitIntValue(LO.Size, 1);
     }
     // Emit alignment to 8 byte.
-    OS.EmitValueToAlignment(8);
+    OS.emitValueToAlignment(8);
   }
 }
 
@@ -564,7 +564,7 @@ void StackMaps::serializeToStackMapSection() {
   OS.SwitchSection(StackMapSection);
 
   // Emit a dummy symbol to force section inclusion.
-  OS.EmitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));
+  OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));
 
   // Serialize data.
   LLVM_DEBUG(dbgs() << "********** Stack Map Output **********\n");

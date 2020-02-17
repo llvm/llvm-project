@@ -1245,7 +1245,7 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
   // and PATCHPOINT
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
   SM.recordStatepoint(*MILabel, MI);
 }
 
@@ -1265,7 +1265,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *FaultingLabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(FaultingLabel);
+  OutStreamer->emitLabel(FaultingLabel);
 
   assert(FK < FaultMaps::FaultKindMax && "Invalid Faulting Kind!");
   FM.recordFaultingOp(FK, FaultingLabel, HandlerLabel);
@@ -1345,7 +1345,7 @@ void X86AsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
 
   SM.recordStackMap(*MILabel, MI);
   unsigned NumShadowBytes = MI.getOperand(1).getImm();
@@ -1364,7 +1364,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->EmitLabel(MILabel);
+  OutStreamer->emitLabel(MILabel);
   SM.recordPatchPoint(*MILabel, MI);
 
   PatchPointOpers opers(&MI);
@@ -1445,8 +1445,8 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_event_sled_", true);
   OutStreamer->AddComment("# XRay Custom Event Log");
-  OutStreamer->EmitCodeAlignment(2);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
@@ -1541,8 +1541,8 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_typed_event_sled_", true);
   OutStreamer->AddComment("# XRay Typed Event Log");
-  OutStreamer->EmitCodeAlignment(2);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
@@ -1643,8 +1643,8 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   //   call <relative offset, 32-bits>   // 5 bytes
   //
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitCodeAlignment(2);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
@@ -1673,8 +1673,8 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   //
   // This just makes sure that the alignment for the next instruction is 2.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitCodeAlignment(2);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitLabel(CurSled);
   unsigned OpCode = MI.getOperand(0).getImm();
   MCInst Ret;
   Ret.setOpcode(OpCode);
@@ -1697,8 +1697,8 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // the PATCHABLE_FUNCTION_ENTER case, followed by the lowering of the actual
   // tail call much like how we have it in PATCHABLE_RET.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->EmitCodeAlignment(2);
-  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1706,7 +1706,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // FIXME: Find another less hacky way do force the relative jump.
   OutStreamer->emitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
-  OutStreamer->EmitLabel(Target);
+  OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, SledKind::TAIL_CALL);
 
   unsigned OpCode = MI.getOperand(0).getImm();
@@ -2018,7 +2018,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInstLowering.Lower(MI, Inst);
       EmitAndCountInstruction(Inst);
       CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
-      OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+      OutStreamer->emitLabel(CurrentPatchableFunctionEntrySym);
       return;
     }
     break;
@@ -2141,7 +2141,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     // Emit the label.
-    OutStreamer->EmitLabel(PICBase);
+    OutStreamer->emitLabel(PICBase);
 
     // popl $reg
     EmitAndCountInstruction(
@@ -2166,7 +2166,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // However, we can't generate a ".", so just emit a new label here and refer
     // to it.
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->EmitLabel(DotSym);
+    OutStreamer->emitLabel(DotSym);
 
     // Now that we have emitted the label, lower the complex operand expression.
     MCSymbol *OpSym = MCInstLowering.GetSymbolFromOperand(MI->getOperand(2));

@@ -206,10 +206,10 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
 
     Sym = AP.OutContext.getOrCreateSymbol(Twine(symbolName));
     if (Sym->isUndefined()) {
-      OutStreamer.EmitLabel(Sym);
+      OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Global);
       OutStreamer.EmitIntValue(Value, AlignSize);
-      OutStreamer.EmitCodeAlignment(AlignSize);
+      OutStreamer.emitCodeAlignment(AlignSize);
     }
   } else {
     assert(Imm.isExpr() && "Expected expression and found none");
@@ -234,10 +234,10 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
     OutStreamer.SwitchSection(Section);
     Sym = AP.OutContext.getOrCreateSymbol(Twine(LitaName));
     if (Sym->isUndefined()) {
-      OutStreamer.EmitLabel(Sym);
+      OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Local);
       OutStreamer.EmitValue(Imm.getExpr(), AlignSize);
-      OutStreamer.EmitCodeAlignment(AlignSize);
+      OutStreamer.emitCodeAlignment(AlignSize);
     }
   }
   return Sym;

@@ -445,9 +445,9 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.EmitValue(DescSZ, 4);                                     // descz
   S.EmitIntValue(NoteType, 4);                                // type
   S.emitBytes(Name);                                          // name
-  S.EmitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   EmitDesc(S);                                                // desc
-  S.EmitValueToAlignment(4, 0, 1, 0);                         // padding 0
+  S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   S.PopSection();
 }
 
@@ -539,9 +539,9 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
 
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_ISA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
+             OS.emitLabel(DescBegin);
              OS.emitBytes(IsaVersionString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -566,9 +566,9 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
 
   EmitNote(ElfNote::NoteNameV3, DescSZ, ELF::NT_AMDGPU_METADATA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
+             OS.emitLabel(DescBegin);
              OS.emitBytes(HSAMetadataString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -590,9 +590,9 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
 
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_HSA_METADATA,
            [&](MCELFStreamer &OS) {
-             OS.EmitLabel(DescBegin);
+             OS.emitLabel(DescBegin);
              OS.emitBytes(HSAMetadataString);
-             OS.EmitLabel(DescEnd);
+             OS.emitLabel(DescEnd);
            });
   return true;
 }
@@ -602,7 +602,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  OS.EmitValueToAlignment(64, Encoded_s_code_end, 4);
+  OS.emitValueToAlignment(64, Encoded_s_code_end, 4);
   for (unsigned I = 0; I < 48; ++I)
     OS.EmitIntValue(Encoded_s_code_end, 4);
   OS.PopSection();
@@ -637,7 +637,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   if (KernelCodeSymbol->getVisibility() == ELF::STV_DEFAULT)
     KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
-  Streamer.EmitLabel(KernelDescriptorSymbol);
+  Streamer.emitLabel(KernelDescriptorSymbol);
   Streamer.emitBytes(StringRef(
       (const char*)&(KernelDescriptor),
       offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset)));

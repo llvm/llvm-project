@@ -90,15 +90,15 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
 void MCELFStreamer::InitSections(bool NoExecStack) {
   MCContext &Ctx = getContext();
   SwitchSection(Ctx.getObjectFileInfo()->getTextSection());
-  EmitCodeAlignment(4);
+  emitCodeAlignment(4);
 
   if (NoExecStack)
     SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
-void MCELFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
+void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  MCObjectStreamer::EmitLabel(Symbol, Loc);
+  MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionELF &Section =
       static_cast<const MCSectionELF &>(*getCurrentSectionOnly());
@@ -304,8 +304,8 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     MCSectionSubPair P = getCurrentSection();
     SwitchSection(&Section);
 
-    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
-    EmitLabel(Symbol);
+    emitValueToAlignment(ByteAlignment, 0, 1, 0);
+    emitLabel(Symbol);
     EmitZeros(Size);
 
     SwitchSection(P.first, P.second);
@@ -338,21 +338,21 @@ void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   emitCommonSymbol(Symbol, Size, ByteAlignment);
 }
 
-void MCELFStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
+void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                   SMLoc Loc) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
   fixSymbolsInTLSFixups(Value);
-  MCObjectStreamer::EmitValueImpl(Value, Size, Loc);
+  MCObjectStreamer::emitValueImpl(Value, Size, Loc);
 }
 
-void MCELFStreamer::EmitValueToAlignment(unsigned ByteAlignment,
+void MCELFStreamer::emitValueToAlignment(unsigned ByteAlignment,
                                          int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
-  MCObjectStreamer::EmitValueToAlignment(ByteAlignment, Value,
+  MCObjectStreamer::emitValueToAlignment(ByteAlignment, Value,
                                          ValueSize, MaxBytesToEmit);
 }
 

@@ -1718,7 +1718,7 @@ void RISCVAsmParser::emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
 
   MCSymbol *TmpLabel = Ctx.createTempSymbol(
       "pcrel_hi", /* AlwaysAddSuffix */ true, /* CanBeUnnamed */ false);
-  Out.EmitLabel(TmpLabel);
+  Out.emitLabel(TmpLabel);
 
   const RISCVMCExpr *SymbolHi = RISCVMCExpr::create(Symbol, VKHi, Ctx);
   emitToStreamer(

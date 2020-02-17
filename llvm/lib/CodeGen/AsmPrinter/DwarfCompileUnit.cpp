@@ -1131,7 +1131,7 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   // Don't bother labeling the .dwo unit, as its offset isn't used.
   if (!Skeleton && !DD->useSectionsAsReferences()) {
     LabelBegin = Asm->createTempSymbol("cu_begin");
-    Asm->OutStreamer->EmitLabel(LabelBegin);
+    Asm->OutStreamer->emitLabel(LabelBegin);
   }
 
   dwarf::UnitType UT = Skeleton ? dwarf::DW_UT_split_compile

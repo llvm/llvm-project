@@ -2172,7 +2172,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
   Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
 
-  Asm->OutStreamer->EmitLabel(BeginLabel);
+  Asm->OutStreamer->emitLabel(BeginLabel);
 
   Asm->OutStreamer->AddComment("DWARF Version");
   Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION);
@@ -2205,7 +2205,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
 
   Asm->OutStreamer->AddComment("End Mark");
   Asm->emitInt32(0);
-  Asm->OutStreamer->EmitLabel(EndLabel);
+  Asm->OutStreamer->emitLabel(EndLabel);
 }
 
 /// Emit null-terminated strings into a debug str section.
@@ -2364,7 +2364,7 @@ static void emitListsTableHeaderStart(AsmPrinter *Asm,
   // Build the table header, which starts with the length field.
   Asm->OutStreamer->AddComment("Length");
   Asm->emitLabelDifference(TableEnd, TableStart, 4);
-  Asm->OutStreamer->EmitLabel(TableStart);
+  Asm->OutStreamer->emitLabel(TableStart);
   // Version number (DWARF v5 and later).
   Asm->OutStreamer->AddComment("Version");
   Asm->emitInt16(Asm->OutStreamer->getContext().getDwarfVersion());
@@ -2387,7 +2387,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
 
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(Holder.getRangeLists().size());
-  Asm->OutStreamer->EmitLabel(Holder.getRnglistsTableBaseSym());
+  Asm->OutStreamer->emitLabel(Holder.getRnglistsTableBaseSym());
 
   for (const RangeSpanList &List : Holder.getRangeLists())
     Asm->emitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(), 4);
@@ -2408,7 +2408,7 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
 
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(DebugLocs.getLists().size());
-  Asm->OutStreamer->EmitLabel(DebugLocs.getSym());
+  Asm->OutStreamer->emitLabel(DebugLocs.getSym());
 
   for (const auto &List : DebugLocs.getLists())
     Asm->emitLabelDifference(List.Label, DebugLocs.getSym(), 4);
@@ -2429,7 +2429,7 @@ static void emitRangeList(
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
   // Emit our symbol so we can find the beginning of the range.
-  Asm->OutStreamer->EmitLabel(Sym);
+  Asm->OutStreamer->emitLabel(Sym);
 
   // Gather all the ranges that apply to the same section so they can share
   // a base address entry.
@@ -2450,7 +2450,7 @@ static void emitRangeList(
         BaseIsSet = true;
         Asm->OutStreamer->EmitIntValue(-1, Size);
         Asm->OutStreamer->AddComment("  base address");
-        Asm->OutStreamer->EmitSymbolValue(Base, Size);
+        Asm->OutStreamer->emitSymbolValue(Base, Size);
       } else if (NewBase != Begin || P.second.size() > 1) {
         // Only use a base address if
         //  * the existing pool address doesn't match (NewBase != Begin)
@@ -2495,8 +2495,8 @@ static void emitRangeList(
         Asm->OutStreamer->AddComment("  length");
         Asm->emitLabelDifferenceAsULEB128(End, Begin);
       } else {
-        Asm->OutStreamer->EmitSymbolValue(Begin, Size);
-        Asm->OutStreamer->EmitSymbolValue(End, Size);
+        Asm->OutStreamer->emitSymbolValue(Begin, Size);
+        Asm->OutStreamer->emitSymbolValue(End, Size);
       }
       EmitPayload(*RS);
     }
@@ -2538,7 +2538,7 @@ void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
     emitLocList(*this, Asm, List);
 
   if (TableEnd)
-    Asm->OutStreamer->EmitLabel(TableEnd);
+    Asm->OutStreamer->emitLabel(TableEnd);
 }
 
 // Emit locations into the .debug_loc/.debug_loclists section.
@@ -2561,7 +2561,7 @@ void DwarfDebug::emitDebugLocDWO() {
   for (const auto &List : DebugLocs.getLists()) {
     Asm->OutStreamer->SwitchSection(
         Asm->getObjFileLowering().getDwarfLocDWOSection());
-    Asm->OutStreamer->EmitLabel(List.Label);
+    Asm->OutStreamer->emitLabel(List.Label);
 
     for (const auto &Entry : DebugLocs.getEntries(List)) {
       // GDB only supports startx_length in pre-standard split-DWARF.
@@ -2776,7 +2776,7 @@ void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section
     emitRangeList(*this, Asm, List);
 
   if (TableEnd)
-    Asm->OutStreamer->EmitLabel(TableEnd);
+    Asm->OutStreamer->emitLabel(TableEnd);
 }
 
 /// Emit address ranges into the .debug_ranges section or into the DWARF v5
@@ -2839,7 +2839,7 @@ void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
     if (Macros.empty())
       continue;
     Asm->OutStreamer->SwitchSection(Section);
-    Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
+    Asm->OutStreamer->emitLabel(U.getMacroLabelBegin());
     handleMacroNodes(Macros, U);
     Asm->OutStreamer->AddComment("End Of Macro List Mark");
     Asm->emitInt8(0);

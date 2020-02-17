@@ -174,7 +174,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
 
   OS.EmitIntValue(unsigned(DebugSubsectionKind::StringTable), 4);
   OS.emitAbsoluteSymbolDiff(StringEnd, StringBegin, 4);
-  OS.EmitLabel(StringBegin);
+  OS.emitLabel(StringBegin);
 
   // Put the string table data fragment here, if we haven't already put it
   // somewhere else. If somebody wants two string tables in their .s file, one
@@ -184,9 +184,9 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
     InsertedStrTabFragment = true;
   }
 
-  OS.EmitValueToAlignment(4, 0);
+  OS.emitValueToAlignment(4, 0);
 
-  OS.EmitLabel(StringEnd);
+  OS.emitLabel(StringEnd);
 }
 
 void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
@@ -201,7 +201,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
 
   OS.EmitIntValue(unsigned(DebugSubsectionKind::FileChecksums), 4);
   OS.emitAbsoluteSymbolDiff(FileEnd, FileBegin, 4);
-  OS.EmitLabel(FileBegin);
+  OS.emitLabel(FileBegin);
 
   unsigned CurrentOffset = 0;
 
@@ -232,10 +232,10 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
     OS.EmitIntValue(static_cast<uint8_t>(File.Checksum.size()), 1);
     OS.EmitIntValue(File.ChecksumKind, 1);
     OS.emitBytes(toStringRef(File.Checksum));
-    OS.EmitValueToAlignment(4);
+    OS.emitValueToAlignment(4);
   }
 
-  OS.EmitLabel(FileEnd);
+  OS.emitLabel(FileEnd);
 
   ChecksumOffsetsAssigned = true;
 }
@@ -252,14 +252,14 @@ void CodeViewContext::emitFileChecksumOffset(MCObjectStreamer &OS,
     Files.resize(Idx + 1);
 
   if (ChecksumOffsetsAssigned) {
-    OS.EmitSymbolValue(Files[Idx].ChecksumTableOffset, 4);
+    OS.emitSymbolValue(Files[Idx].ChecksumTableOffset, 4);
     return;
   }
 
   const MCSymbolRefExpr *SRE =
       MCSymbolRefExpr::create(Files[Idx].ChecksumTableOffset, OS.getContext());
 
-  OS.EmitValueImpl(SRE, 4);
+  OS.emitValueImpl(SRE, 4);
 }
 
 void CodeViewContext::addLineEntry(const MCCVLoc &LineEntry) {
@@ -333,7 +333,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
 
   OS.EmitIntValue(unsigned(DebugSubsectionKind::Lines), 4);
   OS.emitAbsoluteSymbolDiff(LineEnd, LineBegin, 4);
-  OS.EmitLabel(LineBegin);
+  OS.emitLabel(LineBegin);
   OS.EmitCOFFSecRel32(FuncBegin, /*Offset=*/0);
   OS.EmitCOFFSectionIndex(FuncBegin);
 
@@ -381,7 +381,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
     }
     I = FileSegEnd;
   }
-  OS.EmitLabel(LineEnd);
+  OS.emitLabel(LineEnd);
 }
 
 static bool compressAnnotation(uint32_t Data, SmallVectorImpl<char> &Buffer) {

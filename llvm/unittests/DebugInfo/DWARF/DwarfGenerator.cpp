@@ -236,7 +236,7 @@ void dwarfgen::LineTable::generate(MCContext &MC, AsmPrinter &Asm) const {
 
   writeData(Contents, Asm);
   if (EndSymbol != nullptr)
-    Asm.OutStreamer->EmitLabel(EndSymbol);
+    Asm.OutStreamer->emitLabel(EndSymbol);
 }
 
 void dwarfgen::LineTable::writeData(ArrayRef<ValueAndLength> Data,
@@ -287,7 +287,7 @@ MCSymbol *dwarfgen::LineTable::writeDefaultPrologue(AsmPrinter &Asm) const {
   } else {
     Asm.emitLabelDifference(UnitEnd, UnitStart, 4);
   }
-  Asm.OutStreamer->EmitLabel(UnitStart);
+  Asm.OutStreamer->emitLabel(UnitStart);
   Asm.emitInt16(Version);
   if (Version == 5) {
     Asm.emitInt8(AddrSize);
@@ -298,11 +298,11 @@ MCSymbol *dwarfgen::LineTable::writeDefaultPrologue(AsmPrinter &Asm) const {
   MCSymbol *PrologueEnd = Asm.createTempSymbol("line_prologue_end");
   Asm.emitLabelDifference(PrologueEnd, PrologueStart,
                           Format == DwarfFormat::DWARF64 ? 8 : 4);
-  Asm.OutStreamer->EmitLabel(PrologueStart);
+  Asm.OutStreamer->emitLabel(PrologueStart);
 
   DWARFDebugLine::Prologue DefaultPrologue = createBasicPrologue();
   writeProloguePayload(DefaultPrologue, Asm);
-  Asm.OutStreamer->EmitLabel(PrologueEnd);
+  Asm.OutStreamer->emitLabel(PrologueEnd);
   return UnitEnd;
 }
 
