@@ -49,7 +49,7 @@ int call() { return 1; }
 static int stat_unused_no_emit() { return 1; }
 static int stat_unused_();
 #pragma omp declare variant(stat_unused_) match(implementation = {vendor(llvm)}, device={kind(cpu)})
-#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(xxx)}, device={kind(gpu)})
+#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(unknown)}, device = {kind(gpu)})
 static int stat_unused() { return 1; }
 
 static int stat_used_();
@@ -103,16 +103,16 @@ void xxx() {
 int prio() { return 81; }
 int prio1() { return 82; }
 
-#pragma omp declare variant(prio) match(implementation = {vendor(score(2): llvm)}, device={kind(cpu,host)})
-#pragma omp declare variant(prio1) match(implementation = {vendor(score(1): llvm)}, device={kind(cpu)})
+#pragma omp declare variant(prio1) match(implementation = {vendor(score(2): llvm)}, device={kind(cpu,host)})
+#pragma omp declare variant(prio) match(implementation = {vendor(score(1): llvm)}, device={kind(cpu)})
 int prio_() { return 1; }
 
 static int prio2() { return 83; }
 static int prio3() { return 84; }
 static int prio4() { return 84; }
 
-#pragma omp declare variant(prio4) match(implementation = {vendor(score(8): llvm)},device={kind(cpu,host)})
-#pragma omp declare variant(prio2) match(implementation = {vendor(score(5): llvm)})
+#pragma omp declare variant(prio4) match(implementation = {vendor(score(5): llvm)})
+#pragma omp declare variant(prio2) match(implementation = {vendor(score(8): llvm)}, device={kind(cpu,host)})
 #pragma omp declare variant(prio3) match(implementation = {vendor(score(7): llvm)}, device={kind(cpu)})
 static int prio1_() { return 1; }
 
@@ -137,7 +137,7 @@ int fn_variant2() { return 1; }
 #pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(fpga)})
 int fn2() { return 87; }
 
-#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(xxx)}, device={kind(gpu)})
+#pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(unknown)}, device = {kind(gpu)})
 template <typename T>
 static T stat_unused_T() { return 88; }
 

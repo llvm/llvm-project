@@ -20,49 +20,6 @@
 using namespace clang;
 using namespace llvm::omp;
 
-OpenMPContextSelectorSetKind
-clang::getOpenMPContextSelectorSet(llvm::StringRef Str) {
-  return llvm::StringSwitch<OpenMPContextSelectorSetKind>(Str)
-#define OPENMP_CONTEXT_SELECTOR_SET(Name) .Case(#Name, OMP_CTX_SET_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-      .Default(OMP_CTX_SET_unknown);
-}
-
-llvm::StringRef
-clang::getOpenMPContextSelectorSetName(OpenMPContextSelectorSetKind Kind) {
-  switch (Kind) {
-  case OMP_CTX_SET_unknown:
-    return "unknown";
-#define OPENMP_CONTEXT_SELECTOR_SET(Name)                                      \
-  case OMP_CTX_SET_##Name:                                                     \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
-    break;
-  }
-  llvm_unreachable("Invalid OpenMP context selector set kind");
-}
-
-OpenMPContextSelectorKind clang::getOpenMPContextSelector(llvm::StringRef Str) {
-  return llvm::StringSwitch<OpenMPContextSelectorKind>(Str)
-#define OPENMP_CONTEXT_SELECTOR(Name) .Case(#Name, OMP_CTX_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-      .Default(OMP_CTX_unknown);
-}
-
-llvm::StringRef
-clang::getOpenMPContextSelectorName(OpenMPContextSelectorKind Kind) {
-  switch (Kind) {
-  case OMP_CTX_unknown:
-    return "unknown";
-#define OPENMP_CONTEXT_SELECTOR(Name)                                          \
-  case OMP_CTX_##Name:                                                         \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
-    break;
-  }
-  llvm_unreachable("Invalid OpenMP context selector kind");
-}
-
 OpenMPClauseKind clang::getOpenMPClauseKind(StringRef Str) {
   // 'flush' clause cannot be specified explicitly, because this is an implicit
   // clause for 'flush' directive. If the 'flush' clause is explicitly specified
