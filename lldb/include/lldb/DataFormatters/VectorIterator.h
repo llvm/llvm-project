@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_VectorIterator_h_
-#define liblldb_VectorIterator_h_
+#ifndef LLDB_DATAFORMATTERS_VECTORITERATOR_H
+#define LLDB_DATAFORMATTERS_VECTORITERATOR_H
 
 #include "lldb/lldb-forward.h"
 
@@ -42,4 +42,4 @@ private:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_CF_h_
+#endif // LLDB_DATAFORMATTERS_VECTORITERATOR_H

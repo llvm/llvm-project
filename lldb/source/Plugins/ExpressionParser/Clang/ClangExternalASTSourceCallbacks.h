@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangExternalASTSourceCallbacks_h_
-#define liblldb_ClangExternalASTSourceCallbacks_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -43,4 +43,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangExternalASTSourceCallbacks_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXTERNALASTSOURCECALLBACKS_H

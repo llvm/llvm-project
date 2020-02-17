@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachProcess_h__
-#define __MachProcess_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/loader.h>
@@ -430,4 +430,4 @@ private:
   uint32_t (*m_dyld_process_info_get_platform)(void *info);
 };
 
-#endif // __MachProcess_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H

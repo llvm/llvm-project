@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DebugNubArch_h__
-#define __DebugNubArch_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBARCH_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBARCH_H
 
 #include "DNBDefs.h"
 #include "MacOSX/MachException.h"

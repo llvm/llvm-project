@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_lldb_types_h_
-#define LLDB_lldb_types_h_
+#ifndef LLDB_LLDB_TYPES_H
+#define LLDB_LLDB_TYPES_H
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -91,4 +91,4 @@ typedef void *opaque_compiler_type_t;
 typedef uint64_t queue_id_t;
 } // namespace lldb
 
-#endif // LLDB_lldb_types_h_
+#endif // LLDB_LLDB_TYPES_H

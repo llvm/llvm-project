@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABISysV_arm_h_
-#define liblldb_ABISysV_arm_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_ARM_ABISYSV_ARM_H
+#define LLDB_SOURCE_PLUGINS_ABI_ARM_ABISYSV_ARM_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
@@ -88,4 +88,4 @@ private:
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
-#endif // liblldb_ABISysV_arm_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_ARM_ABISYSV_ARM_H

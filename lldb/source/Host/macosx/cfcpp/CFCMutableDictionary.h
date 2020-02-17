@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CoreFoundationCPP_CFMutableDictionary_h_
-#define CoreFoundationCPP_CFMutableDictionary_h_
+#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEDICTIONARY_H
+#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEDICTIONARY_H
 
 #include "CFCReleaser.h"
 
@@ -63,4 +63,4 @@ private:
   // For CFCMutableDictionary only
 };
 
-#endif // CoreFoundationCPP_CFMutableDictionary_h_
+#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCMUTABLEDICTIONARY_H

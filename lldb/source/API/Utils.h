@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_UTILS_H
-#define LLDB_API_UTILS_H
+#ifndef LLDB_SOURCE_API_UTILS_H
+#define LLDB_SOURCE_API_UTILS_H
 
 #include "llvm/ADT/STLExtras.h"
 #include <memory>

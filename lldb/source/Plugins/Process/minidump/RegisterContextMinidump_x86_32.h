@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextMinidump_x86_32_h_
-#define liblldb_RegisterContextMinidump_x86_32_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_X86_32_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_X86_32_H
 
 #include "MinidumpTypes.h"
 
@@ -132,4 +132,4 @@ enum class MinidumpContext_x86_32_Flags : uint32_t {
 
 } // end namespace minidump
 } // end namespace lldb_private
-#endif // liblldb_RegisterContextMinidump_x86_32_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_X86_32_H

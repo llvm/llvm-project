@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SymbolFile_h_
-#define liblldb_SymbolFile_h_
+#ifndef LLDB_SYMBOL_SYMBOLFILE_H
+#define LLDB_SYMBOL_SYMBOLFILE_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -316,4 +316,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SymbolFile_h_
+#endif // LLDB_SYMBOL_SYMBOLFILE_H

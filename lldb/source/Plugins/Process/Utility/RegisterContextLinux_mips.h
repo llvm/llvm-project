@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextLinux_mips_H_
-#define liblldb_RegisterContextLinux_mips_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLINUX_MIPS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLINUX_MIPS_H
 
 #include "RegisterInfoInterface.h"
 #include "lldb/lldb-private.h"

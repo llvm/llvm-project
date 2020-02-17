@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Stream_h_
-#define liblldb_Stream_h_
+#ifndef LLDB_UTILITY_STREAM_H
+#define LLDB_UTILITY_STREAM_H
 
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
@@ -459,4 +459,4 @@ void DumpAddressRange(llvm::raw_ostream &s, uint64_t lo_addr, uint64_t hi_addr,
 
 } // namespace lldb_private
 
-#endif // liblldb_Stream_h_
+#endif // LLDB_UTILITY_STREAM_H

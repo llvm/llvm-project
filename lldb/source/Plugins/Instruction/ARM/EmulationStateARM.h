@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_EmulationStateARM_h_
-#define lldb_EmulationStateARM_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATIONSTATEARM_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATIONSTATEARM_H
 
 #include <map>
 
@@ -76,4 +76,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(EmulationStateARM);
 };
 
-#endif // lldb_EmulationStateARM_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATIONSTATEARM_H

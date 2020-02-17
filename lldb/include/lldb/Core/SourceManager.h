@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SourceManager_h_
-#define liblldb_SourceManager_h_
+#ifndef LLDB_CORE_SOURCEMANAGER_H
+#define LLDB_CORE_SOURCEMANAGER_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
@@ -162,4 +162,4 @@ bool operator==(const SourceManager::File &lhs, const SourceManager::File &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_SourceManager_h_
+#endif // LLDB_CORE_SOURCEMANAGER_H

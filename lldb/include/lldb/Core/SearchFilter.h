@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SearchFilter_h_
-#define liblldb_SearchFilter_h_
+#ifndef LLDB_CORE_SEARCHFILTER_H
+#define LLDB_CORE_SEARCHFILTER_H
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -440,4 +440,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SearchFilter_h_
+#endif // LLDB_CORE_SEARCHFILTER_H

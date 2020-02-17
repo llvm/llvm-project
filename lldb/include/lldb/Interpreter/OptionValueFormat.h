@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueFormat_h_
-#define liblldb_OptionValueFormat_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEFORMAT_H
+#define LLDB_INTERPRETER_OPTIONVALUEFORMAT_H
 
 #include "lldb/Interpreter/OptionValue.h"
 
@@ -63,4 +63,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueFormat_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEFORMAT_H

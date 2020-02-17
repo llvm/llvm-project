@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MemoryHistoryASan_h_
-#define liblldb_MemoryHistoryASan_h_
+#ifndef LLDB_SOURCE_PLUGINS_MEMORYHISTORY_ASAN_MEMORYHISTORYASAN_H
+#define LLDB_SOURCE_PLUGINS_MEMORYHISTORY_ASAN_MEMORYHISTORYASAN_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/MemoryHistory.h"
@@ -45,4 +45,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_MemoryHistoryASan_h_
+#endif // LLDB_SOURCE_PLUGINS_MEMORYHISTORY_ASAN_MEMORYHISTORYASAN_H

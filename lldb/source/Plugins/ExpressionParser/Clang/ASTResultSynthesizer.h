@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ASTResultSynthesizer_h_
-#define liblldb_ASTResultSynthesizer_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H
 
 #include "lldb/Target/Target.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -170,4 +170,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ASTResultSynthesizer_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTRESULTSYNTHESIZER_H

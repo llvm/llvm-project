@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
-#define lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_SYMBOLFILEPDB_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_SYMBOLFILEPDB_H
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -262,4 +262,4 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
-#endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_SYMBOLFILEPDB_H

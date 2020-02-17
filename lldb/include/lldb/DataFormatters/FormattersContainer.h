@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormattersContainer_h_
-#define lldb_FormattersContainer_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
+#define LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
 
 #include <functional>
 #include <map>
@@ -328,4 +328,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_FormattersContainer_h_
+#endif // LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H

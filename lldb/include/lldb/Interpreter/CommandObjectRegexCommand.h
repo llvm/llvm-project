@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObjectRegexCommand_h_
-#define liblldb_CommandObjectRegexCommand_h_
+#ifndef LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
+#define LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
 
 #include <list>
 
@@ -56,4 +56,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObjectRegexCommand_h_
+#endif // LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H

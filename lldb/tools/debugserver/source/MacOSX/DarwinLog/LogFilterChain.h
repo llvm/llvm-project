@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LogFilterChain_h
-#define LogFilterChain_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERCHAIN_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERCHAIN_H
 
 #include <vector>
 
@@ -34,4 +34,4 @@ private:
   bool m_default_accept;
 };
 
-#endif /* LogFilterChain_hpp */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERCHAIN_H

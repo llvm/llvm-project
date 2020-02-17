@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PThreadEvent_h__
-#define __PThreadEvent_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H
 #include "PThreadCondition.h"
 #include "PThreadMutex.h"
 #include <stdint.h>
@@ -58,4 +58,4 @@ private:
   PThreadEvent &operator=(const PThreadEvent &rhs) = delete;
 };
 
-#endif // #ifndef __PThreadEvent_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H

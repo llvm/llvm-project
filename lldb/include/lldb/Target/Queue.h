@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Queue_h_
-#define liblldb_Queue_h_
+#ifndef LLDB_TARGET_QUEUE_H
+#define LLDB_TARGET_QUEUE_H
 
 #include <string>
 #include <vector>
@@ -149,4 +149,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Queue_h_
+#endif // LLDB_TARGET_QUEUE_H

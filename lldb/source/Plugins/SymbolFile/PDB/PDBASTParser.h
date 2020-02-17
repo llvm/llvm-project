@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H
-#define LLDB_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H
 
 #include "lldb/lldb-forward.h"
 
@@ -113,4 +113,4 @@ private:
   DeclContextToUidMap m_decl_context_to_uid;
 };
 
-#endif // LLDB_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H

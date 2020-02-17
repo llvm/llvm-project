@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIPowerPC_h_
-#define liblldb_ABIPowerPC_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_POWERPC_ABIPOWERPC_H
+#define LLDB_SOURCE_PLUGINS_ABI_POWERPC_ABIPOWERPC_H
 
 class ABIPowerPC {
 public:

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_JSONUTILS_H_
-#define LLDBVSCODE_JSONUTILS_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_JSONUTILS_H
+#define LLDB_TOOLS_LLDB_VSCODE_JSONUTILS_H
 
 #include <stdint.h>
 #include "llvm/ADT/StringRef.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AddressResolver_h_
-#define liblldb_AddressResolver_h_
+#ifndef LLDB_CORE_ADDRESSRESOLVER_H
+#define LLDB_CORE_ADDRESSRESOLVER_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/SearchFilter.h"
@@ -60,4 +60,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_AddressResolver_h_
+#endif // LLDB_CORE_ADDRESSRESOLVER_H

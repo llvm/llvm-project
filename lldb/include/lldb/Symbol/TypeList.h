@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeList_h_
-#define liblldb_TypeList_h_
+#ifndef LLDB_SYMBOL_TYPELIST_H
+#define LLDB_SYMBOL_TYPELIST_H
 
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Iterable.h"
@@ -68,4 +68,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeList_h_
+#endif // LLDB_SYMBOL_TYPELIST_H

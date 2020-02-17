@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformDarwinKernel_h_
-#define liblldb_PlatformDarwinKernel_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H
 
 #include "lldb/Utility/ConstString.h"
 
@@ -196,4 +196,4 @@ public:
 
 #endif // __APPLE__
 
-#endif // liblldb_PlatformDarwinKernel_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H

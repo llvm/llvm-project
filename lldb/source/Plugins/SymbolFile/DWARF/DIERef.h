@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DIERef_h_
-#define SymbolFileDWARF_DIERef_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
 #include "llvm/ADT/Optional.h"
@@ -70,4 +70,4 @@ template<> struct format_provider<DIERef> {
 };
 } // namespace llvm
 
-#endif // SymbolFileDWARF_DIERef_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H

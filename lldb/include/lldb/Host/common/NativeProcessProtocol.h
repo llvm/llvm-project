@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_NativeProcessProtocol_h_
-#define liblldb_NativeProcessProtocol_h_
+#ifndef LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H
+#define LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H
 
 #include "NativeBreakpointList.h"
 #include "NativeThreadProtocol.h"
@@ -475,4 +475,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_NativeProcessProtocol_h_
+#endif // LLDB_HOST_COMMON_NATIVEPROCESSPROTOCOL_H

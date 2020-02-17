@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObjectConstResultChild_h_
-#define liblldb_ValueObjectConstResultChild_h_
+#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
+#define LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H
 
 #include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResultImpl.h"
@@ -75,4 +75,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObjectConstResultChild_h_
+#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTCHILD_H

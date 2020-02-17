@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNBArchImplI386_h__
-#define __DNBArchImplI386_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_I386_DNBARCHIMPLI386_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_I386_DNBARCHIMPLI386_H
 
 #if defined(__i386__) || defined(__x86_64__)
 
@@ -243,4 +243,4 @@ protected:
 };
 
 #endif // #if defined (__i386__) || defined (__x86_64__)
-#endif // #ifndef __DNBArchImplI386_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_I386_DNBARCHIMPLI386_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UnwindAssembly_x86_h_
-#define liblldb_UnwindAssembly_x86_h_
+#ifndef LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_UNWINDASSEMBLY_X86_H
+#define LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_UNWINDASSEMBLY_X86_H
 
 #include "x86AssemblyInspectionEngine.h"
 
@@ -62,4 +62,4 @@ private:
   lldb_private::x86AssemblyInspectionEngine *m_assembly_inspection_engine;
 };
 
-#endif // liblldb_UnwindAssembly_x86_h_
+#endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_UNWINDASSEMBLY_X86_H

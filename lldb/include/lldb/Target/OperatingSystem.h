@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OperatingSystem_h_
-#define liblldb_OperatingSystem_h_
-
+#ifndef LLDB_TARGET_OPERATINGSYSTEM_H
+#define LLDB_TARGET_OPERATINGSYSTEM_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
@@ -75,4 +74,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_OperatingSystem_h_
+#endif // LLDB_TARGET_OPERATINGSYSTEM_H
