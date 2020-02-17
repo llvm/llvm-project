@@ -2381,9 +2381,9 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
       dwo->GetMangledNamesForFunction(scope_qualified_name, mangled_names);
   }
 
-  for (lldb::user_id_t uid :
+  for (DIERef die_ref :
        m_function_scope_qualified_name_map.lookup(scope_qualified_name)) {
-    DWARFDIE die = GetDIE(uid);
+    DWARFDIE die = GetDIE(die_ref);
     mangled_names.push_back(ConstString(die.GetMangledName()));
   }
 }
@@ -3031,7 +3031,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                            .AsCString(""));
       if (scope_qualified_name.size()) {
         m_function_scope_qualified_name_map[scope_qualified_name].insert(
-            die.GetID());
+            *die.GetDIERef());
       }
     }
   }
