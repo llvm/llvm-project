@@ -196,7 +196,9 @@ config("compiler_defaults") {
     }
     if (use_relative_paths_in_debug_info) {
       cflags += [
+        "-Xclang",
         "-fdebug-compilation-dir",
+        "-Xclang",
         ".",
       ]
     }

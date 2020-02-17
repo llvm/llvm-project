@@ -161,3 +161,35 @@ body: |
     %1:_(<2 x s32>) = G_PTRTOINT %0
     $vgpr0_vgpr1 = COPY %1
 ...
+
+---
+name: test_ptrtoint_p3_to_s29
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_ptrtoint_p3_to_s29
+    ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s29) = G_TRUNC [[PTRTOINT]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s29)
+    %0:_(p3) = COPY $vgpr0
+    %1:_(s29) = G_PTRTOINT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_ptrtoint_p3_to_s33
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_ptrtoint_p3_to_s33
+    ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s33) = G_ZEXT [[PTRTOINT]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[ZEXT]](s33)
+    %0:_(p3) = COPY $vgpr0
+    %1:_(s33) = G_PTRTOINT %0
+    S_ENDPGM 0, implicit %1
+...

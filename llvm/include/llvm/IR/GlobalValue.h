@@ -146,12 +146,6 @@ private:
     llvm_unreachable("Fully covered switch above!");
   }
 
-  void maybeSetDsoLocal() {
-    if (hasLocalLinkage() ||
-        (!hasDefaultVisibility() && !hasExternalWeakLinkage()))
-      setDSOLocal(true);
-  }
-
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
   ///
@@ -243,7 +237,8 @@ public:
     assert((!hasLocalLinkage() || V == DefaultVisibility) &&
            "local linkage requires default visibility");
     Visibility = V;
-    maybeSetDsoLocal();
+    if (isImplicitDSOLocal())
+      setDSOLocal(true);
   }
 
   /// If the value is "Thread Local", its value isn't shared by the threads.
@@ -277,6 +272,11 @@ public:
   PointerType *getType() const { return cast<PointerType>(User::getType()); }
 
   Type *getValueType() const { return ValueType; }
+
+  bool isImplicitDSOLocal() const {
+    return hasLocalLinkage() ||
+           (!hasDefaultVisibility() && !hasExternalWeakLinkage());
+  }
 
   void setDSOLocal(bool Local) { IsDSOLocal = Local; }
 
@@ -455,7 +455,8 @@ public:
     if (isLocalLinkage(LT))
       Visibility = DefaultVisibility;
     Linkage = LT;
-    maybeSetDsoLocal();
+    if (isImplicitDSOLocal())
+      setDSOLocal(true);
   }
   LinkageTypes getLinkage() const { return LinkageTypes(Linkage); }
 

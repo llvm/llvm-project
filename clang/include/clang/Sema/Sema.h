@@ -1464,6 +1464,12 @@ public:
 
   void emitAndClearUnusedLocalTypedefWarnings();
 
+  // Emit all deferred diagnostics.
+  void emitDeferredDiags();
+  // Emit any deferred diagnostics for FD and erase them from the map in which
+  // they're stored.
+  void emitDeferredDiags(FunctionDecl *FD, bool ShowCallStack);
+
   enum TUFragmentKind {
     /// The global module fragment, between 'module;' and a module-declaration.
     Global,
@@ -3683,7 +3689,8 @@ public:
     TemplateDiscarded, // Discarded due to uninstantiated templates
     Unknown,
   };
-  FunctionEmissionStatus getEmissionStatus(FunctionDecl *Decl);
+  FunctionEmissionStatus getEmissionStatus(FunctionDecl *Decl,
+                                           bool Final = false);
 
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
@@ -9677,21 +9684,9 @@ private:
   /// Pop OpenMP function region for non-capturing function.
   void popOpenMPFunctionRegion(const sema::FunctionScopeInfo *OldFSI);
 
-  /// Check whether we're allowed to call Callee from the current function.
-  void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
-                                 bool CheckForDelayedContext = true);
-
-  /// Check whether we're allowed to call Callee from the current function.
-  void checkOpenMPHostFunction(SourceLocation Loc, FunctionDecl *Callee,
-                               bool CheckCaller = true);
-
   /// Check if the expression is allowed to be used in expressions for the
   /// OpenMP devices.
   void checkOpenMPDeviceExpr(const Expr *E);
-
-  /// Finishes analysis of the deferred functions calls that may be declared as
-  /// host/nohost during device/host compilation.
-  void finalizeOpenMPDelayedAnalysis();
 
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
@@ -9875,6 +9870,11 @@ public:
   void
   checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
                                    SourceLocation IdLoc = SourceLocation());
+  /// Finishes analysis of the deferred functions calls that may be declared as
+  /// host/nohost during device/host compilation.
+  void finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
+                                     const FunctionDecl *Callee,
+                                     SourceLocation Loc);
   /// Return true inside OpenMP declare target region.
   bool isInOpenMPDeclareTargetContext() const {
     return DeclareTargetNestingLevel > 0;
@@ -11223,18 +11223,6 @@ public:
                  /* Caller = */ FunctionDeclAndLoc>
       DeviceKnownEmittedFns;
 
-  /// A partial call graph maintained during CUDA/OpenMP device code compilation
-  /// to support deferred diagnostics.
-  ///
-  /// Functions are only added here if, at the time they're considered, they are
-  /// not known-emitted.  As soon as we discover that a function is
-  /// known-emitted, we remove it and everything it transitively calls from this
-  /// set and add those functions to DeviceKnownEmittedFns.
-  llvm::DenseMap</* Caller = */ CanonicalDeclPtr<FunctionDecl>,
-                 /* Callees = */ llvm::MapVector<CanonicalDeclPtr<FunctionDecl>,
-                                                 SourceLocation>>
-      DeviceCallGraph;
-
   /// Diagnostic builder for CUDA/OpenMP devices errors which may or may not be
   /// deferred.
   ///
@@ -11308,14 +11296,6 @@ public:
     llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
     llvm::Optional<unsigned> PartialDiagId;
   };
-
-  /// Indicate that this function (and thus everything it transtively calls)
-  /// will be codegen'ed, and emit any deferred diagnostics on this function and
-  /// its (transitive) callees.
-  void markKnownEmitted(
-      Sema &S, FunctionDecl *OrigCaller, FunctionDecl *OrigCallee,
-      SourceLocation OrigLoc,
-      const llvm::function_ref<bool(Sema &, FunctionDecl *)> IsKnownEmitted);
 
   /// Creates a DeviceDiagBuilder that emits the diagnostic if the current context
   /// is "used as device code".

@@ -909,6 +909,10 @@ def ISEL8   : AForm_4<31, 15,
 }  // hasSideEffects = 0
 }  // End FXU Operations.
 
+def : InstAlias<"rotlwi $rA, $rS, $n", (RLWINM8 g8rc:$rA, g8rc:$rS, u5imm:$n, 0, 31)>;
+def : InstAlias<"rotlwi. $rA, $rS, $n", (RLWINM8_rec g8rc:$rA, g8rc:$rS, u5imm:$n, 0, 31)>;
+def : InstAlias<"rotlw $rA, $rS, $rB", (RLWNM8 g8rc:$rA, g8rc:$rS, g8rc:$rB, 0, 31)>;
+def : InstAlias<"rotlw. $rA, $rS, $rB", (RLWNM8_rec g8rc:$rA, g8rc:$rS, g8rc:$rB, 0, 31)>;
 
 //===----------------------------------------------------------------------===//
 // Load/Store instructions.

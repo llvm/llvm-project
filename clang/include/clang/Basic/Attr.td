@@ -1926,7 +1926,7 @@ def ObjCDirect : Attr {
 
 def ObjCDirectMembers : Attr {
   let Spellings = [Clang<"objc_direct_members">];
-  let Subjects = SubjectList<[ObjCImpl, ObjCCategory], ErrorDiag>;
+  let Subjects = SubjectList<[ObjCImpl, ObjCInterface, ObjCCategory], ErrorDiag>;
   let LangOpts = [ObjC];
   let Documentation = [ObjCDirectMembersDocs];
 }

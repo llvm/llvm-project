@@ -1019,8 +1019,8 @@ def err_objc_direct_on_protocol : Error<
   "'objc_direct' attribute cannot be applied to %select{methods|properties}0 "
   "declared in an Objective-C protocol">;
 def err_objc_direct_duplicate_decl : Error<
-  "%select{|direct }0method declaration conflicts "
-  "with previous %select{|direct }1declaration of method %2">;
+  "%select{|direct }0%select{method|property}1 declaration conflicts "
+  "with previous %select{|direct }2declaration of %select{method|property}1 %3">;
 def err_objc_direct_impl_decl_mismatch : Error<
   "direct method was declared in %select{the primary interface|an extension|a category}0 "
   "but is implemented in %select{the primary interface|a category|a different category}1">;
@@ -1036,6 +1036,8 @@ def warn_objc_direct_ignored : Warning<
 def warn_objc_direct_property_ignored : Warning<
   "direct attribute on property %0 ignored (not implemented by this Objective-C runtime)">,
   InGroup<IgnoredAttributes>;
+def err_objc_direct_dynamic_property : Error<
+  "direct property cannot be @dynamic">;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "

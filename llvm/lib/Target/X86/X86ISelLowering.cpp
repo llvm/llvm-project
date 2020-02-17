@@ -21152,26 +21152,13 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
 
 /// Emit nodes that will be selected as "cmp Op0,Op1", or something
 /// equivalent.
-static std::pair<SDValue, SDValue> EmitCmp(SDValue Op0, SDValue Op1,
-                                           unsigned X86CC, const SDLoc &dl,
-                                           SelectionDAG &DAG,
-                                           const X86Subtarget &Subtarget,
-                                           SDValue Chain, bool IsSignaling) {
+static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
+                       const SDLoc &dl, SelectionDAG &DAG,
+                       const X86Subtarget &Subtarget) {
   if (isNullConstant(Op1))
-    return std::make_pair(EmitTest(Op0, X86CC, dl, DAG, Subtarget), Chain);
+    return EmitTest(Op0, X86CC, dl, DAG, Subtarget);
 
   EVT CmpVT = Op0.getValueType();
-
-  if (CmpVT.isFloatingPoint()) {
-    if (Chain) {
-      SDValue Res =
-          DAG.getNode(IsSignaling ? X86ISD::STRICT_FCMPS : X86ISD::STRICT_FCMP,
-                      dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
-      return std::make_pair(Res, Res.getValue(1));
-    }
-    return std::make_pair(DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1),
-                          SDValue());
-  }
 
   assert((CmpVT == MVT::i8 || CmpVT == MVT::i16 ||
           CmpVT == MVT::i32 || CmpVT == MVT::i64) && "Unexpected VT!");
@@ -21225,7 +21212,7 @@ static std::pair<SDValue, SDValue> EmitCmp(SDValue Op0, SDValue Op1,
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
-  return std::make_pair(Sub.getValue(1), SDValue());
+  return Sub.getValue(1);
 }
 
 /// Check if replacement of SQRT with RSQRT should be disabled.
@@ -22135,9 +22122,8 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
 /// corresponding X86 condition code constant in X86CC.
 SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
                                              ISD::CondCode CC, const SDLoc &dl,
-                                             SelectionDAG &DAG, SDValue &X86CC,
-                                             SDValue &Chain,
-                                             bool IsSignaling) const {
+                                             SelectionDAG &DAG,
+                                             SDValue &X86CC) const {
   // Optimize to BT if possible.
   // Lower (X & (1 << N)) == 0 to BT(X, N).
   // Lower ((X >>u N) & 1) != 0 to BT(X, N).
@@ -22196,16 +22182,11 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
     }
   }
 
-  bool IsFP = Op1.getSimpleValueType().isFloatingPoint();
-  X86::CondCode CondCode = TranslateX86CC(CC, dl, IsFP, Op0, Op1, DAG);
-  if (CondCode == X86::COND_INVALID)
-    return SDValue();
+  X86::CondCode CondCode =
+      TranslateX86CC(CC, dl, /*IsFP*/ false, Op0, Op1, DAG);
+  assert(CondCode != X86::COND_INVALID && "Unexpected condition code!");
 
-  std::pair<SDValue, SDValue> Tmp =
-      EmitCmp(Op0, Op1, CondCode, dl, DAG, Subtarget, Chain, IsSignaling);
-  SDValue EFLAGS = Tmp.first;
-  if (Chain)
-    Chain = Tmp.second;
+  SDValue EFLAGS = EmitCmp(Op0, Op1, CondCode, dl, DAG, Subtarget);
   X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
   return EFLAGS;
 }
@@ -22242,18 +22223,32 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  SDValue X86CC;
-  SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC, Chain,
-                                     Op.getOpcode() == ISD::STRICT_FSETCCS);
-  if (!EFLAGS)
+  if (Op0.getSimpleValueType().isInteger()) {
+    SDValue X86CC;
+    SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC);
+    SDValue Res = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
+    return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
+  }
+
+  // Handle floating point.
+  X86::CondCode CondCode = TranslateX86CC(CC, dl, /*IsFP*/ true, Op0, Op1, DAG);
+  if (CondCode == X86::COND_INVALID)
     return SDValue();
 
+  SDValue EFLAGS;
+  if (IsStrict) {
+    bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+    EFLAGS =
+        DAG.getNode(IsSignaling ? X86ISD::STRICT_FCMPS : X86ISD::STRICT_FCMP,
+                    dl, {MVT::i32, MVT::Other}, {Chain, Op0, Op1});
+    Chain = EFLAGS.getValue(1);
+  } else {
+    EFLAGS = DAG.getNode(X86ISD::FCMP, dl, MVT::i32, Op0, Op1);
+  }
+
+  SDValue X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
   SDValue Res = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
-
-  if (IsStrict)
-    return DAG.getMergeValues({Res, Chain}, dl);
-
-  return Res;
+  return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
 }
 
 SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const {
@@ -22344,7 +22339,8 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
 /// Return true if opcode is a X86 logical comparison.
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getOpcode();
-  if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI)
+  if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI ||
+      Opc == X86ISD::FCMP)
     return true;
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
@@ -23295,7 +23291,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
           (void)NewBR;
           Dest = FalseBB;
 
-          SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
+          SDValue Cmp = DAG.getNode(X86ISD::FCMP, dl, MVT::i32,
                                     Cond.getOperand(0), Cond.getOperand(1));
           CC = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
           Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
@@ -23310,7 +23306,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // For FCMP_UNE, we can emit
       // two branches instead of an explicit OR instruction with a
       // separate test.
-      SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
+      SDValue Cmp = DAG.getNode(X86ISD::FCMP, dl, MVT::i32,
                                 Cond.getOperand(0), Cond.getOperand(1));
       CC = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
       Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
@@ -29947,6 +29943,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(BT)
   NODE_NAME_CASE(CMP)
+  NODE_NAME_CASE(FCMP)
   NODE_NAME_CASE(STRICT_FCMP)
   NODE_NAME_CASE(STRICT_FCMPS)
   NODE_NAME_CASE(COMI)
@@ -40372,7 +40369,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
     SDLoc DL(N);
 
     // The SETCCs should both refer to the same CMP.
-    if (CMP0.getOpcode() != X86ISD::CMP || CMP0 != CMP1)
+    if (CMP0.getOpcode() != X86ISD::FCMP || CMP0 != CMP1)
       return SDValue();
 
     SDValue CMP00 = CMP0->getOperand(0);
