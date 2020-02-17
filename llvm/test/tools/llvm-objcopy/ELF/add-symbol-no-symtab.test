@@ -86,13 +86,13 @@ Symbols: []
 # RUN: llvm-objcopy --add-symbol='abs1=1' %t3.no %t3.not.dynstr
 # RUN: llvm-readobj -S %t3.not.dynstr | FileCheck --check-prefix=SEC3 %s
 
-# SEC3:      Index: 1
+# SEC3:      Index: 3
 # SEC3-NEXT: Name: .shstrtab
 # SEC3-NEXT: Type: SHT_STRTAB
 # SEC3:      Name: .symtab
 # SEC3-NEXT: Type: SHT_SYMTAB
 # SEC3-NOT:  }
-# SEC3:      Link: 1
+# SEC3:      Link: 3
 
 --- !ELF
 FileHeader:

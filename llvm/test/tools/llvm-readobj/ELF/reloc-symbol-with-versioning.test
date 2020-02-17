@@ -64,7 +64,7 @@ Sections:
     Type:            SHT_RELA
     Flags:           [ SHF_ALLOC ]
     Info:            0
-    Link:            7
+    Link:            .dynsym
     AddressAlign:    0x0000000000000008
     EntSize:         0x0000000000000018
     Relocations:     

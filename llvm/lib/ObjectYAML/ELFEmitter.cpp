@@ -251,12 +251,11 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
             ELFYAML::Chunk::ChunkKind::RawContent, /*IsImplicit=*/true));
 
   std::vector<StringRef> ImplicitSections;
+  if (Doc.DynamicSymbols)
+    ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
   if (Doc.Symbols)
     ImplicitSections.push_back(".symtab");
   ImplicitSections.insert(ImplicitSections.end(), {".strtab", ".shstrtab"});
-
-  if (Doc.DynamicSymbols)
-    ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
 
   // Insert placeholders for implicit sections that are not
   // defined explicitly in YAML.

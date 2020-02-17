@@ -63,12 +63,12 @@ Sections:
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=INVALID-STRING-TABLE-LLVM
 
 # INVALID-STRING-TABLE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
-# INVALID-STRING-TABLE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
-# INVALID-STRING-TABLE-GNU-NEXT:  warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
+# INVALID-STRING-TABLE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
+# INVALID-STRING-TABLE-GNU-NEXT:  warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 3: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
 # INVALID-STRING-TABLE-GNU-NEXT:  000:   0 (*local*)
 
 # INVALID-STRING-TABLE-LLVM:      VersionSymbols [
-# INVALID-STRING-TABLE-LLVM-NEXT: warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 5: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
+# INVALID-STRING-TABLE-LLVM-NEXT: warning: '[[FILE]]': can't get a string table for the symbol table linked to SHT_GNU_versym section with index 1: invalid string table linked to SHT_DYNSYM section with index 3: invalid sh_type for string table section [index 2]: expected SHT_STRTAB, but got SHT_NULL
 # INVALID-STRING-TABLE-LLVM-NEXT: ]
 
 --- !ELF
@@ -145,12 +145,12 @@ Sections:
 # RUN: llvm-readobj -V %t6 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=SYMBOLS-NUM-MISMATCH-LLVM
 
 # SYMBOLS-NUM-MISMATCH-GNU:      Version symbols section '.gnu.version' contains 2 entries:
-# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
-# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
+# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.dynsym)
+# SYMBOLS-NUM-MISMATCH-GNU-NEXT:  warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 2
 # SYMBOLS-NUM-MISMATCH-GNU-NEXT:   000:   0 (*local*)       1 (*global*)
 
 # SYMBOLS-NUM-MISMATCH-LLVM:      VersionSymbols [
-# SYMBOLS-NUM-MISMATCH-LLVM-NEXT: warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 4
+# SYMBOLS-NUM-MISMATCH-LLVM-NEXT: warning: '[[FILE]]': SHT_GNU_versym section with index 1: the number of entries (2) does not match the number of symbols (3) in the symbol table with index 2
 # SYMBOLS-NUM-MISMATCH-LLVM-NEXT: ]
 
 --- !ELF
