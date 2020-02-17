@@ -321,6 +321,14 @@ static MCInstrAnalysis *createThumbMCInstrAnalysis(const MCInstrInfo *Info) {
   return new ThumbMCInstrAnalysis(Info);
 }
 
+bool ARM::isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI) {
+  // Unfortunately we don't have ARMTargetInfo in the disassembler, so we have
+  // to rely on feature bits.
+  if (Coproc >= 8)
+    return false;
+  return STI.getFeatureBits()[ARM::FeatureCoprocCDE0 + Coproc];
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
   for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),

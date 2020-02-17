@@ -46,6 +46,15 @@ enum ArchExtKind : uint64_t {
   AEK_SB      =     1 << 17,
   AEK_FP_DP   =     1 << 18,
   AEK_LOB     =     1 << 19,
+  AEK_CDECP0 =      1 << 20,
+  AEK_CDECP1 =      1 << 21,
+  AEK_CDECP2 =      1 << 22,
+  AEK_CDECP3 =      1 << 23,
+  AEK_CDECP4 =      1 << 24,
+  AEK_CDECP5 =      1 << 25,
+  AEK_CDECP6 =      1 << 26,
+  AEK_CDECP7 =      1 << 27,
+
   // Unsupported extensions.
   AEK_OS       =    1ULL << 59,
   AEK_IWMMXT   =    1ULL << 60,
