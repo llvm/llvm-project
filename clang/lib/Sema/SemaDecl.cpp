@@ -17929,7 +17929,8 @@ Decl *Sema::getObjCDeclContext() const {
   return (dyn_cast_or_null<ObjCContainerDecl>(CurContext));
 }
 
-Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD) {
+Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD,
+                                                     bool Final) {
   // Templates are emitted when they're instantiated.
   if (FD->isDependentContext())
     return FunctionEmissionStatus::TemplateDiscarded;
@@ -17941,8 +17942,10 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD) {
     if (DevTy.hasValue()) {
       if (*DevTy == OMPDeclareTargetDeclAttr::DT_Host)
         OMPES = FunctionEmissionStatus::OMPDiscarded;
-      else if (DeviceKnownEmittedFns.count(FD) > 0)
+      else if (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost ||
+               *DevTy == OMPDeclareTargetDeclAttr::DT_Any) {
         OMPES = FunctionEmissionStatus::Emitted;
+      }
     }
   } else if (LangOpts.OpenMP) {
     // In OpenMP 4.5 all the functions are host functions.
@@ -17958,10 +17961,11 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD) {
       if (DevTy.hasValue()) {
         if (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
           OMPES = FunctionEmissionStatus::OMPDiscarded;
-        } else if (DeviceKnownEmittedFns.count(FD) > 0) {
+        } else if (*DevTy == OMPDeclareTargetDeclAttr::DT_Host ||
+                   *DevTy == OMPDeclareTargetDeclAttr::DT_Any)
           OMPES = FunctionEmissionStatus::Emitted;
-        }
-      }
+      } else if (Final)
+        OMPES = FunctionEmissionStatus::Emitted;
     }
   }
   if (OMPES == FunctionEmissionStatus::OMPDiscarded ||
@@ -17996,9 +18000,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD) {
 
   // Otherwise, the function is known-emitted if it's in our set of
   // known-emitted functions.
-  return (DeviceKnownEmittedFns.count(FD) > 0)
-             ? FunctionEmissionStatus::Emitted
-             : FunctionEmissionStatus::Unknown;
+  return FunctionEmissionStatus::Unknown;
 }
 
 bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {

@@ -1710,92 +1710,6 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
   return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee,
-                                     bool CheckForDelayedContext) {
-  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
-         "Expected OpenMP device compilation.");
-  assert(Callee && "Callee may not be null.");
-  Callee = Callee->getMostRecentDecl();
-  FunctionDecl *Caller = getCurFunctionDecl();
-
-  // host only function are not available on the device.
-  if (Caller) {
-    FunctionEmissionStatus CallerS = getEmissionStatus(Caller);
-    FunctionEmissionStatus CalleeS = getEmissionStatus(Callee);
-    assert(CallerS != FunctionEmissionStatus::CUDADiscarded &&
-           CalleeS != FunctionEmissionStatus::CUDADiscarded &&
-           "CUDADiscarded unexpected in OpenMP device function check");
-    if ((CallerS == FunctionEmissionStatus::Emitted ||
-         (!isOpenMPDeviceDelayedContext(*this) &&
-          CallerS == FunctionEmissionStatus::Unknown)) &&
-        CalleeS == FunctionEmissionStatus::OMPDiscarded) {
-      StringRef HostDevTy = getOpenMPSimpleClauseTypeName(
-          OMPC_device_type, OMPC_DEVICE_TYPE_host);
-      Diag(Loc, diag::err_omp_wrong_device_function_call) << HostDevTy << 0;
-      Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
-           diag::note_omp_marked_device_type_here)
-          << HostDevTy;
-      return;
-    }
-  }
-  // If the caller is known-emitted, mark the callee as known-emitted.
-  // Otherwise, mark the call in our call graph so we can traverse it later.
-  if ((CheckForDelayedContext && !isOpenMPDeviceDelayedContext(*this)) ||
-      (!Caller && !CheckForDelayedContext) ||
-      (Caller && getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted))
-    markKnownEmitted(*this, Caller, Callee, Loc,
-                     [CheckForDelayedContext](Sema &S, FunctionDecl *FD) {
-                       return CheckForDelayedContext &&
-                              S.getEmissionStatus(FD) ==
-                                  FunctionEmissionStatus::Emitted;
-                     });
-  else if (Caller)
-    DeviceCallGraph[Caller].insert({Callee, Loc});
-}
-
-void Sema::checkOpenMPHostFunction(SourceLocation Loc, FunctionDecl *Callee,
-                                   bool CheckCaller) {
-  assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
-         "Expected OpenMP host compilation.");
-  assert(Callee && "Callee may not be null.");
-  Callee = Callee->getMostRecentDecl();
-  FunctionDecl *Caller = getCurFunctionDecl();
-
-  // device only function are not available on the host.
-  if (Caller) {
-    FunctionEmissionStatus CallerS = getEmissionStatus(Caller);
-    FunctionEmissionStatus CalleeS = getEmissionStatus(Callee);
-    assert(
-        (LangOpts.CUDA || (CallerS != FunctionEmissionStatus::CUDADiscarded &&
-                           CalleeS != FunctionEmissionStatus::CUDADiscarded)) &&
-        "CUDADiscarded unexpected in OpenMP host function check");
-    if (CallerS == FunctionEmissionStatus::Emitted &&
-        CalleeS == FunctionEmissionStatus::OMPDiscarded) {
-      StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
-          OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
-      Diag(Loc, diag::err_omp_wrong_device_function_call) << NoHostDevTy << 1;
-      Diag(Callee->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
-           diag::note_omp_marked_device_type_here)
-          << NoHostDevTy;
-      return;
-    }
-  }
-  // If the caller is known-emitted, mark the callee as known-emitted.
-  // Otherwise, mark the call in our call graph so we can traverse it later.
-  if (!shouldIgnoreInHostDeviceCheck(Callee)) {
-    if ((!CheckCaller && !Caller) ||
-        (Caller &&
-         getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted))
-      markKnownEmitted(
-          *this, Caller, Callee, Loc, [CheckCaller](Sema &S, FunctionDecl *FD) {
-            return CheckCaller &&
-                   S.getEmissionStatus(FD) == FunctionEmissionStatus::Emitted;
-          });
-    else if (Caller)
-      DeviceCallGraph[Caller].insert({Callee, Loc});
-  }
-}
-
 void Sema::checkOpenMPDeviceExpr(const Expr *E) {
   assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
          "OpenMP device compilation mode is expected.");
@@ -2208,52 +2122,43 @@ bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
 
-void Sema::finalizeOpenMPDelayedAnalysis() {
+void Sema::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
+                                         const FunctionDecl *Callee,
+                                         SourceLocation Loc) {
   assert(LangOpts.OpenMP && "Expected OpenMP compilation mode.");
-  // Diagnose implicit declare target functions and their callees.
-  for (const auto &CallerCallees : DeviceCallGraph) {
-    Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
-        OMPDeclareTargetDeclAttr::getDeviceType(
-            CallerCallees.getFirst()->getMostRecentDecl());
-    // Ignore host functions during device analyzis.
-    if (LangOpts.OpenMPIsDevice && DevTy &&
-        *DevTy == OMPDeclareTargetDeclAttr::DT_Host)
-      continue;
-    // Ignore nohost functions during host analyzis.
-    if (!LangOpts.OpenMPIsDevice && DevTy &&
-        *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
-      continue;
-    for (const std::pair<CanonicalDeclPtr<FunctionDecl>, SourceLocation>
-             &Callee : CallerCallees.getSecond()) {
-      const FunctionDecl *FD = Callee.first->getMostRecentDecl();
-      Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
-          OMPDeclareTargetDeclAttr::getDeviceType(FD);
-      if (LangOpts.OpenMPIsDevice && DevTy &&
-          *DevTy == OMPDeclareTargetDeclAttr::DT_Host) {
-        // Diagnose host function called during device codegen.
-        StringRef HostDevTy = getOpenMPSimpleClauseTypeName(
-            OMPC_device_type, OMPC_DEVICE_TYPE_host);
-        Diag(Callee.second, diag::err_omp_wrong_device_function_call)
-            << HostDevTy << 0;
-        Diag(FD->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
-             diag::note_omp_marked_device_type_here)
-            << HostDevTy;
-        continue;
-      }
+  Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+      OMPDeclareTargetDeclAttr::getDeviceType(Caller->getMostRecentDecl());
+  // Ignore host functions during device analyzis.
+  if (LangOpts.OpenMPIsDevice && DevTy &&
+      *DevTy == OMPDeclareTargetDeclAttr::DT_Host)
+    return;
+  // Ignore nohost functions during host analyzis.
+  if (!LangOpts.OpenMPIsDevice && DevTy &&
+      *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
+    return;
+  const FunctionDecl *FD = Callee->getMostRecentDecl();
+  DevTy = OMPDeclareTargetDeclAttr::getDeviceType(FD);
+  if (LangOpts.OpenMPIsDevice && DevTy &&
+      *DevTy == OMPDeclareTargetDeclAttr::DT_Host) {
+    // Diagnose host function called during device codegen.
+    StringRef HostDevTy =
+        getOpenMPSimpleClauseTypeName(OMPC_device_type, OMPC_DEVICE_TYPE_host);
+    Diag(Loc, diag::err_omp_wrong_device_function_call) << HostDevTy << 0;
+    Diag(FD->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
+         diag::note_omp_marked_device_type_here)
+        << HostDevTy;
+    return;
+  }
       if (!LangOpts.OpenMPIsDevice && DevTy &&
           *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
         // Diagnose nohost function called during host codegen.
         StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
             OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
-        Diag(Callee.second, diag::err_omp_wrong_device_function_call)
-            << NoHostDevTy << 1;
+        Diag(Loc, diag::err_omp_wrong_device_function_call) << NoHostDevTy << 1;
         Diag(FD->getAttr<OMPDeclareTargetDeclAttr>()->getLocation(),
              diag::note_omp_marked_device_type_here)
             << NoHostDevTy;
-        continue;
       }
-    }
-  }
 }
 
 void Sema::StartOpenMPDSABlock(OpenMPDirectiveKind DKind,
@@ -17172,15 +17077,6 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }
-    // Mark the function as must be emitted for the device.
-    Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
-        OMPDeclareTargetDeclAttr::getDeviceType(FD);
-    if (LangOpts.OpenMPIsDevice && Res.hasValue() && IdLoc.isValid() &&
-        *DevTy != OMPDeclareTargetDeclAttr::DT_Host)
-      checkOpenMPDeviceFunction(IdLoc, FD, /*CheckForDelayedContext=*/false);
-    if (!LangOpts.OpenMPIsDevice && Res.hasValue() && IdLoc.isValid() &&
-        *DevTy != OMPDeclareTargetDeclAttr::DT_NoHost)
-      checkOpenMPHostFunction(IdLoc, FD, /*CheckCaller=*/false);
   }
   if (auto *VD = dyn_cast<ValueDecl>(D)) {
     // Problem if any with var declared with incomplete type will be reported
