@@ -121,7 +121,6 @@ LLDB_PLUGIN_DECLARE(SwiftLanguage)
 LLDB_PLUGIN_DECLARE(SwiftLanguageRuntime)
 LLDB_PLUGIN_DECLARE(SwiftREPL)
 #endif
-}
 LLDB_PLUGIN_DECLARE(SwiftASTContext);
 LLDB_PLUGIN_DECLARE(SwiftRuntimeReporting);
 // END SWIFT

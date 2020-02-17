@@ -587,7 +587,8 @@ public:
 
   ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
 
-  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
+  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                 const SymbolContext *sc = nullptr) override {
     return GetTypeName(type);
   }
 

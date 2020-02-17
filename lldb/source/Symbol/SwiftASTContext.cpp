@@ -1916,10 +1916,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     // the Clang modules that were imported in this module. This can
     // be a lot of work (potentially ten seconds per module), but it
     // can be performed in parallel.
-    const unsigned threads = repro::Reproducer::Instance().IsReplaying()
-                                 ? 1
-                                 : llvm::hardware_concurrency();
-    llvm::ThreadPool pool(threads);
+    const unsigned threads =
+        repro::Reproducer::Instance().IsReplaying() ? 1 : 0;
+    llvm::ThreadPool pool(llvm::hardware_concurrency(threads));
     for (size_t mi = 0; mi != num_images; ++mi) {
       auto module_sp = target.GetImages().GetModuleAtIndex(mi);
       pool.async([=] {
@@ -5587,8 +5586,9 @@ GetArchetypeNames(swift::Type swift_type, swift::ASTContext &ast_ctx,
   return dict;
 }
 
-ConstString SwiftASTContext::GetDisplayTypeName(void *type,
-                                                const SymbolContext *sc) {
+ConstString
+SwiftASTContext::GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                    const SymbolContext *sc) {
   VALID_OR_RETURN(ConstString("<invalid Swift context>"));
   std::string type_name(GetTypeName(type).AsCString(""));
   if (type) {
