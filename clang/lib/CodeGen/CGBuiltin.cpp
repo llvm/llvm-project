@@ -7069,6 +7069,21 @@ static llvm::Value *ARMMVEConstantSplat(CGBuilderTy &Builder, llvm::Type *VT) {
   return ARMMVEVectorSplat(Builder, Lane);
 }
 
+static llvm::Value *ARMMVEVectorElementReverse(CGBuilderTy &Builder,
+                                               llvm::Value *V,
+                                               unsigned ReverseWidth) {
+  // MVE-specific helper function which reverses the elements of a
+  // vector within every (ReverseWidth)-bit collection of lanes.
+  SmallVector<uint32_t, 16> Indices;
+  unsigned LaneSize = V->getType()->getScalarSizeInBits();
+  unsigned Elements = 128 / LaneSize;
+  unsigned Mask = ReverseWidth / LaneSize - 1;
+  for (unsigned i = 0; i < Elements; i++)
+    Indices.push_back(i ^ Mask);
+  return Builder.CreateShuffleVector(V, llvm::UndefValue::get(V->getType()),
+                                     Indices);
+}
+
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E,
                                               ReturnValueSlot ReturnValue,

@@ -1180,6 +1180,13 @@ defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.False, "">;
 defm vrmlsldavh : MVEBinaryVectorHoriz64R<V.True, V.True, "x">;
 }
 
+let params = T.All8 in
+def vrev16q : Intrinsic<Vector, (args Vector:$a), (vrev $a, 16)>;
+let params = !listconcat(T.All8, T.All16) in
+def vrev32q : Intrinsic<Vector, (args Vector:$a), (vrev $a, 32)>;
+let params = T.Usual in
+def vrev64q : Intrinsic<Vector, (args Vector:$a), (vrev $a, 64)>;
+
 foreach desttype = T.All in {
   // We want a vreinterpretq between every pair of supported vector types
   // _except_ that there shouldn't be one from a type to itself.
