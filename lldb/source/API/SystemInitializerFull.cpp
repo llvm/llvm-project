@@ -89,7 +89,7 @@ LLDB_PLUGIN_DECLARE(CPlusPlusLanguage)
 LLDB_PLUGIN_DECLARE(ObjCLanguage)
 LLDB_PLUGIN_DECLARE(ObjCPlusPlusLanguage)
 #if defined(_WIN32)
-LLDB_PLUGIN_DECLARE(ProcessWindowsCommon)
+LLDB_PLUGIN_DECLARE(ProcessWindows)
 #endif
 #if defined(__FreeBSD__)
 LLDB_PLUGIN_DECLARE(ProcessFreeBSD)
@@ -220,7 +220,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(ObjCPlusPlusLanguage);
 
 #if defined(_WIN32)
-  LLDB_PLUGIN_INITIALIZE(ProcessWindowsCommon);
+  LLDB_PLUGIN_INITIALIZE(ProcessWindows);
 #endif
 #if defined(__FreeBSD__)
   LLDB_PLUGIN_INITIALIZE(ProcessFreeBSD);
