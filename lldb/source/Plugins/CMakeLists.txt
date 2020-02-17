@@ -21,25 +21,3 @@ add_subdirectory(SystemRuntime)
 add_subdirectory(SymbolVendor)
 add_subdirectory(TypeSystem)
 add_subdirectory(UnwindAssembly)
-
-set(LLDB_STRIPPED_PLUGINS)
-get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
-
-set(LLDB_ENUM_PLUGINS "")
-
-foreach(p ${LLDB_ALL_PLUGINS})
-  # Strip lldbPlugin form the plugin name.
-  string(SUBSTRING ${p} 10 -1 pStripped)
-  if(${pStripped} MATCHES "^ScriptInterpreter*")
-    set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_SCRIPT_PLUGIN(${pStripped})\n")
-  else()
-    set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_PLUGIN(${pStripped})\n")
-  endif()
-endforeach(p)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Plugins.def.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Plugins.def
-  )
-
-set_property(GLOBAL PROPERTY LLDB_PLUGINS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR})
