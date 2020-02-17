@@ -127,7 +127,7 @@ static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
 }
 
 template <typename AffineExprContainer>
-SmallVector<AffineMap, 4>
+static SmallVector<AffineMap, 4>
 inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
   int64_t maxDim = -1, maxSym = -1;
   getMaxDimAndSymbol(exprsList, maxDim, maxSym);
