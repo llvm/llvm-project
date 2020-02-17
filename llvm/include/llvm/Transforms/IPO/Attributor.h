@@ -775,6 +775,12 @@ struct Attributor {
   /// Return the internal information cache.
   InformationCache &getInfoCache() { return InfoCache; }
 
+  /// Return true if this is a module pass, false otherwise.
+  bool isModulePass() const {
+    return !Functions.empty() &&
+           Functions.size() == Functions.front()->getParent()->size();
+  }
+
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.
   ///
