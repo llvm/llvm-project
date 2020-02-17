@@ -21212,7 +21212,7 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   // 0-x == y --> x+y == 0
   // 0-x != y --> x+y != 0
   if (Op0.getOpcode() == ISD::SUB && isNullConstant(Op0.getOperand(0)) &&
-      (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+      Op0.hasOneUse() && (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
     SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
     SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(1), Op1);
     return Add.getValue(1);
@@ -21221,7 +21221,7 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   // x == 0-y --> x+y == 0
   // x != 0-y --> x+y != 0
   if (Op1.getOpcode() == ISD::SUB && isNullConstant(Op1.getOperand(0)) &&
-      (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+      Op1.hasOneUse() && (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
     SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
     SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0, Op1.getOperand(1));
     return Add.getValue(1);
