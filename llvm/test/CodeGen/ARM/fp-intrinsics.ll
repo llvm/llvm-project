@@ -72,12 +72,42 @@ define i32 @fptosi_f32(float %x) #0 {
   ret i32 %val
 }
 
+; CHECK-LABEL: fptosi_f32_twice:
+; CHECK-NOSP: bl __aeabi_f2iz
+; CHECK-NOSP: bl __aeabi_f2iz
+; CHECK-SP: vcvt.s32.f32
+; FIXME-CHECK-SP: vcvt.s32.f32
+define void @fptosi_f32_twice(float %arg, i32* %ptr) #0 {
+entry:
+  %conv = call i32 @llvm.experimental.constrained.fptosi.f32(float %arg, metadata !"fpexcept.strict") #0
+  store i32 %conv, i32* %ptr, align 4
+  %conv1 = call i32 @llvm.experimental.constrained.fptosi.f32(float %arg, metadata !"fpexcept.strict") #0
+  %idx = getelementptr inbounds i32, i32* %ptr, i32 1
+  store i32 %conv1, i32* %idx, align 4
+  ret void
+}
+
 ; CHECK-LABEL: fptoui_f32:
 ; CHECK-NOSP: bl __aeabi_f2uiz
 ; FIXME-CHECK-SP: vcvt.u32.f32
 define i32 @fptoui_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.fptoui.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
+}
+
+; CHECK-LABEL: fptoui_f32_twice:
+; CHECK-NOSP: bl __aeabi_f2uiz
+; CHECK-NOSP: bl __aeabi_f2uiz
+; FIXME-CHECK-SP: vcvt.u32.f32
+; FIXME-CHECK-SP: vcvt.u32.f32
+define void @fptoui_f32_twice(float %arg, i32* %ptr) #0 {
+entry:
+  %conv = call i32 @llvm.experimental.constrained.fptoui.f32(float %arg, metadata !"fpexcept.strict") #0
+  store i32 %conv, i32* %ptr, align 4
+  %conv1 = call i32 @llvm.experimental.constrained.fptoui.f32(float %arg, metadata !"fpexcept.strict") #0
+  %idx = getelementptr inbounds i32, i32* %ptr, i32 1
+  store i32 %conv1, i32* %idx, align 4
+  ret void
 }
 
 ; CHECK-LABEL: sqrt_f32:
@@ -945,6 +975,21 @@ define float @fptrunc_f32(double %x) #0 {
 define double @fpext_f32(float %x) #0 {
   %val = call double @llvm.experimental.constrained.fpext.f64.f32(float %x, metadata !"fpexcept.strict") #0
   ret double %val
+}
+
+; CHECK-LABEL: fpext_f32_twice:
+; CHECK-NODP: bl __aeabi_f2d
+; CHECK-NODP: bl __aeabi_f2d
+; CHECK-DP: vcvt.f64.f32
+; FIXME-CHECK-DP: vcvt.f64.f32
+define void @fpext_f32_twice(float %arg, double* %ptr) #0 {
+entry:
+  %conv1 = call double @llvm.experimental.constrained.fpext.f64.f32(float %arg, metadata !"fpexcept.strict") #0
+  store double %conv1, double* %ptr, align 8
+  %conv2 = call double @llvm.experimental.constrained.fpext.f64.f32(float %arg, metadata !"fpexcept.strict") #0
+  %idx = getelementptr inbounds double, double* %ptr, i32 1
+  store double %conv2, double* %idx, align 8
+  ret void
 }
 
 ; CHECK-LABEL: sitofp_f32_i32:
