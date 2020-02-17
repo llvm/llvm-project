@@ -7056,6 +7056,19 @@ static llvm::Value *ARMMVEVectorReinterpret(CGBuilderTy &Builder,
   }
 }
 
+template<unsigned HighBit, unsigned OtherBits>
+static llvm::Value *ARMMVEConstantSplat(CGBuilderTy &Builder, llvm::Type *VT) {
+  // MVE-specific helper function to make a vector splat of a constant such as
+  // UINT_MAX or INT_MIN, in which all bits below the highest one are equal.
+  llvm::Type *T = VT->getVectorElementType();
+  unsigned LaneBits = T->getPrimitiveSizeInBits();
+  uint32_t Value = HighBit << (LaneBits - 1);
+  if (OtherBits)
+    Value |= (1UL << (LaneBits - 1)) - 1;
+  llvm::Value *Lane = llvm::ConstantInt::get(T, Value);
+  return ARMMVEVectorSplat(Builder, Lane);
+}
+
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E,
                                               ReturnValueSlot ReturnValue,

@@ -234,6 +234,33 @@ let params = T.Unsigned in {
   defm vdwdup: vxdup_mc<(? u32:$limit, imm_1248:$step), (? $limit, $step)>;
 }
 
+let params = T.Int in {
+  def vmvnq: Intrinsic<Vector, (args Vector:$a),
+                       (xor $a, (uint_max Vector))>;
+}
+let params = T.Signed in {
+  def vnegq: Intrinsic<Vector, (args Vector:$a),
+                       (sub (zeroinit Vector), $a)>;
+  def vabsq: Intrinsic<Vector, (args Vector:$a),
+                       (select (icmp_slt $a, (zeroinit Vector)),
+                               (sub (zeroinit Vector), $a), $a)>;
+  def vqnegq: Intrinsic<Vector, (args Vector:$a),
+                        (select (icmp_eq $a, (int_min Vector)),
+                                (int_max Vector),
+                                (sub (zeroinit Vector), $a))>;
+  def vqabsq: Intrinsic<Vector, (args Vector:$a),
+                        (select (icmp_sgt $a, (zeroinit Vector)), $a,
+                                (select (icmp_eq $a, (int_min Vector)),
+                                        (int_max Vector),
+                                        (sub (zeroinit Vector), $a)))>;
+}
+let params = T.Float in {
+  def vnegq_f: Intrinsic<Vector, (args Vector:$a), (fneg $a)>,
+               NameOverride<"vnegq">;
+  def vabsq_f: Intrinsic<Vector, (args Vector:$a),
+               (IRIntBase<"fabs", [Vector]> $a)>, NameOverride<"vabsq">;
+}
+
 // The bitcasting below is not overcomplicating the IR because while
 // Vector and UVector may be different vector types at the C level i.e.
 // vectors of same size signed/unsigned ints. Once they're lowered
