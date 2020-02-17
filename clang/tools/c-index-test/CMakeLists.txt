@@ -37,6 +37,7 @@ else()
     clangAST
     clangBasic
     clangCodeGen
+    clangDependencyScanning
     clangDirectoryWatcher
     clangFrontend
     clangIndex
