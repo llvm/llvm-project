@@ -4013,9 +4013,15 @@ let Predicates = [HasMVEInt] in {
                 (VT  (COPY_TO_REGCLASS (VT2 VCCR:$src), VCCR))>;
   }
 
+  // Here we match the specific SDNode type 'ARMVectorRegCastImpl'
+  // rather than the more general 'ARMVectorRegCast' which would also
+  // match some bitconverts. If we use the latter in cases where the
+  // input and output types are the same, the bitconvert gets elided
+  // and we end up generating a nonsense match of nothing.
+
   foreach VT = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
     foreach VT2 = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
-      def : Pat<(VT (ARMVectorRegCast (VT2 MQPR:$src))), (VT MQPR:$src)>;
+      def : Pat<(VT (ARMVectorRegCastImpl (VT2 MQPR:$src))), (VT MQPR:$src)>;
 }
 
 // end of MVE compares
