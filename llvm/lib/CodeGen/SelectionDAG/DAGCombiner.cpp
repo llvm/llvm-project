@@ -14943,6 +14943,12 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
       !LD->getValueType(0).isInteger())
     return false;
 
+  // The algorithm to split up a load of a scalable vector into individual
+  // elements currently requires knowing the length of the loaded type,
+  // so will need adjusting to work on scalable vectors.
+  if (LD->getValueType(0).isScalableVector())
+    return false;
+
   // Keep track of already used bits to detect overlapping values.
   // In that case, we will just abort the transformation.
   APInt UsedBits(LD->getValueSizeInBits(0), 0);
@@ -16579,7 +16585,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       }
 
       if (OptLevel != CodeGenOpt::None && ST1->hasOneUse() &&
-          !ST1->getBasePtr().isUndef()) {
+          !ST1->getBasePtr().isUndef() &&
+          // BaseIndexOffset and the code below requires knowing the size
+          // of a vector, so bail out if MemoryVT is scalable.
+          !ST1->getMemoryVT().isScalableVector()) {
         const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
         unsigned STBitSize = ST->getMemoryVT().getSizeInBits();
