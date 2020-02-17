@@ -59,8 +59,7 @@ continue:
 
 ; CHECK-LABEL: name: test_invoke_varargs
 
-; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
+; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
 ; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
 ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.0
 
