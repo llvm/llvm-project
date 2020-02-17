@@ -6266,27 +6266,14 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       return;
     }
 
-    if (auto *I = dyn_cast<Instruction>(&V))
-      if (isa<BinaryOperator>(I) || isa<CmpInst>(I)) {
-        Value *LHS = I->getOperand(0);
-        Value *RHS = I->getOperand(1);
-
-        if (LHS->getType()->isIntegerTy() && RHS->getType()->isIntegerTy())
-          return;
-      }
-
+    if (isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<CastInst>(&V))
+      return;
     // If it is a load instruction with range metadata, use it.
     if (LoadInst *LI = dyn_cast<LoadInst>(&V))
       if (auto *RangeMD = LI->getMetadata(LLVMContext::MD_range)) {
         intersectKnown(getConstantRangeFromMetadata(*RangeMD));
         return;
       }
-
-    // We handle casts in the updateImpl.
-    // TODO: Allow non integers as well.
-    if (CastInst *CI = dyn_cast<CastInst>(&V))
-      if (CI->getOperand(0)->getType()->isIntegerTy())
-        return;
 
     // We can work with PHI and select instruction as we traverse their operands
     // during update.
@@ -6306,6 +6293,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       SmallVectorImpl<const AAValueConstantRange *> &QuerriedAAs) {
     Value *LHS = BinOp->getOperand(0);
     Value *RHS = BinOp->getOperand(1);
+    // TODO: Allow non integers as well.
+    if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+      return false;
 
     auto &LHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));
@@ -6332,7 +6322,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     assert(CastI->getNumOperands() == 1 && "Expected cast to be unary!");
     // TODO: Allow non integers as well.
     Value &OpV = *CastI->getOperand(0);
-    assert(OpV.getType()->isIntegerTy() && "Expected integer cast");
+    if (!OpV.getType()->isIntegerTy())
+      return false;
 
     auto &OpAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(OpV));
@@ -6348,6 +6339,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
                    SmallVectorImpl<const AAValueConstantRange *> &QuerriedAAs) {
     Value *LHS = CmpI->getOperand(0);
     Value *RHS = CmpI->getOperand(1);
+    // TODO: Allow non integers as well.
+    if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+      return false;
 
     auto &LHSAA =
         A.getAAFor<AAValueConstantRange>(*this, IRPosition::value(*LHS));

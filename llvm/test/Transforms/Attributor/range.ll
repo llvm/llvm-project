@@ -1131,6 +1131,37 @@ entry:
 
 ; }
 
+define i1 @f_fcmp(float %a, float %b) {
+  %r = fcmp uge float %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @d_fcmp(double %a, double %b) {
+  %r = fcmp oeq double %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @dp_icmp(double* %a, double* %b) {
+  %r = icmp sge double* %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @ip_icmp(i8* %a, i8* %b) {
+  %r = icmp ult i8* %a, %b
+  %s = select i1 %r, i1 %r, i1 0
+  ret i1 %s
+}
+define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, double* %dpa, double* %dpb, i8* %ipa, i8* %ipb) {
+  %r1 = call i1 @f_fcmp(float %fa, float %fb)
+  %r2 = call i1 @d_fcmp(double %da, double %db)
+  %r3 = call i1 @dp_icmp(double* %dpa, double* %dpb)
+  %r4 = call i1 @ip_icmp(i8* %ipa, i8* %ipb)
+  %o1 = or i1 %r1, %r2
+  %o2 = or i1 %r3, %r4
+  %o3 = or i1 %o1, %o2
+  ret i1 %o3
+}
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 ; CHECK: !0 = !{i32 0, i32 10}
