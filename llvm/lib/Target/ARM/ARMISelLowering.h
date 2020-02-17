@@ -213,6 +213,12 @@ class VectorType;
       VADDLVu,
       VADDLVAs,
       VADDLVAu,
+      VMLAVs,
+      VMLAVu,
+      VMLALVs,
+      VMLALVu,
+      VMLALVAs,
+      VMLALVAu,
 
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top
