@@ -13,6 +13,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Threading.h"
 
 #include "gtest/gtest.h"
 
@@ -37,7 +38,7 @@ protected:
     // Initially this is only testing detection of the number of
     // physical cores, which is currently only supported/tested for
     // x86_64 Linux and Darwin.
-    return Host.isOSWindows() ||
+    return (Host.isOSWindows() && llvm_is_multithreaded()) ||
            (Host.getArch() == Triple::x86_64 &&
             (Host.isOSDarwin() || Host.getOS() == Triple::Linux));
   }
