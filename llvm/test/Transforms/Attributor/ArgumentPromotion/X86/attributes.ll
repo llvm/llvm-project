@@ -26,7 +26,7 @@ define void @no_promote(<4 x i64>* %arg) #1 {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(32) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* noalias nocapture nofree nonnull readonly align 32 dereferenceable(32) [[TMP]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
@@ -66,7 +66,7 @@ define void @promote(<4 x i64>* %arg) #0 {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 32 dereferenceable(32) [[TMP3]], i8 0, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 0, i64 32, i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* [[TMP]], align 1
 ; CHECK-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32

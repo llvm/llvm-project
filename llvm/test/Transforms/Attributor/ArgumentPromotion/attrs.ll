@@ -4,7 +4,7 @@
 %struct.ss = type { i32, i64 }
 
 ; Don't drop 'byval' on %X here.
-define internal void @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
+define internal i32 @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
@@ -20,7 +20,9 @@ define internal void @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
 ; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
 ; CHECK-NEXT:    store i32 0, i32* [[X_PRIV]]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[X_PRIV]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
 
@@ -30,7 +32,9 @@ entry:
   store i32 %tmp2, i32* %tmp, align 4
 
   store i32 %i, i32* %X
-  ret void
+  %l = load i32, i32* %X
+  %a = add i32 %l, %tmp2
+  ret i32 %a
 }
 
 ; Also make sure we don't drop the call zeroext attribute.
@@ -48,8 +52,8 @@ define i32 @test(i32* %X) {
 ; CHECK-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 1
-; CHECK-NEXT:    call void @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]], i32 zeroext 0)
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[C:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]], i32 zeroext 0)
+; CHECK-NEXT:    ret i32 [[C]]
 ;
 entry:
   %S = alloca %struct.ss
@@ -58,7 +62,7 @@ entry:
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
 
-  call void @f( %struct.ss* byval %S, i32* byval %X, i32 zeroext 0)
+  %c = call i32 @f( %struct.ss* byval %S, i32* byval %X, i32 zeroext 0)
 
-  ret i32 0
+  ret i32 %c
 }
