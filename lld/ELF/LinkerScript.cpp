@@ -761,9 +761,21 @@ void LinkerScript::output(InputSection *s) {
 void LinkerScript::switchTo(OutputSection *sec) {
   ctx->outSec = sec;
 
-  uint64_t before = advance(0, 1);
-  ctx->outSec->addr = advance(0, ctx->outSec->alignment);
-  expandMemoryRegions(ctx->outSec->addr - before);
+  uint64_t pos = advance(0, 1);
+  if (sec->addrExpr && !sec->alignExpr) {
+    // The alignment is ignored.
+    ctx->outSec->addr = pos;
+  } else {
+    // If ALIGN is specified, advance sh_addr according to ALIGN and ignore the
+    // maximum of input section alignments.
+    //
+    // When no SECTIONS command is given, sec->alignExpr is set to the maximum
+    // of input section alignments.
+    uint32_t align =
+        sec->alignExpr ? sec->alignExpr().getValue() : ctx->outSec->alignment;
+    ctx->outSec->addr = advance(0, align);
+    expandMemoryRegions(ctx->outSec->addr - pos);
+  }
 }
 
 // This function searches for a memory region to place the given output
