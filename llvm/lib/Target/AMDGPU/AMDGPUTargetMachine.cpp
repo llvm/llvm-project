@@ -849,6 +849,9 @@ bool GCNPassConfig::addPreISel() {
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
 
+  if (EnableConditionalDiscardTransformations)
+    addPass(createAMDGPUConditionalDiscardPass());
+
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
@@ -865,9 +868,6 @@ bool GCNPassConfig::addPreISel() {
   // therefore can't be preserved in LCSSA as needed. The linking/preserving
   // outside of the same library needs to be resolved in llvm core code.
   addPass(createLCSSAPass());
-
-  if (EnableConditionalDiscardTransformations)
-    addPass(createAMDGPUConditionalDiscardPass());
 
   addPass(createAMDGPUAnnotateUniformValues());
   if (!LateCFGStructurize) {

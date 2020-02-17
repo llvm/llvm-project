@@ -45,6 +45,14 @@
 /// The pass should ideally be placed after code sinking, because some sinking
 /// opportunities get lost after the transformation due to the basic block
 /// removal.
+///
+/// Additionally this pass can be used to transform kill intrinsics optimized
+/// as above to demote operations.
+/// This provides a workaround for applications which perform a non-uniform
+/// "kill" and later compute (implicit) derivatives.
+/// Note that in Vulkan, such applications should be fixed to use demote
+/// (OpDemoteToHelperInvocationEXT) instead of kill (OpKill).
+///
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
@@ -58,6 +66,13 @@
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
+
+// Enable conditional discard to demote transformations
+static cl::opt<bool> EnableTransformDiscardToDemote(
+  "amdgpu-transform-discard-to-demote",
+  cl::desc("Enable transformation of optimized discards to demotes"),
+  cl::init(false),
+  cl::Hidden);
 
 namespace {
 
@@ -78,10 +93,9 @@ public:
      AU.addRequiredTransitive<LoopInfoWrapperPass>();
   }
 
-
   StringRef getPassName() const override { return "AMDGPUConditionalDiscard"; }
 
-  void optimizeBlock(BasicBlock &BB);
+  void optimizeBlock(BasicBlock &BB, bool ConvertToDemote);
 };
 
 } // namespace
@@ -94,7 +108,7 @@ char &llvm::AMDGPUConditionalDiscardID = AMDGPUConditionalDiscard::ID;
 // first instruction is a call to amdgcn_kill, with "false" as argument.
 // Transform the branch condition of the block's predecessor and mark
 // the block for removal. Clone the call to amdgcn_kill to the predecessor.
-void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB) {
+void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemote) {
 
   if (auto *KillCand = dyn_cast<CallInst>(&BB.front())) {
     auto *Callee = KillCand->getCalledFunction();
@@ -111,8 +125,10 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB) {
       return;
 
     // Skip if the kill is in a loop.
-    if (LI->getLoopFor(PredBlock))
+    if (LI->getLoopFor(PredBlock)) {
+      LLVM_DEBUG(dbgs() << "Cannot optimize " << BB.getName() << " due to loop\n");
       return;
+    }
 
     auto *PredTerminator = PredBlock->getTerminator();
     auto *PredBranchInst = dyn_cast<BranchInst>(PredTerminator);
@@ -133,6 +149,11 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB) {
     }
 
     auto *NewKill = cast<CallInst>(KillCand->clone());
+
+    if (ConvertToDemote) {
+      NewKill->setCalledFunction(Intrinsic::getDeclaration(
+          KillCand->getModule(), Intrinsic::amdgcn_wqm_demote));
+    }
 
     NewKill->setArgOperand(0, Cond);
     NewKill->insertBefore(PredTerminator);
@@ -157,7 +178,7 @@ bool AMDGPUConditionalDiscard::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   for (auto &BB : F)
-    optimizeBlock(BB);
+    optimizeBlock(BB, EnableTransformDiscardToDemote);
 
   for (auto *BB : KillBlocksToRemove) {
     for (auto *Succ : successors(BB)) {
@@ -173,10 +194,10 @@ bool AMDGPUConditionalDiscard::runOnFunction(Function &F) {
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUConditionalDiscard, DEBUG_TYPE,
-                "Transform conditional discard", false, false)
+                "AMDGPUConditionalDiscard", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUConditionalDiscard, DEBUG_TYPE,
-                "Transform conditional discard", false, false)
+                "AMDGPUConditionalDiscard", false, false)
 
 FunctionPass *llvm::createAMDGPUConditionalDiscardPass() {
   return new AMDGPUConditionalDiscard();
