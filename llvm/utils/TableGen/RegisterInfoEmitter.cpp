@@ -202,13 +202,13 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "  static const RegClassWeight RCWeightTable[] = {\n";
   for (const auto &RC : RegBank.getRegClasses()) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
+    OS << "    {" << RC.getWeight(RegBank) << ", ";
     if (Regs.empty() || RC.Artificial)
-      OS << "    {0, 0";
+      OS << '0';
     else {
       std::vector<unsigned> RegUnits;
       RC.buildRegUnitSet(RegBank, RegUnits);
-      OS << "    {" << (*Regs.begin())->getWeight(RegBank)
-         << ", " << RegBank.getRegUnitSetWeight(RegUnits);
+      OS << RegBank.getRegUnitSetWeight(RegUnits);
     }
     OS << "},  \t// " << RC.getName() << "\n";
   }
