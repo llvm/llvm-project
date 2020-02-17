@@ -427,6 +427,14 @@ let params = [s8, u8, s16, u16] in {
     (extend (unzip $a, 1), DblVector, (unsignedflag Scalar))>;
 }
 
+let params = [s16, u16, s32, u32] in {
+  def vmovnbq: Intrinsic<HalfVector, (args HalfVector:$inactive, Vector:$a),
+    (trunc (zip $a, (vreinterpret (vrev $inactive, (bitsize Scalar)), Vector)),
+           HalfVector)>;
+  def vmovntq: Intrinsic<HalfVector, (args HalfVector:$inactive, Vector:$a),
+    (trunc (zip (vreinterpret $inactive, Vector), $a), HalfVector)>;
+}
+
 let params = T.Float in {
   def vrndq: Intrinsic<Vector, (args Vector:$a),
       (IRIntBase<"trunc", [Vector]> $a)>;

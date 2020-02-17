@@ -7067,6 +7067,19 @@ static llvm::Value *VectorUnzip(CGBuilderTy &Builder, llvm::Value *V, bool Odd) 
                                      Indices);
 }
 
+static llvm::Value *VectorZip(CGBuilderTy &Builder, llvm::Value *V0,
+                              llvm::Value *V1) {
+  // Make a shufflevector that interleaves two vectors element by element.
+  assert(V0->getType() == V1->getType() && "Can't zip different vector types");
+  SmallVector<uint32_t, 16> Indices;
+  unsigned InputElements = V0->getType()->getVectorNumElements();
+  for (unsigned i = 0; i < InputElements; i++) {
+    Indices.push_back(i);
+    Indices.push_back(i + InputElements);
+  }
+  return Builder.CreateShuffleVector(V0, V1, Indices);
+}
+
 template<unsigned HighBit, unsigned OtherBits>
 static llvm::Value *ARMMVEConstantSplat(CGBuilderTy &Builder, llvm::Type *VT) {
   // MVE-specific helper function to make a vector splat of a constant such as
