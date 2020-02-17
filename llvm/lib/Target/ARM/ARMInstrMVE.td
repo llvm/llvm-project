@@ -3179,6 +3179,10 @@ let Predicates = [HasMVEFloat] in {
             (v4f32 (MVE_VRINTf32P (v4f32 MQPR:$val1)))>;
   def : Pat<(v8f16 (fceil (v8f16 MQPR:$val1))),
             (v8f16 (MVE_VRINTf16P (v8f16 MQPR:$val1)))>;
+  def : Pat<(v4f32 (int_arm_mve_vrintn (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32N (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (int_arm_mve_vrintn (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16N (v8f16 MQPR:$val1)))>;
 }
 
 class MVEFloatArithNeon<string iname, string suffix, bit size,
