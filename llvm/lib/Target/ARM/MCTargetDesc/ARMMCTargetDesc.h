@@ -107,6 +107,9 @@ inline bool isVpred(OperandType op) {
 inline bool isVpred(uint8_t op) {
   return isVpred(static_cast<OperandType>(op));
 }
+
+bool isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI);
+
 } // end namespace ARM
 
 } // End llvm namespace

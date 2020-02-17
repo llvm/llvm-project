@@ -91,6 +91,7 @@ LLDB_PLUGIN_DECLARE(ProcessGDBRemote)
 LLDB_PLUGIN_DECLARE(DynamicLoaderMacOSXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
+LLDB_PLUGIN_DECLARE(DynamicLoaderWasmDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
 
 using namespace lldb_private;
@@ -215,6 +216,7 @@ llvm::Error SystemInitializerTest::Initialize() {
   LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWasmDYLD); // Before DynamicLoaderStatic.
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
 
@@ -302,6 +304,7 @@ void SystemInitializerTest::Terminate() {
 
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderWasmDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);
 

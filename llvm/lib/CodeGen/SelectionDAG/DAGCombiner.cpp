@@ -5648,6 +5648,48 @@ static bool isBSwapHWordPair(SDValue N, MutableArrayRef<SDNode *> Parts) {
   return false;
 }
 
+// Match this pattern:
+//   (or (and (shl (A, 8)), 0xff00ff00), (and (srl (A, 8)), 0x00ff00ff))
+// And rewrite this to:
+//   (rotr (bswap A), 16)
+static SDValue matchBSwapHWordOrAndAnd(const TargetLowering &TLI,
+                                       SelectionDAG &DAG, SDNode *N, SDValue N0,
+                                       SDValue N1, EVT VT, EVT ShiftAmountTy) {
+  assert(N->getOpcode() == ISD::OR && VT == MVT::i32 &&
+         "MatchBSwapHWordOrAndAnd: expecting i32");
+  if (!TLI.isOperationLegalOrCustom(ISD::ROTR, VT))
+    return SDValue();
+  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND)
+    return SDValue();
+  // TODO: this is too restrictive; lifting this restriction requires more tests
+  if (!N0->hasOneUse() || !N1->hasOneUse())
+    return SDValue();
+  ConstantSDNode *Mask0 = isConstOrConstSplat(N0.getOperand(1));
+  ConstantSDNode *Mask1 = isConstOrConstSplat(N1.getOperand(1));
+  if (!Mask0 || !Mask1)
+    return SDValue();
+  if (Mask0->getAPIntValue() != 0xff00ff00 ||
+      Mask1->getAPIntValue() != 0x00ff00ff)
+    return SDValue();
+  SDValue Shift0 = N0.getOperand(0);
+  SDValue Shift1 = N1.getOperand(0);
+  if (Shift0.getOpcode() != ISD::SHL || Shift1.getOpcode() != ISD::SRL)
+    return SDValue();
+  ConstantSDNode *ShiftAmt0 = isConstOrConstSplat(Shift0.getOperand(1));
+  ConstantSDNode *ShiftAmt1 = isConstOrConstSplat(Shift1.getOperand(1));
+  if (!ShiftAmt0 || !ShiftAmt1)
+    return SDValue();
+  if (ShiftAmt0->getAPIntValue() != 8 || ShiftAmt1->getAPIntValue() != 8)
+    return SDValue();
+  if (Shift0.getOperand(0) != Shift1.getOperand(0))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, Shift0.getOperand(0));
+  SDValue ShAmt = DAG.getConstant(16, DL, ShiftAmountTy);
+  return DAG.getNode(ISD::ROTR, DL, VT, BSwap, ShAmt);
+}
+
 /// Match a 32-bit packed halfword bswap. That is
 /// ((x & 0x000000ff) << 8) |
 /// ((x & 0x0000ff00) >> 8) |
@@ -5663,6 +5705,16 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
     return SDValue();
   if (!TLI.isOperationLegalOrCustom(ISD::BSWAP, VT))
     return SDValue();
+
+  if (SDValue BSwap = matchBSwapHWordOrAndAnd(TLI, DAG, N, N0, N1, VT,
+                                              getShiftAmountTy(VT)))
+  return BSwap;
+
+  // Try again with commuted operands.
+  if (SDValue BSwap = matchBSwapHWordOrAndAnd(TLI, DAG, N, N1, N0, VT,
+                                              getShiftAmountTy(VT)))
+  return BSwap;
+
 
   // Look for either
   // (or (bswaphpair), (bswaphpair))
@@ -14891,6 +14943,12 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
       !LD->getValueType(0).isInteger())
     return false;
 
+  // The algorithm to split up a load of a scalable vector into individual
+  // elements currently requires knowing the length of the loaded type,
+  // so will need adjusting to work on scalable vectors.
+  if (LD->getValueType(0).isScalableVector())
+    return false;
+
   // Keep track of already used bits to detect overlapping values.
   // In that case, we will just abort the transformation.
   APInt UsedBits(LD->getValueSizeInBits(0), 0);
@@ -16527,7 +16585,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       }
 
       if (OptLevel != CodeGenOpt::None && ST1->hasOneUse() &&
-          !ST1->getBasePtr().isUndef()) {
+          !ST1->getBasePtr().isUndef() &&
+          // BaseIndexOffset and the code below requires knowing the size
+          // of a vector, so bail out if MemoryVT is scalable.
+          !ST1->getMemoryVT().isScalableVector()) {
         const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
         unsigned STBitSize = ST->getMemoryVT().getSizeInBits();

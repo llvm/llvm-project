@@ -222,6 +222,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64Atomic(MachineOperand &Root) const;
 
+  ComplexRendererFns selectSMRDBufferImm(MachineOperand &Root) const;
+  ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
+
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 

@@ -99,6 +99,9 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisVec<2>, SDTCVecEltisVT<2,i1>]>;
 def AArch64dup_pred : SDNode<"AArch64ISD::DUP_PRED", SDT_AArch64DUP_PRED>;
 
+def SDT_IndexVector : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<1, 2>, SDTCisInt<2>]>;
+def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
+
 let Predicates = [HasSVE] in {
 
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -961,10 +964,10 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index">;
-  defm INDEX_IR : sve_int_index_ir<"index">;
-  defm INDEX_RI : sve_int_index_ri<"index">;
-  defm INDEX_II : sve_int_index_ii<"index">;
+  defm INDEX_RR : sve_int_index_rr<"index", index_vector>;
+  defm INDEX_IR : sve_int_index_ir<"index", index_vector>;
+  defm INDEX_RI : sve_int_index_ri<"index", index_vector>;
+  defm INDEX_II : sve_int_index_ii<"index", index_vector>;
 
   // Unpredicated shifts
   defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr">;
@@ -1285,6 +1288,9 @@ let Predicates = [HasSVE] in {
   multiclass unpred_store<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
     def _fi : Pat<(store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
                        (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+
+    def _default : Pat<(store (Ty ZPR:$val), GPR64:$base),
+                       (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
   defm Pat_ST1B        : unpred_store<nxv16i8, ST1B_IMM, PTRUE_B>;
@@ -1298,6 +1304,9 @@ let Predicates = [HasSVE] in {
   multiclass unpred_load<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
     def _fi : Pat<(Ty (load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
                   (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+
+    def _default : Pat<(Ty (load GPR64:$base)),
+                       (RegImmInst (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
   defm Pat_LD1B        : unpred_load<nxv16i8, LD1B_IMM, PTRUE_B>;
@@ -1311,6 +1320,9 @@ let Predicates = [HasSVE] in {
   multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
     def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),
                   (Store PPR:$val, GPR64sp:$base, simm9:$offset)>;
+
+    def _default : Pat<(store (Ty PPR:$Val), GPR64:$base),
+                  (Store PPR:$Val, GPR64:$base, (i64 0))>;
   }
 
   defm Pat_Store_P16 : unpred_store_predicate<nxv16i1, STR_PXI>;
@@ -1321,6 +1333,9 @@ let Predicates = [HasSVE] in {
   multiclass unpred_load_predicate<ValueType Ty, Instruction Load> {
     def _fi : Pat<(Ty (load (am_sve_fi GPR64sp:$base, simm9:$offset))),
                   (Load GPR64sp:$base, simm9:$offset)>;
+
+    def _default : Pat<(Ty (load GPR64:$base)),
+                  (Load GPR64:$base, (i64 0))>;
   }
 
   defm Pat_Load_P16 : unpred_load_predicate<nxv16i1, LDR_PXI>;

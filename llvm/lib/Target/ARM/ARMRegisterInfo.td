@@ -305,6 +305,17 @@ def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
   let DiagnosticType = "rGPR";
 }
 
+// GPRs without the PC and SP but with APSR_NZCV.Some instructions allow
+// accessing the APSR_NZCV, while actually encoding PC in the register field.
+// This is useful for assembly and disassembly only.
+// Currently used by the CDE extension.
+def GPRwithAPSR_NZCVnosp
+  : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12), LR, APSR_NZCV)> {
+  let isAllocatable = 0;
+  let DiagnosticString =
+    "operand must be a register in the range [r0, r12], r14 or apsr_nzcv";
+}
+
 // Thumb registers are R0-R7 normally. Some instructions can still use
 // the general GPR register class above (MOV, e.g.)
 def tGPR : RegisterClass<"ARM", [i32], 32, (trunc GPR, 8)> {

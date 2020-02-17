@@ -330,6 +330,18 @@ def simm5_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -16 && Imm < 16; }]>
   let DecoderMethod = "DecodeSImm<5>";
 }
 
+def simm5_8b : Operand<i32>, ImmLeaf<i32, [{ return (int8_t)Imm >= -16 && (int8_t)Imm < 16; }]> {
+  let ParserMatchClass = SImm5Operand;
+  let DecoderMethod = "DecodeSImm<5>";
+  let PrintMethod = "printSImm<8>";
+}
+
+def simm5_16b : Operand<i32>, ImmLeaf<i32, [{ return (int16_t)Imm >= -16 && (int16_t)Imm < 16; }]> {
+  let ParserMatchClass = SImm5Operand;
+  let DecoderMethod = "DecodeSImm<5>";
+  let PrintMethod = "printSImm<16>";
+}
+
 // simm7sN predicate - True if the immediate is a multiple of N in the range
 // [-64 * N, 63 * N].
 

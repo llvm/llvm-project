@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
@@ -628,6 +629,7 @@ public:
   void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
+  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
@@ -919,6 +921,12 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 bool GCNPassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
+}
+
+void GCNPassConfig::addPreGlobalInstructionSelect() {
+  // FIXME: We should run this before legalizing globals, but for some reason
+  // this requires legalized and regbankselected.
+  addPass(new Localizer());
 }
 
 bool GCNPassConfig::addGlobalInstructionSelect() {

@@ -319,6 +319,21 @@ TEST(IndexTest, InjecatedNameClass) {
                                          WrittenAt(Position(4, 14)))));
 }
 
+TEST(IndexTest, VisitDefaultArgs) {
+  std::string Code = R"cpp(
+    int var = 0;
+    void f(int s = var) {}
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexFunctionLocals = true;
+  Opts.IndexParametersInDeclarations = true;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("var"), HasRole(SymbolRole::Reference),
+                             WrittenAt(Position(3, 20)))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

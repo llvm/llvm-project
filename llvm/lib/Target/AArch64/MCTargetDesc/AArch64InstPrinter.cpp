@@ -900,6 +900,19 @@ void AArch64InstPrinter::printImmHex(const MCInst *MI, unsigned OpNo,
   O << format("#%#llx", Op.getImm());
 }
 
+template<int Size>
+void AArch64InstPrinter::printSImm(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Size == 8)
+    O << "#" << formatImm((signed char)Op.getImm());
+  else if (Size == 16)
+    O << "#" << formatImm((signed short)Op.getImm());
+  else
+    O << "#" << formatImm(Op.getImm());
+}
+
 void AArch64InstPrinter::printPostIncOperand(const MCInst *MI, unsigned OpNo,
                                              unsigned Imm, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
