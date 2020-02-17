@@ -115,6 +115,10 @@ namespace {
                 cl::desc("Specifies the JITDylib to be used for any subsequent "
                          "-extra-module arguments."));
 
+  cl::list<std::string>
+    Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
+           cl::ZeroOrMore);
+
   // The MCJIT supports building for a target address space separate from
   // the JIT compilation process. Use a forked process and a copying
   // memory manager with IPC to execute using this functionality.
@@ -355,6 +359,7 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
   exit(1);
 }
 
+Error loadDylibs();
 int runOrcLazyJIT(const char *ProgName);
 void disallowOrcOptions();
 
@@ -379,6 +384,8 @@ int main(int argc, char **argv, char * const *envp) {
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)
     sys::Process::PreventCoreFiles();
+
+  ExitOnErr(loadDylibs());
 
   if (UseJITKind == JITKind::OrcLazy)
     return runOrcLazyJIT(argv[0]);
@@ -741,6 +748,16 @@ static std::function<void(Module &)> createDebugDumper() {
     };
   }
   llvm_unreachable("Unknown DumpKind");
+}
+
+Error loadDylibs() {
+  for (const auto &Dylib : Dylibs) {
+    std::string ErrMsg;
+    if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
+      return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+  }
+
+  return Error::success();
 }
 
 static void exitOnLazyCallThroughFailure() { exit(1); }
