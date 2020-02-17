@@ -121,6 +121,10 @@ def fcmp_le: IRBuilder<"CreateFCmpOLE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
+def sitofp: IRBuilder<"CreateSIToFP">;
+def uitofp: IRBuilder<"CreateUIToFP">;
+def fptosi: IRBuilder<"CreateFPToSI">;
+def fptoui: IRBuilder<"CreateFPToUI">;
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
