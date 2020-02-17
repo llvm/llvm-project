@@ -854,6 +854,16 @@ bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
                             deref<std::less<>>());
 }
 
+unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank& RegBank) const {
+  if (TheDef && !TheDef->isValueUnset("Weight"))
+    return TheDef->getValueAsInt("Weight");
+
+  if (Members.empty() || Artificial)
+    return 0;
+
+  return (*Members.begin())->getWeight(RegBank);
+}
+
 namespace llvm {
 
   raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
