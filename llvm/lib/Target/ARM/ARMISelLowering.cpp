@@ -3637,7 +3637,7 @@ SDValue ARMTargetLowering::LowerINTRINSIC_VOID(
       unsigned Reg = MF.addLiveIn(ARM::LR, getRegClassFor(MVT::i32));
       SDValue ReturnAddress =
           DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, PtrVT);
-      std::vector<EVT> ResultTys = {MVT::Other, MVT::Glue};
+      constexpr EVT ResultTys[] = {MVT::Other, MVT::Glue};
       SDValue Callee =
           DAG.getTargetExternalSymbol("\01__gnu_mcount_nc", PtrVT, 0);
       SDValue RegisterMask = DAG.getRegisterMask(Mask);

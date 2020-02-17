@@ -688,9 +688,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (SetjmpF) {
       // Register saveSetjmp function
       FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
-      SmallVector<Type *, 4> Params = {SetjmpFTy->getParamType(0),
-                                       IRB.getInt32Ty(), Type::getInt32PtrTy(C),
-                                       IRB.getInt32Ty()};
+      std::array<Type *, 4> Params = {SetjmpFTy->getParamType(0),
+                                      IRB.getInt32Ty(), Type::getInt32PtrTy(C),
+                                      IRB.getInt32Ty()};
       FunctionType *FTy =
           FunctionType::get(Type::getInt32PtrTy(C), Params, false);
       SaveSetjmpF =

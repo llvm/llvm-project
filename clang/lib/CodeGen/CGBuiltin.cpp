@@ -3962,19 +3962,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       // Create a vector of the arguments, as well as a constant value to
       // express to the runtime the number of variadic arguments.
-      std::vector<llvm::Value *> Args = {
-          Queue,  Flags, Range,
-          Kernel, Block, ConstantInt::get(IntTy, NumArgs - 4),
-          ElemPtr};
-      std::vector<llvm::Type *> ArgTys = {
+      llvm::Value *const Args[] = {Queue,  Flags,
+                                   Range,  Kernel,
+                                   Block,  ConstantInt::get(IntTy, NumArgs - 4),
+                                   ElemPtr};
+      llvm::Type *const ArgTys[] = {
           QueueTy,          IntTy, RangeTy,           GenericVoidPtrTy,
           GenericVoidPtrTy, IntTy, ElemPtr->getType()};
 
-      llvm::FunctionType *FTy = llvm::FunctionType::get(
-          Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      auto Call =
-          RValue::get(Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
-                                         llvm::ArrayRef<llvm::Value *>(Args)));
+      llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, ArgTys, false);
+      auto Call = RValue::get(
+          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), Args));
       if (TmpSize)
         EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
