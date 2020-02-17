@@ -746,8 +746,8 @@ void BTFDebug::emitBTFSection() {
   uint32_t StringOffset = 0;
   for (const auto &S : StringTable.getTable()) {
     OS.AddComment("string offset=" + std::to_string(StringOffset));
-    OS.EmitBytes(S);
-    OS.EmitBytes(StringRef("\0", 1));
+    OS.emitBytes(S);
+    OS.emitBytes(StringRef("\0", 1));
     StringOffset += S.size() + 1;
   }
 }

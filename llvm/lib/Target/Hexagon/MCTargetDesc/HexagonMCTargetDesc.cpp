@@ -251,7 +251,7 @@ public:
   }
 
 
-  void EmitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
+  void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                               unsigned ByteAlignment,
                               unsigned AccessSize) override {
     HexagonMCELFStreamer &HexagonELFStreamer =
@@ -260,7 +260,7 @@ public:
                                                  AccessSize);
   }
 
-  void EmitLocalCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
+  void emitLocalCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                                    unsigned ByteAlignment,
                                    unsigned AccessSize) override {
     HexagonMCELFStreamer &HexagonELFStreamer =

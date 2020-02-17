@@ -46,7 +46,7 @@ Error CodeViewRecordIO::endRecord() {
     while (PaddingBytes > 0) {
       char Pad = static_cast<uint8_t>(LF_PAD0 + PaddingBytes);
       StringRef BytesSR = StringRef(&Pad, sizeof(Pad));
-      Streamer->EmitBytes(BytesSR);
+      Streamer->emitBytes(BytesSR);
       --PaddingBytes;
     }
     resetStreamedLen();
@@ -101,7 +101,7 @@ Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes,
                                           const Twine &Comment) {
   if (isStreaming()) {
     emitComment(Comment);
-    Streamer->EmitBinaryData(toStringRef(Bytes));
+    Streamer->emitBinaryData(toStringRef(Bytes));
     incrStreamedLen(Bytes.size());
   } else if (isWriting()) {
     if (auto EC = Writer->writeBytes(Bytes))
@@ -205,7 +205,7 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value, const Twine &Comment) {
   if (isStreaming()) {
     auto NullTerminatedString = StringRef(Value.data(), Value.size() + 1);
     emitComment(Comment);
-    Streamer->EmitBytes(NullTerminatedString);
+    Streamer->emitBytes(NullTerminatedString);
     incrStreamedLen(NullTerminatedString.size());
   } else if (isWriting()) {
     // Truncate if we attempt to write too much.
@@ -226,7 +226,7 @@ Error CodeViewRecordIO::mapGuid(GUID &Guid, const Twine &Comment) {
     StringRef GuidSR =
         StringRef((reinterpret_cast<const char *>(&Guid)), GuidSize);
     emitComment(Comment);
-    Streamer->EmitBytes(GuidSR);
+    Streamer->emitBytes(GuidSR);
     incrStreamedLen(GuidSize);
     return Error::success();
   }

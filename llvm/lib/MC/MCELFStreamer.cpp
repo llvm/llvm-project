@@ -117,7 +117,7 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   // Let the target do whatever target specific stuff it needs to do.
   getAssembler().getBackend().handleAssemblerFlag(Flag);
   // Do any generic stuff we need to do.
@@ -161,7 +161,7 @@ void MCELFStreamer::ChangeSection(MCSection *Section,
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCELFStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
+void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
   getAssembler().registerSymbol(*Symbol);
   const MCExpr *Value = MCSymbolRefExpr::create(
       Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
@@ -187,7 +187,7 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
   return T2;
 }
 
-bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
+bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolELF>(S);
 
   // Adding a symbol attribute always introduces the symbol, note that an
@@ -286,7 +286,7 @@ bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   return true;
 }
 
-void MCELFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                      unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolELF>(S);
   getAssembler().registerSymbol(*Symbol);
@@ -328,14 +328,14 @@ void MCELFStreamer::emitELFSymverDirective(StringRef AliasName,
   getAssembler().Symvers.push_back({AliasName, Aliasee});
 }
 
-void MCELFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                           unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolELF>(S);
   // FIXME: Should this be caught and done earlier?
   getAssembler().registerSymbol(*Symbol);
   Symbol->setBinding(ELF::STB_LOCAL);
   Symbol->setExternal(false);
-  EmitCommonSymbol(Symbol, Size, ByteAlignment);
+  emitCommonSymbol(Symbol, Size, ByteAlignment);
 }
 
 void MCELFStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
@@ -371,7 +371,7 @@ void MCELFStreamer::EmitIdent(StringRef IdentString) {
     EmitIntValue(0, 1);
     SeenIdent = true;
   }
-  EmitBytes(IdentString);
+  emitBytes(IdentString);
   EmitIntValue(0, 1);
   PopSection();
 }
@@ -676,15 +676,15 @@ void MCELFStreamer::FinishImpl() {
   this->MCObjectStreamer::FinishImpl();
 }
 
-void MCELFStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCELFStreamer::emitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("Generic ELF doesn't support this directive");
 }
 
-void MCELFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCELFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("ELF doesn't support this directive");
 }
 
-void MCELFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCELFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, unsigned ByteAlignment,
                                  SMLoc Loc) {
   llvm_unreachable("ELF doesn't support this directive");

@@ -184,7 +184,7 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-      getStreamer().EmitSymbolAttribute(Sym, Attr);
+      getStreamer().emitSymbolAttribute(Sym, Attr);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -729,7 +729,7 @@ bool ELFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
     return TokError("unexpected token in '.type' directive");
   Lex();
 
-  getStreamer().EmitSymbolAttribute(Sym, Attr);
+  getStreamer().emitSymbolAttribute(Sym, Attr);
 
   return false;
 }
@@ -800,7 +800,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   getStreamer().EmitIntValue(Data.size()+1, 4); // namesz.
   getStreamer().EmitIntValue(0, 4);             // descsz = 0 (no description).
   getStreamer().EmitIntValue(1, 4);             // type = NT_VERSION.
-  getStreamer().EmitBytes(Data);                // name.
+  getStreamer().emitBytes(Data);                // name.
   getStreamer().EmitIntValue(0, 1);             // terminate the string.
   getStreamer().EmitValueToAlignment(4);        // ensure 4 byte alignment.
   getStreamer().PopSection();
@@ -829,7 +829,7 @@ bool ELFAsmParser::ParseDirectiveWeakref(StringRef, SMLoc) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-  getStreamer().EmitWeakReference(Alias, Sym);
+  getStreamer().emitWeakReference(Alias, Sym);
   return false;
 }
 

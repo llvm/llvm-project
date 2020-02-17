@@ -456,7 +456,7 @@ public:
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc) override {
-    EmitDataMappingSymbol();
+    emitDataMappingSymbol();
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
 
@@ -521,15 +521,15 @@ public:
       llvm_unreachable("Invalid Suffix");
     }
 
-    MCELFStreamer::EmitBytes(StringRef(Buffer, Size));
+    MCELFStreamer::emitBytes(StringRef(Buffer, Size));
   }
 
   /// This is one of the functions used to emit data into an ELF section, so the
   /// ARM streamer overrides it to add the appropriate mapping symbol ($d) if
   /// necessary.
-  void EmitBytes(StringRef Data) override {
-    EmitDataMappingSymbol();
-    MCELFStreamer::EmitBytes(Data);
+  void emitBytes(StringRef Data) override {
+    emitDataMappingSymbol();
+    MCELFStreamer::emitBytes(Data);
   }
 
   void FlushPendingMappingSymbol() {
@@ -552,12 +552,12 @@ public:
       getOrCreateDataFragment();
     }
 
-    EmitDataMappingSymbol();
+    emitDataMappingSymbol();
     MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   }
 
-  void EmitAssemblerFlag(MCAssemblerFlag Flag) override {
-    MCELFStreamer::EmitAssemblerFlag(Flag);
+  void emitAssemblerFlag(MCAssemblerFlag Flag) override {
+    MCELFStreamer::emitAssemblerFlag(Flag);
 
     switch (Flag) {
     case MCAF_SyntaxUnified:
@@ -597,7 +597,7 @@ private:
     ElfMappingSymbol State;
   };
 
-  void EmitDataMappingSymbol() {
+  void emitDataMappingSymbol() {
     if (LastEMSInfo->State == EMS_Data)
       return;
     else if (LastEMSInfo->State == EMS_None) {
@@ -653,9 +653,9 @@ private:
     Symbol->setExternal(false);
   }
 
-  void EmitThumbFunc(MCSymbol *Func) override {
+  void emitThumbFunc(MCSymbol *Func) override {
     getAssembler().setIsThumbFunc(Func);
-    EmitSymbolAttribute(Func, MCSA_ELF_TypeFunction);
+    emitSymbolAttribute(Func, MCSA_ELF_TypeFunction);
   }
 
   // Helper functions for ARM exception handling directives
@@ -1091,7 +1091,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   const size_t ContentsSize = calculateContentSize();
 
   Streamer.EmitIntValue(VendorHeaderSize + TagHeaderSize + ContentsSize, 4);
-  Streamer.EmitBytes(CurrentVendor);
+  Streamer.emitBytes(CurrentVendor);
   Streamer.EmitIntValue(0, 1); // '\0'
 
   Streamer.EmitIntValue(ARMBuildAttrs::File, 1);
@@ -1108,12 +1108,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
       Streamer.emitULEB128IntValue(item.IntValue);
       break;
     case AttributeItem::TextAttribute:
-      Streamer.EmitBytes(item.StringValue);
+      Streamer.emitBytes(item.StringValue);
       Streamer.EmitIntValue(0, 1); // '\0'
       break;
     case AttributeItem::NumericAndTextAttributes:
       Streamer.emitULEB128IntValue(item.IntValue);
-      Streamer.EmitBytes(item.StringValue);
+      Streamer.emitBytes(item.StringValue);
       Streamer.EmitIntValue(0, 1); // '\0'
       break;
     }
@@ -1131,7 +1131,7 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
   Streamer.getAssembler().registerSymbol(*Symbol);
   unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
-    Streamer.EmitThumbFunc(Symbol);
+    Streamer.emitThumbFunc(Symbol);
 }
 
 void
@@ -1143,13 +1143,13 @@ void ARMTargetELFStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
   if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(Value)) {
     const MCSymbol &Sym = SRE->getSymbol();
     if (!Sym.isDefined()) {
-      getStreamer().EmitAssignment(Symbol, Value);
+      getStreamer().emitAssignment(Symbol, Value);
       return;
     }
   }
 
-  getStreamer().EmitThumbFunc(Symbol);
-  getStreamer().EmitAssignment(Symbol, Value);
+  getStreamer().emitThumbFunc(Symbol);
+  getStreamer().emitAssignment(Symbol, Value);
 }
 
 void ARMTargetELFStreamer::emitInst(uint32_t Inst, char Suffix) {

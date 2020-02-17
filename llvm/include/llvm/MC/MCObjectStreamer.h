@@ -116,12 +116,12 @@ public:
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                               uint64_t Offset);
-  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
-  void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
@@ -132,7 +132,7 @@ public:
   void EmitBundleAlignMode(unsigned AlignPow2) override;
   void EmitBundleLock(bool AlignToEnd) override;
   void EmitBundleUnlock() override;
-  void EmitBytes(StringRef Data) override;
+  void emitBytes(StringRef Data) override;
   void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;

@@ -801,7 +801,7 @@ public:
       std::string S;
       if (Parser.parseEscapedString(S))
         return error("Cannot parse string constant: ", Lexer.getTok());
-      Out.EmitBytes(StringRef(S.c_str(), S.length() + 1));
+      Out.emitBytes(StringRef(S.c_str(), S.length() + 1));
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 

@@ -140,23 +140,23 @@ public:
   void emitELFSymverDirective(StringRef AliasName,
                               const MCSymbol *Aliasee) override;
 
-  void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
+  void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
-  void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void EmitLinkerOptions(ArrayRef<std::string> Options) override;
-  void EmitDataRegion(MCDataRegionType Kind) override;
-  void EmitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
+  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitLinkerOptions(ArrayRef<std::string> Options) override;
+  void emitDataRegion(MCDataRegionType Kind) override;
+  void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
                       unsigned Update, VersionTuple SDKVersion) override;
-  void EmitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+  void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
-  void EmitThumbFunc(MCSymbol *Func) override;
+  void emitThumbFunc(MCSymbol *Func) override;
 
-  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
-  void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
-  void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
+  void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override;
   void EmitCOFFSymbolStorageClass(int StorageClass) override;
   void EmitCOFFSymbolType(int Type) override;
@@ -170,7 +170,7 @@ public:
                                   MCSymbol *CsectSym,
                                   unsigned ByteAlign) override;
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
-  void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
 
   /// Emit a local common (.lcomm) symbol.
@@ -178,19 +178,19 @@ public:
   /// @param Symbol - The common symbol to emit.
   /// @param Size - The size of the common symbol.
   /// @param ByteAlignment - The alignment of the common symbol in bytes.
-  void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
 
-  void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, unsigned ByteAlignment = 0,
                     SMLoc Loc = SMLoc()) override;
 
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
 
-  void EmitBinaryData(StringRef Data) override;
+  void emitBinaryData(StringRef Data) override;
 
-  void EmitBytes(StringRef Data) override;
+  void emitBytes(StringRef Data) override;
 
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
@@ -473,7 +473,7 @@ void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
+void MCAsmStreamer::emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
   StringRef str = MCLOHIdToName(Kind);
 
 #ifndef NDEBUG
@@ -493,7 +493,7 @@ void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   switch (Flag) {
   case MCAF_SyntaxUnified:         OS << "\t.syntax unified"; break;
   case MCAF_SubsectionsViaSymbols: OS << ".subsections_via_symbols"; break;
@@ -504,7 +504,7 @@ void MCAsmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLinkerOptions(ArrayRef<std::string> Options) {
+void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
   assert(!Options.empty() && "At least one option is required!");
   OS << "\t.linker_option \"" << Options[0] << '"';
   for (ArrayRef<std::string>::iterator it = Options.begin() + 1,
@@ -514,7 +514,7 @@ void MCAsmStreamer::EmitLinkerOptions(ArrayRef<std::string> Options) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitDataRegion(MCDataRegionType Kind) {
+void MCAsmStreamer::emitDataRegion(MCDataRegionType Kind) {
   if (!MAI->doesSupportDataRegionDirectives())
     return;
   switch (Kind) {
@@ -550,7 +550,7 @@ static void EmitSDKVersionSuffix(raw_ostream &OS,
   }
 }
 
-void MCAsmStreamer::EmitVersionMin(MCVersionMinType Type, unsigned Major,
+void MCAsmStreamer::emitVersionMin(MCVersionMinType Type, unsigned Major,
                                    unsigned Minor, unsigned Update,
                                    VersionTuple SDKVersion) {
   OS << '\t' << getVersionMinDirective(Type) << ' ' << Major << ", " << Minor;
@@ -575,7 +575,7 @@ static const char *getPlatformName(MachO::PlatformType Type) {
   llvm_unreachable("Invalid Mach-O platform type");
 }
 
-void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
+void MCAsmStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                      unsigned Minor, unsigned Update,
                                      VersionTuple SDKVersion) {
   const char *PlatformName = getPlatformName((MachO::PlatformType)Platform);
@@ -586,7 +586,7 @@ void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
   // This needs to emit to a temporary string to get properly quoted
   // MCSymbols when they have spaces in them.
   OS << "\t.thumb_func";
@@ -598,7 +598,7 @@ void MCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   // Do not emit a .set on inlined target assignments.
   bool EmitSet = true;
   if (auto *E = dyn_cast<MCTargetExpr>(Value))
@@ -613,10 +613,10 @@ void MCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     EmitEOL();
   }
 
-  MCStreamer::EmitAssignment(Symbol, Value);
+  MCStreamer::emitAssignment(Symbol, Value);
 }
 
-void MCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
+void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
   OS << ".weakref ";
   Alias->print(OS, MAI);
   OS << ", ";
@@ -624,7 +624,7 @@ void MCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
   EmitEOL();
 }
 
-bool MCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
+bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
                                         MCSymbolAttr Attribute) {
   switch (Attribute) {
   case MCSA_Invalid: llvm_unreachable("Invalid symbol attribute");
@@ -691,7 +691,7 @@ bool MCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
   return true;
 }
 
-void MCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   OS << ".desc" << ' ';
   Symbol->print(OS, MAI);
   OS << ',' << DescValue;
@@ -795,7 +795,7 @@ void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                      unsigned ByteAlignment) {
   OS << "\t.comm\t";
   Symbol->print(OS, MAI);
@@ -810,7 +810,7 @@ void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                           unsigned ByteAlign) {
   OS << "\t.lcomm\t";
   Symbol->print(OS, MAI);
@@ -832,7 +832,7 @@ void MCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, unsigned ByteAlignment,
                                  SMLoc Loc) {
   if (Symbol)
@@ -918,7 +918,7 @@ static void PrintQuotedString(StringRef Data, raw_ostream &OS) {
   OS << '"';
 }
 
-void MCAsmStreamer::EmitBytes(StringRef Data) {
+void MCAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
   if (Data.empty()) return;
@@ -952,7 +952,7 @@ void MCAsmStreamer::EmitBytes(StringRef Data) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitBinaryData(StringRef Data) {
+void MCAsmStreamer::emitBinaryData(StringRef Data) {
   // This is binary data. Print it in a grid of hex bytes for readability.
   const size_t Cols = 4;
   for (size_t I = 0, EI = alignTo(Data.size(), Cols); I < EI; I += Cols) {

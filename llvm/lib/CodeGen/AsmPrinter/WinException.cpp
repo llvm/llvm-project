@@ -566,7 +566,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
         Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
     const MCExpr *MCOffset =
         MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
-    Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+    Asm->OutStreamer->emitAssignment(ParentFrameOffset, MCOffset);
   }
 
   // Use the assembler to compute the number of table entries through label
@@ -956,7 +956,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   MCContext &Ctx = Asm->OutContext;
   MCSymbol *ParentFrameOffset =
       Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
-  Asm->OutStreamer->EmitAssignment(ParentFrameOffset,
+  Asm->OutStreamer->emitAssignment(ParentFrameOffset,
                                    MCConstantExpr::create(Offset, Ctx));
 }
 
