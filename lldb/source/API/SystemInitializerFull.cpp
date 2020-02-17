@@ -115,16 +115,6 @@ LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
 
-// BEGIN SWIFT
-#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-LLDB_PLUGIN_DECLARE(SwiftLanguage)
-LLDB_PLUGIN_DECLARE(SwiftLanguageRuntime)
-LLDB_PLUGIN_DECLARE(SwiftREPL)
-#endif
-LLDB_PLUGIN_DECLARE(SwiftASTContext);
-LLDB_PLUGIN_DECLARE(SwiftRuntimeReporting);
-// END SWIFT
-
 using namespace lldb_private;
 
 SystemInitializerFull::SystemInitializerFull() {}
@@ -134,22 +124,22 @@ SystemInitializerFull::~SystemInitializerFull() {}
 // BEGIN SWIFT
 static void SwiftInitialize() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-  LLDB_PLUGIN_INITIALIZE(SwiftLanguage);
-  LLDB_PLUGIN_INITIALIZE(SwiftLanguageRuntime);
-  LLDB_PLUGIN_INITIALIZE(SwiftREPL);
+  SwiftLanguage::Initialize();
+  SwiftLanguageRuntime::Initialize();
+  SwiftREPL::Initialize();
 #endif
-  LLDB_PLUGIN_INITIALIZE(SwiftASTContext);
-  LLDB_PLUGIN_INITIALIZE(SwiftRuntimeReporting);
+  SwiftASTContext::Initialize();
+  SwiftRuntimeReporting::Initialize();
 }
 
 static void SwiftTerminate() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-  LLDB_PLUGIN_TERMINATE(SwiftLanguage);
-  LLDB_PLUGIN_TERMINATE(SwiftLanguageRuntime);
-  LLDB_PLUGIN_TERMINATE(SwiftREPL);
+  SwiftLanguage::Terminate();
+  SwiftLanguageRuntime::Terminate();
+  SwiftREPL::Terminate();
 #endif
-  LLDB_PLUGIN_TERMINATE(SwiftASTContext);
-  LLDB_PLUGIN_TERMINATE(SwiftRuntimeReporting);
+  SwiftASTContext::Terminate();
+  SwiftRuntimeReporting::Terminate();
 }
 // END SWIFT
 
@@ -213,6 +203,10 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
+  // BEGIN SWIFT
+  ::SwiftInitialize();
+  // END SWIFT
+
   LLDB_PLUGIN_INITIALIZE(TypeSystemClang);
 
 #define LLVM_TARGET(t) LLDB_PROCESS_##t(LLDB_PLUGIN_INITIALIZE)
@@ -257,9 +251,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(CPlusPlusLanguage);
   LLDB_PLUGIN_INITIALIZE(ObjCLanguage);
   LLDB_PLUGIN_INITIALIZE(ObjCPlusPlusLanguage);
-  // BEGIN SWIFT
-  ::SwiftInitialize();
-  // END SWIFT
 
 #if defined(_WIN32)
   LLDB_PLUGIN_INITIALIZE(ProcessWindows);
@@ -307,6 +298,10 @@ void SystemInitializerFull::Terminate() {
   // Terminate and unload and loaded system or user LLDB plug-ins
   PluginManager::Terminate();
 
+  // BEGIN SWIFT
+  ::SwiftTerminate();
+  // END SWIFT
+
   LLDB_PLUGIN_TERMINATE(TypeSystemClang);
 
   LLDB_PLUGIN_TERMINATE(ArchitectureArm);
@@ -352,9 +347,6 @@ void SystemInitializerFull::Terminate() {
   LLDB_PLUGIN_TERMINATE(CPlusPlusLanguage);
   LLDB_PLUGIN_TERMINATE(ObjCLanguage);
   LLDB_PLUGIN_TERMINATE(ObjCPlusPlusLanguage);
-  // BEGIN SWIFT
-  ::SwiftTerminate();
-  // END SWIFT
 
 #if defined(__APPLE__)
   LLDB_PLUGIN_TERMINATE(DynamicLoaderDarwinKernel);
