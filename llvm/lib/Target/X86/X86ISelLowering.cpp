@@ -25736,14 +25736,12 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   */
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  const Align StackAlignment(TFI.getStackAlignment());
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
 
   // Save FP Control Word to stack slot
   int SSFI =
-      MF.getFrameInfo().CreateStackObject(2, StackAlignment.value(), false);
+      MF.getFrameInfo().CreateStackObject(2, 2, false);
   SDValue StackSlot =
       DAG.getFrameIndex(SSFI, getPointerTy(DAG.getDataLayout()));
 
