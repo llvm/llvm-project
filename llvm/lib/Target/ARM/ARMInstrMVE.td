@@ -2076,6 +2076,13 @@ let Predicates = [HasMVEInt] in {
             (v4i32 ( MVE_VCLZs32 (v4i32 MQPR:$val1)))>;
   def : Pat<(v8i16 ( ctlz (v8i16 MQPR:$val1))),
             (v8i16 ( MVE_VCLZs16 (v8i16 MQPR:$val1)))>;
+
+  def : Pat<(v16i8 ( int_arm_mve_vcls (v16i8 MQPR:$val1))),
+            (v16i8 ( MVE_VCLSs8 (v16i8 MQPR:$val1)))>;
+  def : Pat<(v4i32 ( int_arm_mve_vcls (v4i32 MQPR:$val1))),
+            (v4i32 ( MVE_VCLSs32 (v4i32 MQPR:$val1)))>;
+  def : Pat<(v8i16 ( int_arm_mve_vcls (v8i16 MQPR:$val1))),
+            (v8i16 ( MVE_VCLSs16 (v8i16 MQPR:$val1)))>;
 }
 
 class MVE_VABSNEG_int<string iname, string suffix, bits<2> size, bit negate,

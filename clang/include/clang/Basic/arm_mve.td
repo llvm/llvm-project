@@ -237,8 +237,11 @@ let params = T.Unsigned in {
 let params = T.Int in {
   def vmvnq: Intrinsic<Vector, (args Vector:$a),
                        (xor $a, (uint_max Vector))>;
+  def vclzq: Intrinsic<Vector, (args Vector:$a),
+                       (IRIntBase<"ctlz", [Vector]> $a, (i1 0))>;
 }
 let params = T.Signed in {
+  def vclsq: Intrinsic<Vector, (args Vector:$a), (IRInt<"vcls", [Vector]> $a)>;
   def vnegq: Intrinsic<Vector, (args Vector:$a),
                        (sub (zeroinit Vector), $a)>;
   def vabsq: Intrinsic<Vector, (args Vector:$a),
