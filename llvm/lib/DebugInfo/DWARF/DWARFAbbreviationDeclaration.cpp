@@ -171,7 +171,7 @@ Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
       if (FormValue.extractValue(DebugInfoData, &Offset, U.getFormParams(), &U))
         return FormValue;
     }
-    // March Offset along until we get to the attribute we want.
+    // Match Offset along until we get to the attribute we want.
     if (auto FixedSize = Spec.getByteSize(U))
       Offset += *FixedSize;
     else
