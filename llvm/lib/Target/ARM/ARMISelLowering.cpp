@@ -943,6 +943,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
     setTargetDAGCombine(ISD::INTRINSIC_VOID);
     setTargetDAGCombine(ISD::VECREDUCE_ADD);
+    setTargetDAGCombine(ISD::ADD);
   }
 
   if (!Subtarget->hasFP64()) {
@@ -1656,6 +1657,10 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VMULLu:        return "ARMISD::VMULLu";
   case ARMISD::VADDVs:        return "ARMISD::VADDVs";
   case ARMISD::VADDVu:        return "ARMISD::VADDVu";
+  case ARMISD::VADDLVs:       return "ARMISD::VADDLVs";
+  case ARMISD::VADDLVu:       return "ARMISD::VADDLVu";
+  case ARMISD::VADDLVAs:      return "ARMISD::VADDLVAs";
+  case ARMISD::VADDLVAu:      return "ARMISD::VADDLVAu";
   case ARMISD::UMAAL:         return "ARMISD::UMAAL";
   case ARMISD::UMLAL:         return "ARMISD::UMLAL";
   case ARMISD::SMLAL:         return "ARMISD::SMLAL";
@@ -11731,6 +11736,53 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue PerformADDVecReduce(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasMVEIntegerOps() || N->getValueType(0) != MVT::i64)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // We are looking for a i64 add of a VADDLVx. Due to these being i64's, this
+  // will look like:
+  //   t1: i32,i32 = ARMISD::VADDLVs x
+  //   t2: i64 = build_pair t1, t1:1
+  //   t3: i64 = add t2, y
+  // We also need to check for sext / zext and commutitive adds.
+  auto MakeVecReduce = [&](unsigned Opcode, unsigned OpcodeA, SDValue NA,
+                           SDValue NB) {
+    if (NB->getOpcode() != ISD::BUILD_PAIR)
+      return SDValue();
+    SDValue VecRed = NB->getOperand(0);
+    if (VecRed->getOpcode() != Opcode || VecRed.getResNo() != 0 ||
+        NB->getOperand(1) != SDValue(VecRed.getNode(), 1))
+      return SDValue();
+
+    SDLoc dl(N);
+    SDValue Lo = DCI.DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
+                                 DCI.DAG.getConstant(0, dl, MVT::i32));
+    SDValue Hi = DCI.DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
+                                 DCI.DAG.getConstant(1, dl, MVT::i32));
+    SDValue Red =
+        DCI.DAG.getNode(OpcodeA, dl, DCI.DAG.getVTList({MVT::i32, MVT::i32}),
+                        Lo, Hi, VecRed->getOperand(0));
+    return DCI.DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Red,
+                           SDValue(Red.getNode(), 1));
+  };
+
+  if (SDValue M = MakeVecReduce(ARMISD::VADDLVs, ARMISD::VADDLVAs, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VADDLVu, ARMISD::VADDLVAu, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VADDLVs, ARMISD::VADDLVAs, N1, N0))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VADDLVu, ARMISD::VADDLVAu, N1, N0))
+    return M;
+  return SDValue();
+}
+
 bool
 ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                  CombineLevel Level) const {
@@ -11900,6 +11952,9 @@ static SDValue PerformADDCombine(SDNode *N,
 
   // Only works one way, because it needs an immediate operand.
   if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
+    return Result;
+
+  if (SDValue Result = PerformADDVecReduce(N, DCI, Subtarget))
     return Result;
 
   // First try with the default operand order.
@@ -13945,6 +14000,7 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
 
   // Cases:
   //   VADDV u/s 8/16/32
+  //   VADDLV u/s 32
 
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {
     if (ResVT != RetTy || N0->getOpcode() != ExtendCode)
@@ -13954,11 +14010,19 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return A;
     return SDValue();
   };
+  auto Create64bitNode = [&](unsigned Opcode, ArrayRef<SDValue> Ops) {
+    SDValue Node = DAG.getNode(Opcode, dl, {MVT::i32, MVT::i32}, Ops);
+    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Node, SDValue(Node.getNode(), 1));
+  };
 
   if (SDValue A = IsVADDV(MVT::i32, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v16i8}))
     return DAG.getNode(ARMISD::VADDVs, dl, ResVT, A);
   if (SDValue A = IsVADDV(MVT::i32, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v16i8}))
     return DAG.getNode(ARMISD::VADDVu, dl, ResVT, A);
+  if (SDValue A = IsVADDV(MVT::i64, ISD::SIGN_EXTEND, {MVT::v4i32}))
+    return Create64bitNode(ARMISD::VADDLVs, {A});
+  if (SDValue A = IsVADDV(MVT::i64, ISD::ZERO_EXTEND, {MVT::v4i32}))
+    return Create64bitNode(ARMISD::VADDLVu, {A});
 
   return SDValue();
 }

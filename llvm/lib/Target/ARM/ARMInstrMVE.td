@@ -691,6 +691,30 @@ multiclass MVE_VADDLV_A<string suffix, bit U, list<dag> pattern=[]> {
 defm MVE_VADDLVs32 : MVE_VADDLV_A<"s32", 0b0>;
 defm MVE_VADDLVu32 : MVE_VADDLV_A<"u32", 0b1>;
 
+def SDTVecReduceL : SDTypeProfile<2, 1, [    // VADDLV
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisVec<2>
+]>;
+def SDTVecReduceLA : SDTypeProfile<2, 3, [    // VADDLVA
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>,
+  SDTCisVec<4>
+]>;
+def ARMVADDLVs      : SDNode<"ARMISD::VADDLVs", SDTVecReduceL>;
+def ARMVADDLVu      : SDNode<"ARMISD::VADDLVu", SDTVecReduceL>;
+def ARMVADDLVAs     : SDNode<"ARMISD::VADDLVAs", SDTVecReduceLA>;
+def ARMVADDLVAu     : SDNode<"ARMISD::VADDLVAu", SDTVecReduceLA>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(ARMVADDLVs (v4i32 MQPR:$val1)),
+            (MVE_VADDLVs32no_acc (v4i32 MQPR:$val1))>;
+  def : Pat<(ARMVADDLVu (v4i32 MQPR:$val1)),
+            (MVE_VADDLVu32no_acc (v4i32 MQPR:$val1))>;
+
+  def : Pat<(ARMVADDLVAs tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1)),
+            (MVE_VADDLVs32acc tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1))>;
+  def : Pat<(ARMVADDLVAu tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1)),
+            (MVE_VADDLVu32acc tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1))>;
+}
+
 class MVE_VMINMAXNMV<string iname, string suffix, bit sz,
                      bit bit_17, bit bit_7, list<dag> pattern=[]>
   : MVE_rDest<(outs rGPR:$RdaDest), (ins rGPR:$RdaSrc, MQPR:$Qm),
