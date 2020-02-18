@@ -368,11 +368,11 @@ void MCELFStreamer::EmitIdent(StringRef IdentString) {
   PushSection();
   SwitchSection(Comment);
   if (!SeenIdent) {
-    EmitIntValue(0, 1);
+    emitIntValue(0, 1);
     SeenIdent = true;
   }
   emitBytes(IdentString);
-  EmitIntValue(0, 1);
+  emitIntValue(0, 1);
   PopSection();
 }
 

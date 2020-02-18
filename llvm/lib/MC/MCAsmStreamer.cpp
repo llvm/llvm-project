@@ -194,9 +194,9 @@ public:
 
   void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
-  void EmitIntValue(uint64_t Value, unsigned Size) override;
-  void EmitIntValueInHex(uint64_t Value, unsigned Size) override;
-  void EmitIntValueInHexWithPadding(uint64_t Value, unsigned Size) override;
+  void emitIntValue(uint64_t Value, unsigned Size) override;
+  void emitIntValueInHex(uint64_t Value, unsigned Size) override;
+  void emitIntValueInHexWithPadding(uint64_t Value, unsigned Size) override;
 
   void emitULEB128Value(const MCExpr *Value) override;
 
@@ -966,17 +966,17 @@ void MCAsmStreamer::emitBinaryData(StringRef Data) {
   }
 }
 
-void MCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext()), Size);
+void MCAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  emitValue(MCConstantExpr::create(Value, getContext()), Size);
 }
 
-void MCAsmStreamer::EmitIntValueInHex(uint64_t Value, unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext(), true), Size);
+void MCAsmStreamer::emitIntValueInHex(uint64_t Value, unsigned Size) {
+  emitValue(MCConstantExpr::create(Value, getContext(), true), Size);
 }
 
-void MCAsmStreamer::EmitIntValueInHexWithPadding(uint64_t Value,
+void MCAsmStreamer::emitIntValueInHexWithPadding(uint64_t Value,
                                                  unsigned Size) {
-  EmitValue(MCConstantExpr::create(Value, getContext(), true, Size), Size);
+  emitValue(MCConstantExpr::create(Value, getContext(), true, Size), Size);
 }
 
 void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
@@ -1021,7 +1021,7 @@ void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                          std::numeric_limits<unsigned long long>::digits) &&
              "undefined behavior");
       ValueToEmit &= ~0ULL >> Shift;
-      EmitIntValue(ValueToEmit, EmissionSize);
+      emitIntValue(ValueToEmit, EmissionSize);
       Emitted += EmissionSize;
     }
     return;

@@ -413,19 +413,19 @@ void StackMaps::recordStatepoint(const MCSymbol &L, const MachineInstr &MI) {
 /// uint32 : NumRecords
 void StackMaps::emitStackmapHeader(MCStreamer &OS) {
   // Header.
-  OS.EmitIntValue(StackMapVersion, 1); // Version.
-  OS.EmitIntValue(0, 1);               // Reserved.
-  OS.EmitIntValue(0, 2);               // Reserved.
+  OS.emitIntValue(StackMapVersion, 1); // Version.
+  OS.emitIntValue(0, 1);               // Reserved.
+  OS.emitIntValue(0, 2);               // Reserved.
 
   // Num functions.
   LLVM_DEBUG(dbgs() << WSMP << "#functions = " << FnInfos.size() << '\n');
-  OS.EmitIntValue(FnInfos.size(), 4);
+  OS.emitIntValue(FnInfos.size(), 4);
   // Num constants.
   LLVM_DEBUG(dbgs() << WSMP << "#constants = " << ConstPool.size() << '\n');
-  OS.EmitIntValue(ConstPool.size(), 4);
+  OS.emitIntValue(ConstPool.size(), 4);
   // Num callsites.
   LLVM_DEBUG(dbgs() << WSMP << "#callsites = " << CSInfos.size() << '\n');
-  OS.EmitIntValue(CSInfos.size(), 4);
+  OS.emitIntValue(CSInfos.size(), 4);
 }
 
 /// Emit the function frame record for each function.
@@ -443,8 +443,8 @@ void StackMaps::emitFunctionFrameRecords(MCStreamer &OS) {
                       << " frame size: " << FR.second.StackSize
                       << " callsite count: " << FR.second.RecordCount << '\n');
     OS.emitSymbolValue(FR.first, 8);
-    OS.EmitIntValue(FR.second.StackSize, 8);
-    OS.EmitIntValue(FR.second.RecordCount, 8);
+    OS.emitIntValue(FR.second.StackSize, 8);
+    OS.emitIntValue(FR.second.RecordCount, 8);
   }
 }
 
@@ -456,7 +456,7 @@ void StackMaps::emitConstantPoolEntries(MCStreamer &OS) {
   LLVM_DEBUG(dbgs() << WSMP << "constants:\n");
   for (const auto &ConstEntry : ConstPool) {
     LLVM_DEBUG(dbgs() << WSMP << ConstEntry.second << '\n');
-    OS.EmitIntValue(ConstEntry.second, 8);
+    OS.emitIntValue(ConstEntry.second, 8);
   }
 }
 
@@ -501,43 +501,43 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     // simple overflow checks, but we may eventually communicate other
     // compilation errors this way.
     if (CSLocs.size() > UINT16_MAX || LiveOuts.size() > UINT16_MAX) {
-      OS.EmitIntValue(UINT64_MAX, 8); // Invalid ID.
-      OS.EmitValue(CSI.CSOffsetExpr, 4);
-      OS.EmitIntValue(0, 2); // Reserved.
-      OS.EmitIntValue(0, 2); // 0 locations.
-      OS.EmitIntValue(0, 2); // padding.
-      OS.EmitIntValue(0, 2); // 0 live-out registers.
-      OS.EmitIntValue(0, 4); // padding.
+      OS.emitIntValue(UINT64_MAX, 8); // Invalid ID.
+      OS.emitValue(CSI.CSOffsetExpr, 4);
+      OS.emitIntValue(0, 2); // Reserved.
+      OS.emitIntValue(0, 2); // 0 locations.
+      OS.emitIntValue(0, 2); // padding.
+      OS.emitIntValue(0, 2); // 0 live-out registers.
+      OS.emitIntValue(0, 4); // padding.
       continue;
     }
 
-    OS.EmitIntValue(CSI.ID, 8);
-    OS.EmitValue(CSI.CSOffsetExpr, 4);
+    OS.emitIntValue(CSI.ID, 8);
+    OS.emitValue(CSI.CSOffsetExpr, 4);
 
     // Reserved for flags.
-    OS.EmitIntValue(0, 2);
-    OS.EmitIntValue(CSLocs.size(), 2);
+    OS.emitIntValue(0, 2);
+    OS.emitIntValue(CSLocs.size(), 2);
 
     for (const auto &Loc : CSLocs) {
-      OS.EmitIntValue(Loc.Type, 1);
-      OS.EmitIntValue(0, 1);  // Reserved
-      OS.EmitIntValue(Loc.Size, 2);
-      OS.EmitIntValue(Loc.Reg, 2);
-      OS.EmitIntValue(0, 2);  // Reserved
-      OS.EmitIntValue(Loc.Offset, 4);
+      OS.emitIntValue(Loc.Type, 1);
+      OS.emitIntValue(0, 1);  // Reserved
+      OS.emitIntValue(Loc.Size, 2);
+      OS.emitIntValue(Loc.Reg, 2);
+      OS.emitIntValue(0, 2);  // Reserved
+      OS.emitIntValue(Loc.Offset, 4);
     }
 
     // Emit alignment to 8 byte.
     OS.emitValueToAlignment(8);
 
     // Num live-out registers and padding to align to 4 byte.
-    OS.EmitIntValue(0, 2);
-    OS.EmitIntValue(LiveOuts.size(), 2);
+    OS.emitIntValue(0, 2);
+    OS.emitIntValue(LiveOuts.size(), 2);
 
     for (const auto &LO : LiveOuts) {
-      OS.EmitIntValue(LO.DwarfRegNum, 2);
-      OS.EmitIntValue(0, 1);
-      OS.EmitIntValue(LO.Size, 1);
+      OS.emitIntValue(LO.DwarfRegNum, 2);
+      OS.emitIntValue(0, 1);
+      OS.emitIntValue(LO.Size, 1);
     }
     // Emit alignment to 8 byte.
     OS.emitValueToAlignment(8);

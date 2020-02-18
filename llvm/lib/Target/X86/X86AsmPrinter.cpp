@@ -598,15 +598,15 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       // Emitting note header.
       int WordSize = TT.isArch64Bit() ? 8 : 4;
       emitAlignment(WordSize == 4 ? Align(4) : Align(8));
-      OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
-      OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
-      OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
+      OutStreamer->emitIntValue(4, 4 /*size*/); // data size for "GNU\0"
+      OutStreamer->emitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
+      OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
       OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
       // Emitting an Elf_Prop for the CET properties.
-      OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->EmitIntValue(4, 4);               // data size
-      OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
+      OutStreamer->emitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
+      OutStreamer->emitIntValue(4, 4);               // data size
+      OutStreamer->emitIntValue(FeatureFlagsAnd, 4); // data
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
@@ -662,7 +662,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4/*size*/);
   else
     // Internal to current translation unit.
     //
@@ -670,7 +670,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
     // pointers need to be indirect and pc-rel. We accomplish this by
     // using NLPs; however, sometimes the types are local to the file.
     // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
+    OutStreamer.emitValue(
         MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
         4 /*size*/);
 }

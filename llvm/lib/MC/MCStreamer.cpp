@@ -128,7 +128,7 @@ void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
 
 /// EmitIntValue - Special case of EmitValue that avoids the client having to
 /// pass in a MCExpr for constant integers.
-void MCStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
+void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   assert(1 <= Size && Size <= 8 && "Invalid size");
   assert((isUIntN(8 * Size, Value) || isIntN(8 * Size, Value)) &&
          "Invalid size");
@@ -159,7 +159,7 @@ void MCStreamer::emitSLEB128IntValue(int64_t Value) {
   emitBytes(OSE.str());
 }
 
-void MCStreamer::EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
+void MCStreamer::emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   emitValueImpl(Value, Size, Loc);
 }
 
@@ -1027,7 +1027,7 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
 
   const MCAsmInfo *MAI = Context.getAsmInfo();
   if (!MAI->doesSetDirectiveSuppressReloc()) {
-    EmitValue(Diff, Size);
+    emitValue(Diff, Size);
     return;
   }
 

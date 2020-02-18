@@ -372,13 +372,13 @@ void FPOStateMachine::emitFrameDataRecord(MCStreamer &OS, MCSymbol *Label) {
 
   OS.emitAbsoluteSymbolDiff(Label, FPO->Begin, 4); // RvaStart
   OS.emitAbsoluteSymbolDiff(FPO->End, Label, 4);   // CodeSize
-  OS.EmitIntValue(LocalSize, 4);
-  OS.EmitIntValue(FPO->ParamsSize, 4);
-  OS.EmitIntValue(MaxStackSize, 4);
-  OS.EmitIntValue(FrameFuncStrTabOff, 4); // FrameFunc
+  OS.emitIntValue(LocalSize, 4);
+  OS.emitIntValue(FPO->ParamsSize, 4);
+  OS.emitIntValue(MaxStackSize, 4);
+  OS.emitIntValue(FrameFuncStrTabOff, 4); // FrameFunc
   OS.emitAbsoluteSymbolDiff(FPO->PrologueEnd, Label, 2);
-  OS.EmitIntValue(SavedRegSize, 2);
-  OS.EmitIntValue(CurFlags, 4);
+  OS.emitIntValue(SavedRegSize, 2);
+  OS.emitIntValue(CurFlags, 4);
 }
 
 /// Compute and emit the real CodeView FrameData subsection.
@@ -398,12 +398,12 @@ bool X86WinCOFFTargetStreamer::emitFPOData(const MCSymbol *ProcSym, SMLoc L) {
   MCSymbol *FrameBegin = Ctx.createTempSymbol(),
            *FrameEnd = Ctx.createTempSymbol();
 
-  OS.EmitIntValue(unsigned(DebugSubsectionKind::FrameData), 4);
+  OS.emitIntValue(unsigned(DebugSubsectionKind::FrameData), 4);
   OS.emitAbsoluteSymbolDiff(FrameEnd, FrameBegin, 4);
   OS.emitLabel(FrameBegin);
 
   // Start with the RVA of the function in question.
-  OS.EmitValue(MCSymbolRefExpr::create(FPO->Function,
+  OS.emitValue(MCSymbolRefExpr::create(FPO->Function,
                                        MCSymbolRefExpr::VK_COFF_IMGREL32, Ctx),
                4);
 

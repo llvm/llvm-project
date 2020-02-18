@@ -3049,9 +3049,9 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
       uint64_t IntValue = MCE->getValue();
       if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
         return Error(ExprLoc, "out of range literal value");
-      getStreamer().EmitIntValue(IntValue, Size);
+      getStreamer().emitIntValue(IntValue, Size);
     } else
-      getStreamer().EmitValue(Value, Size, ExprLoc);
+      getStreamer().emitValue(Value, Size, ExprLoc);
     return false;
   };
 
@@ -3090,11 +3090,11 @@ bool AsmParser::parseDirectiveOctaValue(StringRef IDVal) {
     if (parseHexOcta(*this, hi, lo))
       return true;
     if (MAI.isLittleEndian()) {
-      getStreamer().EmitIntValue(lo, 8);
-      getStreamer().EmitIntValue(hi, 8);
+      getStreamer().emitIntValue(lo, 8);
+      getStreamer().emitIntValue(hi, 8);
     } else {
-      getStreamer().EmitIntValue(hi, 8);
-      getStreamer().EmitIntValue(lo, 8);
+      getStreamer().emitIntValue(hi, 8);
+      getStreamer().emitIntValue(lo, 8);
     }
     return false;
   };
@@ -3153,7 +3153,7 @@ bool AsmParser::parseDirectiveRealValue(StringRef IDVal,
     APInt AsInt;
     if (checkForValidSection() || parseRealValue(Semantics, AsInt))
       return true;
-    getStreamer().EmitIntValue(AsInt.getLimitedValue(),
+    getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
     return false;
   };
@@ -3979,7 +3979,7 @@ bool AsmParser::parseDirectiveCVString() {
   // Put the string in the table and emit the offset.
   std::pair<StringRef, unsigned> Insertion =
       getCVContext().addToStringTable(Data);
-  getStreamer().EmitIntValue(Insertion.second, 4);
+  getStreamer().emitIntValue(Insertion.second, 4);
   return false;
 }
 
@@ -4752,10 +4752,10 @@ bool AsmParser::parseDirectiveDCB(StringRef IDVal, unsigned Size) {
     if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
       return Error(ExprLoc, "literal value out of range for directive");
     for (uint64_t i = 0, e = NumValues; i != e; ++i)
-      getStreamer().EmitIntValue(IntValue, Size);
+      getStreamer().emitIntValue(IntValue, Size);
   } else {
     for (uint64_t i = 0, e = NumValues; i != e; ++i)
-      getStreamer().EmitValue(Value, Size, ExprLoc);
+      getStreamer().emitValue(Value, Size, ExprLoc);
   }
 
   if (parseToken(AsmToken::EndOfStatement,
@@ -4791,7 +4791,7 @@ bool AsmParser::parseDirectiveRealDCB(StringRef IDVal, const fltSemantics &Seman
     return true;
 
   for (uint64_t i = 0, e = NumValues; i != e; ++i)
-    getStreamer().EmitIntValue(AsInt.getLimitedValue(),
+    getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
 
   return false;

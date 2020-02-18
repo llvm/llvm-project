@@ -1509,7 +1509,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
         if (Sym->isUndefined()) {
           getStreamer().emitLabel(Sym);
           getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
-          getStreamer().EmitIntValue(Value, byteSize);
+          getStreamer().emitIntValue(Value, byteSize);
         }
       } else if (MO_1.isExpr()) {
         const char *StringStart = nullptr;
@@ -1531,7 +1531,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
           // case where symbol is not yet defined: emit symbol
           getStreamer().emitLabel(Sym);
           getStreamer().emitSymbolAttribute(Sym, MCSA_Local);
-          getStreamer().EmitValue(MO_1.getExpr(), 4);
+          getStreamer().emitValue(MO_1.getExpr(), 4);
         }
       } else
         llvm_unreachable("unexpected type of machine operand!");

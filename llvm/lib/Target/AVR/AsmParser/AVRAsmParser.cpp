@@ -670,7 +670,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[0].getKind() == AsmToken::Minus &&
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
-    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L,
+    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
             AVRMCExpr::VK_AVR_None);
     return false;
   }
@@ -688,7 +688,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     }
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
-    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
+    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
     return false;
   }
 
@@ -696,7 +696,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     const MCExpr *Value;
     if (Parser.parseExpression(Value))
       return true;
-    Parser.getStreamer().EmitValue(Value, SizeInBytes, L);
+    Parser.getStreamer().emitValue(Value, SizeInBytes, L);
     return false;
   };
   return (parseMany(parseOne));

@@ -1124,40 +1124,40 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
   unsigned RsrcReg = getRsrcReg(MF.getFunction().getCallingConv());
 
   if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
-    OutStreamer->EmitIntValue(R_00B848_COMPUTE_PGM_RSRC1, 4);
+    OutStreamer->emitIntValue(R_00B848_COMPUTE_PGM_RSRC1, 4);
 
-    OutStreamer->EmitIntValue(CurrentProgramInfo.ComputePGMRSrc1, 4);
+    OutStreamer->emitIntValue(CurrentProgramInfo.ComputePGMRSrc1, 4);
 
-    OutStreamer->EmitIntValue(R_00B84C_COMPUTE_PGM_RSRC2, 4);
-    OutStreamer->EmitIntValue(CurrentProgramInfo.ComputePGMRSrc2, 4);
+    OutStreamer->emitIntValue(R_00B84C_COMPUTE_PGM_RSRC2, 4);
+    OutStreamer->emitIntValue(CurrentProgramInfo.ComputePGMRSrc2, 4);
 
-    OutStreamer->EmitIntValue(R_00B860_COMPUTE_TMPRING_SIZE, 4);
-    OutStreamer->EmitIntValue(S_00B860_WAVESIZE(CurrentProgramInfo.ScratchBlocks), 4);
+    OutStreamer->emitIntValue(R_00B860_COMPUTE_TMPRING_SIZE, 4);
+    OutStreamer->emitIntValue(S_00B860_WAVESIZE(CurrentProgramInfo.ScratchBlocks), 4);
 
     // TODO: Should probably note flat usage somewhere. SC emits a "FlatPtr32 =
     // 0" comment but I don't see a corresponding field in the register spec.
   } else {
-    OutStreamer->EmitIntValue(RsrcReg, 4);
-    OutStreamer->EmitIntValue(S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
+    OutStreamer->emitIntValue(RsrcReg, 4);
+    OutStreamer->emitIntValue(S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
                               S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks), 4);
-    OutStreamer->EmitIntValue(R_0286E8_SPI_TMPRING_SIZE, 4);
-    OutStreamer->EmitIntValue(
+    OutStreamer->emitIntValue(R_0286E8_SPI_TMPRING_SIZE, 4);
+    OutStreamer->emitIntValue(
         S_0286E8_WAVESIZE(CurrentProgramInfo.ScratchBlocks), 4);
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
-    OutStreamer->EmitIntValue(R_00B02C_SPI_SHADER_PGM_RSRC2_PS, 4);
-    OutStreamer->EmitIntValue(S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks), 4);
-    OutStreamer->EmitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);
-    OutStreamer->EmitIntValue(MFI->getPSInputEnable(), 4);
-    OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
-    OutStreamer->EmitIntValue(MFI->getPSInputAddr(), 4);
+    OutStreamer->emitIntValue(R_00B02C_SPI_SHADER_PGM_RSRC2_PS, 4);
+    OutStreamer->emitIntValue(S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks), 4);
+    OutStreamer->emitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);
+    OutStreamer->emitIntValue(MFI->getPSInputEnable(), 4);
+    OutStreamer->emitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
+    OutStreamer->emitIntValue(MFI->getPSInputAddr(), 4);
   }
 
-  OutStreamer->EmitIntValue(R_SPILLED_SGPRS, 4);
-  OutStreamer->EmitIntValue(MFI->getNumSpilledSGPRs(), 4);
-  OutStreamer->EmitIntValue(R_SPILLED_VGPRS, 4);
-  OutStreamer->EmitIntValue(MFI->getNumSpilledVGPRs(), 4);
+  OutStreamer->emitIntValue(R_SPILLED_SGPRS, 4);
+  OutStreamer->emitIntValue(MFI->getNumSpilledSGPRs(), 4);
+  OutStreamer->emitIntValue(R_SPILLED_VGPRS, 4);
+  OutStreamer->emitIntValue(MFI->getNumSpilledVGPRs(), 4);
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

@@ -145,7 +145,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
   if (Optional<uint64_t> Diff = absoluteSymbolDiff(getAssembler(), Hi, Lo)) {
-    EmitIntValue(*Diff, Size);
+    emitIntValue(*Diff, Size);
     return;
   }
   MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
@@ -241,7 +241,7 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
           Loc, "value evaluated as " + Twine(AbsValue) + " is out of range.");
       return;
     }
-    EmitIntValue(AbsValue, Size);
+    emitIntValue(AbsValue, Size);
     return;
   }
   DF->getFixups().push_back(
@@ -472,9 +472,9 @@ static void emitDwarfSetLineAddr(MCObjectStreamer &OS,
                                  int64_t LineDelta, const MCSymbol *Label,
                                  int PointerSize) {
   // emit the sequence to set the address
-  OS.EmitIntValue(dwarf::DW_LNS_extended_op, 1);
+  OS.emitIntValue(dwarf::DW_LNS_extended_op, 1);
   OS.emitULEB128IntValue(PointerSize + 1);
-  OS.EmitIntValue(dwarf::DW_LNE_set_address, 1);
+  OS.emitIntValue(dwarf::DW_LNE_set_address, 1);
   OS.emitSymbolValue(Label, PointerSize);
 
   // emit the sequence for the LineDelta (from 1) and a zero address delta.
@@ -723,9 +723,9 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
     int64_t NonZeroSize = Size > 4 ? 4 : Size;
     Expr &= ~0ULL >> (64 - NonZeroSize * 8);
     for (uint64_t i = 0, e = IntNumValues; i != e; ++i) {
-      EmitIntValue(Expr, NonZeroSize);
+      emitIntValue(Expr, NonZeroSize);
       if (NonZeroSize < Size)
-        EmitIntValue(0, Size - NonZeroSize);
+        emitIntValue(0, Size - NonZeroSize);
     }
     return;
   }

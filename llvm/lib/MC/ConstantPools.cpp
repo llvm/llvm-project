@@ -30,7 +30,7 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
   for (const ConstantPoolEntry &Entry : Entries) {
     Streamer.emitCodeAlignment(Entry.Size); // align naturally
     Streamer.emitLabel(Entry.Label);
-    Streamer.EmitValue(Entry.Value, Entry.Size, Entry.Loc);
+    Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
   Streamer.emitDataRegion(MCDR_DataRegionEnd);
   Entries.clear();
