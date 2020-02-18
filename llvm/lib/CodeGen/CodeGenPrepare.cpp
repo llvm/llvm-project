@@ -7259,11 +7259,18 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
 // to re-order dbg.value intrinsics.
 bool CodeGenPrepare::placeDbgValues(Function &F) {
   bool MadeChange = false;
-  DominatorTree DT(F);
+  DominatorTree &DT = getDT(F);
 
   for (BasicBlock &BB : F) {
+    // Maintain an ersatz OrderedBasicBlock here, as it dramatically speeds up
+    // dominance queries. For a file in WebKit, this reduces time spent in CGP
+    // from 10 minutes to 50 milliseconds. We can't just use OrderedBasicBlock
+    // because moving around dbg.values causes invalidation.
+    SmallPtrSet<const Instruction *, 32> VisitedInsts;
     for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
       Instruction *Insn = &*BI++;
+      VisitedInsts.insert(Insn);
+
       DbgValueInst *DVI = dyn_cast<DbgValueInst>(Insn);
       if (!DVI)
         continue;
@@ -7275,19 +7282,27 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
 
       // If VI is a phi in a block with an EHPad terminator, we can't insert
       // after it.
-      if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
+      BasicBlock *VIParent = VI->getParent();
+      if (isa<PHINode>(VI) && VIParent->getTerminator()->isEHPad())
         continue;
 
       // If the defining instruction dominates the dbg.value, we do not need
-      // to move the dbg.value.
-      if (DT.dominates(VI, DVI))
+      // to move the dbg.value. Query the visited instruction set first as it's
+      // much cheaper than the domtree query: if we've seen VI, we must have
+      // have either seen it before DVI or moved DVI, so `VI dom DVI`.
+      bool UseAfterDef =
+          (VIParent == &BB) ? VisitedInsts.count(VI) : DT.dominates(VI, DVI);
+      if (UseAfterDef)
         continue;
 
       LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
                         << *DVI << ' ' << *VI);
       DVI->removeFromParent();
+      // We will either move DVI out of this basic block, or move it to a later
+      // position within the block. In the latter case, we would visit VI before
+      // visiting DVI a second time. There's no need to update the visited set.
       if (isa<PHINode>(VI))
-        DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
+        DVI->insertBefore(&*VIParent->getFirstInsertionPt());
       else
         DVI->insertAfter(VI);
       MadeChange = true;
