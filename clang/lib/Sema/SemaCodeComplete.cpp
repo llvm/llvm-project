@@ -8776,7 +8776,16 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       if (++Count == 2500) // If we happen to hit a huge directory,
         break;             // bail out early so we're not too slow.
       StringRef Filename = llvm::sys::path::filename(It->path());
-      switch (It->type()) {
+
+      // To know whether a symlink should be treated as file or a directory, we
+      // have to stat it. This should be cheap enough as there shouldn't be many
+      // symlinks.
+      llvm::sys::fs::file_type Type = It->type();
+      if (Type == llvm::sys::fs::file_type::symlink_file) {
+        if (auto FileStatus = FS.status(It->path()))
+          Type = FileStatus->getType();
+      }
+      switch (Type) {
       case llvm::sys::fs::file_type::directory_file:
         // All entries in a framework directory must have a ".framework" suffix,
         // but the suffix does not appear in the source code's include/import.
