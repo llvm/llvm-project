@@ -2223,7 +2223,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         isThisReturn = true;
       }
       const TargetOptions &Options = DAG.getTarget().Options;
-      if (Options.SupportsDebugEntryValues)
+      if (Options.EnableDebugEntryValues)
         CSInfo.emplace_back(VA.getLocReg(), i);
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
     } else if (isByVal) {

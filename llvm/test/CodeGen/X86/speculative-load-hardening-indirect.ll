@@ -2,7 +2,7 @@
 
 ; Verify the call site info. If the call site info is not
 ; in the valid state, an assert should be triggered.
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -stop-after=machineverifier
+; RUN: llc < %s -debug-entry-values -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -stop-after=machineverifier
 
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections | FileCheck %s --check-prefix=X64
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39451.
