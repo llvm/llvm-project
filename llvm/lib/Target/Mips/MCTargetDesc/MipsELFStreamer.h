@@ -46,7 +46,7 @@ public:
   /// Overriding this function allows us to record all labels that should be
   /// marked as microMIPS. Based on this data marking is done in
   /// EmitInstruction.
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   /// Overriding this function allows us to dismiss all labels that are
   /// candidates for marking as microMIPS when .section directive is processed.
@@ -56,7 +56,7 @@ public:
   /// Overriding these functions allows us to dismiss all labels that are
   /// candidates for marking as microMIPS when .word/.long/.4byte etc
   /// directives are emitted.
-  void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
+  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
   void EmitIntValue(uint64_t Value, unsigned Size) override;
 
   // Overriding these functions allows us to avoid recording of these labels

@@ -902,7 +902,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     MCSection *Sec = getStreamer().getCurrentSectionOnly();
     if (!Sec->getBeginSymbol()) {
       MCSymbol *SectionStartSym = getContext().createTempSymbol();
-      getStreamer().EmitLabel(SectionStartSym);
+      getStreamer().emitLabel(SectionStartSym);
       Sec->setBeginSymbol(SectionStartSym);
     }
     bool InsertResult = getContext().addGenDwarfSection(Sec);
@@ -1097,7 +1097,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
           // This is a '$' reference, which references the current PC.  Emit a
           // temporary label to the streamer and refer to it.
           MCSymbol *Sym = Ctx.createTempSymbol();
-          Out.EmitLabel(Sym);
+          Out.emitLabel(Sym);
           Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
                                         getContext());
           EndLoc = FirstTokenLoc;
@@ -1223,7 +1223,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     // This is a '.' reference, which references the current PC.  Emit a
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
-    Out.EmitLabel(Sym);
+    Out.emitLabel(Sym);
     Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
     Lex(); // Eat identifier.
@@ -1854,7 +1854,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     // Emit the label.
     if (!getTargetParser().isParsingInlineAsm())
-      Out.EmitLabel(Sym, IDLoc);
+      Out.emitLabel(Sym, IDLoc);
 
     // If we are generating dwarf for assembly source files then gather the
     // info to make a dwarf label entry for this label if needed.
@@ -3335,10 +3335,10 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   bool UseCodeAlign = Section->UseCodeAlign();
   if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
       ValueSize == 1 && UseCodeAlign) {
-    getStreamer().EmitCodeAlignment(Alignment, MaxBytesToFill);
+    getStreamer().emitCodeAlignment(Alignment, MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
-    getStreamer().EmitValueToAlignment(Alignment, FillExpr, ValueSize,
+    getStreamer().emitValueToAlignment(Alignment, FillExpr, ValueSize,
                                        MaxBytesToFill);
   }
 

@@ -40,7 +40,7 @@ public:
 
   void InitSections(bool NoExecStack) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                       uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
@@ -63,12 +63,12 @@ public:
                     SMLoc L = SMLoc()) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
-  void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
   void EmitIdent(StringRef IdentString) override;
 
-  void EmitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
+  void emitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
 
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;

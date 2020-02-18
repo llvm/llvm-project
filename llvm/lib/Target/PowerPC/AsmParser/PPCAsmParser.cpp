@@ -1702,7 +1702,7 @@ bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
     return addErrorSuffix(" in '.tc' directive");
 
   // Align to word size.
-  getParser().getStreamer().EmitValueToAlignment(Size);
+  getParser().getStreamer().emitValueToAlignment(Size);
 
   // Emit expressions.
   return ParseDirectiveWord(Size, ID);

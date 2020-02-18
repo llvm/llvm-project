@@ -8323,7 +8323,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       // Reading PC provides the start of the current instruction + 8 and
       // the transform to adr is biased by that.
       MCSymbol *Dot = getContext().createTempSymbol();
-      Out.EmitLabel(Dot);
+      Out.emitLabel(Dot);
       const MCExpr *OpExpr = Inst.getOperand(2).getExpr();
       const MCExpr *InstPC = MCSymbolRefExpr::create(Dot,
                                                      MCSymbolRefExpr::VK_None,
@@ -11314,9 +11314,9 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
 
   assert(Section && "must have section to emit alignment");
   if (Section->UseCodeAlign())
-    getStreamer().EmitCodeAlignment(2);
+    getStreamer().emitCodeAlignment(2);
   else
-    getStreamer().EmitValueToAlignment(2);
+    getStreamer().emitValueToAlignment(2);
 
   return false;
 }
@@ -11516,9 +11516,9 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->UseCodeAlign())
-      getStreamer().EmitCodeAlignment(4, 0);
+      getStreamer().emitCodeAlignment(4, 0);
     else
-      getStreamer().EmitValueToAlignment(4, 0, 1, 0);
+      getStreamer().emitValueToAlignment(4, 0, 1, 0);
     return false;
   }
   return true;

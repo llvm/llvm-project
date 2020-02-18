@@ -1358,7 +1358,7 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
     }
     int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
-    Out.EmitLabel(Sym);
+    Out.emitLabel(Sym);
     const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
                                                  Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);

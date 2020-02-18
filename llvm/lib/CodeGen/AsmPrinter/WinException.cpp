@@ -207,7 +207,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
                        &F);
 
     // Now that we've emitted the alignment directive, point at our funclet.
-    Asm->OutStreamer->EmitLabel(Sym);
+    Asm->OutStreamer->emitLabel(Sym);
   }
 
   // Mark 'Sym' as starting our funclet.
@@ -581,7 +581,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   AddComment("Number of call sites");
   OS.EmitValue(EntryCount, 4);
 
-  OS.EmitLabel(TableBegin);
+  OS.emitLabel(TableBegin);
 
   // Iterate over all the invoke try ranges. Unlike MSVC, LLVM currently only
   // models exceptions from invokes. LLVM also allows arbitrary reordering of
@@ -609,7 +609,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
     LastEHState = StateChange.NewState;
   }
 
-  OS.EmitLabel(TableEnd);
+  OS.emitLabel(TableEnd);
 }
 
 void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
@@ -713,8 +713,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // EHFlags & 1 -> Synchronous exceptions only, no async exceptions.
   // EHFlags & 2 -> ???
   // EHFlags & 4 -> The function is noexcept(true), unwinding can't continue.
-  OS.EmitValueToAlignment(4);
-  OS.EmitLabel(FuncInfoXData);
+  OS.emitValueToAlignment(4);
+  OS.emitLabel(FuncInfoXData);
 
   AddComment("MagicNumber");
   OS.EmitIntValue(0x19930522, 4);
@@ -753,7 +753,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   //   void  (*Action)();
   // };
   if (UnwindMapXData) {
-    OS.EmitLabel(UnwindMapXData);
+    OS.emitLabel(UnwindMapXData);
     for (const CxxUnwindMapEntry &UME : FuncInfo.CxxUnwindMap) {
       MCSymbol *CleanupSym =
           getMCSymbolForMBB(Asm, UME.Cleanup.dyn_cast<MachineBasicBlock *>());
@@ -773,7 +773,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   //   HandlerType *HandlerArray;
   // };
   if (TryBlockMapXData) {
-    OS.EmitLabel(TryBlockMapXData);
+    OS.emitLabel(TryBlockMapXData);
     SmallVector<MCSymbol *, 1> HandlerMaps;
     for (size_t I = 0, E = FuncInfo.TryBlockMap.size(); I != E; ++I) {
       const WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
@@ -829,7 +829,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
       //   void          (*Handler)();
       //   int32_t         ParentFrameOffset; // x64 and AArch64 only
       // };
-      OS.EmitLabel(HandlerMapXData);
+      OS.emitLabel(HandlerMapXData);
       for (const WinEHHandlerType &HT : TBME.HandlerArray) {
         // Get the frame escape label with the offset of the catch object. If
         // the index is INT_MAX, then there is no catch object, and we should
@@ -871,7 +871,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   //   int32_t State;
   // };
   if (IPToStateXData) {
-    OS.EmitLabel(IPToStateXData);
+    OS.emitLabel(IPToStateXData);
     for (auto &IPStatePair : IPToStateTable) {
       AddComment("IP");
       OS.EmitValue(IPStatePair.first, 4);
@@ -979,8 +979,8 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
 
   // Emit the __ehtable label that we use for llvm.x86.seh.lsda.
   MCSymbol *LSDALabel = Asm->OutContext.getOrCreateLSDASymbol(FLinkageName);
-  OS.EmitValueToAlignment(4);
-  OS.EmitLabel(LSDALabel);
+  OS.emitValueToAlignment(4);
+  OS.emitLabel(LSDALabel);
 
   const auto *Per = cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   StringRef PerName = Per->getName();

@@ -40,7 +40,7 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   // EmitLabel updates LastLabel and LastLabelLoc when a new label is emitted.
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 };
 
 MCELFStreamer *createPPCELFStreamer(MCContext &Context,

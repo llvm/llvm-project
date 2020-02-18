@@ -304,7 +304,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   if (!Section.empty()) {
     auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
     Streamer.SwitchSection(S);
-    Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+    Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.EmitIntValue(Version, 4);
     Streamer.EmitIntValue(Flags, 4);
     Streamer.AddBlankLine();
@@ -377,13 +377,13 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
                                                    ELF::SHT_PROGBITS, Flags, 0);
   unsigned Size = DL.getPointerSize();
   Streamer.SwitchSection(Sec);
-  Streamer.EmitValueToAlignment(DL.getPointerABIAlignment(0).value());
+  Streamer.emitValueToAlignment(DL.getPointerABIAlignment(0).value());
   Streamer.emitSymbolAttribute(Label, MCSA_ELF_TypeObject);
   const MCExpr *E = MCConstantExpr::create(Size, getContext());
   Streamer.emitELFSize(Label, E);
-  Streamer.EmitLabel(Label);
+  Streamer.emitLabel(Label);
 
-  Streamer.EmitSymbolValue(Sym, Size);
+  Streamer.emitSymbolValue(Sym, Size);
 }
 
 const MCExpr *TargetLoweringObjectFileELF::getTTypeGlobalReference(
@@ -918,7 +918,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   MCSectionMachO *S = getContext().getMachOSection(
       Segment, Section, TAA, StubSize, SectionKind::getData());
   Streamer.SwitchSection(S);
-  Streamer.EmitLabel(getContext().
+  Streamer.emitLabel(getContext().
                      getOrCreateSymbol(StringRef("L_OBJC_IMAGE_INFO")));
   Streamer.EmitIntValue(VersionVal, 4);
   Streamer.EmitIntValue(ImageInfoFlags, 4);
@@ -1472,7 +1472,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
       Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
   Streamer.SwitchSection(S);
-  Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+  Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
   Streamer.EmitIntValue(Version, 4);
   Streamer.EmitIntValue(Flags, 4);
   Streamer.AddBlankLine();

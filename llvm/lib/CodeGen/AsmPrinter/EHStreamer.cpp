@@ -432,8 +432,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   MCSymbol *GCCETSym =
     Asm->OutContext.getOrCreateSymbol(Twine("GCC_except_table")+
                                       Twine(Asm->getFunctionNumber()));
-  Asm->OutStreamer->EmitLabel(GCCETSym);
-  Asm->OutStreamer->EmitLabel(Asm->getCurExceptionSym());
+  Asm->OutStreamer->emitLabel(GCCETSym);
+  Asm->OutStreamer->emitLabel(Asm->getCurExceptionSym());
 
   // Emit the LSDA header.
   Asm->emitEncodingByte(dwarf::DW_EH_PE_omit, "@LPStart");
@@ -448,7 +448,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
     MCSymbol *TTBaseRefLabel = Asm->createTempSymbol("ttbaseref");
     TTBaseLabel = Asm->createTempSymbol("ttbase");
     Asm->emitLabelDifferenceAsULEB128(TTBaseLabel, TTBaseRefLabel);
-    Asm->OutStreamer->EmitLabel(TTBaseRefLabel);
+    Asm->OutStreamer->emitLabel(TTBaseRefLabel);
   }
 
   bool VerboseAsm = Asm->OutStreamer->isVerboseAsm();
@@ -458,7 +458,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   MCSymbol *CstEndLabel = Asm->createTempSymbol("cst_end");
   Asm->emitEncodingByte(CallSiteEncoding, "Call site");
   Asm->emitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
-  Asm->OutStreamer->EmitLabel(CstBeginLabel);
+  Asm->OutStreamer->emitLabel(CstBeginLabel);
 
   // SjLj / Wasm Exception handling
   if (IsSJLJ || IsWasm) {
@@ -557,7 +557,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
       Asm->emitULEB128(S.Action);
     }
   }
-  Asm->OutStreamer->EmitLabel(CstEndLabel);
+  Asm->OutStreamer->emitLabel(CstEndLabel);
 
   // Emit the Action Table.
   int Entry = 0;
@@ -632,7 +632,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
     Asm->emitTTypeReference(GV, TTypeEncoding);
   }
 
-  Asm->OutStreamer->EmitLabel(TTBaseLabel);
+  Asm->OutStreamer->emitLabel(TTBaseLabel);
 
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {

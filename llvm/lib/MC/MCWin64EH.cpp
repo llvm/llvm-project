@@ -143,7 +143,7 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
                                 const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.EmitValueToAlignment(4);
+  streamer.emitValueToAlignment(4);
   EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
   EmitSymbolRefWithOfs(streamer, info->Function, info->End);
   streamer.EmitValue(MCSymbolRefExpr::create(info->Symbol,
@@ -159,8 +159,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.EmitValueToAlignment(4);
-  streamer.EmitLabel(Label);
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
   info->Symbol = Label;
 
   // Upper 3 bits are the version number (currently 1).
@@ -498,8 +498,8 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.EmitValueToAlignment(4);
-  streamer.EmitLabel(Label);
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
   info->Symbol = Label;
 
   int64_t RawFuncLength;
@@ -646,7 +646,7 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
                                      const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.EmitValueToAlignment(4);
+  streamer.emitValueToAlignment(4);
   EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
   streamer.EmitValue(MCSymbolRefExpr::create(info->Symbol,
                                              MCSymbolRefExpr::VK_COFF_IMGREL32,

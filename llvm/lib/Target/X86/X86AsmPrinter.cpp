@@ -656,7 +656,7 @@ static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {
   // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.emitLabel(StubLabel);
   //   .indirect_symbol _foo
   OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 

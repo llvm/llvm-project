@@ -282,7 +282,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
 
   if (!PrevLabel) {
     PrevLabel = MMI->getContext().createTempSymbol();
-    Asm->OutStreamer->EmitLabel(PrevLabel);
+    Asm->OutStreamer->emitLabel(PrevLabel);
   }
   I->second = PrevLabel;
 }
@@ -314,7 +314,7 @@ void DebugHandlerBase::endInstruction() {
   // We need a label after this instruction.
   if (!PrevLabel) {
     PrevLabel = MMI->getContext().createTempSymbol();
-    Asm->OutStreamer->EmitLabel(PrevLabel);
+    Asm->OutStreamer->emitLabel(PrevLabel);
   }
   I->second = PrevLabel;
 }

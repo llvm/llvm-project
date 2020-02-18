@@ -2131,7 +2131,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       TOut.getStreamer().EmitRelocDirective(*TmpExpr,
           inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
           RelocJalrExpr, IDLoc, *STI);
-      TOut.getStreamer().EmitLabel(TmpLabel);
+      TOut.getStreamer().emitLabel(TmpLabel);
     }
 
     Inst = JalrInst;
@@ -3388,7 +3388,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
+  getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().EmitIntValue(ImmOp32, 4);
   getStreamer().SwitchSection(CS);
 
@@ -3440,8 +3440,8 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitValueToAlignment(8);
+  getStreamer().emitLabel(Sym, IDLoc);
+  getStreamer().emitValueToAlignment(8);
   getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
@@ -3523,8 +3523,8 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitValueToAlignment(8);
+  getStreamer().emitLabel(Sym, IDLoc);
+  getStreamer().emitValueToAlignment(8);
   getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
@@ -4260,7 +4260,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   if (!Signed) {
     if (!UseTraps)
-      TOut.getStreamer().EmitLabel(BrTarget);
+      TOut.getStreamer().emitLabel(BrTarget);
 
     TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
     return false;
@@ -4271,7 +4271,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return true;
 
   if (!UseTraps)
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
 
   TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, -1, IDLoc, STI);
 
@@ -4299,7 +4299,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     TOut.emitII(Mips::BREAK, 0x6, 0, IDLoc, STI);
   }
 
-  TOut.getStreamer().EmitLabel(BrTargetEnd);
+  TOut.getStreamer().emitLabel(BrTargetEnd);
   TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
   return false;
 }
@@ -5101,7 +5101,7 @@ bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
   }
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
@@ -5138,7 +5138,7 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
   }
 
   return false;
@@ -7770,7 +7770,7 @@ bool MipsAsmParser::parseDirectiveGpWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitGPRel32Value(Value);
+  getParser().getStreamer().emitGPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7788,7 +7788,7 @@ bool MipsAsmParser::parseDirectiveGpDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitGPRel64Value(Value);
+  getParser().getStreamer().emitGPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7806,7 +7806,7 @@ bool MipsAsmParser::parseDirectiveDtpRelWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitDTPRel32Value(Value);
+  getParser().getStreamer().emitDTPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7824,7 +7824,7 @@ bool MipsAsmParser::parseDirectiveDtpRelDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitDTPRel64Value(Value);
+  getParser().getStreamer().emitDTPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7842,7 +7842,7 @@ bool MipsAsmParser::parseDirectiveTpRelWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitTPRel32Value(Value);
+  getParser().getStreamer().emitTPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7860,7 +7860,7 @@ bool MipsAsmParser::parseDirectiveTpRelDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitTPRel64Value(Value);
+  getParser().getStreamer().emitTPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),

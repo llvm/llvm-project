@@ -159,7 +159,7 @@ bool X86WinCOFFTargetStreamer::checkInFPOPrologue(SMLoc L) {
 
 MCSymbol *X86WinCOFFTargetStreamer::emitFPOLabel() {
   MCSymbol *Label = getContext().createTempSymbol("cfi", true);
-  getStreamer().EmitLabel(Label);
+  getStreamer().emitLabel(Label);
   return Label;
 }
 
@@ -400,7 +400,7 @@ bool X86WinCOFFTargetStreamer::emitFPOData(const MCSymbol *ProcSym, SMLoc L) {
 
   OS.EmitIntValue(unsigned(DebugSubsectionKind::FrameData), 4);
   OS.emitAbsoluteSymbolDiff(FrameEnd, FrameBegin, 4);
-  OS.EmitLabel(FrameBegin);
+  OS.emitLabel(FrameBegin);
 
   // Start with the RVA of the function in question.
   OS.EmitValue(MCSymbolRefExpr::create(FPO->Function,
@@ -437,8 +437,8 @@ bool X86WinCOFFTargetStreamer::emitFPOData(const MCSymbol *ProcSym, SMLoc L) {
     FSM.emitFrameDataRecord(OS, Inst.Label);
   }
 
-  OS.EmitValueToAlignment(4, 0);
-  OS.EmitLabel(FrameEnd);
+  OS.emitValueToAlignment(4, 0);
+  OS.emitLabel(FrameEnd);
   return false;
 }
 

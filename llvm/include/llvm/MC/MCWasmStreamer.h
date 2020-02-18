@@ -63,12 +63,12 @@ public:
                     SMLoc Loc = SMLoc()) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
-  void EmitValueImpl(const MCExpr *Value, unsigned Size,
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
   void EmitIdent(StringRef IdentString) override;
 
-  void EmitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
+  void emitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
 
   void FinishImpl() override;
 

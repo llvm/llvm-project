@@ -160,41 +160,41 @@ void MCStreamer::emitSLEB128IntValue(int64_t Value) {
 }
 
 void MCStreamer::EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
-  EmitValueImpl(Value, Size, Loc);
+  emitValueImpl(Value, Size, Loc);
 }
 
-void MCStreamer::EmitSymbolValue(const MCSymbol *Sym, unsigned Size,
+void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                                  bool IsSectionRelative) {
   assert((!IsSectionRelative || Size == 4) &&
          "SectionRelative value requires 4-bytes");
 
   if (!IsSectionRelative)
-    EmitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
+    emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
   else
     EmitCOFFSecRel32(Sym, /*Offset=*/0);
 }
 
-void MCStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+void MCStreamer::emitDTPRel64Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-void MCStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+void MCStreamer::emitDTPRel32Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-void MCStreamer::EmitTPRel64Value(const MCExpr *Value) {
+void MCStreamer::emitTPRel64Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-void MCStreamer::EmitTPRel32Value(const MCExpr *Value) {
+void MCStreamer::emitTPRel32Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-void MCStreamer::EmitGPRel64Value(const MCExpr *Value) {
+void MCStreamer::emitGPRel64Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-void MCStreamer::EmitGPRel32Value(const MCExpr *Value) {
+void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
@@ -396,7 +396,7 @@ void MCStreamer::AssignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
   SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
 }
 
-void MCStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->redefineIfPossible();
 
   if (!Symbol->isUndefined() || Symbol->isVariable())
@@ -1034,7 +1034,7 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
   // Otherwise, emit with .set (aka assignment).
   MCSymbol *SetLabel = Context.createTempSymbol("set", true);
   emitAssignment(SetLabel, Diff);
-  EmitSymbolValue(SetLabel, Size);
+  emitSymbolValue(SetLabel, Size);
 }
 
 void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
@@ -1079,7 +1079,7 @@ void MCStreamer::ChangeSection(MCSection *, const MCExpr *) {}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
-void MCStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
+void MCStreamer::emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   visitUsedExpr(*Value);
 }
 void MCStreamer::emitULEB128Value(const MCExpr *Value) {}
@@ -1087,10 +1087,10 @@ void MCStreamer::emitSLEB128Value(const MCExpr *Value) {}
 void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
-void MCStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+void MCStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                       unsigned ValueSize,
                                       unsigned MaxBytesToEmit) {}
-void MCStreamer::EmitCodeAlignment(unsigned ByteAlignment,
+void MCStreamer::emitCodeAlignment(unsigned ByteAlignment,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
@@ -1109,7 +1109,7 @@ void MCStreamer::SwitchSection(MCSection *Section, const MCExpr *Subsection) {
     assert(!Section->hasEnded() && "Section already ended");
     MCSymbol *Sym = Section->getBeginSymbol();
     if (Sym && !Sym->isInSection())
-      EmitLabel(Sym);
+      emitLabel(Sym);
   }
 }
 
@@ -1121,7 +1121,7 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
     return Sym;
 
   SwitchSection(Section);
-  EmitLabel(Sym);
+  emitLabel(Sym);
   return Sym;
 }
 

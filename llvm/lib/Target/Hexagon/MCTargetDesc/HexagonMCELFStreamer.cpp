@@ -110,8 +110,8 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     SwitchSection(&Section);
 
     if (ELFSymbol->isUndefined()) {
-      EmitValueToAlignment(ByteAlignment, 0, 1, 0);
-      EmitLabel(Symbol);
+      emitValueToAlignment(ByteAlignment, 0, 1, 0);
+      emitLabel(Symbol);
       EmitZeros(Size);
     }
 
