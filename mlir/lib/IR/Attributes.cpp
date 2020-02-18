@@ -68,6 +68,11 @@ ArrayAttr ArrayAttr::get(ArrayRef<Attribute> value, MLIRContext *context) {
 
 ArrayRef<Attribute> ArrayAttr::getValue() const { return getImpl()->value; }
 
+Attribute ArrayAttr::operator[](unsigned idx) const {
+  assert(idx < size() && "index out of bounds");
+  return getValue()[idx];
+}
+
 //===----------------------------------------------------------------------===//
 // BoolAttr
 //===----------------------------------------------------------------------===//
