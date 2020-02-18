@@ -363,17 +363,15 @@ public:
   static unsigned getNumUnpackedValues() { return 2; }
 };
 /// Base class for operation conversions targeting the LLVM IR dialect. Provides
-/// conversion patterns with an access to the containing LLVMLowering for the
-/// purpose of type conversions.
+/// conversion patterns with access to an LLVMTypeConverter.
 class LLVMOpLowering : public ConversionPattern {
 public:
   LLVMOpLowering(StringRef rootOpName, MLIRContext *context,
-                 LLVMTypeConverter &lowering, PatternBenefit benefit = 1);
+                 LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1);
 
 protected:
-  // Back-reference to the lowering class, used to call type and function
-  // conversions accounting for potential extensions.
-  LLVMTypeConverter &lowering;
+  /// Reference to the type converter, with potential extensions.
+  LLVMTypeConverter &typeConverter;
 };
 
 } // namespace mlir
