@@ -300,7 +300,6 @@ public:
   /// Emit a table with all XRay instrumentation points.
   void emitXRayTable();
 
-  DenseMap<const MCSection *, unsigned> PatchableFunctionEntryID;
   void emitPatchableFunctionEntries();
 
   //===------------------------------------------------------------------===//

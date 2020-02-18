@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64 %s -o - | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 
 define void @f0() "patchable-function-entry"="0" "branch-target-enforcement" {
 ; CHECK-LABEL: f0:
@@ -21,7 +21,7 @@ define void @f1() "patchable-function-entry"="1" "branch-target-enforcement" {
 ; CHECK-NEXT: .Lpatch0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret
-; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1,unique,0
+; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1{{$}}
 ; CHECK-NEXT: .p2align 3
 ; CHECK-NEXT: .xword .Lpatch0
   ret void
@@ -41,7 +41,7 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 ; CHECK-NEXT:  ret
 ; CHECK:      .Lfunc_end2:
 ; CHECK-NEXT: .size f2_1, .Lfunc_end2-f2_1
-; CHECK:      .section __patchable_function_entries,"awo",@progbits,f2_1,unique,0
+; CHECK:      .section __patchable_function_entries,"awo",@progbits,f2_1{{$}}
 ; CHECK-NEXT: .p2align 3
 ; CHECK-NEXT: .xword .Ltmp0
   ret void
@@ -58,7 +58,7 @@ define internal void @f1i(i64 %v) "patchable-function-entry"="1" "branch-target-
 ;; Other basic blocks have BTI, but they don't affect our decision to not create .Lpatch0
 ; CHECK:      .LBB{{.+}} // %sw.bb1
 ; CHECK-NEXT:  hint #36
-; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1i,unique,0
+; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1i{{$}}
 ; CHECK-NEXT: .p2align 3
 ; CHECK-NEXT: .xword .Lfunc_begin3
 entry:
