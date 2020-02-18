@@ -857,7 +857,10 @@ public:
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);
 
-  CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
+  /// Returns the underlying integer type for an enum type. If the given type
+  /// is invalid or not an enum-type, the function returns an invalid
+  /// CompilerType.
+  CompilerType GetEnumerationIntegerType(CompilerType type);
 
   // Pointers & References
 
