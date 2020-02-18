@@ -16,14 +16,8 @@ class MLIRContext;
 class ModuleOp;
 template <typename T> class OpPassBase;
 
-class LinalgTypeConverter : public LLVMTypeConverter {
-public:
-  using LLVMTypeConverter::LLVMTypeConverter;
-  Type convertType(Type t) override;
-};
-
 /// Populate the given list with patterns that convert from Linalg to LLVM.
-void populateLinalgToLLVMConversionPatterns(LinalgTypeConverter &converter,
+void populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             OwningRewritePatternList &patterns,
                                             MLIRContext *ctx);
 

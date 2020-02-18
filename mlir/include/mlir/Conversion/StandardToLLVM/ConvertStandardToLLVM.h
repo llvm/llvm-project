@@ -78,10 +78,6 @@ public:
   LLVMTypeConverter(MLIRContext *ctx,
                     const LLVMTypeConverterCustomization &custom);
 
-  /// Convert types to LLVM IR.  This calls `convertAdditionalType` to convert
-  /// non-standard or non-builtin types.
-  Type convertType(Type t) override;
-
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
@@ -129,8 +125,6 @@ protected:
   LLVM::LLVMDialect *llvmDialect;
 
 private:
-  Type convertStandardType(Type type);
-
   // Convert a function type.  The arguments and results are converted one by
   // one.  Additionally, if the function returns more than one value, pack the
   // results into an LLVM IR structure type so that the converted function type
