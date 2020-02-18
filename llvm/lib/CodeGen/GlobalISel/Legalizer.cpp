@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <iterator>
@@ -180,7 +181,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
 
   // Now install the observer as the delegate to MF.
   // This will keep all the observers notified about new insertions/deletions.
-  RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
+  RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
   LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder);
   LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
   auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
@@ -305,6 +306,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     // We want CSEInfo in addition to WorkListObserver to observe all changes.
     AuxObservers.push_back(CSEInfo);
   }
+  assert(!CSEInfo || !errorToBool(CSEInfo->verify()));
 
   const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
   MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, *MIRBuilder);
@@ -324,5 +326,11 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
     reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
+  // If for some reason CSE was not enabled, make sure that we invalidate the
+  // CSEInfo object (as we currently declare that the analysis is preserved).
+  // The next time get on the wrapper is called, it will force it to recompute
+  // the analysis.
+  if (!EnableCSE)
+    Wrapper.setComputed(false);
   return Result.Changed;
 }
