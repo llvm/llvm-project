@@ -629,7 +629,6 @@ public:
   void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
-  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
@@ -911,6 +910,7 @@ bool GCNPassConfig::addIRTranslator() {
 void GCNPassConfig::addPreLegalizeMachineIR() {
   bool IsOptNone = getOptLevel() == CodeGenOpt::None;
   addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
+  addPass(new Localizer());
 }
 
 bool GCNPassConfig::addLegalizeMachineIR() {
@@ -921,12 +921,6 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 bool GCNPassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
-}
-
-void GCNPassConfig::addPreGlobalInstructionSelect() {
-  // FIXME: We should run this before legalizing globals, but for some reason
-  // this requires legalized and regbankselected.
-  addPass(new Localizer());
 }
 
 bool GCNPassConfig::addGlobalInstructionSelect() {

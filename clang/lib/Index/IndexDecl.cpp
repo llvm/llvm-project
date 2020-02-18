@@ -80,7 +80,7 @@ public:
            !MD->isSynthesizedAccessorStub();
   }
 
-  
+
   void handleDeclarator(const DeclaratorDecl *D,
                         const NamedDecl *Parent = nullptr,
                         bool isIBType = false) {

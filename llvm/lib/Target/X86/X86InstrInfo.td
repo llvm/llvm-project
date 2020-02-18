@@ -2919,6 +2919,11 @@ let Predicates = [HasTBM] in {
             (TZMSK64rr GR64:$src)>;
 
   // Patterns to match flag producing ops.
+  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, 1)),
+            (BLCFILL32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, 1)),
+            (BLCFILL64rr GR64:$src)>;
+
   def : Pat<(or_flag_nocf GR32:$src, (not (add GR32:$src, 1))),
             (BLCI32rr GR32:$src)>;
   def : Pat<(or_flag_nocf GR64:$src, (not (add GR64:$src, 1))),

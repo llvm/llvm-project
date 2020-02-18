@@ -663,7 +663,7 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   // C++17 [expr.prim.lambda]p21:
   //   The closure type associated with a lambda-expression has no default
   //   constructor and a deleted copy assignment operator.
-  if (getLambdaCaptureDefault() != LCD_None || 
+  if (getLambdaCaptureDefault() != LCD_None ||
       getLambdaData().NumCaptures != 0)
     return false;
   return getASTContext().getLangOpts().CPlusPlus2a;
@@ -2152,7 +2152,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
     return DevirtualizedMethod;
 
   // Similarly, if the class itself or its destructor is marked 'final',
-  // the class can't be derived from and we can therefore devirtualize the 
+  // the class can't be derived from and we can therefore devirtualize the
   // member function call.
   if (BestDynamicDecl->isEffectivelyFinal())
     return DevirtualizedMethod;

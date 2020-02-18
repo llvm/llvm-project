@@ -97,6 +97,20 @@ public:
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
+  bool legalizeUDIV_UREM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
+
+  void legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
+                               Register DstReg, Register Num, Register Den,
+                               bool IsRem) const;
+  bool legalizeUDIV_UREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+
+  bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+  bool legalizeSDIV_SREM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
+
   bool legalizeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
   bool legalizeFDIV16(MachineInstr &MI, MachineRegisterInfo &MRI,

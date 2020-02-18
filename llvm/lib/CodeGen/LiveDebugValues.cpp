@@ -932,6 +932,11 @@ void LiveDebugValues::transferRegisterDef(
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
   SparseBitVector<> KillSet;
+  // Max out the number of statically allocated elements in `DeadRegs`, as this
+  // prevents fallback to std::set::count() operations. As often as possible, we
+  // want a linear scan here.
+  SmallSet<unsigned, 32> DeadRegs;
+  SmallVector<const uint32_t *, 4> DeadRegMasks;
   for (const MachineOperand &MO : MI.operands()) {
     // Determine whether the operand is a register def.  Assume that call
     // instructions never clobber SP, because some backends (e.g., AArch64)
@@ -939,22 +944,41 @@ void LiveDebugValues::transferRegisterDef(
     if (MO.isReg() && MO.isDef() && MO.getReg() &&
         Register::isPhysicalRegister(MO.getReg()) &&
         !(MI.isCall() && MO.getReg() == SP)) {
-      // Remove ranges of all aliased registers.
+      // Remove ranges of all aliased registers. Note: the actual removal is
+      // done after we finish visiting MachineOperands, for performance reasons.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-        for (unsigned ID : OpenRanges.getVarLocs())
-          if (VarLocIDs[ID].isDescribedByReg() == *RAI)
-            KillSet.set(ID);
+        // FIXME: Can we break out of this loop early if no insertion occurs?
+        DeadRegs.insert(*RAI);
     } else if (MO.isRegMask()) {
       // Remove ranges of all clobbered registers. Register masks don't usually
       // list SP as preserved.  While the debug info may be off for an
       // instruction or two around callee-cleanup calls, transferring the
-      // DEBUG_VALUE across the call is still a better user experience.
-      for (unsigned ID : OpenRanges.getVarLocs()) {
-        unsigned Reg = VarLocIDs[ID].isDescribedByReg();
-        if (Reg && Reg != SP && MO.clobbersPhysReg(Reg))
-          KillSet.set(ID);
-      }
+      // DEBUG_VALUE across the call is still a better user experience. Note:
+      // the actual removal is done after we finish visiting MachineOperands,
+      // for performance reasons.
+      DeadRegMasks.push_back(MO.getRegMask());
     }
+  }
+  // For performance reasons, it's critical to iterate over the open var locs
+  // at most once.
+  for (unsigned ID : OpenRanges.getVarLocs()) {
+    unsigned Reg = VarLocIDs[ID].isDescribedByReg();
+    if (!Reg)
+      continue;
+
+    if (DeadRegs.count(Reg)) {
+      KillSet.set(ID);
+      continue;
+    }
+
+    if (Reg == SP)
+      continue;
+    bool AnyRegMaskKillsReg =
+        any_of(DeadRegMasks, [Reg](const uint32_t *RegMask) {
+          return MachineOperand::clobbersPhysReg(RegMask, Reg);
+        });
+    if (AnyRegMaskKillsReg)
+      KillSet.set(ID);
   }
   OpenRanges.erase(KillSet, VarLocIDs);
 

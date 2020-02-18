@@ -24,6 +24,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -784,3 +785,9 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
   Function *Fn = Intrinsic::getDeclaration(M, ID, Types);
   return createCallHelper(Fn, Args, this, Name, FMFSource);
 }
+
+IRBuilderDefaultInserter::~IRBuilderDefaultInserter() {}
+IRBuilderCallbackInserter::~IRBuilderCallbackInserter() {}
+IRBuilderFolder::~IRBuilderFolder() {}
+void ConstantFolder::anchor() {}
+void NoFolder::anchor() {}

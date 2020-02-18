@@ -495,6 +495,29 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
   }
 }
 
+// Same as above, but with an additional parameter 'basename' which overrides
+// the C intrinsic base name
+multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
+                                   string basename, int wantXVariant = 1,
+                                   string nameSuffix = "",
+                                   PolymorphicNameType pnt_m = PNT_Type,
+                                   PolymorphicNameType pnt_x = PNT_Type> {
+  def "_m" # nameSuffix:
+     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>,
+     NameOverride<basename # "_m" # nameSuffix> {
+    let pnt = pnt_m;
+  }
+
+  foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
+    def "_x" # nameSuffix:
+      Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)>,
+      NameOverride<basename # "_x" # nameSuffix> {
+      let pnt = pnt_x;
+    }
+  }
+}
+
+
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you
 // can define a typical intrinsic with 'let Params = T.Usual', or similar,

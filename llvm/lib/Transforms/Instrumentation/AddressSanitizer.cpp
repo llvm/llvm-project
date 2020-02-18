@@ -787,7 +787,7 @@ private:
                                        StringRef OriginalName);
   void SetComdatForGlobalMetadata(GlobalVariable *G, GlobalVariable *Metadata,
                                   StringRef InternalSuffix);
-  IRBuilder<> CreateAsanModuleDtor(Module &M);
+  Instruction *CreateAsanModuleDtor(Module &M);
 
   bool ShouldInstrumentGlobal(GlobalVariable *G);
   bool ShouldUseMachOGlobalsSection() const;
@@ -2030,13 +2030,13 @@ ModuleAddressSanitizer::CreateMetadataGlobal(Module &M, Constant *Initializer,
   return Metadata;
 }
 
-IRBuilder<> ModuleAddressSanitizer::CreateAsanModuleDtor(Module &M) {
+Instruction *ModuleAddressSanitizer::CreateAsanModuleDtor(Module &M) {
   AsanDtorFunction =
       Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
                        GlobalValue::InternalLinkage, kAsanModuleDtorName, &M);
   BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
 
-  return IRBuilder<>(ReturnInst::Create(*C, AsanDtorBB));
+  return ReturnInst::Create(*C, AsanDtorBB);
 }
 
 void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
@@ -2115,7 +2115,7 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
 
   // We also need to unregister globals at the end, e.g., when a shared library
   // gets closed.
-  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRBuilder<> IRB_Dtor(CreateAsanModuleDtor(M));
   IRB_Dtor.CreateCall(AsanUnregisterElfGlobals,
                       {IRB.CreatePointerCast(RegisteredFlag, IntptrTy),
                        IRB.CreatePointerCast(StartELFMetadata, IntptrTy),
@@ -2174,7 +2174,7 @@ void ModuleAddressSanitizer::InstrumentGlobalsMachO(
 
   // We also need to unregister globals at the end, e.g., when a shared library
   // gets closed.
-  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRBuilder<> IRB_Dtor(CreateAsanModuleDtor(M));
   IRB_Dtor.CreateCall(AsanUnregisterImageGlobals,
                       {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
 }
@@ -2202,7 +2202,7 @@ void ModuleAddressSanitizer::InstrumentGlobalsWithMetadataArray(
 
   // We also need to unregister globals at the end, e.g., when a shared library
   // gets closed.
-  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRBuilder<> IRB_Dtor(CreateAsanModuleDtor(M));
   IRB_Dtor.CreateCall(AsanUnregisterGlobals,
                       {IRB.CreatePointerCast(AllGlobals, IntptrTy),
                        ConstantInt::get(IntptrTy, N)});

@@ -36,8 +36,8 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
 }
 
 /// Utility to print the help string for a specific option.
-void printOptionHelp(StringRef arg, StringRef desc, size_t indent,
-                     size_t descIndent, bool isTopLevel) {
+static void printOptionHelp(StringRef arg, StringRef desc, size_t indent,
+                            size_t descIndent, bool isTopLevel) {
   size_t numSpaces = descIndent - indent - 4;
   llvm::outs().indent(indent)
       << "--" << llvm::left_justify(arg, numSpaces) << "-   " << desc << '\n';

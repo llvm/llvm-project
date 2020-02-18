@@ -742,7 +742,7 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Value *FMulAdd = Intrinsic::getDeclaration(
+        Function *FMulAdd = Intrinsic::getDeclaration(
             Func.getParent(), Intrinsic::fmuladd, A->getType());
         return Builder.CreateCall(FMulAdd, {A, B, Sum});
       }

@@ -293,9 +293,10 @@ static LogicalResult verifyIntegerTypeInvariants(Optional<Location> loc,
   return emitOptionalError(loc, "expected integer or index type");
 }
 
-LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                           MLIRContext *ctx, Type type,
-                                           int64_t value) {
+LogicalResult IntegerAttr::verifyConstructionInvariants(Optional<Location> loc,
+                                                        MLIRContext *ctx,
+                                                        Type type,
+                                                        int64_t value) {
   return verifyIntegerTypeInvariants(loc, type);
 }
 

@@ -43,6 +43,12 @@ def vqaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                               (IRIntBase<"sadd_sat", [Vector]> $a, $b)>;
 def vqsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                               (IRIntBase<"ssub_sat", [Vector]> $a, $b)>;
+let pnt = PNT_NType in {
+  def vqaddq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (IRIntBase<"sadd_sat", [Vector]> $a, (splat $b))>;
+  def vqsubq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (IRIntBase<"ssub_sat", [Vector]> $a, (splat $b))>;
+}
 }
 let params = T.Unsigned in {
 def vqaddq_u: Intrinsic<Vector, (args Vector:$a, Vector:$b),
@@ -51,6 +57,14 @@ def vqaddq_u: Intrinsic<Vector, (args Vector:$a, Vector:$b),
 def vqsubq_u: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                 (IRIntBase<"usub_sat", [Vector]> $a, $b)>,
               NameOverride<"vqsubq">;
+let pnt = PNT_NType in {
+  def vqaddq_u_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                    (IRIntBase<"uadd_sat", [Vector]> $a, (splat $b))>,
+                  NameOverride<"vqaddq_n">;
+  def vqsubq_u_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                    (IRIntBase<"usub_sat", [Vector]> $a, (splat $b))>,
+                  NameOverride<"vqsubq_n">;
+}
 }
 
 // Some intrinsics below are implemented not as IR fragments, but as
@@ -85,12 +99,32 @@ def vmullbq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
 def vmulltq_int: Intrinsic<DblVector, (args Vector:$a, Vector:$b),
                                       (IRInt<"vmull", [DblVector, Vector]>
                                        $a, $b, (unsignedflag Scalar), 1)>;
+let pnt = PNT_NType in {
+  def vaddq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                 (add $a, (splat $b))>;
+  def vsubq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                 (sub $a, (splat $b))>;
+  def vmulq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                 (mul $a, (splat $b))>;
+  def vhaddq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (IRInt<"vhadd", [Vector]> $a, (splat $b),
+                                  (unsignedflag Scalar))>;
+  def vhsubq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (IRInt<"vhsub", [Vector]> $a, (splat $b),
+                                  (unsignedflag Scalar))>;
+}
 }
 let params = T.Signed in {
 def vqdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                 (IRInt<"vqdmulh", [Vector]> $a, $b)>;
 def vqrdmulhq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                  (IRInt<"vqrdmulh", [Vector]> $a, $b)>;
+let pnt = PNT_NType in {
+  def vqdmulhq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                    (IRInt<"vqdmulh", [Vector]> $a, (splat $b))>;
+  def vqrdmulhq_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                    (IRInt<"vqrdmulh", [Vector]> $a, (splat $b))>;
+}
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {
@@ -114,6 +148,18 @@ def vsubqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fsub $a, $b)>,
             NameOverride<"vsubq">;
 def vmulqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fmul $a, $b)>,
             NameOverride<"vmulq">;
+
+let pnt = PNT_NType in {
+  def vaddqf_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (fadd $a, (splat $b))>,
+                NameOverride<"vaddq_n">;
+  def vsubqf_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (fsub $a, (splat $b))>,
+                NameOverride<"vsubq_n">;
+  def vmulqf_n: Intrinsic<Vector, (args Vector:$a, unpromoted<Scalar>:$b),
+                                  (fmul $a, (splat $b))>,
+                NameOverride<"vmulq_n">;
+}
 }
 
 let params = !listconcat(T.Int16, T.Int32) in {
@@ -217,6 +263,16 @@ multiclass VectorVectorArithmetic<string operation, dag extraArgs = (?),
            extraArgs, (? $pred, $inactive)), wantXVariant>;
 }
 
+multiclass VectorScalarArithmetic<string operation, string basename,
+                                  dag extraArgs = (?),
+                                  int wantXVariant = 1> {
+  defm "" : IntrinsicMXNameOverride<
+      Vector, (args Vector:$a, unpromoted<Scalar>:$b, Predicate:$pred),
+      !con((IRInt<operation, [Vector, Predicate]> $a, (splat $b)),
+           extraArgs, (? $pred, $inactive)), basename, wantXVariant, "_n",
+           PNT_NType, PNT_NType>;
+}
+
 multiclass VectorVectorArithmeticBitcast<string operation> {
   defm "" : IntrinsicMX<Vector, (args Vector:$a, Vector:$b,
                                  Predicate:$pred),
@@ -238,6 +294,10 @@ let params = T.Usual in {
   defm veorq : VectorVectorArithmeticBitcast<"eor_predicated">;
   defm vornq : VectorVectorArithmeticBitcast<"orn_predicated">;
   defm vorrq : VectorVectorArithmeticBitcast<"orr_predicated">;
+
+  defm : VectorScalarArithmetic<"add_predicated", "vaddq">;
+  defm : VectorScalarArithmetic<"sub_predicated", "vsubq">;
+  defm : VectorScalarArithmetic<"mul_predicated", "vmulq">;
 }
 
 multiclass DblVectorVectorArithmetic<string operation, dag extraArgs = (?)> {
@@ -260,6 +320,11 @@ let params = T.Int in {
   defm vhsubq : VectorVectorArithmetic<"hsub_predicated", (? (unsignedflag Scalar))>;
   defm vmullbq_int : DblVectorVectorArithmetic<"mull_int_predicated", (? (unsignedflag Scalar), (u32 0))>;
   defm vmulltq_int : DblVectorVectorArithmetic<"mull_int_predicated", (? (unsignedflag Scalar), (u32 1))>;
+
+  defm : VectorScalarArithmetic<"qadd_predicated", "vqaddq", (? (unsignedflag Scalar)), 0>;
+  defm : VectorScalarArithmetic<"hadd_predicated", "vhaddq", (? (unsignedflag Scalar))>;
+  defm : VectorScalarArithmetic<"qsub_predicated", "vqsubq", (? (unsignedflag Scalar)), 0>;
+  defm : VectorScalarArithmetic<"hsub_predicated", "vhsubq", (? (unsignedflag Scalar))>;
 }
 let params = T.Signed in {
   defm vqdmulhq : VectorVectorArithmetic<"qdmulh_predicated", (?), 0>;
@@ -268,6 +333,9 @@ let params = T.Signed in {
                                    (IRInt<"vmina_predicated", [UVector,Predicate]> $a, $b, $pred)>;
   def vmaxaq_m: Intrinsic<UVector, (args UVector:$a, Vector:$b, Predicate:$pred),
                                    (IRInt<"vmaxa_predicated", [UVector,Predicate]> $a, $b, $pred)>;
+
+  defm : VectorScalarArithmetic<"qdmulh_predicated", "vqdmulhq", (?), 0>;
+  defm : VectorScalarArithmetic<"qrdmulh_predicated", "vqrdmulhq", (?), 0>;
 }
 
 let params = T.Poly, overrideKindLetter = "p" in {

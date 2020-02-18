@@ -21209,6 +21209,24 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
   }
 
+  // 0-x == y --> x+y == 0
+  // 0-x != y --> x+y != 0
+  if (Op0.getOpcode() == ISD::SUB && isNullConstant(Op0.getOperand(0)) &&
+      Op0.hasOneUse() && (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+    SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
+    SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(1), Op1);
+    return Add.getValue(1);
+  }
+
+  // x == 0-y --> x+y == 0
+  // x != 0-y --> x+y != 0
+  if (Op1.getOpcode() == ISD::SUB && isNullConstant(Op1.getOperand(0)) &&
+      Op1.hasOneUse() && (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+    SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
+    SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0, Op1.getOperand(1));
+    return Add.getValue(1);
+  }
+
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
@@ -22373,9 +22391,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // Lower FP selects into a CMP/AND/ANDN/OR sequence when the necessary SSE ops
   // are available or VBLENDV if AVX is available.
   // Otherwise FP cmovs get lowered into a less efficient branch sequence later.
-  if (Cond.getOpcode() == ISD::SETCC &&
-      ((Subtarget.hasSSE2() && VT == MVT::f64) ||
-       (Subtarget.hasSSE1() && VT == MVT::f32)) &&
+  if (Cond.getOpcode() == ISD::SETCC && isScalarFPTypeInSSEReg(VT) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
     bool IsAlwaysSignaling;
@@ -22431,7 +22447,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // AVX512 fallback is to lower selects of scalar floats to masked moves.
-  if ((VT == MVT::f64 || VT == MVT::f32) && Subtarget.hasAVX512()) {
+  if (isScalarFPTypeInSSEReg(VT) && Subtarget.hasAVX512()) {
     SDValue Cmp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1, Cond);
     return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
   }
@@ -25718,14 +25734,12 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   */
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  const Align StackAlignment(TFI.getStackAlignment());
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
 
   // Save FP Control Word to stack slot
   int SSFI =
-      MF.getFrameInfo().CreateStackObject(2, StackAlignment.value(), false);
+      MF.getFrameInfo().CreateStackObject(2, 2, false);
   SDValue StackSlot =
       DAG.getFrameIndex(SSFI, getPointerTy(DAG.getDataLayout()));
 
@@ -27717,7 +27731,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
         AI->use_empty())
       return nullptr;
 
-  auto Builder = IRBuilder<>(AI);
+  IRBuilder<> Builder(AI);
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
@@ -44523,21 +44537,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    // 0-x == y --> x+y == 0
-    // 0-x != y --> x+y != 0
-    if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-        LHS.hasOneUse()) {
-      SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, RHS, LHS.getOperand(1));
-      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
-    }
-    // x == 0-y --> x+y == 0
-    // x != 0-y --> x+y != 0
-    if (RHS.getOpcode() == ISD::SUB && isNullConstant(RHS.getOperand(0)) &&
-        RHS.hasOneUse()) {
-      SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
-      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
-    }
-
     if (SDValue V = combineVectorSizedSetCCEquality(N, DAG, Subtarget))
       return V;
   }

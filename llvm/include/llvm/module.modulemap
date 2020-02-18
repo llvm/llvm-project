@@ -234,6 +234,7 @@ module LLVM_intrinsic_gen {
   module IR_ConstantFolder { header "IR/ConstantFolder.h" export * }
   module IR_GlobalVariable { header "IR/GlobalVariable.h" export * }
   module IR_NoFolder { header "IR/NoFolder.h" export * }
+  module IRBuilderFolder { header "IR/IRBuilderFolder.h" export * }
   module IR_Module { header "IR/Module.h" export * }
   module IR_ModuleSummaryIndex { header "IR/ModuleSummaryIndex.h" export * }
   module IR_ModuleSummaryIndexYAML { header "IR/ModuleSummaryIndexYAML.h" export * }

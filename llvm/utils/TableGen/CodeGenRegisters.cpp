@@ -741,6 +741,7 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     : TheDef(R), Name(std::string(R->getName())),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1) {
+  GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
     Record *Type = TypeList[i];
@@ -817,6 +818,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
       CopyCost(0), Allocatable(true), AllocationPriority(0) {
   Artificial = true;
+  GeneratePressureSet = false;
   for (const auto R : Members) {
     TopoSigs.set(R->getTopoSig());
     Artificial &= R->Artificial;
@@ -839,6 +841,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   Allocatable = Super.Allocatable;
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  GeneratePressureSet |= Super.GeneratePressureSet;
 
   // Copy all allocation orders, filter out foreign registers from the larger
   // super-class.
@@ -1892,7 +1895,7 @@ void CodeGenRegBank::computeRegUnitSets() {
   // Compute a unique RegUnitSet for each RegClass.
   auto &RegClasses = getRegClasses();
   for (auto &RC : RegClasses) {
-    if (!RC.Allocatable || RC.Artificial)
+    if (!RC.Allocatable || RC.Artificial || !RC.GeneratePressureSet)
       continue;
 
     // Speculatively grow the RegUnitSets to hold the new set.

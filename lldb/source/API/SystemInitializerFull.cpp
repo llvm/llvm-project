@@ -26,19 +26,20 @@
 
 LLDB_PLUGIN_DECLARE(ABIAArch64)
 LLDB_PLUGIN_DECLARE(ABIARM)
-LLDB_PLUGIN_DECLARE(ABISysV_arc)
-LLDB_PLUGIN_DECLARE(ABISysV_hexagon)
+LLDB_PLUGIN_DECLARE(ABIARC)
+LLDB_PLUGIN_DECLARE(ABIHexagon)
 LLDB_PLUGIN_DECLARE(ABIMips)
 LLDB_PLUGIN_DECLARE(ABIPowerPC)
-LLDB_PLUGIN_DECLARE(ABISysV_s390x)
+LLDB_PLUGIN_DECLARE(ABISystemZ)
 LLDB_PLUGIN_DECLARE(ABIX86)
 LLDB_PLUGIN_DECLARE(ObjectFileBreakpad)
 LLDB_PLUGIN_DECLARE(ObjectFileELF)
+LLDB_PLUGIN_DECLARE(ObjectFileJIT)
 LLDB_PLUGIN_DECLARE(ObjectFileMachO)
 LLDB_PLUGIN_DECLARE(ObjectFilePECOFF)
 LLDB_PLUGIN_DECLARE(ObjectFileWasm)
 LLDB_PLUGIN_DECLARE(ObjectContainerBSDArchive)
-LLDB_PLUGIN_DECLARE(ObjectContainerUniversalMachO)
+LLDB_PLUGIN_DECLARE(ObjectContainerMachOArchive)
 LLDB_PLUGIN_DECLARE(ScriptInterpreterNone)
 #if LLDB_ENABLE_PYTHON
 LLDB_PLUGIN_DECLARE(OperatingSystemPython)
@@ -75,13 +76,13 @@ LLDB_PLUGIN_DECLARE(SymbolFilePDB)
 LLDB_PLUGIN_DECLARE(SymbolFileSymtab)
 LLDB_PLUGIN_DECLARE(SymbolVendorWasm)
 LLDB_PLUGIN_DECLARE(UnwindAssemblyInstEmulation)
-LLDB_PLUGIN_DECLARE(UnwindAssembly_x86)
-LLDB_PLUGIN_DECLARE(EmulateInstructionARM)
-LLDB_PLUGIN_DECLARE(EmulateInstructionARM64)
-LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS)
-LLDB_PLUGIN_DECLARE(EmulateInstructionMIPS64)
-LLDB_PLUGIN_DECLARE(EmulateInstructionPPC64)
-LLDB_PLUGIN_DECLARE(ItaniumABILanguageRuntime)
+LLDB_PLUGIN_DECLARE(UnwindAssemblyX86)
+LLDB_PLUGIN_DECLARE(InstructionARM)
+LLDB_PLUGIN_DECLARE(InstructionARM64)
+LLDB_PLUGIN_DECLARE(InstructionMIPS)
+LLDB_PLUGIN_DECLARE(InstructionMIPS64)
+LLDB_PLUGIN_DECLARE(InstructionPPC64)
+LLDB_PLUGIN_DECLARE(CXXItaniumABI)
 LLDB_PLUGIN_DECLARE(AppleObjCRuntime)
 LLDB_PLUGIN_DECLARE(SystemRuntimeMacOSX)
 LLDB_PLUGIN_DECLARE(RenderScriptRuntime)
@@ -89,21 +90,22 @@ LLDB_PLUGIN_DECLARE(CPlusPlusLanguage)
 LLDB_PLUGIN_DECLARE(ObjCLanguage)
 LLDB_PLUGIN_DECLARE(ObjCPlusPlusLanguage)
 #if defined(_WIN32)
-LLDB_PLUGIN_DECLARE(ProcessWindows)
+LLDB_PLUGIN_DECLARE(ProcessWindowsCommon)
 #endif
 #if defined(__FreeBSD__)
 LLDB_PLUGIN_DECLARE(ProcessFreeBSD)
 #endif
 #if defined(__APPLE__)
 LLDB_PLUGIN_DECLARE(SymbolVendorMacOSX)
-LLDB_PLUGIN_DECLARE(ProcessKDP)
+LLDB_PLUGIN_DECLARE(ProcessMacOSXKernel)
 LLDB_PLUGIN_DECLARE(DynamicLoaderDarwinKernel)
 #endif
 LLDB_PLUGIN_DECLARE(StructuredDataDarwinLog)
-LLDB_PLUGIN_DECLARE(PlatformRemoteGDBServer)
+LLDB_PLUGIN_DECLARE(PlatformGDB)
 LLDB_PLUGIN_DECLARE(ProcessGDBRemote)
+LLDB_PLUGIN_DECLARE(DynamicLoaderHexagonDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderMacOSXDYLD)
-LLDB_PLUGIN_DECLARE(DynamicLoaderPOSIXDYLD)
+LLDB_PLUGIN_DECLARE(DynamicLoaderPosixDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWasmDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
@@ -116,11 +118,11 @@ SystemInitializerFull::~SystemInitializerFull() {}
 
 #define LLDB_PROCESS_AArch64(op) op(ABIAArch64);
 #define LLDB_PROCESS_ARM(op) op(ABIARM);
-#define LLDB_PROCESS_ARC(op) op(ABISysV_arc);
-#define LLDB_PROCESS_Hexagon(op) op(ABISysV_hexagon);
+#define LLDB_PROCESS_ARC(op) op(ABIARC);
+#define LLDB_PROCESS_Hexagon(op) op(ABIHexagon);
 #define LLDB_PROCESS_Mips(op) op(ABIMips);
 #define LLDB_PROCESS_PowerPC(op) op(ABIPowerPC);
-#define LLDB_PROCESS_SystemZ(op) op(ABISysV_s390x);
+#define LLDB_PROCESS_SystemZ(op) op(ABISystemZ);
 #define LLDB_PROCESS_X86(op) op(ABIX86);
 
 #define LLDB_PROCESS_AMDGPU(op)
@@ -140,12 +142,13 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   LLDB_PLUGIN_INITIALIZE(ObjectFileBreakpad);
   LLDB_PLUGIN_INITIALIZE(ObjectFileELF);
+  LLDB_PLUGIN_INITIALIZE(ObjectFileJIT);
   LLDB_PLUGIN_INITIALIZE(ObjectFileMachO);
   LLDB_PLUGIN_INITIALIZE(ObjectFilePECOFF);
   LLDB_PLUGIN_INITIALIZE(ObjectFileWasm);
 
   LLDB_PLUGIN_INITIALIZE(ObjectContainerBSDArchive);
-  LLDB_PLUGIN_INITIALIZE(ObjectContainerUniversalMachO);
+  LLDB_PLUGIN_INITIALIZE(ObjectContainerMachOArchive);
 
   LLDB_PLUGIN_INITIALIZE(ScriptInterpreterNone);
 
@@ -202,15 +205,15 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(SymbolFileSymtab);
   LLDB_PLUGIN_INITIALIZE(SymbolVendorWasm);
   LLDB_PLUGIN_INITIALIZE(UnwindAssemblyInstEmulation);
-  LLDB_PLUGIN_INITIALIZE(UnwindAssembly_x86);
+  LLDB_PLUGIN_INITIALIZE(UnwindAssemblyX86);
 
-  LLDB_PLUGIN_INITIALIZE(EmulateInstructionARM);
-  LLDB_PLUGIN_INITIALIZE(EmulateInstructionARM64);
-  LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS);
-  LLDB_PLUGIN_INITIALIZE(EmulateInstructionMIPS64);
-  LLDB_PLUGIN_INITIALIZE(EmulateInstructionPPC64);
+  LLDB_PLUGIN_INITIALIZE(InstructionARM);
+  LLDB_PLUGIN_INITIALIZE(InstructionARM64);
+  LLDB_PLUGIN_INITIALIZE(InstructionMIPS);
+  LLDB_PLUGIN_INITIALIZE(InstructionMIPS64);
+  LLDB_PLUGIN_INITIALIZE(InstructionPPC64);
 
-  LLDB_PLUGIN_INITIALIZE(ItaniumABILanguageRuntime);
+  LLDB_PLUGIN_INITIALIZE(CXXItaniumABI);
   LLDB_PLUGIN_INITIALIZE(AppleObjCRuntime);
   LLDB_PLUGIN_INITIALIZE(SystemRuntimeMacOSX);
   LLDB_PLUGIN_INITIALIZE(RenderScriptRuntime);
@@ -220,14 +223,14 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(ObjCPlusPlusLanguage);
 
 #if defined(_WIN32)
-  LLDB_PLUGIN_INITIALIZE(ProcessWindows);
+  LLDB_PLUGIN_INITIALIZE(ProcessWindowsCommon);
 #endif
 #if defined(__FreeBSD__)
   LLDB_PLUGIN_INITIALIZE(ProcessFreeBSD);
 #endif
 #if defined(__APPLE__)
   LLDB_PLUGIN_INITIALIZE(SymbolVendorMacOSX);
-  LLDB_PLUGIN_INITIALIZE(ProcessKDP);
+  LLDB_PLUGIN_INITIALIZE(ProcessMacOSXKernel);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderDarwinKernel);
 #endif
 
@@ -236,11 +239,12 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(StructuredDataDarwinLog);
 
   // Platform agnostic plugins
-  LLDB_PLUGIN_INITIALIZE(PlatformRemoteGDBServer);
+  LLDB_PLUGIN_INITIALIZE(PlatformGDB);
 
   LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_INITIALIZE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderPosixDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWasmDYLD); // Before DynamicLoaderStatic.
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
@@ -294,16 +298,16 @@ void SystemInitializerFull::Terminate() {
   LLDB_PLUGIN_TERMINATE(SymbolFileDWARF);
   LLDB_PLUGIN_TERMINATE(SymbolFilePDB);
   LLDB_PLUGIN_TERMINATE(SymbolFileSymtab);
-  LLDB_PLUGIN_TERMINATE(UnwindAssembly_x86);
+  LLDB_PLUGIN_TERMINATE(UnwindAssemblyX86);
   LLDB_PLUGIN_TERMINATE(UnwindAssemblyInstEmulation);
 
-  LLDB_PLUGIN_TERMINATE(EmulateInstructionARM);
-  LLDB_PLUGIN_TERMINATE(EmulateInstructionARM64);
-  LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS);
-  LLDB_PLUGIN_TERMINATE(EmulateInstructionMIPS64);
-  LLDB_PLUGIN_TERMINATE(EmulateInstructionPPC64);
+  LLDB_PLUGIN_TERMINATE(InstructionARM);
+  LLDB_PLUGIN_TERMINATE(InstructionARM64);
+  LLDB_PLUGIN_TERMINATE(InstructionMIPS);
+  LLDB_PLUGIN_TERMINATE(InstructionMIPS64);
+  LLDB_PLUGIN_TERMINATE(InstructionPPC64);
 
-  LLDB_PLUGIN_TERMINATE(ItaniumABILanguageRuntime);
+  LLDB_PLUGIN_TERMINATE(CXXItaniumABI);
   LLDB_PLUGIN_TERMINATE(AppleObjCRuntime);
   LLDB_PLUGIN_TERMINATE(SystemRuntimeMacOSX);
   LLDB_PLUGIN_TERMINATE(RenderScriptRuntime);
@@ -314,7 +318,7 @@ void SystemInitializerFull::Terminate() {
 
 #if defined(__APPLE__)
   LLDB_PLUGIN_TERMINATE(DynamicLoaderDarwinKernel);
-  LLDB_PLUGIN_TERMINATE(ProcessKDP);
+  LLDB_PLUGIN_TERMINATE(ProcessMacOSXKernel);
   LLDB_PLUGIN_TERMINATE(SymbolVendorMacOSX);
 #endif
 
@@ -323,12 +327,13 @@ void SystemInitializerFull::Terminate() {
 #endif
   Debugger::SettingsTerminate();
 
-  LLDB_PLUGIN_TERMINATE(PlatformRemoteGDBServer);
+  LLDB_PLUGIN_TERMINATE(PlatformGDB);
   LLDB_PLUGIN_TERMINATE(ProcessGDBRemote);
   LLDB_PLUGIN_TERMINATE(StructuredDataDarwinLog);
 
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
-  LLDB_PLUGIN_TERMINATE(DynamicLoaderPOSIXDYLD);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderPosixDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWasmDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);
@@ -343,12 +348,13 @@ void SystemInitializerFull::Terminate() {
 
   LLDB_PLUGIN_TERMINATE(ObjectFileBreakpad);
   LLDB_PLUGIN_TERMINATE(ObjectFileELF);
+  LLDB_PLUGIN_TERMINATE(ObjectFileJIT);
   LLDB_PLUGIN_TERMINATE(ObjectFileMachO);
   LLDB_PLUGIN_TERMINATE(ObjectFilePECOFF);
   LLDB_PLUGIN_TERMINATE(ObjectFileWasm);
 
   LLDB_PLUGIN_TERMINATE(ObjectContainerBSDArchive);
-  LLDB_PLUGIN_TERMINATE(ObjectContainerUniversalMachO);
+  LLDB_PLUGIN_TERMINATE(ObjectContainerMachOArchive);
 
 #if LLDB_ENABLE_PYTHON
   LLDB_PLUGIN_TERMINATE(OperatingSystemPython);

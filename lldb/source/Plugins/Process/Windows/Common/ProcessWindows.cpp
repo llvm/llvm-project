@@ -44,7 +44,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ProcessWindows)
+LLDB_PLUGIN_DEFINE_ADV(ProcessWindows, ProcessWindowsCommon)
 
 namespace {
 std::string GetProcessExecutableName(HANDLE process_handle) {

@@ -3452,7 +3452,9 @@ public:
 
     BasicBlock *EnteringBB = R->getEnteringBlock();
 
-    PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
+    PollyIRBuilder Builder(EnteringBB->getContext(), ConstantFolder(),
+                           IRInserter(Annotator));
+    Builder.SetInsertPoint(EnteringBB->getTerminator());
 
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
