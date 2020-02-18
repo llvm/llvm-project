@@ -2493,7 +2493,10 @@ struct AAReachabilityFunction final : public AAReachabilityImpl {
 /// ------------------------ NoAlias Argument Attribute ------------------------
 
 struct AANoAliasImpl : AANoAlias {
-  AANoAliasImpl(const IRPosition &IRP) : AANoAlias(IRP) {}
+  AANoAliasImpl(const IRPosition &IRP) : AANoAlias(IRP) {
+    assert(getAssociatedType()->isPointerTy() &&
+           "Noalias is a pointer attribute");
+  }
 
   const std::string getAsStr() const override {
     return getAssumed() ? "noalias" : "may-alias";
@@ -2517,6 +2520,11 @@ struct AANoAliasFloating final : AANoAliasImpl {
         break;
       Val = Base;
     } while (true);
+
+    if (!Val->getType()->isPointerTy()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
     if (isa<AllocaInst>(Val))
       indicateOptimisticFixpoint();
