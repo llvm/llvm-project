@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=wasm32-unknown-unknown < %s | FileCheck -check-prefix=WASM32 %s
 
 ; WASM32: i32.load        28
-; WASM32-NEXT: i32.sub
+; WASM32-NEXT: i32.ne
 ; WASM32-NEXT: br_if           0
 
 ; WASM32: __stack_chk_fail
