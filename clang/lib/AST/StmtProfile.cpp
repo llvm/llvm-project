@@ -1198,6 +1198,12 @@ void StmtProfiler::VisitOMPArrayShapingExpr(const OMPArrayShapingExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitOMPIteratorExpr(const OMPIteratorExpr *S) {
+  VisitExpr(S);
+  for (unsigned I = 0, E = S->numOfIterators(); I < E; ++I)
+    VisitDecl(S->getIteratorDecl(I));
+}
+
 void StmtProfiler::VisitCallExpr(const CallExpr *S) {
   VisitExpr(S);
 }
