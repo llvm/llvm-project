@@ -294,7 +294,7 @@ public:
   bool
   getMemOperandsWithOffset(const MachineInstr &LdSt,
                            SmallVectorImpl<const MachineOperand *> &BaseOps,
-                           int64_t &Offset,
+                           int64_t &Offset, bool &OffsetIsScalable,
                            const TargetRegisterInfo *TRI) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,

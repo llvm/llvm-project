@@ -2948,8 +2948,9 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffset(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   unsigned AccessSize = 0;
+  OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
   if (!BaseOp || !BaseOp->isReg())
     return false;
