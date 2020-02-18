@@ -141,50 +141,44 @@ private:
 void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
   // Assignment statement analysis is in expression.cpp where user-defined
   // assignments can be recognized and replaced.
-  if (const evaluate::Assignment * asst{GetAssignment(stmt)}) {
-    if (const auto *intrinsicAsst{
-            std::get_if<evaluate::Assignment::IntrinsicAssignment>(&asst->u)}) {
-      CheckForImpureCall(intrinsicAsst->lhs);
-      CheckForImpureCall(intrinsicAsst->rhs);
-      if (forall_) {
-        // TODO: Warn if some name in forall_->activeNames or its outer
-        // contexts does not appear on LHS
-      }
-      CheckForPureContext(intrinsicAsst->lhs, intrinsicAsst->rhs,
-          std::get<parser::Expr>(stmt.t).source, false /* not => */);
+  if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
+    CheckForImpureCall(assignment->lhs);
+    CheckForImpureCall(assignment->rhs);
+    if (forall_) {
+      // TODO: Warn if some name in forall_->activeNames or its outer
+      // contexts does not appear on LHS
     }
+    CheckForPureContext(assignment->lhs, assignment->rhs,
+        std::get<parser::Expr>(stmt.t).source, false /* not => */);
   }
   // TODO: Fortran 2003 ALLOCATABLE assignment semantics (automatic
   // (re)allocation of LHS array when unallocated or nonconformable)
 }
 
 void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
-  using PointerAssignment = evaluate::Assignment::PointerAssignment;
   CHECK(!where_);
-  const evaluate::Assignment *assign{GetAssignment(stmt)};
-  if (!assign) {
+  const evaluate::Assignment *assignment{GetAssignment(stmt)};
+  if (!assignment) {
     return;
   }
-  const auto &ptrAssign{std::get<PointerAssignment>(assign->u)};
-  const SomeExpr &lhs{ptrAssign.lhs};
-  const SomeExpr &rhs{ptrAssign.rhs};
+  const SomeExpr &lhs{assignment->lhs};
+  const SomeExpr &rhs{assignment->rhs};
   CheckForImpureCall(lhs);
   CheckForImpureCall(rhs);
   std::visit(
-      common::visitors{
-          [&](const PointerAssignment::BoundsSpec &bounds) {
-            for (const auto &bound : bounds) {
-              CheckForImpureCall(SomeExpr{bound});
-            }
-          },
-          [&](const PointerAssignment::BoundsRemapping &bounds) {
+      common::visitors{[&](const evaluate::Assignment::BoundsSpec &bounds) {
+                         for (const auto &bound : bounds) {
+                           CheckForImpureCall(SomeExpr{bound});
+                         }
+                       },
+          [&](const evaluate::Assignment::BoundsRemapping &bounds) {
             for (const auto &bound : bounds) {
               CheckForImpureCall(SomeExpr{bound.first});
               CheckForImpureCall(SomeExpr{bound.second});
             }
           },
-      },
-      ptrAssign.bounds);
+          [](const auto &) { DIE("not valid for pointer assignment"); }},
+      assignment->u);
   if (forall_) {
     // TODO: Warn if some name in forall_->activeNames or its outer
     // contexts does not appear on LHS
@@ -193,7 +187,7 @@ void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
       true /* isPointerAssignment */);
   auto restorer{context_.foldingContext().messages().SetLocation(
       context_.location().value())};
-  CheckPointerAssignment(context_.foldingContext(), ptrAssign);
+  CheckPointerAssignment(context_.foldingContext(), *assignment);
 }
 
 void AssignmentContext::Analyze(const parser::WhereStmt &stmt) {

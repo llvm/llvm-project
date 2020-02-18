@@ -26,8 +26,8 @@ namespace Fortran::semantics {
 
 class Symbol;
 
-void CheckPointerAssignment(evaluate::FoldingContext &,
-    const evaluate::Assignment::PointerAssignment &);
+void CheckPointerAssignment(
+    evaluate::FoldingContext &, const evaluate::Assignment &);
 void CheckPointerAssignment(
     evaluate::FoldingContext &, const Symbol &lhs, const SomeExpr &rhs);
 void CheckPointerAssignment(evaluate::FoldingContext &,

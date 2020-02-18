@@ -811,28 +811,24 @@ public:
   common::CombineVariants<TypelessExpression, CategoryExpression> u;
 };
 
-// An assignment is either intrinsic (with lhs and rhs) or user-defined,
-// represented as a ProcedureRef. A pointer assignment optionally also has
-// a bounds-spec or bounds-remapping.
+// An assignment is either intrinsic, user-defined (with a ProcedureRef to
+// specify the procedure to call), or pointer assignment (with possibly empty
+// BoundsSpec or non-empty BoundsRemapping). In all cases there are Exprs
+// representing the LHS and RHS of the assignment.
 class Assignment {
 public:
-  UNION_CONSTRUCTORS(Assignment)
-  struct IntrinsicAssignment {
-    Expr<SomeType> lhs;
-    Expr<SomeType> rhs;
-  };
-  struct PointerAssignment {
-    using BoundsSpec = std::vector<Expr<SubscriptInteger>>;
-    using BoundsRemapping =
-        std::vector<std::pair<Expr<SubscriptInteger>, Expr<SubscriptInteger>>>;
-    PointerAssignment(Expr<SomeType> &&lhs, Expr<SomeType> &&rhs)
-      : lhs{std::move(lhs)}, rhs{std::move(rhs)} {}
-    Expr<SomeType> lhs;
-    Expr<SomeType> rhs;
-    std::variant<BoundsSpec, BoundsRemapping> bounds;
-  };
+  Assignment(Expr<SomeType> &&lhs, Expr<SomeType> &&rhs)
+    : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+
+  struct Intrinsic {};
+  using BoundsSpec = std::vector<Expr<SubscriptInteger>>;
+  using BoundsRemapping =
+      std::vector<std::pair<Expr<SubscriptInteger>, Expr<SubscriptInteger>>>;
   std::ostream &AsFortran(std::ostream &) const;
-  std::variant<IntrinsicAssignment, ProcedureRef, PointerAssignment> u;
+
+  Expr<SomeType> lhs;
+  Expr<SomeType> rhs;
+  std::variant<Intrinsic, ProcedureRef, BoundsSpec, BoundsRemapping> u;
 };
 
 // This wrapper class is used, by means of a forward reference with

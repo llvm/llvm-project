@@ -35,7 +35,6 @@ using evaluate::characteristics::Procedure;
 using evaluate::characteristics::TypeAndShape;
 using parser::MessageFixedText;
 using parser::MessageFormattedText;
-using PointerAssignment = evaluate::Assignment::PointerAssignment;
 
 class PointerAssignmentChecker {
 public:
@@ -348,17 +347,17 @@ parser::Message *PointerAssignmentChecker::Say(A &&... x) {
 // Verify that any bounds on the LHS of a pointer assignment are valid.
 // Return true if it is a bound-remapping so we can perform further checks.
 static bool CheckPointerBounds(
-    evaluate::FoldingContext &context, const PointerAssignment &assignment) {
+    evaluate::FoldingContext &context, const evaluate::Assignment &assignment) {
   auto &messages{context.messages()};
   const SomeExpr &lhs{assignment.lhs};
   const SomeExpr &rhs{assignment.rhs};
   bool isBoundsRemapping{false};
   std::size_t numBounds{std::visit(
       common::visitors{
-          [&](const PointerAssignment::BoundsSpec &bounds) {
+          [&](const evaluate::Assignment::BoundsSpec &bounds) {
             return bounds.size();
           },
-          [&](const PointerAssignment::BoundsRemapping &bounds) {
+          [&](const evaluate::Assignment::BoundsRemapping &bounds) {
             isBoundsRemapping = true;
             evaluate::ExtentExpr lhsSizeExpr{1};
             for (const auto &bound : bounds) {
@@ -383,8 +382,11 @@ static bool CheckPointerBounds(
             }
             return bounds.size();
           },
+          [](const auto &) -> std::size_t {
+            DIE("not valid for pointer assignment");
+          },
       },
-      assignment.bounds)};
+      assignment.u)};
   if (numBounds > 0) {
     if (lhs.Rank() != static_cast<int>(numBounds)) {
       messages.Say("Pointer '%s' has rank %d but the number of bounds specified"
@@ -401,7 +403,7 @@ static bool CheckPointerBounds(
 }
 
 void CheckPointerAssignment(
-    evaluate::FoldingContext &context, const PointerAssignment &assignment) {
+    evaluate::FoldingContext &context, const evaluate::Assignment &assignment) {
   const SomeExpr &lhs{assignment.lhs};
   const SomeExpr &rhs{assignment.rhs};
   const Symbol *pointer{GetLastSymbol(lhs)};

@@ -168,40 +168,33 @@ GenericExprWrapper::~GenericExprWrapper() {}
 std::ostream &Assignment::AsFortran(std::ostream &o) const {
   std::visit(
       common::visitors{
-          [&](const evaluate::Assignment::IntrinsicAssignment &x) {
-            x.rhs.AsFortran(x.lhs.AsFortran(o) << '=');
+          [&](const Assignment::Intrinsic &) {
+            rhs.AsFortran(lhs.AsFortran(o) << '=');
           },
-          [&](const evaluate::ProcedureRef &x) { x.AsFortran(o << "CALL "); },
-          [&](const evaluate::Assignment::PointerAssignment &x) {
-            x.lhs.AsFortran(o);
-            std::visit(
-                common::visitors{
-                    [&](const evaluate::Assignment::PointerAssignment::
-                            BoundsSpec &bounds) {
-                      if (!bounds.empty()) {
-                        char sep{'('};
-                        for (const auto &bound : bounds) {
-                          bound.AsFortran(o << sep) << ':';
-                          sep = ',';
-                        }
-                        o << ')';
-                      }
-                    },
-                    [&](const evaluate::Assignment::PointerAssignment::
-                            BoundsRemapping &bounds) {
-                      if (!bounds.empty()) {
-                        char sep{'('};
-                        for (const auto &bound : bounds) {
-                          bound.first.AsFortran(o << sep) << ':';
-                          bound.second.AsFortran(o);
-                          sep = ',';
-                        }
-                        o << ')';
-                      }
-                    },
-                },
-                x.bounds);
-            x.rhs.AsFortran(o << " => ");
+          [&](const ProcedureRef &proc) { proc.AsFortran(o << "CALL "); },
+          [&](const BoundsSpec &bounds) {
+            lhs.AsFortran(o);
+            if (!bounds.empty()) {
+              char sep{'('};
+              for (const auto &bound : bounds) {
+                bound.AsFortran(o << sep) << ':';
+                sep = ',';
+              }
+              o << ')';
+            }
+          },
+          [&](const BoundsRemapping &bounds) {
+            lhs.AsFortran(o);
+            if (!bounds.empty()) {
+              char sep{'('};
+              for (const auto &bound : bounds) {
+                bound.first.AsFortran(o << sep) << ':';
+                bound.second.AsFortran(o);
+                sep = ',';
+              }
+              o << ')';
+            }
+            rhs.AsFortran(o << " => ");
           },
       },
       u);
