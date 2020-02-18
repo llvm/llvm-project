@@ -4,6 +4,10 @@ add_llvm_library(MLIRIR
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
+
+  LINK_LIBS
+  MLIRSupport
+  LLVMSupport
+  ${LLVM_PTHREAD_LIB}
   )
 add_dependencies(MLIRIR MLIRCallOpInterfacesIncGen MLIROpAsmInterfacesIncGen MLIRSupport LLVMSupport)
-target_link_libraries(MLIRIR MLIRSupport LLVMSupport)

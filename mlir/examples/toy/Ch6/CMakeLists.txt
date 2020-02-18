@@ -41,4 +41,9 @@ target_link_libraries(toyc-ch6
     MLIRPass
     MLIRTargetLLVMIR
     MLIRTransforms
+    LLVMOrcJIT
+    LLVMSupport
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Info
     )

@@ -4,8 +4,11 @@ add_mlir_unittest(MLIRSPIRVTests
 )
 target_link_libraries(MLIRSPIRVTests
   PRIVATE
+  MLIRIR
   MLIRSPIRV
-  MLIRSPIRVSerialization)
+  MLIRSPIRVSerialization
+  MLIRStandardOps
+  MLIRSupport)
 
 whole_archive_link(MLIRSPIRVTests MLIRSPIRV)
 

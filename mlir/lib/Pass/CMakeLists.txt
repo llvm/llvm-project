@@ -4,6 +4,12 @@ add_llvm_library(MLIRPass
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass
+
+  LINK_LIBS
+  MLIRAnalysis
+  MLIRIR
+  MLIRSupport
+  LLVMIRReader
+  LLVMSupport
   )
 add_dependencies(MLIRPass MLIRAnalysis MLIRIR LLVMSupport)
-target_link_libraries(MLIRPass MLIRAnalysis MLIRIR LLVMSupport)

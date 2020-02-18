@@ -6,6 +6,7 @@ set(LIBS
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
+  LLVMSupport
   )
 
 add_mlir_dialect_library(MLIRLinalgEDSC
@@ -15,7 +16,9 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS
+  ${LIBS}
   )
 
 add_dependencies(MLIRLinalgEDSC ${LIBS})
-target_link_libraries(MLIRLinalgEDSC ${LIBS})
