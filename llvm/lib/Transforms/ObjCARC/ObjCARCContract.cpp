@@ -47,10 +47,6 @@ using namespace llvm::objcarc;
 STATISTIC(NumPeeps,       "Number of calls peephole-optimized");
 STATISTIC(NumStoreStrongs, "Number objc_storeStrong calls formed");
 
-static cl::opt<unsigned> MaxBBSize("arc-contract-max-bb-size", cl::Hidden,
-    cl::desc("Maximum basic block size to discover the dominance relation of "
-             "two instructions in the same basic block"), cl::init(65535));
-
 //===----------------------------------------------------------------------===//
 //                                Declarations
 //===----------------------------------------------------------------------===//
@@ -580,23 +576,6 @@ bool ObjCARCContract::runOnFunction(Function &F) {
   SmallPtrSet<Instruction *, 4> DependingInstructions;
   SmallPtrSet<const BasicBlock *, 4> Visited;
 
-  // Cache the basic block size.
-  DenseMap<const BasicBlock *, unsigned> BBSizeMap;
-
-  // A lambda that lazily computes the size of a basic block and determines
-  // whether the size exceeds MaxBBSize.
-  auto IsLargeBB = [&](const BasicBlock *BB) {
-    unsigned BBSize;
-    auto I = BBSizeMap.find(BB);
-
-    if (I != BBSizeMap.end())
-      BBSize = I->second;
-    else
-      BBSize = BBSizeMap[BB] = BB->size();
-
-    return BBSize > MaxBBSize;
-  };
-
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E;) {
     Instruction *Inst = &*I++;
 
@@ -614,7 +593,7 @@ bool ObjCARCContract::runOnFunction(Function &F) {
     // and such; to do the replacement, the argument must have type i8*.
 
     // Function for replacing uses of Arg dominated by Inst.
-    auto ReplaceArgUses = [Inst, IsLargeBB, this](Value *Arg) {
+    auto ReplaceArgUses = [Inst, this](Value *Arg) {
       // If we're compiling bugpointed code, don't get in trouble.
       if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
         return;
@@ -625,17 +604,6 @@ bool ObjCARCContract::runOnFunction(Function &F) {
         // Increment UI now, because we may unlink its element.
         Use &U = *UI++;
         unsigned OperandNo = U.getOperandNo();
-
-        // Don't replace the uses if Inst and the user belong to the same basic
-        // block and the size of the basic block is large. We don't want to call
-        // DominatorTree::dominate in that case. We can remove this check if we
-        // can use OrderedBasicBlock to compute the dominance relation between
-        // two instructions, but that's not currently possible since it doesn't
-        // recompute the instruction ordering when new instructions are inserted
-        // to the basic block.
-        if (Inst->getParent() == cast<Instruction>(U.getUser())->getParent() &&
-            IsLargeBB(Inst->getParent()))
-          continue;
 
         // If the call's return value dominates a use of the call's argument
         // value, rewrite the use to use the return value. We check for
@@ -688,7 +656,6 @@ bool ObjCARCContract::runOnFunction(Function &F) {
         }
       }
     };
-
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
     Value *OrigArg = Arg;
