@@ -149,6 +149,51 @@ exit:
   ret i64 0
 }
 
+; Instcombine folds (a + b <u a)  to (a ^ -1 <u b). Make sure we match this
+; pattern as well.
+define i64 @uaddo6_xor(i64 %a, i64 %b) {
+; CHECK-LABEL: @uaddo6_xor(
+; CHECK-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %x = xor i64 %a, -1
+  %cmp = icmp ult i64 %x, %b
+  %Q = select i1 %cmp, i64 %b, i64 42
+  ret i64 %Q
+}
+
+define i64 @uaddo6_xor_commuted(i64 %a, i64 %b) {
+; CHECK-LABEL: @uaddo6_xor_commuted(
+; CHECK-NEXT:    [[X:%.*]] = xor i64 -1, [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %x = xor i64 -1, %a
+  %cmp = icmp ult i64 %x, %b
+  %Q = select i1 %cmp, i64 %b, i64 42
+  ret i64 %Q
+}
+
+declare void @use(i64)
+
+define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
+; CHECK-LABEL: @uaddo6_xor_multi_use(
+; CHECK-NEXT:    [[X:%.*]] = xor i64 -1, [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    call void @use(i64 [[X]])
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %x = xor i64 -1, %a
+  %cmp = icmp ult i64 %x, %b
+  %Q = select i1 %cmp, i64 %b, i64 42
+  call void @use(i64 %x)
+  ret i64 %Q
+}
+
 ; When adding 1, the general pattern for add-overflow may be different due to icmp canonicalization.
 ; PR31754: https://bugs.llvm.org/show_bug.cgi?id=31754
 
