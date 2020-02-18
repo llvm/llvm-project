@@ -119,7 +119,8 @@ namespace llvm {
           ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EnableDebugEntryValues(false), ForceDwarfFrameSection(false) {}
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ForceDwarfFrameSection(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -256,8 +257,18 @@ namespace llvm {
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
 
-    /// Emit debug info about parameter's entry values.
+    /// Set if the target supports the debug entry values by default.
+    unsigned SupportsDebugEntryValues : 1;
+    /// When set to true, the EnableDebugEntryValues option forces production
+    /// of debug entry values even if the target does not officially support
+    /// it. Useful for testing purposes only. This flag should never be checked
+    /// directly, always use \ref ShouldEmitDebugEntryValues instead.
     unsigned EnableDebugEntryValues : 1;
+    /// NOTE: There are targets that still do not support the call site info
+    /// production (the info about the arguments passed to the call, necessary
+    /// for the debug entry values), so we keep using the experimental option
+    /// (-debug-entry-values) to test them as well.
+    bool ShouldEmitDebugEntryValues() const;
 
     /// Emit DWARF debug frame section.
     unsigned ForceDwarfFrameSection : 1;
