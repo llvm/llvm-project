@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNB_h__
-#define __DNB_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNB_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNB_H
 
 #include "DNBDefs.h"
 #include "JSONGenerator.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangExpressionParser_h_
-#define liblldb_ClangExpressionParser_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H
 
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
@@ -185,4 +185,4 @@ private:
 };
 }
 
-#endif // liblldb_ClangExpressionParser_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONPARSER_H

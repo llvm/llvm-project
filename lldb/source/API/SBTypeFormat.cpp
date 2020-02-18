@@ -39,7 +39,7 @@ SBTypeFormat::SBTypeFormat(const lldb::SBTypeFormat &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeFormat, (const lldb::SBTypeFormat &), rhs);
 }
 
-SBTypeFormat::~SBTypeFormat() {}
+SBTypeFormat::~SBTypeFormat() = default;
 
 bool SBTypeFormat::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, IsValid);

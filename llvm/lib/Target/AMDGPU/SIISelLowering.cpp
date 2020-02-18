@@ -4384,9 +4384,7 @@ bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
   // FIXME: Either avoid relying on address space here or change the default
   // address space for functions to avoid the explicit check.
   return (GV->getValueType()->isFunctionTy() ||
-          GV->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-          GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-          GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+          !isNonGlobalAddrSpace(GV->getAddressSpace())) &&
          !shouldEmitFixup(GV) &&
          !getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
 }

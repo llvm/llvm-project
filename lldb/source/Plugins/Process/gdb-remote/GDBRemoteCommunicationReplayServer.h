@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunicationReplayServer_h_
-#define liblldb_GDBRemoteCommunicationReplayServer_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONREPLAYSERVER_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONREPLAYSERVER_H
 
 // Other libraries and framework includes
 #include "GDBRemoteCommunication.h"
@@ -79,4 +79,4 @@ private:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // liblldb_GDBRemoteCommunicationReplayServer_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONREPLAYSERVER_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_SymbolFileDWARF_h_
-#define SymbolFileDWARF_SymbolFileDWARF_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H
 
 #include <list>
 #include <map>
@@ -166,7 +166,7 @@ public:
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
-                      const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
 
@@ -175,7 +175,7 @@ public:
                            lldb_private::VariableList &variables) override;
 
   void FindFunctions(lldb_private::ConstString name,
-                     const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                     const lldb_private::CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
@@ -190,7 +190,7 @@ public:
 
   void
   FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext *parent_decl_ctx,
+            const lldb_private::CompilerDeclContext &parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
@@ -209,7 +209,7 @@ public:
 
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
+      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
 
   void PreloadSymbols() override;
 
@@ -280,7 +280,7 @@ public:
   llvm::Optional<uint64_t> GetDWOId();
 
   static bool
-  DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
+  DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
                    const DWARFDIE &die);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
@@ -331,7 +331,7 @@ protected:
                                lldb_private::DWARFDataExtractor &data);
 
   bool DeclContextMatchesThisSymbolFile(
-      const lldb_private::CompilerDeclContext *decl_ctx);
+      const lldb_private::CompilerDeclContext &decl_ctx);
 
   uint32_t CalculateNumCompileUnits() override;
 
@@ -473,7 +473,7 @@ protected:
   };
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
-  SymbolFileDWARFDwp *GetDwpSymbolFile();
+  void FindDwpSymbolFile();
 
   const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
 
@@ -481,12 +481,14 @@ protected:
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
   llvm::once_flag m_dwp_symfile_once_flag;
-  std::unique_ptr<SymbolFileDWARFDwp> m_dwp_symfile;
+  std::shared_ptr<SymbolFileDWARFDwo> m_dwp_symfile;
 
   lldb_private::DWARFContext m_context;
 
-  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
+  llvm::once_flag m_info_once_flag;
   std::unique_ptr<DWARFDebugInfo> m_info;
+
+  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
@@ -498,7 +500,7 @@ protected:
   bool m_fetched_external_modules : 1;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
-  typedef std::set<lldb::user_id_t> DIERefSet;
+  typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRanges> m_ranges;
@@ -512,4 +514,4 @@ protected:
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
 };
 
-#endif // SymbolFileDWARF_SymbolFileDWARF_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

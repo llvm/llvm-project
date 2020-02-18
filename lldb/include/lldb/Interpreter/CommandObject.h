@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObject_h_
-#define liblldb_CommandObject_h_
+#ifndef LLDB_INTERPRETER_COMMANDOBJECT_H
+#define LLDB_INTERPRETER_COMMANDOBJECT_H
 
 #include <map>
 #include <string>
@@ -411,4 +411,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObject_h_
+#endif // LLDB_INTERPRETER_COMMANDOBJECT_H

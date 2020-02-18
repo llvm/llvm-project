@@ -16,7 +16,10 @@
 // X86 specific DAG Nodes.
 //
 
-def SDTX86CmpTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisSameAs<1, 2>]>;
+def SDTX86CmpTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
+                                         SDTCisSameAs<1, 2>]>;
+def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
+                                         SDTCisSameAs<1, 2>]>;
 
 def SDTX86Cmps : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
 //def SDTX86Cmpss : SDTypeProfile<1, 3, [SDTCisVT<0, f32>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
@@ -144,8 +147,9 @@ def X86shld    : SDNode<"X86ISD::SHLD",     SDTIntShiftDOp>;
 def X86shrd    : SDNode<"X86ISD::SHRD",     SDTIntShiftDOp>;
 
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
-def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86CmpTest, [SDNPHasChain]>;
-def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86CmpTest, [SDNPHasChain]>;
+def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
+def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86FCmp, [SDNPHasChain]>;
+def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
@@ -382,7 +386,7 @@ class X86VMemOperand<RegisterClass RC, string printMethod,
 def anymem : X86MemOperand<"printanymem">;
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),
-                           (X86cmp node:$lhs, node:$rhs)]>;
+                           (X86fcmp node:$lhs, node:$rhs)]>;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.
@@ -2915,6 +2919,11 @@ let Predicates = [HasTBM] in {
             (TZMSK64rr GR64:$src)>;
 
   // Patterns to match flag producing ops.
+  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, 1)),
+            (BLCFILL32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, 1)),
+            (BLCFILL64rr GR64:$src)>;
+
   def : Pat<(or_flag_nocf GR32:$src, (not (add GR32:$src, 1))),
             (BLCI32rr GR32:$src)>;
   def : Pat<(or_flag_nocf GR64:$src, (not (add GR64:$src, 1))),

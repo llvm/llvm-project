@@ -52,7 +52,7 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);
-  EmitZeros(Size);
+  emitZeros(Size);
 }
 
 void MCXCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
@@ -94,7 +94,7 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
   return S;
 }
 
-void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
+void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                  uint64_t Size,
                                                  MCSymbol *CsectSym,
                                                  unsigned ByteAlignment) {

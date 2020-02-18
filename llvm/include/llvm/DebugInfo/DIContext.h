@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -204,6 +205,10 @@ struct DIDumpOptions {
       Opts.ParentRecurseDepth = 0;
     return Opts;
   }
+
+  std::function<void(Error)> RecoverableErrorHandler =
+      WithColor::defaultErrorHandler;
+  std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
 };
 
 class DIContext {

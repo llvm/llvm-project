@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DWARFExpression_h_
-#define liblldb_DWARFExpression_h_
+#ifndef LLDB_EXPRESSION_DWARFEXPRESSION_H
+#define LLDB_EXPRESSION_DWARFEXPRESSION_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
@@ -272,4 +272,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_DWARFExpression_h_
+#endif // LLDB_EXPRESSION_DWARFEXPRESSION_H

@@ -50,7 +50,7 @@ void SBDeclaration::SetDeclaration(
   ref() = lldb_object_ref;
 }
 
-SBDeclaration::~SBDeclaration() {}
+SBDeclaration::~SBDeclaration() = default;
 
 bool SBDeclaration::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDeclaration, IsValid);

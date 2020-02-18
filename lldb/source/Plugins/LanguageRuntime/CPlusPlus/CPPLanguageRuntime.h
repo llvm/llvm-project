@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CPPLanguageRuntime_h_
-#define liblldb_CPPLanguageRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H
 
 #include <vector>
 
@@ -95,4 +95,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CPPLanguageRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_CPPLANGUAGERUNTIME_H

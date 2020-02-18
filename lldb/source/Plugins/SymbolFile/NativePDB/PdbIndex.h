@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBINDEX_H
-#define LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBINDEX_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBINDEX_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBINDEX_H
 
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/IntervalMap.h"

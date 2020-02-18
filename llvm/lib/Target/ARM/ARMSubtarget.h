@@ -162,6 +162,7 @@ protected:
   bool HasV8_1MMainlineOps = false;
   bool HasMVEIntegerOps = false;
   bool HasMVEFloatOps = false;
+  bool HasCDEOps = false;
 
   /// HasVFPv2, HasVFPv3, HasVFPv4, HasFPARMv8, HasNEON - Specify what
   /// floating point ISAs are supported.
@@ -562,6 +563,7 @@ private:
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
   ARMFrameLowering *initializeFrameLowering(StringRef CPU, StringRef FS);
 
+  std::bitset<8> CoprocCDE = {};
 public:
   void computeIssueWidth();
 
@@ -584,6 +586,7 @@ public:
   bool hasV8_1MMainlineOps() const { return HasV8_1MMainlineOps; }
   bool hasMVEIntegerOps() const { return HasMVEIntegerOps; }
   bool hasMVEFloatOps() const { return HasMVEFloatOps; }
+  bool hasCDEOps() const { return HasCDEOps; }
   bool hasFPRegs() const { return HasFPRegs; }
   bool hasFPRegs16() const { return HasFPRegs16; }
   bool hasFPRegs64() const { return HasFPRegs64; }

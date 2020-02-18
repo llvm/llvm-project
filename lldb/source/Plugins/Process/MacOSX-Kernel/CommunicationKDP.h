@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommunicationKDP_h_
-#define liblldb_CommunicationKDP_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H
 
 #include <list>
 #include <mutex>
@@ -244,4 +244,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CommunicationKDP);
 };
 
-#endif // liblldb_CommunicationKDP_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_COMMUNICATIONKDP_H

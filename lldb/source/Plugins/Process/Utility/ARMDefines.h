@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_ARMDefines_h_
-#define lldb_ARMDefines_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMDEFINES_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMDEFINES_H
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -188,4 +188,4 @@ static inline bool ARMConditionPassed(const uint32_t condition,
 
 } // namespace lldb_private
 
-#endif // lldb_ARMDefines_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_ARMDEFINES_H

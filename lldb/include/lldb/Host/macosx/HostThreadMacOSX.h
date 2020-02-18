@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_macosx_HostThreadMacOSX_h_
-#define lldb_Host_macosx_HostThreadMacOSX_h_
+#ifndef LLDB_HOST_MACOSX_HOSTTHREADMACOSX_H
+#define LLDB_HOST_MACOSX_HOSTTHREADMACOSX_H
 
 #include "lldb/Host/posix/HostThreadPosix.h"
 

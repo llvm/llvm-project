@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
@@ -902,6 +903,7 @@ bool GCNPassConfig::addIRTranslator() {
 void GCNPassConfig::addPreLegalizeMachineIR() {
   bool IsOptNone = getOptLevel() == CodeGenOpt::None;
   addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
+  addPass(new Localizer());
 }
 
 bool GCNPassConfig::addLegalizeMachineIR() {

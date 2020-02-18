@@ -395,8 +395,7 @@ static void instantiateOMPDeclareVariantAttr(
 
   // Copy the template version of the OMPTraitInfo and run substitute on all
   // score and condition expressiosn.
-  OMPTraitInfo *TI = new OMPTraitInfo();
-  *TI = *Attr.getTraitInfos();
+  OMPTraitInfo TI = Attr.getTraitInfos();
 
   // Try to substitute template parameters in score and condition expressions.
   auto SubstScoreOrConditionExpr = [&S, Subst](Expr *&E, bool) {
@@ -411,21 +410,17 @@ static void instantiateOMPDeclareVariantAttr(
     }
     return false;
   };
-  if (TI->anyScoreOrCondition(SubstScoreOrConditionExpr)) {
-    delete TI;
+  if (TI.anyScoreOrCondition(SubstScoreOrConditionExpr))
     return;
-  }
 
   // Check function/variant ref.
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       S.checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New),
-                                          VariantFuncRef.get(), *TI,
+                                          VariantFuncRef.get(), TI,
                                           Attr.getRange());
 
-  if (!DeclVarData) {
-    delete TI;
+  if (!DeclVarData)
     return;
-  }
 
   S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
                                        DeclVarData.getValue().second, TI,

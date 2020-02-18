@@ -1154,8 +1154,7 @@ bool PDBASTParser::AddEnumValue(CompilerType enum_type,
   default:
     return false;
   }
-  CompilerType underlying_type =
-      m_ast.GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
+  CompilerType underlying_type = m_ast.GetEnumerationIntegerType(enum_type);
   uint32_t byte_size = m_ast.getASTContext().getTypeSize(
       ClangUtil::GetQualType(underlying_type));
   auto enum_constant_decl = m_ast.AddEnumerationValueToEnumerationType(

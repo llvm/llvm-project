@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextLinux_arm64_H_
-#define liblldb_RegisterContextLinux_arm64_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
 
 #include "RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"

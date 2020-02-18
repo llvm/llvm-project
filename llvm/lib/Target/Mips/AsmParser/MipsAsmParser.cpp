@@ -2128,8 +2128,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           MCSymbolRefExpr::create(JalSym, MCSymbolRefExpr::VK_None,
                                   getContext(), IDLoc);
 
-      TOut.getStreamer().EmitRelocDirective(*TmpExpr,
-          inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
+      TOut.getStreamer().emitRelocDirective(
+          *TmpExpr, inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
           RelocJalrExpr, IDLoc, *STI);
       TOut.getStreamer().emitLabel(TmpLabel);
     }
@@ -3389,7 +3389,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(ImmOp32, 4);
+  getStreamer().emitIntValue(ImmOp32, 4);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
@@ -3442,7 +3442,7 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
-  getStreamer().EmitIntValue(ImmOp64, 8);
+  getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   unsigned TmpReg = getATReg(IDLoc);
@@ -3525,7 +3525,7 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
-  getStreamer().EmitIntValue(ImmOp64, 8);
+  getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))

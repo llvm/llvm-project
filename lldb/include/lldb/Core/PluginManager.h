@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PluginManager_h_
-#define liblldb_PluginManager_h_
+#ifndef LLDB_CORE_PLUGINMANAGER_H
+#define LLDB_CORE_PLUGINMANAGER_H
 
 #include "lldb/Core/Architecture.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -22,11 +22,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define LLDB_PLUGIN_DEFINE(PluginName)                                         \
+#define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   namespace lldb_private {                                                     \
-  void lldb_initialize_##PluginName() { PluginName::Initialize(); }            \
-  void lldb_terminate_##PluginName() { PluginName::Terminate(); }              \
+  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
+  void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
+
+#define LLDB_PLUGIN_DEFINE(PluginName)                                         \
+  LLDB_PLUGIN_DEFINE_ADV(PluginName, PluginName)
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
@@ -492,4 +495,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_PluginManager_h_
+#endif // LLDB_CORE_PLUGINMANAGER_H

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This class implements the parser for assembly files.
+// This class implements a parser for assembly files similar to gas syntax.
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,9 +74,7 @@ using namespace llvm;
 
 MCAsmParserSemaCallback::~MCAsmParserSemaCallback() = default;
 
-static cl::opt<unsigned> AsmMacroMaxNestingDepth(
-     "asm-macro-max-nesting-depth", cl::init(20), cl::Hidden,
-     cl::desc("The maximum nesting depth allowed for assembly macros."));
+extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 namespace {
 
@@ -645,6 +643,7 @@ private:
   bool parseDirectiveElse(SMLoc DirectiveLoc); // ".else"
   bool parseDirectiveEndIf(SMLoc DirectiveLoc); // .endif
   bool parseEscapedString(std::string &Data) override;
+  bool parseAngleBracketString(std::string &Data) override;
 
   const MCExpr *applyModifierToExpr(const MCExpr *E,
                                     MCSymbolRefExpr::VariantKind Variant);
@@ -1365,7 +1364,7 @@ AsmParser::applyModifierToExpr(const MCExpr *E,
 /// implementation. GCC does not fully support this feature and so we will not
 /// support it.
 /// TODO: Adding single quote as a string.
-static bool isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
+static bool isAngleBracketString(SMLoc &StrLoc, SMLoc &EndLoc) {
   assert((StrLoc.getPointer() != nullptr) &&
          "Argument to the function cannot be a NULL value");
   const char *CharPtr = StrLoc.getPointer();
@@ -1383,7 +1382,7 @@ static bool isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
 }
 
 /// creating a string without the escape characters '!'.
-static std::string altMacroString(StringRef AltMacroStr) {
+static std::string angleBracketString(StringRef AltMacroStr) {
   std::string Res;
   for (size_t Pos = 0; Pos < AltMacroStr.size(); Pos++) {
     if (AltMacroStr[Pos] == '!')
@@ -2497,7 +2496,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
             // is considered altMacroString!!!
             else if (AltMacroMode && Token.getString().front() == '<' &&
                      Token.is(AsmToken::String)) {
-              OS << altMacroString(Token.getStringContents());
+              OS << angleBracketString(Token.getStringContents());
             }
             // We expect no quotes around the string's contents when
             // parsing for varargs.
@@ -2690,7 +2689,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
                         StringRef(StrChar, EndChar - StrChar), Value);
       FA.Value.push_back(newToken);
     } else if (AltMacroMode && Lexer.is(AsmToken::Less) &&
-               isAltmacroString(StrLoc, EndLoc)) {
+               isAngleBracketString(StrLoc, EndLoc)) {
       const char *StrChar = StrLoc.getPointer();
       const char *EndChar = EndLoc.getPointer();
       jumpToLoc(EndLoc, CurBuffer);
@@ -2969,6 +2968,21 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   return false;
 }
 
+bool AsmParser::parseAngleBracketString(std::string &Data) {
+  SMLoc EndLoc, StartLoc = getTok().getLoc();
+  if (isAngleBracketString(StartLoc, EndLoc)) {
+    const char *StartChar = StartLoc.getPointer() + 1;
+    const char *EndChar = EndLoc.getPointer() - 1;
+    jumpToLoc(EndLoc, CurBuffer);
+    /// Eat from '<' to '>'
+    Lex();
+
+    Data = angleBracketString(StringRef(StartChar, EndChar - StartChar));
+    return false;
+  }
+  return true;
+}
+
 /// parseDirectiveAscii:
 ///   ::= ( .ascii | .asciz | .string ) [ "string" ( , "string" )* ]
 bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
@@ -3029,7 +3043,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
 
   const MCTargetAsmParser &MCT = getTargetParser();
   const MCSubtargetInfo &STI = MCT.getSTI();
-  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
+  if (getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
     return Error(NameLoc, "unknown relocation name");
 
   return false;
@@ -3049,9 +3063,9 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
       uint64_t IntValue = MCE->getValue();
       if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
         return Error(ExprLoc, "out of range literal value");
-      getStreamer().EmitIntValue(IntValue, Size);
+      getStreamer().emitIntValue(IntValue, Size);
     } else
-      getStreamer().EmitValue(Value, Size, ExprLoc);
+      getStreamer().emitValue(Value, Size, ExprLoc);
     return false;
   };
 
@@ -3090,11 +3104,11 @@ bool AsmParser::parseDirectiveOctaValue(StringRef IDVal) {
     if (parseHexOcta(*this, hi, lo))
       return true;
     if (MAI.isLittleEndian()) {
-      getStreamer().EmitIntValue(lo, 8);
-      getStreamer().EmitIntValue(hi, 8);
+      getStreamer().emitIntValue(lo, 8);
+      getStreamer().emitIntValue(hi, 8);
     } else {
-      getStreamer().EmitIntValue(hi, 8);
-      getStreamer().EmitIntValue(lo, 8);
+      getStreamer().emitIntValue(hi, 8);
+      getStreamer().emitIntValue(lo, 8);
     }
     return false;
   };
@@ -3153,7 +3167,7 @@ bool AsmParser::parseDirectiveRealValue(StringRef IDVal,
     APInt AsInt;
     if (checkForValidSection() || parseRealValue(Semantics, AsInt))
       return true;
-    getStreamer().EmitIntValue(AsInt.getLimitedValue(),
+    getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
     return false;
   };
@@ -3419,7 +3433,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // numberless .file directives. This allows some portability of assembler
     // between different object file formats.
     if (getContext().getAsmInfo()->hasSingleParameterDotFile())
-      getStreamer().EmitFileDirective(Filename);
+      getStreamer().emitFileDirective(Filename);
   } else {
     // In case there is a -g option as well as debug info from directive .file,
     // we turn off the -g option, directly use the existing debug info instead.
@@ -3979,7 +3993,7 @@ bool AsmParser::parseDirectiveCVString() {
   // Put the string in the table and emit the offset.
   std::pair<StringRef, unsigned> Insertion =
       getCVContext().addToStringTable(Data);
-  getStreamer().EmitIntValue(Insertion.second, 4);
+  getStreamer().emitIntValue(Insertion.second, 4);
   return false;
 }
 
@@ -4661,7 +4675,7 @@ bool AsmParser::parseDirectiveBundleAlignMode() {
 
   // Because of AlignSizePow2's verified range we can safely truncate it to
   // unsigned.
-  getStreamer().EmitBundleAlignMode(static_cast<unsigned>(AlignSizePow2));
+  getStreamer().emitBundleAlignMode(static_cast<unsigned>(AlignSizePow2));
   return false;
 }
 
@@ -4686,7 +4700,7 @@ bool AsmParser::parseDirectiveBundleLock() {
     AlignToEnd = true;
   }
 
-  getStreamer().EmitBundleLock(AlignToEnd);
+  getStreamer().emitBundleLock(AlignToEnd);
   return false;
 }
 
@@ -4698,7 +4712,7 @@ bool AsmParser::parseDirectiveBundleUnlock() {
                  "unexpected token in '.bundle_unlock' directive"))
     return true;
 
-  getStreamer().EmitBundleUnlock();
+  getStreamer().emitBundleUnlock();
   return false;
 }
 
@@ -4752,10 +4766,10 @@ bool AsmParser::parseDirectiveDCB(StringRef IDVal, unsigned Size) {
     if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
       return Error(ExprLoc, "literal value out of range for directive");
     for (uint64_t i = 0, e = NumValues; i != e; ++i)
-      getStreamer().EmitIntValue(IntValue, Size);
+      getStreamer().emitIntValue(IntValue, Size);
   } else {
     for (uint64_t i = 0, e = NumValues; i != e; ++i)
-      getStreamer().EmitValue(Value, Size, ExprLoc);
+      getStreamer().emitValue(Value, Size, ExprLoc);
   }
 
   if (parseToken(AsmToken::EndOfStatement,
@@ -4791,7 +4805,7 @@ bool AsmParser::parseDirectiveRealDCB(StringRef IDVal, const fltSemantics &Seman
     return true;
 
   for (uint64_t i = 0, e = NumValues; i != e; ++i)
-    getStreamer().EmitIntValue(AsInt.getLimitedValue(),
+    getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
 
   return false;
@@ -5726,7 +5740,7 @@ bool AsmParser::parseDirectivePrint(SMLoc DirectiveLoc) {
 }
 
 bool AsmParser::parseDirectiveAddrsig() {
-  getStreamer().EmitAddrsig();
+  getStreamer().emitAddrsig();
   return false;
 }
 
@@ -5736,7 +5750,7 @@ bool AsmParser::parseDirectiveAddrsigSym() {
             "expected identifier in '.addrsig_sym' directive"))
     return true;
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  getStreamer().EmitAddrsigSym(Sym);
+  getStreamer().emitAddrsigSym(Sym);
   return false;
 }
 

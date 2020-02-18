@@ -250,6 +250,10 @@ public:
   /// characters and return the string contents.
   virtual bool parseEscapedString(std::string &Data) = 0;
 
+  /// Parse an angle-bracket delimited string at the current position if one is
+  /// present, returning the string contents.
+  virtual bool parseAngleBracketString(std::string &Data) = 0;
+
   /// Skip to the end of the current statement, for error recovery.
   virtual void eatToEndOfStatement() = 0;
 
@@ -300,9 +304,13 @@ public:
                                      SMLoc &EndLoc) = 0;
 };
 
-/// Create an MCAsmParser instance.
+/// Create an MCAsmParser instance for parsing assembly similar to gas syntax
 MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
                                const MCAsmInfo &, unsigned CB = 0);
+
+/// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
+MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
+                                const MCAsmInfo &, unsigned CB = 0);
 
 } // end namespace llvm
 

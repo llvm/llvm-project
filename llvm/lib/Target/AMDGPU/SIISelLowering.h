@@ -263,6 +263,12 @@ public:
   bool isMemOpUniform(const SDNode *N) const;
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
 
+  static bool isNonGlobalAddrSpace(unsigned AS) {
+    return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS ||
+           AS == AMDGPUAS::PRIVATE_ADDRESS;
+  }
+
+  // FIXME: Missing constant_32bit
   static bool isFlatGlobalAddrSpace(unsigned AS) {
     return AS == AMDGPUAS::GLOBAL_ADDRESS ||
            AS == AMDGPUAS::FLAT_ADDRESS ||

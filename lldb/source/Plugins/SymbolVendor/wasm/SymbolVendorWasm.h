@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SymbolVendorWasm_h_
-#define liblldb_SymbolVendorWasm_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_WASM_SYMBOLVENDORWASM_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_WASM_SYMBOLVENDORWASM_H
 
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/lldb-private.h"
@@ -41,4 +41,4 @@ private:
 } // namespace wasm
 } // namespace lldb_private
 
-#endif // liblldb_SymbolVendorWasm_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_WASM_SYMBOLVENDORWASM_H

@@ -34,10 +34,10 @@ static const char *BTFKindStr[] = {
 void BTFTypeBase::emitType(MCStreamer &OS) {
   OS.AddComment(std::string(BTFKindStr[Kind]) + "(id = " + std::to_string(Id) +
                 ")");
-  OS.EmitIntValue(BTFType.NameOff, 4);
+  OS.emitIntValue(BTFType.NameOff, 4);
   OS.AddComment("0x" + Twine::utohexstr(BTFType.Info));
-  OS.EmitIntValue(BTFType.Info, 4);
-  OS.EmitIntValue(BTFType.Size, 4);
+  OS.emitIntValue(BTFType.Info, 4);
+  OS.emitIntValue(BTFType.Size, 4);
 }
 
 BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
@@ -148,7 +148,7 @@ void BTFTypeInt::completeType(BTFDebug &BDebug) {
 void BTFTypeInt::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
   OS.AddComment("0x" + Twine::utohexstr(IntVal));
-  OS.EmitIntValue(IntVal, 4);
+  OS.emitIntValue(IntVal, 4);
 }
 
 BTFTypeEnum::BTFTypeEnum(const DICompositeType *ETy, uint32_t VLen) : ETy(ETy) {
@@ -179,8 +179,8 @@ void BTFTypeEnum::completeType(BTFDebug &BDebug) {
 void BTFTypeEnum::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
   for (const auto &Enum : EnumValues) {
-    OS.EmitIntValue(Enum.NameOff, 4);
-    OS.EmitIntValue(Enum.Val, 4);
+    OS.emitIntValue(Enum.NameOff, 4);
+    OS.emitIntValue(Enum.Val, 4);
   }
 }
 
@@ -209,9 +209,9 @@ void BTFTypeArray::completeType(BTFDebug &BDebug) {
 
 void BTFTypeArray::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
-  OS.EmitIntValue(ArrayInfo.ElemType, 4);
-  OS.EmitIntValue(ArrayInfo.IndexType, 4);
-  OS.EmitIntValue(ArrayInfo.Nelems, 4);
+  OS.emitIntValue(ArrayInfo.ElemType, 4);
+  OS.emitIntValue(ArrayInfo.IndexType, 4);
+  OS.emitIntValue(ArrayInfo.Nelems, 4);
 }
 
 /// Represent either a struct or a union.
@@ -252,10 +252,10 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
 void BTFTypeStruct::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
   for (const auto &Member : Members) {
-    OS.EmitIntValue(Member.NameOff, 4);
-    OS.EmitIntValue(Member.Type, 4);
+    OS.emitIntValue(Member.NameOff, 4);
+    OS.emitIntValue(Member.Type, 4);
     OS.AddComment("0x" + Twine::utohexstr(Member.Offset));
-    OS.EmitIntValue(Member.Offset, 4);
+    OS.emitIntValue(Member.Offset, 4);
   }
 }
 
@@ -303,8 +303,8 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
 void BTFTypeFuncProto::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
   for (const auto &Param : Parameters) {
-    OS.EmitIntValue(Param.NameOff, 4);
-    OS.EmitIntValue(Param.Type, 4);
+    OS.emitIntValue(Param.NameOff, 4);
+    OS.emitIntValue(Param.Type, 4);
   }
 }
 
@@ -340,7 +340,7 @@ void BTFKindVar::completeType(BTFDebug &BDebug) {
 
 void BTFKindVar::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
-  OS.EmitIntValue(Info, 4);
+  OS.emitIntValue(Info, 4);
 }
 
 BTFKindDataSec::BTFKindDataSec(AsmPrinter *AsmPrt, std::string SecName)
@@ -359,9 +359,9 @@ void BTFKindDataSec::emitType(MCStreamer &OS) {
   BTFTypeBase::emitType(OS);
 
   for (const auto &V : Vars) {
-    OS.EmitIntValue(std::get<0>(V), 4);
+    OS.emitIntValue(std::get<0>(V), 4);
     Asm->emitLabelReference(std::get<1>(V), 4);
-    OS.EmitIntValue(std::get<2>(V), 4);
+    OS.emitIntValue(std::get<2>(V), 4);
   }
 }
 
@@ -711,9 +711,9 @@ void BTFDebug::constructLineInfo(const DISubprogram *SP, MCSymbol *Label,
 
 void BTFDebug::emitCommonHeader() {
   OS.AddComment("0x" + Twine::utohexstr(BTF::MAGIC));
-  OS.EmitIntValue(BTF::MAGIC, 2);
-  OS.EmitIntValue(BTF::VERSION, 1);
-  OS.EmitIntValue(0, 1);
+  OS.emitIntValue(BTF::MAGIC, 2);
+  OS.emitIntValue(BTF::VERSION, 1);
+  OS.emitIntValue(0, 1);
 }
 
 void BTFDebug::emitBTFSection() {
@@ -726,17 +726,17 @@ void BTFDebug::emitBTFSection() {
 
   // Emit header.
   emitCommonHeader();
-  OS.EmitIntValue(BTF::HeaderSize, 4);
+  OS.emitIntValue(BTF::HeaderSize, 4);
 
   uint32_t TypeLen = 0, StrLen;
   for (const auto &TypeEntry : TypeEntries)
     TypeLen += TypeEntry->getSize();
   StrLen = StringTable.getSize();
 
-  OS.EmitIntValue(0, 4);
-  OS.EmitIntValue(TypeLen, 4);
-  OS.EmitIntValue(TypeLen, 4);
-  OS.EmitIntValue(StrLen, 4);
+  OS.emitIntValue(0, 4);
+  OS.emitIntValue(TypeLen, 4);
+  OS.emitIntValue(TypeLen, 4);
+  OS.emitIntValue(StrLen, 4);
 
   // Emit type table.
   for (const auto &TypeEntry : TypeEntries)
@@ -764,7 +764,7 @@ void BTFDebug::emitBTFExtSection() {
 
   // Emit header.
   emitCommonHeader();
-  OS.EmitIntValue(BTF::ExtHeaderSize, 4);
+  OS.emitIntValue(BTF::ExtHeaderSize, 4);
 
   // Account for FuncInfo/LineInfo record size as well.
   uint32_t FuncLen = 4, LineLen = 4;
@@ -786,59 +786,59 @@ void BTFDebug::emitBTFExtSection() {
   if (FieldRelocLen)
     FieldRelocLen += 4;
 
-  OS.EmitIntValue(0, 4);
-  OS.EmitIntValue(FuncLen, 4);
-  OS.EmitIntValue(FuncLen, 4);
-  OS.EmitIntValue(LineLen, 4);
-  OS.EmitIntValue(FuncLen + LineLen, 4);
-  OS.EmitIntValue(FieldRelocLen, 4);
+  OS.emitIntValue(0, 4);
+  OS.emitIntValue(FuncLen, 4);
+  OS.emitIntValue(FuncLen, 4);
+  OS.emitIntValue(LineLen, 4);
+  OS.emitIntValue(FuncLen + LineLen, 4);
+  OS.emitIntValue(FieldRelocLen, 4);
 
   // Emit func_info table.
   OS.AddComment("FuncInfo");
-  OS.EmitIntValue(BTF::BPFFuncInfoSize, 4);
+  OS.emitIntValue(BTF::BPFFuncInfoSize, 4);
   for (const auto &FuncSec : FuncInfoTable) {
     OS.AddComment("FuncInfo section string offset=" +
                   std::to_string(FuncSec.first));
-    OS.EmitIntValue(FuncSec.first, 4);
-    OS.EmitIntValue(FuncSec.second.size(), 4);
+    OS.emitIntValue(FuncSec.first, 4);
+    OS.emitIntValue(FuncSec.second.size(), 4);
     for (const auto &FuncInfo : FuncSec.second) {
       Asm->emitLabelReference(FuncInfo.Label, 4);
-      OS.EmitIntValue(FuncInfo.TypeId, 4);
+      OS.emitIntValue(FuncInfo.TypeId, 4);
     }
   }
 
   // Emit line_info table.
   OS.AddComment("LineInfo");
-  OS.EmitIntValue(BTF::BPFLineInfoSize, 4);
+  OS.emitIntValue(BTF::BPFLineInfoSize, 4);
   for (const auto &LineSec : LineInfoTable) {
     OS.AddComment("LineInfo section string offset=" +
                   std::to_string(LineSec.first));
-    OS.EmitIntValue(LineSec.first, 4);
-    OS.EmitIntValue(LineSec.second.size(), 4);
+    OS.emitIntValue(LineSec.first, 4);
+    OS.emitIntValue(LineSec.second.size(), 4);
     for (const auto &LineInfo : LineSec.second) {
       Asm->emitLabelReference(LineInfo.Label, 4);
-      OS.EmitIntValue(LineInfo.FileNameOff, 4);
-      OS.EmitIntValue(LineInfo.LineOff, 4);
+      OS.emitIntValue(LineInfo.FileNameOff, 4);
+      OS.emitIntValue(LineInfo.LineOff, 4);
       OS.AddComment("Line " + std::to_string(LineInfo.LineNum) + " Col " +
                     std::to_string(LineInfo.ColumnNum));
-      OS.EmitIntValue(LineInfo.LineNum << 10 | LineInfo.ColumnNum, 4);
+      OS.emitIntValue(LineInfo.LineNum << 10 | LineInfo.ColumnNum, 4);
     }
   }
 
   // Emit field reloc table.
   if (FieldRelocLen) {
     OS.AddComment("FieldReloc");
-    OS.EmitIntValue(BTF::BPFFieldRelocSize, 4);
+    OS.emitIntValue(BTF::BPFFieldRelocSize, 4);
     for (const auto &FieldRelocSec : FieldRelocTable) {
       OS.AddComment("Field reloc section string offset=" +
                     std::to_string(FieldRelocSec.first));
-      OS.EmitIntValue(FieldRelocSec.first, 4);
-      OS.EmitIntValue(FieldRelocSec.second.size(), 4);
+      OS.emitIntValue(FieldRelocSec.first, 4);
+      OS.emitIntValue(FieldRelocSec.second.size(), 4);
       for (const auto &FieldRelocInfo : FieldRelocSec.second) {
         Asm->emitLabelReference(FieldRelocInfo.Label, 4);
-        OS.EmitIntValue(FieldRelocInfo.TypeID, 4);
-        OS.EmitIntValue(FieldRelocInfo.OffsetNameOff, 4);
-        OS.EmitIntValue(FieldRelocInfo.RelocKind, 4);
+        OS.emitIntValue(FieldRelocInfo.TypeID, 4);
+        OS.emitIntValue(FieldRelocInfo.OffsetNameOff, 4);
+        OS.emitIntValue(FieldRelocInfo.RelocKind, 4);
       }
     }
   }

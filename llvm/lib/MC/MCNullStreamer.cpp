@@ -23,7 +23,7 @@ namespace {
     /// @{
 
     bool hasRawTextSupport() const override { return true; }
-    void EmitRawTextImpl(StringRef String) override {}
+    void emitRawTextImpl(StringRef String) override {}
 
     bool emitSymbolAttribute(MCSymbol *Symbol,
                              MCSymbolAttr Attribute) override {

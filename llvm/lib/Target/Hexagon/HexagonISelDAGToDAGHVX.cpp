@@ -2201,29 +2201,29 @@ void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
   SDNode *Result;
   switch (IID) {
   case Intrinsic::hexagon_V6_vaddcarry: {
-    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
-                                    N->getOperand(3) };
+    std::array<SDValue, 3> Ops = {N->getOperand(1), N->getOperand(2),
+                                  N->getOperand(3)};
     SDVTList VTs = CurDAG->getVTList(MVT::v16i32, MVT::v512i1);
     Result = CurDAG->getMachineNode(Hexagon::V6_vaddcarry, SDLoc(N), VTs, Ops);
     break;
   }
   case Intrinsic::hexagon_V6_vaddcarry_128B: {
-    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
-                                    N->getOperand(3) };
+    std::array<SDValue, 3> Ops = {N->getOperand(1), N->getOperand(2),
+                                  N->getOperand(3)};
     SDVTList VTs = CurDAG->getVTList(MVT::v32i32, MVT::v1024i1);
     Result = CurDAG->getMachineNode(Hexagon::V6_vaddcarry, SDLoc(N), VTs, Ops);
     break;
   }
   case Intrinsic::hexagon_V6_vsubcarry: {
-    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
-                                    N->getOperand(3) };
+    std::array<SDValue, 3> Ops = {N->getOperand(1), N->getOperand(2),
+                                  N->getOperand(3)};
     SDVTList VTs = CurDAG->getVTList(MVT::v16i32, MVT::v512i1);
     Result = CurDAG->getMachineNode(Hexagon::V6_vsubcarry, SDLoc(N), VTs, Ops);
     break;
   }
   case Intrinsic::hexagon_V6_vsubcarry_128B: {
-    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
-                                    N->getOperand(3) };
+    std::array<SDValue, 3> Ops = {N->getOperand(1), N->getOperand(2),
+                                  N->getOperand(3)};
     SDVTList VTs = CurDAG->getVTList(MVT::v32i32, MVT::v1024i1);
     Result = CurDAG->getMachineNode(Hexagon::V6_vsubcarry, SDLoc(N), VTs, Ops);
     break;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandReturnObject_h_
-#define liblldb_CommandReturnObject_h_
+#ifndef LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
+#define LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/StreamString.h"
@@ -157,4 +157,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandReturnObject_h_
+#endif // LLDB_INTERPRETER_COMMANDRETURNOBJECT_H

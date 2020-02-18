@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Type_h_
-#define liblldb_Type_h_
+#ifndef LLDB_SYMBOL_TYPE_H
+#define LLDB_SYMBOL_TYPE_H
 
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -510,4 +510,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Type_h_
+#endif // LLDB_SYMBOL_TYPE_H

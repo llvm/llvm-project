@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
-#define SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
 
@@ -43,9 +43,6 @@ public:
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
 protected:
-  void LoadSectionData(lldb::SectionType sect_type,
-                       lldb_private::DWARFDataExtractor &data) override;
-
   DIEToTypePtr &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
@@ -72,4 +69,4 @@ protected:
   SymbolFileDWARF &m_base_symbol_file;
 };
 
-#endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H

@@ -267,7 +267,7 @@ public:
   void AddCXXDefinitionData(const CXXRecordDecl *D);
 
   /// Write an OMPTraitInfo object.
-  void writeOMPTraitInfo(OMPTraitInfo *TI);
+  void writeOMPTraitInfo(const OMPTraitInfo &TI);
 
   void writeOMPClause(OMPClause *C);
 

@@ -104,7 +104,7 @@ operator=(const lldb::SBSourceManager &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBSourceManager::~SBSourceManager() {}
+SBSourceManager::~SBSourceManager() = default;
 
 size_t SBSourceManager::DisplaySourceLinesWithLineNumbers(
     const SBFileSpec &file, uint32_t line, uint32_t context_before,

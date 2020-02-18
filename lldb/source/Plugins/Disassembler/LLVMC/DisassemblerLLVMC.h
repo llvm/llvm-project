@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DisassemblerLLVMC_h_
-#define liblldb_DisassemblerLLVMC_h_
+#ifndef LLDB_SOURCE_PLUGINS_DISASSEMBLER_LLVMC_DISASSEMBLERLLVMC_H
+#define LLDB_SOURCE_PLUGINS_DISASSEMBLER_LLVMC_DISASSEMBLERLLVMC_H
 
 #include <memory>
 #include <mutex>
@@ -82,4 +82,4 @@ protected:
   std::unique_ptr<MCDisasmInstance> m_alternate_disasm_up;
 };
 
-#endif // liblldb_DisassemblerLLVM_h_
+#endif // LLDB_SOURCE_PLUGINS_DISASSEMBLER_LLVMC_DISASSEMBLERLLVMC_H

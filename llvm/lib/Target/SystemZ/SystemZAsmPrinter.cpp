@@ -695,7 +695,7 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
                             OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(ZCPV->getType());
 
-  OutStreamer->EmitValue(Expr, Size);
+  OutStreamer->emitValue(Expr, Size);
 }
 
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

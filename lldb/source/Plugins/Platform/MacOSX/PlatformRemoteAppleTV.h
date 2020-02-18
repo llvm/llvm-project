@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformRemoteAppleTV_h_
-#define liblldb_PlatformRemoteAppleTV_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
 
 #include <string>
 
@@ -61,4 +61,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformRemoteAppleTV);
 };
 
-#endif // liblldb_PlatformRemoteAppleTV_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextCorePOSIX_powerpc_h_
-#define liblldb_RegisterContextCorePOSIX_powerpc_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -57,4 +57,4 @@ private:
   lldb_private::DataExtractor m_vec;
 };
 
-#endif // liblldb_RegisterContextCorePOSIX_powerpc_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H

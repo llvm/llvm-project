@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StoppointLocation_h_
-#define liblldb_StoppointLocation_h_
+#ifndef LLDB_BREAKPOINT_STOPPOINTLOCATION_H
+#define LLDB_BREAKPOINT_STOPPOINTLOCATION_H
 
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -83,4 +83,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_StoppointLocation_h_
+#endif // LLDB_BREAKPOINT_STOPPOINTLOCATION_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormattersHelpers_h_
-#define lldb_FormattersHelpers_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H
+#define LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -184,4 +184,4 @@ private:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // lldb_FormattersHelpers_h_
+#endif // LLDB_DATAFORMATTERS_FORMATTERSHELPERS_H

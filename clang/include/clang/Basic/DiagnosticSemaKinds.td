@@ -1067,8 +1067,8 @@ def err_objc_direct_on_protocol : Error<
   "'objc_direct' attribute cannot be applied to %select{methods|properties}0 "
   "declared in an Objective-C protocol">;
 def err_objc_direct_duplicate_decl : Error<
-  "%select{|direct }0method declaration conflicts "
-  "with previous %select{|direct }1declaration of method %2">;
+  "%select{|direct }0%select{method|property}1 declaration conflicts "
+  "with previous %select{|direct }2declaration of %select{method|property}1 %3">;
 def err_objc_direct_impl_decl_mismatch : Error<
   "direct method was declared in %select{the primary interface|an extension|a category}0 "
   "but is implemented in %select{the primary interface|a category|a different category}1">;
@@ -1084,6 +1084,8 @@ def warn_objc_direct_ignored : Warning<
 def warn_objc_direct_property_ignored : Warning<
   "direct attribute on property %0 ignored (not implemented by this Objective-C runtime)">,
   InGroup<IgnoredAttributes>;
+def err_objc_direct_dynamic_property : Error<
+  "direct property cannot be @dynamic">;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "
@@ -3712,6 +3714,15 @@ def warn_int_to_pointer_cast : Warning<
 def warn_int_to_void_pointer_cast : Warning<
   "cast to %1 from smaller integer type %0">,
   InGroup<IntToVoidPointerCast>;
+def warn_pointer_to_int_cast : Warning<
+  "cast to smaller integer type %1 from %0">,
+  InGroup<PointerToIntCast>;
+def warn_void_pointer_to_int_cast : Warning<
+  "cast to smaller integer type %1 from %0">,
+  InGroup<VoidPointerToIntCast>;
+def ext_ms_pointer_to_int_cast : ExtWarn<
+  "cast to smaller integer type %1 from %0 is a Microsoft extension">,
+InGroup<MicrosoftCast>;
 
 def warn_attribute_ignored_for_field_of_type : Warning<
   "%0 attribute ignored for field of type %1">,

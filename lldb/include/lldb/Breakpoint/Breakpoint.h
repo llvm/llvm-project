@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Breakpoint_h_
-#define liblldb_Breakpoint_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINT_H
+#define LLDB_BREAKPOINT_BREAKPOINT_H
 
 #include <memory>
 #include <string>
@@ -142,7 +142,8 @@ public:
 
   // Saving & restoring breakpoints:
   static lldb::BreakpointSP CreateFromStructuredData(
-      Target &target, StructuredData::ObjectSP &data_object_sp, Status &error);
+      lldb::TargetSP target_sp, StructuredData::ObjectSP &data_object_sp,
+      Status &error);
 
   static bool
   SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
@@ -568,6 +569,11 @@ public:
     return GetPermissions().GetAllowDelete();
   }
 
+  // This one should only be used by Target to copy breakpoints from target to
+  // target - primarily from the dummy target to prime new targets.
+  static lldb::BreakpointSP CopyFromBreakpoint(lldb::TargetSP new_target,
+      const Breakpoint &bp_to_copy_from);
+
 protected:
   friend class Target;
   // Protected Methods
@@ -625,9 +631,8 @@ protected:
   }
 
 private:
-  // This one should only be used by Target to copy breakpoints from target to
-  // target - primarily from the dummy target to prime new targets.
-  Breakpoint(Target &new_target, Breakpoint &bp_to_copy_from);
+  // To call from CopyFromBreakpoint.
+  Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
   bool m_being_created;
@@ -669,4 +674,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Breakpoint_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINT_H

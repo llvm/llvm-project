@@ -247,7 +247,7 @@ void dwarfgen::LineTable::writeData(ArrayRef<ValueAndLength> Data,
     case Half:
     case Long:
     case Quad:
-      Asm.OutStreamer->EmitIntValue(Entry.Value, Entry.Length);
+      Asm.OutStreamer->emitIntValue(Entry.Value, Entry.Length);
       continue;
     case ULEB:
       Asm.emitULEB128(Entry.Value);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanStepUntil_h_
-#define liblldb_ThreadPlanStepUntil_h_
+#ifndef LLDB_TARGET_THREADPLANSTEPUNTIL_H
+#define LLDB_TARGET_THREADPLANSTEPUNTIL_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -64,4 +64,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanStepUntil_h_
+#endif // LLDB_TARGET_THREADPLANSTEPUNTIL_H

@@ -38,7 +38,7 @@ int d;
 #pragma omp end declare target
 int c;
 
-int bar() { return 1 + foo() + bar() + baz1() + baz2(); }
+int bar() { return 1 + foo() + bar() + baz1() + baz2(); } // expected-note {{called by 'bar'}}
 
 int maini1() {
   int a;
@@ -49,7 +49,7 @@ int maini1() {
   {
     S s(a);
     static long aaa = 23;
-    a = foo() + bar() + b + c + d + aa + aaa + FA<int>();
+    a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}
     if (!a)
       throw "Error"; // expected-error {{cannot use 'throw' with exceptions disabled}}
   }

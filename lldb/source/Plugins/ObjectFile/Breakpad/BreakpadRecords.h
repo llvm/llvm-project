@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
-#define LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
 
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-types.h"
@@ -183,4 +183,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StackWinRecord &R);
 } // namespace breakpad
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H

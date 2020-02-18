@@ -327,9 +327,10 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
 }
 
 template <typename LoopTy>
-Optional<TiledLinalgOp>
-tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
-                 ArrayRef<unsigned> permutation, OperationFolder *folder) {
+Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
+                                                ArrayRef<Value> tileSizes,
+                                                ArrayRef<unsigned> permutation,
+                                                OperationFolder *folder) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   // 1. Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBUnixSignals_h_
-#define LLDB_SBUnixSignals_h_
+#ifndef LLDB_API_SBUNIXSIGNALS_H
+#define LLDB_API_SBUNIXSIGNALS_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -68,4 +68,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBUnixSignals_h_
+#endif // LLDB_API_SBUNIXSIGNALS_H

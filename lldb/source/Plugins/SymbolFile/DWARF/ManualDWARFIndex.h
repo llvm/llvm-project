@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_MANUALDWARFINDEX_H
-#define LLDB_MANUALDWARFINDEX_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
@@ -71,4 +71,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_MANUALDWARFINDEX_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H

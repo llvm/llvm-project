@@ -295,6 +295,7 @@ llvm::omp::getOpenMPContextTraitSetForSelector(TraitSelector Selector) {
     return TraitSet::TraitSetEnum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
+  llvm_unreachable("Unknown trait selector!");
 }
 TraitSet
 llvm::omp::getOpenMPContextTraitSetForProperty(TraitProperty Property) {

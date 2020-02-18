@@ -835,6 +835,9 @@ bool LLParser::ParseSummaryEntry() {
   case lltok::kw_typeidCompatibleVTable:
     result = ParseTypeIdCompatibleVtableEntry(SummaryID);
     break;
+  case lltok::kw_flags:
+    result = ParseSummaryIndexFlags();
+    break;
   default:
     result = Error(Lex.getLoc(), "unexpected summary kind");
     break;
@@ -3416,7 +3419,7 @@ bool LLParser::ParseValID(ValID &ID, PerFunctionState *PFS) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
- 
+
   // Unary Operators.
   case lltok::kw_fneg: {
     unsigned Opc = Lex.getUIntVal();
@@ -3426,7 +3429,7 @@ bool LLParser::ParseValID(ValID &ID, PerFunctionState *PFS) {
         ParseGlobalTypeAndValue(Val) ||
         ParseToken(lltok::rparen, "expected ')' in unary constantexpr"))
       return true;
-    
+
     // Check that the type is valid for the operator.
     switch (Opc) {
     case Instruction::FNeg:
@@ -4774,7 +4777,7 @@ bool LLParser::ParseDICommonBlock(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(file, MDField, );                                                   \
-  OPTIONAL(line, LineField, );						       
+  OPTIONAL(line, LineField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -8003,6 +8006,21 @@ void LLParser::AddGlobalValueToIndex(
       NumberedValueInfos.resize(ID + 1);
     NumberedValueInfos[ID] = VI;
   }
+}
+
+/// ParseSummaryIndexFlags
+///   ::= 'flags' ':' UInt64
+bool LLParser::ParseSummaryIndexFlags() {
+  assert(Lex.getKind() == lltok::kw_flags);
+  Lex.Lex();
+
+  if (ParseToken(lltok::colon, "expected ':' here"))
+    return true;
+  uint64_t Flags;
+  if (ParseUInt64(Flags))
+    return true;
+  Index->setFlags(Flags);
+  return false;
 }
 
 /// ParseGVEntry

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformWindows_h_
-#define liblldb_PlatformWindows_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H
 
 #include "lldb/Target/RemoteAwarePlatform.h"
 
@@ -77,4 +77,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_PlatformWindows_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H

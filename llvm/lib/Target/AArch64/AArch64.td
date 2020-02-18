@@ -240,11 +240,11 @@ def FeatureDotProd : SubtargetFeature<
 
 def FeaturePA : SubtargetFeature<
     "pa", "HasPA", "true",
-    "Enable v8.3-A Pointer Authentication enchancement">;
+    "Enable v8.3-A Pointer Authentication extension">;
 
 def FeatureJS : SubtargetFeature<
     "jsconv", "HasJS", "true",
-    "Enable v8.3-A JavaScript FP conversion enchancement",
+    "Enable v8.3-A JavaScript FP conversion instructions",
     [FeatureFPARMv8]>;
 
 def FeatureCCIDX : SubtargetFeature<
@@ -853,6 +853,7 @@ def : ProcessorModel<"generic", NoSchedModel, [
                      ]>;
 
 def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
+def : ProcessorModel<"cortex-a34", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;

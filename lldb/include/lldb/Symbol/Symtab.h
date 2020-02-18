@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Symtab_h_
-#define liblldb_Symtab_h_
+#ifndef LLDB_SYMBOL_SYMTAB_H
+#define LLDB_SYMBOL_SYMTAB_H
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/Symbol.h"
@@ -229,4 +229,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Symtab_h_
+#endif // LLDB_SYMBOL_SYMTAB_H

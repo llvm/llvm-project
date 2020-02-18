@@ -60,9 +60,9 @@ public:
                              unsigned ByteAlignment) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     unsigned ByteAlignment, SMLoc Loc = SMLoc()) override;
-  void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
+  void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
-  void EmitIdent(StringRef IdentString) override;
+  void emitIdent(StringRef IdentString) override;
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void FinishImpl() override;
 

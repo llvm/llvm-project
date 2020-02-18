@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __RNBContext_h__
-#define __RNBContext_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBCONTEXT_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBCONTEXT_H
 
 #include "DNBError.h"
 #include "PThreadEvent.h"
@@ -153,4 +153,4 @@ private:
   RNBContext &operator=(const RNBContext &rhs) = delete;
 };
 
-#endif // #ifndef __RNBContext_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBCONTEXT_H

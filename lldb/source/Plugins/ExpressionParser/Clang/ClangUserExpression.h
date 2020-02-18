@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangUserExpression_h_
-#define liblldb_ClangUserExpression_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H
 
 #include <vector>
 
@@ -250,4 +250,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangUserExpression_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUSEREXPRESSION_H

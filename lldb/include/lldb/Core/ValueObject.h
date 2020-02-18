@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObject_h_
-#define liblldb_ValueObject_h_
+#ifndef LLDB_CORE_VALUEOBJECT_H
+#define LLDB_CORE_VALUEOBJECT_H
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -1020,4 +1020,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObject_h_
+#endif // LLDB_CORE_VALUEOBJECT_H

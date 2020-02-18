@@ -260,7 +260,7 @@ public:
   }
 
   /// Read an OMPTraitInfo object, advancing Idx.
-  OMPTraitInfo *readOMPTraitInfo();
+  OMPTraitInfo readOMPTraitInfo();
 
   /// Read an OpenMP clause, advancing Idx.
   OMPClause *readOMPClause();

@@ -1171,7 +1171,7 @@ size_t SymbolFileNativePDB::ParseBlocksRecursive(Function &func) {
 void SymbolFileNativePDB::DumpClangAST(Stream &s) { m_ast->Dump(s); }
 
 void SymbolFileNativePDB::FindGlobalVariables(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   using SymbolAndOffset = std::pair<uint32_t, llvm::codeview::CVSymbol>;
@@ -1198,7 +1198,7 @@ void SymbolFileNativePDB::FindGlobalVariables(
 }
 
 void SymbolFileNativePDB::FindFunctions(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1236,7 +1236,7 @@ void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
                                         SymbolContextList &sc_list) {}
 
 void SymbolFileNativePDB::FindTypes(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1563,7 +1563,7 @@ void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
 
 CompilerDeclContext
 SymbolFileNativePDB::FindNamespace(ConstString name,
-                                   const CompilerDeclContext *parent_decl_ctx) {
+                                   const CompilerDeclContext &parent_decl_ctx) {
   return {};
 }
 

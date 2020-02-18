@@ -21,3 +21,7 @@ MCTargetOptions::MCTargetOptions()
 StringRef MCTargetOptions::getABIName() const {
   return ABIName;
 }
+
+StringRef MCTargetOptions::getAssemblyLanguage() const {
+  return AssemblyLanguage;
+}

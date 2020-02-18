@@ -208,7 +208,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
     if (Sym->isUndefined()) {
       OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Global);
-      OutStreamer.EmitIntValue(Value, AlignSize);
+      OutStreamer.emitIntValue(Value, AlignSize);
       OutStreamer.emitCodeAlignment(AlignSize);
     }
   } else {
@@ -236,7 +236,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
     if (Sym->isUndefined()) {
       OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Local);
-      OutStreamer.EmitValue(Imm.getExpr(), AlignSize);
+      OutStreamer.emitValue(Imm.getExpr(), AlignSize);
       OutStreamer.emitCodeAlignment(AlignSize);
     }
   }

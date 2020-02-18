@@ -2610,17 +2610,13 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
                         MachineMemOperand::MOVolatile);
   }
 
-  // Perform the comparison via a subtract/getsetcc.
-  EVT VT = Guard.getValueType();
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, Guard, GuardVal);
-
+  // Perform the comparison via a getsetcc.
   SDValue Cmp = DAG.getSetCC(dl, TLI.getSetCCResultType(DAG.getDataLayout(),
                                                         *DAG.getContext(),
-                                                        Sub.getValueType()),
-                             Sub, DAG.getConstant(0, dl, VT), ISD::SETNE);
+                                                        Guard.getValueType()),
+                             Guard, GuardVal, ISD::SETNE);
 
-  // If the sub is not 0, then we know the guard/stackslot do not equal, so
-  // branch to failure MBB.
+  // If the guard/stackslot do not equal, branch to failure MBB.
   SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
                                MVT::Other, GuardVal.getOperand(0),
                                Cmp, DAG.getBasicBlock(SPD.getFailureMBB()));
@@ -3312,9 +3308,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   SDValue Cond     = getValue(I.getOperand(0));
   SDValue LHSVal   = getValue(I.getOperand(1));
   SDValue RHSVal   = getValue(I.getOperand(2));
-  auto BaseOps = {Cond};
-  ISD::NodeType OpCode = Cond.getValueType().isVector() ?
-    ISD::VSELECT : ISD::SELECT;
+  SmallVector<SDValue, 1> BaseOps(1, Cond);
+  ISD::NodeType OpCode =
+      Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT;
 
   bool IsUnaryAbs = false;
 
@@ -3397,13 +3393,13 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       OpCode = Opc;
       LHSVal = getValue(LHS);
       RHSVal = getValue(RHS);
-      BaseOps = {};
+      BaseOps.clear();
     }
 
     if (IsUnaryAbs) {
       OpCode = Opc;
       LHSVal = getValue(LHS);
-      BaseOps = {};
+      BaseOps.clear();
     }
   }
 

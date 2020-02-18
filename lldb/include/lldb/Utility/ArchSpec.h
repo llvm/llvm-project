@@ -541,4 +541,4 @@ bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_UTILITY_ARCHSPEC_H
+#endif // LLDB_UTILITY_ARCHSPEC_H

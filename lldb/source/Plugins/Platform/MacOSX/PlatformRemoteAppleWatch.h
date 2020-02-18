@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformRemoteAppleWatch_h_
-#define liblldb_PlatformRemoteAppleWatch_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H
 
 #include <string>
 #include <vector>
@@ -64,4 +64,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformRemoteAppleWatch);
 };
 
-#endif // liblldb_PlatformRemoteAppleWatch_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEWATCH_H

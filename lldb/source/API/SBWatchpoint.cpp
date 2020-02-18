@@ -46,7 +46,7 @@ const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBWatchpoint::~SBWatchpoint() {}
+SBWatchpoint::~SBWatchpoint() = default;
 
 watch_id_t SBWatchpoint::GetID() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::watch_id_t, SBWatchpoint, GetID);

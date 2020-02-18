@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostInfo_h_
-#define lldb_Host_HostInfo_h_
+#ifndef LLDB_HOST_HOSTINFO_H
+#define LLDB_HOST_HOSTINFO_H
 
 /// \class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
 /// A class that provides host computer information.

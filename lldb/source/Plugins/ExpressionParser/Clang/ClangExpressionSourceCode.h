@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangExpressionSourceCode_h
-#define liblldb_ClangExpressionSourceCode_h
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONSOURCECODE_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONSOURCECODE_H
 
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/ExpressionSourceCode.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_WindowsMiniDump_h_
-#define liblldb_WindowsMiniDump_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_WINDOWSMINIDUMP_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_WINDOWSMINIDUMP_H
 
 #include "lldb/Target/Process.h"
 

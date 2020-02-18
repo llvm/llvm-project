@@ -4,8 +4,8 @@ int side_effect = 0;
 
 struct B { int dummy = 2324; };
 struct C {
-  void *operator new(size_t size) { C* r = ::new C; r->custom_new = true; return r; }
-  void *operator new[](size_t size) { C* r = static_cast<C*>(std::malloc(size)); r->custom_new = true; return r; }
+  void *operator new(std::size_t size) { C* r = ::new C; r->custom_new = true; return r; }
+  void *operator new[](std::size_t size) { C* r = static_cast<C*>(std::malloc(size)); r->custom_new = true; return r; }
   void operator delete(void *p) { std::free(p); side_effect = 1; }
   void operator delete[](void *p) { std::free(p); side_effect = 2; }
 

@@ -89,7 +89,7 @@ SBType &SBType::operator=(const SBType &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBType::~SBType() {}
+SBType::~SBType() = default;
 
 TypeImpl &SBType::ref() {
   if (m_opaque_sp.get() == nullptr)
@@ -619,13 +619,13 @@ uint32_t SBTypeList::GetSize() {
   return m_opaque_up->GetSize();
 }
 
-SBTypeList::~SBTypeList() {}
+SBTypeList::~SBTypeList() = default;
 
 SBTypeMember::SBTypeMember() : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMember);
 }
 
-SBTypeMember::~SBTypeMember() {}
+SBTypeMember::~SBTypeMember() = default;
 
 SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR(SBTypeMember, (const lldb::SBTypeMember &), rhs);
@@ -756,7 +756,7 @@ SBTypeMemberFunction::SBTypeMemberFunction() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMemberFunction);
 }
 
-SBTypeMemberFunction::~SBTypeMemberFunction() {}
+SBTypeMemberFunction::~SBTypeMemberFunction() = default;
 
 SBTypeMemberFunction::SBTypeMemberFunction(const SBTypeMemberFunction &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {

@@ -28,7 +28,7 @@ WebAssemblyTargetStreamer::WebAssemblyTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S) {}
 
 void WebAssemblyTargetStreamer::emitValueType(wasm::ValType Type) {
-  Streamer.EmitIntValue(uint8_t(Type), 1);
+  Streamer.emitIntValue(uint8_t(Type), 1);
 }
 
 WebAssemblyTargetAsmStreamer::WebAssemblyTargetAsmStreamer(

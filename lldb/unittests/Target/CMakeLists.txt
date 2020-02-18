@@ -1,4 +1,5 @@
 add_lldb_unittest(TargetTests
+  ABITest.cpp
   ExecutionContextTest.cpp
   MemoryRegionInfoTest.cpp
   ModuleCacheTest.cpp

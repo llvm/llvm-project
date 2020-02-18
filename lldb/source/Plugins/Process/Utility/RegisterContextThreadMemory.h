@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterContextThreadMemory_h_
-#define lldb_RegisterContextThreadMemory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H
 
 #include <vector>
 
@@ -97,4 +97,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_RegisterContextThreadMemory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H

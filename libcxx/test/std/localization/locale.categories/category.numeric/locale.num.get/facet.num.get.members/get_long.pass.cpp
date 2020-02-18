@@ -15,7 +15,6 @@
 
 // This test exercises the fix for PR28704, which isn't in the dylib for
 // some systems.
-// XFAIL: with_system_cxx_lib=macosx10.15
 // XFAIL: with_system_cxx_lib=macosx10.14
 // XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12

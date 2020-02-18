@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextPOSIX_mips64_h_
-#define liblldb_RegisterContextPOSIX_mips64_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_MIPS64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_MIPS64_H
 
 #include "RegisterContext_mips.h"
 #include "RegisterInfoInterface.h"
@@ -81,4 +81,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // liblldb_RegisterContextPOSIX_mips64_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_MIPS64_H

@@ -269,7 +269,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
   OutStreamer->emitULEB128IntValue(EmittedFeatures.size());
   for (auto &F : EmittedFeatures) {
-    OutStreamer->EmitIntValue(F.Prefix, 1);
+    OutStreamer->emitIntValue(F.Prefix, 1);
     OutStreamer->emitULEB128IntValue(F.Name.size());
     OutStreamer->emitBytes(F.Name);
   }

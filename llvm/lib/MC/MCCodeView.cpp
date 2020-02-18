@@ -172,7 +172,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
   MCSymbol *StringBegin = Ctx.createTempSymbol("strtab_begin", false),
            *StringEnd = Ctx.createTempSymbol("strtab_end", false);
 
-  OS.EmitIntValue(unsigned(DebugSubsectionKind::StringTable), 4);
+  OS.emitIntValue(unsigned(DebugSubsectionKind::StringTable), 4);
   OS.emitAbsoluteSymbolDiff(StringEnd, StringBegin, 4);
   OS.emitLabel(StringBegin);
 
@@ -199,7 +199,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
   MCSymbol *FileBegin = Ctx.createTempSymbol("filechecksums_begin", false),
            *FileEnd = Ctx.createTempSymbol("filechecksums_end", false);
 
-  OS.EmitIntValue(unsigned(DebugSubsectionKind::FileChecksums), 4);
+  OS.emitIntValue(unsigned(DebugSubsectionKind::FileChecksums), 4);
   OS.emitAbsoluteSymbolDiff(FileEnd, FileBegin, 4);
   OS.emitLabel(FileBegin);
 
@@ -221,16 +221,16 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
       CurrentOffset = alignTo(CurrentOffset, 4);
     }
 
-    OS.EmitIntValue(File.StringTableOffset, 4);
+    OS.emitIntValue(File.StringTableOffset, 4);
 
     if (!File.ChecksumKind) {
       // There is no checksum.  Therefore zero the next two fields and align
       // back to 4 bytes.
-      OS.EmitIntValue(0, 4);
+      OS.emitIntValue(0, 4);
       continue;
     }
-    OS.EmitIntValue(static_cast<uint8_t>(File.Checksum.size()), 1);
-    OS.EmitIntValue(File.ChecksumKind, 1);
+    OS.emitIntValue(static_cast<uint8_t>(File.Checksum.size()), 1);
+    OS.emitIntValue(File.ChecksumKind, 1);
     OS.emitBytes(toStringRef(File.Checksum));
     OS.emitValueToAlignment(4);
   }
@@ -331,7 +331,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   MCSymbol *LineBegin = Ctx.createTempSymbol("linetable_begin", false),
            *LineEnd = Ctx.createTempSymbol("linetable_end", false);
 
-  OS.EmitIntValue(unsigned(DebugSubsectionKind::Lines), 4);
+  OS.emitIntValue(unsigned(DebugSubsectionKind::Lines), 4);
   OS.emitAbsoluteSymbolDiff(LineEnd, LineBegin, 4);
   OS.emitLabel(LineBegin);
   OS.EmitCOFFSecRel32(FuncBegin, /*Offset=*/0);
@@ -342,7 +342,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   bool HaveColumns = any_of(Locs, [](const MCCVLoc &LineEntry) {
     return LineEntry.getColumn() != 0;
   });
-  OS.EmitIntValue(HaveColumns ? int(LF_HaveColumns) : 0, 2);
+  OS.emitIntValue(HaveColumns ? int(LF_HaveColumns) : 0, 2);
   OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 4);
 
   for (auto I = Locs.begin(), E = Locs.end(); I != E;) {
@@ -359,24 +359,24 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
                   ->getContents()[Files[CurFileNum - 1].StringTableOffset]) +
         "' begins");
     OS.EmitCVFileChecksumOffsetDirective(CurFileNum);
-    OS.EmitIntValue(EntryCount, 4);
+    OS.emitIntValue(EntryCount, 4);
     uint32_t SegmentSize = 12;
     SegmentSize += 8 * EntryCount;
     if (HaveColumns)
       SegmentSize += 4 * EntryCount;
-    OS.EmitIntValue(SegmentSize, 4);
+    OS.emitIntValue(SegmentSize, 4);
 
     for (auto J = I; J != FileSegEnd; ++J) {
       OS.emitAbsoluteSymbolDiff(J->getLabel(), FuncBegin, 4);
       unsigned LineData = J->getLine();
       if (J->isStmt())
         LineData |= LineInfo::StatementFlag;
-      OS.EmitIntValue(LineData, 4);
+      OS.emitIntValue(LineData, 4);
     }
     if (HaveColumns) {
       for (auto J = I; J != FileSegEnd; ++J) {
-        OS.EmitIntValue(J->getColumn(), 2);
-        OS.EmitIntValue(0, 2);
+        OS.emitIntValue(J->getColumn(), 2);
+        OS.emitIntValue(0, 2);
       }
     }
     I = FileSegEnd;

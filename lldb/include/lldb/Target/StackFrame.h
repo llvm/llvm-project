@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StackFrame_h_
-#define liblldb_StackFrame_h_
+#ifndef LLDB_TARGET_STACKFRAME_H
+#define LLDB_TARGET_STACKFRAME_H
 
 #include <memory>
 #include <mutex>
@@ -531,4 +531,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_StackFrame_h_
+#endif // LLDB_TARGET_STACKFRAME_H

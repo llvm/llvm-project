@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointIDList_h_
-#define liblldb_BreakpointIDList_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTIDLIST_H
+#define LLDB_BREAKPOINT_BREAKPOINTIDLIST_H
 
 #include <utility>
 #include <vector>
@@ -73,4 +73,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointIDList_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTIDLIST_H

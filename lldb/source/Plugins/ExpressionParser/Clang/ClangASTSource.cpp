@@ -252,7 +252,7 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
 
         ConstString name(tag_decl->getName().str().c_str());
 
-        i->first->FindTypesInNamespace(name, &i->second, UINT32_MAX, types);
+        i->first->FindTypesInNamespace(name, i->second, UINT32_MAX, types);
 
         for (uint32_t ti = 0, te = types.GetSize(); ti != te && !found; ++ti) {
           lldb::TypeSP type = types.GetTypeAtIndex(ti);
@@ -664,7 +664,7 @@ void ClangASTSource::FindExternalVisibleDecls(
     CompilerDeclContext found_namespace_decl;
 
     if (SymbolFile *symbol_file = module_sp->GetSymbolFile()) {
-      found_namespace_decl = symbol_file->FindNamespace(name, &namespace_decl);
+      found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
 
       if (found_namespace_decl) {
         context.m_namespace_map->push_back(
@@ -692,7 +692,7 @@ void ClangASTSource::FindExternalVisibleDecls(
       if (!symbol_file)
         continue;
 
-      found_namespace_decl = symbol_file->FindNamespace(name, &namespace_decl);
+      found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
 
       if (found_namespace_decl) {
         context.m_namespace_map->push_back(
@@ -713,7 +713,7 @@ void ClangASTSource::FindExternalVisibleDecls(
     const bool exact_match = true;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
     if (module_sp && namespace_decl)
-      module_sp->FindTypesInNamespace(name, &namespace_decl, 1, types);
+      module_sp->FindTypesInNamespace(name, namespace_decl, 1, types);
     else {
       m_target->GetImages().FindTypes(module_sp.get(), name, exact_match, 1,
                                       searched_symbol_files, types);
@@ -1696,7 +1696,7 @@ void ClangASTSource::CompleteNamespaceMap(
         continue;
 
       found_namespace_decl =
-          symbol_file->FindNamespace(name, &module_parent_namespace_decl);
+          symbol_file->FindNamespace(name, module_parent_namespace_decl);
 
       if (!found_namespace_decl)
         continue;
@@ -1727,7 +1727,7 @@ void ClangASTSource::CompleteNamespaceMap(
         continue;
 
       found_namespace_decl =
-          symbol_file->FindNamespace(name, &null_namespace_decl);
+          symbol_file->FindNamespace(name, null_namespace_decl);
 
       if (!found_namespace_decl)
         continue;

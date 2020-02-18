@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformDarwin_h_
-#define liblldb_PlatformDarwin_h_
-
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSystem.h"
@@ -135,4 +134,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);
 };
 
-#endif // liblldb_PlatformDarwin_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H

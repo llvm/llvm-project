@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AuxVector_H_
-#define liblldb_AuxVector_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_AUXVECTOR_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_AUXVECTOR_H
 
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"

@@ -127,7 +127,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   if (!MCAI->useIntegratedAssembler() &&
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
-    OutStreamer->EmitRawText(Str);
+    OutStreamer->emitRawText(Str);
     emitInlineAsmEnd(STI, nullptr);
     return;
   }

@@ -51,7 +51,7 @@ SBFileSpec::SBFileSpec(const char *path, bool resolve)
     FileSystem::Instance().Resolve(*m_opaque_up);
 }
 
-SBFileSpec::~SBFileSpec() {}
+SBFileSpec::~SBFileSpec() = default;
 
 const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBFileSpec &,

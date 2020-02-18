@@ -99,7 +99,8 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9: {
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(
+        sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -386,6 +387,12 @@ unsigned FreeBSD::GetDefaultDwarfVersion() const {
   if (getTriple().getOSMajorVersion() < 12)
     return 2;
   return 4;
+}
+
+void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CC1Args) const {
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/usr/include/c++/v1");
 }
 
 void FreeBSD::addLibStdCxxIncludePaths(

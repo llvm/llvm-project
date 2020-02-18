@@ -294,8 +294,8 @@ static void packIdAndNumId(gpu::KernelDim3 kernelIds,
                            SmallVectorImpl<Value> &ids,
                            SmallVectorImpl<Value> &nids) {
   assert(nDims <= 3 && "invalid number of launch dimensions");
-  SmallVector<Value, 3> allIds = {kernelIds.z, kernelIds.y, kernelIds.x};
-  SmallVector<Value, 3> allNids = {kernelNids.z, kernelNids.y, kernelNids.x};
+  std::array<Value, 3> allIds = {kernelIds.z, kernelIds.y, kernelIds.x};
+  std::array<Value, 3> allNids = {kernelNids.z, kernelNids.y, kernelNids.x};
   ids.clear();
   ids.append(std::next(allIds.begin(), allIds.size() - nDims), allIds.end());
   nids.clear();

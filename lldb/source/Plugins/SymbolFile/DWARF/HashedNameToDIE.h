@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_HashedNameToDIE_h_
-#define SymbolFileDWARF_HashedNameToDIE_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_HASHEDNAMETODIE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_HASHEDNAMETODIE_H
 
 #include <vector>
 
@@ -194,4 +194,4 @@ protected:
   static const char *GetAtomTypeName(uint16_t atom);
 };
 
-#endif // SymbolFileDWARF_HashedNameToDIE_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_HASHEDNAMETODIE_H

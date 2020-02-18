@@ -101,6 +101,15 @@ bool FindClassDeclX(ASTUnit *AST) {
   }
   return false;
 }
+
+struct TestDiagnosticConsumer : public DiagnosticConsumer {
+  TestDiagnosticConsumer() : NumDiagnosticsSeen(0) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    ++NumDiagnosticsSeen;
+  }
+  unsigned NumDiagnosticsSeen;
+};
 } // end namespace
 
 TEST(runToolOnCode, FindsClassDecl) {
@@ -127,6 +136,16 @@ TEST(buildASTFromCode, FindsClassDecl) {
   AST = buildASTFromCode("class Y;");
   ASSERT_TRUE(AST.get());
   EXPECT_FALSE(FindClassDeclX(AST.get()));
+}
+
+TEST(buildASTFromCode, ReportsErrors) {
+  TestDiagnosticConsumer Consumer;
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs(
+      "int x = \"A\";", {}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      getClangStripDependencyFileAdjuster(), FileContentMappings(), &Consumer);
+  EXPECT_TRUE(AST.get());
+  EXPECT_EQ(1u, Consumer.NumDiagnosticsSeen);
 }
 
 TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromType) {
@@ -638,15 +657,6 @@ TEST(ClangToolTest, BuildASTs) {
   EXPECT_EQ(0, Tool.buildASTs(ASTs));
   EXPECT_EQ(2u, ASTs.size());
 }
-
-struct TestDiagnosticConsumer : public DiagnosticConsumer {
-  TestDiagnosticConsumer() : NumDiagnosticsSeen(0) {}
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const Diagnostic &Info) override {
-    ++NumDiagnosticsSeen;
-  }
-  unsigned NumDiagnosticsSeen;
-};
 
 TEST(ClangToolTest, InjectDiagnosticConsumer) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());

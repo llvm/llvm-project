@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessRunLock_h_
-#define liblldb_ProcessRunLock_h_
+#ifndef LLDB_HOST_PROCESSRUNLOCK_H
+#define LLDB_HOST_PROCESSRUNLOCK_H
 
 #include <stdint.h>
 #include <time.h>
@@ -80,4 +80,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ProcessRunLock_h_
+#endif // LLDB_HOST_PROCESSRUNLOCK_H

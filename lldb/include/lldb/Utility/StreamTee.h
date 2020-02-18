@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StreamTee_h_
-#define liblldb_StreamTee_h_
+#ifndef LLDB_UTILITY_STREAMTEE_H
+#define LLDB_UTILITY_STREAMTEE_H
 
 #include <limits.h>
 
@@ -137,4 +137,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_StreamTee_h_
+#endif // LLDB_UTILITY_STREAMTEE_H

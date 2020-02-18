@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Variable_h_
-#define liblldb_Variable_h_
+#ifndef LLDB_SYMBOL_VARIABLE_H
+#define LLDB_SYMBOL_VARIABLE_H
 
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpression.h"
@@ -141,4 +141,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Variable_h_
+#endif // LLDB_SYMBOL_VARIABLE_H

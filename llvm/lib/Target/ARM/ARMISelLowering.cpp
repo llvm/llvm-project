@@ -2223,7 +2223,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         isThisReturn = true;
       }
       const TargetOptions &Options = DAG.getTarget().Options;
-      if (Options.EnableDebugEntryValues)
+      if (Options.SupportsDebugEntryValues)
         CSInfo.emplace_back(VA.getLocReg(), i);
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
     } else if (isByVal) {
@@ -3637,7 +3637,7 @@ SDValue ARMTargetLowering::LowerINTRINSIC_VOID(
       unsigned Reg = MF.addLiveIn(ARM::LR, getRegClassFor(MVT::i32));
       SDValue ReturnAddress =
           DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, PtrVT);
-      std::vector<EVT> ResultTys = {MVT::Other, MVT::Glue};
+      constexpr EVT ResultTys[] = {MVT::Other, MVT::Glue};
       SDValue Callee =
           DAG.getTargetExternalSymbol("\01__gnu_mcount_nc", PtrVT, 0);
       SDValue RegisterMask = DAG.getRegisterMask(Mask);
@@ -5425,7 +5425,12 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   // FIXME: Remove this when we have strict fp instruction selection patterns
   if (IsStrict) {
-    DAG.mutateStrictFPToFP(Op.getNode());
+    SDLoc Loc(Op);
+    SDValue Result =
+        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
+                                                             : ISD::FP_TO_UINT,
+                    Loc, Op.getValueType(), SrcVal);
+    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
   }
 
   return Op;
@@ -16532,7 +16537,10 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
     // FIXME: Remove this when we have strict fp instruction selection patterns
     if (IsStrict) {
-      DAG.mutateStrictFPToFP(Op.getNode());
+      SDLoc Loc(Op);
+      SDValue Result = DAG.getNode(ISD::FP_EXTEND,
+                                   Loc, Op.getValueType(), SrcVal);
+      return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
     }
     return Op;
   }

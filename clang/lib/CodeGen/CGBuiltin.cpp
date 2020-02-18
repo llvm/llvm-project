@@ -1629,7 +1629,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_ceilf:
     case Builtin::BI__builtin_ceilf16:
     case Builtin::BI__builtin_ceill:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::ceil,
                                    Intrinsic::experimental_constrained_ceil));
 
@@ -1650,7 +1650,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosf:
     case Builtin::BI__builtin_cosf16:
     case Builtin::BI__builtin_cosl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::cos,
                                    Intrinsic::experimental_constrained_cos));
 
@@ -1661,7 +1661,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_expf:
     case Builtin::BI__builtin_expf16:
     case Builtin::BI__builtin_expl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::exp,
                                    Intrinsic::experimental_constrained_exp));
 
@@ -1672,7 +1672,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2f:
     case Builtin::BI__builtin_exp2f16:
     case Builtin::BI__builtin_exp2l:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::exp2,
                                    Intrinsic::experimental_constrained_exp2));
 
@@ -1693,7 +1693,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_floorf:
     case Builtin::BI__builtin_floorf16:
     case Builtin::BI__builtin_floorl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::floor,
                                    Intrinsic::experimental_constrained_floor));
 
@@ -1704,7 +1704,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaf:
     case Builtin::BI__builtin_fmaf16:
     case Builtin::BI__builtin_fmal:
-      return RValue::get(emitTernaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitTernaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::fma,
                                    Intrinsic::experimental_constrained_fma));
 
@@ -1715,7 +1715,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::maxnum,
                                    Intrinsic::experimental_constrained_maxnum));
 
@@ -1726,7 +1726,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::minnum,
                                    Intrinsic::experimental_constrained_minnum));
 
@@ -1751,7 +1751,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_logf:
     case Builtin::BI__builtin_logf16:
     case Builtin::BI__builtin_logl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::log,
                                    Intrinsic::experimental_constrained_log));
 
@@ -1762,7 +1762,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log10f:
     case Builtin::BI__builtin_log10f16:
     case Builtin::BI__builtin_log10l:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::log10,
                                    Intrinsic::experimental_constrained_log10));
 
@@ -1773,7 +1773,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log2f:
     case Builtin::BI__builtin_log2f16:
     case Builtin::BI__builtin_log2l:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::log2,
                                    Intrinsic::experimental_constrained_log2));
 
@@ -1783,7 +1783,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_nearbyint:
     case Builtin::BI__builtin_nearbyintf:
     case Builtin::BI__builtin_nearbyintl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                 Intrinsic::nearbyint,
                                 Intrinsic::experimental_constrained_nearbyint));
 
@@ -1794,7 +1794,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_powf:
     case Builtin::BI__builtin_powf16:
     case Builtin::BI__builtin_powl:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::pow,
                                    Intrinsic::experimental_constrained_pow));
 
@@ -1805,7 +1805,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_rintf:
     case Builtin::BI__builtin_rintf16:
     case Builtin::BI__builtin_rintl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::rint,
                                    Intrinsic::experimental_constrained_rint));
 
@@ -1816,7 +1816,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_roundf:
     case Builtin::BI__builtin_roundf16:
     case Builtin::BI__builtin_roundl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::round,
                                    Intrinsic::experimental_constrained_round));
 
@@ -1827,7 +1827,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sinf:
     case Builtin::BI__builtin_sinf16:
     case Builtin::BI__builtin_sinl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::sin,
                                    Intrinsic::experimental_constrained_sin));
 
@@ -1838,7 +1838,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtf:
     case Builtin::BI__builtin_sqrtf16:
     case Builtin::BI__builtin_sqrtl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::sqrt,
                                    Intrinsic::experimental_constrained_sqrt));
 
@@ -1849,7 +1849,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncf:
     case Builtin::BI__builtin_truncf16:
     case Builtin::BI__builtin_truncl:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E, 
+      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::trunc,
                                    Intrinsic::experimental_constrained_trunc));
 
@@ -4034,19 +4034,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       // Create a vector of the arguments, as well as a constant value to
       // express to the runtime the number of variadic arguments.
-      std::vector<llvm::Value *> Args = {
-          Queue,  Flags, Range,
-          Kernel, Block, ConstantInt::get(IntTy, NumArgs - 4),
-          ElemPtr};
-      std::vector<llvm::Type *> ArgTys = {
+      llvm::Value *const Args[] = {Queue,  Flags,
+                                   Range,  Kernel,
+                                   Block,  ConstantInt::get(IntTy, NumArgs - 4),
+                                   ElemPtr};
+      llvm::Type *const ArgTys[] = {
           QueueTy,          IntTy, RangeTy,           GenericVoidPtrTy,
           GenericVoidPtrTy, IntTy, ElemPtr->getType()};
 
-      llvm::FunctionType *FTy = llvm::FunctionType::get(
-          Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      auto Call =
-          RValue::get(Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
-                                         llvm::ArrayRef<llvm::Value *>(Args)));
+      llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, ArgTys, false);
+      auto Call = RValue::get(
+          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), Args));
       if (TmpSize)
         EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
@@ -7128,6 +7126,58 @@ static llvm::Value *ARMMVEVectorReinterpret(CGBuilderTy &Builder,
   } else {
     return Builder.CreateBitCast(V, DestType);
   }
+}
+
+static llvm::Value *VectorUnzip(CGBuilderTy &Builder, llvm::Value *V, bool Odd) {
+  // Make a shufflevector that extracts every other element of a vector (evens
+  // or odds, as desired).
+  SmallVector<uint32_t, 16> Indices;
+  unsigned InputElements = V->getType()->getVectorNumElements();
+  for (unsigned i = 0; i < InputElements; i += 2)
+    Indices.push_back(i + Odd);
+  return Builder.CreateShuffleVector(V, llvm::UndefValue::get(V->getType()),
+                                     Indices);
+}
+
+static llvm::Value *VectorZip(CGBuilderTy &Builder, llvm::Value *V0,
+                              llvm::Value *V1) {
+  // Make a shufflevector that interleaves two vectors element by element.
+  assert(V0->getType() == V1->getType() && "Can't zip different vector types");
+  SmallVector<uint32_t, 16> Indices;
+  unsigned InputElements = V0->getType()->getVectorNumElements();
+  for (unsigned i = 0; i < InputElements; i++) {
+    Indices.push_back(i);
+    Indices.push_back(i + InputElements);
+  }
+  return Builder.CreateShuffleVector(V0, V1, Indices);
+}
+
+template<unsigned HighBit, unsigned OtherBits>
+static llvm::Value *ARMMVEConstantSplat(CGBuilderTy &Builder, llvm::Type *VT) {
+  // MVE-specific helper function to make a vector splat of a constant such as
+  // UINT_MAX or INT_MIN, in which all bits below the highest one are equal.
+  llvm::Type *T = VT->getVectorElementType();
+  unsigned LaneBits = T->getPrimitiveSizeInBits();
+  uint32_t Value = HighBit << (LaneBits - 1);
+  if (OtherBits)
+    Value |= (1UL << (LaneBits - 1)) - 1;
+  llvm::Value *Lane = llvm::ConstantInt::get(T, Value);
+  return ARMMVEVectorSplat(Builder, Lane);
+}
+
+static llvm::Value *ARMMVEVectorElementReverse(CGBuilderTy &Builder,
+                                               llvm::Value *V,
+                                               unsigned ReverseWidth) {
+  // MVE-specific helper function which reverses the elements of a
+  // vector within every (ReverseWidth)-bit collection of lanes.
+  SmallVector<uint32_t, 16> Indices;
+  unsigned LaneSize = V->getType()->getScalarSizeInBits();
+  unsigned Elements = 128 / LaneSize;
+  unsigned Mask = ReverseWidth / LaneSize - 1;
+  for (unsigned i = 0; i < Elements; i++)
+    Indices.push_back(i ^ Mask);
+  return Builder.CreateShuffleVector(V, llvm::UndefValue::get(V->getType()),
+                                     Indices);
 }
 
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
@@ -13377,7 +13427,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
 
     // FIXME-GFX10: How should 32 bit mask be handled?
-    Value *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
       { Builder.getInt64Ty(), Src0->getType() });
     return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
@@ -13388,7 +13438,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
 
     // FIXME-GFX10: How should 32 bit mask be handled?
-    Value *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
       { Builder.getInt64Ty(), Src0->getType() });
     return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }

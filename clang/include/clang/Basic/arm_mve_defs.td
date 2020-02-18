@@ -98,6 +98,9 @@ def extend: CGHelperFn<"SignOrZeroExtend"> {
   let special_params = [IRBuilderIntParam<2, "bool">];
 }
 def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
+def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
+def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;
 def undef: IRFunction<"UndefValue::get">;
 def icmp_eq: IRBuilder<"CreateICmpEQ">;
 def icmp_ne: IRBuilder<"CreateICmpNE">;
@@ -117,6 +120,24 @@ def fcmp_lt: IRBuilder<"CreateFCmpOLT">;
 def fcmp_le: IRBuilder<"CreateFCmpOLE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
+def fneg: IRBuilder<"CreateFNeg">;
+def sitofp: IRBuilder<"CreateSIToFP">;
+def uitofp: IRBuilder<"CreateUIToFP">;
+def fptosi: IRBuilder<"CreateFPToSI">;
+def fptoui: IRBuilder<"CreateFPToUI">;
+def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
+  let special_params = [IRBuilderIntParam<1, "unsigned">];
+}
+def unzip: CGHelperFn<"VectorUnzip"> {
+  let special_params = [IRBuilderIntParam<1, "bool">];
+}
+def zip: CGHelperFn<"VectorZip">;
+
+// Helper for making boolean flags in IR
+def i1: IRBuilderBase {
+  let prefix = "llvm::ConstantInt::get(Builder.getInt1Ty(), ";
+  let special_params = [IRBuilderIntParam<0, "bool">];
+}
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
@@ -166,6 +187,10 @@ def seq;
 // _type_ as an argument, and it expands into 1 for an unsigned type
 // and 0 for a signed (or floating) one.
 def unsignedflag;
+
+// 'bitsize' also takes a scalar type, and expands into an integer
+// constant giving its size in bits.
+def bitsize;
 
 // If you put CustomCodegen<"foo"> in an intrinsic's codegen field, it
 // indicates that the IR generation for that intrinsic is done by handwritten
@@ -494,6 +519,29 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
     }
   }
 }
+
+// Same as above, but with an additional parameter 'basename' which overrides
+// the C intrinsic base name
+multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
+                                   string basename, int wantXVariant = 1,
+                                   string nameSuffix = "",
+                                   PolymorphicNameType pnt_m = PNT_Type,
+                                   PolymorphicNameType pnt_x = PNT_Type> {
+  def "_m" # nameSuffix:
+     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>,
+     NameOverride<basename # "_m" # nameSuffix> {
+    let pnt = pnt_m;
+  }
+
+  foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
+    def "_x" # nameSuffix:
+      Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)>,
+      NameOverride<basename # "_x" # nameSuffix> {
+      let pnt = pnt_x;
+    }
+  }
+}
+
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you

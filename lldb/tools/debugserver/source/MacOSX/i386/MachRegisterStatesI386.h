@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachRegisterStatesI386_h__
-#define __MachRegisterStatesI386_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_I386_MACHREGISTERSTATESI386_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_I386_MACHREGISTERSTATESI386_H
 
 #include <inttypes.h>
 

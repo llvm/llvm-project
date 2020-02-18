@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextCorePOSIX_x86_64_h_
-#define liblldb_RegisterContextCorePOSIX_x86_64_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_X86_64_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -46,4 +46,4 @@ private:
   std::unique_ptr<uint8_t[]> m_fpregset;
 };
 
-#endif // liblldb_RegisterContextCorePOSIX_x86_64_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_X86_64_H

@@ -204,7 +204,8 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   // We need to locate the SHT_SYMTAB_SHNDX section early, because it might be
   // needed for dumping symbols.
   if (SymTabShndx) {
-    if (!SymTab || SymTabShndx->sh_link != SymTab - Sections.begin())
+    if (!SymTab ||
+        SymTabShndx->sh_link != (unsigned)(SymTab - Sections.begin()))
       return createStringError(
           obj2yaml_error::not_implemented,
           "only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported");

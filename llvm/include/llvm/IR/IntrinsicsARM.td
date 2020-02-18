@@ -1158,4 +1158,10 @@ defm int_arm_mve_vcvt_fix: MVEMXPredicated<
   [llvm_anyvector_ty /* output */], [llvm_i32_ty],
   [llvm_anyvector_ty /* input vector */, llvm_i32_ty /* scale */],
   LLVMMatchType<0>, llvm_anyvector_ty>;
+
+def int_arm_mve_vrintn: Intrinsic<
+  [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vcls: Intrinsic<
+  [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+
 } // end TargetPrefix

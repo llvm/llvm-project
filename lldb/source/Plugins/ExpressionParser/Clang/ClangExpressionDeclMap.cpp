@@ -597,7 +597,7 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   VariableList vars;
 
   if (module && namespace_decl)
-    module->FindGlobalVariables(name, namespace_decl, -1, vars);
+    module->FindGlobalVariables(name, *namespace_decl, -1, vars);
   else
     target.GetImages().FindGlobalVariables(name, -1, vars);
 
@@ -1237,7 +1237,7 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
   if (namespace_decl && module_sp) {
     const bool include_symbols = false;
 
-    module_sp->FindFunctions(name, &namespace_decl, eFunctionNameTypeBase,
+    module_sp->FindFunctions(name, namespace_decl, eFunctionNameTypeBase,
                              include_symbols, include_inlines, sc_list);
   } else if (target && !namespace_decl) {
     const bool include_symbols = true;
