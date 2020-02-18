@@ -324,4 +324,63 @@ for.end:
   ret void
 }
 
+; Check we merge undef and a constant properly.
+; FIXME fold the addition and return the constant.
+define i8 @caller0() {
+; CHECK-LABEL: define {{[^@]+}}@caller0()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller1() {
+; CHECK-LABEL: define {{[^@]+}}@caller1()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller2() {
+; CHECK-LABEL: define {{[^@]+}}@caller2()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller_middle() {
+; CHECK-LABEL: define {{[^@]+}}@caller_middle()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 42)
+  ret i8 %c
+}
+define i8 @caller3() {
+; CHECK-LABEL: define {{[^@]+}}@caller3()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller4() {
+; CHECK-LABEL: define {{[^@]+}}@caller4()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define internal i8 @callee(i8 %a) {
+; CHECK-LABEL: define {{[^@]+}}@callee()
+; CHECK-NEXT:    [[C:%.*]] = add i8 42, 7
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = add i8 %a, 7
+  ret i8 %c
+}
+
 ; UTC_ARGS: --disable
