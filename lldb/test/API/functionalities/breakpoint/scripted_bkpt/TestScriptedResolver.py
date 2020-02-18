@@ -40,7 +40,6 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_bad_options()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_copy_from_dummy_target(self):
         """Make sure we don't crash during scripted breakpoint copy from dummy target"""
         self.build()
