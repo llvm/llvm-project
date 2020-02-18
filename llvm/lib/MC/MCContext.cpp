@@ -316,12 +316,14 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   if (const MCSymbol *Group = Section->getGroup())
     GroupName = Group->getName();
 
+  // This function is only used by .debug*, which should not have the
+  // SHF_LINK_ORDER flag.
   unsigned UniqueID = Section->getUniqueID();
   ELFUniquingMap.erase(
-      ELFSectionKey{Section->getSectionName(), GroupName, UniqueID});
-  auto I = ELFUniquingMap.insert(std::make_pair(
-                                     ELFSectionKey{Name, GroupName, UniqueID},
-                                     Section))
+      ELFSectionKey{Section->getSectionName(), GroupName, "", UniqueID});
+  auto I = ELFUniquingMap
+               .insert(std::make_pair(
+                   ELFSectionKey{Name, GroupName, "", UniqueID}, Section))
                .first;
   StringRef CachedName = I->first.SectionName;
   const_cast<MCSectionELF *>(Section)->setSectionName(CachedName);
@@ -404,8 +406,10 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   if (GroupSym)
     Group = GroupSym->getName();
   // Do the lookup, if we have a hit, return it.
-  auto IterBool = ELFUniquingMap.insert(
-      std::make_pair(ELFSectionKey{Section.str(), Group, UniqueID}, nullptr));
+  auto IterBool = ELFUniquingMap.insert(std::make_pair(
+      ELFSectionKey{Section.str(), Group,
+                    LinkedToSym ? LinkedToSym->getName() : "", UniqueID},
+      nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second)
     return Entry.second;

@@ -193,21 +193,27 @@ namespace llvm {
     /// The Compile Unit ID that we are currently processing.
     unsigned DwarfCompileUnitID = 0;
 
+    // Sections are differentiated by the quadruple (section_name, group_name,
+    // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
+    // combined into one section.
     struct ELFSectionKey {
       std::string SectionName;
       StringRef GroupName;
+      StringRef LinkedToName;
       unsigned UniqueID;
 
       ELFSectionKey(StringRef SectionName, StringRef GroupName,
-                    unsigned UniqueID)
-          : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {
-      }
+                    StringRef LinkedToName, unsigned UniqueID)
+          : SectionName(SectionName), GroupName(GroupName),
+            LinkedToName(LinkedToName), UniqueID(UniqueID) {}
 
       bool operator<(const ELFSectionKey &Other) const {
         if (SectionName != Other.SectionName)
           return SectionName < Other.SectionName;
         if (GroupName != Other.GroupName)
           return GroupName < Other.GroupName;
+        if (int O = LinkedToName.compare(Other.LinkedToName))
+          return O < 0;
         return UniqueID < Other.UniqueID;
       }
     };

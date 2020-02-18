@@ -34,7 +34,7 @@ define void @f2() "patchable-function-entry"="2" {
 ; 32-COUNT-2:  nop
 ; 64:          xchgw %ax, %ax
 ; CHECK-NEXT:  ret
-; NOFSECT:     .section __patchable_function_entries,"awo",@progbits,f1,unique,0
+; NOFSECT:     .section __patchable_function_entries,"awo",@progbits,f2,unique,0
 ; FSECT:       .section __patchable_function_entries,"awo",@progbits,f2,unique,1
 ; 32:          .p2align 2
 ; 32-NEXT:     .long .Lfunc_begin2
@@ -91,7 +91,7 @@ define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="
 ;; .size does not include the prefix.
 ; CHECK:      .Lfunc_end5:
 ; CHECK-NEXT: .size f3_2, .Lfunc_end5-f3_2
-; NOFSECT     .section __patchable_function_entries,"awo",@progbits,f0,unique,0
+; NOFSECT:    .section __patchable_function_entries,"awo",@progbits,f3_2,unique,0
 ; FSECT:      .section __patchable_function_entries,"awo",@progbits,f3_2,unique,4
 ; 32:         .p2align 2
 ; 32-NEXT:    .long .Ltmp0
