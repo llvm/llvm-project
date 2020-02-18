@@ -35,7 +35,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_gdb_server;
 
-LLDB_PLUGIN_DEFINE_ADV(PlatformRemoteGDBServer, PlatformGDB)
+LLDB_PLUGIN_DEFINE(PlatformRemoteGDBServer)
 
 static bool g_initialized = false;
 

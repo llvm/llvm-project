@@ -22,14 +22,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
-  namespace lldb_private {                                                     \
-  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
-  void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
-  }
-
 #define LLDB_PLUGIN_DEFINE(PluginName)                                         \
-  LLDB_PLUGIN_DEFINE_ADV(PluginName, PluginName)
+  namespace lldb_private {                                                     \
+  void lldb_initialize_##PluginName() { PluginName::Initialize(); }            \
+  void lldb_terminate_##PluginName() { PluginName::Terminate(); }              \
+  }
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \

@@ -1665,7 +1665,7 @@ ABIMacOSX_arm64::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
 
   if (vendor_type == llvm::Triple::Apple) {
-    if (arch_type == llvm::Triple::aarch64 ||
+    if (arch_type == llvm::Triple::aarch64 || 
         arch_type == llvm::Triple::aarch64_32) {
       return ABISP(
           new ABIMacOSX_arm64(std::move(process_sp), MakeMCRegisterInfo(arch)));
