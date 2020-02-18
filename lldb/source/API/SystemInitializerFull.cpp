@@ -162,9 +162,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderPosixDYLD);
-  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWasmDYLD); // Before DynamicLoaderStatic.
-  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderStatic);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWasmDYLD);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderWindowsDYLD);
 
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
@@ -251,9 +251,9 @@ void SystemInitializerFull::Terminate() {
   LLDB_PLUGIN_TERMINATE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderPosixDYLD);
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWasmDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWindowsDYLD);
-  LLDB_PLUGIN_TERMINATE(DynamicLoaderStatic);
 
   LLDB_PLUGIN_TERMINATE(PlatformFreeBSD);
   LLDB_PLUGIN_TERMINATE(PlatformLinux);
