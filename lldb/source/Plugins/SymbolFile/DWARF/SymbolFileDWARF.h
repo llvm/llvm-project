@@ -322,8 +322,7 @@ protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb::opaque_compiler_type_t>
       DIEToClangType;
-  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>
-      ClangTypeToDIE;
+  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
   DISALLOW_COPY_AND_ASSIGN(SymbolFileDWARF);
 
