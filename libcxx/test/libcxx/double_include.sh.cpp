@@ -25,6 +25,9 @@
 #include <array>
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <atomic>
+#include <latch>
+#include <barrier>
+#include <semaphore>
 #endif
 #include <bit>
 #include <bitset>
