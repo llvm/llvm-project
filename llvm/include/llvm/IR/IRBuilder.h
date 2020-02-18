@@ -134,9 +134,9 @@ public:
     return C;
   }
 
-  Value *Insert(Value *V, const Twine& = "") const {
+  Value *Insert(Value *V, const Twine &Name = "") const {
     if (Instruction *I = dyn_cast<Instruction>(V))
-      return Insert(I);
+      return Insert(I, Name);
     assert(isa<Constant>(V));
     return V;
   }
