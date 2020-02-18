@@ -50,7 +50,7 @@ public:
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   Value *optimizeMemCpyChk(CallInst *CI, IRBuilderBase &B);
@@ -151,7 +151,7 @@ public:
   /// other instructions that use the given instruction were modified
   /// and the given instruction is dead.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   // String and Memory Library Call Optimizations
