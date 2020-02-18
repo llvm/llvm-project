@@ -280,6 +280,13 @@ void test_vqdmulh_lane(int32x2_t a, int32x2_t b) {
   vqdmulh_lane_s32(a, b, 1);
 }
 
+void test_vqdmulhq_lane(int32x4_t a, int32x2_t b) {
+  vqdmulhq_lane_s32(a, b, -1); // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  vqdmulhq_lane_s32(a, b, 2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  vqdmulhq_lane_s32(a, b, 0);
+  vqdmulhq_lane_s32(a, b, 1);
+}
+
 #if defined(__aarch64__)
 void test_vqdmulh_laneq(int32x2_t a, int32x4_t b) {
   vqdmulh_laneq_s32(a, b, -1); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
@@ -391,6 +398,13 @@ void test_vqrdmulh_lane(int32x2_t a, int32x2_t v) {
   vqrdmulh_lane_s32(a, v,  2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
   vqrdmulh_lane_s32(a, v,  0);
   vqrdmulh_lane_s32(a, v,  1);
+}
+
+void test_vqrdmulhq_lane(int32x4_t a, int32x2_t v) {
+  vqrdmulhq_lane_s32(a, v,  -1); // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  vqrdmulhq_lane_s32(a, v,  2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  vqrdmulhq_lane_s32(a, v,  0);
+  vqrdmulhq_lane_s32(a, v,  1);
 }
 
 #if defined(__aarch64__)

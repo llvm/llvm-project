@@ -5824,9 +5824,14 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqdmulh_lane_v:
   case NEON::BI__builtin_neon_vqrdmulhq_lane_v:
   case NEON::BI__builtin_neon_vqrdmulh_lane_v: {
+    llvm::Type *RTy = Ty;
+    if (BuiltinID == NEON::BI__builtin_neon_vqdmulhq_lane_v ||
+        BuiltinID == NEON::BI__builtin_neon_vqrdmulhq_lane_v)
+      RTy = llvm::VectorType::get(Ty->getVectorElementType(),
+                                  Ty->getVectorNumElements() * 2);
     llvm::Type *Tys[2] = {
-        Ty, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
-                                            /*isQuad*/ false))};
+        RTy, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ false))};
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, NameHint);
   }
   case NEON::BI__builtin_neon_vqdmulhq_laneq_v:
