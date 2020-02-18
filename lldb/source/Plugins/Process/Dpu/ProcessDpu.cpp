@@ -330,16 +330,12 @@ Status ProcessDpu::Detach() {
   Status error;
   bool success;
 
-  success = m_dpu->ResumeThreads(NULL, false);
-  if (!success)
-    return Status("Cannot resume the DPU");
+  m_dpu->ResumeThreads(NULL, false);
 
   Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
       m_dpu->GetSliceID(), m_dpu->GetDpuID() ^ 0x1);
   if (dpu_neighbor != nullptr) {
-    success = dpu_neighbor->ResumeThreads(NULL, false);
-    if (!success)
-      return Status("Cannot resume the DPU neighbor");
+    dpu_neighbor->ResumeThreads(NULL, false);
   }
 
   success = m_dpu->RestoreSliceContext();
@@ -390,6 +386,7 @@ Status ProcessDpu::Kill() {
   case StateType::eStateRunning:
   case StateType::eStateStepping:
   case StateType::eStateSuspended:
+    Detach();
     // We can try to kill a process in these states.
     break;
   }

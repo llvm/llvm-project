@@ -60,6 +60,8 @@ public:
 
   bool DpuIsRunning(int nr_running_threads);
 
+  bool RestoreFaultContext();
+
 private:
   bool AddThreadInScheduling(unsigned int thread);
   void ResetScheduling();

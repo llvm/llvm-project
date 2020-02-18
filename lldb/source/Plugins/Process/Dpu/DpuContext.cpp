@@ -184,3 +184,15 @@ bool DpuContext::DpuIsRunning(int nr_running_threads) {
   }
   return false;
 }
+
+bool DpuContext::RestoreFaultContext() {
+  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
+    if (m_context->scheduling[each_thread] ==
+        m_context->nr_of_running_threads - 1) {
+      m_context->scheduling[each_thread] = 0;
+    } else if (m_context->scheduling[each_thread] != 0xff) {
+      m_context->scheduling[each_thread]++;
+    }
+  }
+  return dpu_finalize_fault_process_for_dpu(m_dpu, m_context) == DPU_OK;
+}

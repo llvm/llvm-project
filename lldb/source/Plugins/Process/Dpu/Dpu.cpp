@@ -253,8 +253,10 @@ bool Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
                         bool allowed_polling) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
-  if (!m_context->ContextReadyForResumeOrStep())
+  if (!m_context->ContextReadyForResumeOrStep()) {
+    m_context->RestoreFaultContext();
     return false;
+  }
 
   int ret = DPU_OK;
   if (registers_has_been_modified) {
