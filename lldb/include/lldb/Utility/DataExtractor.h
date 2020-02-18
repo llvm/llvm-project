@@ -573,24 +573,6 @@ public:
                             uint32_t bitfield_bit_size,
                             uint32_t bitfield_bit_offset) const;
 
-  /// Extract an pointer from \a *offset_ptr.
-  ///
-  /// Extract a single pointer from the data and update the offset pointed to
-  /// by \a offset_ptr. The size of the extracted pointer comes from the \a
-  /// m_addr_size member variable and should be set correctly prior to
-  /// extracting any pointer values.
-  ///
-  /// \param[in,out] offset_ptr
-  ///     A pointer to an offset within the data that will be advanced
-  ///     by the appropriate number of bytes if the value is extracted
-  ///     correctly. If the offset is out of bounds or there are not
-  ///     enough bytes to extract this value, the offset will be left
-  ///     unmodified.
-  ///
-  /// \return
-  ///     The extracted pointer value as a 64 integer.
-  uint64_t GetPointer(lldb::offset_t *offset_ptr) const;
-
   /// Get the current byte order value.
   ///
   /// \return
@@ -1003,8 +985,7 @@ protected:
       *m_end; ///< A pointer to the byte that is past the end of the data.
   lldb::ByteOrder
       m_byte_order;     ///< The byte order of the data we are extracting from.
-  uint32_t m_addr_size; ///< The address size to use when extracting pointers or
-                        /// addresses
+  uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
   const uint32_t m_target_byte_size;
