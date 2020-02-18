@@ -761,7 +761,7 @@ void Sema::PrintInstantiationStack() {
 
     case CodeSynthesisContext::Memoization:
       break;
-    
+
     case CodeSynthesisContext::ConstraintsCheck: {
       unsigned DiagID = 0;
       if (!Active->Entity) {

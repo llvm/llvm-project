@@ -1006,7 +1006,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     assert(Tok.isNot(tok::kw_decltype) && Tok.isNot(tok::kw___super));
     return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                isVectorLiteral, NotPrimaryExpression);
-      
+
   case tok::identifier: {      // primary-expression: identifier
                                // unqualified-id: identifier
                                // constant: enumeration-constant
@@ -2690,7 +2690,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
 
     PreferredType.enterTypeCast(Tok.getLocation(), Ty.get().get());
     ExprResult SubExpr = ParseCastExpression(AnyCastExpr);
-    
+
     if (Ty.isInvalid() || SubExpr.isInvalid())
       return ExprError();
 

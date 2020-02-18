@@ -300,7 +300,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
                                     MachineInstr::const_mop_iterator MOE,
                                     bool recordResult) {
   MCContext &OutContext = AP.OutStreamer->getContext();
-  
+
   LocationVec Locations;
   LiveOutVec LiveOuts;
 

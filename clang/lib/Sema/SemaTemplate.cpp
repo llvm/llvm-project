@@ -1288,11 +1288,11 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   // Check that we have valid decl-specifiers specified.
   auto CheckValidDeclSpecifiers = [this, &D] {
     // C++ [temp.param]
-    // p1 
+    // p1
     //   template-parameter:
     //     ...
     //     parameter-declaration
-    // p2 
+    // p2
     //   ... A storage class shall not be specified in a template-parameter
     //   declaration.
     // [dcl.typedef]p1:
@@ -8341,7 +8341,7 @@ Decl *Sema::ActOnConceptDefinition(Scope *S,
   ConceptDecl *NewDecl = ConceptDecl::Create(Context, DC, NameLoc, Name,
                                              TemplateParameterLists.front(),
                                              ConstraintExpr);
-                                             
+
   if (NewDecl->hasAssociatedConstraints()) {
     // C++2a [temp.concept]p4:
     // A concept shall not have associated constraints.

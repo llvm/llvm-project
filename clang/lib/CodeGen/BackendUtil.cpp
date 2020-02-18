@@ -351,7 +351,7 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
     break;
   case CodeGenOptions::MASSV:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV);
-    break;    
+    break;
   case CodeGenOptions::SVML:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
     break;

@@ -677,7 +677,7 @@ void AliasSet::print(raw_ostream &OS) const {
       I.getPointer()->printAsOperand(OS << "(");
       if (I.getSize() == LocationSize::unknown())
         OS << ", unknown)";
-      else 
+      else
         OS << ", " << I.getSize() << ")";
     }
   }
