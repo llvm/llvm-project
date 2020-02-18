@@ -526,7 +526,7 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
 
 static bool useFramePointerForTargetByDefault(const ArgList &Args,
                                               const llvm::Triple &Triple) {
-  if (Args.hasArg(options::OPT_pg))
+  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
     return true;
 
   switch (Triple.getArch()) {
@@ -6150,7 +6150,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (FPKeepKind == CodeGenOptions::FramePointerKind::None)
+    if (FPKeepKind == CodeGenOptions::FramePointerKind::None &&
+        !Args.hasArg(options::OPT_mfentry))
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
                                                       << A->getAsString(Args);
 
