@@ -75,7 +75,7 @@ const SBModule &SBModule::operator=(const SBModule &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBModule::~SBModule() {}
+SBModule::~SBModule() = default;
 
 bool SBModule::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, IsValid);

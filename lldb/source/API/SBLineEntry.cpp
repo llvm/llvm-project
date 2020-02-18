@@ -48,7 +48,7 @@ void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
   m_opaque_up = std::make_unique<LineEntry>(lldb_object_ref);
 }
 
-SBLineEntry::~SBLineEntry() {}
+SBLineEntry::~SBLineEntry() = default;
 
 SBAddress SBLineEntry::GetStartAddress() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBLineEntry,

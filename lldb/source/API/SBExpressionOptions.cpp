@@ -39,7 +39,7 @@ operator=(const SBExpressionOptions &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBExpressionOptions::~SBExpressionOptions() {}
+SBExpressionOptions::~SBExpressionOptions() = default;
 
 bool SBExpressionOptions::GetCoerceResultToId() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBExpressionOptions,

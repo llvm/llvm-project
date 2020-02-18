@@ -45,7 +45,7 @@ SBStructuredData::SBStructuredData(lldb_private::StructuredDataImpl *impl)
                           (lldb_private::StructuredDataImpl *), impl);
 }
 
-SBStructuredData::~SBStructuredData() {}
+SBStructuredData::~SBStructuredData() = default;
 
 SBStructuredData &SBStructuredData::
 operator=(const lldb::SBStructuredData &rhs) {

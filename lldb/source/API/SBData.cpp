@@ -41,7 +41,7 @@ const SBData &SBData::operator=(const SBData &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBData::~SBData() {}
+SBData::~SBData() = default;
 
 void SBData::SetOpaque(const lldb::DataExtractorSP &data_sp) {
   m_opaque_sp = data_sp;

@@ -54,7 +54,7 @@ SBAttachInfo::SBAttachInfo(const SBAttachInfo &rhs)
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
-SBAttachInfo::~SBAttachInfo() {}
+SBAttachInfo::~SBAttachInfo() = default;
 
 lldb_private::ProcessAttachInfo &SBAttachInfo::ref() { return *m_opaque_sp; }
 

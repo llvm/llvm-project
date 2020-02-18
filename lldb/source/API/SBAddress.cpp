@@ -52,7 +52,7 @@ SBAddress::SBAddress(lldb::addr_t load_addr, lldb::SBTarget &target)
   SetLoadAddress(load_addr, target);
 }
 
-SBAddress::~SBAddress() {}
+SBAddress::~SBAddress() = default;
 
 const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBAddress &,

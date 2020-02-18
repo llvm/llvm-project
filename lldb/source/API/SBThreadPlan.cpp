@@ -96,7 +96,7 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 // Destructor
-SBThreadPlan::~SBThreadPlan() {}
+SBThreadPlan::~SBThreadPlan() = default;
 
 lldb_private::ThreadPlan *SBThreadPlan::get() { return m_opaque_sp.get(); }
 

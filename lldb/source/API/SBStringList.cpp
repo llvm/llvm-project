@@ -39,7 +39,7 @@ const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBStringList::~SBStringList() {}
+SBStringList::~SBStringList() = default;
 
 const lldb_private::StringList *SBStringList::operator->() const {
   return m_opaque_up.get();

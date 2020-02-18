@@ -112,9 +112,9 @@ LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
 
 using namespace lldb_private;
 
-SystemInitializerFull::SystemInitializerFull() {}
+SystemInitializerFull::SystemInitializerFull() = default;
 
-SystemInitializerFull::~SystemInitializerFull() {}
+SystemInitializerFull::~SystemInitializerFull() = default;
 
 #define LLDB_PROCESS_AArch64(op) op(ABIAArch64);
 #define LLDB_PROCESS_ARM(op) op(ABIARM);
