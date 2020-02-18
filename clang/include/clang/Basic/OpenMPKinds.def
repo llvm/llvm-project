@@ -107,9 +107,6 @@
 #ifndef OPENMP_DISTRIBUTE_CLAUSE
 #define OPENMP_DISTRIBUTE_CLAUSE(Name)
 #endif
-#ifndef OPENMP_DEFAULT_KIND
-#  define OPENMP_DEFAULT_KIND(Name)
-#endif
 #ifndef OPENMP_SCHEDULE_KIND
 #define OPENMP_SCHEDULE_KIND(Name)
 #endif
@@ -350,10 +347,6 @@ OPENMP_SINGLE_CLAUSE(allocate)
 
 // Clauses allowed for OpenMP directive 'cancel'.
 OPENMP_CANCEL_CLAUSE(if)
-
-// Static attributes for 'default' clause.
-OPENMP_DEFAULT_KIND(none)
-OPENMP_DEFAULT_KIND(shared)
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -1103,7 +1096,6 @@ OPENMP_FLUSH_CLAUSE(release)
 #undef OPENMP_DEPEND_KIND
 #undef OPENMP_SCHEDULE_MODIFIER
 #undef OPENMP_SCHEDULE_KIND
-#undef OPENMP_DEFAULT_KIND
 #undef OPENMP_CLAUSE
 #undef OPENMP_CRITICAL_CLAUSE
 #undef OPENMP_ORDERED_CLAUSE

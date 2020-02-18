@@ -12009,9 +12009,8 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   OMPClause *Res = nullptr;
   switch (Kind) {
   case OMPC_default:
-    Res =
-        ActOnOpenMPDefaultClause(static_cast<OpenMPDefaultClauseKind>(Argument),
-                                 ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    Res = ActOnOpenMPDefaultClause(static_cast<DefaultKind>(Argument),
+                                   ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_proc_bind:
     Res = ActOnOpenMPProcBindClause(static_cast<ProcBindKind>(Argument),
@@ -12114,31 +12113,23 @@ getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
   return std::string(Out.str());
 }
 
-OMPClause *Sema::ActOnOpenMPDefaultClause(OpenMPDefaultClauseKind Kind,
+OMPClause *Sema::ActOnOpenMPDefaultClause(DefaultKind Kind,
                                           SourceLocation KindKwLoc,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
-  if (Kind == OMPC_DEFAULT_unknown) {
-    static_assert(OMPC_DEFAULT_unknown > 0,
-                  "OMPC_DEFAULT_unknown not greater than 0");
+  if (Kind == OMP_DEFAULT_unknown) {
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_default, /*First=*/0,
-                                   /*Last=*/OMPC_DEFAULT_unknown)
+                                   /*Last=*/unsigned(OMP_DEFAULT_unknown))
         << getOpenMPClauseName(OMPC_default);
     return nullptr;
   }
-  switch (Kind) {
-  case OMPC_DEFAULT_none:
+  if (Kind == OMP_DEFAULT_none)
     DSAStack->setDefaultDSANone(KindKwLoc);
-    break;
-  case OMPC_DEFAULT_shared:
+  else if (Kind == OMP_DEFAULT_shared)
     DSAStack->setDefaultDSAShared(KindKwLoc);
-    break;
-  case OMPC_DEFAULT_unknown:
-    llvm_unreachable("Clause kind is not allowed.");
-    break;
-  }
+
   return new (Context)
       OMPDefaultClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }

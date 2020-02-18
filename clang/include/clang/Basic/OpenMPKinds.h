@@ -34,14 +34,6 @@ enum OpenMPClauseKind {
   OMPC_unknown
 };
 
-/// OpenMP attributes for 'default' clause.
-enum OpenMPDefaultClauseKind {
-#define OPENMP_DEFAULT_KIND(Name) \
-  OMPC_DEFAULT_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMPC_DEFAULT_unknown
-};
-
 /// OpenMP attributes for 'schedule' clause.
 enum OpenMPScheduleClauseKind {
 #define OPENMP_SCHEDULE_KIND(Name) \
