@@ -783,7 +783,7 @@ public:
 
   /// These functions do the actual initialization.
   inline void initializeIfNeeded();
-  void initializeIndexIfNeeded();
+  int initializeIndexIfNeeded();
 
   // Implementation Details
 private:
@@ -806,7 +806,8 @@ private:
   /// Add all of the module level global variables (and their initializers)
   /// and function declarations, but not the contents of those functions.
   void processModule();
-  void processIndex();
+  // Returns number of allocated slots
+  int processIndex();
 
   /// Add all of the functions arguments, basic blocks, and instructions.
   void processFunction();
@@ -920,11 +921,12 @@ inline void SlotTracker::initializeIfNeeded() {
     processFunction();
 }
 
-void SlotTracker::initializeIndexIfNeeded() {
+int SlotTracker::initializeIndexIfNeeded() {
   if (!TheIndex)
-    return;
-  processIndex();
+    return 0;
+  int NumSlots = processIndex();
   TheIndex = nullptr; ///< Prevent re-processing next time we're called.
+  return NumSlots;
 }
 
 // Iterate through all the global variables, functions, and global
@@ -1019,7 +1021,7 @@ void SlotTracker::processFunction() {
 }
 
 // Iterate through all the GUID in the index and create slots for them.
-void SlotTracker::processIndex() {
+int SlotTracker::processIndex() {
   ST_DEBUG("begin processIndex!\n");
   assert(TheIndex);
 
@@ -1038,17 +1040,17 @@ void SlotTracker::processIndex() {
   for (auto &GlobalList : *TheIndex)
     CreateGUIDSlot(GlobalList.first);
 
+  for (auto &TId : TheIndex->typeIdCompatibleVtableMap())
+    CreateGUIDSlot(GlobalValue::getGUID(TId.first));
+
   // Start numbering the TypeIds after the GUIDs.
   TypeIdNext = GUIDNext;
-
   for (auto TidIter = TheIndex->typeIds().begin();
        TidIter != TheIndex->typeIds().end(); TidIter++)
     CreateTypeIdSlot(TidIter->second.first);
 
-  for (auto &TId : TheIndex->typeIdCompatibleVtableMap())
-    CreateGUIDSlot(GlobalValue::getGUID(TId.first));
-
   ST_DEBUG("end processIndex!\n");
+  return TypeIdNext;
 }
 
 void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
@@ -2678,7 +2680,7 @@ void AssemblyWriter::printModule(const Module *M) {
 
 void AssemblyWriter::printModuleSummaryIndex() {
   assert(TheIndex);
-  Machine.initializeIndexIfNeeded();
+  int NumSlots = Machine.initializeIndexIfNeeded();
 
   Out << "\n";
 
@@ -2740,6 +2742,10 @@ void AssemblyWriter::printModuleSummaryIndex() {
     printTypeIdCompatibleVtableSummary(TId.second);
     Out << ") ; guid = " << GUID << "\n";
   }
+
+  // Don't emit flags when it's not really needed (value is zero by default).
+  if (TheIndex->getFlags())
+    Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";
 }
 
 static const char *
