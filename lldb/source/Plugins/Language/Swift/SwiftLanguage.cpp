@@ -1033,7 +1033,7 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
                   else {
                     uint8_t *data = new uint8_t[13];
                     unsigned long data_len =
-                        sprintf((char *)data, "\\u{%x}", *buffer);
+                        sprintf((char *)data, "\\u{%x}", (unsigned)codepoint);
                     retval = {data, data_len,
                               [](const uint8_t *c) { delete[] c; }};
                     break;
