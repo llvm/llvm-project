@@ -539,7 +539,7 @@ emitAuthenticatedPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          const MachineModuleInfoMachO::AuthStubInfo &StubInfo) {
   // L_foo$addend$auth_ptr$ib$23:
   OutStreamer.emitLabel(StubLabel);
-  OutStreamer.EmitValue(StubInfo.Pointer, /*size=*/8);
+  OutStreamer.emitValue(StubInfo.Pointer, /*size=*/8);
 }
 
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {

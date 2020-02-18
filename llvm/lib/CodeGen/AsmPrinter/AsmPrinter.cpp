@@ -2812,7 +2812,7 @@ static void emitPtrAuthGlobalConstant(const DataLayout &DL,
   }
 
   auto *ME = AP.lowerPtrAuthGlobalConstant(PAI);
-  AP.OutStreamer->EmitValue(ME, Size);
+  AP.OutStreamer->emitValue(ME, Size);
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
