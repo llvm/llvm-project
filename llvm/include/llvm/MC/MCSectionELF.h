@@ -81,7 +81,7 @@ public:
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;
 
-  bool isUnique() const { return UniqueID != ~0U; }
+  bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
 
   const MCSection *getLinkedToSection() const {
