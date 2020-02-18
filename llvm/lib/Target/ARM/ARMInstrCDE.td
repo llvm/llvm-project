@@ -1,3 +1,15 @@
+//===-- ARMInstrCDE.td - CDE support for ARM ---------------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file describes the Arm CDE (Custom Datapath Extension) instruction set.
+//
+//===----------------------------------------------------------------------===//
+
 // Immediate operand of arbitrary bit width
 class BitWidthImmOperand<int width>
   : ImmAsmOperand<0, !add(!shl(1, width), -1)> {
