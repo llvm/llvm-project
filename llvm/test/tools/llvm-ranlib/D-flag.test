@@ -41,5 +41,5 @@
 # RUN: not llvm-ranlib -DxD %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-xD
 # BAD-OPT-xD: error: Invalid option: '-xD'
 
-# DETERMINISTIC-VALUES: {{[rwx-]+}} 0/0    712 Jan  1 00:00 1970 D-flag.test.tmp.o
-# REAL-VALUES: {{[rwx-]+}} {{[0-9]+}}/{{[0-9]+}} 712 Jan  2 03:04 2000 D-flag.test.tmp.o
+# DETERMINISTIC-VALUES: {{[-rwx]+}} 0/0    712 Jan  1 00:00 1970 D-flag.test.tmp.o
+# REAL-VALUES: {{[-rwx]+}} {{[0-9]+}}/{{[0-9]+}} 712 Jan  2 03:04 2000 D-flag.test.tmp.o
