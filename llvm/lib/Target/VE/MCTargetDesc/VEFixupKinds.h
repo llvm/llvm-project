@@ -42,6 +42,12 @@ enum Fixups {
   fixup_ve_plt_hi32,
   fixup_ve_plt_lo32,
 
+  /// fixups for Thread Local Storage
+  fixup_ve_tls_gd_hi32,
+  fixup_ve_tls_gd_lo32,
+  fixup_ve_tpoff_hi32,
+  fixup_ve_tpoff_lo32,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
