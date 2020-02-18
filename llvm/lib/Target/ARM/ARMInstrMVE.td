@@ -4795,6 +4795,20 @@ def MVE_VBRSR8  : MVE_VBRSR<"vbrsr", "8", 0b00>;
 def MVE_VBRSR16 : MVE_VBRSR<"vbrsr", "16", 0b01>;
 def MVE_VBRSR32 : MVE_VBRSR<"vbrsr", "32", 0b10>;
 
+multiclass MVE_VBRSR_pat_m<MVEVectorVTInfo VTI, Instruction Inst> {
+  // Unpredicated
+  def : Pat<(VTI.Vec (int_arm_mve_vbrsr (VTI.Vec MQPR:$Qn), (i32 rGPR:$Rm))),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$Qn), (i32 rGPR:$Rm)))>;
+  // Predicated
+  def : Pat<(VTI.Vec (int_arm_mve_vbrsr_predicated
+                          (VTI.Vec MQPR:$inactive),
+                          (VTI.Vec MQPR:$Qn), (i32 rGPR:$Rm),
+                          (VTI.Pred VCCR:$mask))),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$Qn), (i32 rGPR:$Rm),
+                          ARMVCCThen, (VTI.Pred VCCR:$mask),
+                          (VTI.Vec MQPR:$inactive)))>;
+}
+
 let Predicates = [HasMVEInt] in {
   def : Pat<(v16i8 ( bitreverse (v16i8 MQPR:$val1))),
             (v16i8 ( MVE_VBRSR8 (v16i8 MQPR:$val1), (t2MOVi (i32 8)) ))>;
@@ -4804,6 +4818,15 @@ let Predicates = [HasMVEInt] in {
 
   def : Pat<(v8i16 ( bitreverse (v8i16 MQPR:$val1))),
             (v8i16 ( MVE_VBRSR16 (v8i16 MQPR:$val1), (t2MOVi (i32 16)) ))>;
+
+  defm : MVE_VBRSR_pat_m<MVE_v16i8, MVE_VBRSR8>;
+  defm : MVE_VBRSR_pat_m<MVE_v8i16, MVE_VBRSR16>;
+  defm : MVE_VBRSR_pat_m<MVE_v4i32, MVE_VBRSR32>;
+}
+
+let Predicates = [HasMVEFloat] in {
+  defm : MVE_VBRSR_pat_m<MVE_v8f16, MVE_VBRSR16>;
+  defm : MVE_VBRSR_pat_m<MVE_v4f32, MVE_VBRSR32>;
 }
 
 class MVE_VMUL_qr_int<string iname, string suffix, bits<2> size>
