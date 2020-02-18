@@ -38426,15 +38426,10 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Otherwise we can still at least try to simplify multiple use bits.
-  APInt DemandedMask(APInt::getSignMask(BitWidth));
-  APInt DemandedElts(APInt::getAllOnesValue(VT.getVectorNumElements()));
-  KnownBits Known;
-  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                        !DCI.isBeforeLegalizeOps());
-  if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedMask,
-                                                      DemandedElts, DAG, 0))
-    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
-                       V, N->getOperand(1), N->getOperand(2));
+  APInt DemandedBits(APInt::getSignMask(BitWidth));
+  if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedBits, DAG))
+    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
+                       N->getOperand(1), N->getOperand(2));
 
   return SDValue();
 }
@@ -42184,9 +42179,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI))
       return SDValue(N, 0);
-    APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
-    if (SDValue NewMask = TLI.SimplifyMultipleUseDemandedBits(
-            Mask, DemandedBits, DemandedElts, DAG, 0))
+    if (SDValue NewMask =
+            TLI.SimplifyMultipleUseDemandedBits(Mask, DemandedBits, DAG))
       return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
                                 Mst->getBasePtr(), Mst->getOffset(), NewMask,
                                 Mst->getMemoryVT(), Mst->getMemOperand(),
