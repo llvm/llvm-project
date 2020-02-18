@@ -1132,26 +1132,61 @@ entry:
 ; }
 
 define i1 @f_fcmp(float %a, float %b) {
+; CHECK-LABEL: define {{[^@]+}}@f_fcmp
+; CHECK-SAME: (float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge float [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
   %r = fcmp uge float %a, %b
   %s = select i1 %r, i1 %r, i1 0
   ret i1 %s
 }
 define i1 @d_fcmp(double %a, double %b) {
+; CHECK-LABEL: define {{[^@]+}}@d_fcmp
+; CHECK-SAME: (double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq double [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
   %r = fcmp oeq double %a, %b
   %s = select i1 %r, i1 %r, i1 0
   ret i1 %s
 }
 define i1 @dp_icmp(double* %a, double* %b) {
+; CHECK-LABEL: define {{[^@]+}}@dp_icmp
+; CHECK-SAME: (double* nofree readnone [[A:%.*]], double* nofree readnone [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sge double* [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
   %r = icmp sge double* %a, %b
   %s = select i1 %r, i1 %r, i1 0
   ret i1 %s
 }
 define i1 @ip_icmp(i8* %a, i8* %b) {
+; CHECK-LABEL: define {{[^@]+}}@ip_icmp
+; CHECK-SAME: (i8* nofree readnone [[A:%.*]], i8* nofree readnone [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8* [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[R]], i1 [[R]], i1 false
+; CHECK-NEXT:    ret i1 [[S]]
+;
   %r = icmp ult i8* %a, %b
   %s = select i1 %r, i1 %r, i1 0
   ret i1 %s
 }
 define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, double* %dpa, double* %dpb, i8* %ipa, i8* %ipb) {
+; CHECK-LABEL: define {{[^@]+}}@fcmp_caller
+; CHECK-SAME: (float [[FA:%.*]], float [[FB:%.*]], double [[DA:%.*]], double [[DB:%.*]], double* nofree readnone [[DPA:%.*]], double* nofree readnone [[DPB:%.*]], i8* nofree readnone [[IPA:%.*]], i8* nofree readnone [[IPB:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = call i1 @f_fcmp(float [[FA]], float [[FB]])
+; CHECK-NEXT:    [[R2:%.*]] = call i1 @d_fcmp(double [[DA]], double [[DB]])
+; CHECK-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(double* noalias nofree readnone [[DPA]], double* noalias nofree readnone [[DPB]])
+; CHECK-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(i8* noalias nofree readnone [[IPA]], i8* noalias nofree readnone [[IPB]])
+; CHECK-NEXT:    [[O1:%.*]] = or i1 [[R1]], [[R2]]
+; CHECK-NEXT:    [[O2:%.*]] = or i1 [[R3]], [[R4]]
+; CHECK-NEXT:    [[O3:%.*]] = or i1 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i1 [[O3]]
+;
   %r1 = call i1 @f_fcmp(float %fa, float %fb)
   %r2 = call i1 @d_fcmp(double %da, double %db)
   %r3 = call i1 @dp_icmp(double* %dpa, double* %dpb)
