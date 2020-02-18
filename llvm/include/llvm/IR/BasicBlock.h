@@ -402,7 +402,9 @@ public:
 
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.
-  bool hasAddressTaken() const { return getSubclassDataFromValue() != 0; }
+  bool hasAddressTaken() const {
+    return getBasicBlockBits().BlockAddressRefCount != 0;
+  }
 
   /// Update all phi nodes in this basic block to refer to basic block \p New
   /// instead of basic block \p Old.
@@ -437,16 +439,61 @@ public:
 
   Optional<uint64_t> getIrrLoopHeaderWeight() const;
 
+  /// Returns true if the Order field of child Instructions is valid.
+  bool isInstrOrderValid() const {
+    return getBasicBlockBits().InstrOrderValid;
+  }
+
+  /// Mark instruction ordering invalid. Done on every instruction insert.
+  void invalidateOrders() {
+    validateInstrOrdering();
+    BasicBlockBits Bits = getBasicBlockBits();
+    Bits.InstrOrderValid = false;
+    setBasicBlockBits(Bits);
+  }
+
+  /// Renumber instructions and mark the ordering as valid.
+  void renumberInstructions();
+
+  /// Returns false if the instruction ordering is incorrect in an debug build.
+  /// Always returns true when assertions are disabled. The method does not
+  /// assert internally so that we get better location info.
+  void validateInstrOrdering() const;
+
 private:
+  /// Bitfield to help interpret the bits in Value::SubclassData.
+  struct BasicBlockBits {
+    unsigned short BlockAddressRefCount : 15;
+    unsigned short InstrOrderValid : 1;
+  };
+
+  /// Safely reinterpret the subclass data bits to a more useful form.
+  BasicBlockBits getBasicBlockBits() const {
+    static_assert(sizeof(BasicBlockBits) == sizeof(unsigned short),
+                  "too many bits for Value::SubclassData");
+    unsigned short ValueData = getSubclassDataFromValue();
+    BasicBlockBits AsBits;
+    memcpy(&AsBits, &ValueData, sizeof(AsBits));
+    return AsBits;
+  }
+
+  /// Reinterpret our subclass bits and store them back into Value.
+  void setBasicBlockBits(BasicBlockBits AsBits) {
+    unsigned short D;
+    memcpy(&D, &AsBits, sizeof(D));
+    Value::setValueSubclassData(D);
+  }
+
   /// Increment the internal refcount of the number of BlockAddresses
   /// referencing this BasicBlock by \p Amt.
   ///
   /// This is almost always 0, sometimes one possibly, but almost never 2, and
   /// inconceivably 3 or more.
   void AdjustBlockAddressRefCount(int Amt) {
-    setValueSubclassData(getSubclassDataFromValue()+Amt);
-    assert((int)(signed char)getSubclassDataFromValue() >= 0 &&
-           "Refcount wrap-around");
+    BasicBlockBits Bits = getBasicBlockBits();
+    Bits.BlockAddressRefCount += Amt;
+    setBasicBlockBits(Bits);
+    assert(Bits.BlockAddressRefCount < 255 && "Refcount wrap-around");
   }
 
   /// Shadow Value::setValueSubclassData with a private forwarding method so
@@ -462,6 +509,12 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(BasicBlock, LLVMBasicBlockRef)
 /// Advance \p It while it points to a debug instruction and return the result.
 /// This assumes that \p It is not at the end of a block.
 BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
+
+#ifdef NDEBUG
+/// In release builds, this is a no-op. For !NDEBUG builds, the checks are
+/// implemented in the .cpp file to avoid circular header deps.
+inline void Instruction::validateInstrOrdering() const {}
+#endif
 
 } // end namespace llvm
 

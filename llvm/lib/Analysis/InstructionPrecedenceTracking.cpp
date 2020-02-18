@@ -104,18 +104,14 @@ void InstructionPrecedenceTracking::insertInstructionTo(const Instruction *Inst,
                                                         const BasicBlock *BB) {
   if (isSpecialInstruction(Inst))
     FirstSpecialInsts.erase(BB);
-  OI.invalidateBlock(BB);
 }
 
 void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
   if (isSpecialInstruction(Inst))
     FirstSpecialInsts.erase(Inst->getParent());
-  OI.invalidateBlock(Inst->getParent());
 }
 
 void InstructionPrecedenceTracking::clear() {
-  for (auto It : FirstSpecialInsts)
-    OI.invalidateBlock(It.first);
   FirstSpecialInsts.clear();
 #ifndef NDEBUG
   // The map should be valid after clearing (at least empty).
