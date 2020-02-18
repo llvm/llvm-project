@@ -205,3 +205,18 @@ void dummy(const char*) {}
 void invalid(const NotAString &s) {
   dummy(s.c_str());
 }
+
+// Test for rvalue std::string.
+void m1(std::string&&) {
+  std::string s;
+
+  m1(s.c_str());
+
+  void (*m1p1)(std::string&&);
+  m1p1 = m1;
+  m1p1(s.c_str());
+
+  using m1tp = void (*)(std::string &&);
+  m1tp m1p2 = m1;
+  m1p2(s.c_str());  
+}
