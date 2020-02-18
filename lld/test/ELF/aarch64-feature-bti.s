@@ -174,7 +174,7 @@
 
 # RUN: ld.lld %t.o %t2.o -z force-bti %t.so -o %tforcebti.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
 
-# FORCE-WARN: aarch64-feature-bti.s.tmp2.o: -z force-bti: file does not have BTI property
+# FORCE-WARN: aarch64-feature-bti.s.tmp2.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
 
 
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
