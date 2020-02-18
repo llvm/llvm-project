@@ -2723,6 +2723,31 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
           canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;
 
+  CmpInst::Predicate Pred;
+  Value *Mul, *Ov, *MulIsNotZero, *UMulWithOv;
+  // Check if the OR weakens the overflow condition for umul.with.overflow by
+  // treating any non-zero result as overflow. In that case, we overflow if both
+  // umul.with.overflow operands are != 0, as in that case the result can only
+  // be 0, iff the multiplication overflows.
+  if (match(&I,
+            m_c_Or(m_CombineAnd(m_ExtractValue<1>(m_Value(UMulWithOv)),
+                                m_Value(Ov)),
+                   m_CombineAnd(m_ICmp(Pred,
+                                       m_CombineAnd(m_ExtractValue<0>(
+                                                        m_Deferred(UMulWithOv)),
+                                                    m_Value(Mul)),
+                                       m_ZeroInt()),
+                                m_Value(MulIsNotZero)))) &&
+      (Ov->hasOneUse() || (MulIsNotZero->hasOneUse() && Mul->hasOneUse())) &&
+      Pred == CmpInst::ICMP_NE) {
+    Value *A, *B;
+    if (match(UMulWithOv, m_Intrinsic<Intrinsic::umul_with_overflow>(
+                              m_Value(A), m_Value(B))))
+
+      return BinaryOperator::CreateAnd(Builder.CreateIsNotNull(A),
+                                       Builder.CreateIsNotNull(B));
+  }
+
   return nullptr;
 }
 
