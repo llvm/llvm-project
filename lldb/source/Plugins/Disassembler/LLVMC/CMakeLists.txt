@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginDisassemblerLLVM PLUGIN
+add_lldb_library(lldbPluginDisassemblerLLVMC PLUGIN
   DisassemblerLLVMC.cpp
 
   LINK_LIBS
