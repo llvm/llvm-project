@@ -1242,7 +1242,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Promote integer operand: "; N->dump(&DAG);
              dbgs() << "\n");
   SDValue Res = SDValue();
-
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
     LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
     return false;
@@ -1339,10 +1338,17 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   if (Res.getNode() == N)
     return true;
 
-  assert(Res.getValueType() == N->getValueType(0) && N->getNumValues() == 1 &&
+  const bool IsStrictFp = N->isStrictFPOpcode();
+  assert(Res.getValueType() == N->getValueType(0) &&
+         N->getNumValues() == (IsStrictFp ? 2 : 1) &&
          "Invalid operand expansion");
+  LLVM_DEBUG(dbgs() << "Replacing: "; N->dump(&DAG); dbgs() << "     with: ";
+             Res.dump());
 
   ReplaceValueWith(SDValue(N, 0), Res);
+  if (IsStrictFp)
+    ReplaceValueWith(SDValue(N, 1), SDValue(Res.getNode(), 1));
+
   return false;
 }
 
