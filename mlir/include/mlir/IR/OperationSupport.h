@@ -32,14 +32,17 @@ struct OperationState;
 class OpAsmParser;
 class OpAsmParserResult;
 class OpAsmPrinter;
+class OperandRange;
 class OpFoldResult;
 class ParseResult;
 class Pattern;
 class Region;
+class ResultRange;
 class RewritePattern;
 class Type;
 class Value;
 class ValueRange;
+template <typename ValueRangeT> class ValueTypeRange;
 
 /// This is an adaptor from a list of values to named operands of OpTy.  In a
 /// generic operation context, e.g., in dialect conversions, an ordered array of
@@ -536,6 +539,46 @@ private:
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// TypeRange
+
+/// This class provides an abstraction over the various different ranges of
+/// value types. In many cases, this prevents the need to explicitly materialize
+/// a SmallVector/std::vector. This class should be used in places that are not
+/// suitable for a more derived type (e.g. ArrayRef) or a template range
+/// parameter.
+class TypeRange
+    : public detail::indexed_accessor_range_base<
+          TypeRange,
+          llvm::PointerUnion<const Value *, const Type *, OpOperand *>, Type,
+          Type, Type> {
+public:
+  using RangeBaseT::RangeBaseT;
+  TypeRange(ArrayRef<Type> types = llvm::None);
+  explicit TypeRange(OperandRange values);
+  explicit TypeRange(ResultRange values);
+  explicit TypeRange(ValueRange values);
+  template <typename ValueRangeT>
+  TypeRange(ValueTypeRange<ValueRangeT> values)
+      : TypeRange(ValueRangeT(values.begin().getCurrent(),
+                              values.end().getCurrent())) {}
+
+private:
+  /// The owner of the range is either:
+  /// * A pointer to the first element of an array of values.
+  /// * A pointer to the first element of an array of types.
+  /// * A pointer to the first element of an array of operands.
+  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *>;
+
+  /// See `detail::indexed_accessor_range_base` for details.
+  static OwnerT offset_base(OwnerT object, ptrdiff_t index);
+  /// See `detail::indexed_accessor_range_base` for details.
+  static Type dereference_iterator(OwnerT object, ptrdiff_t index);
+
+  /// Allow access to `offset_base` and `dereference_iterator`.
+  friend RangeBaseT;
+};
+
+//===----------------------------------------------------------------------===//
 // ValueTypeRange
 
 /// This class implements iteration on the types of a given range of values.
@@ -555,6 +598,18 @@ public:
       : llvm::mapped_iterator<ValueIteratorT, Type (*)(Value)>(it, &unwrap) {}
 };
 
+/// This class implements iteration on the types of a given range of values.
+template <typename ValueRangeT>
+class ValueTypeRange final
+    : public llvm::iterator_range<
+          ValueTypeIterator<typename ValueRangeT::iterator>> {
+public:
+  using llvm::iterator_range<
+      ValueTypeIterator<typename ValueRangeT::iterator>>::iterator_range;
+  template <typename Container>
+  ValueTypeRange(Container &&c) : ValueTypeRange(c.begin(), c.end()) {}
+};
+
 //===----------------------------------------------------------------------===//
 // OperandRange
 
@@ -568,7 +623,8 @@ public:
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;
-  iterator_range<type_iterator> getTypes() const { return {begin(), end()}; }
+  using type_range = ValueTypeRange<OperandRange>;
+  type_range getTypes() const { return {begin(), end()}; }
 
 private:
   /// See `detail::indexed_accessor_range_base` for details.
@@ -598,7 +654,8 @@ public:
 
   /// Returns the types of the values within this range.
   using type_iterator = ArrayRef<Type>::iterator;
-  ArrayRef<Type> getTypes() const;
+  using type_range = ArrayRef<Type>;
+  type_range getTypes() const;
 
 private:
   /// See `indexed_accessor_range` for details.
@@ -666,7 +723,8 @@ public:
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;
-  iterator_range<type_iterator> getTypes() const { return {begin(), end()}; }
+  using type_range = ValueTypeRange<ValueRange>;
+  type_range getTypes() const { return {begin(), end()}; }
 
 private:
   using OwnerT = detail::ValueRangeOwner;

@@ -141,6 +141,43 @@ void detail::OperandStorage::grow(ResizableStorage &resizeUtil,
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// TypeRange
+
+TypeRange::TypeRange(ArrayRef<Type> types)
+    : TypeRange(types.data(), types.size()) {}
+TypeRange::TypeRange(OperandRange values)
+    : TypeRange(values.begin().getBase(), values.size()) {}
+TypeRange::TypeRange(ResultRange values)
+    : TypeRange(values.getBase()->getResultTypes().slice(values.getStartIndex(),
+                                                         values.size())) {}
+TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
+  detail::ValueRangeOwner owner = values.begin().getBase();
+  if (auto *op = reinterpret_cast<Operation *>(owner.ptr.dyn_cast<void *>()))
+    this->base = &op->getResultTypes()[owner.startIndex];
+  else if (auto *operand = owner.ptr.dyn_cast<OpOperand *>())
+    this->base = operand;
+  else
+    this->base = owner.ptr.get<const Value *>();
+}
+
+/// See `detail::indexed_accessor_range_base` for details.
+TypeRange::OwnerT TypeRange::offset_base(OwnerT object, ptrdiff_t index) {
+  if (auto *value = object.dyn_cast<const Value *>())
+    return {value + index};
+  if (auto *operand = object.dyn_cast<OpOperand *>())
+    return {operand + index};
+  return {object.dyn_cast<const Type *>() + index};
+}
+/// See `detail::indexed_accessor_range_base` for details.
+Type TypeRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
+  if (auto *value = object.dyn_cast<const Value *>())
+    return (value + index)->getType();
+  if (auto *operand = object.dyn_cast<OpOperand *>())
+    return (operand + index)->get().getType();
+  return object.dyn_cast<const Type *>()[index];
+}
+
+//===----------------------------------------------------------------------===//
 // OperandRange
 
 OperandRange::OperandRange(Operation *op)

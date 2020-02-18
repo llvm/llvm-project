@@ -188,10 +188,9 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, bool value) {
   return p << (value ? StringRef("true") : "false");
 }
 
-template <typename IteratorT>
-inline OpAsmPrinter &
-operator<<(OpAsmPrinter &p,
-           const iterator_range<ValueTypeIterator<IteratorT>> &types) {
+template <typename ValueRangeT>
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
+                                const ValueTypeRange<ValueRangeT> &types) {
   interleaveComma(types, p);
   return p;
 }
