@@ -345,6 +345,30 @@ func @indexed_generic_with_tensor_input_and_output(
 
 // -----
 
+#broadcast_access = [
+  affine_map<(i, j) -> (0)>,
+  affine_map<(i,j) -> (i,j)>
+]
+
+#trait_broadcast = {
+  args_in = 1,
+  args_out = 1,
+  indexing_maps = #broadcast_access,
+  iterator_types = ["parallel", "parallel"],
+  library_call = "some_broadcast_external_fn"
+}
+
+func @generic_op_zero_rank(%arg0 : tensor<f32>) ->  (tensor<3x4xf32>)
+{
+  %0 = linalg.generic #trait_broadcast %arg0 {
+    ^bb(%a: f32) :
+      linalg.yield %a : f32
+  } : tensor<f32> -> tensor<3x4xf32>
+  return %0 : tensor<3x4xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
