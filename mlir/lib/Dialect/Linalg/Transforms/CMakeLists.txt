@@ -14,6 +14,7 @@ set(LIBS
   MLIRStandardToLLVM
   MLIRTransformUtils
   MLIRVectorOps
+  LLVMSupport
   )
 
 add_mlir_dialect_library(MLIRLinalgTransforms
@@ -27,6 +28,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS
+  ${LIBS}
   )
 
 add_dependencies(MLIRLinalgTransforms
@@ -34,4 +38,3 @@ add_dependencies(MLIRLinalgTransforms
   ${LIBS}
   MLIRLinalgTransformPatternsIncGen
   )
-target_link_libraries(MLIRLinalgTransforms ${LIBS})
