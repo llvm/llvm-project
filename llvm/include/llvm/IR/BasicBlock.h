@@ -513,7 +513,7 @@ BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 #ifdef NDEBUG
 /// In release builds, this is a no-op. For !NDEBUG builds, the checks are
 /// implemented in the .cpp file to avoid circular header deps.
-inline void Instruction::validateInstrOrdering() const {}
+inline void BasicBlock::validateInstrOrdering() const {}
 #endif
 
 } // end namespace llvm
