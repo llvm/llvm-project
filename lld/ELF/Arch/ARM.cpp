@@ -132,6 +132,13 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
+  case R_ARM_MOVW_BREL_NC:
+  case R_ARM_MOVW_BREL:
+  case R_ARM_MOVT_BREL:
+  case R_ARM_THM_MOVW_BREL_NC:
+  case R_ARM_THM_MOVW_BREL:
+  case R_ARM_THM_MOVT_BREL:
+    return R_ARM_SBREL;
   case R_ARM_NONE:
     return R_NONE;
   case R_ARM_TLS_LE32:
@@ -527,16 +534,19 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_ARM_MOVW_ABS_NC:
   case R_ARM_MOVW_PREL_NC:
+  case R_ARM_MOVW_BREL_NC:
     write32le(loc, (read32le(loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
                        (val & 0x0fff));
     break;
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVT_PREL:
+  case R_ARM_MOVT_BREL:
     write32le(loc, (read32le(loc) & ~0x000f0fff) |
                        (((val >> 16) & 0xf000) << 4) | ((val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVT_PREL:
+  case R_ARM_THM_MOVT_BREL:
     // Encoding T1: A = imm4:i:imm3:imm8
     write16le(loc,
               0xf2c0 |                     // opcode
@@ -549,6 +559,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVW_PREL_NC:
+  case R_ARM_THM_MOVW_BREL_NC:
     // Encoding T3: A = imm4:i:imm3:imm8
     write16le(loc,
               0xf240 |                     // opcode
@@ -629,14 +640,18 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_MOVW_ABS_NC:
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVW_PREL_NC:
-  case R_ARM_MOVT_PREL: {
+  case R_ARM_MOVT_PREL:
+  case R_ARM_MOVW_BREL_NC:
+  case R_ARM_MOVT_BREL: {
     uint64_t val = read32le(buf) & 0x000f0fff;
     return SignExtend64<16>(((val & 0x000f0000) >> 4) | (val & 0x00fff));
   }
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVW_PREL_NC:
-  case R_ARM_THM_MOVT_PREL: {
+  case R_ARM_THM_MOVT_PREL:
+  case R_ARM_THM_MOVW_BREL_NC:
+  case R_ARM_THM_MOVT_BREL: {
     // Encoding T3: A = imm4:i:imm3:imm8
     uint16_t hi = read16le(buf);
     uint16_t lo = read16le(buf + 2);
