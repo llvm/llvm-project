@@ -911,10 +911,7 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  const MCSymbol *Link = TextSec.getBeginSymbol();
-  auto It = StackSizesUniquing.insert({Link, StackSizesUniquing.size()});
-  unsigned UniqueID = It.first->second;
-
   return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, UniqueID, cast<MCSymbolELF>(Link));
+                            GroupName, MCSection::NonUniqueID,
+                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
