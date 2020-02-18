@@ -1214,6 +1214,65 @@ define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, double* %dp
   ret i1 %o3
 }
 
+define i8 @ret_two() {
+; CHECK-LABEL: define {{[^@]+}}@ret_two()
+; CHECK-NEXT:    ret i8 2
+;
+  ret i8 2
+}
+define i8 @ret_undef() {
+; CHECK-LABEL: define {{[^@]+}}@ret_undef()
+; CHECK-NEXT:    ret i8 undef
+;
+  ret i8 undef
+}
+
+; Verify we collapse undef to a value and return something non-undef here.
+define i8 @undef_collapse_1() {
+; CHECK-LABEL: define {{[^@]+}}@undef_collapse_1()
+; CHECK-NEXT:    ret i8 0
+;
+  %c = call i8 @ret_undef()
+  %s = shl i8 %c, 2
+  ret i8 %s
+}
+
+; Verify we collapse undef to a value and return something non-undef here.
+define i8 @undef_collapse_2() {
+; CHECK-LABEL: define {{[^@]+}}@undef_collapse_2()
+; CHECK-NEXT:    ret i8 0
+;
+  %c = call i8 @ret_two()
+  %s = shl i8 undef, %c
+  ret i8 %s
+}
+
+define i8 @undef_collapse_caller() {
+; OLD_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; OLD_PM-NEXT:    ret i8 0
+;
+; NEW_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; NEW_PM-NEXT:    ret i8 0
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; CGSCC_OLD_PM-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1()
+; CGSCC_OLD_PM-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2()
+; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = add i8 [[C1]], [[C2]]
+; CGSCC_OLD_PM-NEXT:    ret i8 [[A]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@undef_collapse_caller()
+; CGSCC_NEW_PM-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1()
+; CGSCC_NEW_PM-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2()
+; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = add i8 [[C1]], [[C2]]
+; CGSCC_NEW_PM-NEXT:    ret i8 [[A]]
+;
+  %c1 = call i8 @undef_collapse_1()
+  %c2 = call i8 @undef_collapse_2()
+  %a = add i8 %c1, %c2
+  ret i8 %a
+}
+
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 ; CHECK: !0 = !{i32 0, i32 10}

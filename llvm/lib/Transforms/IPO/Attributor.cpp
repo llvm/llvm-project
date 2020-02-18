@@ -6656,6 +6656,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     }
 
     if (isa<UndefValue>(&V)) {
+      // Collapse the undef state to 0.
+      unionAssumed(ConstantRange(APInt(getBitWidth(), 0)));
       indicateOptimisticFixpoint();
       return;
     }
