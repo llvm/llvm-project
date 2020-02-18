@@ -4495,10 +4495,15 @@ static llvm::VectorType *GetFloatNeonType(CodeGenFunction *CGF,
   }
 }
 
+Value *CodeGenFunction::EmitNeonSplat(Value *V, Constant *C,
+                                      const ElementCount &Count) {
+  Value *SV = llvm::ConstantVector::getSplat(Count, C);
+  return Builder.CreateShuffleVector(V, V, SV, "lane");
+}
+
 Value *CodeGenFunction::EmitNeonSplat(Value *V, Constant *C) {
   ElementCount EC = V->getType()->getVectorElementCount();
-  Value *SV = llvm::ConstantVector::getSplat(EC, C);
-  return Builder.CreateShuffleVector(V, V, SV, "lane");
+  return EmitNeonSplat(V, C, EC);
 }
 
 Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
@@ -4605,6 +4610,10 @@ struct ARMVectorIntrinsicInfo {
       TypeModifier }
 
 static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
+  NEONMAP0(splat_lane_v),
+  NEONMAP0(splat_laneq_v),
+  NEONMAP0(splatq_lane_v),
+  NEONMAP0(splatq_laneq_v),
   NEONMAP2(vabd_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP1(vabs_v, arm_neon_vabs, 0),
@@ -4886,6 +4895,10 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
 };
 
 static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
+  NEONMAP0(splat_lane_v),
+  NEONMAP0(splat_laneq_v),
+  NEONMAP0(splatq_lane_v),
+  NEONMAP0(splatq_laneq_v),
   NEONMAP1(vabs_v, aarch64_neon_abs, 0),
   NEONMAP1(vabsq_v, aarch64_neon_abs, 0),
   NEONMAP0(vaddhn_v),
@@ -5460,6 +5473,19 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
 
   switch (BuiltinID) {
   default: break;
+  case NEON::BI__builtin_neon_splat_lane_v:
+  case NEON::BI__builtin_neon_splat_laneq_v:
+  case NEON::BI__builtin_neon_splatq_lane_v:
+  case NEON::BI__builtin_neon_splatq_laneq_v: {
+    auto NumElements = VTy->getElementCount();
+    if (BuiltinID == NEON::BI__builtin_neon_splatq_lane_v)
+      NumElements = NumElements * 2;
+    if (BuiltinID == NEON::BI__builtin_neon_splat_laneq_v)
+      NumElements = NumElements / 2;
+
+    Ops[0] = Builder.CreateBitCast(Ops[0], VTy);
+    return EmitNeonSplat(Ops[0], cast<ConstantInt>(Ops[1]), NumElements);
+  }
   case NEON::BI__builtin_neon_vpadd_v:
   case NEON::BI__builtin_neon_vpaddq_v:
     // We don't allow fp/int overloading of intrinsics.
@@ -5798,9 +5824,14 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqdmulh_lane_v:
   case NEON::BI__builtin_neon_vqrdmulhq_lane_v:
   case NEON::BI__builtin_neon_vqrdmulh_lane_v: {
+    llvm::Type *RTy = Ty;
+    if (BuiltinID == NEON::BI__builtin_neon_vqdmulhq_lane_v ||
+        BuiltinID == NEON::BI__builtin_neon_vqrdmulhq_lane_v)
+      RTy = llvm::VectorType::get(Ty->getVectorElementType(),
+                                  Ty->getVectorNumElements() * 2);
     llvm::Type *Tys[2] = {
-        Ty, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
-                                            /*isQuad*/ false))};
+        RTy, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                             /*isQuad*/ false))};
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, NameHint);
   }
   case NEON::BI__builtin_neon_vqdmulhq_laneq_v:
