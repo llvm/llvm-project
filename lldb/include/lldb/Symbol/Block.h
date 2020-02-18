@@ -40,7 +40,7 @@ namespace lldb_private {
 /// blocks.
 class Block : public UserID, public SymbolContextScope {
 public:
-  typedef RangeArray<uint32_t, uint32_t, 1> RangeList;
+  typedef RangeVector<uint32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
   /// Construct with a User ID \a uid, \a depth.

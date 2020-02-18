@@ -45,7 +45,7 @@ public:
 
 protected:
   typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;
-  typedef RangeArray<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
+  typedef RangeVector<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
   typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
   // Classes that inherit from MemoryCache can see and modify these
   std::recursive_mutex m_mutex;
