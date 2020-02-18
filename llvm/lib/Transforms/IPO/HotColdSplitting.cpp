@@ -493,6 +493,10 @@ public:
     // first have predecessors within the extraction region.
     if (mayExtractBlock(SinkBB)) {
       addBlockToRegion(&SinkBB, SinkScore);
+      if (pred_empty(&SinkBB)) {
+        ColdRegion->EntireFunctionCold = true;
+        return Regions;
+      }
     } else {
       Regions.emplace_back();
       ColdRegion = &Regions.back();
