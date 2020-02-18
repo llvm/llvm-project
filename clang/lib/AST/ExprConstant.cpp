@@ -3140,6 +3140,13 @@ struct CompleteObject {
       : Base(Base), Value(Value), Type(Type) {}
 
   bool mayAccessMutableMembers(EvalInfo &Info, AccessKinds AK) const {
+    // If this isn't a "real" access (eg, if it's just accessing the type
+    // info), allow it. We assume the type doesn't change dynamically for
+    // subobjects of constexpr objects (even though we'd hit UB here if it
+    // did). FIXME: Is this right?
+    if (!isAnyAccess(AK))
+      return true;
+
     // In C++14 onwards, it is permitted to read a mutable member whose
     // lifetime began within the evaluation.
     // FIXME: Should we also allow this in C++11?
