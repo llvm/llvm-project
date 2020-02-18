@@ -108,10 +108,6 @@ class GlobalVariablesTestCase(TestBase):
                 'g_marked_spot.x',
                 '20'])
 
-        # rdar://problem/9747668
-        # runCmd: target variable g_marked_spot.y
-        # output: (int) g_marked_spot.y = <a.o[0x214] can't be resolved,  in not currently loaded.
-        #         >
         self.expect(
             "target variable g_marked_spot.y",
             VARIABLES_DISPLAYED_CORRECTLY,
