@@ -61,10 +61,10 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
                                           StringRef Str) {
   switch (Kind) {
   case OMPC_default:
-    return llvm::StringSwitch<OpenMPDefaultClauseKind>(Str)
-#define OPENMP_DEFAULT_KIND(Name) .Case(#Name, OMPC_DEFAULT_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-        .Default(OMPC_DEFAULT_unknown);
+    return llvm::StringSwitch<unsigned>(Str)
+#define OMP_DEFAULT_KIND(Enum, Name) .Case(Name, unsigned(Enum))
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+        .Default(unsigned(llvm::omp::OMP_DEFAULT_unknown));
   case OMPC_proc_bind:
     return llvm::StringSwitch<unsigned>(Str)
 #define OMP_PROC_BIND_KIND(Enum, Name, Value) .Case(Name, Value)
@@ -203,13 +203,11 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
                                                  unsigned Type) {
   switch (Kind) {
   case OMPC_default:
-    switch (Type) {
-    case OMPC_DEFAULT_unknown:
-      return "unknown";
-#define OPENMP_DEFAULT_KIND(Name)                                              \
-  case OMPC_DEFAULT_##Name:                                                    \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
+    switch (llvm::omp::DefaultKind(Type)) {
+#define OMP_DEFAULT_KIND(Enum, Name)                                           \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'default' clause type");
   case OMPC_proc_bind:

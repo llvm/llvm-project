@@ -1244,7 +1244,8 @@ void OMPClausePrinter::VisitOMPCollapseClause(OMPCollapseClause *Node) {
 
 void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
-     << getOpenMPSimpleClauseTypeName(OMPC_default, Node->getDefaultKind())
+     << getOpenMPSimpleClauseTypeName(OMPC_default,
+                                      unsigned(Node->getDefaultKind()))
      << ")";
 }
 
