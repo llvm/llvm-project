@@ -38,6 +38,8 @@ template <> struct ilist_alloc_traits<MCFragment> {
 /// current translation unit.  The MCContext class uniques and creates these.
 class MCSection {
 public:
+  static constexpr unsigned NonUniqueID = ~0U;
+
   enum SectionVariant { SV_COFF = 0, SV_ELF, SV_MachO, SV_Wasm, SV_XCOFF };
 
   /// Express the state of bundle locked groups while emitting code.
