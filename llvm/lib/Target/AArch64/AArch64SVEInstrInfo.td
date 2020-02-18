@@ -1475,14 +1475,14 @@ let Predicates = [HasSVE2] in {
   defm SQRDCMLAH_ZZZ : sve2_int_cmla<0b1, "sqrdcmlah", int_aarch64_sve_sqrdcmlah_x>;
 
   // SVE2 integer multiply long (indexed)
-  defm SMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b000, "smullb">;
-  defm SMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b001, "smullt">;
-  defm UMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b010, "umullb">;
-  defm UMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b011, "umullt">;
+  defm SMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b000, "smullb", int_aarch64_sve_smullb_lane>;
+  defm SMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b001, "smullt", int_aarch64_sve_smullt_lane>;
+  defm UMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b010, "umullb", int_aarch64_sve_umullb_lane>;
+  defm UMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b011, "umullt", int_aarch64_sve_umullt_lane>;
 
   // SVE2 saturating multiply (indexed)
-  defm SQDMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b100, "sqdmullb">;
-  defm SQDMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b101, "sqdmullt">;
+  defm SQDMULLB_ZZZI : sve2_int_mul_long_by_indexed_elem<0b100, "sqdmullb", int_aarch64_sve_sqdmullb_lane>;
+  defm SQDMULLT_ZZZI : sve2_int_mul_long_by_indexed_elem<0b101, "sqdmullt", int_aarch64_sve_sqdmullt_lane>;
 
   // SVE2 integer multiply-add long (indexed)
   defm SMLALB_ZZZI : sve2_int_mla_long_by_indexed_elem<0b1000, "smlalb", int_aarch64_sve_smlalb_lane>;
@@ -1593,14 +1593,14 @@ let Predicates = [HasSVE2] in {
   defm UABDLT_ZZZ : sve2_wide_int_arith_long<0b01111, "uabdlt", int_aarch64_sve_uabdlt>;
 
   // SVE2 integer add/subtract wide
-  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb">;
-  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt">;
-  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb">;
-  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt">;
-  defm SSUBWB_ZZZ : sve2_wide_int_arith_wide<0b100, "ssubwb">;
-  defm SSUBWT_ZZZ : sve2_wide_int_arith_wide<0b101, "ssubwt">;
-  defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb">;
-  defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt">;
+  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb", int_aarch64_sve_saddwb>;
+  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt", int_aarch64_sve_saddwt>;
+  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb", int_aarch64_sve_uaddwb>;
+  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt", int_aarch64_sve_uaddwt>;
+  defm SSUBWB_ZZZ : sve2_wide_int_arith_wide<0b100, "ssubwb", int_aarch64_sve_ssubwb>;
+  defm SSUBWT_ZZZ : sve2_wide_int_arith_wide<0b101, "ssubwt", int_aarch64_sve_ssubwt>;
+  defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
+  defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
 
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
@@ -1693,10 +1693,10 @@ let Predicates = [HasSVE2] in {
   defm EORTB_ZZZ : sve2_bitwise_xor_interleaved<0b1, "eortb">;
 
   // SVE2 bitwise shift left long
-  defm SSHLLB_ZZI : sve2_bitwise_shift_left_long<0b00, "sshllb">;
-  defm SSHLLT_ZZI : sve2_bitwise_shift_left_long<0b01, "sshllt">;
-  defm USHLLB_ZZI : sve2_bitwise_shift_left_long<0b10, "ushllb">;
-  defm USHLLT_ZZI : sve2_bitwise_shift_left_long<0b11, "ushllt">;
+  defm SSHLLB_ZZI : sve2_bitwise_shift_left_long<0b00, "sshllb", int_aarch64_sve_sshllb>;
+  defm SSHLLT_ZZI : sve2_bitwise_shift_left_long<0b01, "sshllt", int_aarch64_sve_sshllt>;
+  defm USHLLB_ZZI : sve2_bitwise_shift_left_long<0b10, "ushllb", int_aarch64_sve_ushllb>;
+  defm USHLLT_ZZI : sve2_bitwise_shift_left_long<0b11, "ushllt", int_aarch64_sve_ushllt>;
 
   // SVE2 integer add/subtract interleaved long
   defm SADDLBT_ZZZ : sve2_misc_int_addsub_long_interleaved<0b00, "saddlbt", int_aarch64_sve_saddlbt>;
