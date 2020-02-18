@@ -587,4 +587,4 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK083 %s
 // CHECK083:          "-isysroot" "/hexagon"
-// CHECK083:          "-internal-externc-isystem" "/hexagon/include"
+// CHECK083:          "-internal-externc-isystem" "/hexagon{{/|\\\\}}include"
