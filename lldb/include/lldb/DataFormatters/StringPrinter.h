@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StringPrinter_h_
-#define liblldb_StringPrinter_h_
+#ifndef LLDB_DATAFORMATTERS_STRINGPRINTER_H
+#define LLDB_DATAFORMATTERS_STRINGPRINTER_H
 
 #include <functional>
 #include <string>
@@ -218,4 +218,4 @@ public:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_StringPrinter_h_
+#endif // LLDB_DATAFORMATTERS_STRINGPRINTER_H

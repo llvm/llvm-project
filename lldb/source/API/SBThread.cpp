@@ -86,7 +86,7 @@ const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
 }
 
 // Destructor
-SBThread::~SBThread() {}
+SBThread::~SBThread() = default;
 
 lldb::SBQueue SBThread::GetQueue() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBQueue, SBThread, GetQueue);

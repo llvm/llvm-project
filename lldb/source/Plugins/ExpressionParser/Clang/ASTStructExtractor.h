@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ASTStructExtractor_h_
-#define liblldb_ASTStructExtractor_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H
 
 #include "ClangExpressionVariable.h"
 #include "ClangFunctionCaller.h"
@@ -128,4 +128,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ASTStructExtractor_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTSTRUCTEXTRACTOR_H

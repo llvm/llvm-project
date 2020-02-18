@@ -843,7 +843,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     };
 
     if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
+      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
                                   sc_list);

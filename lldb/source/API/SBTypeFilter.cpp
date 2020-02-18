@@ -30,7 +30,7 @@ SBTypeFilter::SBTypeFilter(const lldb::SBTypeFilter &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeFilter, (const lldb::SBTypeFilter &), rhs);
 }
 
-SBTypeFilter::~SBTypeFilter() {}
+SBTypeFilter::~SBTypeFilter() = default;
 
 bool SBTypeFilter::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, IsValid);

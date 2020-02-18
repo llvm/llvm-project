@@ -66,6 +66,12 @@ def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sha
 // Multiple extensions
 def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
 
+// Arm extensions.
+def ArmIntegerDotProductInt8                   : FunctionExtension<"cl_arm_integer_dot_product_int8">;
+def ArmIntegerDotProductAccumulateInt8         : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int8">;
+def ArmIntegerDotProductAccumulateInt16        : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int16">;
+def ArmIntegerDotProductAccumulateSaturateInt8 : FunctionExtension<"cl_arm_integer_dot_product_accumulate_saturate_int8">;
+
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _Name, bit _IsAbstract=0> {
   // Name of the field or function in a clang::ASTContext
@@ -1348,5 +1354,32 @@ let Extension = FuncExtKhrGlMsaaSharing in {
       def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
     }
     def : Builtin<"get_image_array_size", [Size, ImageType<Image2dArrayMsaaDepth, aQual>], Attr.Const>;
+  }
+}
+
+//--------------------------------------------------------------------
+// Arm extensions.
+let Extension = ArmIntegerDotProductInt8 in {
+  foreach name = ["arm_dot"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateInt8 in {
+  foreach name = ["arm_dot_acc"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateInt16 in {
+  foreach name = ["arm_dot_acc"] in {
+    def : Builtin<name, [UInt, VectorType<UShort, 2>, VectorType<UShort, 2>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Short, 2>, VectorType<Short, 2>, Int]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateSaturateInt8 in {
+  foreach name = ["arm_dot_acc_sat"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
   }
 }

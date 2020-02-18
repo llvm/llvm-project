@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DynamicLoader_h_
-#define liblldb_DynamicLoader_h_
+#ifndef LLDB_TARGET_DYNAMICLOADER_H
+#define LLDB_TARGET_DYNAMICLOADER_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/FileSpec.h"
@@ -315,4 +315,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_DynamicLoader_h_
+#endif // LLDB_TARGET_DYNAMICLOADER_H

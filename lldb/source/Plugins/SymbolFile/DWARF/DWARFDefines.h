@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDefines_h_
-#define SymbolFileDWARF_DWARFDefines_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEFINES_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEFINES_H
 
 #include "lldb/Core/dwarf.h"
 #include <stdint.h>
@@ -74,4 +74,4 @@ const char *DW_LNS_value_to_name(uint32_t val);
 
 } // namespace lldb_private
 
-#endif // SymbolFileDWARF_DWARFDefines_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEFINES_H

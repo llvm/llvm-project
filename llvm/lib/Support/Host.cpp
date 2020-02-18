@@ -178,6 +178,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
         // values correspond to the "Part number" in the CP15/c0 register. The
         // contents are specified in the various processor manuals.
+        // This corresponds to the Main ID Register in Technical Reference Manuals.
+        // and is used in programs like sys-utils
         return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
             .Case("0x926", "arm926ej-s")
             .Case("0xb02", "mpcore")
@@ -190,6 +192,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Case("0xc20", "cortex-m0")
             .Case("0xc23", "cortex-m3")
             .Case("0xc24", "cortex-m4")
+            .Case("0xd02", "cortex-a34")
             .Case("0xd04", "cortex-a35")
             .Case("0xd03", "cortex-a53")
             .Case("0xd07", "cortex-a57")

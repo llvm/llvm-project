@@ -91,7 +91,7 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
     if (context.module_sp) {
       context.module_sp->FindSymbolsWithNameAndType(m_func_name,
                                                     eSymbolTypeCode, sym_list);
-      context.module_sp->FindFunctions(m_func_name, nullptr,
+      context.module_sp->FindFunctions(m_func_name, CompilerDeclContext(),
                                        eFunctionNameTypeAuto, include_symbols,
                                        include_inlines, func_list);
     }

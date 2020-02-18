@@ -595,7 +595,7 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(
 }
 
 void Module::FindGlobalVariables(ConstString name,
-                                 const CompilerDeclContext *parent_decl_ctx,
+                                 const CompilerDeclContext &parent_decl_ctx,
                                  size_t max_matches, VariableList &variables) {
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindGlobalVariables(name, parent_decl_ctx, max_matches, variables);
@@ -783,7 +783,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
 }
 
 void Module::FindFunctions(ConstString name,
-                           const CompilerDeclContext *parent_decl_ctx,
+                           const CompilerDeclContext &parent_decl_ctx,
                            FunctionNameType name_type_mask,
                            bool include_symbols, bool include_inlines,
                            SymbolContextList &sc_list) {
@@ -920,7 +920,7 @@ void Module::FindAddressesForLine(const lldb::TargetSP target_sp,
 }
 
 void Module::FindTypes_Impl(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
@@ -932,7 +932,7 @@ void Module::FindTypes_Impl(
 }
 
 void Module::FindTypesInNamespace(ConstString type_name,
-                                  const CompilerDeclContext *parent_decl_ctx,
+                                  const CompilerDeclContext &parent_decl_ctx,
                                   size_t max_matches, TypeList &type_list) {
   TypeMap types_map;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
@@ -974,7 +974,7 @@ void Module::FindTypes(
     exact_match = type_scope.consume_front("::");
 
     ConstString type_basename_const_str(type_basename);
-    FindTypes_Impl(type_basename_const_str, nullptr, max_matches,
+    FindTypes_Impl(type_basename_const_str, CompilerDeclContext(), max_matches,
                    searched_symbol_files, typesmap);
     if (typesmap.GetSize())
       typesmap.RemoveMismatchedTypes(std::string(type_scope),
@@ -986,13 +986,14 @@ void Module::FindTypes(
     if (type_class != eTypeClassAny && !type_basename.empty()) {
       // The "type_name_cstr" will have been modified if we have a valid type
       // class prefix (like "struct", "class", "union", "typedef" etc).
-      FindTypes_Impl(ConstString(type_basename), nullptr, UINT_MAX,
-                     searched_symbol_files, typesmap);
+      FindTypes_Impl(ConstString(type_basename), CompilerDeclContext(),
+                     UINT_MAX, searched_symbol_files, typesmap);
       typesmap.RemoveMismatchedTypes(std::string(type_scope),
                                      std::string(type_basename), type_class,
                                      exact_match);
     } else {
-      FindTypes_Impl(name, nullptr, UINT_MAX, searched_symbol_files, typesmap);
+      FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
+                     searched_symbol_files, typesmap);
       if (exact_match) {
         std::string name_str(name.AsCString(""));
         typesmap.RemoveMismatchedTypes(std::string(type_scope), name_str,

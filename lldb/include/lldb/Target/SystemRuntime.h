@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SystemRuntime_h_
-#define liblldb_SystemRuntime_h_
+#ifndef LLDB_TARGET_SYSTEMRUNTIME_H
+#define LLDB_TARGET_SYSTEMRUNTIME_H
 
 #include <vector>
 
@@ -305,4 +305,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SystemRuntime_h_
+#endif // LLDB_TARGET_SYSTEMRUNTIME_H

@@ -5,8 +5,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-define i64 @uaddo1(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @uaddo1(
+define i64 @uaddo1_overflow_used(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo1_overflow_used(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -19,8 +19,24 @@ define i64 @uaddo1(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-define i64 @uaddo2(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @uaddo2(
+define i64 @uaddo1_math_overflow_used(i64 %a, i64 %b, i64* %res) nounwind ssp {
+; CHECK-LABEL: @uaddo1_math_overflow_used(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[RES:%.*]]
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %add = add i64 %b, %a
+  %cmp = icmp ult i64 %add, %a
+  %Q = select i1 %cmp, i64 %b, i64 42
+  store i64 %add, i64* %res
+  ret i64 %Q
+}
+
+define i64 @uaddo2_overflow_used(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo2_overflow_used(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -33,8 +49,24 @@ define i64 @uaddo2(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-define i64 @uaddo3(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @uaddo3(
+define i64 @uaddo2_math_overflow_used(i64 %a, i64 %b, i64* %res) nounwind ssp {
+; CHECK-LABEL: @uaddo2_math_overflow_used(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[RES:%.*]]
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %add = add i64 %b, %a
+  %cmp = icmp ult i64 %add, %b
+  %Q = select i1 %cmp, i64 %b, i64 42
+  store i64 %add, i64* %res
+  ret i64 %Q
+}
+
+define i64 @uaddo3_overflow_used(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo3_overflow_used(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -44,6 +76,22 @@ define i64 @uaddo3(i64 %a, i64 %b) nounwind ssp {
   %add = add i64 %b, %a
   %cmp = icmp ugt i64 %b, %add
   %Q = select i1 %cmp, i64 %b, i64 42
+  ret i64 %Q
+}
+
+define i64 @uaddo3_math_overflow_used(i64 %a, i64 %b, i64* %res) nounwind ssp {
+; CHECK-LABEL: @uaddo3_math_overflow_used(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[RES:%.*]]
+; CHECK-NEXT:    ret i64 [[Q]]
+;
+  %add = add i64 %b, %a
+  %cmp = icmp ugt i64 %b, %add
+  %Q = select i1 %cmp, i64 %b, i64 42
+  store i64 %add, i64* %res
   ret i64 %Q
 }
 
@@ -239,8 +287,20 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, i42* %p) {
   ret i1 %ov
 }
 
-define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) {
-; CHECK-LABEL: @usubo_ult_i64(
+define i1 @usubo_ult_i64_overflow_used(i64 %x, i64 %y, i64* %p) {
+; CHECK-LABEL: @usubo_ult_i64_overflow_used(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[OV1]]
+;
+  %s = sub i64 %x, %y
+  %ov = icmp ult i64 %x, %y
+  ret i1 %ov
+}
+
+define i1 @usubo_ult_i64_math_overflow_used(i64 %x, i64 %y, i64* %p) {
+; CHECK-LABEL: @usubo_ult_i64_math_overflow_used(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1

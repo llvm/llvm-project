@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanStepInRange_h_
-#define liblldb_ThreadPlanStepInRange_h_
+#ifndef LLDB_TARGET_THREADPLANSTEPINRANGE_H
+#define LLDB_TARGET_THREADPLANSTEPINRANGE_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
@@ -110,4 +110,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanStepInRange_h_
+#endif // LLDB_TARGET_THREADPLANSTEPINRANGE_H

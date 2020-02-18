@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformNetBSD_h_
-#define liblldb_PlatformNetBSD_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_NETBSD_PLATFORMNETBSD_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_NETBSD_PLATFORMNETBSD_H
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 
@@ -66,4 +66,4 @@ private:
 } // namespace platform_netbsd
 } // namespace lldb_private
 
-#endif // liblldb_PlatformNetBSD_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_NETBSD_PLATFORMNETBSD_H

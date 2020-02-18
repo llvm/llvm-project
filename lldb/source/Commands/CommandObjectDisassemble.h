@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObjectDisassemble_h_
-#define liblldb_CommandObjectDisassemble_h_
+#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H
+#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H
 
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/Options.h"
@@ -78,4 +78,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObjectDisassemble_h_
+#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H

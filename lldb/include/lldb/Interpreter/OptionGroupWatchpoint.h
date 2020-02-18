@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionGroupWatchpoint_h_
-#define liblldb_OptionGroupWatchpoint_h_
+#ifndef LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
+#define LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
 
 #include "lldb/Interpreter/Options.h"
 
@@ -51,4 +51,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionGroupWatchpoint_h_
+#endif // LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H

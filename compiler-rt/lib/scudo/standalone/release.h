@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include "list.h"
+#include "mutex.h"
 
 namespace scudo {
 
@@ -39,11 +40,13 @@ private:
 };
 
 // A packed array of Counters. Each counter occupies 2^N bits, enough to store
-// counter's MaxValue. Ctor will try to allocate the required Buffer via map()
-// and the caller is expected to check whether the initialization was successful
-// by checking isAllocated() result. For the performance sake, none of the
-// accessors check the validity of the arguments, It is assumed that Index is
-// always in [0, N) range and the value is not incremented past MaxValue.
+// counter's MaxValue. Ctor will try to use a static buffer first, and if that
+// fails (the buffer is too small or already locked), will allocate the
+// required Buffer via map(). The caller is expected to check whether the
+// initialization was successful by checking isAllocated() result. For
+// performance sake, none of the accessors check the validity of the arguments,
+// It is assumed that Index is always in [0, N) range and the value is not
+// incremented past MaxValue.
 class PackedCounterArray {
 public:
   PackedCounterArray(uptr NumCounters, uptr MaxValue) : N(NumCounters) {
@@ -66,11 +69,20 @@ public:
     BufferSize = (roundUpTo(N, static_cast<uptr>(1U) << PackingRatioLog) >>
                   PackingRatioLog) *
                  sizeof(*Buffer);
-    Buffer = reinterpret_cast<uptr *>(
-        map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+    if (BufferSize <= StaticBufferSize && Mutex.tryLock()) {
+      Buffer = &StaticBuffer[0];
+      memset(Buffer, 0, BufferSize);
+    } else {
+      Buffer = reinterpret_cast<uptr *>(
+          map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+    }
   }
   ~PackedCounterArray() {
-    if (isAllocated())
+    if (!isAllocated())
+      return;
+    if (Buffer == &StaticBuffer[0])
+      Mutex.unlock();
+    else
       unmap(reinterpret_cast<void *>(Buffer), BufferSize);
   }
 
@@ -110,6 +122,10 @@ private:
 
   uptr BufferSize;
   uptr *Buffer;
+
+  static HybridMutex Mutex;
+  static const uptr StaticBufferSize = 1024U;
+  static uptr StaticBuffer[StaticBufferSize];
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {

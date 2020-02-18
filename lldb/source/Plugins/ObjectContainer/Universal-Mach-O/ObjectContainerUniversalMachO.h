@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjectContainerUniversalMachO_h_
-#define liblldb_ObjectContainerUniversalMachO_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_UNIVERSAL_MACH_O_OBJECTCONTAINERUNIVERSALMACHO_H
+#define LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_UNIVERSAL_MACH_O_OBJECTCONTAINERUNIVERSALMACHO_H
 
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectContainer.h"
@@ -72,4 +72,4 @@ protected:
                           std::vector<llvm::MachO::fat_arch> &fat_archs);
 };
 
-#endif // liblldb_ObjectContainerUniversalMachO_h_
+#endif // LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_UNIVERSAL_MACH_O_OBJECTCONTAINERUNIVERSALMACHO_H

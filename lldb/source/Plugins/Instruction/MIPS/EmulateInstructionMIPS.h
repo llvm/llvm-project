@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EmulateInstructionMIPS_h_
-#define EmulateInstructionMIPS_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS_EMULATEINSTRUCTIONMIPS_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS_EMULATEINSTRUCTIONMIPS_H
 
 namespace llvm {
 class MCDisassembler;
@@ -218,4 +218,4 @@ private:
   bool m_use_alt_disaasm;
 };
 
-#endif // EmulateInstructionMIPS_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS_EMULATEINSTRUCTIONMIPS_H

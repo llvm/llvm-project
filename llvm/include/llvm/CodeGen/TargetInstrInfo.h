@@ -1242,6 +1242,7 @@ public:
   /// to handle a single base operand.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
+                               bool &OffsetIsScalable,
                                const TargetRegisterInfo *TRI) const;
 
   /// Get the base operands and byte offset of an instruction that reads/writes
@@ -1250,9 +1251,11 @@ public:
   /// It returns false if no base operands and offset was found.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
-  virtual bool getMemOperandsWithOffset(
-      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, const TargetRegisterInfo *TRI) const {
+  virtual bool
+  getMemOperandsWithOffset(const MachineInstr &MI,
+                           SmallVectorImpl<const MachineOperand *> &BaseOps,
+                           int64_t &Offset, bool &OffsetIsScalable,
+                           const TargetRegisterInfo *TRI) const {
     return false;
   }
 

@@ -8136,15 +8136,36 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
 
-  case ARM::CDE_CX1: case ARM::CDE_CX1A: case ARM::CDE_CX1D: case ARM::CDE_CX1DA:
-  case ARM::CDE_CX2: case ARM::CDE_CX2A: case ARM::CDE_CX2D: case ARM::CDE_CX2DA:
-  case ARM::CDE_CX3: case ARM::CDE_CX3A: case ARM::CDE_CX3D: case ARM::CDE_CX3DA:
-  case ARM::CDE_VCX1_vec:  case ARM::CDE_VCX1_fpsp:  case ARM::CDE_VCX1_fpdp:
-  case ARM::CDE_VCX1A_vec: case ARM::CDE_VCX1A_fpsp: case ARM::CDE_VCX1A_fpdp:
-  case ARM::CDE_VCX2_vec:  case ARM::CDE_VCX2_fpsp:  case ARM::CDE_VCX2_fpdp:
-  case ARM::CDE_VCX2A_vec: case ARM::CDE_VCX2A_fpsp: case ARM::CDE_VCX2A_fpdp:
-  case ARM::CDE_VCX3_vec:  case ARM::CDE_VCX3_fpsp:  case ARM::CDE_VCX3_fpdp:
-  case ARM::CDE_VCX3A_vec: case ARM::CDE_VCX3A_fpsp: case ARM::CDE_VCX3A_fpdp: {
+  case ARM::CDE_CX1:
+  case ARM::CDE_CX1A:
+  case ARM::CDE_CX1D:
+  case ARM::CDE_CX1DA:
+  case ARM::CDE_CX2:
+  case ARM::CDE_CX2A:
+  case ARM::CDE_CX2D:
+  case ARM::CDE_CX2DA:
+  case ARM::CDE_CX3:
+  case ARM::CDE_CX3A:
+  case ARM::CDE_CX3D:
+  case ARM::CDE_CX3DA:
+  case ARM::CDE_VCX1_vec:
+  case ARM::CDE_VCX1_fpsp:
+  case ARM::CDE_VCX1_fpdp:
+  case ARM::CDE_VCX1A_vec:
+  case ARM::CDE_VCX1A_fpsp:
+  case ARM::CDE_VCX1A_fpdp:
+  case ARM::CDE_VCX2_vec:
+  case ARM::CDE_VCX2_fpsp:
+  case ARM::CDE_VCX2_fpdp:
+  case ARM::CDE_VCX2A_vec:
+  case ARM::CDE_VCX2A_fpsp:
+  case ARM::CDE_VCX2A_fpdp:
+  case ARM::CDE_VCX3_vec:
+  case ARM::CDE_VCX3_fpsp:
+  case ARM::CDE_VCX3_fpdp:
+  case ARM::CDE_VCX3A_vec:
+  case ARM::CDE_VCX3A_fpsp:
+  case ARM::CDE_VCX3A_fpdp: {
     assert(Inst.getOperand(1).isImm() &&
            "CDE operand 1 must be a coprocessor ID");
     int64_t Coproc = Inst.getOperand(1).getImm();
@@ -8157,17 +8178,48 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
 
-  case ARM::t2CDP: case ARM::t2CDP2:
-  case ARM::t2LDC2L_OFFSET: case ARM::t2LDC2L_OPTION: case ARM::t2LDC2L_POST: case ARM::t2LDC2L_PRE:
-  case ARM::t2LDC2_OFFSET: case ARM::t2LDC2_OPTION: case ARM::t2LDC2_POST: case ARM::t2LDC2_PRE:
-  case ARM::t2LDCL_OFFSET: case ARM::t2LDCL_OPTION: case ARM::t2LDCL_POST: case ARM::t2LDCL_PRE:
-  case ARM::t2LDC_OFFSET: case ARM::t2LDC_OPTION: case ARM::t2LDC_POST: case ARM::t2LDC_PRE:
-  case ARM::t2MCR: case ARM::t2MCR2: case ARM::t2MCRR: case ARM::t2MCRR2:
-  case ARM::t2MRC: case ARM::t2MRC2: case ARM::t2MRRC: case ARM::t2MRRC2:
-  case ARM::t2STC2L_OFFSET: case ARM::t2STC2L_OPTION: case ARM::t2STC2L_POST: case ARM::t2STC2L_PRE:
-  case ARM::t2STC2_OFFSET: case ARM::t2STC2_OPTION: case ARM::t2STC2_POST: case ARM::t2STC2_PRE:
-  case ARM::t2STCL_OFFSET: case ARM::t2STCL_OPTION: case ARM::t2STCL_POST: case ARM::t2STCL_PRE:
-  case ARM::t2STC_OFFSET: case ARM::t2STC_OPTION: case ARM::t2STC_POST: case ARM::t2STC_PRE: {
+  case ARM::t2CDP:
+  case ARM::t2CDP2:
+  case ARM::t2LDC2L_OFFSET:
+  case ARM::t2LDC2L_OPTION:
+  case ARM::t2LDC2L_POST:
+  case ARM::t2LDC2L_PRE:
+  case ARM::t2LDC2_OFFSET:
+  case ARM::t2LDC2_OPTION:
+  case ARM::t2LDC2_POST:
+  case ARM::t2LDC2_PRE:
+  case ARM::t2LDCL_OFFSET:
+  case ARM::t2LDCL_OPTION:
+  case ARM::t2LDCL_POST:
+  case ARM::t2LDCL_PRE:
+  case ARM::t2LDC_OFFSET:
+  case ARM::t2LDC_OPTION:
+  case ARM::t2LDC_POST:
+  case ARM::t2LDC_PRE:
+  case ARM::t2MCR:
+  case ARM::t2MCR2:
+  case ARM::t2MCRR:
+  case ARM::t2MCRR2:
+  case ARM::t2MRC:
+  case ARM::t2MRC2:
+  case ARM::t2MRRC:
+  case ARM::t2MRRC2:
+  case ARM::t2STC2L_OFFSET:
+  case ARM::t2STC2L_OPTION:
+  case ARM::t2STC2L_POST:
+  case ARM::t2STC2L_PRE:
+  case ARM::t2STC2_OFFSET:
+  case ARM::t2STC2_OPTION:
+  case ARM::t2STC2_POST:
+  case ARM::t2STC2_PRE:
+  case ARM::t2STCL_OFFSET:
+  case ARM::t2STCL_OPTION:
+  case ARM::t2STCL_POST:
+  case ARM::t2STCL_PRE:
+  case ARM::t2STC_OFFSET:
+  case ARM::t2STC_OPTION:
+  case ARM::t2STC_POST:
+  case ARM::t2STC_PRE: {
     unsigned Opcode = Inst.getOpcode();
     // Inst.getOperand indexes operands in the (oops ...) and (iops ...) dags,
     // CopInd is the index of the coprocessor operand.
@@ -8176,11 +8228,13 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       CopInd = 2;
     else if (Opcode == ARM::t2MRC || Opcode == ARM::t2MRC2)
       CopInd = 1;
-    assert(Inst.getOperand(CopInd).isImm() && "Operand must be a coprocessor ID");
+    assert(Inst.getOperand(CopInd).isImm() &&
+           "Operand must be a coprocessor ID");
     int64_t Coproc = Inst.getOperand(CopInd).getImm();
     // Operands[2] is the coprocessor operand at syntactic level
     if (ARM::isCDECoproc(Coproc, *STI))
-      return Error(Operands[2]->getStartLoc(), "coprocessor must be configured as GCP");
+      return Error(Operands[2]->getStartLoc(),
+                   "coprocessor must be configured as GCP");
     break;
   }
   }

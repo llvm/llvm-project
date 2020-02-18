@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ExpressionVariable_h_
-#define liblldb_ExpressionVariable_h_
+#ifndef LLDB_EXPRESSION_EXPRESSIONVARIABLE_H
+#define LLDB_EXPRESSION_EXPRESSIONVARIABLE_H
 
 #include <memory>
 #include <vector>
@@ -251,4 +251,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ExpressionVariable_h_
+#endif // LLDB_EXPRESSION_EXPRESSIONVARIABLE_H

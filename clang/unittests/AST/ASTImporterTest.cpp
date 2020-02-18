@@ -5845,6 +5845,48 @@ TEST_P(ImportAutoFunctions, ReturnWithTypeInSwitch) {
   EXPECT_TRUE(isa<AutoType>(To->getReturnType()));
 }
 
+struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
+
+TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {
+  // Tests that the FileID tree structure (with the links being the include
+  // chains) is preserved while importing other files (which need to be
+  // added to this structure with fake include locations.
+
+  SourceLocation Location1;
+  {
+    auto Pattern = varDecl(hasName("X"));
+    Decl *FromTU = getTuDecl("int X;", Lang_C, "input0.c");
+    auto *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+
+    Location1 = Import(FromD, Lang_C)->getLocation();
+  }
+  SourceLocation Location2;
+  {
+    auto Pattern = varDecl(hasName("Y"));
+    Decl *FromTU = getTuDecl("int Y;", Lang_C, "input1.c");
+    auto *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+
+    Location2 = Import(FromD, Lang_C)->getLocation();
+  }
+
+  SourceManager &ToSM = ToAST->getSourceManager();
+  FileID FileID1 = ToSM.getFileID(Location1);
+  FileID FileID2 = ToSM.getFileID(Location2);
+
+  // Check that the imported files look like as if they were included from the
+  // start of the main file.
+  SourceLocation FileStart = ToSM.getLocForStartOfFile(ToSM.getMainFileID());
+  EXPECT_NE(FileID1, ToSM.getMainFileID());
+  EXPECT_NE(FileID2, ToSM.getMainFileID());
+  EXPECT_EQ(ToSM.getIncludeLoc(FileID1), FileStart);
+  EXPECT_EQ(ToSM.getIncludeLoc(FileID2), FileStart);
+
+  // Let the SourceManager check the order of the locations. The order should
+  // be the order in which the declarations are imported.
+  EXPECT_TRUE(ToSM.isBeforeInTranslationUnit(Location1, Location2));
+  EXPECT_FALSE(ToSM.isBeforeInTranslationUnit(Location2, Location1));
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
@@ -5901,6 +5943,9 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportVariables,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, LLDBLookupTest,
+                        DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportSourceLocations,
                         DefaultTestValuesForRunOptions, );
 
 } // end namespace ast_matchers

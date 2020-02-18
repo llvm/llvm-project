@@ -494,3 +494,153 @@ define void @ChecksExtractScores(double* %storeArray, double* %array, <2 x doubl
   store double %add1, double *%sidx1, align 8
   ret void
 }
+
+
+define i1 @ExtractIdxNotConstantInt1(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
+; CHECK-LABEL: @ExtractIdxNotConstantInt1(
+; CHECK-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 undef
+; CHECK-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
+; CHECK-NEXT:    [[FM:%.*]] = fmul float [[A:%.*]], [[SUB14_I167]]
+; CHECK-NEXT:    [[SUB25_I168:%.*]] = fsub float [[FM]], [[B:%.*]]
+; CHECK-NEXT:    [[VECEXT_I276_I169:%.*]] = extractelement <4 x float> [[VEC]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[ADD36_I173:%.*]] = fadd float [[SUB25_I168]], 1.000000e+01
+; CHECK-NEXT:    [[MUL72_I179:%.*]] = fmul float [[C:%.*]], [[VECEXT_I276_I169]]
+; CHECK-NEXT:    [[ADD78_I180:%.*]] = fsub float [[MUL72_I179]], 3.000000e+01
+; CHECK-NEXT:    [[ADD79_I181:%.*]] = fadd float 2.000000e+00, [[ADD78_I180]]
+; CHECK-NEXT:    [[MUL123_I184:%.*]] = fmul float [[ADD36_I173]], [[ADD79_I181]]
+; CHECK-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP_I185]]
+;
+  %vecext.i291.i166 = extractelement <4 x float> %vec, i64 undef
+  %sub14.i167 = fsub float undef, %vecext.i291.i166
+  %fm = fmul float %a, %sub14.i167
+  %sub25.i168 = fsub float %fm, %b
+  %vecext.i276.i169 = extractelement <4 x float> %vec, i64 %idx2
+  %add36.i173 = fadd float %sub25.i168, 10.0
+  %mul72.i179 = fmul float %c, %vecext.i276.i169
+  %add78.i180 = fsub float %mul72.i179, 30.0
+  %add79.i181 = fadd float 2.0, %add78.i180
+  %mul123.i184 = fmul float %add36.i173, %add79.i181
+  %cmp.i185 = fcmp ogt float %mul123.i184, 0.000000e+00
+  ret i1 %cmp.i185
+}
+
+
+define i1 @ExtractIdxNotConstantInt2(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
+; CHECK-LABEL: @ExtractIdxNotConstantInt2(
+; CHECK-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 1
+; CHECK-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
+; CHECK-NEXT:    [[FM:%.*]] = fmul float [[A:%.*]], [[SUB14_I167]]
+; CHECK-NEXT:    [[SUB25_I168:%.*]] = fsub float [[FM]], [[B:%.*]]
+; CHECK-NEXT:    [[VECEXT_I276_I169:%.*]] = extractelement <4 x float> [[VEC]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[ADD36_I173:%.*]] = fadd float [[SUB25_I168]], 1.000000e+01
+; CHECK-NEXT:    [[MUL72_I179:%.*]] = fmul float [[C:%.*]], [[VECEXT_I276_I169]]
+; CHECK-NEXT:    [[ADD78_I180:%.*]] = fsub float [[MUL72_I179]], 3.000000e+01
+; CHECK-NEXT:    [[ADD79_I181:%.*]] = fadd float 2.000000e+00, [[ADD78_I180]]
+; CHECK-NEXT:    [[MUL123_I184:%.*]] = fmul float [[ADD36_I173]], [[ADD79_I181]]
+; CHECK-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP_I185]]
+;
+  %vecext.i291.i166 = extractelement <4 x float> %vec, i64 1
+  %sub14.i167 = fsub float undef, %vecext.i291.i166
+  %fm = fmul float %a, %sub14.i167
+  %sub25.i168 = fsub float %fm, %b
+  %vecext.i276.i169 = extractelement <4 x float> %vec, i64 %idx2
+  %add36.i173 = fadd float %sub25.i168, 10.0
+  %mul72.i179 = fmul float %c, %vecext.i276.i169
+  %add78.i180 = fsub float %mul72.i179, 30.0
+  %add79.i181 = fadd float 2.0, %add78.i180
+  %mul123.i184 = fmul float %add36.i173, %add79.i181
+  %cmp.i185 = fcmp ogt float %mul123.i184, 0.000000e+00
+  ret i1 %cmp.i185
+}
+
+
+define i1 @foo(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 0
+; CHECK-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
+; CHECK-NEXT:    [[FM:%.*]] = fmul float [[A:%.*]], [[SUB14_I167]]
+; CHECK-NEXT:    [[SUB25_I168:%.*]] = fsub float [[FM]], [[B:%.*]]
+; CHECK-NEXT:    [[VECEXT_I276_I169:%.*]] = extractelement <4 x float> [[VEC]], i64 1
+; CHECK-NEXT:    [[ADD36_I173:%.*]] = fadd float [[SUB25_I168]], 1.000000e+01
+; CHECK-NEXT:    [[MUL72_I179:%.*]] = fmul float [[C:%.*]], [[VECEXT_I276_I169]]
+; CHECK-NEXT:    [[ADD78_I180:%.*]] = fsub float [[MUL72_I179]], 3.000000e+01
+; CHECK-NEXT:    [[ADD79_I181:%.*]] = fadd float 2.000000e+00, [[ADD78_I180]]
+; CHECK-NEXT:    [[MUL123_I184:%.*]] = fmul float [[ADD36_I173]], [[ADD79_I181]]
+; CHECK-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP_I185]]
+;
+  %vecext.i291.i166 = extractelement <4 x float> %vec, i64 0
+  %sub14.i167 = fsub float undef, %vecext.i291.i166
+  %fm = fmul float %a, %sub14.i167
+  %sub25.i168 = fsub float %fm, %b
+  %vecext.i276.i169 = extractelement <4 x float> %vec, i64 1
+  %add36.i173 = fadd float %sub25.i168, 10.0
+  %mul72.i179 = fmul float %c, %vecext.i276.i169
+  %add78.i180 = fsub float %mul72.i179, 30.0
+  %add79.i181 = fadd float 2.0, %add78.i180
+  %mul123.i184 = fmul float %add36.i173, %add79.i181
+  %cmp.i185 = fcmp ogt float %mul123.i184, 0.000000e+00
+  ret i1 %cmp.i185
+}
+
+; Same as @ChecksExtractScores, but the extratelement vector operands do not match.
+define void @ChecksExtractScores_different_vectors(double* %storeArray, double* %array, <2 x double> *%vecPtr1, <2 x double>* %vecPtr2, <2 x double>* %vecPtr3, <2 x double>* %vecPtr4) {
+; CHECK-LABEL: @ChecksExtractScores_different_vectors(
+; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr inbounds double, double* [[ARRAY:%.*]], i64 0
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[ARRAY]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[IDX0]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
+; CHECK-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, <2 x double>* [[VECPTR1:%.*]], align 4
+; CHECK-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, <2 x double>* [[VECPTR2:%.*]], align 4
+; CHECK-NEXT:    [[EXTRA0:%.*]] = extractelement <2 x double> [[LOADVEC]], i32 0
+; CHECK-NEXT:    [[EXTRA1:%.*]] = extractelement <2 x double> [[LOADVEC2]], i32 1
+; CHECK-NEXT:    [[LOADVEC3:%.*]] = load <2 x double>, <2 x double>* [[VECPTR3:%.*]], align 4
+; CHECK-NEXT:    [[LOADVEC4:%.*]] = load <2 x double>, <2 x double>* [[VECPTR4:%.*]], align 4
+; CHECK-NEXT:    [[EXTRB0:%.*]] = extractelement <2 x double> [[LOADVEC3]], i32 0
+; CHECK-NEXT:    [[EXTRB1:%.*]] = extractelement <2 x double> [[LOADVEC4]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[EXTRB0]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[EXTRA1]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> undef, double [[EXTRA0]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP10]], double [[EXTRB1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP11]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[SIDX0:%.*]] = getelementptr inbounds double, double* [[STOREARRAY:%.*]], i64 0
+; CHECK-NEXT:    [[SIDX1:%.*]] = getelementptr inbounds double, double* [[STOREARRAY]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast double* [[SIDX0]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP13]], <2 x double>* [[TMP14]], align 8
+; CHECK-NEXT:    ret void
+;
+  %idx0 = getelementptr inbounds double, double* %array, i64 0
+  %idx1 = getelementptr inbounds double, double* %array, i64 1
+  %loadA0 = load double, double* %idx0, align 4
+  %loadA1 = load double, double* %idx1, align 4
+
+  %loadVec = load <2 x double>, <2 x double>* %vecPtr1, align 4
+  %loadVec2 = load <2 x double>, <2 x double>* %vecPtr2, align 4
+  %extrA0 = extractelement <2 x double> %loadVec, i32 0
+  %extrA1 = extractelement <2 x double> %loadVec2, i32 1
+  %loadVec3= load <2 x double>, <2 x double>* %vecPtr3, align 4
+  %loadVec4 = load <2 x double>, <2 x double>* %vecPtr4, align 4
+  %extrB0 = extractelement <2 x double> %loadVec3, i32 0
+  %extrB1 = extractelement <2 x double> %loadVec4, i32 1
+
+  %mul0 = fmul double %extrA0, %loadA0
+  %mul1 = fmul double %extrA1, %loadA0
+  %mul3 = fmul double %extrB0, %loadA1
+  %mul4 = fmul double %extrB1, %loadA1
+  %add0 = fadd double %mul0, %mul3
+  %add1 = fadd double %mul1, %mul4
+
+  %sidx0 = getelementptr inbounds double, double* %storeArray, i64 0
+  %sidx1 = getelementptr inbounds double, double* %storeArray, i64 1
+  store double %add0, double *%sidx0, align 8
+  store double %add1, double *%sidx1, align 8
+  ret void
+}

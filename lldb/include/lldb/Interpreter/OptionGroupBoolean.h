@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionGroupBoolean_h_
-#define liblldb_OptionGroupBoolean_h_
+#ifndef LLDB_INTERPRETER_OPTIONGROUPBOOLEAN_H
+#define LLDB_INTERPRETER_OPTIONGROUPBOOLEAN_H
 
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/Options.h"
@@ -48,4 +48,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionGroupBoolean_h_
+#endif // LLDB_INTERPRETER_OPTIONGROUPBOOLEAN_H

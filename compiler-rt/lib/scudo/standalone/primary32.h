@@ -40,7 +40,8 @@ namespace scudo {
 
 template <class SizeClassMapT, uptr RegionSizeLog,
           s32 MinReleaseToOsIntervalMs = INT32_MIN,
-          s32 MaxReleaseToOsIntervalMs = INT32_MAX> class SizeClassAllocator32 {
+          s32 MaxReleaseToOsIntervalMs = INT32_MAX>
+class SizeClassAllocator32 {
 public:
   typedef SizeClassMapT SizeClassMap;
   // The bytemap can only track UINT8_MAX - 1 classes.
@@ -49,7 +50,8 @@ public:
   static_assert((1UL << RegionSizeLog) >= SizeClassMap::MaxSize, "");
   typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog,
                                MinReleaseToOsIntervalMs,
-                               MaxReleaseToOsIntervalMs> ThisT;
+                               MaxReleaseToOsIntervalMs>
+      ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
   static const bool SupportsMemoryTagging = false;

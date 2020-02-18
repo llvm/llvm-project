@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGIN_ABI_X86_ABIX86_64_H
-#define LLDB_PLUGIN_ABI_X86_ABIX86_64_H
+#ifndef LLDB_SOURCE_PLUGINS_ABI_X86_ABIX86_64_H
+#define LLDB_SOURCE_PLUGINS_ABI_X86_ABIX86_64_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
@@ -23,4 +23,4 @@ private:
   using lldb_private::MCBasedABI::MCBasedABI;
 };
 
-#endif // LLDB_PLUGIN_ABI_X86_ABIX86_64_H
+#endif // LLDB_SOURCE_PLUGINS_ABI_X86_ABIX86_64_H

@@ -214,4 +214,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_PseudoTerminal_h_
+#endif // LLDB_HOST_PSEUDOTERMINAL_H

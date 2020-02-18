@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterContextMemory_h_
-#define lldb_RegisterContextMemory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H
 
 #include <vector>
 
@@ -70,4 +70,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RegisterContextMemory);
 };
 
-#endif // lldb_RegisterContextMemory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Predicate_h_
-#define liblldb_Predicate_h_
+#ifndef LLDB_UTILITY_PREDICATE_H
+#define LLDB_UTILITY_PREDICATE_H
 
 #include <stdint.h>
 #include <time.h>
@@ -226,4 +226,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Predicate_h_
+#endif // LLDB_UTILITY_PREDICATE_H

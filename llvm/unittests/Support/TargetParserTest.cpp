@@ -781,6 +781,10 @@ TEST(TargetParserTest, testAArch64CPU) {
       AArch64::AEK_NONE, ""));
 
   EXPECT_TRUE(testAArch64CPU(
+      "cortex-a34", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+      AArch64::AEK_SIMD, "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
       "cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_SIMD, "8-A"));
@@ -957,7 +961,7 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 35;
+static constexpr unsigned NumAArch64CPUArchs = 36;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1002,6 +1006,8 @@ bool testAArch64Extension(StringRef CPUName, AArch64::ArchKind AK,
 }
 
 TEST(TargetParserTest, testAArch64Extension) {
+  EXPECT_FALSE(testAArch64Extension("cortex-a34",
+                                    AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cortex-a35",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cortex-a53",

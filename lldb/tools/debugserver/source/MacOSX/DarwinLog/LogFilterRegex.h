@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LogFilterRegex_h
-#define LogFilterRegex_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERREGEX_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERREGEX_H
 
 // C includes
 #include <regex.h>
@@ -40,4 +40,4 @@ private:
   std::string m_error_text;
 };
 
-#endif /* LogFilterSubsystemRegex_hpp */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGFILTERREGEX_H

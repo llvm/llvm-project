@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadMachCore_h_
-#define liblldb_ThreadMachCore_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_THREADMACHCORE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_THREADMACHCORE_H
 
 #include <string>
 
@@ -62,4 +62,4 @@ protected:
   bool CalculateStopInfo() override;
 };
 
-#endif // liblldb_ThreadMachCore_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_THREADMACHCORE_H

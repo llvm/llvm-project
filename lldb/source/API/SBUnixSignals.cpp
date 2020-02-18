@@ -42,7 +42,7 @@ const SBUnixSignals &SBUnixSignals::operator=(const SBUnixSignals &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBUnixSignals::~SBUnixSignals() {}
+SBUnixSignals::~SBUnixSignals() = default;
 
 UnixSignalsSP SBUnixSignals::GetSP() const { return m_opaque_wp.lock(); }
 

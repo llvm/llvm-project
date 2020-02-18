@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_File_h_
-#define liblldb_File_h_
+#ifndef LLDB_HOST_FILE_H
+#define LLDB_HOST_FILE_H
 
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/IOObject.h"
@@ -433,4 +433,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_File_h_
+#endif // LLDB_HOST_FILE_H

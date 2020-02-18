@@ -481,17 +481,17 @@ bool DynamicLoaderMacOSXDYLD::ReadAllImageInfosStructure() {
       offset = 0;
       m_dyld_all_image_infos.version = data.GetU32(&offset);
       m_dyld_all_image_infos.dylib_info_count = data.GetU32(&offset);
-      m_dyld_all_image_infos.dylib_info_addr = data.GetPointer(&offset);
-      m_dyld_all_image_infos.notification = data.GetPointer(&offset);
+      m_dyld_all_image_infos.dylib_info_addr = data.GetAddress(&offset);
+      m_dyld_all_image_infos.notification = data.GetAddress(&offset);
       m_dyld_all_image_infos.processDetachedFromSharedRegion =
           data.GetU8(&offset);
       m_dyld_all_image_infos.libSystemInitialized = data.GetU8(&offset);
       // Adjust for padding.
       offset += addr_size - 2;
-      m_dyld_all_image_infos.dyldImageLoadAddress = data.GetPointer(&offset);
+      m_dyld_all_image_infos.dyldImageLoadAddress = data.GetAddress(&offset);
       if (m_dyld_all_image_infos.version >= 11) {
         offset += addr_size * 8;
-        uint64_t dyld_all_image_infos_addr = data.GetPointer(&offset);
+        uint64_t dyld_all_image_infos_addr = data.GetAddress(&offset);
 
         // When we started, we were given the actual address of the
         // all_image_infos struct (probably via TASK_DYLD_INFO) in memory -
@@ -671,9 +671,9 @@ bool DynamicLoaderMacOSXDYLD::ReadImageInfos(
     for (size_t i = 0;
          i < image_infos.size() && info_data_ref.ValidOffset(info_data_offset);
          i++) {
-      image_infos[i].address = info_data_ref.GetPointer(&info_data_offset);
-      lldb::addr_t path_addr = info_data_ref.GetPointer(&info_data_offset);
-      image_infos[i].mod_date = info_data_ref.GetPointer(&info_data_offset);
+      image_infos[i].address = info_data_ref.GetAddress(&info_data_offset);
+      lldb::addr_t path_addr = info_data_ref.GetAddress(&info_data_offset);
+      image_infos[i].mod_date = info_data_ref.GetAddress(&info_data_offset);
 
       char raw_path[PATH_MAX];
       m_process->ReadCStringFromMemory(path_addr, raw_path, sizeof(raw_path),

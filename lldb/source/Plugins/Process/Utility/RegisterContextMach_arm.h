@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextMach_arm_h_
-#define liblldb_RegisterContextMach_arm_h_
-
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_ARM_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_ARM_H
 
 #include "RegisterContextDarwin_arm.h"
 
@@ -37,4 +36,4 @@ protected:
   int DoWriteDBG(lldb::tid_t tid, int flavor, const DBG &dbg);
 };
 
-#endif // liblldb_RegisterContextMach_arm_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_ARM_H

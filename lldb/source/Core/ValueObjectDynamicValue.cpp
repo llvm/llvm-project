@@ -327,7 +327,7 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
     // but NULL'ing out a value should always be allowed
     lldb::offset_t offset = 0;
 
-    if (data.GetPointer(&offset) != 0) {
+    if (data.GetAddress(&offset) != 0) {
       error.SetErrorString(
           "unable to modify dynamic value, use 'expression' command");
       return false;

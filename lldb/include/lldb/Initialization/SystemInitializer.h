@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INITIALIZATION_SYSTEM_INITIALIZER_H
-#define LLDB_INITIALIZATION_SYSTEM_INITIALIZER_H
+#ifndef LLDB_INITIALIZATION_SYSTEMINITIALIZER_H
+#define LLDB_INITIALIZATION_SYSTEMINITIALIZER_H
 
 #include "llvm/Support/Error.h"
 

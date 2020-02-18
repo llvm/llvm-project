@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionGroupPlatform_h_
-#define liblldb_OptionGroupPlatform_h_
+#ifndef LLDB_INTERPRETER_OPTIONGROUPPLATFORM_H
+#define LLDB_INTERPRETER_OPTIONGROUPPLATFORM_H
 
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
@@ -70,4 +70,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionGroupPlatform_h_
+#endif // LLDB_INTERPRETER_OPTIONGROUPPLATFORM_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABISysV_s390x_h_
-#define liblldb_ABISysV_s390x_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_SYSTEMZ_ABISYSV_S390X_H
+#define LLDB_SOURCE_PLUGINS_ABI_SYSTEMZ_ABISYSV_S390X_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
@@ -91,4 +91,4 @@ private:
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
-#endif // liblldb_ABISysV_s390x_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_SYSTEMZ_ABISYSV_S390X_H

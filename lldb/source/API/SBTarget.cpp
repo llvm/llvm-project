@@ -118,7 +118,7 @@ const SBTarget &SBTarget::operator=(const SBTarget &rhs) {
 }
 
 // Destructor
-SBTarget::~SBTarget() {}
+SBTarget::~SBTarget() = default;
 
 bool SBTarget::EventIsTargetEvent(const SBEvent &event) {
   LLDB_RECORD_STATIC_METHOD(bool, SBTarget, EventIsTargetEvent,

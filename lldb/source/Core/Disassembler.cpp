@@ -173,8 +173,8 @@ bool Disassembler::Disassemble(
   // Find functions matching the given name.
   SymbolContextList sc_list;
   if (module) {
-    module->FindFunctions(name, nullptr, eFunctionNameTypeAuto, include_symbols,
-                          include_inlines, sc_list);
+    module->FindFunctions(name, CompilerDeclContext(), eFunctionNameTypeAuto,
+                          include_symbols, include_inlines, sc_list);
   } else if (exe_ctx.GetTargetPtr()) {
     exe_ctx.GetTargetPtr()->GetImages().FindFunctions(
         name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);

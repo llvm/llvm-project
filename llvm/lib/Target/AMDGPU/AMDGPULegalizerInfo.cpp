@@ -3575,11 +3575,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
 
       B.setInstr(*BrCond);
 
-      // FIXME: Need to adjust branch targets based on unconditional branch.
+      MachineBasicBlock *BrTarget = BrCond->getOperand(1).getMBB();
+      if (Br)
+        BrTarget = Br->getOperand(0).getMBB();
+
       Register Reg = MI.getOperand(2).getReg();
       B.buildInstr(AMDGPU::SI_LOOP)
         .addUse(Reg)
-        .addMBB(BrCond->getOperand(1).getMBB());
+        .addMBB(BrTarget);
+
+      if (Br)
+        Br->getOperand(0).setMBB(BrCond->getOperand(1).getMBB());
+
       MI.eraseFromParent();
       BrCond->eraseFromParent();
       MRI.setRegClass(Reg, TRI->getWaveMaskRegClass());

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_UnwindMacOSXFrameBackchain_h_
-#define lldb_UnwindMacOSXFrameBackchain_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_UNWINDMACOSXFRAMEBACKCHAIN_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_UNWINDMACOSXFRAMEBACKCHAIN_H
 
 #include <vector>
 
@@ -51,4 +51,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(UnwindMacOSXFrameBackchain);
 };
 
-#endif // lldb_UnwindMacOSXFrameBackchain_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_UNWINDMACOSXFRAMEBACKCHAIN_H

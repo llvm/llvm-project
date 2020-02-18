@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionGroupFile_h_
-#define liblldb_OptionGroupFile_h_
+#ifndef LLDB_INTERPRETER_OPTIONGROUPFILE_H
+#define LLDB_INTERPRETER_OPTIONGROUPFILE_H
 
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
@@ -78,4 +78,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionGroupFile_h_
+#endif // LLDB_INTERPRETER_OPTIONGROUPFILE_H

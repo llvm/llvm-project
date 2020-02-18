@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StackFrameRecognizer_h_
-#define liblldb_StackFrameRecognizer_h_
+#ifndef LLDB_TARGET_STACKFRAMERECOGNIZER_H
+#define LLDB_TARGET_STACKFRAMERECOGNIZER_H
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
@@ -164,4 +164,4 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
 
 } // namespace lldb_private
 
-#endif // liblldb_StackFrameRecognizer_h_
+#endif // LLDB_TARGET_STACKFRAMERECOGNIZER_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjectContainer_h_
-#define liblldb_ObjectContainer_h_
+#ifndef LLDB_SYMBOL_OBJECTCONTAINER_H
+#define LLDB_SYMBOL_OBJECTCONTAINER_H
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
@@ -172,4 +172,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ObjectContainer_h_
+#endif // LLDB_SYMBOL_OBJECTCONTAINER_H

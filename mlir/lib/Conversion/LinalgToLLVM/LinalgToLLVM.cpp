@@ -146,7 +146,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
     auto rangeDescriptorTy =
-        convertLinalgType(rangeOp.getResult().getType(), lowering);
+        convertLinalgType(rangeOp.getResult().getType(), typeConverter);
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
@@ -190,7 +190,7 @@ public:
     edsc::ScopedContext context(rewriter, op->getLoc());
     ReshapeOpOperandAdaptor adaptor(operands);
     BaseViewConversionHelper baseDesc(adaptor.view());
-    BaseViewConversionHelper desc(lowering.convertType(dstType));
+    BaseViewConversionHelper desc(typeConverter.convertType(dstType));
     desc.setAllocatedPtr(baseDesc.allocatedPtr());
     desc.setAlignedPtr(baseDesc.alignedPtr());
     desc.setOffset(baseDesc.offset());
@@ -225,11 +225,11 @@ public:
 
     auto sliceOp = cast<SliceOp>(op);
     auto memRefType = sliceOp.getBaseViewType();
-    auto int64Ty = lowering.convertType(rewriter.getIntegerType(64))
+    auto int64Ty = typeConverter.convertType(rewriter.getIntegerType(64))
                        .cast<LLVM::LLVMType>();
 
     BaseViewConversionHelper desc(
-        lowering.convertType(sliceOp.getShapedType()));
+        typeConverter.convertType(sliceOp.getShapedType()));
 
     // TODO(ntv): extract sizes and emit asserts.
     SmallVector<Value, 4> strides(memRefType.getRank());
@@ -322,7 +322,7 @@ public:
       return rewriter.replaceOp(op, {baseDesc}), matchSuccess();
 
     BaseViewConversionHelper desc(
-        lowering.convertType(transposeOp.getShapedType()));
+        typeConverter.convertType(transposeOp.getShapedType()));
 
     // Copy the base and aligned pointers from the old descriptor to the new
     // one.

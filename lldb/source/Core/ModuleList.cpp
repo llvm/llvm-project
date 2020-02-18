@@ -363,7 +363,7 @@ void ModuleList::FindFunctions(ConstString name,
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      (*pos)->FindFunctions(lookup_info.GetLookupName(), nullptr,
+      (*pos)->FindFunctions(lookup_info.GetLookupName(), CompilerDeclContext(),
                             lookup_info.GetNameTypeMask(), include_symbols,
                             include_inlines, sc_list);
     }
@@ -376,8 +376,8 @@ void ModuleList::FindFunctions(ConstString name,
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      (*pos)->FindFunctions(name, nullptr, name_type_mask, include_symbols,
-                            include_inlines, sc_list);
+      (*pos)->FindFunctions(name, CompilerDeclContext(), name_type_mask,
+                            include_symbols, include_inlines, sc_list);
     }
   }
 }
@@ -434,7 +434,8 @@ void ModuleList::FindGlobalVariables(ConstString name, size_t max_matches,
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(name, nullptr, max_matches, variable_list);
+    (*pos)->FindGlobalVariables(name, CompilerDeclContext(), max_matches,
+                                variable_list);
   }
 }
 

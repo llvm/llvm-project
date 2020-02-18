@@ -1015,6 +1015,13 @@ void TailDuplicator::removeDeadBlock(
   assert(MBB->pred_empty() && "MBB must be dead!");
   LLVM_DEBUG(dbgs() << "\nRemoving MBB: " << *MBB);
 
+  MachineFunction *MF = MBB->getParent();
+  // Update the call site info.
+  std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
+    if (MI.isCandidateForCallSiteEntry())
+      MF->eraseCallSiteInfo(&MI);
+  });
+
   if (RemovalCallback)
     (*RemovalCallback)(MBB);
 

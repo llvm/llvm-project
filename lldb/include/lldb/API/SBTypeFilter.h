@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBTypeFilter_h_
-#define LLDB_SBTypeFilter_h_
+#ifndef LLDB_API_SBTYPEFILTER_H
+#define LLDB_API_SBTYPEFILTER_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -71,4 +71,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_SBTypeFilter_h_
+#endif // LLDB_API_SBTYPEFILTER_H

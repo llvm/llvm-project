@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CoreFoundationCPP_CFString_h_
-#define CoreFoundationCPP_CFString_h_
+#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCSTRING_H
+#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCSTRING_H
 
 #include <iosfwd>
 
@@ -35,4 +35,4 @@ public:
                                        std::string &expanded_path);
 };
 
-#endif // #ifndef CoreFoundationCPP_CFString_h_
+#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCSTRING_H

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PThreadMutex_h__
-#define __PThreadMutex_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADMUTEX_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADMUTEX_H
 
 #include <assert.h>
 #include <pthread.h>

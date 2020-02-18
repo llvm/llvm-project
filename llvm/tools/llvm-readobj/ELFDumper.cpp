@@ -2098,6 +2098,16 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
       }
       break;
     }
+    case ELF::DT_SYMENT: {
+      uint64_t Val = Dyn.getVal();
+      if (Val != sizeof(Elf_Sym))
+        reportWarning(createError("DT_SYMENT value of 0x" +
+                                  Twine::utohexstr(Val) +
+                                  " is not the size of a symbol (0x" +
+                                  Twine::utohexstr(sizeof(Elf_Sym)) + ")"),
+                      ObjF->getFileName());
+      break;
+    }
     case ELF::DT_RELA:
       DynRelaRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;

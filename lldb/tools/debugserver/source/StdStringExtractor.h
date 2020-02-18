@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_StdStringExtractor_h_
-#define utility_StdStringExtractor_h_
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_STDSTRINGEXTRACTOR_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_STDSTRINGEXTRACTOR_H
 
 #include <stdint.h>
 #include <string>
@@ -102,4 +102,4 @@ protected:
                         // reached when decoding information
 };
 
-#endif // utility_StringExtractor_h_
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_STDSTRINGEXTRACTOR_H

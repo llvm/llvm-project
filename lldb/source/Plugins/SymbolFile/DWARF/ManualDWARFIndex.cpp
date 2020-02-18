@@ -406,7 +406,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
         dies.push_back(die);
     }
   }
@@ -417,7 +417,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
         dies.push_back(die);
     }
     offsets.clear();

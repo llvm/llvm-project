@@ -134,9 +134,9 @@ bool ReadJITEntry(const addr_t from_addr, Process *process,
   DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                           process->GetByteOrder(), sizeof(ptr_t));
   lldb::offset_t offset = 0;
-  entry->next_entry = extractor.GetPointer(&offset);
-  entry->prev_entry = extractor.GetPointer(&offset);
-  entry->symfile_addr = extractor.GetPointer(&offset);
+  entry->next_entry = extractor.GetAddress(&offset);
+  entry->prev_entry = extractor.GetAddress(&offset);
+  entry->symfile_addr = extractor.GetAddress(&offset);
   offset = llvm::alignTo(offset, uint64_align_bytes);
   entry->symfile_size = extractor.GetU64(&offset);
 

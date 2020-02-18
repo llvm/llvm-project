@@ -17,8 +17,8 @@
 /// reading both 32 and 64 bit instances of the object.
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ELFHeader_h_
-#define liblldb_ELFHeader_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_ELFHEADER_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_ELFHEADER_H
 
 #include "llvm/BinaryFormat/ELF.h"
 
@@ -391,4 +391,4 @@ struct ELFRela {
 
 } // End namespace elf.
 
-#endif // #ifndef liblldb_ELFHeader_h_
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_ELFHEADER_H

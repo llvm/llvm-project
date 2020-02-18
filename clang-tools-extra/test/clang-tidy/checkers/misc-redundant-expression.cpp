@@ -81,6 +81,13 @@ int TestSimpleEquivalent(int X, int Y) {
   if (P2.a[P1.x + 2] < P2.x && P2.a[(P1.x) + (2)] < (P2.x)) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: both sides of operator are equivalent
 
+  if (X && Y && X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: operator has equivalent nested operands
+  if (X || (Y || X)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operator has equivalent nested operands
+  if ((X ^ Y) ^ (Y ^ X)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: operator has equivalent nested operands
+
   return 0;
 }
 
@@ -106,6 +113,7 @@ int Valid(int X, int Y) {
   if (++X != ++X) return 1;
   if (P.a[X]++ != P.a[X]++) return 1;
   if (P.a[X++] != P.a[X++]) return 1;
+  if (X && X++ && X) return 1;
 
   if ("abc" == "ABC") return 1;
   if (foo(bar(0)) < (foo(bat(0, 1)))) return 1;
@@ -163,6 +171,15 @@ bool operator<(const MyStruct& lhs, const MyStruct& rhs) { return lhs.x < rhs.x;
 bool operator>(const MyStruct& lhs, MyStruct& rhs) { rhs.x--; return lhs.x > rhs.x; }
 bool operator||(MyStruct& lhs, const MyStruct& rhs) { lhs.x++; return lhs.x || rhs.x; }
 
+struct MyStruct1 {
+  bool x;
+  MyStruct1(bool x) : x(x) {};
+  operator bool() { return x; }
+};
+
+MyStruct1 operator&&(const MyStruct1& lhs, const MyStruct1& rhs) { return lhs.x && rhs.x; }
+MyStruct1 operator||(MyStruct1& lhs, MyStruct1& rhs) { return lhs.x && rhs.x; }
+
 bool TestOverloadedOperator(MyStruct& S) {
   if (S == Q) return false;
 
@@ -179,6 +196,15 @@ bool TestOverloadedOperator(MyStruct& S) {
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
   if (S >= S) return true;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
+
+  MyStruct1 U(false);
+  MyStruct1 V(true);
+
+  // valid because the operator is not const
+  if ((U || V) || U) return true;
+
+  if (U && V && U && V) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: overloaded operator has equivalent nested operands
 
   return true;
 }

@@ -1053,9 +1053,28 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class SVE2_1VectorArg_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMSubdivide2VectorType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<1>]>;
+
   class SVE2_2VectorArg_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMSubdivide2VectorType<0>,
+                 LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
+
+  class SVE2_2VectorArgIndexed_Long_Intrinsic
+  : Intrinsic<[llvm_anyvector_ty],
+              [LLVMSubdivide2VectorType<0>,
+               LLVMSubdivide2VectorType<0>,
+               llvm_i32_ty],
+              [IntrNoMem, ImmArg<2>]>;
+
+  class SVE2_2VectorArg_Wide_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
                  LLVMSubdivide2VectorType<0>],
                 [IntrNoMem]>;
 
@@ -1766,28 +1785,34 @@ def int_aarch64_sve_usra          : AdvSIMD_2VectorArgIndexed_Intrinsic;
 // SVE2 - Widening DSP operations
 //
 
-def int_aarch64_sve_sabalb   : SVE2_3VectorArg_Long_Intrinsic;
-def int_aarch64_sve_sabalt   : SVE2_3VectorArg_Long_Intrinsic;
-def int_aarch64_sve_sabdlb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_sabdlt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_saddlb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_saddlt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_smullb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_smullt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_sqdmullb : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_sqdmullt : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_ssublb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_ssublt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uabalb   : SVE2_3VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uabalt   : SVE2_3VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uabdlb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uabdlt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uaddlb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_uaddlt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_umullb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_umullt   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_usublb   : SVE2_2VectorArg_Long_Intrinsic;
-def int_aarch64_sve_usublt   : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabalb : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabalt : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabdlb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sabdlt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_saddlb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_saddlt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_saddwb : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_saddwt : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_sshllb : SVE2_1VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sshllt : SVE2_1VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ssublb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ssublt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ssubwb : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_ssubwt : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_uabalb : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabalt : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabdlb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uabdlt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uaddlb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uaddlt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_uaddwb : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_uaddwt : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_ushllb : SVE2_1VectorArg_Long_Intrinsic;
+def int_aarch64_sve_ushllt : SVE2_1VectorArg_Long_Intrinsic;
+def int_aarch64_sve_usublb : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_usublt : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_usubwb : SVE2_2VectorArg_Wide_Intrinsic;
+def int_aarch64_sve_usubwt : SVE2_2VectorArg_Wide_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic
@@ -1933,10 +1958,16 @@ def int_aarch64_sve_smlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_smlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_umlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_umlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smullb_lane   : SVE2_2VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_smullt_lane   : SVE2_2VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_umullb_lane   : SVE2_2VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_umullt_lane   : SVE2_2VectorArgIndexed_Long_Intrinsic;
 def int_aarch64_sve_sqdmlalb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlalt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlslb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlslt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmullb_lane : SVE2_2VectorArgIndexed_Long_Intrinsic;
+def int_aarch64_sve_sqdmullt_lane : SVE2_2VectorArgIndexed_Long_Intrinsic;
 
 // SVE2 MLA Unpredicated.
 def int_aarch64_sve_smlalb      : SVE2_3VectorArg_Long_Intrinsic;
@@ -1947,11 +1978,17 @@ def int_aarch64_sve_smlslb      : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_smlslt      : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_umlslb      : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_umlslt      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smullb      : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smullt      : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umullb      : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umullt      : SVE2_2VectorArg_Long_Intrinsic;
 
 def int_aarch64_sve_sqdmlalb    : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlalt    : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlslb    : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlslt    : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmullb    : SVE2_2VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmullt    : SVE2_2VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlalbt   : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_sqdmlslbt   : SVE2_3VectorArg_Long_Intrinsic;
 

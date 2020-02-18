@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_LockFileBase_h_
-#define liblldb_Host_LockFileBase_h_
+#ifndef LLDB_HOST_LOCKFILEBASE_H
+#define LLDB_HOST_LOCKFILEBASE_H
 
 #include "lldb/Utility/Status.h"
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangASTMetadata_h
-#define liblldb_ClangASTMetadata_h
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTMETADATA_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTMETADATA_H
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
@@ -97,4 +97,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangASTMetadata_h
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTMETADATA_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIWindows_x86_64_h_
-#define liblldb_ABIWindows_x86_64_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_X86_ABIWINDOWS_X86_64_H
+#define LLDB_SOURCE_PLUGINS_ABI_X86_ABIWINDOWS_X86_64_H
 
 #include "Plugins/ABI/X86/ABIX86_64.h"
 
@@ -91,4 +91,4 @@ private:
   using ABIX86_64::ABIX86_64; // Call CreateInstance instead.
 };
 
-#endif // liblldb_ABISysV_x86_64_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_X86_ABIWINDOWS_X86_64_H

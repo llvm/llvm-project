@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBExpressionOptions_h_
-#define LLDB_SBExpressionOptions_h_
+#ifndef LLDB_API_SBEXPRESSIONOPTIONS_H
+#define LLDB_API_SBEXPRESSIONOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -112,4 +112,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBExpressionOptions_h_
+#endif // LLDB_API_SBEXPRESSIONOPTIONS_H

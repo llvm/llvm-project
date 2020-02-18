@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDIE_h_
-#define SymbolFileDWARF_DWARFDIE_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
 
 #include "DWARFBaseDIE.h"
 #include "llvm/ADT/SmallSet.h"
@@ -90,4 +90,4 @@ public:
                             lldb_private::DWARFExpression *frame_base) const;
 };
 
-#endif // SymbolFileDWARF_DWARFDIE_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

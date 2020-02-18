@@ -46,10 +46,9 @@ template <class SizeClassMapT, uptr RegionSizeLog,
 class SizeClassAllocator64 {
 public:
   typedef SizeClassMapT SizeClassMap;
-  typedef SizeClassAllocator64<SizeClassMap, RegionSizeLog,
-                               MinReleaseToOsIntervalMs,
-                               MaxReleaseToOsIntervalMs,
-                               MaySupportMemoryTagging>
+  typedef SizeClassAllocator64<
+      SizeClassMap, RegionSizeLog, MinReleaseToOsIntervalMs,
+      MaxReleaseToOsIntervalMs, MaySupportMemoryTagging>
       ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
@@ -68,11 +67,6 @@ public:
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(
         map(nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, &Data));
-
-    RegionInfoArray = reinterpret_cast<RegionInfo *>(
-        map(nullptr, sizeof(RegionInfo) * NumClasses, "scudo:regioninfo"));
-    DCHECK_EQ(reinterpret_cast<uptr>(RegionInfoArray) % SCUDO_CACHE_LINE_SIZE,
-              0);
 
     u32 Seed;
     if (UNLIKELY(!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed))))
@@ -106,8 +100,6 @@ public:
 
   void unmapTestOnly() {
     unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL, &Data);
-    unmap(reinterpret_cast<void *>(RegionInfoArray),
-          sizeof(RegionInfo) * NumClasses);
   }
 
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
@@ -156,7 +148,7 @@ public:
     }
   }
 
-  template <typename F> void iterateOverBlocks(F Callback) const {
+  template <typename F> void iterateOverBlocks(F Callback) {
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
         continue;
@@ -169,7 +161,7 @@ public:
     }
   }
 
-  void getStats(ScopedString *Str) const {
+  void getStats(ScopedString *Str) {
     // TODO(kostyak): get the RSS per region.
     uptr TotalMapped = 0;
     uptr PoppedBlocks = 0;
@@ -252,12 +244,12 @@ private:
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr PrimaryBase;
-  RegionInfo *RegionInfoArray;
   MapPlatformData Data;
   atomic_s32 ReleaseToOsIntervalMs;
   bool UseMemoryTagging;
+  RegionInfo RegionInfoArray[NumClasses];
 
-  RegionInfo *getRegionInfo(uptr ClassId) const {
+  RegionInfo *getRegionInfo(uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     return &RegionInfoArray[ClassId];
   }
@@ -371,7 +363,7 @@ private:
     return B;
   }
 
-  void getStats(ScopedString *Str, uptr ClassId, uptr Rss) const {
+  void getStats(ScopedString *Str, uptr ClassId, uptr Rss) {
     RegionInfo *Region = getRegionInfo(ClassId);
     if (Region->MappedUser == 0)
       return;

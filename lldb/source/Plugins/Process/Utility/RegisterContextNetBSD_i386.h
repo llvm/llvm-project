@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextNetBSD_i386_H_
-#define liblldb_RegisterContextNetBSD_i386_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTNETBSD_I386_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTNETBSD_I386_H
 
 #include "RegisterInfoInterface.h"
 

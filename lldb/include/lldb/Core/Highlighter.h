@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Highlighter_h_
-#define liblldb_Highlighter_h_
+#ifndef LLDB_CORE_HIGHLIGHTER_H
+#define LLDB_CORE_HIGHLIGHTER_H
 
 #include <utility>
 #include <vector>
@@ -152,4 +152,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_Highlighter_h_
+#endif // LLDB_CORE_HIGHLIGHTER_H

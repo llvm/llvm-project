@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SymbolFile_h_
-#define liblldb_SymbolFile_h_
+#ifndef LLDB_SYMBOL_SYMBOLFILE_H
+#define LLDB_SYMBOL_SYMBOLFILE_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -208,21 +208,21 @@ public:
                                         SymbolContextList &sc_list);
 
   virtual void DumpClangAST(Stream &s) {}
-  virtual void
-  FindGlobalVariables(ConstString name,
-                      const CompilerDeclContext *parent_decl_ctx,
-                      uint32_t max_matches, VariableList &variables);
+  virtual void FindGlobalVariables(ConstString name,
+                                   const CompilerDeclContext &parent_decl_ctx,
+                                   uint32_t max_matches,
+                                   VariableList &variables);
   virtual void FindGlobalVariables(const RegularExpression &regex,
                                    uint32_t max_matches,
                                    VariableList &variables);
   virtual void FindFunctions(ConstString name,
-                             const CompilerDeclContext *parent_decl_ctx,
+                             const CompilerDeclContext &parent_decl_ctx,
                              lldb::FunctionNameType name_type_mask,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void
-  FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
+  FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
@@ -251,8 +251,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
   virtual CompilerDeclContext
-  FindNamespace(ConstString name,
-                const CompilerDeclContext *parent_decl_ctx) {
+  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx) {
     return CompilerDeclContext();
   }
 
@@ -316,4 +315,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SymbolFile_h_
+#endif // LLDB_SYMBOL_SYMBOLFILE_H

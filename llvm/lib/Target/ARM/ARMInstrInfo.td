@@ -307,7 +307,22 @@ def ARMLoopDec  : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
 // because that's what (MVE) VSTRH.16 followed by VLDRB.8 would do. So the
 // bitconvert would have to emit a VREV16.8 instruction, whereas the
 // VECTOR_REG_CAST emits no code at all if the vector is already in a register.
-def ARMVectorRegCast : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
+def ARMVectorRegCastImpl : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
+
+// In little-endian, VECTOR_REG_CAST is often turned into bitconvert during
+// lowering (because in that situation they're identical). So an isel pattern
+// that needs to match something that's _logically_ a VECTOR_REG_CAST must
+// _physically_ match a different node type depending on endianness.
+//
+// This 'PatFrags' instance is a centralized facility to make that easy. It
+// matches VECTOR_REG_CAST in either endianness, and also bitconvert in the
+// endianness where it's equivalent.
+def ARMVectorRegCast: PatFrags<
+    (ops node:$x), [(ARMVectorRegCastImpl node:$x), (bitconvert node:$x)], [{
+       // Reject a match against bitconvert (aka ISD::BITCAST) if big-endian
+       return !(CurDAG->getDataLayout().isBigEndian() &&
+                N->getOpcode() == ISD::BITCAST);
+    }]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.

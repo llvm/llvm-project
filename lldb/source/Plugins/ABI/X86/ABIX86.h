@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIX86_h_
-#define liblldb_ABIX86_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_X86_ABIX86_H
+#define LLDB_SOURCE_PLUGINS_ABI_X86_ABIX86_H
 
 class ABIX86 {
 public:

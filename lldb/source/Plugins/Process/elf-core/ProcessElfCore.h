@@ -13,8 +13,8 @@
 //     space.
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessElfCore_h_
-#define liblldb_ProcessElfCore_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
 #include <list>
 #include <vector>
@@ -165,4 +165,4 @@ private:
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
 };
 
-#endif // liblldb_ProcessElfCore_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H

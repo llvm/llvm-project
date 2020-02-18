@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Plugins_Process_Windows_DynamicLoaderWindowsDYLD_h_
-#define liblldb_Plugins_Process_Windows_DynamicLoaderWindowsDYLD_h_
+#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WINDOWS_DYLD_DYNAMICLOADERWINDOWSDYLD_H
+#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WINDOWS_DYLD_DYNAMICLOADERWINDOWSDYLD_H
 
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/lldb-forward.h"
@@ -51,4 +51,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Plugins_Process_Windows_DynamicLoaderWindowsDYLD_h_
+#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_WINDOWS_DYLD_DYNAMICLOADERWINDOWSDYLD_H

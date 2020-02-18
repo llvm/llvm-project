@@ -82,7 +82,7 @@ SBMemoryRegionInfoList::SBMemoryRegionInfoList(
                           (const lldb::SBMemoryRegionInfoList &), rhs);
 }
 
-SBMemoryRegionInfoList::~SBMemoryRegionInfoList() {}
+SBMemoryRegionInfoList::~SBMemoryRegionInfoList() = default;
 
 const SBMemoryRegionInfoList &SBMemoryRegionInfoList::
 operator=(const SBMemoryRegionInfoList &rhs) {

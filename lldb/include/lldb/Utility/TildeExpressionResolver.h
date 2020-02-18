@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
-#define LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
+#ifndef LLDB_UTILITY_TILDEEXPRESSIONRESOLVER_H
+#define LLDB_UTILITY_TILDEEXPRESSIONRESOLVER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -61,4 +61,4 @@ public:
 };
 }
 
-#endif // #ifndef LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
+#endif // LLDB_UTILITY_TILDEEXPRESSIONRESOLVER_H

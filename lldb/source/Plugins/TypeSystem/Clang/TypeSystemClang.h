@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeSystemClang_h_
-#define liblldb_TypeSystemClang_h_
+#ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
+#define LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
 
 #include <stdint.h>
 
@@ -45,6 +45,16 @@ class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
+/// A TypeSystem implementation based on Clang.
+///
+/// This class uses a single clang::ASTContext as the backend for storing
+/// its types and declarations. Every clang::ASTContext should also just have
+/// a single associated TypeSystemClang instance that manages it.
+///
+/// The clang::ASTContext instance can either be created by TypeSystemClang
+/// itself or it can adopt an existing clang::ASTContext (for example, when
+/// it is necessary to provide a TypeSystem interface for an existing
+/// clang::ASTContext that was created by clang::CompilerInstance).
 class TypeSystemClang : public TypeSystem {
   // LLVM RTTI support
   static char ID;
@@ -114,6 +124,7 @@ public:
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
+  /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
   clang::ASTContext &getASTContext();
 
   clang::MangleContext *getMangleContext();
@@ -846,7 +857,10 @@ public:
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);
 
-  CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
+  /// Returns the underlying integer type for an enum type. If the given type
+  /// is invalid or not an enum-type, the function returns an invalid
+  /// CompilerType.
+  CompilerType GetEnumerationIntegerType(CompilerType type);
 
   // Pointers & References
 
@@ -997,6 +1011,8 @@ private:
   void SetTargetTriple(llvm::StringRef target_triple);
 };
 
+/// The TypeSystemClang instance used for the scratch ASTContext in a
+/// lldb::Target.
 class TypeSystemClangForExpressions : public TypeSystemClang {
 public:
   TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
@@ -1031,4 +1047,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeSystemClang_h_
+#endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SERVER_TESTS_TESTBASE_H
-#define LLDB_SERVER_TESTS_TESTBASE_H
+#ifndef LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTBASE_H
+#define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTBASE_H
 
 #include "TestClient.h"
 #include "lldb/Host/FileSystem.h"
@@ -56,4 +56,4 @@ protected:
 
 } // namespace llgs_tests
 
-#endif // LLDB_SERVER_TESTS_TESTBASE_H
+#endif // LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTBASE_H

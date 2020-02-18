@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CoreMedia_h_
-#define liblldb_CoreMedia_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COREMEDIA_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COREMEDIA_H
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -22,4 +22,4 @@ bool CMTimeSummaryProvider(ValueObject &valobj, Stream &stream,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_CF_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_COREMEDIA_H

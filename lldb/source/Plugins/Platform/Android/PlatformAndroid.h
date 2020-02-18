@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformAndroid_h_
-#define liblldb_PlatformAndroid_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
 
 #include <memory>
 #include <string>
@@ -83,4 +83,4 @@ private:
 } // namespace platofor_android
 } // namespace lldb_private
 
-#endif // liblldb_PlatformAndroid_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H

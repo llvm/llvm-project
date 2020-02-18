@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Expression_h_
-#define liblldb_Expression_h_
+#ifndef LLDB_EXPRESSION_EXPRESSION_H
+#define LLDB_EXPRESSION_EXPRESSION_H
 
 #include <map>
 #include <string>
@@ -101,4 +101,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_Expression_h_
+#endif // LLDB_EXPRESSION_EXPRESSION_H

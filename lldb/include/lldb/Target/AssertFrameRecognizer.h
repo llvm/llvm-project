@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AssertFrameRecognizer_h_
-#define liblldb_AssertFrameRecognizer_h_
+#ifndef LLDB_TARGET_ASSERTFRAMERECOGNIZER_H
+#define LLDB_TARGET_ASSERTFRAMERECOGNIZER_H
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -51,4 +51,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_AssertFrameRecognizer_h_
+#endif // LLDB_TARGET_ASSERTFRAMERECOGNIZER_H

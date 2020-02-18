@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __ThreadInfo_h__
-#define __ThreadInfo_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_THREADINFO_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_THREADINFO_H
 
 namespace ThreadInfo {
 
@@ -22,4 +22,4 @@ public:
 };
 };
 
-#endif // __ThreadInfo_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_THREADINFO_H

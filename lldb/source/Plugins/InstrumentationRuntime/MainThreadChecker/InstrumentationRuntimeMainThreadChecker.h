@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MainThreadCheckerRuntime_h_
-#define liblldb_MainThreadCheckerRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_MAINTHREADCHECKER_INSTRUMENTATIONRUNTIMEMAINTHREADCHECKER_H
+#define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_MAINTHREADCHECKER_INSTRUMENTATIONRUNTIMEMAINTHREADCHECKER_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
@@ -65,4 +65,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_MainThreadCheckerRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_MAINTHREADCHECKER_INSTRUMENTATIONRUNTIMEMAINTHREADCHECKER_H

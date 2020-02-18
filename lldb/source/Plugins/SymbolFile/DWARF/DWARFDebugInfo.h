@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugInfo_h_
-#define SymbolFileDWARF_DWARFDebugInfo_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H
 
 #include <map>
 #include <vector>
@@ -82,4 +82,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
 };
 
-#endif // SymbolFileDWARF_DWARFDebugInfo_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H

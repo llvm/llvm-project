@@ -59,7 +59,7 @@ operator=(const SBBreakpointLocation &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBBreakpointLocation::~SBBreakpointLocation() {}
+SBBreakpointLocation::~SBBreakpointLocation() = default;
 
 BreakpointLocationSP SBBreakpointLocation::GetSP() const {
   return m_opaque_wp.lock();

@@ -72,6 +72,52 @@ std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
 
 constexpr uint64_t ModuleSummaryIndex::BitcodeSummaryVersion;
 
+uint64_t ModuleSummaryIndex::getFlags() const {
+  uint64_t Flags = 0;
+  if (withGlobalValueDeadStripping())
+    Flags |= 0x1;
+  if (skipModuleByDistributedBackend())
+    Flags |= 0x2;
+  if (hasSyntheticEntryCounts())
+    Flags |= 0x4;
+  if (enableSplitLTOUnit())
+    Flags |= 0x8;
+  if (partiallySplitLTOUnits())
+    Flags |= 0x10;
+  if (withAttributePropagation())
+    Flags |= 0x20;
+  return Flags;
+}
+
+void ModuleSummaryIndex::setFlags(uint64_t Flags) {
+  assert(Flags <= 0x3f && "Unexpected bits in flag");
+  // 1 bit: WithGlobalValueDeadStripping flag.
+  // Set on combined index only.
+  if (Flags & 0x1)
+    setWithGlobalValueDeadStripping();
+  // 1 bit: SkipModuleByDistributedBackend flag.
+  // Set on combined index only.
+  if (Flags & 0x2)
+    setSkipModuleByDistributedBackend();
+  // 1 bit: HasSyntheticEntryCounts flag.
+  // Set on combined index only.
+  if (Flags & 0x4)
+    setHasSyntheticEntryCounts();
+  // 1 bit: DisableSplitLTOUnit flag.
+  // Set on per module indexes. It is up to the client to validate
+  // the consistency of this flag across modules being linked.
+  if (Flags & 0x8)
+    setEnableSplitLTOUnit();
+  // 1 bit: PartiallySplitLTOUnits flag.
+  // Set on combined index only.
+  if (Flags & 0x10)
+    setPartiallySplitLTOUnits();
+  // 1 bit: WithAttributePropagation flag.
+  // Set on combined index only.
+  if (Flags & 0x20)
+    setWithAttributePropagation();
+}
+
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(

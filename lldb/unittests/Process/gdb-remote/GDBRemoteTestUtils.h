@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
-#define lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
+#ifndef LLDB_UNITTESTS_PROCESS_GDB_REMOTE_GDBREMOTETESTUTILS_H
+#define LLDB_UNITTESTS_PROCESS_GDB_REMOTE_GDBREMOTETESTUTILS_H
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -88,4 +88,4 @@ public:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
+#endif // LLDB_UNITTESTS_PROCESS_GDB_REMOTE_GDBREMOTETESTUTILS_H

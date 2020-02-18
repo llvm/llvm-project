@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Iterable_h_
-#define liblldb_Iterable_h_
+#ifndef LLDB_UTILITY_ITERABLE_H
+#define LLDB_UTILITY_ITERABLE_H
 
 #include <utility>
 
@@ -194,4 +194,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Iterable_h_
+#endif // LLDB_UTILITY_ITERABLE_H

@@ -3191,7 +3191,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
 
 bool X86InstrInfo::getMemOperandsWithOffset(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (MemRefBegin < 0)
@@ -3222,6 +3222,7 @@ bool X86InstrInfo::getMemOperandsWithOffset(
   if (!BaseOp->isReg())
     return false;
 
+  OffsetIsScalable = false;
   BaseOps.push_back(BaseOp);
   return true;
 }

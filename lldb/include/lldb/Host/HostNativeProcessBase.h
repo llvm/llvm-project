@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostNativeProcessBase_h_
-#define lldb_Host_HostNativeProcessBase_h_
+#ifndef LLDB_HOST_HOSTNATIVEPROCESSBASE_H
+#define LLDB_HOST_HOSTNATIVEPROCESSBASE_H
 
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Utility/Status.h"

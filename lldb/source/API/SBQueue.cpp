@@ -47,7 +47,7 @@ public:
     m_pending_items_fetched = rhs.m_pending_items_fetched;
   }
 
-  ~QueueImpl() {}
+  ~QueueImpl() = default;
 
   bool IsValid() { return m_queue_wp.lock() != nullptr; }
 
@@ -243,7 +243,7 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBQueue::~SBQueue() {}
+SBQueue::~SBQueue() = default;
 
 bool SBQueue::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, IsValid);

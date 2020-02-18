@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DebugMacros_h_
-#define liblldb_DebugMacros_h_
+#ifndef LLDB_SYMBOL_DEBUGMACROS_H
+#define LLDB_SYMBOL_DEBUGMACROS_H
 
 #include <memory>
 #include <vector>
@@ -96,4 +96,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_DebugMacros_h_
+#endif // LLDB_SYMBOL_DEBUGMACROS_H

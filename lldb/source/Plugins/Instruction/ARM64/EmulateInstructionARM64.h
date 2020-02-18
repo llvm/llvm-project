@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EmulateInstructionARM64_h_
-#define EmulateInstructionARM64_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -189,4 +189,4 @@ protected:
   bool m_ignore_conditions;
 };
 
-#endif // EmulateInstructionARM64_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM64_EMULATEINSTRUCTIONARM64_H

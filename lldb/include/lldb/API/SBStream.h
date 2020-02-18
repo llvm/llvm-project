@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBStream_h_
-#define LLDB_SBStream_h_
+#ifndef LLDB_API_SBSTREAM_H
+#define LLDB_API_SBSTREAM_H
 
 #include <stdio.h>
 
@@ -106,4 +106,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBStream_h_
+#endif // LLDB_API_SBSTREAM_H

@@ -89,7 +89,7 @@ const SBInstruction &SBInstruction::operator=(const SBInstruction &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBInstruction::~SBInstruction() {}
+SBInstruction::~SBInstruction() = default;
 
 bool SBInstruction::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, IsValid);

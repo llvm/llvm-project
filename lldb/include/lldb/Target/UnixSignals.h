@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_UnixSignals_h_
-#define lldb_UnixSignals_h_
+#ifndef LLDB_TARGET_UNIXSIGNALS_H
+#define LLDB_TARGET_UNIXSIGNALS_H
 
 #include <map>
 #include <string>
@@ -126,4 +126,4 @@ protected:
 };
 
 } // Namespace lldb
-#endif // lldb_UnixSignals_h_
+#endif // LLDB_TARGET_UNIXSIGNALS_H

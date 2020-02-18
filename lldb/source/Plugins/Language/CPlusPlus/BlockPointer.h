@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BlockPointer_h_
-#define liblldb_BlockPointer_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_BLOCKPOINTER_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_BLOCKPOINTER_H
 
 #include "lldb/lldb-forward.h"
 
@@ -22,4 +22,4 @@ BlockPointerSyntheticFrontEndCreator(CXXSyntheticChildren *,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_BlockPointer_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_BLOCKPOINTER_H

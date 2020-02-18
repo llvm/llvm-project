@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_IRExecutionUnit_h_
-#define liblldb_IRExecutionUnit_h_
+#ifndef LLDB_EXPRESSION_IREXECUTIONUNIT_H
+#define LLDB_EXPRESSION_IREXECUTIONUNIT_H
 
 #include <atomic>
 #include <memory>
@@ -406,4 +406,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_IRExecutionUnit_h_
+#endif // LLDB_EXPRESSION_IREXECUTIONUNIT_H

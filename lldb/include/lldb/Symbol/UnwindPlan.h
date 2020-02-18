@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UnwindPlan_h
-#define liblldb_UnwindPlan_h
+#ifndef LLDB_SYMBOL_UNWINDPLAN_H
+#define LLDB_SYMBOL_UNWINDPLAN_H
 
 #include <map>
 #include <memory>
@@ -540,4 +540,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_UnwindPlan_h
+#endif // LLDB_SYMBOL_UNWINDPLAN_H

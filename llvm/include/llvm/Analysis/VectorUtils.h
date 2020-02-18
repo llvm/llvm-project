@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
@@ -254,6 +253,7 @@ template <typename T> class ArrayRef;
 class DemandedBits;
 class GetElementPtrInst;
 template <typename InstTy> class InterleaveGroup;
+class IRBuilderBase;
 class Loop;
 class ScalarEvolution;
 class TargetTransformInfo;
@@ -394,7 +394,7 @@ Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 /// Note: The result is a mask of 0's and 1's, as opposed to the other
 /// create[*]Mask() utilities which create a shuffle mask (mask that
 /// consists of indices).
-Constant *createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
+Constant *createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
                                const InterleaveGroup<Instruction> &Group);
 
 /// Create a mask with replicated elements.
@@ -409,8 +409,8 @@ Constant *createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
 /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
 ///
 ///   <0,0,0,1,1,1,2,2,2,3,3,3>
-Constant *createReplicatedMask(IRBuilder<> &Builder, unsigned ReplicationFactor,
-                               unsigned VF);
+Constant *createReplicatedMask(IRBuilderBase &Builder,
+                               unsigned ReplicationFactor, unsigned VF);
 
 /// Create an interleave shuffle mask.
 ///
@@ -423,7 +423,7 @@ Constant *createReplicatedMask(IRBuilder<> &Builder, unsigned ReplicationFactor,
 /// For example, the mask for VF = 4 and NumVecs = 2 is:
 ///
 ///   <0, 4, 1, 5, 2, 6, 3, 7>.
-Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
+Constant *createInterleaveMask(IRBuilderBase &Builder, unsigned VF,
                                unsigned NumVecs);
 
 /// Create a stride shuffle mask.
@@ -438,7 +438,7 @@ Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
 /// For example, the mask for Start = 0, Stride = 2, and VF = 4 is:
 ///
 ///   <0, 2, 4, 6>
-Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
+Constant *createStrideMask(IRBuilderBase &Builder, unsigned Start,
                            unsigned Stride, unsigned VF);
 
 /// Create a sequential shuffle mask.
@@ -452,7 +452,7 @@ Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
 /// For example, the mask for Start = 0, NumInsts = 4, and NumUndefs = 4 is:
 ///
 ///   <0, 1, 2, 3, undef, undef, undef, undef>
-Constant *createSequentialMask(IRBuilder<> &Builder, unsigned Start,
+Constant *createSequentialMask(IRBuilderBase &Builder, unsigned Start,
                                unsigned NumInts, unsigned NumUndefs);
 
 /// Concatenate a list of vectors.
@@ -462,7 +462,7 @@ Constant *createSequentialMask(IRBuilder<> &Builder, unsigned Start,
 /// their element types should be the same. The number of elements in the
 /// vectors should also be the same; however, if the last vector has fewer
 /// elements, it will be padded with undefs.
-Value *concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs);
+Value *concatenateVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vecs);
 
 /// Given a mask vector of the form <Y x i1>, Return true if all of the
 /// elements of this predicate mask are false or undef.  That is, return true

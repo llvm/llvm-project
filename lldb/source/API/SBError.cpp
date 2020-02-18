@@ -25,7 +25,7 @@ SBError::SBError(const SBError &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBError::~SBError() {}
+SBError::~SBError() = default;
 
 const SBError &SBError::operator=(const SBError &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBError &,

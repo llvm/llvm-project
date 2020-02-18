@@ -39,7 +39,7 @@ SBTypeCategory::SBTypeCategory(const lldb::SBTypeCategory &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &), rhs);
 }
 
-SBTypeCategory::~SBTypeCategory() {}
+SBTypeCategory::~SBTypeCategory() = default;
 
 bool SBTypeCategory::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, IsValid);

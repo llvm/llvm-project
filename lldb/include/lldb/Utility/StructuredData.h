@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StructuredData_h_
-#define liblldb_StructuredData_h_
+#ifndef LLDB_UTILITY_STRUCTUREDDATA_H
+#define LLDB_UTILITY_STRUCTUREDDATA_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -553,4 +553,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_StructuredData_h_
+#endif // LLDB_UTILITY_STRUCTUREDDATA_H

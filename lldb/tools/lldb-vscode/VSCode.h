@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_VSCODE_H_
-#define LLDBVSCODE_VSCODE_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
+#define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
 #include <iosfwd>
 #include <map>

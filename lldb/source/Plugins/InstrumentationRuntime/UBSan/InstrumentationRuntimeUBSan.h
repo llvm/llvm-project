@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UndefinedBehaviorSanitizerRuntime_h_
-#define liblldb_UndefinedBehaviorSanitizerRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_UBSAN_INSTRUMENTATIONRUNTIMEUBSAN_H
+#define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_UBSAN_INSTRUMENTATIONRUNTIMEUBSAN_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
@@ -65,4 +65,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_UndefinedBehaviorSanitizerRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_UBSAN_INSTRUMENTATIONRUNTIMEUBSAN_H

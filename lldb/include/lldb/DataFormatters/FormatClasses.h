@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormatClasses_h_
-#define lldb_FormatClasses_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATCLASSES_H
+#define LLDB_DATAFORMATTERS_FORMATCLASSES_H
 
 #include <functional>
 #include <memory>
@@ -160,4 +160,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_FormatClasses_h_
+#endif // LLDB_DATAFORMATTERS_FORMATCLASSES_H

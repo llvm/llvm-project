@@ -246,7 +246,8 @@ void DFAPacketizerEmitter::emitForItineraries(
 
   // Output the mapping from ScheduleClass to ResourcesIdx.
   unsigned Idx = 0;
-  OS << "unsigned " << TargetName << DFAName << "ResourceIndices[] = {";
+  OS << "constexpr unsigned " << TargetName << DFAName
+     << "ResourceIndices[] = {";
   for (const ScheduleClass &SC : ScheduleClasses) {
     if (Idx++ % 32 == 0)
       OS << "\n  ";
@@ -255,7 +256,7 @@ void DFAPacketizerEmitter::emitForItineraries(
   OS << "\n};\n\n";
 
   // And the mapping from Itinerary index into the previous table.
-  OS << "unsigned " << TargetName << DFAName
+  OS << "constexpr unsigned " << TargetName << DFAName
      << "ProcResourceIndexStart[] = {\n";
   OS << "  0, // NoSchedModel\n";
   for (const CodeGenProcModel *Model : ProcModels) {

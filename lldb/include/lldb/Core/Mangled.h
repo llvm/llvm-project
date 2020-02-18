@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Mangled_h_
-#define liblldb_Mangled_h_
+#ifndef LLDB_CORE_MANGLED_H
+#define LLDB_CORE_MANGLED_H
 #if defined(__cplusplus)
 
 #include "lldb/lldb-enumerations.h"
@@ -280,4 +280,4 @@ Stream &operator<<(Stream &s, const Mangled &obj);
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)
-#endif // liblldb_Mangled_h_
+#endif // LLDB_CORE_MANGLED_H

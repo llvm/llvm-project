@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_SharedCluster_h_
-#define utility_SharedCluster_h_
+#ifndef LLDB_UTILITY_SHAREDCLUSTER_H
+#define LLDB_UTILITY_SHAREDCLUSTER_H
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "llvm/ADT/STLExtras.h"
@@ -56,4 +56,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // utility_SharedCluster_h_
+#endif // LLDB_UTILITY_SHAREDCLUSTER_H

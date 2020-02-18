@@ -37,7 +37,7 @@ SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBSymbolContext::~SBSymbolContext() {}
+SBSymbolContext::~SBSymbolContext() = default;
 
 const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBSymbolContext &,

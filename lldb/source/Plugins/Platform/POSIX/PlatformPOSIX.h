@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformPOSIX_h_
-#define liblldb_PlatformPOSIX_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H
 
 #include <map>
 #include <memory>
@@ -108,4 +108,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);
 };
 
-#endif // liblldb_PlatformPOSIX_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H

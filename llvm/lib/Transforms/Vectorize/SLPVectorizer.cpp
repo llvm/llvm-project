@@ -832,13 +832,12 @@ public:
 
       // Extracts from consecutive indexes of the same vector better score as
       // the extracts could be optimized away.
-      auto *Ex1 = dyn_cast<ExtractElementInst>(V1);
-      auto *Ex2 = dyn_cast<ExtractElementInst>(V2);
-      if (Ex1 && Ex2 && Ex1->getVectorOperand() == Ex2->getVectorOperand() &&
-          cast<ConstantInt>(Ex1->getIndexOperand())->getZExtValue() + 1 ==
-              cast<ConstantInt>(Ex2->getIndexOperand())->getZExtValue()) {
+      Value *EV;
+      ConstantInt *Ex1Idx, *Ex2Idx;
+      if (match(V1, m_ExtractElement(m_Value(EV), m_ConstantInt(Ex1Idx))) &&
+          match(V2, m_ExtractElement(m_Deferred(EV), m_ConstantInt(Ex2Idx))) &&
+          Ex1Idx->getZExtValue() + 1 == Ex2Idx->getZExtValue())
         return VLOperands::ScoreConsecutiveExtracts;
-      }
 
       auto *I1 = dyn_cast<Instruction>(V1);
       auto *I2 = dyn_cast<Instruction>(V2);

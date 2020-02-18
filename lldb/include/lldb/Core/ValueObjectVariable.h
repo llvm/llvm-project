@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObjectVariable_h_
-#define liblldb_ValueObjectVariable_h_
+#ifndef LLDB_CORE_VALUEOBJECTVARIABLE_H
+#define LLDB_CORE_VALUEOBJECTVARIABLE_H
 
 #include "lldb/Core/ValueObject.h"
 
@@ -85,4 +85,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObjectVariable_h_
+#endif // LLDB_CORE_VALUEOBJECTVARIABLE_H

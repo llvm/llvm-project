@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIARM_h_
-#define liblldb_ABIARM_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_ARM_ABIARM_H
+#define LLDB_SOURCE_PLUGINS_ABI_ARM_ABIARM_H
 
 class ABIARM {
 public:

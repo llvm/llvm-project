@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/Support/TypeSize.h"
 
 #define GET_INSTRINFO_HEADER
 #include "AArch64GenInstrInfo.inc"
@@ -114,11 +115,17 @@ public:
 
   bool getMemOperandsWithOffset(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI)
+      const override;
 
+  /// If \p OffsetIsScalable is set to 'true', the offset is scaled by `vscale`.
+  /// This is true for some SVE instructions like ldr/str that have a
+  /// 'reg + imm' addressing mode where the immediate is an index to the
+  /// scalable vector located at 'reg + imm * vscale x #bytes'.
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, unsigned &Width,
+                                    int64_t &Offset, bool &OffsetIsScalable,
+                                    unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
@@ -128,7 +135,7 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  static bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
+  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, unsigned &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,

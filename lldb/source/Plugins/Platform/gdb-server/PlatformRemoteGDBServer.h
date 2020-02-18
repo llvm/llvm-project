@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformRemoteGDBServer_h_
-#define liblldb_PlatformRemoteGDBServer_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
 
 #include <string>
 
@@ -198,4 +198,4 @@ private:
 } // namespace platform_gdb_server
 } // namespace lldb_private
 
-#endif // liblldb_PlatformRemoteGDBServer_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H

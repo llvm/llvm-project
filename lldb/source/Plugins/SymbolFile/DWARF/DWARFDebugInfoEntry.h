@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugInfoEntry_h_
-#define SymbolFileDWARF_DWARFDebugInfoEntry_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
 
 #include "SymbolFileDWARF.h"
 #include "llvm/ADT/SmallVector.h"
@@ -185,4 +185,4 @@ protected:
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 };
 
-#endif // SymbolFileDWARF_DWARFDebugInfoEntry_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H

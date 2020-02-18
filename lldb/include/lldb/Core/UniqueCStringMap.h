@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UniqueCStringMap_h_
-#define liblldb_UniqueCStringMap_h_
+#ifndef LLDB_CORE_UNIQUECSTRINGMAP_H
+#define LLDB_CORE_UNIQUECSTRINGMAP_H
 
 #include <algorithm>
 #include <vector>
@@ -204,4 +204,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_UniqueCStringMap_h_
+#endif // LLDB_CORE_UNIQUECSTRINGMAP_H

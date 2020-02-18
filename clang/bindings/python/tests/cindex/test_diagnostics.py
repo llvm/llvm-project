@@ -100,7 +100,7 @@ class TestDiagnostics(unittest.TestCase):
         self.assertRegexpMatches(children[0].spelling,
                 '.*declared here')
         self.assertEqual(children[0].location.line, 1)
-        self.assertEqual(children[0].location.column, 1)
+        self.assertEqual(children[0].location.column, 6)
 
     def test_diagnostic_string_repr(self):
         tu = get_tu('struct MissingSemicolon{}')

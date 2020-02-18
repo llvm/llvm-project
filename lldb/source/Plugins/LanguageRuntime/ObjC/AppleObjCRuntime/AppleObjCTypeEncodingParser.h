@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AppleObjCTypeEncodingParser_h_
-#define liblldb_AppleObjCTypeEncodingParser_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTYPEENCODINGPARSER_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTYPEENCODINGPARSER_H
 
 #include "clang/AST/ASTContext.h"
 
@@ -70,4 +70,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_AppleObjCTypeEncodingParser_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTYPEENCODINGPARSER_H

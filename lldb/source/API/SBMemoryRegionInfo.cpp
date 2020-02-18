@@ -46,7 +46,7 @@ operator=(const SBMemoryRegionInfo &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBMemoryRegionInfo::~SBMemoryRegionInfo() {}
+SBMemoryRegionInfo::~SBMemoryRegionInfo() = default;
 
 void SBMemoryRegionInfo::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBMemoryRegionInfo, Clear);

@@ -110,7 +110,12 @@ public:
   /// outputting colored text, or before program exit.
   WithColor &resetColor();
 
+  /// Implement default handling for Error.
+  /// Print "error: " to stderr.
   static void defaultErrorHandler(Error Err);
+
+  /// Implement default handling for Warning.
+  /// Print "warning: " to stderr.
   static void defaultWarningHandler(Error Warning);
 };
 

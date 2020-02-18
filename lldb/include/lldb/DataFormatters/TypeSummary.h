@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_TypeSummary_h_
-#define lldb_TypeSummary_h_
+#ifndef LLDB_DATAFORMATTERS_TYPESUMMARY_H
+#define LLDB_DATAFORMATTERS_TYPESUMMARY_H
 
 #include <stdint.h>
 
@@ -391,4 +391,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // lldb_TypeSummary_h_
+#endif // LLDB_DATAFORMATTERS_TYPESUMMARY_H

@@ -355,6 +355,9 @@ DynamicSymbols: []
 # RUN: yaml2obj %s --docnum=10 -o %t10
 # RUN: llvm-readobj --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
 # RUN: llvm-readelf --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
+
+# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
+
 ## b) The same, but the DT_SYMTAB tag is present. In this case the dynamic tag has priority over the
 ##    information about a location and an entity size of the dynamic symbol table from the section header.
 ##    The code uses sizeof(Elf_Sym) for an entity size, so it can't be incorrect and
@@ -363,9 +366,19 @@ DynamicSymbols: []
 # RUN: llvm-readobj --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 # RUN: llvm-readelf --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 
-# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
-
 # DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': section with index 2 has invalid size (0x1){{$}}
+
+## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
+#     value of the symbol size for the platform.
+# RUN: yaml2obj %s -D BITS=32 --docnum=12 -o %t12
+# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: yaml2obj %s -D BITS=64 --docnum=12 -o %t13
+# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
+
+# DYNSYM-SIZE-INVALID3: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x10){{$}}
+# DYNSYM-SIZE-INVALID4: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x18){{$}}
 
 --- !ELF
 FileHeader:
@@ -401,3 +414,18 @@ ProgramHeaders:
     VAddr: 0x100
     Sections:
       - Section: .dynsym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMENT
+        Value: 0x123
+      - Tag:   DT_NULL
+        Value: 0

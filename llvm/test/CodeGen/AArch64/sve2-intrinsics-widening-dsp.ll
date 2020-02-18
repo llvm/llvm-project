@@ -193,6 +193,69 @@ define <vscale x 2 x i64> @saddlt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 ;
+; SADDWB
+;
+
+define <vscale x 8 x i16> @saddwb_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: saddwb_b:
+; CHECK: saddwb z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.saddwb.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @saddwb_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: saddwb_h:
+; CHECK: saddwb z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.saddwb.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @saddwb_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: saddwb_s:
+; CHECK: saddwb z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.saddwb.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SADDWT
+;
+
+define <vscale x 8 x i16> @saddwt_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: saddwt_b:
+; CHECK: saddwt z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.saddwt.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @saddwt_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: saddwt_h:
+; CHECK: saddwt z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.saddwt.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @saddwt_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: saddwt_s:
+; CHECK: saddwt z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.saddwt.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+
+;
 ; SMULLB (Vectors)
 ;
 
@@ -220,6 +283,30 @@ define <vscale x 2 x i64> @smullb_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK-NEXT: ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.smullb.nxv2i64(<vscale x 4 x i32> %a,
                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SMULLB (Indexed)
+;
+
+define <vscale x 4 x i32> @smullb_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: smullb_lane_h:
+; CHECK: smullb z0.s, z0.h, z1.h[4]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.smullb.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                       <vscale x 8 x i16> %b,
+                                                                       i32 4)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @smullb_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: smullb_lane_s:
+; CHECK: smullb z0.d, z0.s, z1.s[3]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.smullb.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                       <vscale x 4 x i32> %b,
+                                                                       i32 3)
   ret <vscale x 2 x i64> %out
 }
 
@@ -255,6 +342,30 @@ define <vscale x 2 x i64> @smullt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 ;
+; SMULLT (Indexed)
+;
+
+define <vscale x 4 x i32> @smullt_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: smullt_lane_h:
+; CHECK: smullt z0.s, z0.h, z1.h[5]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.smullt.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                       <vscale x 8 x i16> %b,
+                                                                       i32 5)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @smullt_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: smullt_lane_s:
+; CHECK: smullt z0.d, z0.s, z1.s[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.smullt.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                       <vscale x 4 x i32> %b,
+                                                                       i32 2)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; SQDMULLB (Vectors)
 ;
 
@@ -282,6 +393,30 @@ define <vscale x 2 x i64> @sqdmullb_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> 
 ; CHECK-NEXT: ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullb.nxv2i64(<vscale x 4 x i32> %a,
                                                                     <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SQDMULLB (Indexed)
+;
+
+define <vscale x 4 x i32> @sqdmullb_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: sqdmullb_lane_h:
+; CHECK: sqdmullb z0.s, z0.h, z1.h[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullb.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                         <vscale x 8 x i16> %b,
+                                                                         i32 2)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sqdmullb_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: sqdmullb_lane_s:
+; CHECK: sqdmullb z0.d, z0.s, z1.s[1]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullb.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                         <vscale x 4 x i32> %b,
+                                                                         i32 1)
   ret <vscale x 2 x i64> %out
 }
 
@@ -317,6 +452,30 @@ define <vscale x 2 x i64> @sqdmullt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> 
 }
 
 ;
+; SQDMULLT (Indexed)
+;
+
+define <vscale x 4 x i32> @sqdmullt_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: sqdmullt_lane_h:
+; CHECK: sqdmullt z0.s, z0.h, z1.h[3]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullt.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                         <vscale x 8 x i16> %b,
+                                                                         i32 3)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sqdmullt_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: sqdmullt_lane_s:
+; CHECK: sqdmullt z0.d, z0.s, z1.s[0]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullt.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                         <vscale x 4 x i32> %b,
+                                                                         i32 0)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; SSUBLB
 ;
 
@@ -348,6 +507,62 @@ define <vscale x 2 x i64> @ssublb_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 ;
+; SSHLLB
+;
+
+define <vscale x 8 x i16> @sshllb_b(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sshllb_b:
+; CHECK: sshllb z0.h, z0.b, #0
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sshllb.nxv8i16(<vscale x 16 x i8> %a, i32 0)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @sshllb_h(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sshllb_h:
+; CHECK: sshllb z0.s, z0.h, #1
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sshllb.nxv4i32(<vscale x 8 x i16> %a, i32 1)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sshllb_s(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sshllb_s:
+; CHECK: sshllb z0.d, z0.s, #2
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sshllb.nxv2i64(<vscale x 4 x i32> %a, i32 2)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SSHLLT
+;
+
+define <vscale x 8 x i16> @sshllt_b(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sshllt_b:
+; CHECK: sshllt z0.h, z0.b, #3
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sshllt.nxv8i16(<vscale x 16 x i8> %a, i32 3)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @sshllt_h(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sshllt_h:
+; CHECK: sshllt z0.s, z0.h, #4
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sshllt.nxv4i32(<vscale x 8 x i16> %a, i32 4)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sshllt_s(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sshllt_s:
+; CHECK: sshllt z0.d, z0.s, #5
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sshllt.nxv2i64(<vscale x 4 x i32> %a, i32 5)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; SSUBLT
 ;
 
@@ -374,6 +589,68 @@ define <vscale x 2 x i64> @ssublt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK: ssublt z0.d, z0.s, z1.s
 ; CHECK-NEXT: ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ssublt.nxv2i64(<vscale x 4 x i32> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SSUBWB
+;
+
+define <vscale x 8 x i16> @ssubwb_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: ssubwb_b:
+; CHECK: ssubwb z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ssubwb.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ssubwb_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: ssubwb_h:
+; CHECK: ssubwb z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ssubwb.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ssubwb_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ssubwb_s:
+; CHECK: ssubwb z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ssubwb.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; SSUBWT
+;
+
+define <vscale x 8 x i16> @ssubwt_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: ssubwt_b:
+; CHECK: ssubwt z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ssubwt.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ssubwt_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: ssubwt_h:
+; CHECK: ssubwt z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ssubwt.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ssubwt_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ssubwt_s:
+; CHECK: ssubwt z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ssubwt.nxv2i64(<vscale x 2 x i64> %a,
                                                                   <vscale x 4 x i32> %b)
   ret <vscale x 2 x i64> %out
 }
@@ -571,6 +848,68 @@ define <vscale x 2 x i64> @uaddlt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 ;
+; UADDWB
+;
+
+define <vscale x 8 x i16> @uaddwb_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: uaddwb_b:
+; CHECK: uaddwb z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uaddwb.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @uaddwb_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uaddwb_h:
+; CHECK: uaddwb z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uaddwb.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @uaddwb_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: uaddwb_s:
+; CHECK: uaddwb z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uaddwb.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; UADDWT
+;
+
+define <vscale x 8 x i16> @uaddwt_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: uaddwt_b:
+; CHECK: uaddwt z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uaddwt.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @uaddwt_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: uaddwt_h:
+; CHECK: uaddwt z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uaddwt.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @uaddwt_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: uaddwt_s:
+; CHECK: uaddwt z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uaddwt.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; UMULLB (Vectors)
 ;
 
@@ -602,6 +941,31 @@ define <vscale x 2 x i64> @umullb_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 ;
+; UMULLB (Indexed)
+;
+
+define <vscale x 4 x i32> @umullb_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: umullb_lane_h:
+; CHECK: umullb z0.s, z0.h, z1.h[0]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.umullb.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                       <vscale x 8 x i16> %b,
+                                                                       i32 0)
+  ret <vscale x 4 x i32> %out
+}
+
+
+define <vscale x 2 x i64> @umullb_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: umullb_lane_s:
+; CHECK: umullb z0.d, z0.s, z1.s[3]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.umullb.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                       <vscale x 4 x i32> %b,
+                                                                       i32 3)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; UMULLT (Vectors)
 ;
 
@@ -629,6 +993,86 @@ define <vscale x 2 x i64> @umullt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK-NEXT: ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.umullt.nxv2i64(<vscale x 4 x i32> %a,
                                                                   <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; UMULLT (Indexed)
+;
+
+define <vscale x 4 x i32> @umullt_lane_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: umullt_lane_h:
+; CHECK: umullt z0.s, z0.h, z1.h[1]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.umullt.lane.nxv4i32(<vscale x 8 x i16> %a,
+                                                                       <vscale x 8 x i16> %b,
+                                                                       i32 1)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @umullt_lane_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: umullt_lane_s:
+; CHECK: umullt z0.d, z0.s, z1.s[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.umullt.lane.nxv2i64(<vscale x 4 x i32> %a,
+                                                                       <vscale x 4 x i32> %b,
+                                                                       i32 2)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; USHLLB
+;
+
+define <vscale x 8 x i16> @ushllb_b(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: ushllb_b:
+; CHECK: ushllb z0.h, z0.b, #6
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ushllb.nxv8i16(<vscale x 16 x i8> %a, i32 6)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ushllb_h(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: ushllb_h:
+; CHECK: ushllb z0.s, z0.h, #7
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ushllb.nxv4i32(<vscale x 8 x i16> %a, i32 7)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ushllb_s(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: ushllb_s:
+; CHECK: ushllb z0.d, z0.s, #8
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ushllb.nxv2i64(<vscale x 4 x i32> %a, i32 8)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; USHLLT
+;
+
+define <vscale x 8 x i16> @ushllt_b(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: ushllt_b:
+; CHECK: ushllt z0.h, z0.b, #7
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ushllt.nxv8i16(<vscale x 16 x i8> %a, i32 7)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ushllt_h(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: ushllt_h:
+; CHECK: ushllt z0.s, z0.h, #15
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ushllt.nxv4i32(<vscale x 8 x i16> %a, i32 15)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ushllt_s(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: ushllt_s:
+; CHECK: ushllt z0.d, z0.s, #31
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ushllt.nxv2i64(<vscale x 4 x i32> %a, i32 31)
   ret <vscale x 2 x i64> %out
 }
 
@@ -694,6 +1138,68 @@ define <vscale x 2 x i64> @usublt_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
   ret <vscale x 2 x i64> %out
 }
 
+;
+; USUBWB
+;
+
+define <vscale x 8 x i16> @usubwb_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: usubwb_b:
+; CHECK: usubwb z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.usubwb.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @usubwb_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: usubwb_h:
+; CHECK: usubwb z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.usubwb.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @usubwb_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: usubwb_s:
+; CHECK: usubwb z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.usubwb.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; USUBWT
+;
+
+define <vscale x 8 x i16> @usubwt_b(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: usubwt_b:
+; CHECK: usubwt z0.h, z0.h, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.usubwt.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  <vscale x 16 x i8> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @usubwt_h(<vscale x 4 x i32> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: usubwt_h:
+; CHECK: usubwt z0.s, z0.s, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.usubwt.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  <vscale x 8 x i16> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @usubwt_s(<vscale x 2 x i64> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: usubwt_s:
+; CHECK: usubwt z0.d, z0.d, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.usubwt.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  <vscale x 4 x i32> %b)
+  ret <vscale x 2 x i64> %out
+}
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sabalb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sabalb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sabalb.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>, <vscale x 4 x i32>)
@@ -718,21 +1224,49 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.saddlt.nxv8i16(<vscale x 16 x i8>, 
 declare <vscale x 4 x i32> @llvm.aarch64.sve.saddlt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.saddlt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
+declare <vscale x 8 x i16> @llvm.aarch64.sve.saddwb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.saddwb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.saddwb.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.saddwt.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.saddwt.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.saddwt.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.smullb.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.smullb.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.smullb.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.smullb.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.smullb.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.smullt.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.smullt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.smullt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
+declare <vscale x 4 x i32> @llvm.aarch64.sve.smullt.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.smullt.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sqdmullb.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullb.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullb.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullb.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullb.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sqdmullt.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sqdmullt.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sqdmullt.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sshllb.nxv8i16(<vscale x 16 x i8>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sshllb.nxv4i32(<vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sshllb.nxv2i64(<vscale x 4 x i32>, i32)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sshllt.nxv8i16(<vscale x 16 x i8>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sshllt.nxv4i32(<vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sshllt.nxv2i64(<vscale x 4 x i32>, i32)
 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ssublb.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ssublb.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
@@ -741,6 +1275,14 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.ssublb.nxv2i64(<vscale x 4 x i32>, 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ssublt.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ssublt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.ssublt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ssubwb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ssubwb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ssubwb.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ssubwt.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ssubwt.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ssubwt.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uabalb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uabalb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>, <vscale x 8 x i16>)
@@ -766,13 +1308,35 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.uaddlt.nxv8i16(<vscale x 16 x i8>, 
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uaddlt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.uaddlt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
+declare <vscale x 8 x i16> @llvm.aarch64.sve.uaddwb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.uaddwb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.uaddwb.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.uaddwt.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.uaddwt.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.uaddwt.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.umullb.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.umullb.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.umullb.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
+declare <vscale x 4 x i32> @llvm.aarch64.sve.umullb.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.umullb.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+
 declare <vscale x 8 x i16> @llvm.aarch64.sve.umullt.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.umullt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.umullt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.umullt.lane.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.umullt.lane.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ushllb.nxv8i16(<vscale x 16 x i8>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ushllb.nxv4i32(<vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ushllb.nxv2i64(<vscale x 4 x i32>, i32)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ushllt.nxv8i16(<vscale x 16 x i8>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ushllt.nxv4i32(<vscale x 8 x i16>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ushllt.nxv2i64(<vscale x 4 x i32>, i32)
 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.usublb.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.usublb.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
@@ -781,3 +1345,11 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.usublb.nxv2i64(<vscale x 4 x i32>, 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.usublt.nxv8i16(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.usublt.nxv4i32(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.usublt.nxv2i64(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.usubwb.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.usubwb.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.usubwb.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.usubwt.nxv8i16(<vscale x 8 x i16>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.usubwt.nxv4i32(<vscale x 4 x i32>, <vscale x 8 x i16>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.usubwt.nxv2i64(<vscale x 2 x i64>, <vscale x 4 x i32>)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIAArch64_h_
-#define liblldb_ABIAArch64_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIAARCH64_H
+#define LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIAARCH64_H
 
 class ABIAArch64 {
 public:
