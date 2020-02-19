@@ -1,6 +1,6 @@
 # this checks llvm-dwp handling of DWARFv5 Info section header.
 
-# RUN: llvm-mc --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
+# RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
 
 # RUN: llvm-dwp %t.dwo -o %t.dwp
 # RUN: llvm-dwarfdump -v %t.dwp | FileCheck %s
