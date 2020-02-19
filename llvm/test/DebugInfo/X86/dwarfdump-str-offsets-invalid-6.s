@@ -20,7 +20,7 @@ str_TU:
 str_TU_type:
         .asciz "MyStruct"
 
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 dwo_str_CU_5_producer:
         .asciz "Handmade split DWARF producer"
 dwo_str_CU_5_name:
