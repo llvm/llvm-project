@@ -688,17 +688,18 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (SetjmpF) {
       // Register saveSetjmp function
       FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
-      std::array<Type *, 4> Params = {SetjmpFTy->getParamType(0),
-                                      IRB.getInt32Ty(), Type::getInt32PtrTy(C),
-                                      IRB.getInt32Ty()};
       FunctionType *FTy =
-          FunctionType::get(Type::getInt32PtrTy(C), Params, false);
+          FunctionType::get(Type::getInt32PtrTy(C),
+                            {SetjmpFTy->getParamType(0), IRB.getInt32Ty(),
+                             Type::getInt32PtrTy(C), IRB.getInt32Ty()},
+                            false);
       SaveSetjmpF =
           Function::Create(FTy, GlobalValue::ExternalLinkage, "saveSetjmp", &M);
 
       // Register testSetjmp function
-      Params = {IRB.getInt32Ty(), Type::getInt32PtrTy(C), IRB.getInt32Ty()};
-      FTy = FunctionType::get(IRB.getInt32Ty(), Params, false);
+      FTy = FunctionType::get(
+          IRB.getInt32Ty(),
+          {IRB.getInt32Ty(), Type::getInt32PtrTy(C), IRB.getInt32Ty()}, false);
       TestSetjmpF =
           Function::Create(FTy, GlobalValue::ExternalLinkage, "testSetjmp", &M);
 
