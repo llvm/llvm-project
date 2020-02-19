@@ -8,7 +8,7 @@ declare i32 @llvm.flt.rounds()
 define i32 @test_flt_rounds() nounwind {
 ; X86-LABEL: test_flt_rounds:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    subl $2, %esp
 ; X86-NEXT:    fnstcw (%esp)
 ; X86-NEXT:    movzwl (%esp), %ecx
 ; X86-NEXT:    shrl $9, %ecx
@@ -17,7 +17,7 @@ define i32 @test_flt_rounds() nounwind {
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %eax
 ; X86-NEXT:    andl $3, %eax
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $2, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_flt_rounds:
