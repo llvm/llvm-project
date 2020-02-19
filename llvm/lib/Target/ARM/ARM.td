@@ -536,6 +536,16 @@ def HasMVEFloatOps : SubtargetFeature<
                "Support M-Class Vector Extension with integer and floating ops",
                [HasMVEIntegerOps, FeatureFPARMv8_D16_SP, FeatureFullFP16]>;
 
+def HasCDEOps : SubtargetFeature<"cde", "HasCDEOps", "true",
+                                 "Support CDE instructions",
+                                 [HasV8MMainlineOps]>;
+
+foreach i = {0-7} in
+    def FeatureCoprocCDE#i : SubtargetFeature<"cdecp"#i,
+                                              "CoprocCDE["#i#"]", "true",
+                                              "Coprocessor "#i#" ISA is CDEv1",
+                                              [HasCDEOps]>;
+
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
 //

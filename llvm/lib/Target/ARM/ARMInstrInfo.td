@@ -5995,6 +5995,12 @@ include "ARMInstrNEON.td"
 include "ARMInstrMVE.td"
 
 //===----------------------------------------------------------------------===//
+// CDE (Custom Datapath Extension)
+//
+
+include "ARMInstrCDE.td"
+
+//===----------------------------------------------------------------------===//
 // Assembler aliases
 //
 
