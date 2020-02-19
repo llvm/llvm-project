@@ -12,15 +12,16 @@ body: |
     ; CHECK-LABEL: name: add_v2s16_ss
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(<2 x s32>) = G_ANYEXT [[COPY]](<2 x s16>)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:sgpr(<2 x s32>) = G_ANYEXT [[COPY1]](<2 x s16>)
-    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[ANYEXT]](<2 x s32>)
-    ; CHECK: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[ANYEXT1]](<2 x s32>)
-    ; CHECK: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[UV]], [[UV2]]
-    ; CHECK: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[UV1]], [[UV3]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32)
-    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](<2 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY1]](<2 x s16>)
+    ; CHECK: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; CHECK: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[BITCAST]], [[BITCAST1]]
+    ; CHECK: [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[LSHR]], [[LSHR1]]
+    ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ADD]](s32), [[ADD1]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $sgpr1
     %2:_(<2 x s16>) = G_ADD %0, %1

@@ -2096,20 +2096,24 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
     GISelObserverWrapper Observer(&ApplySALU);
-    LegalizerHelper Helper(*MF, Observer, B);
 
     if (DstTy.isVector()) {
-      // FIXME: Multi-step legalization is awkward here. We're relying on the
-      // fact that widenScalar leaves the instruction in place in this case, and
-      // we have to do it in this order.
-      if (Helper.widenScalar(MI, 0, LLT::vector(2, 32)) !=
-          LegalizerHelper::Legalized)
-        llvm_unreachable("widen scalar should have succeeded");
+      B.setChangeObserver(Observer);
 
-      if (Helper.fewerElementsVector(MI, 0, S32) != LegalizerHelper::Legalized)
-        llvm_unreachable("fewerElementsVector should have succeeded");
+      Register WideSrc0Lo, WideSrc0Hi;
+      Register WideSrc1Lo, WideSrc1Hi;
 
+      std::tie(WideSrc0Lo, WideSrc0Hi)
+        = unpackV2S16ToS32(B, MI.getOperand(1).getReg(), AMDGPU::G_ANYEXT);
+      std::tie(WideSrc1Lo, WideSrc1Hi)
+        = unpackV2S16ToS32(B, MI.getOperand(2).getReg(), AMDGPU::G_ANYEXT);
+      auto Lo = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Lo, WideSrc1Lo});
+      auto Hi = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Hi, WideSrc1Hi});
+      B.buildBuildVectorTrunc(DstReg, {Lo.getReg(0), Hi.getReg(0)});
+      MI.eraseFromParent();
     } else {
+      LegalizerHelper Helper(*MF, Observer, B);
+
       if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
         llvm_unreachable("widen scalar should have succeeded");
     }
