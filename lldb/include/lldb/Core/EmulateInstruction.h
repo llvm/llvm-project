@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_EmulateInstruction_h_
-#define lldb_EmulateInstruction_h_
+#ifndef LLDB_CORE_EMULATEINSTRUCTION_H
+#define LLDB_CORE_EMULATEINSTRUCTION_H
 
 #include <string>
 
@@ -504,4 +504,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_EmulateInstruction_h_
+#endif // LLDB_CORE_EMULATEINSTRUCTION_H

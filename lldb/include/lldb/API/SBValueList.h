@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBValueList_h_
-#define LLDB_SBValueList_h_
+#ifndef LLDB_API_SBVALUELIST_H
+#define LLDB_API_SBVALUELIST_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -72,4 +72,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBValueList_h_
+#endif // LLDB_API_SBVALUELIST_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGIN_ARCHITECTURE_ARM_H
-#define LLDB_PLUGIN_ARCHITECTURE_ARM_H
+#ifndef LLDB_SOURCE_PLUGINS_ARCHITECTURE_ARM_ARCHITECTUREARM_H
+#define LLDB_SOURCE_PLUGINS_ARCHITECTURE_ARM_ARCHITECTUREARM_H
 
 #include "lldb/Core/Architecture.h"
 
@@ -37,4 +37,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_PLUGIN_ARCHITECTURE_ARM_H
+#endif // LLDB_SOURCE_PLUGINS_ARCHITECTURE_ARM_ARCHITECTUREARM_H

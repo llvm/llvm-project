@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_TypeCategory_h_
-#define lldb_TypeCategory_h_
+#ifndef LLDB_DATAFORMATTERS_TYPECATEGORY_H
+#define LLDB_DATAFORMATTERS_TYPECATEGORY_H
 
 #include <initializer_list>
 #include <memory>
@@ -366,4 +366,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_TypeCategory_h_
+#endif // LLDB_DATAFORMATTERS_TYPECATEGORY_H

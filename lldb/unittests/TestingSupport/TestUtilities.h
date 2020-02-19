@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UNITTESTS_UTILITY_HELPERS_TESTUTILITIES_H
-#define LLDB_UNITTESTS_UTILITY_HELPERS_TESTUTILITIES_H
+#ifndef LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
+#define LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"

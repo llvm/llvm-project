@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_IRMemoryMap_h_
-#define lldb_IRMemoryMap_h_
+#ifndef LLDB_EXPRESSION_IRMEMORYMAP_H
+#define LLDB_EXPRESSION_IRMEMORYMAP_H
 
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/UserID.h"

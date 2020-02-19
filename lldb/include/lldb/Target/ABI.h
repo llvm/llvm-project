@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABI_h_
-#define liblldb_ABI_h_
+#ifndef LLDB_TARGET_ABI_H
+#define LLDB_TARGET_ABI_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -187,4 +187,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_ABI_h_
+#endif // LLDB_TARGET_ABI_H

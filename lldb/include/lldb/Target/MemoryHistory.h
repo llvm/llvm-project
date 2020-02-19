@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MemoryHistory_h_
-#define liblldb_MemoryHistory_h_
+#ifndef LLDB_TARGET_MEMORYHISTORY_H
+#define LLDB_TARGET_MEMORYHISTORY_H
 
 #include <vector>
 
@@ -30,4 +30,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_MemoryHistory_h_
+#endif // LLDB_TARGET_MEMORYHISTORY_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBAddress_h_
-#define LLDB_SBAddress_h_
+#ifndef LLDB_API_SBADDRESS_H
+#define LLDB_API_SBADDRESS_H
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
@@ -127,4 +127,4 @@ bool LLDB_API operator==(const SBAddress &lhs, const SBAddress &rhs);
 
 } // namespace lldb
 
-#endif // LLDB_SBAddress_h_
+#endif // LLDB_API_SBADDRESS_H

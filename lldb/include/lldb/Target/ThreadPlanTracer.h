@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanTracer_h_
-#define liblldb_ThreadPlanTracer_h_
+#ifndef LLDB_TARGET_THREADPLANTRACER_H
+#define LLDB_TARGET_THREADPLANTRACER_H
 
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Thread.h"
@@ -96,4 +96,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanTracer_h_
+#endif // LLDB_TARGET_THREADPLANTRACER_H

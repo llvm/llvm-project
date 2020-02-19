@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Function_h_
-#define liblldb_Function_h_
+#ifndef LLDB_SYMBOL_FUNCTION_H
+#define LLDB_SYMBOL_FUNCTION_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
@@ -630,4 +630,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Function_h_
+#endif // LLDB_SYMBOL_FUNCTION_H

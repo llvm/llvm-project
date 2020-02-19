@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointID_h_
-#define liblldb_BreakpointID_h_
-
+#ifndef LLDB_BREAKPOINT_BREAKPOINTID_H
+#define LLDB_BREAKPOINT_BREAKPOINTID_H
 
 #include "lldb/lldb-private.h"
 
@@ -95,4 +94,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointID_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTID_H

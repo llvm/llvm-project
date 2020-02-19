@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformAndroidRemoteGDBServer_h_
-#define liblldb_PlatformAndroidRemoteGDBServer_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
 
 #include <map>
 #include <utility>
@@ -60,4 +60,4 @@ private:
 } // namespace platform_android
 } // namespace lldb_private
 
-#endif // liblldb_PlatformAndroidRemoteGDBServer_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H

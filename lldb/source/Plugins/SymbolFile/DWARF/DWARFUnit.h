@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFUnit_h_
-#define SymbolFileDWARF_DWARFUnit_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H
 
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
@@ -338,4 +338,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };
 
-#endif // SymbolFileDWARF_DWARFUnit_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H

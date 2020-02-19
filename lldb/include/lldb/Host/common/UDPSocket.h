@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UDPSocket_h_
-#define liblldb_UDPSocket_h_
+#ifndef LLDB_HOST_COMMON_UDPSOCKET_H
+#define LLDB_HOST_COMMON_UDPSOCKET_H
 
 #include "lldb/Host/Socket.h"
 
@@ -33,4 +33,4 @@ private:
 };
 }
 
-#endif // ifndef liblldb_UDPSocket_h_
+#endif // LLDB_HOST_COMMON_UDPSOCKET_H

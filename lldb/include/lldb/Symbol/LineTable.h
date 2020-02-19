@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LineTable_h_
-#define liblldb_LineTable_h_
+#ifndef LLDB_SYMBOL_LINETABLE_H
+#define LLDB_SYMBOL_LINETABLE_H
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/Section.h"
@@ -342,4 +342,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_LineTable_h_
+#endif // LLDB_SYMBOL_LINETABLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Thread_h_
-#define liblldb_Thread_h_
+#ifndef LLDB_TARGET_THREAD_H
+#define LLDB_TARGET_THREAD_H
 
 #include <memory>
 #include <mutex>
@@ -1283,4 +1283,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Thread_h_
+#endif // LLDB_TARGET_THREAD_H

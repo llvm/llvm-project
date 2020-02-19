@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ConstString_h_
-#define liblldb_ConstString_h_
+#ifndef LLDB_UTILITY_CONSTSTRING_H
+#define LLDB_UTILITY_CONSTSTRING_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -483,4 +483,4 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
 /// \}
 }
 
-#endif // liblldb_ConstString_h_
+#endif // LLDB_UTILITY_CONSTSTRING_H

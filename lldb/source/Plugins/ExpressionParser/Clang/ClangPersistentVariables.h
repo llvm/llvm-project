@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangPersistentVariables_h_
-#define liblldb_ClangPersistentVariables_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H
 
 #include "llvm/ADT/DenseMap.h"
 
@@ -106,4 +106,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangPersistentVariables_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H

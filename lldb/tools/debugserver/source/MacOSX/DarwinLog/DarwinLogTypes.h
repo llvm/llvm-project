@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DarwinLogTypes_h
-#define DarwinLogTypes_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGTYPES_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGTYPES_H
 
 enum FilterTarget {
   eFilterTargetInvalid,
@@ -18,4 +18,4 @@ enum FilterTarget {
   eFilterTargetSubsystem
 };
 
-#endif /* DarwinLogTypes_h */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGTYPES_H

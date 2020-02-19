@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_posix_HostThreadPosix_h_
-#define lldb_Host_posix_HostThreadPosix_h_
+#ifndef LLDB_HOST_POSIX_HOSTTHREADPOSIX_H
+#define LLDB_HOST_POSIX_HOSTTHREADPOSIX_H
 
 #include "lldb/Host/HostNativeThreadBase.h"
 
@@ -29,4 +29,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // lldb_Host_posix_HostThreadPosix_h_
+#endif // LLDB_HOST_POSIX_HOSTTHREADPOSIX_H

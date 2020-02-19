@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CFUtils_h__
-#define __CFUtils_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -72,4 +72,4 @@ private:
 };
 
 #endif // #ifdef __cplusplus
-#endif // #ifndef __CFUtils_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFUTILS_H

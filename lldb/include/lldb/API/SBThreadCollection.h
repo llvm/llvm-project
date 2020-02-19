@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBThreadCollection_h_
-#define LLDB_SBThreadCollection_h_
+#ifndef LLDB_API_SBTHREADCOLLECTION_H
+#define LLDB_API_SBTHREADCOLLECTION_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -54,4 +54,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBThreadCollection_h_
+#endif // LLDB_API_SBTHREADCOLLECTION_H

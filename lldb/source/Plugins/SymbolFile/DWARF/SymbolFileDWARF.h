@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_SymbolFileDWARF_h_
-#define SymbolFileDWARF_SymbolFileDWARF_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H
 
 #include <list>
 #include <map>
@@ -514,4 +514,4 @@ protected:
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
 };
 
-#endif // SymbolFileDWARF_SymbolFileDWARF_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

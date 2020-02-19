@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeSystemClang_h_
-#define liblldb_TypeSystemClang_h_
+#ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
+#define LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
 
 #include <stdint.h>
 
@@ -1031,4 +1031,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeSystemClang_h_
+#endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H

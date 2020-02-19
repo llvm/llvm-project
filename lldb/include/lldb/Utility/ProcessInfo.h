@@ -250,4 +250,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_UTILITY_PROCESSINFO_H
+#endif // LLDB_UTILITY_PROCESSINFO_H

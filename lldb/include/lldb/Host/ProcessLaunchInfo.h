@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessLaunch_Info_h
-#define liblldb_ProcessLaunch_Info_h
+#ifndef LLDB_HOST_PROCESSLAUNCHINFO_H
+#define LLDB_HOST_PROCESSLAUNCHINFO_H
 
 // C++ Headers
 #include <string>
@@ -165,4 +165,4 @@ protected:
 };
 }
 
-#endif // liblldb_ProcessLaunch_Info_h
+#endif // LLDB_HOST_PROCESSLAUNCHINFO_H

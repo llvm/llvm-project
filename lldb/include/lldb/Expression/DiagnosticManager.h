@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_DiagnosticManager_h
-#define lldb_DiagnosticManager_h
+#ifndef LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
+#define LLDB_EXPRESSION_DIAGNOSTICMANAGER_H
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
@@ -148,4 +148,4 @@ protected:
 };
 }
 
-#endif /* lldb_DiagnosticManager_h */
+#endif // LLDB_EXPRESSION_DIAGNOSTICMANAGER_H

@@ -1012,4 +1012,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_DataExtractor_h_
+#endif // LLDB_UTILITY_DATAEXTRACTOR_H

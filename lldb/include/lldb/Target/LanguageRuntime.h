@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LanguageRuntime_h_
-#define liblldb_LanguageRuntime_h_
+#ifndef LLDB_TARGET_LANGUAGERUNTIME_H
+#define LLDB_TARGET_LANGUAGERUNTIME_H
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
@@ -189,4 +189,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_LanguageRuntime_h_
+#endif // LLDB_TARGET_LANGUAGERUNTIME_H

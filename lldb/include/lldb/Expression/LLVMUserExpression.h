@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LLVMUserExpression_h
-#define liblldb_LLVMUserExpression_h
+#ifndef LLDB_EXPRESSION_LLVMUSEREXPRESSION_H
+#define LLDB_EXPRESSION_LLVMUSEREXPRESSION_H
 
 #include <map>
 #include <string>

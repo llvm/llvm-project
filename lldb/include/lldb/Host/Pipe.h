@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_Pipe_h_
-#define liblldb_Host_Pipe_h_
+#ifndef LLDB_HOST_PIPE_H
+#define LLDB_HOST_PIPE_H
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PipeWindows.h"
@@ -21,4 +21,4 @@ typedef PipePosix Pipe;
 }
 #endif
 
-#endif // liblldb_Host_Pipe_h_
+#endif // LLDB_HOST_PIPE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Memory_h_
-#define liblldb_Memory_h_
+#ifndef LLDB_TARGET_MEMORY_H
+#define LLDB_TARGET_MEMORY_H
 
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
@@ -140,4 +140,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Memory_h_
+#endif // LLDB_TARGET_MEMORY_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RenderScriptRuntime_h_
-#define liblldb_RenderScriptRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H
 
 #include <array>
 #include <map>
@@ -588,4 +588,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_RenderScriptRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H

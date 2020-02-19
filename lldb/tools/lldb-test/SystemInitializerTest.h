@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SYSTEM_INITIALIZER_TEST_H
-#define LLDB_API_SYSTEM_INITIALIZER_TEST_H
+#ifndef LLDB_TOOLS_LLDB_TEST_SYSTEMINITIALIZERTEST_H
+#define LLDB_TOOLS_LLDB_TEST_SYSTEMINITIALIZERTEST_H
 
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
@@ -29,4 +29,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_API_SYSTEM_INITIALIZER_FULL_H
+#endif // LLDB_TOOLS_LLDB_TEST_SYSTEMINITIALIZERTEST_H

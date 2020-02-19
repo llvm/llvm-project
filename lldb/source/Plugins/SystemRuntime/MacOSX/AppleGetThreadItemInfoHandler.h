@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_AppleGetThreadItemInfoHandler_h_
-#define lldb_AppleGetThreadItemInfoHandler_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETTHREADITEMINFOHANDLER_H
+#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETTHREADITEMINFOHANDLER_H
 
 #include <map>
 #include <mutex>
@@ -108,4 +108,4 @@ private:
 
 } // using namespace lldb_private
 
-#endif // lldb_AppleGetThreadItemInfoHandler_h_
+#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETTHREADITEMINFOHANDLER_H

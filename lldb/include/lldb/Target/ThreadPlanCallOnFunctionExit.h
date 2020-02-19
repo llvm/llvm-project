@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ThreadPlanCallOnFunctionExit_h
-#define ThreadPlanCallOnFunctionExit_h
+#ifndef LLDB_TARGET_THREADPLANCALLONFUNCTIONEXIT_H
+#define LLDB_TARGET_THREADPLANCALLONFUNCTIONEXIT_H
 
 #include "lldb/Target/ThreadPlan.h"
 
@@ -50,4 +50,4 @@ private:
 };
 }
 
-#endif /* ThreadPlanCallOnFunctionExit_h */
+#endif // LLDB_TARGET_THREADPLANCALLONFUNCTIONEXIT_H

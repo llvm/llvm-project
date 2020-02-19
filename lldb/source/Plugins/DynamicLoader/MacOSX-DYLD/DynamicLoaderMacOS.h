@@ -14,8 +14,8 @@
 // array of load addresses for solibs loaded and unloaded.  The SPI will tell us
 // about both dyld and the executable, in addition to all of the usual solibs.
 
-#ifndef liblldb_DynamicLoaderMacOS_h_
-#define liblldb_DynamicLoaderMacOS_h_
+#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H
+#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H
 
 #include <mutex>
 #include <vector>
@@ -108,4 +108,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOS);
 };
 
-#endif // liblldb_DynamicLoaderMacOS_h_
+#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

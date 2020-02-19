@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Process_h_
-#define liblldb_Process_h_
+#ifndef LLDB_TARGET_PROCESS_H
+#define LLDB_TARGET_PROCESS_H
 
 #include "lldb/Host/Config.h"
 
@@ -2866,4 +2866,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_Process_h_
+#endif // LLDB_TARGET_PROCESS_H

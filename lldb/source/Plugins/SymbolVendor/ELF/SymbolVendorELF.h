@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SymbolVendorELF_h_
-#define liblldb_SymbolVendorELF_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H
 
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/lldb-private.h"
@@ -41,4 +41,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SymbolVendorELF);
 };
 
-#endif // liblldb_SymbolVendorELF_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H

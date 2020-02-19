@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
-#define LLDB_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
 
 #include "DWARFDataExtractor.h"
 #include "lldb/Core/Section.h"

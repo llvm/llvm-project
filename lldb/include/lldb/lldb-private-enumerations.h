@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_lldb_private_enumerations_h_
-#define LLDB_lldb_private_enumerations_h_
+#ifndef LLDB_LLDB_PRIVATE_ENUMERATIONS_H
+#define LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
@@ -267,4 +267,4 @@ template <> struct format_provider<lldb_private::Vote> {
 };
 }
 
-#endif // LLDB_lldb_private_enumerations_h_
+#endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H

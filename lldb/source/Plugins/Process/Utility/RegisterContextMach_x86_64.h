@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextMach_x86_64_h_
-#define liblldb_RegisterContextMach_x86_64_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_X86_64_H
 
 #include "RegisterContextDarwin_x86_64.h"
 
@@ -33,4 +33,4 @@ protected:
   int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc);
 };
 
-#endif // liblldb_RegisterContextMach_x86_64_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACH_X86_64_H

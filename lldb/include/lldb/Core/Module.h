@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Module_h_
-#define liblldb_Module_h_
+#ifndef LLDB_CORE_MODULE_H
+#define LLDB_CORE_MODULE_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleList.h"
@@ -1047,4 +1047,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Module_h_
+#endif // LLDB_CORE_MODULE_H

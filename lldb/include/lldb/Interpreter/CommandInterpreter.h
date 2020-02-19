@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandInterpreter_h_
-#define liblldb_CommandInterpreter_h_
+#ifndef LLDB_INTERPRETER_COMMANDINTERPRETER_H
+#define LLDB_INTERPRETER_COMMANDINTERPRETER_H
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
@@ -587,4 +587,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandInterpreter_h_
+#endif // LLDB_INTERPRETER_COMMANDINTERPRETER_H

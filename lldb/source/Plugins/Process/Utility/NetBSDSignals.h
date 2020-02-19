@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_NetBSDSignals_H_
-#define liblldb_NetBSDSignals_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NETBSDSIGNALS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NETBSDSIGNALS_H
 
 #include "lldb/Target/UnixSignals.h"
 
@@ -24,4 +24,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_NetBSDSignals_H_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NETBSDSIGNALS_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBVariablesOptions_h_
-#define LLDB_SBVariablesOptions_h_
+#ifndef LLDB_API_SBVARIABLESOPTIONS_H
+#define LLDB_API_SBVARIABLESOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -79,4 +79,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBValue_h_
+#endif // LLDB_API_SBVARIABLESOPTIONS_H

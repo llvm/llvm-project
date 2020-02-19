@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadSpec_h_
-#define liblldb_ThreadSpec_h_
+#ifndef LLDB_TARGET_THREADSPEC_H
+#define LLDB_TARGET_THREADSPEC_H
 
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
@@ -128,4 +128,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadSpec_h_
+#endif // LLDB_TARGET_THREADSPEC_H

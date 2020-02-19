@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessKDP_h_
-#define liblldb_ProcessKDP_h_
-
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H
 
 #include <list>
 #include <vector>
@@ -190,4 +189,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ProcessKDP);
 };
 
-#endif // liblldb_ProcessKDP_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDP_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILENATIVEPDB_COMPILEUNITINDEX_H
-#define LLDB_PLUGINS_SYMBOLFILENATIVEPDB_COMPILEUNITINDEX_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_COMPILEUNITINDEX_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_COMPILEUNITINDEX_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"

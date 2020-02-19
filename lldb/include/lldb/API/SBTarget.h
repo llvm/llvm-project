@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBTarget_h_
-#define LLDB_SBTarget_h_
+#ifndef LLDB_API_SBTARGET_H
+#define LLDB_API_SBTARGET_H
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
@@ -849,4 +849,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBTarget_h_
+#endif // LLDB_API_SBTARGET_H

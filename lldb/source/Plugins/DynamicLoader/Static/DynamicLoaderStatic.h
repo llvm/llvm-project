@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DynamicLoaderStatic_h_
-#define liblldb_DynamicLoaderStatic_h_
+#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERSTATIC_H
+#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERSTATIC_H
 
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
@@ -56,4 +56,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DynamicLoaderStatic);
 };
 
-#endif // liblldb_DynamicLoaderStatic_h_
+#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERSTATIC_H

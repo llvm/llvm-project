@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanCallUserExpression_h_
-#define liblldb_ThreadPlanCallUserExpression_h_
+#ifndef LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H
+#define LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -61,4 +61,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanCallUserExpression_h_
+#endif // LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H

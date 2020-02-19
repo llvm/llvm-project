@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StopInfo_h_
-#define liblldb_StopInfo_h_
+#ifndef LLDB_TARGET_STOPINFO_H
+#define LLDB_TARGET_STOPINFO_H
 
 #include <string>
 
@@ -188,4 +188,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_StopInfo_h_
+#endif // LLDB_TARGET_STOPINFO_H

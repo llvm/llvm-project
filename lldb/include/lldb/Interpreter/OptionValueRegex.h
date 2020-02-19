@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueRegex_h_
-#define liblldb_OptionValueRegex_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEREGEX_H
+#define LLDB_INTERPRETER_OPTIONVALUEREGEX_H
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -63,4 +63,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueRegex_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEREGEX_H

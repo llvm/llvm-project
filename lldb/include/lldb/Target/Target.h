@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Target_h_
-#define liblldb_Target_h_
+#ifndef LLDB_TARGET_TARGET_H
+#define LLDB_TARGET_TARGET_H
 
 #include <list>
 #include <map>
@@ -1365,4 +1365,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Target_h_
+#endif // LLDB_TARGET_TARGET_H

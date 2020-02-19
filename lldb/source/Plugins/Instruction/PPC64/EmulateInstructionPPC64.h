@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EmulateInstructionPPC64_h_
-#define EmulateInstructionPPC64_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_PPC64_EMULATEINSTRUCTIONPPC64_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_PPC64_EMULATEINSTRUCTIONPPC64_H
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -89,4 +89,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // EmulateInstructionPPC64_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_PPC64_EMULATEINSTRUCTIONPPC64_H

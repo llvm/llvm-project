@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_IOHandler_h_
-#define liblldb_IOHandler_h_
+#ifndef LLDB_CORE_IOHANDLER_H
+#define LLDB_CORE_IOHANDLER_H
 
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Config.h"
@@ -545,4 +545,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_IOHandler_h_
+#endif // LLDB_CORE_IOHANDLER_H

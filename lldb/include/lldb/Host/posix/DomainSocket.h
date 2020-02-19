@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DomainSocket_h_
-#define liblldb_DomainSocket_h_
+#ifndef LLDB_HOST_POSIX_DOMAINSOCKET_H
+#define LLDB_HOST_POSIX_DOMAINSOCKET_H
 
 #include "lldb/Host/Socket.h"
 
@@ -34,4 +34,4 @@ private:
 };
 }
 
-#endif // ifndef liblldb_DomainSocket_h_
+#endif // LLDB_HOST_POSIX_DOMAINSOCKET_H

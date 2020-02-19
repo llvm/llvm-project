@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIMips_h_
-#define liblldb_ABIMips_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_MIPS_ABIMIPS_H
+#define LLDB_SOURCE_PLUGINS_ABI_MIPS_ABIMIPS_H
 
 class ABIMips {
 public:

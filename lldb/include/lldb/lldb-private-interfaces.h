@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_lldb_private_interfaces_h_
-#define liblldb_lldb_private_interfaces_h_
+#ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
+#define LLDB_LLDB_PRIVATE_INTERFACES_H
 
 #if defined(__cplusplus)
 
@@ -107,4 +107,4 @@ typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 
 #endif // #if defined(__cplusplus)
 
-#endif // liblldb_lldb_private_interfaces_h_
+#endif // LLDB_LLDB_PRIVATE_INTERFACES_H
