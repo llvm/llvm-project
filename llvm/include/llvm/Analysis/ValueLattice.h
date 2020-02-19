@@ -140,6 +140,7 @@ public:
   }
 
   bool isUndefined() const { return Tag == undefined; }
+  bool isUnknown() const { return Tag == undefined; }
   bool isConstant() const { return Tag == constant; }
   bool isNotConstant() const { return Tag == notconstant; }
   bool isConstantRange() const { return Tag == constantrange; }
@@ -170,71 +171,75 @@ public:
     return None;
   }
 
-private:
-  void markOverdefined() {
+  bool markOverdefined() {
     if (isOverdefined())
-      return;
+      return false;
     if (isConstant() || isNotConstant())
       ConstVal = nullptr;
     if (isConstantRange())
       Range.~ConstantRange();
     Tag = overdefined;
+    return true;
   }
 
-  void markConstant(Constant *V) {
-    assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      markConstantRange(ConstantRange(CI->getValue()));
-      return;
-    }
+  bool markConstant(Constant *V) {
     if (isa<UndefValue>(V))
-      return;
+      return false;
 
-    assert((!isConstant() || getConstant() == V) &&
-           "Marking constant with different value");
+    if (isConstant()) {
+      assert(getConstant() == V && "Marking constant with different value");
+      return false;
+    }
+
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
+      return markConstantRange(ConstantRange(CI->getValue()));
+
     assert(isUndefined());
     Tag = constant;
     ConstVal = V;
+    return true;
   }
 
-  void markNotConstant(Constant *V) {
+  bool markNotConstant(Constant *V) {
     assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      markConstantRange(ConstantRange(CI->getValue() + 1, CI->getValue()));
-      return;
-    }
-    if (isa<UndefValue>(V))
-      return;
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
+      return markConstantRange(
+          ConstantRange(CI->getValue() + 1, CI->getValue()));
 
-    assert((!isConstant() || getConstant() != V) &&
-           "Marking constant !constant with same value");
-    assert((!isNotConstant() || getNotConstant() == V) &&
-           "Marking !constant with different value");
-    assert(isUndefined() || isConstant());
+    if (isa<UndefValue>(V))
+      return false;
+
+    if (isNotConstant()) {
+      assert(getNotConstant() == V && "Marking !constant with different value");
+      return false;
+    }
+
+    assert(isUndefined());
     Tag = notconstant;
     ConstVal = V;
+    return true;
   }
 
-  void markConstantRange(ConstantRange NewR) {
+  bool markConstantRange(ConstantRange NewR) {
     if (isConstantRange()) {
       if (NewR.isEmptySet())
         markOverdefined();
       else {
+        assert(NewR.contains(getConstantRange()) && "Existing range must be a subset of NewR");
         Range = std::move(NewR);
       }
-      return;
+      return true;
     }
 
     assert(isUndefined());
     if (NewR.isEmptySet())
-      markOverdefined();
-    else {
-      Tag = constantrange;
-      new (&Range) ConstantRange(std::move(NewR));
-    }
+      return markOverdefined();
+
+    Tag = constantrange;
+    new (&Range) ConstantRange(std::move(NewR));
+    return true;
   }
 
-public:
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
   bool mergeIn(const ValueLatticeElement &RHS, const DataLayout &DL) {
@@ -273,12 +278,11 @@ public:
     }
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
-      markOverdefined();
+      return markOverdefined();
     else if (NewR == getConstantRange())
       return false;
     else
-      markConstantRange(std::move(NewR));
-    return true;
+      return markConstantRange(std::move(NewR));
   }
 
   /// Compares this symbolic value with Other using Pred and returns either
