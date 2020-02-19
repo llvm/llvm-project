@@ -1208,9 +1208,6 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   Register SrcReg = I.getOperand(1).getReg();
   const LLT DstTy = MRI->getType(DstReg);
   const LLT SrcTy = MRI->getType(SrcReg);
-  if (!DstTy.isScalar())
-    return false;
-
   const LLT S1 = LLT::scalar(1);
 
   const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, *MRI, TRI);
@@ -1225,6 +1222,8 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
       return false;
   }
 
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+
   unsigned DstSize = DstTy.getSizeInBits();
   unsigned SrcSize = SrcTy.getSizeInBits();
 
@@ -1233,6 +1232,71 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   const TargetRegisterClass *DstRC
     = TRI.getRegClassForSizeOnBank(DstSize, *DstRB, *MRI);
 
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    return false;
+  }
+
+  if (DstTy == LLT::vector(2, 16) && SrcTy == LLT::vector(2, 32)) {
+    MachineBasicBlock *MBB = I.getParent();
+    const DebugLoc &DL = I.getDebugLoc();
+
+    Register LoReg = MRI->createVirtualRegister(DstRC);
+    Register HiReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), LoReg)
+      .addReg(SrcReg, 0, AMDGPU::sub0);
+    BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), HiReg)
+      .addReg(SrcReg, 0, AMDGPU::sub1);
+
+    if (IsVALU && STI.hasSDWA()) {
+      // Write the low 16-bits of the high element into the high 16-bits of the
+      // low element.
+      MachineInstr *MovSDWA =
+        BuildMI(*MBB, I, DL, TII.get(AMDGPU::V_MOV_B32_sdwa), DstReg)
+        .addImm(0)                             // $src0_modifiers
+        .addReg(HiReg)                         // $src0
+        .addImm(0)                             // $clamp
+        .addImm(AMDGPU::SDWA::WORD_1)          // $dst_sel
+        .addImm(AMDGPU::SDWA::UNUSED_PRESERVE) // $dst_unused
+        .addImm(AMDGPU::SDWA::WORD_0)          // $src0_sel
+        .addReg(LoReg, RegState::Implicit);
+      MovSDWA->tieOperands(0, MovSDWA->getNumOperands() - 1);
+    } else {
+      Register TmpReg0 = MRI->createVirtualRegister(DstRC);
+      Register TmpReg1 = MRI->createVirtualRegister(DstRC);
+      Register ImmReg = MRI->createVirtualRegister(DstRC);
+      if (IsVALU) {
+        BuildMI(*MBB, I, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), TmpReg0)
+          .addImm(16)
+          .addReg(HiReg);
+      } else {
+        BuildMI(*MBB, I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg0)
+          .addReg(HiReg)
+          .addImm(16);
+      }
+
+      unsigned MovOpc = IsVALU ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
+      unsigned AndOpc = IsVALU ? AMDGPU::V_AND_B32_e64 : AMDGPU::S_AND_B32;
+      unsigned OrOpc = IsVALU ? AMDGPU::V_OR_B32_e64 : AMDGPU::S_OR_B32;
+
+      BuildMI(*MBB, I, DL, TII.get(MovOpc), ImmReg)
+        .addImm(0xffff);
+      BuildMI(*MBB, I, DL, TII.get(AndOpc), TmpReg1)
+        .addReg(LoReg)
+        .addReg(ImmReg);
+      BuildMI(*MBB, I, DL, TII.get(OrOpc), DstReg)
+        .addReg(TmpReg0)
+        .addReg(TmpReg1);
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (!DstTy.isScalar())
+    return false;
+
   if (SrcSize > 32) {
     int SubRegIdx = sizeToSubRegIndex(DstSize);
     if (SubRegIdx == -1)
@@ -1240,17 +1304,17 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
 
     // Deal with weird cases where the class only partially supports the subreg
     // index.
-    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegIdx);
-    if (!SrcRC)
+    const TargetRegisterClass *SrcWithSubRC
+      = TRI.getSubClassWithSubReg(SrcRC, SubRegIdx);
+    if (!SrcWithSubRC)
       return false;
 
-    I.getOperand(1).setSubReg(SubRegIdx);
-  }
+    if (SrcWithSubRC != SrcRC) {
+      if (!RBI.constrainGenericRegister(SrcReg, *SrcWithSubRC, *MRI))
+        return false;
+    }
 
-  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
-      !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI)) {
-    LLVM_DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
-    return false;
+    I.getOperand(1).setSubReg(SubRegIdx);
   }
 
   I.setDesc(TII.get(TargetOpcode::COPY));
