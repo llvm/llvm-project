@@ -24,3 +24,9 @@ class TestCase(TestBase):
         self.expect("expr ClassWithDeletedCtor(1).value", error=True, substrs=["Couldn't lookup symbols:"])
         self.expect("expr ClassWithDeletedDefaultCtor().value", error=True, substrs=["Couldn't lookup symbols:"])
 
+    @skipIfLinux # Fails on some Linux systems with SIGABRT.
+    def test_constructors_new(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
+
+        self.expect_expr("(new ClassWithOneCtor(1)).value; 1", result_type="int", result_value="1")
