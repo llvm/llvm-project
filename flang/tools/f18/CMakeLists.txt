@@ -18,8 +18,8 @@ target_link_libraries(f18
   FortranParser
   FortranEvaluate
   FortranSemantics
-  LLVMSupport
   FortranLower
+  LLVMSupport
 )
 
 add_executable(f18-parse-demo
