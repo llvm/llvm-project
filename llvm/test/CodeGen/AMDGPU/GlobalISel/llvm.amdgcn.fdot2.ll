@@ -101,15 +101,17 @@ define float @v_fdot2_neg_c(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX906-LABEL: v_fdot2_neg_c:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX906-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX906-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fdot2_neg_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.c = fneg float %c
   %r = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %neg.c, i1 false)
