@@ -964,4 +964,48 @@ define i64 @tzmsk64_branch(i64 %x) nounwind {
   ret i64 %tmp3
 }
 
+define i32 @blcfill32_branch(i32 %x) nounwind {
+; CHECK-LABEL: blcfill32_branch:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    blcfilll %edi, %ebx
+; CHECK-NEXT:    jne .LBB73_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    callq bar
+; CHECK-NEXT:  .LBB73_2:
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %tmp2 = add i32 %x, 1
+  %tmp3 = and i32 %tmp2, %x
+  %cmp = icmp eq i32 %tmp3, 0
+  br i1 %cmp, label %1, label %2
+
+  tail call void @bar()
+  br label %2
+  ret i32 %tmp3
+}
+
+define i64 @blcfill64_branch(i64 %x) nounwind {
+; CHECK-LABEL: blcfill64_branch:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    blcfillq %rdi, %rbx
+; CHECK-NEXT:    jne .LBB74_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    callq bar
+; CHECK-NEXT:  .LBB74_2:
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %tmp2 = add i64 %x, 1
+  %tmp3 = and i64 %tmp2, %x
+  %cmp = icmp eq i64 %tmp3, 0
+  br i1 %cmp, label %1, label %2
+
+  tail call void @bar()
+  br label %2
+  ret i64 %tmp3
+}
+
 declare void @bar()
