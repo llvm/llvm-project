@@ -17,7 +17,7 @@ add_library(FortranSemantics
   check-coarray.cpp
   check-deallocate.cpp
   check-declarations.cpp
-  check-do.cpp
+  check-do-forall.cpp
   check-if-stmt.cpp
   check-io.cpp
   check-nullify.cpp

@@ -1,4 +1,4 @@
-//===-- lib/semantics/check-do.cpp ----------------------------------------===//
+//===-- lib/semantics/check-do-forall.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "check-do.h"
+#include "check-do-forall.h"
 #include "flang/common/template.h"
 #include "flang/evaluate/call.h"
 #include "flang/evaluate/expression.h"
@@ -763,37 +763,37 @@ private:
   parser::CharBlock currentStatementSourcePosition_;
 };  // class DoContext
 
-void DoChecker::Enter(const parser::DoConstruct &doConstruct) {
+void DoForallChecker::Enter(const parser::DoConstruct &doConstruct) {
   DoContext doContext{context_, IndexVarKind::DO};
   doContext.DefineDoVariables(doConstruct);
 }
 
-void DoChecker::Leave(const parser::DoConstruct &doConstruct) {
+void DoForallChecker::Leave(const parser::DoConstruct &doConstruct) {
   DoContext doContext{context_, IndexVarKind::DO};
   doContext.Check(doConstruct);
   doContext.ResetDoVariables(doConstruct);
 }
 
-void DoChecker::Enter(const parser::ForallConstruct &construct) {
+void DoForallChecker::Enter(const parser::ForallConstruct &construct) {
   DoContext doContext{context_, IndexVarKind::FORALL};
   doContext.ActivateIndexVars(GetControls(construct));
 }
-void DoChecker::Leave(const parser::ForallConstruct &construct) {
+void DoForallChecker::Leave(const parser::ForallConstruct &construct) {
   DoContext doContext{context_, IndexVarKind::FORALL};
   doContext.Check(construct);
   doContext.DeactivateIndexVars(GetControls(construct));
 }
 
-void DoChecker::Enter(const parser::ForallStmt &stmt) {
+void DoForallChecker::Enter(const parser::ForallStmt &stmt) {
   DoContext doContext{context_, IndexVarKind::FORALL};
   doContext.ActivateIndexVars(GetControls(stmt));
 }
-void DoChecker::Leave(const parser::ForallStmt &stmt) {
+void DoForallChecker::Leave(const parser::ForallStmt &stmt) {
   DoContext doContext{context_, IndexVarKind::FORALL};
   doContext.Check(stmt);
   doContext.DeactivateIndexVars(GetControls(stmt));
 }
-void DoChecker::Leave(const parser::ForallAssignmentStmt &stmt) {
+void DoForallChecker::Leave(const parser::ForallAssignmentStmt &stmt) {
   DoContext doContext{context_, IndexVarKind::FORALL};
   doContext.Check(stmt);
 }
@@ -813,8 +813,8 @@ static parser::CharBlock GetNodePosition(const ConstructNode &construct) {
       [&](const auto &x) { return GetConstructPosition(*x); }, construct);
 }
 
-void DoChecker::SayBadLeave(StmtType stmtType, const char *enclosingStmtName,
-    const ConstructNode &construct) const {
+void DoForallChecker::SayBadLeave(StmtType stmtType,
+    const char *enclosingStmtName, const ConstructNode &construct) const {
   context_
       .Say("%s must not leave a %s statement"_err_en_US, EnumToString(stmtType),
           enclosingStmtName)
@@ -838,7 +838,7 @@ static bool ConstructIsDoConcurrent(const ConstructNode &construct) {
 
 // Check that CYCLE and EXIT statements do not cause flow of control to
 // leave DO CONCURRENT, CRITICAL, or CHANGE TEAM constructs.
-void DoChecker::CheckForBadLeave(
+void DoForallChecker::CheckForBadLeave(
     StmtType stmtType, const ConstructNode &construct) const {
   std::visit(
       common::visitors{
@@ -876,7 +876,7 @@ static bool StmtMatchesConstruct(const parser::Name *stmtName,
 }
 
 // C1167 Can't EXIT from a DO CONCURRENT
-void DoChecker::CheckDoConcurrentExit(
+void DoForallChecker::CheckDoConcurrentExit(
     StmtType stmtType, const ConstructNode &construct) const {
   if (stmtType == StmtType::EXIT && ConstructIsDoConcurrent(construct)) {
     SayBadLeave(StmtType::EXIT, "DO CONCURRENT", construct);
@@ -887,7 +887,7 @@ void DoChecker::CheckDoConcurrentExit(
 // nesting levels looking for a construct that matches the CYCLE or EXIT
 // statment.  At every construct, check for a violation.  If we find a match
 // without finding a violation, the check is complete.
-void DoChecker::CheckNesting(
+void DoForallChecker::CheckNesting(
     StmtType stmtType, const parser::Name *stmtName) const {
   const ConstructStack &stack{context_.constructStack()};
   for (auto iter{stack.cend()}; iter-- != stack.cbegin();) {
@@ -909,16 +909,16 @@ void DoChecker::CheckNesting(
 }
 
 // C1135 -- Nesting for CYCLE statements
-void DoChecker::Enter(const parser::CycleStmt &cycleStmt) {
+void DoForallChecker::Enter(const parser::CycleStmt &cycleStmt) {
   CheckNesting(StmtType::CYCLE, common::GetPtrFromOptional(cycleStmt.v));
 }
 
 // C1167 and C1168 -- Nesting for EXIT statements
-void DoChecker::Enter(const parser::ExitStmt &exitStmt) {
+void DoForallChecker::Enter(const parser::ExitStmt &exitStmt) {
   CheckNesting(StmtType::EXIT, common::GetPtrFromOptional(exitStmt.v));
 }
 
-void DoChecker::Leave(const parser::AssignmentStmt &stmt) {
+void DoForallChecker::Leave(const parser::AssignmentStmt &stmt) {
   const auto &variable{std::get<parser::Variable>(stmt.t)};
   context_.CheckIndexVarRedefine(variable);
 }
@@ -947,7 +947,7 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
 // the same time, we need to iterate over the parser::Expr versions of the
 // actual arguments to get their source locations of the arguments for the
 // messages.
-void DoChecker::Leave(const parser::CallStmt &callStmt) {
+void DoForallChecker::Leave(const parser::CallStmt &callStmt) {
   if (const auto &typedCall{callStmt.typedCall}) {
     const auto &parsedArgs{
         std::get<std::list<parser::ActualArgSpec>>(callStmt.v.t)};
@@ -970,7 +970,7 @@ void DoChecker::Leave(const parser::CallStmt &callStmt) {
   }
 }
 
-void DoChecker::Leave(const parser::ConnectSpec &connectSpec) {
+void DoForallChecker::Leave(const parser::ConnectSpec &connectSpec) {
   const auto *newunit{
       std::get_if<parser::ConnectSpec::Newunit>(&connectSpec.u)};
   if (newunit) {
@@ -997,7 +997,7 @@ template<typename A> ActualArgumentSet CollectActualArguments(const A &x) {
 
 template ActualArgumentSet CollectActualArguments(const SomeExpr &);
 
-void DoChecker::Leave(const parser::Expr &parsedExpr) {
+void DoForallChecker::Leave(const parser::Expr &parsedExpr) {
   if (const SomeExpr * expr{GetExpr(parsedExpr)}) {
     ActualArgumentSet argSet{CollectActualArguments(*expr)};
     for (const evaluate::ActualArgumentRef &argRef : argSet) {
@@ -1006,7 +1006,7 @@ void DoChecker::Leave(const parser::Expr &parsedExpr) {
   }
 }
 
-void DoChecker::Leave(const parser::InquireSpec &inquireSpec) {
+void DoForallChecker::Leave(const parser::InquireSpec &inquireSpec) {
   const auto *intVar{std::get_if<parser::InquireSpec::IntVar>(&inquireSpec.u)};
   if (intVar) {
     const auto &scalar{std::get<parser::ScalarIntVariable>(intVar->t)};
@@ -1014,20 +1014,20 @@ void DoChecker::Leave(const parser::InquireSpec &inquireSpec) {
   }
 }
 
-void DoChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
+void DoForallChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
   const auto *size{std::get_if<parser::IoControlSpec::Size>(&ioControlSpec.u)};
   if (size) {
     context_.CheckIndexVarRedefine(size->v.thing.thing);
   }
 }
 
-void DoChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
+void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
   const auto &control{std::get<parser::IoImpliedDoControl>(outputImpliedDo.t)};
   const parser::Name &name{control.name.thing.thing};
   context_.CheckIndexVarRedefine(name.source, *name.symbol);
 }
 
-void DoChecker::Leave(const parser::StatVariable &statVariable) {
+void DoForallChecker::Leave(const parser::StatVariable &statVariable) {
   context_.CheckIndexVarRedefine(statVariable.v.thing.thing);
 }
 
