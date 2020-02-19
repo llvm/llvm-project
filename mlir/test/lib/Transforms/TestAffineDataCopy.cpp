@@ -43,13 +43,13 @@ private:
 
 void TestAffineDataCopy::runOnFunction() {
   // Gather all AffineForOps by loop depth.
-  DenseMap<unsigned, SmallVector<AffineForOp, 2>> depthToLoops;
+  std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   gatherLoops(getFunction(), depthToLoops);
   assert(depthToLoops.size() && "Loop nest not found");
 
   // Only support tests with a single loop nest and a single innermost loop
   // for now.
-  unsigned innermostLoopIdx = depthToLoops.size() - 2;
+  unsigned innermostLoopIdx = depthToLoops.size() - 1;
   if (depthToLoops[0].size() != 1 || depthToLoops[innermostLoopIdx].size() != 1)
     return;
 
