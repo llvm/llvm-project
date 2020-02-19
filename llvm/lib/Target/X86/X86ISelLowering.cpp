@@ -5168,7 +5168,8 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
-bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT) const {
+bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                                             bool) const {
   // TODO: Allow vectors?
   if (VT.isVector())
     return false;
