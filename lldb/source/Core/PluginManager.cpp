@@ -205,11 +205,9 @@ public:
                       Args &&... args) {
     if (!callback)
       return false;
-
     assert((bool)name);
     Instance instance =
         Instance(name, description, callback, std::forward<Args>(args)...);
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_instances.push_back(instance);
     return false;
   }
@@ -217,7 +215,6 @@ public:
   bool UnregisterPlugin(typename Instance::CallbackType callback) {
     if (!callback)
       return false;
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     auto pos = m_instances.begin();
     auto end = m_instances.end();
     for (; pos != end; ++pos) {
@@ -230,21 +227,18 @@ public:
   }
 
   typename Instance::CallbackType GetCallbackAtIndex(uint32_t idx) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (Instance *instance = GetInstanceAtIndex(idx))
       return instance->create_callback;
     return nullptr;
   }
 
   const char *GetDescriptionAtIndex(uint32_t idx) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (Instance *instance = GetInstanceAtIndex(idx))
       return instance->description.c_str();
     return nullptr;
   }
 
   const char *GetNameAtIndex(uint32_t idx) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (Instance *instance = GetInstanceAtIndex(idx))
       return instance->name.GetCString();
     return nullptr;
@@ -253,7 +247,6 @@ public:
   typename Instance::CallbackType GetCallbackForName(ConstString name) {
     if (!name)
       return nullptr;
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (auto &instance : m_instances) {
       if (name == instance.name)
         return instance.create_callback;
@@ -262,25 +255,21 @@ public:
   }
 
   void PerformDebuggerCallback(Debugger &debugger) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (auto &instance : m_instances) {
       if (instance.debugger_init_callback)
         instance.debugger_init_callback(debugger);
     }
   }
 
-  std::recursive_mutex &GetMutex() { return m_mutex; }
   const std::vector<Instance> &GetInstances() const { return m_instances; }
   std::vector<Instance> &GetInstances() { return m_instances; }
 
 private:
   Instance *GetInstanceAtIndex(uint32_t idx) {
-    // Caller locks.
     if (idx < m_instances.size())
       return &m_instances[idx];
     return nullptr;
   }
-  std::recursive_mutex m_mutex;
   std::vector<Instance> m_instances;
 };
 
@@ -312,11 +301,6 @@ ABICreateInstance PluginManager::GetABICreateCallbackAtIndex(uint32_t idx) {
 typedef PluginInstance<ArchitectureCreateInstance> ArchitectureInstance;
 typedef std::vector<ArchitectureInstance> ArchitectureInstances;
 
-static std::mutex &GetArchitectureMutex() {
-  static std::mutex g_architecture_mutex;
-  return g_architecture_mutex;
-}
-
 static ArchitectureInstances &GetArchitectureInstances() {
   static ArchitectureInstances g_instances;
   return g_instances;
@@ -325,14 +309,12 @@ static ArchitectureInstances &GetArchitectureInstances() {
 void PluginManager::RegisterPlugin(ConstString name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   GetArchitectureInstances().push_back(
       {name, std::string(description), create_callback});
 }
 
 void PluginManager::UnregisterPlugin(
     ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   auto &instances = GetArchitectureInstances();
 
   for (auto pos = instances.begin(), end = instances.end(); pos != end; ++pos) {
@@ -346,7 +328,6 @@ void PluginManager::UnregisterPlugin(
 
 std::unique_ptr<Architecture>
 PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
-  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   for (const auto &instances : GetArchitectureInstances()) {
     if (auto plugin_up = instances.create_callback(arch))
       return plugin_up;
@@ -585,8 +566,6 @@ PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(uint32_t idx) {
 
 LanguageRuntimeGetCommandObject
 PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetLanguageRuntimeInstances().GetMutex());
   const auto &instances = GetLanguageRuntimeInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].command_callback;
@@ -595,8 +574,6 @@ PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx) {
 
 LanguageRuntimeGetExceptionPrecondition
 PluginManager::GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetLanguageRuntimeInstances().GetMutex());
   const auto &instances = GetLanguageRuntimeInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].precondition_callback;
@@ -677,8 +654,6 @@ PluginManager::GetObjectFileCreateCallbackAtIndex(uint32_t idx) {
 
 ObjectFileCreateMemoryInstance
 PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetObjectFileInstances().GetMutex());
   const auto &instances = GetObjectFileInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].create_memory_callback;
@@ -688,8 +663,6 @@ PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(uint32_t idx) {
 ObjectFileGetModuleSpecifications
 PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
     uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetObjectFileInstances().GetMutex());
   const auto &instances = GetObjectFileInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].get_module_specifications;
@@ -701,9 +674,6 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
     ConstString name) {
   if (!name)
     return nullptr;
-
-  std::lock_guard<std::recursive_mutex> guard(
-      GetObjectFileInstances().GetMutex());
   const auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (instance.name == name)
@@ -715,8 +685,6 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                const FileSpec &outfile) {
   Status error;
-  std::lock_guard<std::recursive_mutex> guard(
-      GetObjectFileInstances().GetMutex());
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (instance.save_core && instance.save_core(process_sp, outfile, error))
@@ -768,8 +736,6 @@ PluginManager::GetObjectContainerCreateCallbackAtIndex(uint32_t idx) {
 ObjectFileGetModuleSpecifications
 PluginManager::GetObjectContainerGetModuleSpecificationsCallbackAtIndex(
     uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetObjectContainerInstances().GetMutex());
   const auto &instances = GetObjectContainerInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].get_module_specifications;
@@ -818,8 +784,6 @@ PluginManager::GetPlatformCreateCallbackForPluginName(ConstString name) {
 
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
                                              CompletionRequest &request) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetPlatformInstances().GetMutex());
   for (const auto &instance : GetPlatformInstances().GetInstances()) {
     if (instance.name.GetStringRef().startswith(name))
       request.AddCompletion(instance.name.GetCString());
@@ -908,8 +872,6 @@ PluginManager::GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx) {
 lldb::ScriptInterpreterSP
 PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                                Debugger &debugger) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetScriptInterpreterInstances().GetMutex());
   const auto &instances = GetScriptInterpreterInstances().GetInstances();
   ScriptInterpreterCreateInstance none_instance = nullptr;
   for (const auto &instance : instances) {
@@ -972,8 +934,6 @@ PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx) {
 StructuredDataFilterLaunchInfo
 PluginManager::GetStructuredDataFilterCallbackAtIndex(
     uint32_t idx, bool &iteration_complete) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetStructuredDataPluginInstances().GetMutex());
   const auto &instances = GetStructuredDataPluginInstances().GetInstances();
   if (idx < instances.size()) {
     iteration_complete = false;
@@ -1128,8 +1088,6 @@ bool PluginManager::UnregisterPlugin(
 
 InstrumentationRuntimeGetType
 PluginManager::GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetInstrumentationRuntimeInstances().GetMutex());
   const auto &instances = GetInstrumentationRuntimeInstances().GetInstances();
   if (idx < instances.size())
     return instances[idx].get_type_callback;
@@ -1185,8 +1143,6 @@ PluginManager::GetTypeSystemCreateCallbackAtIndex(uint32_t idx) {
 }
 
 LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForTypes() {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetTypeSystemInstances().GetMutex());
   const auto &instances = GetTypeSystemInstances().GetInstances();
   LanguageSet all;
   for (unsigned i = 0; i < instances.size(); ++i)
@@ -1195,8 +1151,6 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForTypes() {
 }
 
 LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
-  std::lock_guard<std::recursive_mutex> guard(
-      GetTypeSystemInstances().GetMutex());
   const auto &instances = GetTypeSystemInstances().GetInstances();
   LanguageSet all;
   for (unsigned i = 0; i < instances.size(); ++i)
@@ -1239,7 +1193,6 @@ REPLCreateInstance PluginManager::GetREPLCreateCallbackAtIndex(uint32_t idx) {
 }
 
 LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
-  std::lock_guard<std::recursive_mutex> guard(GetREPLInstances().GetMutex());
   const auto &instances = GetREPLInstances().GetInstances();
   LanguageSet all;
   for (unsigned i = 0; i < instances.size(); ++i)
