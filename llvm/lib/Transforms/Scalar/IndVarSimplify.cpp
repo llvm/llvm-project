@@ -102,8 +102,10 @@ STATISTIC(NumElimIV      , "Number of congruent IVs eliminated");
 // implement a strong expression equivalence checker in SCEV. Until then, we
 // use the verify-indvars flag, which may assert in some cases.
 static cl::opt<bool> VerifyIndvars(
-  "verify-indvars", cl::Hidden,
-  cl::desc("Verify the ScalarEvolution result after running indvars"));
+    "verify-indvars", cl::Hidden,
+    cl::desc("Verify the ScalarEvolution result after running indvars. Has no "
+             "effect in release builds. (Note: this adds additional SCEV "
+             "queries potentially changing the analysis result)"));
 
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
@@ -2663,7 +2665,12 @@ bool IndVarSimplify::run(Loop *L) {
 
 #ifndef NDEBUG
   // Used below for a consistency check only
-  const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
+  // Note: Since the result returned by ScalarEvolution may depend on the order
+  // in which previous results are added to its cache, the call to
+  // getBackedgeTakenCount() may change following SCEV queries.
+  const SCEV *BackedgeTakenCount;
+  if (VerifyIndvars)
+    BackedgeTakenCount = SE->getBackedgeTakenCount(L);
 #endif
 
   bool Changed = false;
