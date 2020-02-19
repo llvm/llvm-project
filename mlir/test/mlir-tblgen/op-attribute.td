@@ -53,6 +53,16 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? Optional<some-return-type>(attr.some-convert-from-storage()) : (llvm::None);
 
+// Test setter methods
+// ---
+
+// DEF:      void AOp::aAttrAttr(some-attr-kind attr) {
+// DEF-NEXT:   this->setAttr("aAttr", attr);
+// DEF:      void AOp::bAttrAttr(some-attr-kind attr) {
+// DEF-NEXT:   this->setAttr("bAttr", attr);
+// DEF:      void AOp::cAttrAttr(some-attr-kind attr) {
+// DEF-NEXT:   this->setAttr("cAttr", attr);
+
 // Test build methods
 // ---
 
