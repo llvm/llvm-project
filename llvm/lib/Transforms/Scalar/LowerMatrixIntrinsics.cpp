@@ -290,7 +290,7 @@ public:
   /// Otherwie split the flat vector \p MatrixVal containing a matrix with
   /// shape \p SI into column vectors.
   ColumnMatrixTy getMatrix(Value *MatrixVal, const ShapeInfo &SI,
-                           IRBuilder<> Builder) {
+                           IRBuilder<> &Builder) {
     VectorType *VType = dyn_cast<VectorType>(MatrixVal->getType());
     assert(VType && "MatrixVal must be a vector type");
     assert(VType->getNumElements() == SI.NumRows * SI.NumColumns &&
@@ -584,13 +584,13 @@ public:
   }
 
   LoadInst *createColumnLoad(Value *ColumnPtr, Type *EltType,
-                             IRBuilder<> Builder) {
+                             IRBuilder<> &Builder) {
     return Builder.CreateAlignedLoad(
         ColumnPtr, Align(DL.getABITypeAlignment(EltType)), "col.load");
   }
 
   StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
-                               Type *EltType, IRBuilder<> Builder) {
+                               Type *EltType, IRBuilder<> &Builder) {
     return Builder.CreateAlignedStore(ColumnValue, ColumnPtr,
                                       DL.getABITypeAlign(EltType));
   }
@@ -690,7 +690,7 @@ public:
   /// Extract a column vector of \p NumElts starting at index (\p I, \p J) from
   /// the matrix \p LM represented as a vector of column vectors.
   Value *extractVector(const ColumnMatrixTy &LM, unsigned I, unsigned J,
-                       unsigned NumElts, IRBuilder<> Builder) {
+                       unsigned NumElts, IRBuilder<> &Builder) {
     Value *Col = LM.getColumn(J);
     Value *Undef = UndefValue::get(Col->getType());
     Constant *Mask = createSequentialMask(Builder, I, NumElts, 0);
@@ -699,7 +699,7 @@ public:
 
   // Set elements I..I+NumElts-1 to Block
   Value *insertVector(Value *Col, unsigned I, Value *Block,
-                      IRBuilder<> Builder) {
+                      IRBuilder<> &Builder) {
 
     // First, bring Block to the same size as Col
     unsigned BlockNumElts =
