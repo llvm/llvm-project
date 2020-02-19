@@ -464,14 +464,18 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
                                                     : AArch64::ORRv16i8))
-            .addReg(DstReg, RegState::Define)
+            .addReg(DstReg,
+                    RegState::Define |
+                        getRenamableRegState(MI.getOperand(0).isRenamable()))
             .add(MI.getOperand(1))
             .add(MI.getOperand(1));
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
                                                     : AArch64::BSLv16i8))
             .add(MI.getOperand(0))
-            .addReg(DstReg, RegState::Kill)
+            .addReg(DstReg,
+                    RegState::Kill |
+                        getRenamableRegState(MI.getOperand(0).isRenamable()))
             .add(MI.getOperand(2))
             .add(MI.getOperand(3));
       }
