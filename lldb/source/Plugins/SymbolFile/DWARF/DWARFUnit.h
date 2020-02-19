@@ -59,6 +59,9 @@ public:
   dw_offset_t GetLength() const { return m_length; }
   dw_offset_t GetAbbrOffset() const { return m_abbr_offset; }
   uint8_t GetUnitType() const { return m_unit_type; }
+  const llvm::DWARFUnitIndex::Entry *GetIndexEntry() const {
+    return m_index_entry;
+  }
   uint64_t GetTypeHash() const { return m_type_hash; }
   dw_offset_t GetTypeOffset() const { return m_type_offset; }
   bool IsTypeUnit() const {
@@ -215,6 +218,8 @@ public:
   uint8_t GetUnitType() const { return m_header.GetUnitType(); }
   bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
 
+  llvm::Optional<uint64_t> GetStringOffsetSectionItem(uint32_t index) const;
+
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
   llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset);
@@ -331,6 +336,7 @@ private:
   void ClearDIEsRWLocked();
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
+  void SetDwoStrOffsetsBase();
 
   void ComputeCompDirAndGuessPathStyle();
   void ComputeAbsolutePath();
