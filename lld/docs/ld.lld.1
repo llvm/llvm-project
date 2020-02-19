@@ -456,6 +456,8 @@ were concatenated in the order they appeared on the command line.
 Set address of section.
 .It Fl -shared , Fl -Bsharable
 Build a shared object.
+.It Fl -shuffle-sections Ns = Ns Ar seed
+Shuffle input sections using the given seed. If 0, use a random seed.
 .It Fl -soname Ns = Ns Ar value , Fl h Ar value
 Set
 .Dv DT_SONAME
