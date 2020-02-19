@@ -1430,6 +1430,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      _Pragma("clang attribute pop")                                            \
      _Pragma("clang attribute pop")                                            \
      _Pragma("clang attribute pop")
+#  define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
+     _LIBCPP_AVAILABILITY_FILESYSTEM
 #else
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
@@ -1444,6 +1446,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
+#  define _LIBCPP_AVAILABILITY_TO_CHARS
 #endif
 
 // Define availability that depends on _LIBCPP_NO_EXCEPTIONS.
