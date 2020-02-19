@@ -19,10 +19,12 @@
 ; void b(int i) { asm("" : : : "rdi"); }
 
 ; CHECK:      DW_AT_location [DW_FORM_sec_offset]   (0x00000000
-; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000000, 0x0000000000000006): DW_OP_reg5 RDI)
+; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000000, 0x0000000000000006): DW_OP_reg5 RDI
+; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000001, 0x0000000000000002): DW_OP_GNU_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value)
 
 ; CHECK:      DW_AT_location [DW_FORM_sec_offset]   (0x00000000
-; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000000, 0x0000000000000000): DW_OP_reg5 RDI)
+; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000000, 0x0000000000000000): DW_OP_reg5 RDI
+; CHECK-NEXT: DW_LLE_startx_length (0x0000000000000001, 0x0000000000000001): DW_OP_GNU_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value)
 
 target triple = "x86_64-unknown-linux-gnu"
 
