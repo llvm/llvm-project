@@ -1110,8 +1110,13 @@ generating.
 
 AMDGPU optimized code may spill vector registers to non-global address space
 memory, and this spilling may be done only for lanes that are active on entry to
-the function. To support this, a location description that can be created as a
+the subprogram. To support this, a location description that can be created as a
 masked select is required.
+
+Since the active lane mask may be held in a register, a way to get the value of
+a register on entry to a subprogram is required. To support this an operation
+that returns the caller value of a register as specified by the Call Frame
+Information (see :ref:`amdgpu-call-frame-information`) is required.
 
 Current DWARF uses an empty expression to indicate an undefined location
 description. Since the masked select composite location description operation
@@ -1358,7 +1363,7 @@ registers. The mapping for AMDGPU is defined in
 The vector registers are represented as the full size for the wavefront. They
 are organized as consecutive dwords (32-bits), one per lane, with the dword at
 the least significant bit position corresponding to lane 0 and so forth. DWARF
-location expressions involving the ``DW_OP_LLVM_bit_piecex`` and
+location expressions involving the ``DW_OP_LLVM_offset`` and
 ``DW_OP_LLVM_push_lane`` operations are used to select the part of the vector
 register corresponding to the lane that is executing the current thread of
 execution in languages that are implemented using a SIMD or SIMT execution
@@ -1814,8 +1819,7 @@ inclusive range ``DW_ATE_lo_user`` to ``DW_ATE_hi_user``.
       copies of the variables on entry. Seems only the compiler knows how to do
       this. If the main purpose is only to read the entry value of a register
       using CFI then would be better to have an operation that explicitly does
-      just that such as ``DW_OP_LLVM_call_frame_reg`` that is like
-      ``DW_OP_call_frame_cfa``.
+      just that such as ``DW_OP_LLVM_call_frame_entry_reg``.
 
 .. _amdgpu-location-description-operations:
 
@@ -2094,6 +2098,20 @@ General Operations
       debugging information entries, and should not be creating DWARF with
       ``DW_OP_call*`` to a ``DW_TAG_dwarf_procedure`` that does not have a
       ``DW_AT_location`` attribute.
+
+12. ``DW_OP_LLVM_call_frame_entry_reg`` *New*
+
+    ``DW_OP_LLVM_call_frame_entry_reg`` has a single unsigned LEB128 integer
+    operand that is treated as a target architecture register number R.
+
+    It pushes a location description L that holds the value of register R on
+    entry to the current subprogram as defined by the Call Frame Information
+    (see :ref:`amdgpu-call-frame-information`).
+
+    *If there is no Call Frame Information defined, then the default rules for
+    the target architecture are used. If the register rule is* undefined\ *,
+    then the undefined location description is pushed. If the register rule is*
+    same value\ *, then a register location description for R is pushed.*
 
 Undefined Location Descriptions
 ###############################
@@ -2687,8 +2705,8 @@ compatible with the definitions in DWARF 5 and earlier.*
     bit offset updated as if the ``DW_OP_LLVM_bit_offset D`` operation were
     applied.
 
-    *If a computed bit displacement is required, the* ``DW_OP_bit_offset`` *can
-    be used to update the part location description.*
+    *If a computed bit displacement is required, the* ``DW_OP_LLVM_bit_offset``
+    *can be used to update the part location description.*
 
     .. note::
 
@@ -2734,7 +2752,7 @@ compatible with the definitions in DWARF 5 and earlier.*
     1.  If the Nth least significant bit of M is a zero then the PL for part N
         is the same as L0, otherwise it is the same as L1.
 
-    2.  The PL for part N is updated as if the ``DW_OP_bit_offset N*S``
+    2.  The PL for part N is updated as if the ``DW_OP_LLVM_bit_offset N*S``
         operation was applied.
 
     If LS is not in canonical form it is updated to be in canonical form.
@@ -2742,10 +2760,9 @@ compatible with the definitions in DWARF 5 and earlier.*
     The DWARF expression is ill-formed if S or C are 0, or if the bit size of M
     is less than C.
 
-``DW_OP_bit_piece`` *and* ``DW_OP_bit_piecex`` *are used instead of*
-``DW_OP_piece`` *when the piece to be assembled into a value or assigned to is
-not byte-sized or is not at the start of the part location description.*
-``DW_OP_bit_piecex`` *is used when the bit offset is not a constant value.*
+``DW_OP_bit_piece`` *is used instead of* ``DW_OP_piece`` *when the piece to be
+assembled into a value or assigned to is not byte-sized or is not at the start
+of the part location description.*
 
 .. note::
 
@@ -2772,27 +2789,28 @@ for AMDGPU.
 .. table:: AMDGPU DWARF Expression Operation Encodings
    :name: amdgpu-dwarf-expression-operation-encodings-table
 
-   ================================== ==== ======== ===============================
-   Operation                          Code Number   Notes
-                                           of
-                                           Operands
-   ================================== ==== ======== ===============================
-   DW_OP_LLVM_form_aspace_address     0xe7    0
-   DW_OP_LLVM_push_lane               0xea    0
-   DW_OP_LLVM_offset                  0xe9    0
-   DW_OP_LLVM_offset_uconst                   1     ULEB128 byte displacement
-   DW_OP_LLVM_bit_offset                      0
-   DW_OP_LLVM_undefined                       0
-   DW_OP_LLVM_aspace_bregx                    2     ULEB128 register number,
-                                                    ULEB128 byte displacement
-   DW_OP_LLVM_aspace_implicit_pointer         2     4- or 8-byte offset of DIE,
-                                                    SLEB128 byte displacement
-   DW_OP_LLVM_piece_end                       0
-   DW_OP_LLVM_extend                          2     ULEB128 bit size,
-                                                    ULEB128 count
-   DW_OP_LLVM_select_bit_piece                2     ULEB128 bit size,
-                                                    ULEB128 count
-   ================================== ==== ======== ===============================
+   ================================== ===== ======== ===============================
+   Operation                          Code  Number   Notes
+                                            of
+                                            Operands
+   ================================== ===== ======== ===============================
+   DW_OP_LLVM_form_aspace_address     0xe7     0
+   DW_OP_LLVM_push_lane               0xea     0
+   DW_OP_LLVM_offset                  0xe9     0
+   DW_OP_LLVM_offset_uconst           *TBD*    1     ULEB128 byte displacement
+   DW_OP_LLVM_bit_offset              *TBD*    0
+   DW_OP_LLVM_call_frame_entry_reg    *TBD*    1     ULEB128 register number
+   DW_OP_LLVM_undefined               *TBD*    0
+   DW_OP_LLVM_aspace_bregx            *TBD*    2     ULEB128 register number,
+                                                     ULEB128 byte displacement
+   DW_OP_LLVM_aspace_implicit_pointer *TBD*    2     4- or 8-byte offset of DIE,
+                                                     SLEB128 byte displacement
+   DW_OP_LLVM_piece_end               *TBD*    0
+   DW_OP_LLVM_extend                  *TBD*    2     ULEB128 bit size,
+                                                     ULEB128 count
+   DW_OP_LLVM_select_bit_piece        *TBD*    2     ULEB128 bit size,
+                                                     ULEB128 count
+   ================================== ===== ======== ===============================
 
 .. _amdgpu-dwarf-debugging-information-entry-attributes:
 
@@ -3318,20 +3336,29 @@ Call Frame Instructions
 +++++++++++++++++++++++
 
 Some call frame instructions have operands that are encoded as DWARF expressions
-(see :ref:`amdgpu-dwarf-expressions`). The following DWARF operators cannot be
-used in such operands:
+E (see :ref:`amdgpu-dwarf-expressions`). The DWARF operators that can be used in
+E have the following restrictions:
 
 * ``DW_OP_addrx``, ``DW_OP_call2``, ``DW_OP_call4``, ``DW_OP_call_ref``,
   ``DW_OP_const_type``, ``DW_OP_constx``, ``DW_OP_convert``,
   ``DW_OP_deref_type``, ``DW_OP_regval_type``, and ``DW_OP_reinterpret``
-  operators are not allowed in an operand of these instructions because the
-  call frame information must not depend on other debug sections.
+  operators are not allowed because the call frame information must not depend
+  on other debug sections.
 
-* ``DW_OP_push_object_address`` is not meaningful in an operand of these
-  instructions because there is no object context to provide a value to push.
+* ``DW_OP_push_object_address`` is not allowed because there is no object
+  context to provide a value to push.
 
-* ``DW_OP_call_frame_cfa`` and ``DW_OP_entry_value`` are not meaningful in an
-  operand of these instructions because their use would be circular.
+* ``DW_OP_call_frame_cfa`` and ``DW_OP_entry_value`` are not allowed because
+  their use would be circular.
+
+* ``DW_OP_LLVM_call_frame_entry_reg`` is not allowed if evaluating E causes a
+  circular dependency between ``DW_OP_LLVM_call_frame_entry_reg`` operators.
+
+  *For example, if a register R1 has a* ``DW_CFA_def_cfa_expression``
+  *instruction that evaluates a* ``DW_OP_LLVM_call_frame_entry_reg`` *operator
+  that specifies register R2, and register R2 has a*
+  ``DW_CFA_def_cfa_expression`` *instruction that that evaluates a*
+  ``DW_OP_LLVM_call_frame_entry_reg`` *operator that specifies register R1.*
 
 *Call frame instructions to which these restrictions apply include*
 ``DW_CFA_def_cfa_expression``\ *,* ``DW_CFA_expression``\ *, and*
