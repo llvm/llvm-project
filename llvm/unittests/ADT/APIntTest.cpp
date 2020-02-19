@@ -1821,6 +1821,15 @@ TEST(APIntTest, byteSwap) {
   EXPECT_EQ(0x117700ff, APInt(32, 0xff007711).byteSwap());
   EXPECT_EQ(0x050403020100ULL, APInt(48, 0x000102030405ULL).byteSwap());
   EXPECT_EQ(0xff050403020100aaULL, APInt(64, 0xaa000102030405ffULL).byteSwap());
+
+  for (unsigned N : {16, 32, 48, 64, 80, 96, 112, 128, 256, 1024, 1040}) {
+    for (unsigned I = 0; I < N; I += 8) {
+      APInt X = APInt::getBitsSet(N, I, I + 8);
+      APInt Y = APInt::getBitsSet(N, N - I - 8, N - I);
+      EXPECT_EQ(Y, X.byteSwap());
+      EXPECT_EQ(X, Y.byteSwap());
+    }
+  }
 }
 
 TEST(APIntTest, reverseBits) {
