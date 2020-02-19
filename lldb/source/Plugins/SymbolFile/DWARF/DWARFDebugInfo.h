@@ -61,7 +61,10 @@ protected:
 
   SymbolFileDWARF &m_dwarf;
   lldb_private::DWARFContext &m_context;
+
+  llvm::once_flag m_units_once_flag;
   UnitColl m_units;
+
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
 
