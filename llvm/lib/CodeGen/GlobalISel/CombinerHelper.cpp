@@ -1373,6 +1373,70 @@ bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
+                                                unsigned TargetShiftSize,
+                                                unsigned &ShiftVal) {
+  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a shift");
+
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty.isVector()) // TODO:
+    return false;
+
+  // Don't narrow further than the requested size.
+  unsigned Size = Ty.getSizeInBits();
+  if (Size <= TargetShiftSize)
+    return false;
+
+  auto MaybeImmVal =
+    getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!MaybeImmVal)
+    return false;
+
+  ShiftVal = MaybeImmVal->Value;
+  return ShiftVal >= Size / 2 && ShiftVal < Size;
+}
+
+//  dst = G_LSHR s64:x, C for C >= 32
+// =>
+//   lo, hi = G_UNMERGE_VALUES x
+//   dst = merge_values (G_LSHR hi, C - 32), 0
+bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
+                                                const unsigned &ShiftVal) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(SrcReg);
+  unsigned Size = Ty.getSizeInBits();
+
+  assert(ShiftVal >= Size / 2);
+  LLT HalfTy = LLT::scalar(Size / 2);
+
+  Builder.setInstr(MI);
+  auto Unmerge = Builder.buildUnmerge(HalfTy, SrcReg);
+
+  Register Narrowed = Unmerge.getReg(1);
+  if (ShiftVal > Size / 2) {
+    Narrowed = Builder.buildLShr(
+      HalfTy, Narrowed,
+      Builder.buildConstant(HalfTy, ShiftVal - Size / 2)).getReg(0);
+  }
+
+  Builder.buildMerge(
+    DstReg, { Narrowed, Builder.buildConstant(HalfTy, 0).getReg(0) });
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::tryCombineShiftToUnmerge(MachineInstr &MI,
+                                              unsigned TargetShiftAmount) {
+  unsigned ShiftAmt;
+  if (matchCombineShiftToUnmerge(MI, TargetShiftAmount, ShiftAmt)) {
+    applyCombineShiftToUnmerge(MI, ShiftAmt);
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;

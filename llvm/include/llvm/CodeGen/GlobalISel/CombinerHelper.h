@@ -183,6 +183,13 @@ public:
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
   bool applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
 
+  /// Reduce a shift by a constant to an unmerge and a shift on a half sized
+  /// type. This will not produce a shift smaller than \p TargetShiftSize.
+  bool matchCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftSize,
+                                 unsigned &ShiftVal);
+  bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
+  bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
