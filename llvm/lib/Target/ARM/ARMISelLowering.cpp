@@ -5425,7 +5425,12 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   // FIXME: Remove this when we have strict fp instruction selection patterns
   if (IsStrict) {
-    DAG.mutateStrictFPToFP(Op.getNode());
+    SDLoc Loc(Op);
+    SDValue Result =
+        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
+                                                             : ISD::FP_TO_UINT,
+                    Loc, Op.getValueType(), SrcVal);
+    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
   }
 
   return Op;
@@ -16532,7 +16537,10 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
     // FIXME: Remove this when we have strict fp instruction selection patterns
     if (IsStrict) {
-      DAG.mutateStrictFPToFP(Op.getNode());
+      SDLoc Loc(Op);
+      SDValue Result = DAG.getNode(ISD::FP_EXTEND,
+                                   Loc, Op.getValueType(), SrcVal);
+      return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
     }
     return Op;
   }
