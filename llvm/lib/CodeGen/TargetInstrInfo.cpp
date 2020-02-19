@@ -1031,9 +1031,9 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 // Default implementation of getMemOperandWithOffset.
 bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
-    const TargetRegisterInfo *TRI) const {
+    bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  if (!getMemOperandsWithOffset(MI, BaseOps, Offset, TRI) ||
+  if (!getMemOperandsWithOffset(MI, BaseOps, Offset, OffsetIsScalable, TRI) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -1137,6 +1137,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});
   int64_t Offset;
+  bool OffsetIsScalable;
 
   // To simplify the sub-register handling, verify that we only need to
   // consider physical registers.
@@ -1175,7 +1176,12 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return None;
 
     const MachineOperand *BaseOp;
-    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
+                                      TRI))
+      return None;
+
+    // FIXME: Scalable offsets are not yet handled in the offset code below.
+    if (OffsetIsScalable)
       return None;
 
     // TODO: Can currently only handle mem instructions with a single define.
