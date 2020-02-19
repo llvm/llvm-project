@@ -95,7 +95,7 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
 
   Builder.SetInsertPoint(II);
   auto *BCI = Builder.CreateBitCast(Operand, FramePtrTy);
-  auto *Load = Builder.CreateLoad(BCI);
+  auto *Load = Builder.CreateLoad(FrameTy, BCI);
   auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
 
   II->replaceAllUsesWith(Cond);

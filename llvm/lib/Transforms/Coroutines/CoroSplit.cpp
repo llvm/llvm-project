@@ -630,7 +630,7 @@ Value *CoroCloner::deriveNewFramePointer() {
     // Otherwise, load the real frame from the opaque storage.
     auto FramePtrPtr =
       Builder.CreateBitCast(NewStorage, FramePtrTy->getPointerTo());
-    return Builder.CreateLoad(FramePtrPtr);
+    return Builder.CreateLoad(FramePtrTy, FramePtrPtr);
   }
   }
   llvm_unreachable("bad ABI");
