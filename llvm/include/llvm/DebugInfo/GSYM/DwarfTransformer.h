@@ -47,15 +47,6 @@ public:
   /// Gsym format in the GsymCreator object that is passed in. Returns an
   /// error if something fatal is encountered.
   ///
-  /// \param DDICtx The DWARF to use when converting to GSYM.
-  ///
-  /// \param Log The stream to log warnings and non fatal issues to.
-  ///
-  /// \param NumThreads The stream to log warnings and non fatal issues to.
-  ///
-  /// \param Gsym The GSYM creator to populate with the function information
-  /// from the debug info.
-  ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
   llvm::Error convert(uint32_t NumThreads);
