@@ -239,7 +239,8 @@ class mve_addr_q_shift<int shift> : MemOperand {
 
 // A family of classes wrapping up information about the vector types
 // used by MVE.
-class MVEVectorVTInfo<ValueType vec, ValueType dblvec, ValueType pred,
+class MVEVectorVTInfo<ValueType vec, ValueType dblvec,
+                      ValueType pred, ValueType dblpred,
                       bits<2> size, string suffixletter, bit unsigned> {
   // The LLVM ValueType representing the vector, so we can use it in
   // ISel patterns.
@@ -261,6 +262,9 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec, ValueType pred,
   // there's no MVE compare instruction that will _generate_ v2i1
   // directly.
   ValueType Pred = pred;
+
+  // Same as Pred but for DblVec rather than Vec.
+  ValueType DblPred = dblpred;
 
   // The most common representation of the vector element size in MVE
   // instruction encodings: a 2-bit value V representing an (8<<V)-bit
@@ -288,31 +292,31 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec, ValueType pred,
 }
 
 // Integer vector types that don't treat signed and unsigned differently.
-def MVE_v16i8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "i", ?>;
-def MVE_v8i16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "i", ?>;
-def MVE_v4i32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "i", ?>;
-def MVE_v2i64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "i", ?>;
+def MVE_v16i8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "i", ?>;
+def MVE_v8i16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "i", ?>;
+def MVE_v4i32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "i", ?>;
+def MVE_v2i64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "i", ?>;
 
 // Explicitly signed and unsigned integer vectors. They map to the
 // same set of LLVM ValueTypes as above, but are represented
 // differently in assembly and instruction encodings.
-def MVE_v16s8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "s", 0b0>;
-def MVE_v8s16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "s", 0b0>;
-def MVE_v4s32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "s", 0b0>;
-def MVE_v2s64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "s", 0b0>;
-def MVE_v16u8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b00, "u", 0b1>;
-def MVE_v8u16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b01, "u", 0b1>;
-def MVE_v4u32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  0b10, "u", 0b1>;
-def MVE_v2u64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  0b11, "u", 0b1>;
+def MVE_v16s8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "s", 0b0>;
+def MVE_v8s16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "s", 0b0>;
+def MVE_v4s32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "s", 0b0>;
+def MVE_v2s64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "s", 0b0>;
+def MVE_v16u8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "u", 0b1>;
+def MVE_v8u16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "u", 0b1>;
+def MVE_v4u32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "u", 0b1>;
+def MVE_v2u64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "u", 0b1>;
 
 // FP vector types.
-def MVE_v8f16 : MVEVectorVTInfo<v8f16, v4f32, v8i1,  0b01, "f", ?>;
-def MVE_v4f32 : MVEVectorVTInfo<v4f32, v2f64, v4i1,  0b10, "f", ?>;
-def MVE_v2f64 : MVEVectorVTInfo<v2f64, ?,     v4i1,  0b11, "f", ?>;
+def MVE_v8f16 : MVEVectorVTInfo<v8f16, v4f32, v8i1,  v4i1, 0b01, "f", ?>;
+def MVE_v4f32 : MVEVectorVTInfo<v4f32, v2f64, v4i1,  v4i1, 0b10, "f", ?>;
+def MVE_v2f64 : MVEVectorVTInfo<v2f64, ?,     v4i1,  ?,    0b11, "f", ?>;
 
 // Polynomial vector types.
-def MVE_v16p8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, 0b11, "p", 0b0>;
-def MVE_v8p16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  0b11, "p", 0b1>;
+def MVE_v16p8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b11, "p", 0b0>;
+def MVE_v8p16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b11, "p", 0b1>;
 
 // --------- Start of base classes for the instructions themselves
 
@@ -2614,17 +2618,17 @@ multiclass MVE_VSHLL_patterns<MVEVectorVTInfo VTI, int top> {
 
   def : Pat<(VTI.DblVec (pred_int   (VTI.Vec MQPR:$src), imm:$imm,
                                     (i32 VTI.Unsigned), (i32 top),
-                                    (VTI.Pred VCCR:$mask),
+                                    (VTI.DblPred VCCR:$mask),
                                     (VTI.DblVec MQPR:$inactive))),
             (VTI.DblVec (inst_imm   (VTI.Vec MQPR:$src), imm:$imm,
-                                    ARMVCCThen, (VTI.Pred VCCR:$mask),
+                                    ARMVCCThen, (VTI.DblPred VCCR:$mask),
                                     (VTI.DblVec MQPR:$inactive)))>;
   def : Pat<(VTI.DblVec (pred_int   (VTI.Vec MQPR:$src), (i32 VTI.LaneBits),
                                     (i32 VTI.Unsigned), (i32 top),
-                                    (VTI.Pred VCCR:$mask),
+                                    (VTI.DblPred VCCR:$mask),
                                     (VTI.DblVec MQPR:$inactive))),
             (VTI.DblVec (inst_lw    (VTI.Vec MQPR:$src), ARMVCCThen,
-                                    (VTI.Pred VCCR:$mask),
+                                    (VTI.DblPred VCCR:$mask),
                                     (VTI.DblVec MQPR:$inactive)))>;
 }
 
@@ -4282,10 +4286,10 @@ multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
     // Predicated multiply
     def : Pat<(VTI.DblVec !con((pred_int (VTI.Vec MQPR:$Qm),
                                          (VTI.Vec MQPR:$Qn)),
-                               uflag, (? (i32 Top), (VTI.Pred VCCR:$mask),
+                               uflag, (? (i32 Top), (VTI.DblPred VCCR:$mask),
                                          (VTI.DblVec MQPR:$inactive)))),
               (VTI.DblVec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                                ARMVCCThen, (VTI.Pred VCCR:$mask),
+                                ARMVCCThen, (VTI.DblPred VCCR:$mask),
                                 (VTI.DblVec MQPR:$inactive)))>;
   }
 }
