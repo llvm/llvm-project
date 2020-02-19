@@ -46,7 +46,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 26
+#define LTO_API_VERSION 27
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -296,6 +296,21 @@ lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
  */
 extern const char*
 lto_module_get_linkeropts(lto_module_t mod);
+
+/**
+ * If targeting mach-o on darwin, this function gets the CPU type and subtype
+ * that will end up being encoded in the mach-o header. These are the values
+ * that can be found in mach/machine.h.
+ *
+ * \p out_cputype and \p out_cpusubtype must be non-NULL.
+ *
+ * Returns true on error (check lto_get_error_message() for details).
+ *
+ * \since LTO_API_VERSION=27
+ */
+extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
+                                               unsigned int *out_cputype,
+                                               unsigned int *out_cpusubtype);
 
 /**
  * Diagnostic severity.
