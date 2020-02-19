@@ -4,6 +4,102 @@
 
 #include <arm_mve.h>
 
+// CHECK-LABEL: @test_vcvtq_f16_s16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = sitofp <8 x i16> [[A:%.*]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[TMP0]]
+//
+float16x8_t test_vcvtq_f16_s16(int16x8_t a)
+{
+#ifdef POLYMORPHIC
+    return vcvtq(a);
+#else /* POLYMORPHIC */
+    return vcvtq_f16_s16(a);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_f16_u16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = uitofp <8 x i16> [[A:%.*]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[TMP0]]
+//
+float16x8_t test_vcvtq_f16_u16(uint16x8_t a)
+{
+#ifdef POLYMORPHIC
+    return vcvtq(a);
+#else /* POLYMORPHIC */
+    return vcvtq_f16_u16(a);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_f32_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float32x4_t test_vcvtq_f32_s32(int32x4_t a)
+{
+#ifdef POLYMORPHIC
+    return vcvtq(a);
+#else /* POLYMORPHIC */
+    return vcvtq_f32_s32(a);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_f32_u32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = uitofp <4 x i32> [[A:%.*]] to <4 x float>
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float32x4_t test_vcvtq_f32_u32(uint32x4_t a)
+{
+#ifdef POLYMORPHIC
+    return vcvtq(a);
+#else /* POLYMORPHIC */
+    return vcvtq_f32_u32(a);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_s16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = fptosi <8 x half> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    ret <8 x i16> [[TMP0]]
+//
+int16x8_t test_vcvtq_s16_f16(float16x8_t a)
+{
+    return vcvtq_s16_f16(a);
+}
+
+// CHECK-LABEL: @test_vcvtq_s32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = fptosi <4 x float> [[A:%.*]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+int32x4_t test_vcvtq_s32_f32(float32x4_t a)
+{
+    return vcvtq_s32_f32(a);
+}
+
+// CHECK-LABEL: @test_vcvtq_u16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = fptoui <8 x half> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    ret <8 x i16> [[TMP0]]
+//
+uint16x8_t test_vcvtq_u16_f16(float16x8_t a)
+{
+    return vcvtq_u16_f16(a);
+}
+
+// CHECK-LABEL: @test_vcvtq_u32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = fptoui <4 x float> [[A:%.*]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+uint32x4_t test_vcvtq_u32_f32(float32x4_t a)
+{
+    return vcvtq_u32_f32(a);
+}
+
 // CHECK-LABEL: @test_vcvttq_f16_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.narrow(<8 x half> [[A:%.*]], <4 x float> [[B:%.*]], i32 1)
