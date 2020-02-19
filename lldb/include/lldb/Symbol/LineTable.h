@@ -183,7 +183,7 @@ public:
   ///     The number of line table entries in this line table.
   uint32_t GetSize() const;
 
-  typedef lldb_private::RangeArray<lldb::addr_t, lldb::addr_t, 32>
+  typedef lldb_private::RangeVector<lldb::addr_t, lldb::addr_t, 32>
       FileAddressRanges;
 
   /// Gets all contiguous file address ranges for the entire line table.
