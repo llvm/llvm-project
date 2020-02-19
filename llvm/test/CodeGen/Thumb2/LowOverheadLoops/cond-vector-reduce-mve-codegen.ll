@@ -213,22 +213,27 @@ define dso_local i32 @and_mul_reduce_add(i32* noalias nocapture readonly %a, i32
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    bic r4, r4, #3
 ; CHECK-NEXT:    subs r5, r4, #4
+; CHECK-NEXT:    movs r4, #1
+; CHECK-NEXT:    add.w lr, r4, r5, lsr #2
 ; CHECK-NEXT:    lsrs r4, r5, #2
 ; CHECK-NEXT:    sub.w r4, r12, r4, lsl #2
-; CHECK-NEXT:    dlstp.32 lr, r12
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vctp.32 r12
 ; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vsub.i32 q1, q2, q1
-; CHECK-NEXT:    vcmp.i32 eq, q1, zr
 ; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vldrwt.u32 q1, [r1], #16
+; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
+; CHECK-NEXT:    sub.w r12, r12, #4
+; CHECK-NEXT:    vsub.i32 q1, q2, q1
+; CHECK-NEXT:    vpsttt
+; CHECK-NEXT:    vcmpt.i32 eq, q1, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
 ; CHECK-NEXT:    vldrwt.u32 q2, [r2], #16
 ; CHECK-NEXT:    vmul.i32 q1, q2, q1
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    letp lr, .LBB2_2
+; CHECK-NEXT:    le lr, .LBB2_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
 ; CHECK-NEXT:    vctp.32 r4
 ; CHECK-NEXT:    vpsel q0, q1, q0
