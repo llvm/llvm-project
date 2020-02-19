@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cctype>
 
+// FixItHint
+
 using namespace clang::ast_matchers;
 
 namespace clang {
