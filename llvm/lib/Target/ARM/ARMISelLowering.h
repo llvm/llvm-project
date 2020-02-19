@@ -524,6 +524,12 @@ class VectorType;
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                  unsigned Index) const override;
 
+    bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                              bool MathUsed) const override {
+      // Using overflow ops for overflow checks only should beneficial on ARM.
+      return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+    }
+
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
