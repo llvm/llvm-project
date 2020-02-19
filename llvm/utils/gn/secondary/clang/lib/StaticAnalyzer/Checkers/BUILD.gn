@@ -11,6 +11,7 @@ static_library("Checkers") {
     "//clang/lib/StaticAnalyzer/Core",
     "//llvm/lib/Support",
   ]
+  include_dirs = [ "." ]
   sources = [
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
