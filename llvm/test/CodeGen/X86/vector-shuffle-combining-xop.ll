@@ -255,7 +255,7 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
 define <16 x i8> @combine_vpperm_as_proti_v8i16(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_as_proti_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; CHECK-NEXT:    vprotw $8, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>)
   ret <16 x i8> %res0
