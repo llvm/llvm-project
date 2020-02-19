@@ -18,13 +18,7 @@ class CPPAutoTestCase(TestBase):
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        line = line_number('main.cpp', '// break here')
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", line, num_expected_locations=-1, loc_exact=False)
-
-        self.runCmd("process launch", RUN_SUCCEEDED)
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         self.expect_expr('auto f = 123456; f', result_type='int', result_value='123456')
         self.expect(

@@ -16,43 +16,12 @@ class StdCXXDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break inside main().
-        self.line = line_number('main.cpp', '// Set break point at this line.')
-
     @skipIfWindows
     @expectedFailureNetBSD
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # rdar://problem/8543077
-        # test/stl: clang built binaries results in the breakpoint locations = 3,
-        # is this a problem with clang generated debug info?
-        #
-        # Break on line 13 of main.cpp.
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # Now let's get the target as well as the process objects.
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-
-        # The process should be in a 'stopped' state.
-        self.expect(
-            str(process),
-            STOPPED_DUE_TO_BREAKPOINT,
-            exe=False,
-            substrs=[
-                "stopped",
-                "a.out",
-            ])
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, "// Set break point at this line", lldb.SBFileSpec("main.cpp"))
 
         # Disassemble the functions on the call stack.
         self.runCmd("thread backtrace")
