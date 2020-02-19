@@ -2102,6 +2102,66 @@ site, these bundles may contain any values that are needed by the
 generated code.  For more details, see :ref:`GC Transitions
 <gc_transition_args>`.
 
+.. _assume_opbundles:
+
+Assume Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^
+
+Operand bundles on an :ref:`llvm.assume <int_assume>` allows representing
+assumptions that a :ref:`parameter attribute <paramattrs>` or a
+:ref:`function attribute <fnattrs>` holds for a certain value at a certain
+location. Operand bundles enable assumptions that are either hard or impossible
+to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
+
+An assume operand bundle has the form:
+
+::
+
+      "<tag>"([ <holds for value> [, <attribute argument>] ])
+
+* The tag of the operand bundle is the name of attribute that can be assumed
+  to hold.
+* The first argument if present is the value for which the attribute hold.
+* The second argument if present is an argument of the attribute.
+
+If there are no arguments the attribute is a property of the call location.
+
+If the represented attribute expects a constant argument, the argument provided
+to the operand bundle should be a constant as well.
+
+For example:
+
+.. code-block:: llvm
+
+      call void @llvm.assume(i1 true) ["align"(i32* %val, i32 8)]
+
+allows the optimizer to assume that at location of call to
+:ref:`llvm.assume <int_assume>` ``%val`` has an alignment of at least 8.
+
+.. code-block:: llvm
+
+      call void @llvm.assume(i1 %cond) ["cold"(), "nonnull"(i64* %val)]
+
+allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
+call location is cold and that ``%val`` may not be null.
+
+Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
+provided guarantees are are violated at runtime the behavior is undefined.
+
+Even if the assumed property can be encoded as a boolean value, like
+``nonnull``, using operand bundles to express the property can still have
+benefits:
+
+* Attributes that can be expressed via operand bundles are directly the
+  property that the optimizer uses and cares about. Encoding attributes as
+  operand bundles removes the need for an instruction sequence that represents
+  the property (e.g., `icmp ne i32* %p, null` for `nonnull`) and for the
+  optimizer to deduce the property from that instruction sequence.
+* Expressing the property using operand bundles makes it easy to identify the
+  use of the value as a use in an :ref:`llvm.assume <int_assume>`. This then
+  simplifies and improves heuristics, e.g., for use "use-sensitive"
+  optimizations.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -17534,10 +17594,14 @@ The ``llvm.assume`` allows the optimizer to assume that the provided
 condition is true. This information can then be used in simplifying other parts
 of the code.
 
+More complex assumptions can be encoded as
+:ref:`assume operand bundles <assume_opbundles>`.
+
 Arguments:
 """"""""""
 
-The condition which the optimizer may assume is always true.
+The argument of the call is the condition which the optimizer may assume is
+always true.
 
 Semantics:
 """"""""""
