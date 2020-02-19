@@ -18,16 +18,7 @@ class CxxChar8_tTestCase(TestBase):
     def test(self):
         """Test that C++ supports char8_t correctly."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # FIXME: We should be able to test this with target variable, but the
-        # data formatter output is broken.
-        lldbutil.run_break_set_by_symbol(self, 'main')
-        self.runCmd("run", RUN_SUCCEEDED)
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         self.expect_expr("a", result_type="char8_t", result_summary="0x61 u8'a'")
         self.expect_expr("ab", result_type="const char8_t *", result_summary='u8"你好"')

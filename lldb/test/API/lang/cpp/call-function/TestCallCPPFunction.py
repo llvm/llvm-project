@@ -19,12 +19,7 @@ class CallCPPFunctionTestCase(TestBase):
     def test_with_run_command(self):
         """Test calling a function by basename"""
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
-
-        self.runCmd("process launch", RUN_SUCCEEDED)
+        lldbutil.run_to_source_breakpoint(self, "// breakpoint", lldb.SBFileSpec("main.cpp"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list",

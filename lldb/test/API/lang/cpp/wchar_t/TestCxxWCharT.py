@@ -14,32 +14,10 @@ class CxxWCharTTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break for main.cpp.
-        self.source = 'main.cpp'
-        self.line = line_number(
-            self.source, '// Set break point at this line.')
-
     def test(self):
         """Test that C++ supports wchar_t correctly."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Break on the struct declration statement in main.cpp.
-        lldbutil.run_break_set_by_file_and_line(self, "main.cpp", self.line)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         # Check that we correctly report templates on wchar_t
         self.expect("frame variable foo_y",
