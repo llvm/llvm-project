@@ -71,6 +71,9 @@ def InsecureAPI : Package<"insecureAPI">, ParentPackage<Security>;
 def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def Taint : Package<"taint">, ParentPackage<SecurityAlpha>;
 
+def CERT : Package<"cert">, ParentPackage<SecurityAlpha>;
+def POS : Package<"pos">, ParentPackage<CERT>;
+
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
 def CString : Package<"cstring">, ParentPackage<Unix>;
@@ -828,6 +831,15 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Documentation<HasDocumentation>;
 
 } // end "security"
+
+let ParentPackage = POS in {
+
+  def PutenvWithAuto : Checker<"34c">,
+  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
+           "an automatic variable as the argument.">,
+  Documentation<HasDocumentation>;
+
+} // end "alpha.cert.pos"
 
 let ParentPackage = SecurityAlpha in {
 
