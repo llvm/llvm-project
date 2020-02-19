@@ -20,6 +20,7 @@ class ABI;
 class Address;
 class AddressRange;
 class AddressResolver;
+class Architecture;
 class ArchSpec;
 class ArmUnwindInfo;
 class Args;
