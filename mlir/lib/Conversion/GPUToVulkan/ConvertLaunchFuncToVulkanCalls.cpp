@@ -27,7 +27,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 
-#include "llvm/Support/FormatVariadic.h"
+#include "llvm/ADT/SmallString.h"
 
 using namespace mlir;
 
@@ -80,7 +80,7 @@ private:
   /// populates the given `numWorkGroups`.
   LogicalResult createNumWorkGroups(Location loc, OpBuilder &builder,
                                     mlir::gpu::LaunchFuncOp launchOp,
-                                    SmallVector<Value, 3> &numWorkGroups);
+                                    SmallVectorImpl<Value> &numWorkGroups);
 
   /// Declares all needed runtime functions.
   void declareVulkanFunctions(Location loc);
@@ -153,17 +153,15 @@ void GpuLaunchFuncToVulkanCalssPass::declareVulkanFunctions(Location loc) {
 
 Value GpuLaunchFuncToVulkanCalssPass::createEntryPointNameConstant(
     StringRef name, Location loc, OpBuilder &builder) {
-  std::vector<char> shaderName(name.begin(), name.end());
+  SmallString<16> shaderName(name.begin(), name.end());
   // Append `\0` to follow C style string given that LLVM::createGlobalString()
   // won't handle this directly for us.
   shaderName.push_back('\0');
 
-  std::string entryPointGlobalName =
-      std::string(llvm::formatv("{0}_spv_entry_point_name", name));
-  return LLVM::createGlobalString(
-      loc, builder, entryPointGlobalName,
-      StringRef(shaderName.data(), shaderName.size()), LLVM::Linkage::Internal,
-      getLLVMDialect());
+  std::string entryPointGlobalName = (name + "_spv_entry_point_name").str();
+  return LLVM::createGlobalString(loc, builder, entryPointGlobalName,
+                                  shaderName, LLVM::Linkage::Internal,
+                                  getLLVMDialect());
 }
 
 LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
@@ -171,14 +169,12 @@ LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
   bool done = false;
   SmallVector<uint32_t, 0> binary;
   for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
-    if (done) {
-      spirvModule.emitError("should only contain one 'spv.module' op");
-      return failure();
-    }
+    if (done)
+      return spirvModule.emitError("should only contain one 'spv.module' op");
     done = true;
-    if (failed(spirv::serialize(spirvModule, binary))) {
+
+    if (failed(spirv::serialize(spirvModule, binary)))
       return failure();
-    }
   }
 
   binaryShader.resize(binary.size() * sizeof(uint32_t));
@@ -189,14 +185,13 @@ LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
 
 LogicalResult GpuLaunchFuncToVulkanCalssPass::createNumWorkGroups(
     Location loc, OpBuilder &builder, mlir::gpu::LaunchFuncOp launchOp,
-    SmallVector<Value, 3> &numWorkGroups) {
+    SmallVectorImpl<Value> &numWorkGroups) {
   for (auto index : llvm::seq(0, 3)) {
     auto numWorkGroupDimConstant = dyn_cast_or_null<ConstantOp>(
         launchOp.getOperand(index).getDefiningOp());
 
-    if (!numWorkGroupDimConstant) {
+    if (!numWorkGroupDimConstant)
       return failure();
-    }
 
     auto numWorkGroupDimValue =
         numWorkGroupDimConstant.getValue().cast<IntegerAttr>().getInt();
@@ -207,7 +202,6 @@ LogicalResult GpuLaunchFuncToVulkanCalssPass::createNumWorkGroups(
   return success();
 }
 
-// Translates gpu launch op to the sequence of Vulkan runtime calls.
 void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   ModuleOp module = getModule();
@@ -217,9 +211,8 @@ void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
   // Serialize `spirv::Module` into binary form.
   std::vector<char> binary;
   if (failed(
-          GpuLaunchFuncToVulkanCalssPass::createBinaryShader(module, binary))) {
+          GpuLaunchFuncToVulkanCalssPass::createBinaryShader(module, binary)))
     return signalPassFailure();
-  }
 
   // Create LLVM global with SPIR-V binary data, so we can pass a pointer with
   // that data to runtime call.
@@ -246,9 +239,8 @@ void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
 
   // Create number of local workgroup for each dimension.
   SmallVector<Value, 3> numWorkGroups;
-  if (failed(createNumWorkGroups(loc, builder, launchOp, numWorkGroups))) {
+  if (failed(createNumWorkGroups(loc, builder, launchOp, numWorkGroups)))
     return signalPassFailure();
-  }
 
   // Create call `setNumWorkGroups` runtime function with the given numbers of
   // local workgroup.
