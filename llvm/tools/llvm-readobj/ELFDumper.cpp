@@ -362,6 +362,9 @@ public:
   getVersionDefinitions(const Elf_Shdr *Sec) const;
   Expected<std::vector<VerNeed>>
   getVersionDependencies(const Elf_Shdr *Sec) const;
+
+  Expected<std::pair<const Elf_Sym *, std::string>>
+  getRelocationTarget(const Elf_Shdr *SymTab, const Elf_Rela &R) const;
 };
 
 template <class ELFT>
@@ -1048,6 +1051,41 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
       ObjF->getFileName(), ObjF->getELFFile()->template getEntry<Elf_Versym>(
                                SymbolVersionSection, EntryIndex));
   return this->getSymbolVersionByIndex(Versym->vs_index, IsDefault);
+}
+
+template <typename ELFT>
+Expected<std::pair<const typename ELFT::Sym *, std::string>>
+ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
+                                     const Elf_Rela &R) const {
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  Expected<const Elf_Sym *> SymOrErr = Obj->getRelocationSymbol(&R, SymTab);
+  if (!SymOrErr)
+    return SymOrErr.takeError();
+  const Elf_Sym *Sym = *SymOrErr;
+  if (!Sym)
+    return std::make_pair(nullptr, "");
+
+  // The st_name field of a STT_SECTION is usually 0 (empty string).
+  // This code block returns the section name.
+  if (Sym->getType() == ELF::STT_SECTION) {
+    Expected<const Elf_Shdr *> SecOrErr =
+        Obj->getSection(Sym, SymTab, ShndxTable);
+    if (!SecOrErr)
+      return SecOrErr.takeError();
+
+    Expected<StringRef> NameOrErr = Obj->getSectionName(*SecOrErr);
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    return std::make_pair(Sym, NameOrErr->str());
+  }
+
+  Expected<StringRef> StrTableOrErr = Obj->getStringTableForSymtab(*SymTab);
+  if (!StrTableOrErr)
+    return StrTableOrErr.takeError();
+
+  std::string SymbolName =
+      getFullSymbolName(Sym, *StrTableOrErr, SymTab->sh_type == SHT_DYNSYM);
+  return std::make_pair(Sym, SymbolName);
 }
 
 static std::string maybeDemangle(StringRef Name) {
@@ -3281,22 +3319,11 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                                      const Elf_Rela &R, bool IsRela) {
-  const Elf_Sym *Sym =
-      unwrapOrError(this->FileName, Obj->getRelocationSymbol(&R, SymTab));
-  std::string TargetName;
-  if (Sym && Sym->getType() == ELF::STT_SECTION) {
-    const Elf_Shdr *Sec = unwrapOrError(
-        this->FileName,
-        Obj->getSection(Sym, SymTab, this->dumper()->getShndxTable()));
-    TargetName =
-        std::string(unwrapOrError(this->FileName, Obj->getSectionName(Sec)));
-  } else if (Sym) {
-    StringRef StrTable =
-        unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*SymTab));
-    TargetName = this->dumper()->getFullSymbolName(
-        Sym, StrTable, SymTab->sh_type == SHT_DYNSYM /* IsDynamic */);
-  }
-  printRelocation(Obj, Sym, TargetName, R, IsRela);
+  const typename ELFT::Sym *Sym;
+  std::string Name;
+  std::tie(Sym, Name) = unwrapOrError(
+      this->FileName, this->dumper()->getRelocationTarget(SymTab, R));
+  printRelocation(Obj, Sym, Name, R, IsRela);
 }
 
 template <class ELFT>
@@ -5709,23 +5736,13 @@ void LLVMStyle<ELFT>::printRelocations(const Elf_Shdr *Sec, const ELFO *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
                                       const Elf_Shdr *SymTab) {
+  std::string TargetName =
+      unwrapOrError(this->FileName,
+                    this->dumper()->getRelocationTarget(SymTab, Rel))
+          .second;
+
   SmallString<32> RelocName;
   Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
-  std::string TargetName;
-  const Elf_Sym *Sym =
-      unwrapOrError(this->FileName, Obj->getRelocationSymbol(&Rel, SymTab));
-  if (Sym && Sym->getType() == ELF::STT_SECTION) {
-    const Elf_Shdr *Sec = unwrapOrError(
-        this->FileName,
-        Obj->getSection(Sym, SymTab, this->dumper()->getShndxTable()));
-    TargetName =
-        std::string(unwrapOrError(this->FileName, Obj->getSectionName(Sec)));
-  } else if (Sym) {
-    StringRef StrTable =
-        unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*SymTab));
-    TargetName = this->dumper()->getFullSymbolName(
-        Sym, StrTable, SymTab->sh_type == SHT_DYNSYM /* IsDynamic */);
-  }
 
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
