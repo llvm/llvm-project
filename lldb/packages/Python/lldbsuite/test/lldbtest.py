@@ -2406,7 +2406,7 @@ FileCheck output:
                 "Unexpected failure with msg: " + eval_result.GetError().GetCString())
 
         if result_type:
-            self.assertEqual(result_type, eval_result.GetTypeName())
+            self.assertEqual(result_type, eval_result.GetDisplayTypeName())
 
         if result_value:
             self.assertEqual(result_value, eval_result.GetValue())

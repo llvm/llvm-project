@@ -19,8 +19,7 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
-        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
-        self.namespace = 'std::__' + ns + '1'
+        self.namespace = 'std'
 
     @add_test_categories(["libc++"])
     def test_with_run_command(self):

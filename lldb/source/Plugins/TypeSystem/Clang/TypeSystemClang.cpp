@@ -3514,6 +3514,19 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
+ConstString
+TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return ConstString();
+
+  clang::QualType qual_type(GetQualType(type));
+  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
+  printing_policy.SuppressTagKeyword = true;
+  printing_policy.SuppressScope = false;
+  printing_policy.SuppressUnwrittenScope = true;
+  return ConstString(qual_type.getAsString(printing_policy));
+}
+
 uint32_t
 TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                              CompilerType *pointee_or_element_clang_type) {
