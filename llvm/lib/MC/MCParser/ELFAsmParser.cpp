@@ -748,7 +748,7 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
     return TokError("unexpected token in '.ident' directive");
   Lex();
 
-  getStreamer().EmitIdent(Data);
+  getStreamer().emitIdent(Data);
   return false;
 }
 

@@ -160,7 +160,7 @@ void MCWasmStreamer::emitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                          MaxBytesToEmit);
 }
 
-void MCWasmStreamer::EmitIdent(StringRef IdentString) {
+void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // TODO(sbc): Add the ident section once we support mergable strings
   // sections in the object format
 }
@@ -223,7 +223,7 @@ void MCWasmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   llvm_unreachable("Wasm doesn't support this directive");
 }
 
-void MCWasmStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                     uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("Wasm doesn't support this directive");
 }

@@ -210,7 +210,7 @@ public:
     if (getLexer().isNot(AsmToken::EndOfStatement))
       return TokError("unexpected token in '.ident' directive");
     Lex();
-    getStreamer().EmitIdent(Data);
+    getStreamer().emitIdent(Data);
     return false;
   }
 

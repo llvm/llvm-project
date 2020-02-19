@@ -174,10 +174,10 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
             MCSymbolRefExpr::create(OffsetLabel, OutContext);
         const MCExpr *CaleeExpr =
             MCSymbolRefExpr::create(Callee, OutContext);
-        OutStreamer.EmitRelocDirective
-            (*OffsetExpr,
-             Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
-             CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
+        OutStreamer.emitRelocDirective(
+            *OffsetExpr,
+            Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
+            CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
         OutStreamer.emitLabel(OffsetLabel);
         return;
       }

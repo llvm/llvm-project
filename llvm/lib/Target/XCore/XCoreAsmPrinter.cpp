@@ -158,7 +158,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // The ABI requires that unsigned scalar types smaller than 32 bits
   // are padded to 32 bits.
   if (Size < 4)
-    OutStreamer->EmitZeros(4 - Size);
+    OutStreamer->emitZeros(4 - Size);
 
   // Mark the end of the global
   getTargetStreamer().emitCCBottomData(GVSym->getName());
@@ -267,7 +267,7 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
       O << "\tmov "
         << XCoreInstPrinter::getRegisterName(MI->getOperand(0).getReg()) << ", "
         << XCoreInstPrinter::getRegisterName(MI->getOperand(1).getReg());
-      OutStreamer->EmitRawText(O.str());
+      OutStreamer->emitRawText(O.str());
       return;
     }
     break;
@@ -280,7 +280,7 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
     else
       printInlineJT32(MI, 0, O);
     O << '\n';
-    OutStreamer->EmitRawText(O.str());
+    OutStreamer->emitRawText(O.str());
     return;
   }
 
