@@ -1785,22 +1785,31 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
 }
 
 /// Gathers all AffineForOps in 'block' at 'currLoopDepth' in 'depthToLoops'.
-static void gatherLoopsInBlock(
-    Block *block, unsigned currLoopDepth,
-    DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops) {
-  auto &loopsAtDepth = depthToLoops[currLoopDepth];
+static void
+gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
+                   std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
+  // Add a new empty level to output if it doesn't exist level already.
+  assert(currLoopDepth <= depthToLoops.size() && "Unexpected currLoopDepth");
+  if (currLoopDepth == depthToLoops.size())
+    depthToLoops.push_back(SmallVector<AffineForOp, 2>());
+
   for (auto &op : *block) {
     if (auto forOp = dyn_cast<AffineForOp>(op)) {
-      loopsAtDepth.push_back(forOp);
+      depthToLoops[currLoopDepth].push_back(forOp);
       gatherLoopsInBlock(forOp.getBody(), currLoopDepth + 1, depthToLoops);
     }
   }
 }
 
 /// Gathers all AffineForOps in 'func' grouped by loop depth.
-void mlir::gatherLoops(
-    FuncOp func,
-    DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops) {
+void mlir::gatherLoops(FuncOp func,
+                       std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
   for (auto &block : func)
     gatherLoopsInBlock(&block, /*currLoopDepth=*/0, depthToLoops);
+
+  // Remove last loop level from output since it's empty.
+  if (!depthToLoops.empty()) {
+    assert(depthToLoops.back().empty() && "Last loop level is not empty?");
+    depthToLoops.pop_back();
+  }
 }
