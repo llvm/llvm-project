@@ -757,31 +757,66 @@ namespace std {
 }
 
 template <class BidirectionalIterator, class Distance>
-void __advance (BidirectionalIterator& it, Distance n,
-                std::bidirectional_iterator_tag) {
+void __advance(BidirectionalIterator& it, Distance n,
+               std::bidirectional_iterator_tag)
+#if !defined(STD_ADVANCE_INLINE_LEVEL) || STD_ADVANCE_INLINE_LEVEL > 2
+{
   if (n >= 0) while(n-- > 0) ++it; else while (n++<0) --it;
 }
+#else
+    ;
+#endif
 
 template <class RandomAccessIterator, class Distance>
-void __advance (RandomAccessIterator& it, Distance n,
-                std::random_access_iterator_tag) {
+void __advance(RandomAccessIterator& it, Distance n,
+               std::random_access_iterator_tag)
+#if !defined(STD_ADVANCE_INLINE_LEVEL) || STD_ADVANCE_INLINE_LEVEL > 2
+{
   it += n;
 }
+#else
+    ;
+#endif
 
 namespace std {
-  template <class InputIterator, class Distance>
-  void advance (InputIterator& it, Distance n) {
-    __advance(it, n, typename InputIterator::iterator_category());
-  }
 
-  template <class BidirectionalIterator>
-  BidirectionalIterator
-  prev (BidirectionalIterator it,
-        typename iterator_traits<BidirectionalIterator>::difference_type n =
-        1) {
-    advance(it, -n);
-    return it;
-  }
+template <class InputIterator, class Distance>
+void advance(InputIterator& it, Distance n)
+#if !defined(STD_ADVANCE_INLINE_LEVEL) || STD_ADVANCE_INLINE_LEVEL > 1
+{
+  __advance(it, n, typename InputIterator::iterator_category());
+}
+#else
+    ;
+#endif
+
+template <class BidirectionalIterator>
+BidirectionalIterator
+prev(BidirectionalIterator it,
+     typename iterator_traits<BidirectionalIterator>::difference_type n =
+         1)
+#if !defined(STD_ADVANCE_INLINE_LEVEL) || STD_ADVANCE_INLINE_LEVEL > 0
+{
+  advance(it, -n);
+  return it;
+}
+#else
+    ;
+#endif
+
+template <class ForwardIterator>
+ForwardIterator
+next(ForwardIterator it,
+     typename iterator_traits<ForwardIterator>::difference_type n =
+         1)
+#if !defined(STD_ADVANCE_INLINE_LEVEL) || STD_ADVANCE_INLINE_LEVEL > 0
+{
+  advance(it, n);
+  return it;
+}
+#else
+    ;
+#endif
 
   template <class InputIt, class T>
   InputIt find(InputIt first, InputIt last, const T& value);
