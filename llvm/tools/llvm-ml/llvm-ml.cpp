@@ -189,7 +189,8 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCMasmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
@@ -222,6 +223,7 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCOptions.AssemblyLanguage = "masm";
 
   const char *ProgName = argv[0];
   const Target *TheTarget = GetTarget(ProgName);
