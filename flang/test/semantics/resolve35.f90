@@ -50,14 +50,6 @@ subroutine s4
   end forall
 end
 
-subroutine s5
-  real :: a(10), b(10)
-  !ERROR: 'i' is already declared in this scoping unit
-  forall(i=1:10, i=1:10)
-    a(i) = b(i)
-  end forall
-end
-
 subroutine s6
   integer, parameter :: n = 4
   real, dimension(n) :: x

@@ -46,20 +46,8 @@ struct Control {
 struct ForallContext {
   explicit ForallContext(const ForallContext *that) : outer{that} {}
 
-  std::optional<int> GetActiveIntKind(const parser::CharBlock &name) const {
-    const auto iter{activeNames.find(name)};
-    if (iter != activeNames.cend()) {
-      return {integerKind};
-    } else if (outer) {
-      return outer->GetActiveIntKind(name);
-    } else {
-      return std::nullopt;
-    }
-  }
-
   const ForallContext *outer{nullptr};
   std::optional<parser::CharBlock> constructName;
-  int integerKind;
   std::vector<Control> control;
   std::optional<MaskExpr> maskExpr;
   std::set<parser::CharBlock> activeNames;
@@ -89,10 +77,7 @@ public:
   void Analyze(const parser::PointerAssignmentStmt &);
   void Analyze(const parser::WhereStmt &);
   void Analyze(const parser::WhereConstruct &);
-  void Analyze(const parser::ForallStmt &);
   void Analyze(const parser::ForallConstruct &);
-  void Analyze(const parser::ForallConstructStmt &);
-  void Analyze(const parser::ConcurrentHeader &);
 
   template<typename A> void Analyze(const parser::UnlabeledStatement<A> &stmt) {
     context_.set_location(stmt.source);
@@ -120,9 +105,6 @@ private:
   void Analyze(const parser::MaskedElsewhereStmt &);
   void Analyze(const parser::WhereConstruct::Elsewhere &);
 
-  int GetIntegerKind(const std::optional<parser::IntegerTypeSpec> &);
-  void CheckForImpureCall(const SomeExpr &);
-  void CheckForImpureCall(const SomeExpr *);
   void CheckForPureContext(const SomeExpr &lhs, const SomeExpr &rhs,
       parser::CharBlock rhsSource, bool isPointerAssignment);
 
@@ -142,8 +124,6 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
   // Assignment statement analysis is in expression.cpp where user-defined
   // assignments can be recognized and replaced.
   if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
-    CheckForImpureCall(assignment->lhs);
-    CheckForImpureCall(assignment->rhs);
     if (forall_) {
       // TODO: Warn if some name in forall_->activeNames or its outer
       // contexts does not appear on LHS
@@ -163,22 +143,6 @@ void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
   }
   const SomeExpr &lhs{assignment->lhs};
   const SomeExpr &rhs{assignment->rhs};
-  CheckForImpureCall(lhs);
-  CheckForImpureCall(rhs);
-  std::visit(
-      common::visitors{[&](const evaluate::Assignment::BoundsSpec &bounds) {
-                         for (const auto &bound : bounds) {
-                           CheckForImpureCall(SomeExpr{bound});
-                         }
-                       },
-          [&](const evaluate::Assignment::BoundsRemapping &bounds) {
-            for (const auto &bound : bounds) {
-              CheckForImpureCall(SomeExpr{bound.first});
-              CheckForImpureCall(SomeExpr{bound.second});
-            }
-          },
-          [](const auto &) { DIE("not valid for pointer assignment"); }},
-      assignment->u);
   if (forall_) {
     // TODO: Warn if some name in forall_->activeNames or its outer
     // contexts does not appear on LHS
@@ -216,32 +180,6 @@ void AssignmentContext::Analyze(const parser::WhereConstruct &construct) {
       std::get<std::optional<parser::WhereConstruct::Elsewhere>>(construct.t));
 }
 
-void AssignmentContext::Analyze(const parser::ForallStmt &stmt) {
-  CHECK(!where_);
-  ForallContext forall{forall_};
-  AssignmentContext nested{*this, forall};
-  nested.Analyze(
-      std::get<common::Indirection<parser::ConcurrentHeader>>(stmt.t));
-  nested.Analyze(
-      std::get<parser::UnlabeledStatement<parser::ForallAssignmentStmt>>(
-          stmt.t));
-}
-
-// N.B. Construct name matching is checked during label resolution;
-// index name distinction is checked during name resolution.
-void AssignmentContext::Analyze(const parser::ForallConstruct &construct) {
-  CHECK(!where_);
-  ForallContext forall{forall_};
-  AssignmentContext nested{*this, forall};
-  nested.Analyze(
-      std::get<parser::Statement<parser::ForallConstructStmt>>(construct.t));
-  nested.Analyze(std::get<std::list<parser::ForallBodyConstruct>>(construct.t));
-}
-
-void AssignmentContext::Analyze(const parser::ForallConstructStmt &stmt) {
-  Analyze(std::get<common::Indirection<parser::ConcurrentHeader>>(stmt.t));
-}
-
 void AssignmentContext::Analyze(
     const parser::WhereConstruct::MaskedElsewhere &elsewhere) {
   CHECK(where_);
@@ -277,56 +215,6 @@ void AssignmentContext::Analyze(
   MaskExpr copyCumulative{DEREF(where_).cumulativeMaskExpr};
   where_->thisMaskExpr = evaluate::LogicalNegation(std::move(copyCumulative));
   Analyze(std::get<std::list<parser::WhereBodyConstruct>>(elsewhere.t));
-}
-
-void AssignmentContext::Analyze(const parser::ConcurrentHeader &header) {
-  DEREF(forall_).integerKind = GetIntegerKind(
-      std::get<std::optional<parser::IntegerTypeSpec>>(header.t));
-  for (const auto &control :
-      std::get<std::list<parser::ConcurrentControl>>(header.t)) {
-    const parser::Name &name{std::get<parser::Name>(control.t)};
-    bool inserted{forall_->activeNames.insert(name.source).second};
-    CHECK(inserted || context_.HasError(name));
-    CheckForImpureCall(GetExpr(std::get<1>(control.t)));
-    CheckForImpureCall(GetExpr(std::get<2>(control.t)));
-    if (const auto &stride{std::get<3>(control.t)}) {
-      CheckForImpureCall(GetExpr(*stride));
-    }
-  }
-  if (const auto &mask{
-          std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)}) {
-    CheckForImpureCall(GetExpr(*mask));
-  }
-}
-
-int AssignmentContext::GetIntegerKind(
-    const std::optional<parser::IntegerTypeSpec> &spec) {
-  std::optional<parser::KindSelector> empty;
-  evaluate::Expr<evaluate::SubscriptInteger> kind{AnalyzeKindSelector(
-      context_, TypeCategory::Integer, spec ? spec->v : empty)};
-  if (auto value{evaluate::ToInt64(kind)}) {
-    return static_cast<int>(*value);
-  } else {
-    context_.Say("Kind of INTEGER type must be a constant value"_err_en_US);
-    return context_.GetDefaultKind(TypeCategory::Integer);
-  }
-}
-
-void AssignmentContext::CheckForImpureCall(const SomeExpr &expr) {
-  if (forall_) {
-    const auto &intrinsics{context_.foldingContext().intrinsics()};
-    if (auto bad{FindImpureCall(intrinsics, expr)}) {
-      context_.Say(
-          "Impure procedure '%s' may not be referenced in a FORALL"_err_en_US,
-          *bad);
-    }
-  }
-}
-
-void AssignmentContext::CheckForImpureCall(const SomeExpr *expr) {
-  if (expr) {
-    CheckForImpureCall(*expr);
-  }
 }
 
 // C1594 checks
@@ -449,16 +337,10 @@ MaskExpr AssignmentContext::GetMask(
     const parser::LogicalExpr &logicalExpr, bool defaultValue) {
   MaskExpr mask{defaultValue};
   if (const SomeExpr * expr{GetExpr(logicalExpr)}) {
-    CheckForImpureCall(*expr);
     auto *logical{std::get_if<evaluate::Expr<evaluate::SomeLogical>>(&expr->u)};
     mask = evaluate::ConvertTo(mask, common::Clone(DEREF(logical)));
   }
   return mask;
-}
-
-void AnalyzeConcurrentHeader(
-    SemanticsContext &context, const parser::ConcurrentHeader &header) {
-  AssignmentContext{context}.Analyze(header);
 }
 
 AssignmentChecker::~AssignmentChecker() {}
@@ -475,12 +357,6 @@ void AssignmentChecker::Enter(const parser::WhereStmt &x) {
   context_.value().Analyze(x);
 }
 void AssignmentChecker::Enter(const parser::WhereConstruct &x) {
-  context_.value().Analyze(x);
-}
-void AssignmentChecker::Enter(const parser::ForallStmt &x) {
-  context_.value().Analyze(x);
-}
-void AssignmentChecker::Enter(const parser::ForallConstruct &x) {
   context_.value().Analyze(x);
 }
 

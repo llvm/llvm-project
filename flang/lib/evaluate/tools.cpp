@@ -842,5 +842,9 @@ std::optional<std::string> FindImpureCall(
     const IntrinsicProcTable &intrinsics, const Expr<SomeType> &expr) {
   return FindImpureCallHelper{intrinsics}(expr);
 }
+std::optional<std::string> FindImpureCall(
+    const IntrinsicProcTable &intrinsics, const ProcedureRef &proc) {
+  return FindImpureCallHelper{intrinsics}(proc);
+}
 
 }

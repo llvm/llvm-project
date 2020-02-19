@@ -12,24 +12,20 @@
 #include "flang/common/indirection.h"
 #include "flang/evaluate/expression.h"
 #include "flang/semantics/semantics.h"
-#include "flang/semantics/tools.h"
-#include <string>
 
 namespace Fortran::parser {
-template<typename> struct Statement;
+class ContextualMessages;
 struct AssignmentStmt;
-struct ConcurrentHeader;
-struct ForallStmt;
 struct PointerAssignmentStmt;
-struct Program;
 struct WhereStmt;
 struct WhereConstruct;
-struct ForallConstruct;
 }
 
 namespace Fortran::semantics {
 
 class AssignmentContext;
+class Scope;
+class Symbol;
 
 // Applies checks from C1594(1-2) on definitions in pure subprograms
 void CheckDefinabilityInPureScope(parser::ContextualMessages &, const Symbol &,
@@ -46,17 +42,10 @@ public:
   void Enter(const parser::PointerAssignmentStmt &);
   void Enter(const parser::WhereStmt &);
   void Enter(const parser::WhereConstruct &);
-  void Enter(const parser::ForallStmt &);
-  void Enter(const parser::ForallConstruct &);
 
 private:
   common::Indirection<AssignmentContext> context_;
 };
-
-// R1125 concurrent-header is used in FORALL statements & constructs as
-// well as in DO CONCURRENT loops.
-void AnalyzeConcurrentHeader(
-    SemanticsContext &, const parser::ConcurrentHeader &);
 
 }
 

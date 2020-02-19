@@ -203,75 +203,60 @@ void SemanticsContext::PopConstruct() {
   constructStack_.pop_back();
 }
 
-void SemanticsContext::CheckDoVarRedefine(const parser::CharBlock &location,
+void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
     const Symbol &variable, parser::MessageFixedText &&message) {
   if (const Symbol * root{GetAssociationRoot(variable)}) {
-    if (IsActiveDoVariable(*root)) {
-      parser::CharBlock doLoc{GetDoVariableLocation(*root)};
-      CHECK(doLoc != parser::CharBlock{});
-      Say(location, std::move(message), root->name())
-          .Attach(doLoc, "Enclosing DO construct"_en_US);
+    auto it{activeIndexVars_.find(*root)};
+    if (it != activeIndexVars_.end()) {
+      std::string kind{EnumToString(it->second.kind)};
+      Say(location, std::move(message), kind, root->name())
+          .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
     }
   }
 }
 
-void SemanticsContext::WarnDoVarRedefine(
+void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckDoVarRedefine(
-      location, variable, "Possible redefinition of DO variable '%s'"_en_US);
+  CheckIndexVarRedefine(
+      location, variable, "Possible redefinition of %s variable '%s'"_en_US);
 }
 
-void SemanticsContext::CheckDoVarRedefine(
+void SemanticsContext::CheckIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckDoVarRedefine(
-      location, variable, "Cannot redefine DO variable '%s'"_err_en_US);
+  CheckIndexVarRedefine(
+      location, variable, "Cannot redefine %s variable '%s'"_err_en_US);
 }
 
-void SemanticsContext::CheckDoVarRedefine(const parser::Variable &variable) {
+void SemanticsContext::CheckIndexVarRedefine(const parser::Variable &variable) {
   if (const Symbol * entity{GetLastName(variable).symbol}) {
-    const parser::CharBlock &sourceLocation{variable.GetSource()};
-    CheckDoVarRedefine(sourceLocation, *entity);
+    CheckIndexVarRedefine(variable.GetSource(), *entity);
   }
 }
 
-void SemanticsContext::CheckDoVarRedefine(const parser::Name &name) {
-  const parser::CharBlock &sourceLocation{name.source};
+void SemanticsContext::CheckIndexVarRedefine(const parser::Name &name) {
   if (const Symbol * entity{name.symbol}) {
-    CheckDoVarRedefine(sourceLocation, *entity);
+    CheckIndexVarRedefine(name.source, *entity);
   }
 }
 
-void SemanticsContext::ActivateDoVariable(const parser::Name &name) {
-  CheckDoVarRedefine(name);
-  if (const Symbol * doVariable{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*doVariable)}) {
-      if (!IsActiveDoVariable(*root)) {
-        activeDoVariables_.emplace(*root, name.source);
-      }
+void SemanticsContext::ActivateIndexVar(
+    const parser::Name &name, IndexVarKind kind) {
+  CheckIndexVarRedefine(name);
+  if (const Symbol * indexVar{name.symbol}) {
+    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
+      activeIndexVars_.emplace(*root, IndexVarInfo{name.source, kind});
     }
   }
 }
 
-void SemanticsContext::DeactivateDoVariable(const parser::Name &name) {
-  if (Symbol * doVariable{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*doVariable)}) {
-      if (name.source == GetDoVariableLocation(*root)) {
-        activeDoVariables_.erase(*root);
+void SemanticsContext::DeactivateIndexVar(const parser::Name &name) {
+  if (Symbol * indexVar{name.symbol}) {
+    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
+      auto it{activeIndexVars_.find(*root)};
+      if (it != activeIndexVars_.end() && it->second.location == name.source) {
+        activeIndexVars_.erase(it);
       }
     }
-  }
-}
-
-bool SemanticsContext::IsActiveDoVariable(const Symbol &variable) {
-  return activeDoVariables_.find(variable) != activeDoVariables_.end();
-}
-
-parser::CharBlock SemanticsContext::GetDoVariableLocation(
-    const Symbol &variable) {
-  if (IsActiveDoVariable(variable)) {
-    return activeDoVariables_[variable];
-  } else {
-    return parser::CharBlock{};
   }
 }
 

@@ -30,7 +30,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
               } else {
-                context_.CheckDoVarRedefine(name);
+                context_.CheckIndexVarRedefine(name);
               }
             },
             [&](const parser::StructureComponent &structureComponent) {

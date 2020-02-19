@@ -150,19 +150,18 @@ public:
   }
   void PopConstruct();
 
-  // Check to see if a variable being redefined is a DO variable.  If so, emit
-  // a message
-  void WarnDoVarRedefine(const parser::CharBlock &, const Symbol &);
-  void CheckDoVarRedefine(const parser::CharBlock &, const Symbol &);
-  void CheckDoVarRedefine(const parser::Variable &);
-  void CheckDoVarRedefine(const parser::Name &);
-  void ActivateDoVariable(const parser::Name &);
-  void DeactivateDoVariable(const parser::Name &);
-  bool IsActiveDoVariable(const Symbol &);
+  ENUM_CLASS(IndexVarKind, DO, FORALL)
+  // Check to see if a variable being redefined is a DO or FORALL index.
+  // If so, emit a message.
+  void WarnIndexVarRedefine(const parser::CharBlock &, const Symbol &);
+  void CheckIndexVarRedefine(const parser::CharBlock &, const Symbol &);
+  void CheckIndexVarRedefine(const parser::Variable &);
+  void CheckIndexVarRedefine(const parser::Name &);
+  void ActivateIndexVar(const parser::Name &, IndexVarKind);
+  void DeactivateIndexVar(const parser::Name &);
 
 private:
-  parser::CharBlock GetDoVariableLocation(const Symbol &);
-  void CheckDoVarRedefine(
+  void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl languageFeatures_;
@@ -180,7 +179,11 @@ private:
 
   bool CheckError(bool);
   ConstructStack constructStack_;
-  std::map<SymbolRef, const parser::CharBlock> activeDoVariables_;
+  struct IndexVarInfo {
+    parser::CharBlock location;
+    IndexVarKind kind;
+  };
+  std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
 };
 
 class Semantics {

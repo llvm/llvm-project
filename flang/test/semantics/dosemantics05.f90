@@ -47,7 +47,7 @@ subroutine s1()
   end associate
   
   associate (avar => ivar)
-!ERROR: DO CONCURRENT step expression should not be zero
+!ERROR: DO CONCURRENT step expression may not be zero
     do concurrent (i = 1:2:0) default(none) shared(jvar) local(kvar)
 !ERROR: Variable 'ivar' from an enclosing scope referenced in DO CONCURRENT with DEFAULT(NONE) must appear in a locality-spec
       ivar =  &

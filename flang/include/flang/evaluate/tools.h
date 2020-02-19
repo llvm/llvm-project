@@ -843,5 +843,8 @@ parser::Message *SayWithDeclaration(
 // of one to complain about, if any exist.
 std::optional<std::string> FindImpureCall(
     const IntrinsicProcTable &, const Expr<SomeType> &);
+std::optional<std::string> FindImpureCall(
+    const IntrinsicProcTable &, const ProcedureRef &);
+
 }
 #endif  // FORTRAN_EVALUATE_TOOLS_H_

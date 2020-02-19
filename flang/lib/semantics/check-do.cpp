@@ -34,13 +34,31 @@ namespace Fortran::semantics {
 using namespace parser::literals;
 
 using Bounds = parser::LoopControl::Bounds;
+using IndexVarKind = SemanticsContext::IndexVarKind;
 
-static const std::list<parser::ConcurrentControl> &GetControls(
+static const parser::ConcurrentHeader &GetConcurrentHeader(
     const parser::LoopControl &loopControl) {
   const auto &concurrent{
       std::get<parser::LoopControl::Concurrent>(loopControl.u)};
-  const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
-  return std::get<std::list<parser::ConcurrentControl>>(header.t);
+  return std::get<parser::ConcurrentHeader>(concurrent.t);
+}
+static const parser::ConcurrentHeader &GetConcurrentHeader(
+    const parser::ForallConstruct &construct) {
+  const auto &stmt{
+      std::get<parser::Statement<parser::ForallConstructStmt>>(construct.t)};
+  return std::get<common::Indirection<parser::ConcurrentHeader>>(
+      stmt.statement.t)
+      .value();
+}
+static const parser::ConcurrentHeader &GetConcurrentHeader(
+    const parser::ForallStmt &stmt) {
+  return std::get<common::Indirection<parser::ConcurrentHeader>>(stmt.t)
+      .value();
+}
+template<typename T>
+static const std::list<parser::ConcurrentControl> &GetControls(const T &x) {
+  return std::get<std::list<parser::ConcurrentControl>>(
+      GetConcurrentHeader(x).t);
 }
 
 static const Bounds &GetBounds(const parser::DoConstruct &doConstruct) {
@@ -366,10 +384,11 @@ private:
   const Scope &blockScope_;
 };  // class DoConcurrentVariableEnforce
 
-// Find a DO statement and enforce semantics checks on its body
+// Find a DO or FORALL and enforce semantics checks on its body
 class DoContext {
 public:
-  DoContext(SemanticsContext &context) : context_{context} {}
+  DoContext(SemanticsContext &context, IndexVarKind kind)
+    : context_{context}, kind_{kind} {}
 
   // Mark this DO construct as a point of definition for the DO variables
   // or index-names it contains.  If they're already defined, emit an error
@@ -378,13 +397,10 @@ public:
   // the DO construct and use its location in error messages.
   void DefineDoVariables(const parser::DoConstruct &doConstruct) {
     if (doConstruct.IsDoNormal()) {
-      context_.ActivateDoVariable(GetDoVariable(doConstruct));
+      context_.ActivateIndexVar(GetDoVariable(doConstruct), IndexVarKind::DO);
     } else if (doConstruct.IsDoConcurrent()) {
       if (const auto &loopControl{doConstruct.GetLoopControl()}) {
-        const auto &controls{GetControls(*loopControl)};
-        for (const parser::ConcurrentControl &control : controls) {
-          context_.ActivateDoVariable(std::get<parser::Name>(control.t));
-        }
+        ActivateIndexVars(GetControls(*loopControl));
       }
     }
   }
@@ -392,14 +408,23 @@ public:
   // Called at the end of a DO construct to deactivate the DO construct
   void ResetDoVariables(const parser::DoConstruct &doConstruct) {
     if (doConstruct.IsDoNormal()) {
-      context_.DeactivateDoVariable(GetDoVariable(doConstruct));
+      context_.DeactivateIndexVar(GetDoVariable(doConstruct));
     } else if (doConstruct.IsDoConcurrent()) {
       if (const auto &loopControl{doConstruct.GetLoopControl()}) {
-        const auto &controls{GetControls(*loopControl)};
-        for (const parser::ConcurrentControl &control : controls) {
-          context_.DeactivateDoVariable(std::get<parser::Name>(control.t));
-        }
+        DeactivateIndexVars(GetControls(*loopControl));
       }
+    }
+  }
+
+  void ActivateIndexVars(const std::list<parser::ConcurrentControl> &controls) {
+    for (const auto &control : controls) {
+      context_.ActivateIndexVar(std::get<parser::Name>(control.t), kind_);
+    }
+  }
+  void DeactivateIndexVars(
+      const std::list<parser::ConcurrentControl> &controls) {
+    for (const auto &control : controls) {
+      context_.DeactivateIndexVar(std::get<parser::Name>(control.t));
     }
   }
 
@@ -413,6 +438,46 @@ public:
       return;
     }
     // TODO: handle the other cases
+  }
+
+  void Check(const parser::ForallStmt &stmt) {
+    CheckConcurrentHeader(GetConcurrentHeader(stmt));
+  }
+  void Check(const parser::ForallConstruct &construct) {
+    CheckConcurrentHeader(GetConcurrentHeader(construct));
+  }
+
+  void Check(const parser::ForallAssignmentStmt &stmt) {
+    const evaluate::Assignment *assignment{std::visit(
+        common::visitors{[&](const auto &x) { return GetAssignment(x); }},
+        stmt.u)};
+    if (assignment) {
+      CheckForImpureCall(assignment->lhs);
+      CheckForImpureCall(assignment->rhs);
+      if (const auto *proc{
+              std::get_if<evaluate::ProcedureRef>(&assignment->u)}) {
+        CheckForImpureCall(*proc);
+      }
+      std::visit(
+          common::visitors{
+              [](const evaluate::Assignment::Intrinsic &) {},
+              [&](const evaluate::ProcedureRef &proc) {
+                CheckForImpureCall(proc);
+              },
+              [&](const evaluate::Assignment::BoundsSpec &bounds) {
+                for (const auto &bound : bounds) {
+                  CheckForImpureCall(SomeExpr{bound});
+                }
+              },
+              [&](const evaluate::Assignment::BoundsRemapping &bounds) {
+                for (const auto &bound : bounds) {
+                  CheckForImpureCall(SomeExpr{bound.first});
+                  CheckForImpureCall(SomeExpr{bound.second});
+                }
+              },
+          },
+          assignment->u);
+    }
   }
 
 private:
@@ -493,11 +558,9 @@ private:
         "DO CONCURRENT"};
     parser::Walk(block, doConcurrentLabelEnforce);
 
-    const auto &loopControl{
-        std::get<std::optional<parser::LoopControl>>(doStmt.statement.t)};
-    const auto &concurrent{
-        std::get<parser::LoopControl::Concurrent>(loopControl->u)};
-    CheckConcurrentLoopControl(concurrent, block);
+    const auto &loopControl{doConstruct.GetLoopControl()};
+    CheckConcurrentLoopControl(*loopControl);
+    CheckLocalitySpecs(*loopControl, block);
   }
 
   // Return a set of symbols whose names are in a Local locality-spec.  Look
@@ -543,9 +606,9 @@ private:
     SymbolSet references{GatherSymbolsFromExpression(mask.thing.thing.value())};
     for (const Symbol &ref : references) {
       if (IsProcedure(ref) && !IsPureProcedure(ref)) {
-        context_.SayWithDecl(ref, currentStatementSourcePosition_,
-            "Concurrent-header mask expression cannot reference an impure"
-            " procedure"_err_en_US);
+        context_.SayWithDecl(ref, parser::Unwrap<parser::Expr>(mask)->source,
+            "%s mask expression may not reference impure procedure '%s'"_err_en_US,
+            LoopKindName(), ref.name());
         return;
       }
     }
@@ -556,8 +619,8 @@ private:
       const parser::CharBlock &refPosition) const {
     for (const Symbol &ref : refs) {
       if (uses.find(ref) != uses.end()) {
-        context_.SayWithDecl(
-            ref, refPosition, std::move(errorMessage), ref.name());
+        context_.SayWithDecl(ref, refPosition, std::move(errorMessage),
+            LoopKindName(), ref.name());
         return;
       }
     }
@@ -567,7 +630,7 @@ private:
       const SymbolSet &indexNames, const parser::ScalarIntExpr &expr) const {
     CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
         indexNames,
-        "concurrent-control expression references index-name '%s'"_err_en_US,
+        "%s limit expression may not reference index variable '%s'"_err_en_US,
         expr.thing.thing.value().source);
   }
 
@@ -576,7 +639,7 @@ private:
       const parser::ScalarLogicalExpr &mask, const SymbolSet &localVars) const {
     CheckNoCollisions(GatherSymbolsFromExpression(mask.thing.thing.value()),
         localVars,
-        "concurrent-header mask-expr references variable '%s'"
+        "%s mask expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
         mask.thing.thing.value().source);
   }
@@ -587,7 +650,7 @@ private:
       const parser::ScalarIntExpr &expr, const SymbolSet &localVars) const {
     CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
         localVars,
-        "concurrent-header expression references variable '%s'"
+        "%s expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
         expr.thing.thing.value().source);
   }
@@ -618,40 +681,47 @@ private:
 
   // C1123, concurrent limit or step expressions can't reference index-names
   void CheckConcurrentHeader(const parser::ConcurrentHeader &header) const {
+    if (const auto &mask{
+            std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)}) {
+      CheckMaskIsPure(*mask);
+    }
     auto &controls{std::get<std::list<parser::ConcurrentControl>>(header.t)};
     SymbolSet indexNames;
-    for (const auto &c : controls) {
-      const auto &indexName{std::get<parser::Name>(c.t)};
+    for (const parser::ConcurrentControl &control : controls) {
+      const auto &indexName{std::get<parser::Name>(control.t)};
       if (indexName.symbol) {
         indexNames.insert(*indexName.symbol);
       }
     }
     if (!indexNames.empty()) {
-      for (const auto &c : controls) {
-        HasNoReferences(indexNames, std::get<1>(c.t));
-        HasNoReferences(indexNames, std::get<2>(c.t));
-        if (const auto &expr{
-                std::get<std::optional<parser::ScalarIntExpr>>(c.t)}) {
-          HasNoReferences(indexNames, *expr);
-          if (IsZero(*expr)) {
-            context_.Say(expr->thing.thing.value().source,
-                "DO CONCURRENT step expression should not be zero"_err_en_US);
+      for (const parser::ConcurrentControl &control : controls) {
+        HasNoReferences(indexNames, std::get<1>(control.t));
+        HasNoReferences(indexNames, std::get<2>(control.t));
+        if (const auto &intExpr{
+                std::get<std::optional<parser::ScalarIntExpr>>(control.t)}) {
+          const parser::Expr &expr{intExpr->thing.thing.value()};
+          CheckNoCollisions(GatherSymbolsFromExpression(expr), indexNames,
+              "%s step expression may not reference index variable '%s'"_err_en_US,
+              expr.source);
+          if (IsZero(expr)) {
+            context_.Say(expr.source,
+                "%s step expression may not be zero"_err_en_US, LoopKindName());
           }
         }
       }
     }
   }
 
-  void CheckLocalitySpecs(const parser::LoopControl::Concurrent &concurrent,
-      const parser::Block &block) const {
+  void CheckLocalitySpecs(
+      const parser::LoopControl &control, const parser::Block &block) const {
+    const auto &concurrent{
+        std::get<parser::LoopControl::Concurrent>(control.u)};
     const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
-    const auto &controls{
-        std::get<std::list<parser::ConcurrentControl>>(header.t)};
     const auto &localitySpecs{
         std::get<std::list<parser::LocalitySpec>>(concurrent.t)};
     if (!localitySpecs.empty()) {
       const SymbolSet &localVars{GatherLocals(localitySpecs)};
-      for (const auto &c : controls) {
+      for (const auto &c : GetControls(control)) {
         CheckExprDoesNotReferenceLocal(std::get<1>(c.t), localVars);
         CheckExprDoesNotReferenceLocal(std::get<2>(c.t), localVars);
         if (const auto &expr{
@@ -668,33 +738,64 @@ private:
   }
 
   // check constraints [C1121 .. C1130]
-  void CheckConcurrentLoopControl(
-      const parser::LoopControl::Concurrent &concurrent,
-      const parser::Block &block) const {
+  void CheckConcurrentLoopControl(const parser::LoopControl &control) const {
+    const auto &concurrent{
+        std::get<parser::LoopControl::Concurrent>(control.u)};
+    CheckConcurrentHeader(std::get<parser::ConcurrentHeader>(concurrent.t));
+  }
 
-    const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
-    const auto &mask{
-        std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)};
-    if (mask) {
-      CheckMaskIsPure(*mask);
+  template<typename T> void CheckForImpureCall(const T &x) {
+    const auto &intrinsics{context_.foldingContext().intrinsics()};
+    if (auto bad{FindImpureCall(intrinsics, x)}) {
+      context_.Say(
+          "Impure procedure '%s' may not be referenced in a %s"_err_en_US, *bad,
+          LoopKindName());
     }
-    CheckConcurrentHeader(header);
-    CheckLocalitySpecs(concurrent, block);
+  }
+
+  // For messages where the DO loop must be DO CONCURRENT, make that explicit.
+  const char *LoopKindName() const {
+    return kind_ == IndexVarKind::DO ? "DO CONCURRENT" : "FORALL";
   }
 
   SemanticsContext &context_;
+  const IndexVarKind kind_;
   parser::CharBlock currentStatementSourcePosition_;
 };  // class DoContext
 
 void DoChecker::Enter(const parser::DoConstruct &doConstruct) {
-  DoContext doContext{context_};
+  DoContext doContext{context_, IndexVarKind::DO};
   doContext.DefineDoVariables(doConstruct);
 }
 
 void DoChecker::Leave(const parser::DoConstruct &doConstruct) {
-  DoContext doContext{context_};
+  DoContext doContext{context_, IndexVarKind::DO};
   doContext.Check(doConstruct);
   doContext.ResetDoVariables(doConstruct);
+}
+
+void DoChecker::Enter(const parser::ForallConstruct &construct) {
+  DoContext doContext{context_, IndexVarKind::FORALL};
+  doContext.ActivateIndexVars(GetControls(construct));
+}
+void DoChecker::Leave(const parser::ForallConstruct &construct) {
+  DoContext doContext{context_, IndexVarKind::FORALL};
+  doContext.Check(construct);
+  doContext.DeactivateIndexVars(GetControls(construct));
+}
+
+void DoChecker::Enter(const parser::ForallStmt &stmt) {
+  DoContext doContext{context_, IndexVarKind::FORALL};
+  doContext.ActivateIndexVars(GetControls(stmt));
+}
+void DoChecker::Leave(const parser::ForallStmt &stmt) {
+  DoContext doContext{context_, IndexVarKind::FORALL};
+  doContext.Check(stmt);
+  doContext.DeactivateIndexVars(GetControls(stmt));
+}
+void DoChecker::Leave(const parser::ForallAssignmentStmt &stmt) {
+  DoContext doContext{context_, IndexVarKind::FORALL};
+  doContext.Check(stmt);
 }
 
 // Return the (possibly null) name of the ConstructNode
@@ -819,7 +920,7 @@ void DoChecker::Enter(const parser::ExitStmt &exitStmt) {
 
 void DoChecker::Leave(const parser::AssignmentStmt &stmt) {
   const auto &variable{std::get<parser::Variable>(stmt.t)};
-  context_.CheckDoVarRedefine(variable);
+  context_.CheckIndexVarRedefine(variable);
 }
 
 static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
@@ -829,9 +930,9 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
     if (const SomeExpr * argExpr{arg.UnwrapExpr()}) {
       if (const Symbol * var{evaluate::UnwrapWholeSymbolDataRef(*argExpr)}) {
         if (intent == common::Intent::Out) {
-          context.CheckDoVarRedefine(location, *var);
+          context.CheckIndexVarRedefine(location, *var);
         } else {
-          context.WarnDoVarRedefine(location, *var);  // INTENT(INOUT)
+          context.WarnIndexVarRedefine(location, *var);  // INTENT(INOUT)
         }
       }
     }
@@ -873,7 +974,7 @@ void DoChecker::Leave(const parser::ConnectSpec &connectSpec) {
   const auto *newunit{
       std::get_if<parser::ConnectSpec::Newunit>(&connectSpec.u)};
   if (newunit) {
-    context_.CheckDoVarRedefine(newunit->v.thing.thing);
+    context_.CheckIndexVarRedefine(newunit->v.thing.thing);
   }
 }
 
@@ -909,25 +1010,25 @@ void DoChecker::Leave(const parser::InquireSpec &inquireSpec) {
   const auto *intVar{std::get_if<parser::InquireSpec::IntVar>(&inquireSpec.u)};
   if (intVar) {
     const auto &scalar{std::get<parser::ScalarIntVariable>(intVar->t)};
-    context_.CheckDoVarRedefine(scalar.thing.thing);
+    context_.CheckIndexVarRedefine(scalar.thing.thing);
   }
 }
 
 void DoChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
   const auto *size{std::get_if<parser::IoControlSpec::Size>(&ioControlSpec.u)};
   if (size) {
-    context_.CheckDoVarRedefine(size->v.thing.thing);
+    context_.CheckIndexVarRedefine(size->v.thing.thing);
   }
 }
 
 void DoChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
   const auto &control{std::get<parser::IoImpliedDoControl>(outputImpliedDo.t)};
   const parser::Name &name{control.name.thing.thing};
-  context_.CheckDoVarRedefine(name.source, *name.symbol);
+  context_.CheckIndexVarRedefine(name.source, *name.symbol);
 }
 
 void DoChecker::Leave(const parser::StatVariable &statVariable) {
-  context_.CheckDoVarRedefine(statVariable.v.thing.thing);
+  context_.CheckIndexVarRedefine(statVariable.v.thing.thing);
 }
 
 }  // namespace Fortran::semantics

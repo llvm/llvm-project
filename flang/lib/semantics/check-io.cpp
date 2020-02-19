@@ -509,7 +509,7 @@ static void CheckForDoVariableInNamelist(const Symbol &namelist,
     SemanticsContext &context, parser::CharBlock namelistLocation) {
   const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
   for (const Symbol &object : details.objects()) {
-    context.CheckDoVarRedefine(namelistLocation, object);
+    context.CheckIndexVarRedefine(namelistLocation, object);
   }
 }
 
@@ -532,7 +532,7 @@ static void CheckForDoVariable(
   for (const auto &item : items) {
     if (const parser::Variable *
         variable{std::get_if<parser::Variable>(&item.u)}) {
-      context.CheckDoVarRedefine(*variable);
+      context.CheckIndexVarRedefine(*variable);
     }
   }
 }

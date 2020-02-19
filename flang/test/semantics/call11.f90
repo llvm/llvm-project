@@ -36,7 +36,7 @@ module m
       !ERROR: Impure procedure 'impure' may not be referenced in a FORALL
       a(j) = pure(impure(j)) ! C1037
     end forall
-    !ERROR: Concurrent-header mask expression cannot reference an impure procedure
+    !ERROR: DO CONCURRENT mask expression may not reference impure procedure 'impure'
     do concurrent (j=1:1, impure(j) /= 0) ! C1121
       !ERROR: Call to an impure procedure is not allowed in DO CONCURRENT
       a(j) = impure(j) ! C1139
@@ -58,7 +58,7 @@ module m
     do concurrent (j=1:1, x%tbp_pure(j) /= 0) ! ok
       a(j) = x%tbp_pure(j) ! ok
     end do
-    !ERROR: Concurrent-header mask expression cannot reference an impure procedure
+    !ERROR: DO CONCURRENT mask expression may not reference impure procedure 'impure'
     do concurrent (j=1:1, x%tbp_impure(j) /= 0) ! C1121
       !ERROR: Call to an impure procedure component is not allowed in DO CONCURRENT
       a(j) = x%tbp_impure(j) ! C1139

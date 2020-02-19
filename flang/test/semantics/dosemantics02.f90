@@ -6,7 +6,7 @@
 SUBROUTINE do_concurrent_c1121(i,n)
   IMPLICIT NONE
   INTEGER :: i, n, flag
-!ERROR: Concurrent-header mask expression cannot reference an impure procedure
+  !ERROR: DO CONCURRENT mask expression may not reference impure procedure 'random'
   DO CONCURRENT (i = 1:n, random() < 3)
     flag = 3
   END DO
@@ -30,12 +30,12 @@ SUBROUTINE s1()
   20 CONTINUE
 
   ! Error, no compatibility requirement for DO CONCURRENT
-!ERROR: DO CONCURRENT step expression should not be zero
+  !ERROR: DO CONCURRENT step expression may not be zero
   DO CONCURRENT (I = 1 : 10 : 0)
   END DO
 
   ! Error, this time with an integer constant
-!ERROR: DO CONCURRENT step expression should not be zero
+  !ERROR: DO CONCURRENT step expression may not be zero
   DO CONCURRENT (I = 1 : 10 : constInt)
   END DO
 end subroutine s1

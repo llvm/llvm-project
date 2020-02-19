@@ -531,7 +531,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             "Allocatable object declared here with rank %d"_en_US, rank_);
     return false;
   }
-  context.CheckDoVarRedefine(name_);
+  context.CheckIndexVarRedefine(name_);
   return RunCoarrayRelatedChecks(context);
 }
 
