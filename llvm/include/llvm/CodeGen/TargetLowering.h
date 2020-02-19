@@ -2676,17 +2676,21 @@ public:
   /// node operation. Targets may want to override this independently of whether
   /// the operation is legal/custom for the given type because it may obscure
   /// matching of other patterns.
-  virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT) const {
+  virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                                    bool MathUsed) const {
     // TODO: The default logic is inherited from code in CodeGenPrepare.
     // The opcode should not make a difference by default?
     if (Opcode != ISD::UADDO)
       return false;
 
     // Allow the transform as long as we have an integer type that is not
-    // obviously illegal and unsupported.
+    // obviously illegal and unsupported and if the math result is used
+    // besides the overflow check. On some targets (e.g. SPARC), it is
+    // not profitable to form on overflow op if the math result has no
+    // concrete users.
     if (VT.isVector())
       return false;
-    return VT.isSimple() || !isOperationExpand(Opcode, VT);
+    return MathUsed && (VT.isSimple() || !isOperationExpand(Opcode, VT));
   }
 
   // Return true if it is profitable to use a scalar input to a BUILD_VECTOR
