@@ -206,6 +206,10 @@ class VectorType;
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
 
+      // MVE reductions
+      VADDVs,
+      VADDVu,
+
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top
       UMLAL,        // 64bit Unsigned Accumulate Multiply
