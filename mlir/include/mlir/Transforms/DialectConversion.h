@@ -174,7 +174,8 @@ private:
   template <typename T, typename FnT>
   std::enable_if_t<is_invocable<FnT, T>::value, ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
-    return wrapCallback<T>([=](T type, SmallVectorImpl<Type> &results) {
+    return wrapCallback<T>([callback = std::forward<FnT>(callback)](
+                               T type, SmallVectorImpl<Type> &results) {
       if (Optional<Type> resultOpt = callback(type)) {
         bool wasSuccess = static_cast<bool>(resultOpt.getValue());
         if (wasSuccess)
@@ -188,7 +189,8 @@ private:
   template <typename T, typename FnT>
   std::enable_if_t<!is_invocable<FnT, T>::value, ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
-    return [=](Type type,
+    return [callback = std::forward<FnT>(callback)](
+               Type type,
                SmallVectorImpl<Type> &results) -> Optional<LogicalResult> {
       T derivedType = type.dyn_cast<T>();
       if (!derivedType)
