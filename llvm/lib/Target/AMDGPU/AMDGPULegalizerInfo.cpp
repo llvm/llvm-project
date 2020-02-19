@@ -178,6 +178,20 @@ static LegalityPredicate isWideScalarTruncStore(unsigned TypeIdx) {
   };
 }
 
+static LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx0].getSizeInBits() <
+           Query.Types[TypeIdx1].getSizeInBits();
+  };
+}
+
+static LegalityPredicate greaterThan(unsigned TypeIdx0, unsigned TypeIdx1) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx0].getSizeInBits() >
+           Query.Types[TypeIdx1].getSizeInBits();
+  };
+};
+
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                          const GCNTargetMachine &TM)
   :  ST(ST_) {
@@ -646,20 +660,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0)
       .scalarize(0);
   }
-
-  auto smallerThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
-    return [=](const LegalityQuery &Query) {
-      return Query.Types[TypeIdx0].getSizeInBits() <
-             Query.Types[TypeIdx1].getSizeInBits();
-    };
-  };
-
-  auto greaterThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
-    return [=](const LegalityQuery &Query) {
-      return Query.Types[TypeIdx0].getSizeInBits() >
-             Query.Types[TypeIdx1].getSizeInBits();
-    };
-  };
 
   getActionDefinitionsBuilder(G_INTTOPTR)
     // List the common cases
