@@ -699,9 +699,6 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
-  if (Ins.size() > 1)
-    fail(DL, DAG, "WebAssembly doesn't support more than 1 returned value yet");
-
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
 
@@ -847,18 +844,27 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   InTys.push_back(MVT::Other);
-  SDVTList InTyList = DAG.getVTList(InTys);
-  SDValue Res =
-      DAG.getNode(Ins.empty() ? WebAssemblyISD::CALL0 : WebAssemblyISD::CALL1,
-                  DL, InTyList, Ops);
-  if (Ins.empty()) {
-    Chain = Res;
-  } else {
-    InVals.push_back(Res);
-    Chain = Res.getValue(1);
+  unsigned Opc;
+  // TODO: Remove CALL0 and CALL1 in favor of CALL
+  switch (Ins.size()) {
+  case 0:
+    Opc = WebAssemblyISD::CALL0;
+    break;
+  case 1:
+    Opc = WebAssemblyISD::CALL1;
+    break;
+  default:
+    Opc = WebAssemblyISD::CALL;
+    break;
   }
+  SDVTList InTyList = DAG.getVTList(InTys);
+  SDValue Res = DAG.getNode(Opc, DL, InTyList, Ops);
 
-  return Chain;
+  for (size_t I = 0; I < Ins.size(); ++I)
+    InVals.push_back(Res.getValue(I));
+
+  // Return the chain
+  return Res.getValue(Ins.size());
 }
 
 bool WebAssemblyTargetLowering::CanLowerReturn(
