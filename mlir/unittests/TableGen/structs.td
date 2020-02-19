@@ -15,6 +15,8 @@ def Test_Dialect : Dialect {
 def Test_Struct : StructAttr<"TestStruct", Test_Dialect, [
                 StructFieldAttr<"sample_integer", I32Attr>,
                 StructFieldAttr<"sample_float", F32Attr>,
-                StructFieldAttr<"sample_elements", I32ElementsAttr>] > {
+                StructFieldAttr<"sample_elements", I32ElementsAttr>,
+                StructFieldAttr<"sample_optional_integer",
+                                OptionalAttr<I32Attr>>] > {
   let description = "Structure for test data";
 }
