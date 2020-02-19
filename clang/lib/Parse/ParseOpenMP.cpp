@@ -1365,26 +1365,24 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   }
 
   // Parse inner context selectors.
-  OMPTraitInfo *TI = new OMPTraitInfo();
-  parseOMPContextSelectors(Loc, *TI);
+  OMPTraitInfo TI;
+  parseOMPContextSelectors(Loc, TI);
 
   // Parse ')'
   (void)T.consumeClose();
 
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       Actions.checkOpenMPDeclareVariantFunction(
-          Ptr, AssociatedFunction.get(), *TI,
+          Ptr, AssociatedFunction.get(), TI,
           SourceRange(Loc, Tok.getLocation()));
 
   // Skip last tokens.
   while (Tok.isNot(tok::annot_pragma_openmp_end))
     ConsumeAnyToken();
-  if (DeclVarData.hasValue() && !TI->Sets.empty())
+  if (DeclVarData.hasValue() && !TI.Sets.empty())
     Actions.ActOnOpenMPDeclareVariantDirective(
         DeclVarData.getValue().first, DeclVarData.getValue().second, TI,
         SourceRange(Loc, Tok.getLocation()));
-  else
-    delete TI;
 
   // Skip the last annot_pragma_openmp_end.
   (void)ConsumeAnnotationToken();
