@@ -24,6 +24,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -2719,6 +2720,94 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   default:
     return Triple();
   }
+}
+
+static MachO::CPUSubTypeX86 getX86SubTypeFromTriple(const Triple &T) {
+  assert(T.isX86());
+  if (T.isArch32Bit())
+    return MachO::CPU_SUBTYPE_I386_ALL;
+
+  assert(T.isArch64Bit());
+  if (T.getArchName() == "x86_64h")
+    return MachO::CPU_SUBTYPE_X86_64_H;
+  return MachO::CPU_SUBTYPE_X86_64_ALL;
+}
+
+static MachO::CPUSubTypeARM getARMSubTypeFromTriple(const Triple &T) {
+  assert(T.isARM() || T.isThumb());
+  StringRef Arch = T.getArchName();
+  ARM::ArchKind AK = ARM::parseArch(Arch);
+  switch (AK) {
+  default:
+    return MachO::CPU_SUBTYPE_ARM_V7;
+  case ARM::ArchKind::ARMV4T:
+    return MachO::CPU_SUBTYPE_ARM_V4T;
+  case ARM::ArchKind::ARMV5T:
+  case ARM::ArchKind::ARMV5TE:
+  case ARM::ArchKind::ARMV5TEJ:
+    return MachO::CPU_SUBTYPE_ARM_V5;
+  case ARM::ArchKind::ARMV6:
+  case ARM::ArchKind::ARMV6K:
+    return MachO::CPU_SUBTYPE_ARM_V6;
+  case ARM::ArchKind::ARMV7A:
+    return MachO::CPU_SUBTYPE_ARM_V7;
+  case ARM::ArchKind::ARMV7S:
+    return MachO::CPU_SUBTYPE_ARM_V7S;
+  case ARM::ArchKind::ARMV7K:
+    return MachO::CPU_SUBTYPE_ARM_V7K;
+  case ARM::ArchKind::ARMV6M:
+    return MachO::CPU_SUBTYPE_ARM_V6M;
+  case ARM::ArchKind::ARMV7M:
+    return MachO::CPU_SUBTYPE_ARM_V7M;
+  case ARM::ArchKind::ARMV7EM:
+    return MachO::CPU_SUBTYPE_ARM_V7EM;
+  }
+}
+
+static MachO::CPUSubTypeARM64 getARM64SubTypeFromTriple(const Triple &T) {
+  assert(T.isAArch64() || T.getArch() == Triple::aarch64_32);
+  if (T.isArch32Bit())
+    return (MachO::CPUSubTypeARM64)MachO::CPU_SUBTYPE_ARM64_32_V8;
+  if (T.getArchName() == "arm64e")
+    return MachO::CPU_SUBTYPE_ARM64E;
+
+  return MachO::CPU_SUBTYPE_ARM64_ALL;
+}
+
+static MachO::CPUSubTypePowerPC getPowerPCSubTypeFromTriple(const Triple &T) {
+  return MachO::CPU_SUBTYPE_POWERPC_ALL;
+}
+
+Expected<uint32_t> MachOObjectFile::getCPUTypeFromTriple(const Triple &T) {
+  if (T.isX86() && T.isArch32Bit())
+    return MachO::CPU_TYPE_X86;
+  if (T.isX86() && T.isArch64Bit())
+    return MachO::CPU_TYPE_X86_64;
+  if (T.isARM() || T.isThumb())
+    return MachO::CPU_TYPE_ARM;
+  if (T.isAArch64())
+    return MachO::CPU_TYPE_ARM64;
+  if (T.getArch() == Triple::aarch64_32)
+    return MachO::CPU_TYPE_ARM64_32;
+  if (T.getArch() == Triple::ppc)
+    return MachO::CPU_TYPE_POWERPC;
+  if (T.getArch() == Triple::ppc64)
+    return MachO::CPU_TYPE_POWERPC64;
+  return createStringError(std::errc::invalid_argument,
+                           "Unsupported triple for mach-o cpu type.");
+}
+
+Expected<uint32_t> MachOObjectFile::getCPUSubTypeFromTriple(const Triple &T) {
+  if (T.isX86())
+    return getX86SubTypeFromTriple(T);
+  if (T.isARM() || T.isThumb())
+    return getARMSubTypeFromTriple(T);
+  if (T.isAArch64() || T.getArch() == Triple::aarch64_32)
+    return getARM64SubTypeFromTriple(T);
+  if (T.getArch() == Triple::ppc || T.getArch() == Triple::ppc64)
+    return getPowerPCSubTypeFromTriple(T);
+  return createStringError(std::errc::invalid_argument,
+                           "Unsupported triple for mach-o cpu subtype.");
 }
 
 Triple MachOObjectFile::getHostArch() {
