@@ -597,9 +597,7 @@ public:
 
   ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
 
-  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
-    return GetTypeName(type);
-  }
+  ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override;
 
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_or_element_compiler_type) override;

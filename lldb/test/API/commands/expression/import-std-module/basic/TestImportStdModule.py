@@ -25,7 +25,7 @@ class ImportStdModule(TestBase):
         self.expect_expr("std::abs(-42)", result_type="int", result_value="42")
         self.expect_expr("std::div(2, 1).quot", result_type="int", result_value="2")
         # Using types from std.
-        self.expect_expr("(std::size_t)33U", result_type="size_t", result_value="33")
+        self.expect_expr("(std::size_t)33U", result_type="std::size_t", result_value="33")
         # Calling templated functions that return non-template types.
         self.expect_expr("char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
                     result_type="char", result_value="'a'")

@@ -102,9 +102,9 @@ Anonymous<A::B::C<void>>::D AnonABCVoidD;
 // CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x{{0+}})
 // CHECK: (A::D) AD = {}
 // CHECK: (A::D::E) ADE = (ADDMember = 0)
-// CHECK: ((anonymous namespace)::Anonymous<int>) AnonInt = (AnonymousMember = 0)
-// CHECK: ((anonymous namespace)::Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
-// CHECK: ((anonymous namespace)::Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
+// CHECK: (Anonymous<int>) AnonInt = (AnonymousMember = 0)
+// CHECK: (Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
+// CHECK: (Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition
