@@ -943,6 +943,11 @@ TEST(FindReferences, WithinAST) {
           int x = [[MACRO]]([[MACRO]](1));
         }
       )cpp",
+
+      R"cpp(
+        int [[v^ar]] = 0;
+        void foo(int s = [[var]]);
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
