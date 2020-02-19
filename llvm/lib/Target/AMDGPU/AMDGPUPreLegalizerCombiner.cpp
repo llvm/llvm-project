@@ -165,6 +165,11 @@ bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return true;
 
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_LSHR:
+    // On some subtargets, 64-bit shift is a quarter rate instruction. In the
+    // common case, splitting this into a move and a 32-bit shift is faster and
+    // the same code size.
+    return Helper.tryCombineShiftToUnmerge(MI, 32);
   case TargetOpcode::G_CONCAT_VECTORS:
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
