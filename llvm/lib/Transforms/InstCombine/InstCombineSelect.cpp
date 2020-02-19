@@ -857,16 +857,16 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   if (!ICI->isEquality() || !match(CmpRHS, m_Zero()))
     return nullptr;
 
-  Value *Count = FalseVal;
+  Value *SelectArg = FalseVal;
   Value *ValueOnZero = TrueVal;
   if (Pred == ICmpInst::ICMP_NE)
-    std::swap(Count, ValueOnZero);
+    std::swap(SelectArg, ValueOnZero);
 
   // Skip zero extend/truncate.
-  Value *V = nullptr;
-  if (match(Count, m_ZExt(m_Value(V))) ||
-      match(Count, m_Trunc(m_Value(V))))
-    Count = V;
+  Value *Count = nullptr;
+  if (!match(SelectArg, m_ZExt(m_Value(Count))) &&
+      !match(SelectArg, m_Trunc(m_Value(Count))))
+    Count = SelectArg;
 
   // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
   // input to the cttz/ctlz is used as LHS for the compare instruction.
@@ -880,11 +880,10 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // sizeof in bits of 'Count'.
   unsigned SizeOfInBits = Count->getType()->getScalarSizeInBits();
   if (match(ValueOnZero, m_SpecificInt(SizeOfInBits))) {
-    // Explicitly clear the 'undef_on_zero' flag.
-    IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
-    NewI->setArgOperand(1, ConstantInt::getFalse(NewI->getContext()));
-    Builder.Insert(NewI);
-    return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
+    // Explicitly clear the 'undef_on_zero' flag. It's always valid to go from
+    // true to false on this flag, so we can replace it for all users.
+    II->setArgOperand(1, ConstantInt::getFalse(II->getContext()));
+    return SelectArg;
   }
 
   // If the ValueOnZero is not the bitwidth, we can at least make use of the
