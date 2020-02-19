@@ -1818,11 +1818,15 @@ TEST(APIntTest, SelfMoveAssignment) {
 TEST(APIntTest, byteSwap) {
   EXPECT_EQ(0x00000000, APInt(16, 0x0000).byteSwap());
   EXPECT_EQ(0x0000010f, APInt(16, 0x0f01).byteSwap());
+  EXPECT_EQ(0x00ff8000, APInt(24, 0x0080ff).byteSwap());
   EXPECT_EQ(0x117700ff, APInt(32, 0xff007711).byteSwap());
+  EXPECT_EQ(0x228811aaffULL, APInt(40, 0xffaa118822ULL).byteSwap());
   EXPECT_EQ(0x050403020100ULL, APInt(48, 0x000102030405ULL).byteSwap());
+  EXPECT_EQ(0xff050403020100ULL, APInt(56, 0x000102030405ffULL).byteSwap());
   EXPECT_EQ(0xff050403020100aaULL, APInt(64, 0xaa000102030405ffULL).byteSwap());
 
-  for (unsigned N : {16, 32, 48, 64, 80, 96, 112, 128, 256, 1024, 1040}) {
+  for (unsigned N : {16, 24, 32, 48, 56, 64, 72, 80, 96, 112, 128, 248, 256,
+                     1024, 1032, 1040}) {
     for (unsigned I = 0; I < N; I += 8) {
       APInt X = APInt::getBitsSet(N, I, I + 8);
       APInt Y = APInt::getBitsSet(N, N - I - 8, N - I);
