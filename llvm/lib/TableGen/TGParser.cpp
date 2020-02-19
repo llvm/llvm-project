@@ -1180,7 +1180,13 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       InitList.push_back(ParseValue(CurRec, ArgType));
       if (!InitList.back()) return nullptr;
 
-      RecTy *ListType = cast<TypedInit>(InitList.back())->getType();
+      TypedInit *InitListBack = dyn_cast<TypedInit>(InitList.back());
+      if (!InitListBack) {
+        Error(OpLoc, Twine("expected value to be a typed value, got '" +
+                           InitList.back()->getAsString() + "'"));
+        return nullptr;
+      }
+      RecTy *ListType = InitListBack->getType();
       if (!ArgType) {
         ArgType = ListType;
 
