@@ -1401,7 +1401,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (config->emachine == EM_AARCH64) {
     if (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
       addInt(DT_AARCH64_BTI_PLT, 0);
-    if (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)
+    if (config->zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
   }
 
