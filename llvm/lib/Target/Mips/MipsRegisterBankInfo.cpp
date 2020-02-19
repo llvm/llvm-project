@@ -150,6 +150,19 @@ static bool isFloatingPointOpcodeDef(unsigned Opc) {
   }
 }
 
+static bool isGprbTwoInstrUnalignedLoadOrStore(const MachineInstr *MI) {
+  if (MI->getOpcode() == TargetOpcode::G_LOAD ||
+      MI->getOpcode() == TargetOpcode::G_STORE) {
+    auto MMO = *MI->memoperands_begin();
+    const MipsSubtarget &STI =
+        static_cast<const MipsSubtarget &>(MI->getMF()->getSubtarget());
+    if (MMO->getSize() == 4 && (!STI.systemSupportsUnalignedAccess() &&
+                                MMO->getSize() > MMO->getAlignment()))
+      return true;
+  }
+  return false;
+}
+
 static bool isAmbiguous(unsigned Opc) {
   switch (Opc) {
   case TargetOpcode::G_LOAD:
@@ -260,6 +273,11 @@ bool MipsRegisterBankInfo::TypeInfoForMF::visit(
 
   startVisit(MI);
   AmbiguousRegDefUseContainer DefUseContainer(MI);
+
+  if (isGprbTwoInstrUnalignedLoadOrStore(MI)) {
+    setTypes(MI, Integer);
+    return true;
+  }
 
   if (AmbiguousTy == InstType::Ambiguous &&
       (MI->getOpcode() == TargetOpcode::G_MERGE_VALUES ||

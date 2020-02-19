@@ -21,22 +21,38 @@ struct TypesAndMemOps {
   LLT ValTy;
   LLT PtrTy;
   unsigned MemSize;
-  bool MustBeNaturallyAligned;
+  bool SystemSupportsUnalignedAccess;
 };
+
+// Assumes power of 2 memory size. Subtargets that have only naturally-aligned
+// memory access need to perform additional legalization here.
+bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
+  assert(isPowerOf2_64(MemSize) && "Expected power of 2 memory size");
+  assert(isPowerOf2_64(AlignInBits) && "Expected power of 2 align");
+  if (MemSize > AlignInBits)
+    return true;
+  return false;
+}
 
 static bool
 CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
                         std::initializer_list<TypesAndMemOps> SupportedValues) {
+  unsigned QueryMemSize = Query.MMODescrs[0].SizeInBits;
+
+  // Non power of two memory access is never legal.
+  if (!isPowerOf2_64(QueryMemSize))
+    return false;
+
   for (auto &Val : SupportedValues) {
     if (Val.ValTy != Query.Types[0])
       continue;
     if (Val.PtrTy != Query.Types[1])
       continue;
-    if (Val.MemSize != Query.MMODescrs[0].SizeInBits)
+    if (Val.MemSize != QueryMemSize)
       continue;
-    if (Val.MustBeNaturallyAligned &&
-        Query.MMODescrs[0].SizeInBits % Query.MMODescrs[0].AlignInBits != 0)
-      continue;
+    if (!Val.SystemSupportsUnalignedAccess &&
+        isUnalignedMemmoryAccess(QueryMemSize, Query.MMODescrs[0].AlignInBits))
+      return false;
     return true;
   }
   return false;
@@ -79,19 +95,27 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({s32})
       .maxScalar(0, s32);
 
+  // MIPS32r6 does not have alignment restrictions for memory access.
+  // For MIPS32r5 and older memory access must be naturally-aligned i.e. aligned
+  // to at least a multiple of its own size. There is however a two instruction
+  // combination that performs 4 byte unaligned access (lwr/lwl and swl/swr)
+  // therefore 4 byte load and store are legal and will use NoAlignRequirements.
+  bool NoAlignRequirements = true;
+
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalIf([=, &ST](const LegalityQuery &Query) {
-        if (CheckTy0Ty1MemSizeAlign(Query, {{s32, p0, 8, ST.hasMips32r6()},
-                                            {s32, p0, 16, ST.hasMips32r6()},
-                                            {s32, p0, 32, ST.hasMips32r6()},
-                                            {p0, p0, 32, ST.hasMips32r6()},
-                                            {s64, p0, 64, ST.hasMips32r6()}}))
+        if (CheckTy0Ty1MemSizeAlign(
+                Query, {{s32, p0, 8, NoAlignRequirements},
+                        {s32, p0, 16, ST.systemSupportsUnalignedAccess()},
+                        {s32, p0, 32, NoAlignRequirements},
+                        {p0, p0, 32, NoAlignRequirements},
+                        {s64, p0, 64, ST.systemSupportsUnalignedAccess()}}))
           return true;
-        if (ST.hasMSA() &&
-            CheckTy0Ty1MemSizeAlign(Query, {{v16s8, p0, 128, false},
-                                            {v8s16, p0, 128, false},
-                                            {v4s32, p0, 128, false},
-                                            {v2s64, p0, 128, false}}))
+        if (ST.hasMSA() && CheckTy0Ty1MemSizeAlign(
+                               Query, {{v16s8, p0, 128, NoAlignRequirements},
+                                       {v8s16, p0, 128, NoAlignRequirements},
+                                       {v4s32, p0, 128, NoAlignRequirements},
+                                       {v2s64, p0, 128, NoAlignRequirements}}))
           return true;
         return false;
       })
