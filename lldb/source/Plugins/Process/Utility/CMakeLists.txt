@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessUtility
+add_lldb_library(lldbPluginProcessUtility PLUGIN
   AuxVector.cpp
   DynamicRegisterInfo.cpp
   FreeBSDSignals.cpp

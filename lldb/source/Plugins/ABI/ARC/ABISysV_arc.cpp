@@ -55,7 +55,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE_ADV(ABISysV_arc, ABIARC)
+LLDB_PLUGIN_DEFINE(ABISysV_arc)
 
 namespace {
 namespace dwarf {
@@ -146,7 +146,7 @@ size_t ABISysV_arc::GetRedZoneSize() const { return 0; }
 bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
   if (!m_is_reg_file_reduced) {
     const auto *const rf_build_reg = reg_ctx.GetRegisterInfoByName("rf_build");
-
+    
     const auto reg_value = reg_ctx.ReadRegisterAsUnsigned(rf_build_reg,
                                                           /*fail_value*/ 0);
     // RF_BUILD "Number of Entries" bit.
@@ -241,7 +241,7 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
   // Make sure number of parameters matches prototype.
   assert(!prototype.isFunctionVarArg());
   assert(prototype.getFunctionNumParams() == args.size());
-
+  
   const size_t regs_for_args_count = IsRegisterFileReduced(*reg_ctx) ? 4U : 8U;
 
   // Number of arguments passed on stack.
