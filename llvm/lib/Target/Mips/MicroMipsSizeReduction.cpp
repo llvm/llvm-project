@@ -376,7 +376,7 @@ static bool CheckXWPInstr(MachineInstr *MI, bool ReduceToLwp,
 
 // Returns true if the registers Reg1 and Reg2 are consecutive
 static bool ConsecutiveRegisters(unsigned Reg1, unsigned Reg2) {
-  static SmallVector<unsigned, 31> Registers = {
+  constexpr std::array<unsigned, 31> Registers = {
       Mips::AT, Mips::V0, Mips::V1, Mips::A0, Mips::A1, Mips::A2, Mips::A3,
       Mips::T0, Mips::T1, Mips::T2, Mips::T3, Mips::T4, Mips::T5, Mips::T6,
       Mips::T7, Mips::S0, Mips::S1, Mips::S2, Mips::S3, Mips::S4, Mips::S5,
