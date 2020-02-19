@@ -270,26 +270,25 @@ define float @phi_float(i1 %cnd, float %a, float %b) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -16
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 16
-; MIPS32-NEXT:    mtc1 $5, $f0
-; MIPS32-NEXT:    mtc1 $6, $f1
 ; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    swc1 $f0, 12($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    swc1 $f1, 8($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $5, 12($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $6, 8($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    bnez $1, $BB6_2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %entry
 ; MIPS32-NEXT:    j $BB6_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB6_2: # %cond.true
-; MIPS32-NEXT:    lwc1 $f0, 12($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    swc1 $f0, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    j $BB6_4
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB6_3: # %cond.false
-; MIPS32-NEXT:    lwc1 $f0, 8($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    swc1 $f0, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB6_4: # %cond.end
-; MIPS32-NEXT:    lwc1 $f0, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    mtc1 $1, $f0
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

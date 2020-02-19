@@ -46,15 +46,15 @@ define float @float_in_gpr(i32 %a, float %b) {
   ; FP32: bb.1.entry:
   ; FP32:   liveins: $a0, $a1
   ; FP32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP32:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
-  ; FP32:   $f0 = COPY [[MTC1_]](s32)
+  ; FP32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; FP32:   $f0 = COPY [[COPY1]](s32)
   ; FP32:   RetRA implicit $f0
   ; FP64-LABEL: name: float_in_gpr
   ; FP64: bb.1.entry:
   ; FP64:   liveins: $a0, $a1
   ; FP64:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP64:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
-  ; FP64:   $f0 = COPY [[MTC1_]](s32)
+  ; FP64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; FP64:   $f0 = COPY [[COPY1]](s32)
   ; FP64:   RetRA implicit $f0
 entry:
   ret float %b
@@ -65,15 +65,19 @@ define double @double_in_gpr(i32 %a, double %b) {
   ; FP32: bb.1.entry:
   ; FP32:   liveins: $a0, $a2, $a3
   ; FP32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP32:   [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 $a2, $a3
-  ; FP32:   $d0 = COPY [[BuildPairF64_]](s64)
+  ; FP32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; FP32:   $d0 = COPY [[MV]](s64)
   ; FP32:   RetRA implicit $d0
   ; FP64-LABEL: name: double_in_gpr
   ; FP64: bb.1.entry:
   ; FP64:   liveins: $a0, $a2, $a3
   ; FP64:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP64:   [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 $a2, $a3
-  ; FP64:   $d0_64 = COPY [[BuildPairF64_64_]](s64)
+  ; FP64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP64:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; FP64:   $d0_64 = COPY [[MV]](s64)
   ; FP64:   RetRA implicit $d0_64
 entry:
   ret double %b
@@ -148,27 +152,27 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP32: bb.1.entry:
   ; FP32:   liveins: $a0, $a1
   ; FP32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP32:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
+  ; FP32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; FP32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32:   $a0 = COPY [[COPY]](s32)
-  ; FP32:   $a1 = MFC1 [[MTC1_]](s32)
+  ; FP32:   $a1 = COPY [[COPY1]](s32)
   ; FP32:   JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
-  ; FP32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
+  ; FP32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; FP32:   $f0 = COPY [[COPY1]](s32)
+  ; FP32:   $f0 = COPY [[COPY2]](s32)
   ; FP32:   RetRA implicit $f0
   ; FP64-LABEL: name: call_float_in_gpr
   ; FP64: bb.1.entry:
   ; FP64:   liveins: $a0, $a1
   ; FP64:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP64:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
+  ; FP64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; FP64:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64:   $a0 = COPY [[COPY]](s32)
-  ; FP64:   $a1 = MFC1 [[MTC1_]](s32)
+  ; FP64:   $a1 = COPY [[COPY1]](s32)
   ; FP64:   JAL @float_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
-  ; FP64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
+  ; FP64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP64:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; FP64:   $f0 = COPY [[COPY1]](s32)
+  ; FP64:   $f0 = COPY [[COPY2]](s32)
   ; FP64:   RetRA implicit $f0
 entry:
   %call = call float @float_in_gpr(i32 %a, float %b)
@@ -181,29 +185,35 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP32: bb.1.entry:
   ; FP32:   liveins: $a0, $a2, $a3
   ; FP32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP32:   [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 $a2, $a3
+  ; FP32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; FP32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32:   $a0 = COPY [[COPY]](s32)
-  ; FP32:   $a3 = ExtractElementF64 [[BuildPairF64_]](s64), 1
-  ; FP32:   $a2 = ExtractElementF64 [[BuildPairF64_]](s64), 0
+  ; FP32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; FP32:   $a2 = COPY [[UV]](s32)
+  ; FP32:   $a3 = COPY [[UV1]](s32)
   ; FP32:   JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
-  ; FP32:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
+  ; FP32:   [[COPY3:%[0-9]+]]:_(s64) = COPY $d0
   ; FP32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; FP32:   $d0 = COPY [[COPY1]](s64)
+  ; FP32:   $d0 = COPY [[COPY3]](s64)
   ; FP32:   RetRA implicit $d0
   ; FP64-LABEL: name: call_double_in_gpr
   ; FP64: bb.1.entry:
   ; FP64:   liveins: $a0, $a2, $a3
   ; FP64:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; FP64:   [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 $a2, $a3
+  ; FP64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP64:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; FP64:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64:   $a0 = COPY [[COPY]](s32)
-  ; FP64:   $a3 = ExtractElementF64_64 [[BuildPairF64_64_]](s64), 1
-  ; FP64:   $a2 = ExtractElementF64_64 [[BuildPairF64_64_]](s64), 0
+  ; FP64:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; FP64:   $a2 = COPY [[UV]](s32)
+  ; FP64:   $a3 = COPY [[UV1]](s32)
   ; FP64:   JAL @double_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0_64
-  ; FP64:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0_64
+  ; FP64:   [[COPY3:%[0-9]+]]:_(s64) = COPY $d0_64
   ; FP64:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; FP64:   $d0_64 = COPY [[COPY1]](s64)
+  ; FP64:   $d0_64 = COPY [[COPY3]](s64)
   ; FP64:   RetRA implicit $d0_64
 entry:
   %call = call double @double_in_gpr(i32 %a, double %b)
