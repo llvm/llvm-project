@@ -150,7 +150,9 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
-  if (DoesNotSupportXNACK && EnableXNACK) {
+  // Disable XNACK on targets where it is not enabled by default unless it is
+  // explicitly requested.
+  if (!FS.contains("+xnack") && DoesNotSupportXNACK && EnableXNACK) {
     ToggleFeature(AMDGPU::FeatureXNACK);
     EnableXNACK = false;
   }
@@ -242,6 +244,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasDPP(false),
     HasDPP8(false),
     HasR128A16(false),
+    HasGFX10A16(false),
     HasNSAEncoding(false),
     HasDLInsts(false),
     HasDot1Insts(false),

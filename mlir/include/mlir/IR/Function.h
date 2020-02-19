@@ -63,34 +63,6 @@ public:
   /// `argIndices` is allowed to have duplicates and can be in any order.
   void eraseArguments(ArrayRef<unsigned> argIndices);
 
-  /// Returns the type of this function.
-  FunctionType getType() {
-    return getAttrOfType<TypeAttr>(getTypeAttrName())
-        .getValue()
-        .cast<FunctionType>();
-  }
-
-  /// Change the type of this function in place. This is an extremely dangerous
-  /// operation and it is up to the caller to ensure that this is legal for this
-  /// function, and to restore invariants:
-  ///  - the entry block args must be updated to match the function params.
-  ///  - the argument/result attributes may need an update: if the new type has
-  ///  less parameters we drop the extra attributes, if there are more
-  ///  parameters they won't have any attributes.
-  void setType(FunctionType newType) {
-    SmallVector<char, 16> nameBuf;
-    auto oldType = getType();
-    for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e;
-         i++) {
-      removeAttr(getArgAttrName(i, nameBuf));
-    }
-    for (int i = newType.getNumResults(), e = oldType.getNumResults(); i < e;
-         i++) {
-      removeAttr(getResultAttrName(i, nameBuf));
-    }
-    setAttr(getTypeAttrName(), TypeAttr::get(newType));
-  }
-
   /// Create a deep copy of this function and all of its blocks, remapping
   /// any operands that use values outside of the function using the map that is
   /// provided (leaving them alone if no entry is present). If the mapper
@@ -104,19 +76,6 @@ public:
   /// cloned blocks are appended to the back of dest. This function asserts that
   /// the attributes of the current function and dest are compatible.
   void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
-
-  //===--------------------------------------------------------------------===//
-  // Body Handling
-  //===--------------------------------------------------------------------===//
-
-  /// Add an entry block to an empty function, and set up the block arguments
-  /// to match the signature of the function. The newly inserted entry block is
-  /// returned.
-  Block *addEntryBlock();
-
-  /// Add a normal block to the end of the function's block list. The function
-  /// should at least already have an entry block.
-  Block *addBlock();
 
   //===--------------------------------------------------------------------===//
   // CallableOpInterface

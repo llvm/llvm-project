@@ -32,7 +32,7 @@ union U {
 // CHECK: load
 // CHECK-NOT: load
 // CHECK: ret i1 false
-bool pr23833_a(U &u) { return u.b; }
+bool pr23833_a(U &u) { return bool(u.b); }
 
 // CHECK-LABEL: define {{.*}}pr23833_b
 // CHECK: store

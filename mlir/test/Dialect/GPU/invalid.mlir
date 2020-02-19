@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @not_enough_sizes(%sz : index) {
-  // expected-error@+1 {{expected 6 or more operands}}
+  // expected-error@+1 {{expected 6 operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
   }) : (index, index, index, index, index) -> ()
@@ -15,59 +15,6 @@ func @no_region_attrs(%sz : index) {
  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @isolation_arg(%sz : index) {
- // expected-note@+1 {{required by region isolation constraints}}
- "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    // expected-error@+1 {{using value defined outside the region}}
-    "use"(%sz) : (index) -> ()
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @isolation_op(%sz : index) {
- %val = "produce"() : () -> (index)
- // expected-note@+1 {{required by region isolation constraints}}
- "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    // expected-error@+1 {{using value defined outside the region}}
-    "use"(%val) : (index) -> ()
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @nested_isolation(%sz : index) {
-  // expected-note@+1 {{required by region isolation constraints}}
-  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    "region"() ({
-      "region"() ({
-        // expected-error@+1 {{using value defined outside the region}}
-        "use"(%sz) : (index) -> ()
-      }) : () -> ()
-    }) : () -> ()
     gpu.return
   }) : (index, index, index, index, index, index) -> ()
   return
@@ -228,23 +175,21 @@ module attributes {gpu.container_module} {
 
 // -----
 
-gpu.module @kernels {
-  gpu.func @kernel_1(%arg1 : !llvm<"float*">) attributes { gpu.kernel } {
-    gpu.return
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    gpu.func @kernel_1(%arg1 : f32) attributes { gpu.kernel } {
+      gpu.return
+    }
+  }
+
+  func @launch_func_kernel_operand_types(%sz : index, %arg : f32) {
+    // expected-err@+1 {{type of function argument 0 does not match}}
+    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
+        {kernel = "kernel_1", kernel_module = @kernels}
+        : (index, index, index, index, index, index, f32) -> ()
+    return
   }
 }
-
-// Due to the ordering of the current impl of lowering and LLVMLowering, type
-// checks need to be temporarily disabled.
-// TODO(ntv,zinenko,herhut): reactivate checks once "changing gpu.launchFunc
-// to encode target module" has landed.
-// func @launch_func_kernel_operand_types(%sz : index, %arg : f32) {
-//   // expected-err@+1 {{type of function argument 0 does not match}}
-//   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
-//       {kernel = "kernel_1"}
-//       : (index, index, index, index, index, index, f32) -> ()
-//   return
-// }
 
 // -----
 

@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; Generated from the following source compiled with clang++ -gmlt:
 ; void f1() {}
 ; void __attribute__((section("__TEXT,__bar"))) f2() {}

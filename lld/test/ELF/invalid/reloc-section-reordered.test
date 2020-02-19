@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: not ld.lld %t.o -o %t.exe 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: unsupported relocation reference
 
 ## YAML below lists .rela.text before .text, we do not support it.

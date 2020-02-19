@@ -4,8 +4,10 @@ config.name_suffix = "@TSAN_TEST_CONFIG_SUFFIX@"
 config.tsan_lit_source_dir = "@TSAN_LIT_SOURCE_DIR@"
 config.has_libcxx = @TSAN_HAS_LIBCXX@
 config.apple_platform = "@TSAN_TEST_APPLE_PLATFORM@"
+config.apple_platform_min_deployment_target_flag = "@TSAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
 config.target_cflags = "@TSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@TSAN_TEST_TARGET_ARCH@"
+config.deflake_threshold = "@TSAN_TEST_DEFLAKE_THRESHOLD@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

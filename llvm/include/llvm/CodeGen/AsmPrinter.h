@@ -71,10 +71,13 @@ class MDNode;
 class Module;
 class ProfileSummaryInfo;
 class raw_ostream;
-class RemarkStreamer;
 class StackMaps;
 class TargetLoweringObjectFile;
 class TargetMachine;
+
+namespace remarks {
+class RemarkStreamer;
+}
 
 /// This class is intended to be used as a driving class for all asm writers.
 class AsmPrinter : public MachineFunctionPass {
@@ -100,7 +103,7 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI = nullptr;
 
-  /// This is a pointer to the current MachineLoopInfo.
+  /// This is a pointer to the current MachineDominatorTree.
   MachineDominatorTree *MDT = nullptr;
 
   /// This is a pointer to the current MachineLoopInfo.
@@ -285,9 +288,6 @@ public:
   // All the sleds to be emitted.
   SmallVector<XRayFunctionEntry, 4> Sleds;
 
-  // A unique ID used for ELF sections associated with a particular function.
-  unsigned XRayFnUniqueID = 0;
-
   // Helper function to record a given XRay sled.
   void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind,
                   uint8_t Version = 0);
@@ -295,7 +295,6 @@ public:
   /// Emit a table with all XRay instrumentation points.
   void emitXRayTable();
 
-  DenseMap<const MCSection *, unsigned> PatchableFunctionEntryID;
   void emitPatchableFunctionEntries();
 
   //===------------------------------------------------------------------===//
@@ -316,7 +315,7 @@ public:
   /// Emit the specified function out to the OutStreamer.
   bool runOnMachineFunction(MachineFunction &MF) override {
     SetupMachineFunction(MF);
-    EmitFunctionBody();
+    emitFunctionBody();
     return false;
   }
 
@@ -329,7 +328,7 @@ public:
   virtual void SetupMachineFunction(MachineFunction &MF);
 
   /// This method emits the body and trailer for a function.
-  void EmitFunctionBody();
+  void emitFunctionBody();
 
   void emitCFIInstruction(const MachineInstr &MI);
 
@@ -337,7 +336,7 @@ public:
 
   void emitStackSizeSection(const MachineFunction &MF);
 
-  void emitRemarksSection(RemarkStreamer &RS);
+  void emitRemarksSection(remarks::RemarkStreamer &RS);
 
   enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
   CFIMoveType needsCFIMoves() const;
@@ -351,30 +350,30 @@ public:
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
   /// which have been "spilled to memory" by the code generator.
-  virtual void EmitConstantPool();
+  virtual void emitConstantPool();
 
   /// Print assembly representations of the jump tables used by the current
   /// function to the current output stream.
-  virtual void EmitJumpTableInfo();
+  virtual void emitJumpTableInfo();
 
   /// Emit the specified global variable to the .s file.
-  virtual void EmitGlobalVariable(const GlobalVariable *GV);
+  virtual void emitGlobalVariable(const GlobalVariable *GV);
 
   /// Check to see if the specified global is a special global used by LLVM. If
   /// so, emit it and return true, otherwise do nothing and return false.
-  bool EmitSpecialLLVMGlobal(const GlobalVariable *GV);
+  bool emitSpecialLLVMGlobal(const GlobalVariable *GV);
 
   /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  void EmitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
+  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
 
   /// Print a general LLVM constant to the .s file.
-  void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);
+  void emitGlobalConstant(const DataLayout &DL, const Constant *CV);
 
   /// Unnamed constant global variables solely contaning a pointer to
   /// another globals variable act like a global variable "proxy", or GOT
@@ -403,49 +402,49 @@ public:
 
   /// This virtual method can be overridden by targets that want to emit
   /// something at the start of their file.
-  virtual void EmitStartOfAsmFile(Module &) {}
+  virtual void emitStartOfAsmFile(Module &) {}
 
   /// This virtual method can be overridden by targets that want to emit
   /// something at the end of their file.
-  virtual void EmitEndOfAsmFile(Module &) {}
+  virtual void emitEndOfAsmFile(Module &) {}
 
   /// Targets can override this to emit stuff before the first basic block in
   /// the function.
-  virtual void EmitFunctionBodyStart() {}
+  virtual void emitFunctionBodyStart() {}
 
   /// Targets can override this to emit stuff after the last basic block in the
   /// function.
-  virtual void EmitFunctionBodyEnd() {}
+  virtual void emitFunctionBodyEnd() {}
 
   /// Targets can override this to emit stuff at the start of a basic block.
   /// By default, this method prints the label for the specified
   /// MachineBasicBlock, an alignment (if present) and a comment describing it
   /// if appropriate.
-  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB);
+  virtual void emitBasicBlockStart(const MachineBasicBlock &MBB);
 
   /// Targets can override this to emit stuff at the end of a basic block.
-  virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB);
+  virtual void emitBasicBlockEnd(const MachineBasicBlock &MBB);
 
   /// Targets should implement this to emit instructions.
-  virtual void EmitInstruction(const MachineInstr *) {
+  virtual void emitInstruction(const MachineInstr *) {
     llvm_unreachable("EmitInstruction not implemented");
   }
 
   /// Return the symbol for the specified constant pool entry.
   virtual MCSymbol *GetCPISymbol(unsigned CPID) const;
 
-  virtual void EmitFunctionEntryLabel();
+  virtual void emitFunctionEntryLabel();
 
-  virtual void EmitFunctionDescriptor() {
+  virtual void emitFunctionDescriptor() {
     llvm_unreachable("Function descriptor is target-specific.");
   }
 
-  virtual void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
+  virtual void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
 
   /// Targets can override this to change how global constants that are part of
   /// a C++ static/global constructor list are emitted.
-  virtual void EmitXXStructor(const DataLayout &DL, const Constant *CV) {
-    EmitGlobalConstant(DL, CV);
+  virtual void emitXXStructor(const DataLayout &DL, const Constant *CV) {
+    emitGlobalConstant(DL, CV);
   }
 
   /// Return true if the basic block has exactly one predecessor and the control
@@ -509,49 +508,50 @@ public:
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
   /// is specified by Size and Hi/Lo specify the labels.  This implicitly uses
   /// .set if it is available.
-  void EmitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
+  void emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
                            unsigned Size) const;
 
   /// Emit something like ".uleb128 Hi-Lo".
-  void EmitLabelDifferenceAsULEB128(const MCSymbol *Hi,
+  void emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
                                     const MCSymbol *Lo) const;
 
   /// Emit something like ".long Label+Offset" where the size in bytes of the
   /// directive is specified by Size and Label specifies the label.  This
   /// implicitly uses .set if it is available.
-  void EmitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
+  void emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                            unsigned Size, bool IsSectionRelative = false) const;
 
   /// Emit something like ".long Label" where the size in bytes of the directive
   /// is specified by Size and Label specifies the label.
-  void EmitLabelReference(const MCSymbol *Label, unsigned Size,
+  void emitLabelReference(const MCSymbol *Label, unsigned Size,
                           bool IsSectionRelative = false) const {
-    EmitLabelPlusOffset(Label, 0, Size, IsSectionRelative);
+    emitLabelPlusOffset(Label, 0, Size, IsSectionRelative);
   }
 
   /// Emit something like ".long Label + Offset".
-  void EmitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
+  void emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
 
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//
 
   /// Emit the specified signed leb128 value.
-  void EmitSLEB128(int64_t Value, const char *Desc = nullptr) const;
+  void emitSLEB128(int64_t Value, const char *Desc = nullptr) const;
 
   /// Emit the specified unsigned leb128 value.
-  void EmitULEB128(uint64_t Value, const char *Desc = nullptr, unsigned PadTo = 0) const;
+  void emitULEB128(uint64_t Value, const char *Desc = nullptr,
+                   unsigned PadTo = 0) const;
 
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.
   /// Desc is a string saying what the encoding is specifying (e.g. "LSDA").
-  void EmitEncodingByte(unsigned Val, const char *Desc = nullptr) const;
+  void emitEncodingByte(unsigned Val, const char *Desc = nullptr) const;
 
   /// Return the size of the encoding in bytes.
   unsigned GetSizeOfEncodedValue(unsigned Encoding) const;
 
   /// Emit reference to a ttype global with a specified encoding.
-  void EmitTTypeReference(const GlobalValue *GV, unsigned Encoding) const;
+  void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) const;
 
   /// Emit a reference to a symbol for use in dwarf. Different object formats
   /// represent this in different ways. Some use a relocation others encode
@@ -572,10 +572,10 @@ public:
   }
 
   /// Emit reference to a call site with a specified encoding
-  void EmitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
+  void emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
                           unsigned Encoding) const;
   /// Emit an integer value corresponding to the call site encoding
-  void EmitCallSiteValue(uint64_t Value, unsigned Encoding) const;
+  void emitCallSiteValue(uint64_t Value, unsigned Encoding) const;
 
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
@@ -584,7 +584,7 @@ public:
   ///
   /// \p Value - The value to emit.
   /// \p Size - The size of the integer (in bytes) to emit.
-  virtual void EmitDebugValue(const MCExpr *Value, unsigned Size) const;
+  virtual void emitDebugValue(const MCExpr *Value, unsigned Size) const;
 
   //===------------------------------------------------------------------===//
   // Dwarf Lowering Routines
@@ -600,7 +600,7 @@ public:
       emitDwarfAbbrev(*Abbrev);
 
     // Mark end of abbreviations.
-    EmitULEB128(0, "EOM(3)");
+    emitULEB128(0, "EOM(3)");
   }
 
   void emitDwarfAbbrev(const DIEAbbrev &Abbrev) const;
@@ -656,12 +656,12 @@ public:
 
   /// This emits visibility information about symbol, if this is supported by
   /// the target.
-  void EmitVisibility(MCSymbol *Sym, unsigned Visibility,
+  void emitVisibility(MCSymbol *Sym, unsigned Visibility,
                       bool IsDefinition = true) const;
 
   /// This emits linkage information about \p GVSym based on \p GV, if this is
   /// supported by the target.
-  void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
+  void emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
 
   /// Return the alignment for the specified \p GV.
   static Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
@@ -675,18 +675,18 @@ private:
   mutable unsigned Counter = ~0U;
 
   /// This method emits the header for the current function.
-  virtual void EmitFunctionHeader();
+  virtual void emitFunctionHeader();
 
   /// Emit a blob of inline asm to the output streamer.
   void
-  EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+  emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                 const MCTargetOptions &MCOptions,
                 const MDNode *LocMDNode = nullptr,
                 InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT) const;
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
-  void EmitInlineAsm(const MachineInstr *MI) const;
+  void emitInlineAsm(const MachineInstr *MI) const;
 
   /// Add inline assembly info to the diagnostics machinery, so we can
   /// emit file and position info. Returns SrcMgr memory buffer position.
@@ -697,14 +697,14 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void EmitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
-  void EmitLLVMUsedList(const ConstantArray *InitList);
+  void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
-  void EmitModuleIdents(Module &M);
+  void emitModuleIdents(Module &M);
   /// Emit bytes for llvm.commandline metadata.
-  void EmitModuleCommandLines(Module &M);
-  void EmitXXStructorList(const DataLayout &DL, const Constant *List,
+  void emitModuleCommandLines(Module &M);
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
 
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);

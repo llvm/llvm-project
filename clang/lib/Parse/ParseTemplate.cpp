@@ -986,7 +986,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
 
   // Create the parameter.
   return Actions.ActOnNonTypeTemplateParameter(getCurScope(), ParamDecl,
-                                               Depth, Position, EqualLoc, 
+                                               Depth, Position, EqualLoc,
                                                DefaultArg.get());
 }
 

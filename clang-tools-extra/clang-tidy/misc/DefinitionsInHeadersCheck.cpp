@@ -134,6 +134,9 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
          DiagnosticIDs::Note)
         << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
+    // C++14 variable templates are allowed.
+    if (VD->getDescribedVarTemplate())
+      return;
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())
       return;

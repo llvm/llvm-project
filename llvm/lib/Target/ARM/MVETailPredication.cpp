@@ -260,13 +260,18 @@ bool MVETailPredication::isTailPredicate(TripCountPattern &TCP) {
   // %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert,
   //                                  <4 x i32> undef,
   //                                  <4 x i32> zeroinitializer
-  // %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
+  // %induction = [add|or] <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   // %pred = icmp ule <4 x i32> %induction, %broadcast.splat11
-
+  //
+  // Please note that the 'or' is equivalent to the 'and' here, this relies on
+  // BroadcastSplat being the IV which we know is a phi with 0 start and Lanes
+  // increment, which is all being checked below.
   Instruction *BroadcastSplat = nullptr;
   Constant *Const = nullptr;
   if (!match(TCP.Induction,
-             m_Add(m_Instruction(BroadcastSplat), m_Constant(Const))))
+             m_Add(m_Instruction(BroadcastSplat), m_Constant(Const))) &&
+      !match(TCP.Induction,
+             m_Or(m_Instruction(BroadcastSplat), m_Constant(Const))))
     return false;
 
   // Check that we're adding <0, 1, 2, 3...

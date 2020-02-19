@@ -601,8 +601,10 @@ AArch64BtiPac::AArch64BtiPac() {
   // the function in an executable being taken by a shared library.
   // FIXME: There is a potential optimization to omit the BTI if we detect
   // that the address of the PLT entry isn't taken.
+  // The PAC PLT entries require dynamic loader support and this isn't known
+  // from properties in the objects, so we use the command line flag.
   btiEntry = btiHeader && !config->shared;
-  pacEntry = (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_PAC);
+  pacEntry = config->zPacPlt;
 
   if (btiEntry || pacEntry) {
     pltEntrySize = 24;

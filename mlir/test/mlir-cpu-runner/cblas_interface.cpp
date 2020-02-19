@@ -15,32 +15,35 @@
 #include <assert.h>
 #include <iostream>
 
-extern "C" void linalg_fill_viewf32_f32(StridedMemRefType<float, 0> *X,
-                                        float f) {
+extern "C" void
+_mlir_ciface_linalg_fill_viewf32_f32(StridedMemRefType<float, 0> *X, float f) {
   X->data[X->offset] = f;
 }
 
-extern "C" void linalg_fill_viewsxf32_f32(StridedMemRefType<float, 1> *X,
-                                          float f) {
+extern "C" void
+_mlir_ciface_linalg_fill_viewsxf32_f32(StridedMemRefType<float, 1> *X,
+                                       float f) {
   for (unsigned i = 0; i < X->sizes[0]; ++i)
     *(X->data + X->offset + i * X->strides[0]) = f;
 }
 
-extern "C" void linalg_fill_viewsxsxf32_f32(StridedMemRefType<float, 2> *X,
-                                            float f) {
+extern "C" void
+_mlir_ciface_linalg_fill_viewsxsxf32_f32(StridedMemRefType<float, 2> *X,
+                                         float f) {
   for (unsigned i = 0; i < X->sizes[0]; ++i)
     for (unsigned j = 0; j < X->sizes[1]; ++j)
       *(X->data + X->offset + i * X->strides[0] + j * X->strides[1]) = f;
 }
 
-extern "C" void linalg_copy_viewf32_viewf32(StridedMemRefType<float, 0> *I,
-                                            StridedMemRefType<float, 0> *O) {
+extern "C" void
+_mlir_ciface_linalg_copy_viewf32_viewf32(StridedMemRefType<float, 0> *I,
+                                         StridedMemRefType<float, 0> *O) {
   O->data[O->offset] = I->data[I->offset];
 }
 
 extern "C" void
-linalg_copy_viewsxf32_viewsxf32(StridedMemRefType<float, 1> *I,
-                                StridedMemRefType<float, 1> *O) {
+_mlir_ciface_linalg_copy_viewsxf32_viewsxf32(StridedMemRefType<float, 1> *I,
+                                             StridedMemRefType<float, 1> *O) {
   if (I->sizes[0] != O->sizes[0]) {
     std::cerr << "Incompatible strided memrefs\n";
     printMemRefMetaData(std::cerr, *I);
@@ -52,9 +55,8 @@ linalg_copy_viewsxf32_viewsxf32(StridedMemRefType<float, 1> *I,
         I->data[I->offset + i * I->strides[0]];
 }
 
-extern "C" void
-linalg_copy_viewsxsxf32_viewsxsxf32(StridedMemRefType<float, 2> *I,
-                                    StridedMemRefType<float, 2> *O) {
+extern "C" void _mlir_ciface_linalg_copy_viewsxsxf32_viewsxsxf32(
+    StridedMemRefType<float, 2> *I, StridedMemRefType<float, 2> *O) {
   if (I->sizes[0] != O->sizes[0] || I->sizes[1] != O->sizes[1]) {
     std::cerr << "Incompatible strided memrefs\n";
     printMemRefMetaData(std::cerr, *I);
@@ -69,10 +71,9 @@ linalg_copy_viewsxsxf32_viewsxsxf32(StridedMemRefType<float, 2> *I,
           I->data[I->offset + i * si0 + j * si1];
 }
 
-extern "C" void
-linalg_dot_viewsxf32_viewsxf32_viewf32(StridedMemRefType<float, 1> *X,
-                                       StridedMemRefType<float, 1> *Y,
-                                       StridedMemRefType<float, 0> *Z) {
+extern "C" void _mlir_ciface_linalg_dot_viewsxf32_viewsxf32_viewf32(
+    StridedMemRefType<float, 1> *X, StridedMemRefType<float, 1> *Y,
+    StridedMemRefType<float, 0> *Z) {
   if (X->strides[0] != 1 || Y->strides[0] != 1 || X->sizes[0] != Y->sizes[0]) {
     std::cerr << "Incompatible strided memrefs\n";
     printMemRefMetaData(std::cerr, *X);
@@ -85,7 +86,7 @@ linalg_dot_viewsxf32_viewsxf32_viewf32(StridedMemRefType<float, 1> *X,
                  Y->data + Y->offset, Y->strides[0]);
 }
 
-extern "C" void linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
+extern "C" void _mlir_ciface_linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32(
     StridedMemRefType<float, 2> *A, StridedMemRefType<float, 2> *B,
     StridedMemRefType<float, 2> *C) {
   if (A->strides[1] != B->strides[1] || A->strides[1] != C->strides[1] ||

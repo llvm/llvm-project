@@ -32,7 +32,7 @@ SBTypeSummaryOptions::SBTypeSummaryOptions(
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBTypeSummaryOptions::~SBTypeSummaryOptions() {}
+SBTypeSummaryOptions::~SBTypeSummaryOptions() = default;
 
 bool SBTypeSummaryOptions::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeSummaryOptions, IsValid);
@@ -192,7 +192,7 @@ SBTypeSummary::SBTypeSummary(const lldb::SBTypeSummary &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeSummary, (const lldb::SBTypeSummary &), rhs);
 }
 
-SBTypeSummary::~SBTypeSummary() {}
+SBTypeSummary::~SBTypeSummary() = default;
 
 bool SBTypeSummary::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, IsValid);

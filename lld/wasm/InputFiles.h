@@ -160,6 +160,10 @@ public:
 
   void parse();
   std::unique_ptr<llvm::lto::InputFile> obj;
+
+  // Set to true once LTO is complete in order prevent further bitcode objects
+  // being added.
+  static bool doneLTO;
 };
 
 inline bool isBitcode(MemoryBufferRef mb) {

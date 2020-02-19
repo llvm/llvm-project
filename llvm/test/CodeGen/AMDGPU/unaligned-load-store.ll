@@ -665,4 +665,25 @@ define void @private_store_align2_f64(double addrspace(5)* %out, double %x) #0 {
   ret void
 }
 
+; Should not merge this to a dword store
+define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 addrspace(1)* %r) #0 {
+  %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
+  %v = load i16, i16 addrspace(1)* %p, align 2
+  store i16 1, i16 addrspace(1)* %r, align 2
+  store i16 2, i16 addrspace(1)* %gep.r, align 2
+  ret void
+}
+
+; Should not merge this to a word load
+define i32 @load_2xi16_align2(i16 addrspace(1)* %p) #0 {
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i64 1
+  %p.0 = load i16, i16 addrspace(1)* %p, align 2
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 2
+  %zext.0 = zext i16 %p.0 to i32
+  %zext.1 = zext i16 %p.1 to i32
+  %shl.1 = shl i32 %zext.1, 16
+  %or = or i32 %zext.0, %shl.1
+  ret i32 %or
+}
+
 attributes #0 = { nounwind }

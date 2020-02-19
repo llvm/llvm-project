@@ -82,6 +82,9 @@ namespace dr406 { // dr406: yes
   typedef struct {
     static int n; // expected-error {{static data member 'n' not allowed in anonymous struct}}
   } A;
+  typedef union {
+    static int n; // expected-error {{static data member 'n' not allowed in anonymous union}}
+  } B;
 }
 
 namespace dr407 { // dr407: 3.8

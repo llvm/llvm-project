@@ -144,6 +144,20 @@ def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
   let OperandNamespace = "RISCVOp";
 }
 
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]> {
+  let ParserMatchClass = SImmAsmOperand<12>;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<12>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;
+    return MCOp.isBareSymbolRef();
+  }];
+}
+
 // A 13-bit signed immediate where the least significant bit is zero.
 def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
@@ -222,6 +236,18 @@ def call_symbol : Operand<XLenVT> {
   let ParserMatchClass = CallSymbol;
 }
 
+def PseudoJumpSymbol : AsmOperandClass {
+  let Name = "PseudoJumpSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let ParserMethod = "parsePseudoJumpSymbol";
+}
+
+// A bare symbol used for pseudo jumps only.
+def pseudo_jump_symbol : Operand<XLenVT> {
+  let ParserMatchClass = PseudoJumpSymbol;
+}
+
 def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
@@ -282,6 +308,12 @@ def LO12Sext : SDNodeXForm<imm, [{
 def HI20 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
                                    SDLoc(N), N->getValueType(0));
+}]>;
+
+// Return the negation of an immediate value.
+def NegImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0));
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -845,12 +877,12 @@ def : PatGprSimm12<setult, SLTIU>;
 // handled by a RISC-V instruction.
 def : Pat<(seteq GPR:$rs1, 0), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(seteq GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(seteq GPR:$rs1, simm12:$imm12),
-          (SLTIU (XORI GPR:$rs1, simm12:$imm12), 1)>;
+def : Pat<(seteq GPR:$rs1, simm12_plus1:$imm12),
+          (SLTIU (ADDI GPR:$rs1, (NegImm simm12_plus1:$imm12)), 1)>;
 def : Pat<(setne GPR:$rs1, 0), (SLTU X0, GPR:$rs1)>;
 def : Pat<(setne GPR:$rs1, GPR:$rs2), (SLTU X0, (XOR GPR:$rs1, GPR:$rs2))>;
-def : Pat<(setne GPR:$rs1, simm12:$imm12),
-          (SLTU X0, (XORI GPR:$rs1, simm12:$imm12))>;
+def : Pat<(setne GPR:$rs1, simm12_plus1:$imm12),
+          (SLTU X0, (ADDI GPR:$rs1, (NegImm simm12_plus1:$imm12)))>;
 def : Pat<(setugt GPR:$rs1, GPR:$rs2), (SLTU GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setuge GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
@@ -967,6 +999,12 @@ def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
+
+let isCall = 0, isBarrier = 0, isCodeGenOnly = 0, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), []> {
+  let AsmString = "jump\t$target, $rd";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in

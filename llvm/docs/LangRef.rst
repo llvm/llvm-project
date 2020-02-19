@@ -910,8 +910,8 @@ The selection kind must be one of the following:
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.
 
-Note that the Mach-O platform doesn't support COMDATs, and ELF and WebAssembly
-only support ``any`` as a selection kind.
+Note that XCOFF and the Mach-O platform don't support COMDATs, and ELF and
+WebAssembly only support ``any`` as a selection kind.
 
 Here is an example of a COMDAT group where a function will only be selected if
 the COMDAT key's section is the largest:
@@ -1820,27 +1820,42 @@ example:
     not introduce any new floating-point instructions that may trap.
 
 ``"denormal-fp-math"``
-  This indicates the denormal (subnormal) handling that may be assumed
-   for the default floating-point environment. This may be one of
-   ``"ieee"``, ``"preserve-sign"``, or ``"positive-zero"``.  If this
-   is attribute is not specified, the default is ``"ieee"``. If the
-   mode is ``"preserve-sign"``, or ``"positive-zero"``, denormal
-   outputs may be flushed to zero by standard floating point
-   operations. It is not mandated that flushing to zero occurs, but if
-   a denormal output is flushed to zero, it must respect the sign
-   mode. Not all targets support all modes. While this indicates the
-   expected floating point mode the function will be executed with,
-   this does not make any attempt to ensure the mode is
-   consistent. User or platform code is expected to set the floating
-   point mode appropriately before function entry.
+    This indicates the denormal (subnormal) handling that may be
+    assumed for the default floating-point environment. This is a
+    comma separated pair. The elements may be one of ``"ieee"``,
+    ``"preserve-sign"``, or ``"positive-zero"``. The first entry
+    indicates the flushing mode for the result of floating point
+    operations. The second indicates the handling of denormal inputs
+    to floating point instructions. For compatability with older
+    bitcode, if the second value is omitted, both input and output
+    modes will assume the same mode.
+
+    If this is attribute is not specified, the default is
+    ``"ieee,ieee"``.
+
+    If the output mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    denormal outputs may be flushed to zero by standard floating-point
+    operations. It is not mandated that flushing to zero occurs, but if
+    a denormal output is flushed to zero, it must respect the sign
+    mode. Not all targets support all modes. While this indicates the
+    expected floating point mode the function will be executed with,
+    this does not make any attempt to ensure the mode is
+    consistent. User or platform code is expected to set the floating
+    point mode appropriately before function entry.
+
+   If the input mode is ``"preserve-sign"``, or ``"positive-zero"``, a
+   floating-point operation must treat any input denormal value as
+   zero. In some situations, if an instruction does not respect this
+   mode, the input may need to be converted to 0 as if by
+   ``@llvm.canonicalize`` during lowering for correctness.
 
 ``"denormal-fp-math-f32"``
-   Same as ``"denormal-fp-math"``, but only controls the behavior of
-   the 32-bit float type (or vectors of 32-bit floats). If both are
-   are present, this overrides ``"denormal-fp-math"``. Not all targets
-   support separately setting the denormal mode per type, and no
-   attempt is made to diagnose unsupported uses. Currently this
-   attribute is respected by the AMDGPU and NVPTX backends.
+    Same as ``"denormal-fp-math"``, but only controls the behavior of
+    the 32-bit float type (or vectors of 32-bit floats). If both are
+    are present, this overrides ``"denormal-fp-math"``. Not all targets
+    support separately setting the denormal mode per type, and no
+    attempt is made to diagnose unsupported uses. Currently this
+    attribute is respected by the AMDGPU and NVPTX backends.
 
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
@@ -1898,7 +1913,7 @@ attributes are supported:
     present in the IR Module. The signature of the vector variant is
     determined by the rules of the Vector Function ABI (VFABI)
     specifications of the target. For Arm and X86, the VFABI can be
-    found at https://github.com/ARM-software/software-standards and
+    found at https://github.com/ARM-software/abi-aa and
     https://software.intel.com/en-us/articles/vector-simd-function-abi,
     respectively.
 
@@ -2086,6 +2101,66 @@ between GC strategies requires additional code generation at the call
 site, these bundles may contain any values that are needed by the
 generated code.  For more details, see :ref:`GC Transitions
 <gc_transition_args>`.
+
+.. _assume_opbundles:
+
+Assume Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^
+
+Operand bundles on an :ref:`llvm.assume <int_assume>` allows representing
+assumptions that a :ref:`parameter attribute <paramattrs>` or a
+:ref:`function attribute <fnattrs>` holds for a certain value at a certain
+location. Operand bundles enable assumptions that are either hard or impossible
+to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
+
+An assume operand bundle has the form:
+
+::
+
+      "<tag>"([ <holds for value> [, <attribute argument>] ])
+
+* The tag of the operand bundle is the name of attribute that can be assumed
+  to hold.
+* The first argument if present is the value for which the attribute hold.
+* The second argument if present is an argument of the attribute.
+
+If there are no arguments the attribute is a property of the call location.
+
+If the represented attribute expects a constant argument, the argument provided
+to the operand bundle should be a constant as well.
+
+For example:
+
+.. code-block:: llvm
+
+      call void @llvm.assume(i1 true) ["align"(i32* %val, i32 8)]
+
+allows the optimizer to assume that at location of call to
+:ref:`llvm.assume <int_assume>` ``%val`` has an alignment of at least 8.
+
+.. code-block:: llvm
+
+      call void @llvm.assume(i1 %cond) ["cold"(), "nonnull"(i64* %val)]
+
+allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
+call location is cold and that ``%val`` may not be null.
+
+Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
+provided guarantees are are violated at runtime the behavior is undefined.
+
+Even if the assumed property can be encoded as a boolean value, like
+``nonnull``, using operand bundles to express the property can still have
+benefits:
+
+* Attributes that can be expressed via operand bundles are directly the
+  property that the optimizer uses and cares about. Encoding attributes as
+  operand bundles removes the need for an instruction sequence that represents
+  the property (e.g., `icmp ne i32* %p, null` for `nonnull`) and for the
+  optimizer to deduce the property from that instruction sequence.
+* Expressing the property using operand bundles makes it easy to identify the
+  use of the value as a use in an :ref:`llvm.assume <int_assume>`. This then
+  simplifies and improves heuristics, e.g., for use "use-sensitive"
+  optimizations.
 
 .. _moduleasm:
 
@@ -6209,7 +6284,9 @@ The following behaviors are supported:
    * - 2
      - **Warning**
            Emits a warning if two values disagree. The result value will be the
-           operand for the flag from the first module being linked.
+           operand for the flag from the first module being linked, or the max
+           if the other module uses **Max** (in which case the resulting flag
+           will be **Max**).
 
    * - 3
      - **Require**
@@ -15593,9 +15670,9 @@ Each of these intrinsics corresponds to a normal floating-point operation. The
 data arguments and the return value are the same as the corresponding FP
 operation.
 
-The rounding mode argument is a metadata string specifying what 
-assumptions, if any, the optimizer can make when transforming constant 
-values. Some constrained FP intrinsics omit this argument. If required 
+The rounding mode argument is a metadata string specifying what
+assumptions, if any, the optimizer can make when transforming constant
+values. Some constrained FP intrinsics omit this argument. If required
 by the intrinsic, this argument must be one of the following strings:
 
 ::
@@ -15911,7 +15988,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptoui``' intrinsic converts a 
+The '``llvm.experimental.constrained.fptoui``' intrinsic converts a
 floating-point ``value`` to its unsigned integer equivalent of type ``ty2``.
 
 Arguments:
@@ -15944,7 +16021,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptosi``' intrinsic converts 
+The '``llvm.experimental.constrained.fptosi``' intrinsic converts
 :ref:`floating-point <t_floating>` ``value`` to type ``ty2``.
 
 Arguments:
@@ -15952,7 +16029,7 @@ Arguments:
 
 The first argument to the '``llvm.experimental.constrained.fptosi``'
 intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. 
+<t_vector>` of floating point values.
 
 The second argument specifies the exception behavior as described above.
 
@@ -16061,7 +16138,7 @@ intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
 <t_vector>` of floating point values. This argument must be larger in size
 than the result.
 
-The second and third arguments specify the rounding mode and exception 
+The second and third arguments specify the rounding mode and exception
 behavior as described above.
 
 Semantics:
@@ -16085,7 +16162,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fpext``' intrinsic extends a 
+The '``llvm.experimental.constrained.fpext``' intrinsic extends a
 floating-point ``value`` to a larger floating-point value.
 
 Arguments:
@@ -17102,7 +17179,7 @@ Syntax:
       declare <inttype>
       @llvm.experimental.constrained.llround(<fptype> <op1>,
                                              metadata <exception behavior>)
-      
+
 Overview:
 """""""""
 
@@ -17517,10 +17594,14 @@ The ``llvm.assume`` allows the optimizer to assume that the provided
 condition is true. This information can then be used in simplifying other parts
 of the code.
 
+More complex assumptions can be encoded as
+:ref:`assume operand bundles <assume_opbundles>`.
+
 Arguments:
 """"""""""
 
-The condition which the optimizer may assume is always true.
+The argument of the call is the condition which the optimizer may assume is
+always true.
 
 Semantics:
 """"""""""

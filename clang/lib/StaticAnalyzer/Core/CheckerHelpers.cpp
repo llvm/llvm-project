@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/Lex/Preprocessor.h"
 
 namespace clang {
 
@@ -109,6 +110,45 @@ Nullability getNullabilityAnnotation(QualType Type) {
   return Nullability::Unspecified;
 }
 
+llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
+                                       const Preprocessor &PP) {
+  const auto *MacroII = PP.getIdentifierInfo(Macro);
+  if (!MacroII)
+    return llvm::None;
+  const MacroInfo *MI = PP.getMacroInfo(MacroII);
+  if (!MI)
+    return llvm::None;
 
-} // end namespace ento
-} // end namespace clang
+  // Filter out parens.
+  std::vector<Token> FilteredTokens;
+  FilteredTokens.reserve(MI->tokens().size());
+  for (auto &T : MI->tokens())
+    if (!T.isOneOf(tok::l_paren, tok::r_paren))
+      FilteredTokens.push_back(T);
+
+  if (FilteredTokens.size() > 2)
+    return llvm::None;
+
+  // Parse an integer at the end of the macro definition.
+  const Token &T = FilteredTokens.back();
+  if (!T.isLiteral())
+    return llvm::None;
+  StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+  llvm::APInt IntValue;
+  constexpr unsigned AutoSenseRadix = 0;
+  if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
+    return llvm::None;
+
+  // Parse an optional minus sign.
+  if (FilteredTokens.size() == 2) {
+    if (FilteredTokens.front().is(tok::minus))
+      IntValue = -IntValue;
+    else
+      return llvm::None;
+  }
+
+  return IntValue.getSExtValue();
+}
+
+} // namespace ento
+} // namespace clang

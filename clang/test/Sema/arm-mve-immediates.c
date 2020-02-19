@@ -273,3 +273,37 @@ void test_simd_vmvn(void)
     w = vmvnq_n_u32(0x0001FFFF); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
     w = vmvnq_n_u32(0x000001FF);
 }
+
+void test_vidup(void)
+{
+    vidupq_n_u16(0x12345678, 1);
+    vidupq_n_u16(0x12345678, 2);
+    vidupq_n_u16(0x12345678, 4);
+    vidupq_n_u16(0x12345678, 8);
+
+    vidupq_n_u16(0x12345678, 0); // expected-error {{argument value 0 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, 16); // expected-error {{argument value 16 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -1); // expected-error {{argument value -1 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -2); // expected-error {{argument value -2 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -4); // expected-error {{argument value -4 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -8); // expected-error {{argument value -8 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, 3); // expected-error {{argument should be a power of 2}}
+    vidupq_n_u16(0x12345678, 7); // expected-error {{argument should be a power of 2}}
+}
+
+void test_vcvtq(void)
+{
+    uint16x8_t vec_u16;
+    float16x8_t vec_f16;
+    vcvtq_n_f16_u16(vec_u16, 0); // expected-error {{argument value 0 is outside the valid range [1, 16]}}
+    vcvtq_n_f16_u16(vec_u16, 1);
+    vcvtq_n_f16_u16(vec_u16, 16);
+    vcvtq_n_f16_u16(vec_u16, 17); // expected-error {{argument value 17 is outside the valid range [1, 16]}}
+
+    int32x4_t vec_s32;
+    float32x4_t vec_f32;
+    vcvtq_n_s32_f32(vec_s32, -1); // expected-error {{argument value -1 is outside the valid range [1, 32]}}
+    vcvtq_n_s32_f32(vec_s32, 1);
+    vcvtq_n_s32_f32(vec_s32, 32);
+    vcvtq_n_s32_f32(vec_s32, 33); // expected-error {{argument value 33 is outside the valid range [1, 32]}}
+}

@@ -248,6 +248,11 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
                     const Vector<SizedFile> &CorporaFiles) {
   Printf("INFO: collecting data flow: bin: %s dir: %s files: %zd\n",
          DFTBinary.c_str(), DirPath.c_str(), CorporaFiles.size());
+  if (CorporaFiles.empty()) {
+    Printf("ERROR: can't collect data flow without corpus provided.");
+    return 1;
+  }
+
   static char DFSanEnv[] = "DFSAN_OPTIONS=fast16labels=1:warn_unimplemented=0";
   putenv(DFSanEnv);
   MkDir(DirPath);

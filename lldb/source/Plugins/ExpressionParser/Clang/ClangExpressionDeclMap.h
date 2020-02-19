@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangExpressionDeclMap_h_
-#define liblldb_ClangExpressionDeclMap_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONDECLMAP_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONDECLMAP_H
 
 #include <signal.h>
 #include <stdint.h>
@@ -17,7 +17,6 @@
 #include "ClangASTSource.h"
 #include "ClangExpressionVariable.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -28,6 +27,8 @@
 #include "llvm/ADT/DenseMap.h"
 
 namespace lldb_private {
+
+class ClangPersistentVariables;
 
 /// \class ClangExpressionDeclMap ClangExpressionDeclMap.h
 /// "lldb/Expression/ClangExpressionDeclMap.h" Manages named entities that are
@@ -79,8 +80,8 @@ public:
   ClangExpressionDeclMap(
       bool keep_result_in_memory,
       Materializer::PersistentVariableDelegate *result_delegate,
-      const lldb::TargetSP &target, const lldb::ClangASTImporterSP &importer,
-      ValueObject *ctx_obj);
+      const lldb::TargetSP &target,
+      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj);
 
   /// Destructor
   ~ClangExpressionDeclMap() override;
@@ -280,7 +281,7 @@ public:
   ///     for logging purposes.
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
-                                CompilerDeclContext &namespace_decl,
+                                const CompilerDeclContext &namespace_decl,
                                 unsigned int current_id);
 
 protected:
@@ -467,7 +468,7 @@ private:
   ///    True iff a local variable was found.
   bool LookupLocalVariable(NameSearchContext &context, ConstString name,
                            unsigned current_id, SymbolContext &sym_ctx,
-                           CompilerDeclContext &namespace_decl);
+                           const CompilerDeclContext &namespace_decl);
 
   /// Searches for functions in the given SymbolContextList.
   ///
@@ -504,7 +505,8 @@ private:
   ///     The ID for the current FindExternalVisibleDecls invocation,
   ///     for logging purposes.
   void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
-                      ConstString name, CompilerDeclContext &namespace_decl,
+                      ConstString name,
+                      const CompilerDeclContext &namespace_decl,
                       unsigned current_id);
 
   /// Given a target, find a variable that matches the given name and type.
@@ -523,9 +525,9 @@ private:
   ///
   /// \return
   ///     The LLDB Variable found, or NULL if none was found.
-  lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
-                                      ConstString name,
-                                      CompilerDeclContext *namespace_decl);
+  lldb::VariableSP
+  FindGlobalVariable(Target &target, lldb::ModuleSP &module, ConstString name,
+                     const CompilerDeclContext &namespace_decl);
 
   /// Get the value of a variable in a given execution context and return the
   /// associated Types if needed.
@@ -657,4 +659,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangExpressionDeclMap_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONDECLMAP_H

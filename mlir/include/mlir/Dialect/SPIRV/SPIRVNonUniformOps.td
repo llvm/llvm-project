@@ -97,6 +97,10 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
   let results = (outs
     SPV_IntVec4:$result
   );
+
+  let assemblyFormat = [{
+    $execution_scope $predicate attr-dict `:` type($result)
+  }];
 }
 
 // -----
@@ -145,6 +149,8 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
   let builders = [
     OpBuilder<[{Builder *builder, OperationState &state, spirv::Scope}]>
   ];
+
+  let assemblyFormat = "$execution_scope attr-dict `:` type($result)";
 }
 
 // -----

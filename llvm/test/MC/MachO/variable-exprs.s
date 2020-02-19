@@ -298,7 +298,7 @@ Lt0_x = Lt0_a - Lt0_b
 // CHECK-X86_64:     Size: 0x38
 // CHECK-X86_64:     Offset: 385
 // CHECK-X86_64:     Alignment: 0
-// CHECK-X86_64:     RelocationOffset: 0x1BC
+// CHECK-X86_64:     RelocationOffset: 0x1C0
 // CHECK-X86_64:     RelocationCount: 9
 // CHECK-X86_64:     Type: Regular (0x0)
 // CHECK-X86_64:     Attributes [ (0x0)

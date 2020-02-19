@@ -456,10 +456,9 @@ define i32 @test_mul_canonicalize_op0(i32 %x, i32 %y) {
 
 define i32 @test_mul_canonicalize_op1(i32 %x, i32 %z) {
 ; CHECK-LABEL: @test_mul_canonicalize_op1(
-; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[Z:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[MUL]]
+; CHECK-NEXT:    [[Y_NEG:%.*]] = mul i32 [[Z:%.*]], -3
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul i32 [[Y_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[DOTNEG]]
 ;
   %y = mul i32 %z, 3
   %neg = sub i32 0, %x

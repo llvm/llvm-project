@@ -445,8 +445,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       } else {
         // We need to compare against 0.
         assert(CmpInst::isIntPredicate(ResultPred) && "Unsupported predicate");
-        auto Zero = MRI.createGenericVirtualRegister(LLT::scalar(32));
-        MIRBuilder.buildConstant(Zero, 0);
+        auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
         MIRBuilder.buildICmp(ResultPred, ProcessedResult, LibcallResult, Zero);
       }
       Results.push_back(ProcessedResult);

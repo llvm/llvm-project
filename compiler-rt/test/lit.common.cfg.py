@@ -258,6 +258,44 @@ if config.gwp_asan:
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 if config.host_os == 'Darwin':
+  def get_apple_platform_version_aligned_with(macos_version, apple_platform):
+    """
+      Given a macOS version (`macos_version`) returns the corresponding version for
+      the specified Apple platform if it exists.
+
+      `macos_version` - The macOS version as a string.
+      `apple_platform` - The Apple platform name as a string.
+
+      Returns the corresponding version as a string if it exists, otherwise
+      `None` is returned.
+    """
+    m = re.match(r'^10\.(?P<min>\d+)(\.(?P<patch>\d+))?$', macos_version)
+    if not m:
+      raise Exception('Could not parse macOS version: "{}"'.format(macos_version))
+    ver_min = int(m.group('min'))
+    ver_patch = m.group('patch')
+    if ver_patch:
+      ver_patch = int(ver_patch)
+    else:
+      ver_patch = 0
+    result_str = ''
+    if apple_platform == 'osx':
+      # Drop patch for now.
+      result_str = '10.{}'.format(ver_min)
+    elif apple_platform.startswith('ios') or apple_platform.startswith('tvos'):
+      result_maj = ver_min - 2
+      if result_maj < 1:
+        return None
+      result_str = '{}.{}'.format(result_maj, ver_patch)
+    elif apple_platform.startswith('watch'):
+      result_maj = ver_min - 9
+      if result_maj < 1:
+        return None
+      result_str = '{}.{}'.format(result_maj, ver_patch)
+    else:
+      raise Exception('Unsuported apple platform "{}"'.format(apple_platform))
+    return result_str
+
   osx_version = (10, 0, 0)
   try:
     osx_version = subprocess.check_output(["sw_vers", "-productVersion"])
@@ -288,12 +326,17 @@ if config.host_os == 'Darwin':
   except:
     pass
 
-  config.substitutions.append( ("%macos_min_target_10_11", "-mmacosx-version-min=10.11") )
-
-  isIOS = config.apple_platform != "osx"
+  min_os_aligned_with_osx_10_11 = get_apple_platform_version_aligned_with('10.11', config.apple_platform)
+  min_os_aligned_with_osx_10_11_flag = ''
+  if min_os_aligned_with_osx_10_11:
+    min_os_aligned_with_osx_10_11_flag = '{flag}={version}'.format(
+      flag=config.apple_platform_min_deployment_target_flag,
+      version=min_os_aligned_with_osx_10_11)
+  else:
+    lit_config.warning('Could not find a version of {} that corresponds with macOS 10.11'.format(config.apple_platform))
+  config.substitutions.append( ("%macos_min_target_10_11", min_os_aligned_with_osx_10_11_flag) )
   # rdar://problem/22207160
-  config.substitutions.append( ("%darwin_min_target_with_full_runtime_arc_support",
-      "-miphoneos-version-min=9.0" if isIOS else "-mmacosx-version-min=10.11") )
+  config.substitutions.append( ("%darwin_min_target_with_full_runtime_arc_support", min_os_aligned_with_osx_10_11_flag) )
 
   # 32-bit iOS simulator is deprecated and removed in latest Xcode.
   if config.apple_platform == "iossim":

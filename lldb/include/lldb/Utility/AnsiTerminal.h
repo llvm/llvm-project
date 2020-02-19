@@ -1,3 +1,7 @@
+#ifndef LLDB_UTILITY_ANSITERMINAL_H
+
+#define LLDB_UTILITY_ANSITERMINAL_H
+
 //===---------------------AnsiTerminal.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -138,3 +142,5 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
 }
 }
 } // namespace lldb_private
+
+#endif

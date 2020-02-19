@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-pointer-to-int-cast -fsyntax-only -verify %s
 // PR3459
 struct bar {
   char n[1];

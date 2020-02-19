@@ -19,10 +19,44 @@ define i32 @icmp_eq(i32 %a, i32 %b) nounwind {
 define i32 @icmp_eq_constant(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_eq_constant:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a0, a0, 42
+; RV32I-NEXT:    addi a0, a0, -42
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
   %1 = icmp eq i32 %a, 42
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_eq_constant_2048(i32 %a) nounwind {
+; RV32I-LABEL: icmp_eq_constant_2048:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, -2048
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+  %1 = icmp eq i32 %a, 2048
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_eq_constant_neg_2048(i32 %a) nounwind {
+; RV32I-LABEL: icmp_eq_constant_neg_2048:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -2048
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+  %1 = icmp eq i32 %a, -2048
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_eq_constant_neg_2047(i32 %a) nounwind {
+; RV32I-LABEL: icmp_eq_constant_neg_2047:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+  %1 = icmp eq i32 %a, -2047
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
@@ -51,10 +85,33 @@ define i32 @icmp_ne(i32 %a, i32 %b) nounwind {
 define i32 @icmp_ne_constant(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_ne_constant:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a0, a0, 42
+; RV32I-NEXT:    addi a0, a0, -42
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
   %1 = icmp ne i32 %a, 42
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_ne_constant_2048(i32 %a) nounwind {
+; RV32I-LABEL: icmp_ne_constant_2048:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, -2048
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+  %1 = icmp ne i32 %a, 2048
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_ne_constant_neg_2048(i32 %a) nounwind {
+; RV32I-LABEL: icmp_ne_constant_neg_2048:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -2048
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+  %1 = icmp ne i32 %a, -2048
   %2 = zext i1 %1 to i32
   ret i32 %2
 }

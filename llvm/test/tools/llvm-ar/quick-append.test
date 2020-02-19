@@ -9,7 +9,7 @@
 # RUN: llvm-ar t %t/single.a \
 # RUN:   | FileCheck %s --check-prefix=SINGLE --match-full-lines --implicit-check-not {{.}}
 
-# SINGLE: 1.o
+# SINGLE: 1.o{{$}}
 
 # RUN: llvm-nm --print-armap %t/single.a \
 # RUN:   | FileCheck %s --check-prefix=SINGLE-SYM
@@ -21,28 +21,28 @@
 # RUN: llvm-ar t %t/multiple.a \
 # RUN:   | FileCheck %s --check-prefix=MULTIPLE --match-full-lines --implicit-check-not {{.}}
 
-# MULTIPLE:      1.o
-# MULTIPLE-NEXT: 2.o
+# MULTIPLE:      1.o{{$}}
+# MULTIPLE-NEXT: 2.o{{$}}
 
 # RUN: llvm-nm --print-armap %t/multiple.a \
 # RUN:   | FileCheck %s --check-prefix=MULTIPLE-SYM
 
-# MULTIPLE-SYM:      symbol1
-# MULTIPLE-SYM-NEXT: symbol2
+# MULTIPLE-SYM:      symbol1 in 1.o
+# MULTIPLE-SYM-NEXT: symbol2 in 2.o
 
 ## Append same member:
 # RUN: llvm-ar qc %t/same.a %t/1.o %t/1.o
 # RUN: llvm-ar t %t/same.a \
 # RUN:   | FileCheck %s --check-prefix=SAME -DFILE=%t/2.o --match-full-lines --implicit-check-not {{.}}
 
-# SAME:      1.o
-# SAME-NEXT: 1.o
+# SAME:      1.o{{$}}
+# SAME-NEXT: 1.o{{$}}
 
 # RUN: llvm-nm --print-armap %t/same.a \
 # RUN:   | FileCheck %s --check-prefix=SAME-SYM
 
-# SAME-SYM:      symbol1
-# SAME-SYM-NEXT: symbol1
+# SAME-SYM:      symbol1 in 1.o
+# SAME-SYM-NEXT: symbol1 in 1.o
 
 ## Append without member:
 # RUN: llvm-ar qc %t/without.a

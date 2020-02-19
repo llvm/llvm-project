@@ -79,19 +79,4 @@ int64_t MakeVSCodeFrameID(lldb::SBFrame &frame) {
                    frame.GetFrameID());
 }
 
-static uint32_t constexpr BREAKPOINT_ID_SHIFT = 22;
-
-uint32_t GetLLDBBreakpointID(uint64_t dap_breakpoint_id) {
-  return dap_breakpoint_id >> BREAKPOINT_ID_SHIFT;
-}
-
-uint32_t GetLLDBBreakpointLocationID(uint64_t dap_breakpoint_id) {
-  return dap_breakpoint_id & ((1u << BREAKPOINT_ID_SHIFT) - 1);
-}
-
-int64_t MakeVSCodeBreakpointID(lldb::SBBreakpointLocation &bp_loc) {
-  return (int64_t)(bp_loc.GetBreakpoint().GetID() << BREAKPOINT_ID_SHIFT |
-                   bp_loc.GetID());
-}
-
 } // namespace lldb_vscode

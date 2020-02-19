@@ -108,7 +108,7 @@ TESTS = isl_test$(EXEEXT) codegen_test.sh pip_test.sh bound_test.sh \
 @HAVE_CPP_ISL_H_TRUE@@HAVE_CXX11_TRUE@am__append_2 = isl_test_cpp
 @HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@am__append_3 = isl_test_cpp-checked isl_test_cpp-checked-conversion
 @HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@am__append_4 = isl_test_cpp-checked isl_test_cpp-checked-conversion
-@HAVE_CLANG_TRUE@@HAVE_PYTHON_TRUE@am__append_5 = isl_test_python.py
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@@HAVE_PYTHON_TRUE@am__append_5 = isl_test_python.py
 @IMATH_FOR_MP_TRUE@am__append_6 = isl_test_imath
 @IMATH_FOR_MP_TRUE@am__append_7 = isl_test_imath
 @IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@am__append_8 = isl_int_sioimath.h \
@@ -126,6 +126,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11_no_override.m4 \
 	$(top_srcdir)/m4/ax_detect_clang.m4 \
 	$(top_srcdir)/m4/ax_detect_git_head.m4 \
 	$(top_srcdir)/m4/ax_detect_gmp.m4 \
@@ -141,8 +142,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
-	$(am__configure_deps) $(am__pkginclude_HEADERS_DIST) \
-	$(am__DIST_COMMON)
+	$(am__configure_deps) $(am__noinst_PYTHON_DIST) \
+	$(am__pkginclude_HEADERS_DIST) $(am__DIST_COMMON)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
@@ -158,7 +159,7 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libdep_a_AR = $(AR) $(ARFLAGS)
 libdep_a_LIBADD =
-am_libdep_a_OBJECTS = all.$(OBJEXT)
+am_libdep_a_OBJECTS = dep.$(OBJEXT)
 libdep_a_OBJECTS = $(am_libdep_a_OBJECTS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -208,9 +209,9 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_convex_hull.c isl_ctx.c isl_ctx_private.h isl_deprecated.c \
 	isl_dim_map.h isl_dim_map.c isl_equalities.c isl_equalities.h \
 	isl_factorization.c isl_factorization.h isl_farkas.c isl_ffs.c \
-	isl_flow.c isl_fold.c isl_hash.c isl_hash_private.h \
-	isl_id_to_ast_expr.c isl_id_to_id.c isl_id_to_pw_aff.c \
-	isl_ilp.c isl_ilp_private.h isl_input.c isl_int.h isl_local.h \
+	isl_flow.c isl_fold.c isl_hash.c isl_id_to_ast_expr.c \
+	isl_id_to_id.c isl_id_to_pw_aff.c isl_ilp.c isl_ilp_private.h \
+	isl_input.c isl_int.h isl_local_private.h isl_local.h \
 	isl_local.c isl_local_space_private.h isl_local_space.c \
 	isl_lp.c isl_lp_private.h isl_map.c isl_map_list.c \
 	isl_map_simplify.c isl_map_subtract.c isl_map_private.h \
@@ -227,9 +228,10 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_schedule_constraints.c isl_schedule_constraints.h \
 	isl_scheduler.c isl_set_list.c isl_sort.c isl_sort.h \
 	isl_space.c isl_space_private.h isl_stream.c \
-	isl_stream_private.h isl_seq.c isl_seq.h isl_stride.c \
-	isl_tab.c isl_tab.h isl_tab_pip.c isl_tarjan.c isl_tarjan.h \
-	isl_transitive_closure.c isl_union_map.c \
+	isl_stream_private.h isl_seq.c isl_seq.h \
+	isl_set_to_ast_graft_list.c isl_set_to_ast_graft_list.h \
+	isl_stride.c isl_tab.c isl_tab.h isl_tab_pip.c isl_tarjan.c \
+	isl_tarjan.h isl_transitive_closure.c isl_union_map.c \
 	isl_union_map_private.h isl_union_set_private.h isl_val.c \
 	isl_val_private.h isl_vec_private.h isl_vec.c isl_version.c \
 	isl_vertices_private.h isl_vertices.c isl_yaml.h
@@ -267,9 +269,10 @@ am_libisl_la_OBJECTS = $(am__objects_4) isl_aff.lo isl_aff_map.lo \
 	isl_schedule_read.lo isl_schedule_tree.lo \
 	isl_schedule_constraints.lo isl_scheduler.lo isl_set_list.lo \
 	isl_sort.lo isl_space.lo isl_stream.lo isl_seq.lo \
-	isl_stride.lo isl_tab.lo isl_tab_pip.lo isl_tarjan.lo \
-	isl_transitive_closure.lo isl_union_map.lo isl_val.lo \
-	isl_vec.lo isl_version.lo isl_vertices.lo
+	isl_set_to_ast_graft_list.lo isl_stride.lo isl_tab.lo \
+	isl_tab_pip.lo isl_tarjan.lo isl_transitive_closure.lo \
+	isl_union_map.lo isl_val.lo isl_vec.lo isl_version.lo \
+	isl_vertices.lo
 libisl_la_OBJECTS = $(am_libisl_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -358,27 +361,27 @@ isl_test_DEPENDENCIES = libisl.la
 isl_test_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(isl_test_LDFLAGS) $(LDFLAGS) -o $@
-am_isl_test_cpp_OBJECTS = isl_test_cpp-isl_test_cpp.$(OBJEXT)
+am_isl_test_cpp_OBJECTS = isl_test_cpp.$(OBJEXT)
 isl_test_cpp_OBJECTS = $(am_isl_test_cpp_OBJECTS)
 isl_test_cpp_DEPENDENCIES = libisl.la
 isl_test_cpp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(isl_test_cpp_CXXFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(isl_test_cpp_LDFLAGS) $(LDFLAGS) -o $@
-am_isl_test_cpp_checked_OBJECTS =  \
-	isl_test_cpp_checked-isl_test_cpp-checked.$(OBJEXT)
+am_isl_test_cpp_checked_OBJECTS = isl_test_cpp-checked.$(OBJEXT)
 isl_test_cpp_checked_OBJECTS = $(am_isl_test_cpp_checked_OBJECTS)
 isl_test_cpp_checked_DEPENDENCIES = libisl.la
 isl_test_cpp_checked_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) \
-	$(isl_test_cpp_checked_LDFLAGS) $(LDFLAGS) -o $@
-am_isl_test_cpp_checked_conversion_OBJECTS = isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.$(OBJEXT)
+	$(AM_CXXFLAGS) $(CXXFLAGS) $(isl_test_cpp_checked_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_isl_test_cpp_checked_conversion_OBJECTS =  \
+	isl_test_cpp-checked-conversion.$(OBJEXT)
 isl_test_cpp_checked_conversion_OBJECTS =  \
 	$(am_isl_test_cpp_checked_conversion_OBJECTS)
 isl_test_cpp_checked_conversion_DEPENDENCIES = libisl.la
 isl_test_cpp_checked_conversion_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(isl_test_cpp_checked_conversion_LDFLAGS) $(LDFLAGS) -o $@
 isl_test_imath_SOURCES = isl_test_imath.c
 isl_test_imath_OBJECTS = isl_test_imath.$(OBJEXT)
@@ -480,6 +483,9 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+am__noinst_PYTHON_DIST = interface/isl.py
+am__py_compile = PYTHON=$(PYTHON) $(SHELL) $(py_compile)
+py_compile = $(top_srcdir)/py-compile
 DATA = $(pkgconfig_DATA)
 am__pkginclude_HEADERS_DIST = include/isl/cpp.h include/isl/val_gmp.h \
 	include/isl/aff.h include/isl/aff_type.h include/isl/arg.h \
@@ -717,7 +723,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/bound_test.sh.in \
 	$(srcdir)/isl_config.h.in $(srcdir)/isl_srcdir.c.in \
 	$(srcdir)/pip_test.sh.in $(srcdir)/schedule_test.sh.in AUTHORS \
 	ChangeLog README compile config.guess config.sub depcomp \
-	install-sh ltmain.sh missing test-driver
+	install-sh ltmain.sh missing py-compile test-driver
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -774,13 +780,15 @@ CFLAGS = @CFLAGS@
 CLANG_CXXFLAGS = @CLANG_CXXFLAGS@
 CLANG_LDFLAGS = @CLANG_LDFLAGS@
 CLANG_LIBS = @CLANG_LIBS@
+CLANG_RFLAG = @CLANG_RFLAG@
+CONFIG_STATUS_DEPENDENCIES = @CONFIG_STATUS_DEPENDENCIES@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
-CXX11FLAGS = @CXX11FLAGS@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
+CYGPATH = @CYGPATH@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -810,12 +818,14 @@ LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIB_CLANG_EDIT = @LIB_CLANG_EDIT@
 LIPO = @LIPO@
+LLVM_CONFIG = @LLVM_CONFIG@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MP_CFLAGS = @MP_CFLAGS@
 MP_CPPFLAGS = @MP_CPPFLAGS@
 MP_LDFLAGS = @MP_LDFLAGS@
 MP_LIBS = @MP_LIBS@
@@ -823,6 +833,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OS_SRCDIR = @OS_SRCDIR@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -885,7 +896,6 @@ infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
-llvm_config_found = @llvm_config_found@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -911,17 +921,19 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 versioninfo = @versioninfo@
-@HAVE_CLANG_TRUE@MAYBE_INTERFACE = interface
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@MAYBE_INTERFACE = interface
 SUBDIRS = . $(MAYBE_INTERFACE) doc
 DIST_SUBDIRS = $(MAYBE_INTERFACE) doc
 ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = nostdinc subdir-objects
 lib_LTLIBRARIES = libisl.la
 @HAVE_CPP_ISL_H_TRUE@CPP_H = include/isl/cpp.h
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@@HAVE_PYTHON_TRUE@noinst_PYTHON = interface/isl.py
 TEST_EXTENSIONS = .py
 AM_TESTS_ENVIRONMENT = \
 	export PYTHONPATH=interface; \
-	export LD_LIBRARY_PATH=.libs;
+	export ISL_DYLD_LIBRARY_PATH=.libs; \
+	export LD_LIBRARY_PATH=".libs:$(LD_LIBRARY_PATH)";
 
 PY_LOG_COMPILER = $(PYTHON)
 @GMP_FOR_MP_TRUE@MP_SRC = \
@@ -941,7 +953,7 @@ PY_LOG_COMPILER = $(PYTHON)
 @GMP_FOR_MP_TRUE@@NEED_GET_MEMORY_FUNCTIONS_TRUE@GET_MEMORY_FUNCTIONS = mp_get_memory_functions.c
 includes = -I. -I$(srcdir) -I$(srcdir)/include -Iinclude/
 AM_CPPFLAGS = $(includes) @MP_CPPFLAGS@
-AM_CFLAGS = @WARNING_FLAGS@
+AM_CFLAGS = @WARNING_FLAGS@ @MP_CFLAGS@
 libisl_la_SOURCES = \
 	$(MP_SRC) \
 	isl_aff.c \
@@ -985,7 +997,6 @@ libisl_la_SOURCES = \
 	isl_flow.c \
 	isl_fold.c \
 	isl_hash.c \
-	isl_hash_private.h \
 	isl_id_to_ast_expr.c \
 	isl_id_to_id.c \
 	isl_id_to_pw_aff.c \
@@ -993,6 +1004,7 @@ libisl_la_SOURCES = \
 	isl_ilp_private.h \
 	isl_input.c \
 	isl_int.h \
+	isl_local_private.h \
 	isl_local.h \
 	isl_local.c \
 	isl_local_space_private.h \
@@ -1052,6 +1064,8 @@ libisl_la_SOURCES = \
 	isl_stream_private.h \
 	isl_seq.c \
 	isl_seq.h \
+	isl_set_to_ast_graft_list.c \
+	isl_set_to_ast_graft_list.h \
 	isl_stride.c \
 	isl_tab.c \
 	isl_tab.h \
@@ -1141,21 +1155,18 @@ isl_closure_LDADD = libisl.la
 isl_closure_SOURCES = \
 	closure.c
 
-isl_test_cpp_CXXFLAGS = @CXX11FLAGS@
 isl_test_cpp_SOURCES = \
 	isl_test_cpp.cc \
 	include/isl/cpp.h
 
 isl_test_cpp_LDFLAGS = @MP_LDFLAGS@
 isl_test_cpp_LDADD = libisl.la @MP_LIBS@
-isl_test_cpp_checked_CXXFLAGS = @CXX11FLAGS@
 isl_test_cpp_checked_SOURCES = \
 	isl_test_cpp-checked.cc \
 	include/isl/cpp-checked.h
 
 isl_test_cpp_checked_LDFLAGS = @MP_LDFLAGS@
 isl_test_cpp_checked_LDADD = libisl.la @MP_LIBS@
-isl_test_cpp_checked_conversion_CXXFLAGS = @CXX11FLAGS@
 isl_test_cpp_checked_conversion_SOURCES = \
 	isl_test_cpp-checked-conversion.cc \
 	include/isl/cpp-checked-conversion.h
@@ -1166,7 +1177,7 @@ isl_test_cpp_checked_conversion_LDADD = libisl.la @MP_LIBS@
 # dummy library that captures the dependencies on all headers
 # that are relevant for the bindings
 noinst_LIBRARIES = libdep.a
-libdep_a_SOURCES = all.c
+libdep_a_SOURCES = dep.c
 nodist_pkginclude_HEADERS = \
 	include/isl/stdint.h
 
@@ -1232,13 +1243,19 @@ pkginclude_HEADERS = \
 	include/isl/version.h \
 	include/isl/vertices.h
 
-@HAVE_CLANG_TRUE@CPP_INTERFACES = \
-@HAVE_CLANG_TRUE@	include/isl/cpp.h \
-@HAVE_CLANG_TRUE@	include/isl/cpp-checked.h \
-@HAVE_CLANG_TRUE@	include/isl/cpp-checked-conversion.h
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@CPP_INTERFACES = \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	include/isl/cpp.h \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	include/isl/cpp-checked.h \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	include/isl/cpp-checked-conversion.h
 
 BUILT_SOURCES = gitversion.h $(CPP_INTERFACES)
-CLEANFILES = gitversion.h interface/isl.py $(CPP_INTERFACES)
+CLEANFILES = \
+	gitversion.h \
+	interface/isldlname.py \
+	interface/isl.py \
+	interface/isl.pyc \
+	$(CPP_INTERFACES)
+
 DISTCLEANFILES = \
 	isl-uninstalled.sh \
 	isl-uninstalled.pc \
@@ -1249,48 +1266,98 @@ DISTCLEANFILES = \
 EXTRA_DIST = \
 	LICENSE \
 	isl_config_post.h \
+	isl_align_params_templ.c \
+	isl_align_params_bin_templ.c \
 	basis_reduction_templ.c \
+	isl_bind_domain_templ.c \
 	bset_to_bmap.c \
 	bset_from_bmap.c \
+	isl_check_named_params_templ.c \
+	check_reparse_templ.c \
+	check_reparse_test_templ.c \
+	check_type_range_templ.c \
+	isl_domain_factor_templ.c \
 	extract_key.c \
+	has_single_reference_templ.c \
+	isl_list_macro.h \
 	isl_list_templ.c \
 	isl_list_templ.h \
+	isl_map_bound_templ.c \
 	isl_map_lexopt_templ.c \
+	isl_maybe_ast_graft_list.h \
 	isl_maybe_map.h \
 	isl_multi_macro.h \
+	isl_multi_bind_templ.c \
 	isl_multi_explicit_domain.c \
 	isl_multi_pw_aff_explicit_domain.c \
 	isl_multi_union_pw_aff_explicit_domain.c \
 	isl_multi_no_explicit_domain.c \
+	isl_multi_no_domain_templ.c \
 	isl_multi_templ.c \
 	isl_multi_templ.h \
+	isl_multi_add_constant_templ.c \
 	isl_multi_align_templ.c \
 	isl_multi_align_set.c \
 	isl_multi_align_union_set.c \
 	isl_multi_apply_templ.c \
 	isl_multi_apply_set.c \
 	isl_multi_apply_union_set.c \
+	isl_multi_arith_templ.c \
+	isl_multi_bind_domain_templ.c \
 	isl_multi_cmp.c \
 	isl_multi_coalesce.c \
+	isl_multi_dim_id_templ.c \
 	isl_multi_dims.c \
+	isl_multi_domain_templ.c \
 	isl_multi_floor.c \
+	isl_multi_from_base_templ.c \
 	isl_multi_gist.c \
 	isl_multi_hash.c \
 	isl_multi_intersect.c \
+	isl_multi_identity_templ.c \
+	isl_multi_locals_templ.c \
+	isl_multi_move_dims_templ.c \
+	isl_multi_nan_templ.c \
+	isl_multi_param_templ.c \
+	isl_multi_product_templ.c \
+	isl_multi_read_no_explicit_domain_templ.c \
+	isl_multi_splice_templ.c \
+	isl_multi_tuple_id_templ.c \
+	isl_multi_zero_templ.c \
+	opt_type.h \
 	print_templ.c \
 	print_templ_yaml.c \
+	print_yaml_field_templ.c \
 	isl_power_templ.c \
+	isl_project_out_all_params_templ.c \
 	isl_pw_macro.h \
 	isl_pw_templ.c \
 	isl_pw_templ.h \
+	isl_pw_add_constant_templ.c \
+	isl_pw_add_constant_multi_val_templ.c \
+	isl_pw_add_constant_val_templ.c \
+	isl_pw_bind_domain_templ.c \
 	isl_pw_eval.c \
 	isl_pw_hash.c \
+	isl_pw_insert_dims_templ.c \
+	isl_pw_lift_templ.c \
+	isl_pw_morph_templ.c \
+	isl_pw_move_dims_templ.c \
+	isl_pw_neg_templ.c \
+	isl_pw_opt_templ.c \
+	isl_pw_pullback_templ.c \
+	isl_pw_sub_templ.c \
 	isl_pw_union_opt.c \
 	read_in_string_templ.c \
 	set_to_map.c \
 	set_from_map.c \
 	set_list_from_map_list_inl.c \
 	isl_tab_lexopt_templ.c \
+	isl_test_list_templ.c \
+	isl_test_plain_equal_templ.c \
+	isl_type_check_equal_space_templ.c \
+	isl_type_has_equal_space_bin_templ.c \
+	isl_type_has_equal_space_templ.c \
 	uset_to_umap.c \
 	uset_from_umap.c \
 	isl_union_macro.h \
@@ -1540,12 +1607,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/all.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/basis_reduction_tab.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bound.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/closure.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/codegen.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dep.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flow.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flow_cmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_aff.Plo@am__quote@
@@ -1612,6 +1679,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_scheduler.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_seq.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_set_list.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_set_to_ast_graft_list.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_sort.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_space.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_stream.Plo@am__quote@
@@ -1620,9 +1688,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_tab_pip.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_tarjan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp-isl_test_cpp.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp-checked-conversion.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp-checked.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_imath.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_int.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_transitive_closure.Plo@am__quote@
@@ -1694,48 +1762,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-isl_test_cpp-isl_test_cpp.o: isl_test_cpp.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp-isl_test_cpp.o -MD -MP -MF $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo -c -o isl_test_cpp-isl_test_cpp.o `test -f 'isl_test_cpp.cc' || echo '$(srcdir)/'`isl_test_cpp.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo $(DEPDIR)/isl_test_cpp-isl_test_cpp.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp.cc' object='isl_test_cpp-isl_test_cpp.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp-isl_test_cpp.o `test -f 'isl_test_cpp.cc' || echo '$(srcdir)/'`isl_test_cpp.cc
-
-isl_test_cpp-isl_test_cpp.obj: isl_test_cpp.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp-isl_test_cpp.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo -c -o isl_test_cpp-isl_test_cpp.obj `if test -f 'isl_test_cpp.cc'; then $(CYGPATH_W) 'isl_test_cpp.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo $(DEPDIR)/isl_test_cpp-isl_test_cpp.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp.cc' object='isl_test_cpp-isl_test_cpp.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp-isl_test_cpp.obj `if test -f 'isl_test_cpp.cc'; then $(CYGPATH_W) 'isl_test_cpp.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp.cc'; fi`
-
-isl_test_cpp_checked-isl_test_cpp-checked.o: isl_test_cpp-checked.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked-isl_test_cpp-checked.o -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo -c -o isl_test_cpp_checked-isl_test_cpp-checked.o `test -f 'isl_test_cpp-checked.cc' || echo '$(srcdir)/'`isl_test_cpp-checked.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked.cc' object='isl_test_cpp_checked-isl_test_cpp-checked.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked-isl_test_cpp-checked.o `test -f 'isl_test_cpp-checked.cc' || echo '$(srcdir)/'`isl_test_cpp-checked.cc
-
-isl_test_cpp_checked-isl_test_cpp-checked.obj: isl_test_cpp-checked.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked-isl_test_cpp-checked.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo -c -o isl_test_cpp_checked-isl_test_cpp-checked.obj `if test -f 'isl_test_cpp-checked.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked.cc' object='isl_test_cpp_checked-isl_test_cpp-checked.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked-isl_test_cpp-checked.obj `if test -f 'isl_test_cpp-checked.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked.cc'; fi`
-
-isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o: isl_test_cpp-checked-conversion.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o `test -f 'isl_test_cpp-checked-conversion.cc' || echo '$(srcdir)/'`isl_test_cpp-checked-conversion.cc
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked-conversion.cc' object='isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o `test -f 'isl_test_cpp-checked-conversion.cc' || echo '$(srcdir)/'`isl_test_cpp-checked-conversion.cc
-
-isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj: isl_test_cpp-checked-conversion.cc
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj `if test -f 'isl_test_cpp-checked-conversion.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked-conversion.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked-conversion.cc'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked-conversion.cc' object='isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj `if test -f 'isl_test_cpp-checked-conversion.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked-conversion.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked-conversion.cc'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -2497,51 +2523,52 @@ uninstall-am: uninstall-libLTLIBRARIES uninstall-local \
 
 .PRECIOUS: Makefile
 
-@HAVE_CLANG_TRUE@FORCE:
-@HAVE_CLANG_TRUE@interface/extract_interface: FORCE
-@HAVE_CLANG_TRUE@	$(MAKE) $(AM_MAKEFLAGS) -C interface extract_interface
-@HAVE_CLANG_TRUE@@HAVE_PYTHON_TRUE@  isl_test_python.py: interface/isl.py libisl.la
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@FORCE:
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@interface/extract_interface: FORCE
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	$(MAKE) $(AM_MAKEFLAGS) -C interface extract_interface
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@@HAVE_PYTHON_TRUE@  isl_test_python.py: interface/isl.py libisl.la
 
-@HAVE_CLANG_TRUE@interface/isl.py: interface/extract_interface libdep.a python/isl.py.top
-@HAVE_CLANG_TRUE@	(cat $(srcdir)/python/isl.py.top && \
-@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) --language=python \
-@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h) \
-@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@interface/isldlname.py: libisl.la
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	$(AM_V_GEN) $(GREP) dlname $< | $(SED) -e 's/dlname/isl_dlname/' > $@
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@interface/isl.py: interface/extract_interface libdep.a python/isl.py.top \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		interface/isldlname.py
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	(cat interface/isldlname.py $(srcdir)/python/isl.py.top && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		interface/extract_interface$(EXEEXT) --language=python \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			$(includes) $(srcdir)/all.h) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			> $@ || (rm $@ && false)
 
-@HAVE_CLANG_TRUE@include/isl/cpp.h: interface/extract_interface libdep.a \
-@HAVE_CLANG_TRUE@		cpp/cpp.h.top cpp/cpp.h.pre cpp/cpp.h.bot
-@HAVE_CLANG_TRUE@	$(MKDIR_P) "include/isl/cpp" && \
-@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp.h.top $(srcdir)/all.h \
-@HAVE_CLANG_TRUE@	    $(srcdir)/cpp/cpp.h.pre && \
-@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) --language=cpp \
-@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
-@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp.h.bot) \
-@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@include/isl/cpp.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cpp/cpp.h.top cpp/cpp.h.pre cpp/cpp.h.bot
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	$(MKDIR_P) "include/isl/cpp" && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	(cat $(srcdir)/cpp/cpp.h.top $(srcdir)/all.h \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	    $(srcdir)/cpp/cpp.h.pre && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		interface/extract_interface$(EXEEXT) --language=cpp \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cat $(srcdir)/cpp/cpp.h.bot) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			> $@ || (rm $@ && false)
 
-@HAVE_CLANG_TRUE@include/isl/cpp-checked.h: interface/extract_interface libdep.a \
-@HAVE_CLANG_TRUE@		cpp/cpp-checked.h.top \
-@HAVE_CLANG_TRUE@		cpp/cpp-checked.h.pre cpp/cpp-checked.h.bot
-@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp-checked.h.top $(srcdir)/all.h \
-@HAVE_CLANG_TRUE@	    $(srcdir)/cpp/cpp-checked.h.pre && \
-@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) \
-@HAVE_CLANG_TRUE@			--language=cpp-checked \
-@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
-@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp-checked.h.bot) \
-@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@include/isl/cpp-checked.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cpp/cpp-checked.h.top \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cpp/cpp-checked.h.pre cpp/cpp-checked.h.bot
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	(cat $(srcdir)/cpp/cpp-checked.h.top $(srcdir)/all.h \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	    $(srcdir)/cpp/cpp-checked.h.pre && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		interface/extract_interface$(EXEEXT) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			--language=cpp-checked \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cat $(srcdir)/cpp/cpp-checked.h.bot) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			> $@ || (rm $@ && false)
 
-@HAVE_CLANG_TRUE@include/isl/cpp-checked-conversion.h: interface/extract_interface libdep.a \
-@HAVE_CLANG_TRUE@		cpp/cpp-checked-conversion.h.top \
-@HAVE_CLANG_TRUE@		cpp/cpp-checked-conversion.h.bot
-@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp-checked-conversion.h.top && \
-@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) \
-@HAVE_CLANG_TRUE@			--language=cpp-checked-conversion \
-@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
-@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp-checked-conversion.h.bot) \
-@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@include/isl/cpp-checked-conversion.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cpp/cpp-checked-conversion.h.top \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cpp/cpp-checked-conversion.h.bot
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	(cat $(srcdir)/cpp/cpp-checked-conversion.h.top && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		interface/extract_interface$(EXEEXT) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			--language=cpp-checked-conversion \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@		cat $(srcdir)/cpp/cpp-checked-conversion.h.bot) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@			> $@ || (rm $@ && false)
 
-@HAVE_CLANG_TRUE@dist-hook: interface/isl.py
-@HAVE_CLANG_TRUE@	cp interface/isl.py $(distdir)/interface/
-@HAVE_CLANG_FALSE@dist-hook:
+dist-hook:
 	echo @GIT_HEAD_VERSION@ > $(distdir)/GIT_HEAD_ID
 	(cd doc; make manual.pdf)
 	cp doc/manual.pdf $(distdir)/doc/

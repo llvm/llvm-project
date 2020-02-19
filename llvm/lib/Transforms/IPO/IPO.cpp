@@ -23,6 +23,7 @@
 using namespace llvm;
 
 void llvm::initializeIPO(PassRegistry &Registry) {
+  initializeOpenMPOptLegacyPassPass(Registry);
   initializeArgPromotionPass(Registry);
   initializeCalledValuePropagationLegacyPassPass(Registry);
   initializeConstantMergeLegacyPassPass(Registry);
@@ -46,6 +47,7 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeMergeFunctionsLegacyPassPass(Registry);
   initializePartialInlinerLegacyPassPass(Registry);
   initializeAttributorLegacyPassPass(Registry);
+  initializeAttributorCGSCCLegacyPassPass(Registry);
   initializePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializeReversePostOrderFunctionAttrsLegacyPassPass(Registry);
   initializePruneEHPass(Registry);

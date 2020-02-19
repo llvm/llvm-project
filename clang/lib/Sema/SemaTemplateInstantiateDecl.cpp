@@ -393,50 +393,38 @@ static void instantiateOMPDeclareVariantAttr(
     VariantFuncRef = Subst(E);
   }
 
+  // Copy the template version of the OMPTraitInfo and run substitute on all
+  // score and condition expressiosn.
+  OMPTraitInfo TI = Attr.getTraitInfos();
+
+  // Try to substitute template parameters in score and condition expressions.
+  auto SubstScoreOrConditionExpr = [&S, Subst](Expr *&E, bool) {
+    if (E) {
+      EnterExpressionEvaluationContext Unevaluated(
+          S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      ExprResult ER = Subst(E);
+      if (ER.isUsable())
+        E = ER.get();
+      else
+        return true;
+    }
+    return false;
+  };
+  if (TI.anyScoreOrCondition(SubstScoreOrConditionExpr))
+    return;
+
   // Check function/variant ref.
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
-      S.checkOpenMPDeclareVariantFunction(
-          S.ConvertDeclToDeclGroup(New), VariantFuncRef.get(), Attr.getRange());
+      S.checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New),
+                                          VariantFuncRef.get(), TI,
+                                          Attr.getRange());
+
   if (!DeclVarData)
     return;
-  SmallVector<Sema::OMPCtxSelectorData, 4> Data;
-  for (unsigned I = 0, E = Attr.scores_size(); I < E; ++I) {
-    ExprResult Score;
-    if (Expr *E = *std::next(Attr.scores_begin(), I))
-      Score = Subst(E);
-    // Instantiate the attribute.
-    auto CtxSet = static_cast<OpenMPContextSelectorSetKind>(
-        *std::next(Attr.ctxSelectorSets_begin(), I));
-    auto Ctx = static_cast<OpenMPContextSelectorKind>(
-        *std::next(Attr.ctxSelectors_begin(), I));
-    switch (CtxSet) {
-    case OMP_CTX_SET_implementation:
-      switch (Ctx) {
-      case OMP_CTX_vendor:
-        Data.emplace_back(CtxSet, Ctx, Score, Attr.implVendors());
-        break;
-      case OMP_CTX_kind:
-      case OMP_CTX_unknown:
-        llvm_unreachable("Unexpected context selector kind.");
-      }
-      break;
-    case OMP_CTX_SET_device:
-      switch (Ctx) {
-      case OMP_CTX_kind:
-        Data.emplace_back(CtxSet, Ctx, Score, Attr.deviceKinds());
-        break;
-      case OMP_CTX_vendor:
-      case OMP_CTX_unknown:
-        llvm_unreachable("Unexpected context selector kind.");
-      }
-      break;
-    case OMP_CTX_SET_unknown:
-      llvm_unreachable("Unexpected context selector set kind.");
-    }
-  }
+
   S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
-                                       DeclVarData.getValue().second,
-                                       Attr.getRange(), Data);
+                                       DeclVarData.getValue().second, TI,
+                                       Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -1837,6 +1825,23 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
+
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {
     QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc,
@@ -2176,6 +2181,23 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
+
+  if (TemplateParams && TemplateParams->size()) {
+    auto *LastParam =
+        dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
+    if (LastParam && LastParam->isImplicit() &&
+        LastParam->hasTypeConstraint()) {
+      // In abbreviated templates, the type-constraints of invented template
+      // type parameters are instantiated with the function type, invalidating
+      // the TemplateParameterList which relied on the template type parameter
+      // not having a type constraint. Recreate the TemplateParameterList with
+      // the updated parameter list.
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, TemplateParams->getTemplateLoc(),
+          TemplateParams->getLAngleLoc(), TemplateParams->asArray(),
+          TemplateParams->getRAngleLoc(), TemplateParams->getRequiresClause());
+    }
+  }
 
   NestedNameSpecifierLoc QualifierLoc = D->getQualifierLoc();
   if (QualifierLoc) {
@@ -2525,28 +2547,34 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
   Inst->setAccess(AS_public);
   Inst->setImplicit(D->isImplicit());
   if (auto *TC = D->getTypeConstraint()) {
-    // TODO: Concepts: do not instantiate the constraint (delayed constraint
-    // substitution)
-    const ASTTemplateArgumentListInfo *TemplArgInfo
-      = TC->getTemplateArgsAsWritten();
-    TemplateArgumentListInfo InstArgs;
+    if (!D->isImplicit()) {
+      // Invented template parameter type constraints will be instantiated with
+      // the corresponding auto-typed parameter as it might reference other
+      // parameters.
 
-    if (TemplArgInfo) {
-      InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
-      InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
-      if (SemaRef.Subst(TemplArgInfo->getTemplateArgs(),
-                        TemplArgInfo->NumTemplateArgs,
-                        InstArgs, TemplateArgs))
+      // TODO: Concepts: do not instantiate the constraint (delayed constraint
+      // substitution)
+      const ASTTemplateArgumentListInfo *TemplArgInfo
+        = TC->getTemplateArgsAsWritten();
+      TemplateArgumentListInfo InstArgs;
+
+      if (TemplArgInfo) {
+        InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
+        InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
+        if (SemaRef.Subst(TemplArgInfo->getTemplateArgs(),
+                          TemplArgInfo->NumTemplateArgs,
+                          InstArgs, TemplateArgs))
+          return nullptr;
+      }
+      if (SemaRef.AttachTypeConstraint(
+              TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
+              TC->getNamedConcept(), &InstArgs, Inst,
+              D->isParameterPack()
+                  ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
+                      ->getEllipsisLoc()
+                  : SourceLocation()))
         return nullptr;
     }
-    if (SemaRef.AttachTypeConstraint(
-            TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-            TC->getNamedConcept(), &InstArgs, Inst,
-            D->isParameterPack()
-                ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
-                    ->getEllipsisLoc()
-                : SourceLocation()))
-      return nullptr;
   }
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     TypeSourceInfo *InstantiatedDefaultArg =
@@ -4265,7 +4293,13 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
             Scope, MLTAL))
       return true;
   }
-
+  Qualifiers ThisQuals;
+  CXXRecordDecl *Record = nullptr;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    ThisQuals = Method->getMethodQualifiers();
+    Record = Method->getParent();
+  }
+  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
   return CheckConstraintSatisfaction(Template, TemplateAC, TemplateArgs,
                                      PointOfInstantiation, Satisfaction);
 }

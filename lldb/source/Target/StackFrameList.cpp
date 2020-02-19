@@ -348,6 +348,11 @@ static void FindInterveningFrames(Function &begin, Function &end,
 ///   |    ...     | <- Not-yet-visited frames.
 ///   --------------
 void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
+  // Cannot synthesize tail call frames when the stack is empty (there is no
+  // "previous" frame).
+  if (m_frames.empty())
+    return;
+
   TargetSP target_sp = next_frame.CalculateTarget();
   if (!target_sp)
     return;
@@ -358,7 +363,6 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
-  assert(!m_frames.empty() && "Cannot synthesize frames in an empty stack");
   StackFrame &prev_frame = *m_frames.back().get();
 
   // Find the functions prev_frame and next_frame are stopped in. The function

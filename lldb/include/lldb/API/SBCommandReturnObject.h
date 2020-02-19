@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBCommandReturnObject_h_
-#define LLDB_SBCommandReturnObject_h_
+#ifndef LLDB_API_SBCOMMANDRETURNOBJECT_H
+#define LLDB_API_SBCOMMANDRETURNOBJECT_H
 
 #include <stdio.h>
 
@@ -124,4 +124,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBCommandReturnObject_h_
+#endif // LLDB_API_SBCOMMANDRETURNOBJECT_H

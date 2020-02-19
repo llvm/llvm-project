@@ -387,8 +387,8 @@ unsigned FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 }
 
 unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), DA && !TLI->requiresUniformRegister(*MF, V) &&
-                                      DA->isDivergent(V));
+  return CreateRegs(V->getType(), DA && DA->isDivergent(V) &&
+                    !TLI->requiresUniformRegister(*MF, V));
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
@@ -407,7 +407,7 @@ FunctionLoweringInfo::GetLiveOutRegInfo(unsigned Reg, unsigned BitWidth) {
 
   if (BitWidth > LOI->Known.getBitWidth()) {
     LOI->NumSignBits = 1;
-    LOI->Known = LOI->Known.zext(BitWidth, false /* => any extend */);
+    LOI->Known = LOI->Known.anyext(BitWidth);
   }
 
   return LOI;

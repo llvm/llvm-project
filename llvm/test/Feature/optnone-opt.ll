@@ -54,7 +54,6 @@ attributes #0 = { optnone noinline }
 
 ; Loop IR passes that opt doesn't turn on by default.
 ; OPT-LOOP-DAG: Skipping pass 'Delete dead loops'
-; OPT-LOOP-DAG: Skipping pass 'Extract loops into new functions'
 ; OPT-LOOP-DAG: Skipping pass 'Induction Variable Simplification'
 ; OPT-LOOP-DAG: Skipping pass 'Loop Invariant Code Motion'
 ; OPT-LOOP-DAG: Skipping pass 'Loop Strength Reduction'

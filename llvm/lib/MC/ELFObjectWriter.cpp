@@ -1001,7 +1001,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   case ELF::SHT_RELA: {
     sh_link = SymbolTableIndex;
     assert(sh_link && ".symtab not found");
-    const MCSection *InfoSection = Section.getAssociatedSection();
+    const MCSection *InfoSection = Section.getLinkedToSection();
     sh_info = SectionIndexMap.lookup(cast<MCSectionELF>(InfoSection));
     break;
   }
@@ -1024,7 +1024,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
-    const MCSymbol *Sym = Section.getAssociatedSymbol();
+    const MCSymbol *Sym = Section.getLinkedToSymbol();
     const MCSectionELF *Sec = cast<MCSectionELF>(&Sym->getSection());
     sh_link = SectionIndexMap.lookup(Sec);
   }
@@ -1180,7 +1180,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       uint64_t SecStart = W.OS.tell();
 
       writeRelocations(Asm,
-                       cast<MCSectionELF>(*RelSection->getAssociatedSection()));
+                       cast<MCSectionELF>(*RelSection->getLinkedToSection()));
 
       uint64_t SecEnd = W.OS.tell();
       SectionOffsets[RelSection] = std::make_pair(SecStart, SecEnd);

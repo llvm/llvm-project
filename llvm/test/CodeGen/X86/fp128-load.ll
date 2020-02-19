@@ -32,6 +32,6 @@ entry:
 }
 
 ; CHECK-LABEL:  my_fp128:
-; CHECK-NEXT:  .quad   0
-; CHECK-NEXT:  .quad   4611404543450677248
+; CHECK-NEXT:  .quad   0x0
+; CHECK-NEXT:  .quad   0x3fff000000000000
 ; CHECK-NEXT:  .size   my_fp128, 16

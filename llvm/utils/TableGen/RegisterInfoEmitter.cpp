@@ -173,7 +173,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     std::string Namespace = SubRegIndices.front().getNamespace();
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
-    OS << "enum {\n  NoSubRegister,\n";
+    OS << "enum : uint16_t {\n  NoSubRegister,\n";
     unsigned i = 0;
     for (const auto &Idx : SubRegIndices)
       OS << "  " << Idx.getName() << ",\t// " << ++i << "\n";
@@ -181,6 +181,20 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
   }
+
+  OS << "// Register pressure sets enum.\n";
+  if (!Namespace.empty())
+    OS << "namespace " << Namespace << " {\n";
+  OS << "enum RegisterPressureSets {\n";
+  unsigned NumSets = Bank.getNumRegPressureSets();
+  for (unsigned i = 0; i < NumSets; ++i ) {
+    const RegUnitSet &RegUnits = Bank.getRegSetAt(i);
+    OS << "  " << RegUnits.Name << " = " << i << ",\n";
+  }
+  OS << "};\n";
+  if (!Namespace.empty())
+    OS << "} // end namespace " << Namespace << '\n';
+  OS << '\n';
 
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_ENUM\n\n";
@@ -202,13 +216,13 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "  static const RegClassWeight RCWeightTable[] = {\n";
   for (const auto &RC : RegBank.getRegClasses()) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
+    OS << "    {" << RC.getWeight(RegBank) << ", ";
     if (Regs.empty() || RC.Artificial)
-      OS << "    {0, 0";
+      OS << '0';
     else {
       std::vector<unsigned> RegUnits;
       RC.buildRegUnitSet(RegBank, RegUnits);
-      OS << "    {" << (*Regs.begin())->getWeight(RegBank)
-         << ", " << RegBank.getRegUnitSetWeight(RegUnits);
+      OS << RegBank.getRegUnitSetWeight(RegUnits);
     }
     OS << "},  \t// " << RC.getName() << "\n";
   }

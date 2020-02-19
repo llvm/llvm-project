@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Debugger_h_
-#define liblldb_Debugger_h_
+#ifndef LLDB_CORE_DEBUGGER_H
+#define LLDB_CORE_DEBUGGER_H
 
 #include <stdint.h>
 
@@ -440,4 +440,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Debugger_h_
+#endif // LLDB_CORE_DEBUGGER_H

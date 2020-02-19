@@ -7,6 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+//  Subregister declarations
+//===----------------------------------------------------------------------===//
+
+let Namespace = "AMDGPU" in {
+foreach Index = 0-31 in {
+  def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
+}
+}
+
+//===----------------------------------------------------------------------===//
 //  Helpers
 //===----------------------------------------------------------------------===//
 
@@ -131,7 +141,12 @@ def SRC_PRIVATE_BASE : SIReg<"src_private_base", 237>;
 def SRC_PRIVATE_LIMIT : SIReg<"src_private_limit", 238>;
 def SRC_POPS_EXITING_WAVE_ID : SIReg<"src_pops_exiting_wave_id", 239>;
 
-def LDS_DIRECT : SIReg <"src_lds_direct", 254>;
+def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
+  // There is no physical register corresponding to this. This is an
+  // encoding value in a source field, which will ultimately trigger a
+  // read from m0.
+  let isArtificial = 1;
+}
 
 def XNACK_MASK_LO : SIReg<"xnack_mask_lo", 104>;
 def XNACK_MASK_HI : SIReg<"xnack_mask_hi", 105>;
@@ -232,6 +247,7 @@ def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 9;
+  let GeneratePressureSet = 0;
 }
 
 // SGPR 64-bit registers
@@ -422,12 +438,13 @@ def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64, v2f64], 32,
   let CopyCost = -1;
 }
 
-def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
   (add LDS_DIRECT)> {
   let isAllocatable = 0;
   let CopyCost = -1;
 }
 
+let GeneratePressureSet = 0 in {
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
@@ -447,6 +464,7 @@ def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1]
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
   let AllocationPriority = 10;
 }
+} // End GeneratePressureSet = 0
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
@@ -454,8 +472,9 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32
   let AllocationPriority = 10;
 }
 
-def SRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
-  (add SReg_32_XM0, M0_CLASS, EXEC_LO, EXEC_HI, SReg_32_XEXEC_HI, LDS_DIRECT_CLASS)> {
+let GeneratePressureSet = 0 in {
+def SRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+  (add SReg_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;
 }
 
@@ -612,7 +631,7 @@ def VReg_96 : RegisterClass<"AMDGPU", [v3i32, v3f32], 32, (add VGPR_96)> {
   let AllocationPriority = 3;
 }
 
-def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
+def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64, i128], 32,
                              (add VGPR_128)> {
   let Size = 128;
 
@@ -681,7 +700,7 @@ def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
   let CopyCost = 65;
   let AllocationPriority = 8;
 }
-
+} // End GeneratePressureSet = 0
 
 // This is not a real register. This is just to have a register to add
 // to VReg_1 that does not alias any real register that would
@@ -690,6 +709,7 @@ def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
   let isArtificial = 1;
 }
 
+let GeneratePressureSet = 0 in {
 // FIXME: Should specify an empty set for this. No register should
 // ever be allocated using VReg_1. This is a hack for SelectionDAG
 // that should always be lowered by SILowerI1Copies. TableGen crashes
@@ -718,6 +738,7 @@ def AV_64 : RegisterClass<"AMDGPU", [i64, f64, v4f16], 32,
                           (add AReg_64, VReg_64)> {
   let isAllocatable = 0;
 }
+} // End GeneratePressureSet = 0
 
 //===----------------------------------------------------------------------===//
 //  Register operands

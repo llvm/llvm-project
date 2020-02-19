@@ -446,9 +446,6 @@ static void ioctl_table_fill() {
   _(STICIO_STOPQ, NONE, 0);
   /* Entries from file: dev/usb/ukyopon.h */
   _(UKYOPON_IDENTIFY, WRITE, struct_ukyopon_identify_sz);
-  /* Entries from file: dev/usb/urio.h */
-  _(URIO_SEND_COMMAND, READWRITE, struct_urio_command_sz);
-  _(URIO_RECV_COMMAND, READWRITE, struct_urio_command_sz);
   /* Entries from file: dev/usb/usb.h */
   _(USB_REQUEST, READWRITE, struct_usb_ctl_request_sz);
   _(USB_SETDEBUG, READ, sizeof(int));
@@ -1405,6 +1402,9 @@ static void ioctl_table_fill() {
   /* Entries from file: dev/filemon/filemon.h (compat <= 9.99.26) */
   _(FILEMON_SET_FD, READWRITE, sizeof(int));
   _(FILEMON_SET_PID, READWRITE, sizeof(int));
+  /* Entries from file: dev/usb/urio.h (compat <= 9.99.43) */
+  _(URIO_SEND_COMMAND, READWRITE, struct_urio_command_sz);
+  _(URIO_RECV_COMMAND, READWRITE, struct_urio_command_sz);
 #undef _
 } // NOLINT
 

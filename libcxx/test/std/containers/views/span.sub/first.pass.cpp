@@ -15,7 +15,7 @@
 //
 // constexpr span<element_type, dynamic_extent> first(size_type count) const;
 //
-//  Requires: 0 <= Count && Count <= size().
+//  Requires: Count <= size().
 
 
 #include <span>

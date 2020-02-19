@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -amdgpu-lower-kernel-attributes -instcombine %s | FileCheck -enable-var-scope %s
 
+target datalayout = "n32"
+
 ; CHECK-LABEL: @invalid_reqd_work_group_size(
 ; CHECK: load i16,
 define amdgpu_kernel void @invalid_reqd_work_group_size(i16 addrspace(1)* %out) #0 !reqd_work_group_size !1 {

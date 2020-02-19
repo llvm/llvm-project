@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TargetList_h_
-#define liblldb_TargetList_h_
+#ifndef LLDB_TARGET_TARGETLIST_H
+#define LLDB_TARGET_TARGETLIST_H
 
 #include <mutex>
 #include <vector>
@@ -211,4 +211,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_TargetList_h_
+#endif // LLDB_TARGET_TARGETLIST_H

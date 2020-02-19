@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadSanitizerRuntime_h_
-#define liblldb_ThreadSanitizerRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_TSAN_INSTRUMENTATIONRUNTIMETSAN_H
+#define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_TSAN_INSTRUMENTATIONRUNTIMETSAN_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
@@ -78,4 +78,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadSanitizerRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_TSAN_INSTRUMENTATIONRUNTIMETSAN_H

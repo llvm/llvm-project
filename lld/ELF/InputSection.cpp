@@ -441,8 +441,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       // See the comment in maybeReportUndefined for PPC64 .toc .
       auto *d = dyn_cast<Defined>(&sym);
       if (!d) {
-        if (!sec->name.startswith(".debug") &&
-            !sec->name.startswith(".zdebug") && sec->name != ".eh_frame" &&
+        if (!isDebugSection(*sec) && sec->name != ".eh_frame" &&
             sec->name != ".gcc_except_table" && sec->name != ".toc") {
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
           Elf_Shdr_Impl<ELFT> sec =
@@ -465,7 +464,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       if (!RelTy::IsRela)
         addend = target->getImplicitAddend(bufLoc, type);
 
-      if (config->emachine == EM_MIPS && config->relocatable &&
+      if (config->emachine == EM_MIPS &&
           target->getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But

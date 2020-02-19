@@ -127,6 +127,26 @@ func @strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
   return %1: vector<2x2x16xf32>
 }
 
+#contraction_to_scalar_accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> ()>
+]
+#contraction_to_scalar_trait = {
+  indexing_maps = #contraction_to_scalar_accesses,
+  iterator_types = ["reduction"]
+}
+// CHECK-LABEL: contraction_to_scalar
+func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
+  // CHECK:      %[[C0:.*]] = constant 0.000000e+00 : f32
+  %f0 = constant 0.0: f32
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"]} %{{.*}}, %{{.*}}, %[[C0]] : vector<10xf32>, vector<10xf32> into f32
+  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %f0
+    : vector<10xf32>, vector<10xf32> into f32
+  // CHECK:      return %[[X]] : f32
+  return %0 : f32
+}
+
 #contraction_accesses0 = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
@@ -232,4 +252,62 @@ func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
     : vector<3x2x4xf32> to vector<2x3x4xf32>
 
   return %1 : vector<2x3x4xf32>
+}
+
+// CHECK-LABEL: shape_cast
+func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
+                 %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>)
+  -> (vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>) {
+
+  // CHECK: vector.shape_cast %{{.*}} : vector<5x1x3x2xf32> to vector<15x2xf32>
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
+
+  // CHECK-NEXT: vector.shape_cast %{{.*}} : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to tuple<vector<20x2xf32>, vector<12x2xf32>>
+  %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
+                                 tuple<vector<20x2xf32>, vector<12x2xf32>>
+
+  return %0, %1 : vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>
+}
+
+// CHECK-LABEL: @vector_fma
+func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
+  // CHECK: vector.fma %{{.*}} : vector<8xf32>
+  vector.fma %a, %a, %a : vector<8xf32>
+  // CHECK: vector.fma %{{.*}} : vector<8x4xf32>
+  vector.fma %b, %b, %b : vector<8x4xf32>
+  return
+}
+
+// CHECK-LABEL: reduce_fp
+func @reduce_fp(%arg0: vector<16xf32>) -> f32 {
+  // CHECK:    vector.reduction "add", %{{.*}} : vector<16xf32> into f32
+  vector.reduction "add", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xf32> into f32
+  vector.reduction "mul", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction "min", %{{.*}} : vector<16xf32> into f32
+  vector.reduction "min", %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X:.*]] = vector.reduction "max", %{{.*}} : vector<16xf32> into f32
+  %0 = vector.reduction "max", %arg0 : vector<16xf32> into f32
+  // CHECK:    return %[[X]] : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: reduce_int
+func @reduce_int(%arg0: vector<16xi32>) -> i32 {
+  // CHECK:    vector.reduction "add", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "add", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "mul", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "min", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "min", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "max", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "max", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "and", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "and", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction "or", %{{.*}} : vector<16xi32> into i32
+  vector.reduction "or", %arg0 : vector<16xi32> into i32
+  // CHECK:    %[[X:.*]] = vector.reduction "xor", %{{.*}} : vector<16xi32> into i32
+  %0 = vector.reduction "xor", %arg0 : vector<16xi32> into i32
+  // CHECK:    return %[[X]] : i32
+  return %0 : i32
 }

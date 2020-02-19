@@ -267,3 +267,27 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 #endif
   return SetThreadPriorityResult::FAILURE;
 }
+
+#include <thread>
+
+int computeHostNumHardwareThreads() {
+#if defined(HAVE_SCHED_GETAFFINITY) && defined(HAVE_CPU_COUNT)
+  cpu_set_t Set;
+  if (sched_getaffinity(0, sizeof(Set), &Set))
+    return CPU_COUNT(&Set);
+#endif
+  // Guard against std::thread::hardware_concurrency() returning 0.
+  if (unsigned Val = std::thread::hardware_concurrency())
+    return Val;
+  return 1;
+}
+
+void llvm::ThreadPoolStrategy::apply_thread_strategy(
+    unsigned ThreadPoolNum) const {}
+
+llvm::BitVector llvm::get_thread_affinity_mask() {
+  // FIXME: Implement
+  llvm_unreachable("Not implemented!");
+}
+
+unsigned llvm::get_cpus() { return 1; }

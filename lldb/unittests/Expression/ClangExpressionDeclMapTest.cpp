@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ExpressionParser/Clang/ClangExpressionDeclMap.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
@@ -21,7 +21,7 @@ using namespace lldb;
 
 namespace {
 struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
-  FakeClangExpressionDeclMap(const ClangASTImporterSP &importer)
+  FakeClangExpressionDeclMap(const std::shared_ptr<ClangASTImporter> &importer)
       : ClangExpressionDeclMap(false, nullptr, lldb::TargetSP(), importer,
                                nullptr) {
     m_scratch_context = clang_utils::createAST();
@@ -58,7 +58,7 @@ struct ClangExpressionDeclMapTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   /// The ClangASTImporter used during the test.
-  ClangASTImporterSP importer;
+  std::shared_ptr<ClangASTImporter> importer;
   /// The ExpressionDeclMap for the current test case.
   std::unique_ptr<FakeClangExpressionDeclMap> decl_map;
 

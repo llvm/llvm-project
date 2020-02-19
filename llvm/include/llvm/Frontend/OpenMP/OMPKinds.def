@@ -122,6 +122,24 @@ __OMP_TYPE(Int32Ptr)
 
 ///}
 
+/// array types
+///
+///{
+
+#ifndef OMP_ARRAY_TYPE
+#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)
+#endif
+
+#define __OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize) 						  \
+  OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)
+
+__OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
+
+#undef __OMP_ARRAY_TYPE
+#undef OMP_ARRAY_TYPE
+
+///}
+
 /// Struct and function types
 ///
 ///{
@@ -166,8 +184,11 @@ __OMP_FUNCTION_TYPE(ParallelTask, true, Void, Int32Ptr, Int32Ptr)
 __OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_cancel, false, Int32, IdentPtr, Int32, Int32)
 __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_flush, false, Void, IdentPtr)
 __OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
 __OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
+__OMP_RTL(__kmpc_omp_taskwait, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_omp_taskyield, false, Int32, IdentPtr, Int32, Int32)
 __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
           /* Int */ Int32)
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
@@ -175,6 +196,42 @@ __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
+__OMP_RTL(omp_get_num_threads, false, Int32, )
+__OMP_RTL(omp_get_max_threads, false, Int32, )
+__OMP_RTL(omp_in_parallel, false, Int32, )
+__OMP_RTL(omp_get_dynamic, false, Int32, )
+__OMP_RTL(omp_get_cancellation, false, Int32, )
+__OMP_RTL(omp_get_nested, false, Int32, )
+__OMP_RTL(omp_get_schedule, false, Void, Int32Ptr, Int32Ptr)
+__OMP_RTL(omp_get_thread_limit, false, Int32, )
+__OMP_RTL(omp_get_supported_active_levels, false, Int32, )
+__OMP_RTL(omp_get_max_active_levels, false, Int32, )
+__OMP_RTL(omp_get_level, false, Int32, )
+__OMP_RTL(omp_get_ancestor_thread_num, false, Int32, )
+__OMP_RTL(omp_get_team_size, false, Int32, )
+__OMP_RTL(omp_get_active_level, false, Int32, )
+__OMP_RTL(omp_in_final, false, Int32, )
+__OMP_RTL(omp_get_proc_bind, false, Int32, )
+__OMP_RTL(omp_get_num_places, false, Int32, )
+__OMP_RTL(omp_get_num_procs, false, Int32, )
+__OMP_RTL(omp_get_place_proc_ids, false, Void, Int32, Int32Ptr)
+__OMP_RTL(omp_get_place_num, false, Int32, )
+__OMP_RTL(omp_get_partition_num_places, false, Int32, )
+__OMP_RTL(omp_get_partition_place_nums, false, Int32, )
+
+__OMP_RTL(omp_set_num_threads, false, Void, Int32)
+__OMP_RTL(omp_set_dynamic, false, Void, Int32)
+__OMP_RTL(omp_set_nested, false, Void, Int32)
+__OMP_RTL(omp_set_schedule, false, Void, Int32, Int32)
+__OMP_RTL(omp_set_max_active_levels, false, Void, Int32)
+
+__OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy, Int32)
+__OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
+
+__OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
 #undef OMP_RTL
@@ -194,6 +251,16 @@ __OMP_ATTRS_SET(GetterAttrs,
                     ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(ReadOnly),
                                    EnumAttr(NoSync), EnumAttr(NoFree))
                     : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(GetterArgWriteAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
+                                   EnumAttr(NoFree))
+                    : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(SetterAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(WriteOnly),
+                                   EnumAttr(NoSync), EnumAttr(NoFree))
+                    : AttributeSet(EnumAttr(NoUnwind)))
 
 #undef __OMP_ATTRS_SET
 #undef OMP_ATTRS_SET
@@ -210,6 +277,41 @@ __OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
 
 __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_num_threads, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_max_threads, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_in_parallel, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_dynamic, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_cancellation, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_nested, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_schedule, GetterArgWriteAttrs, AttributeSet(),
+                ArrayRef<AttributeSet>(
+                    {AttributeSet(EnumAttr(NoCapture), EnumAttr(WriteOnly)),
+                     AttributeSet(EnumAttr(NoCapture), EnumAttr(WriteOnly))}))
+__OMP_RTL_ATTRS(omp_get_thread_limit, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_supported_active_levels, GetterAttrs, AttributeSet(),
+                {})
+__OMP_RTL_ATTRS(omp_get_max_active_levels, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_level, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_ancestor_thread_num, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_team_size, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_active_level, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_in_final, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_proc_bind, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_num_places, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_num_procs, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_place_proc_ids, GetterArgWriteAttrs, AttributeSet(),
+                ArrayRef<AttributeSet>({AttributeSet(),
+                                        AttributeSet(EnumAttr(NoCapture),
+                                                     EnumAttr(WriteOnly))}))
+__OMP_RTL_ATTRS(omp_get_place_num, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(), {})
+
+__OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_set_nested, SetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_set_schedule, SetterAttrs, AttributeSet(), {})
+__OMP_RTL_ATTRS(omp_set_max_active_levels, SetterAttrs, AttributeSet(), {})
 
 #undef __OMP_RTL_ATTRS
 #undef OMP_RTL_ATTRS
@@ -266,6 +368,25 @@ __OMP_CANCEL_KIND(taskgroup, 4)
 
 ///}
 
+/// Default kinds
+///
+///{
+
+#ifndef OMP_DEFAULT_KIND
+#define OMP_DEFAULT_KIND(Enum, Str)
+#endif
+
+#define __OMP_DEFAULT_KIND(Name) OMP_DEFAULT_KIND(OMP_DEFAULT_##Name, #Name)
+
+__OMP_DEFAULT_KIND(none)
+__OMP_DEFAULT_KIND(shared)
+__OMP_DEFAULT_KIND(unknown)
+
+#undef __OMP_DEFAULT_KIND
+#undef OMP_DEFAULT_KIND
+
+///}
+
 /// Proc bind kinds
 ///
 ///{
@@ -286,4 +407,136 @@ __OMP_PROC_BIND_KIND(unknown, 7)
 #undef __OMP_PROC_BIND_KIND
 #undef OMP_PROC_BIND_KIND
 
+///}
+
+/// OpenMP context related definitions:
+///  - trait set selector
+///  - trait selector
+///  - trait property
+///
+///{
+
+#ifndef OMP_TRAIT_SET
+#define OMP_TRAIT_SET(Enum, Str)
+#endif
+#ifndef OMP_TRAIT_SELECTOR
+#define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, RequiresProperty)
+#endif
+#ifndef OMP_TRAIT_PROPERTY
+#define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)
+#endif
+
+#define __OMP_TRAIT_SET(Name) OMP_TRAIT_SET(Name, #Name)
+#define __OMP_TRAIT_SELECTOR(TraitSet, Name, RequiresProperty)                 \
+  OMP_TRAIT_SELECTOR(TraitSet##_##Name, TraitSet, #Name, RequiresProperty)
+#define __OMP_TRAIT_SELECTOR_AND_PROPERTY(TraitSet, Name)                      \
+  OMP_TRAIT_SELECTOR(TraitSet##_##Name, TraitSet, #Name, false)                \
+  OMP_TRAIT_PROPERTY(TraitSet##_##Name##_##Name, TraitSet, TraitSet##_##Name,  \
+                     #Name)
+#define __OMP_TRAIT_PROPERTY(TraitSet, TraitSelector, Name)                    \
+  OMP_TRAIT_PROPERTY(TraitSet##_##TraitSelector##_##Name, TraitSet,            \
+                     TraitSet##_##TraitSelector, #Name)
+
+// "invalid" must go first.
+OMP_TRAIT_SET(invalid, "invalid")
+OMP_TRAIT_SELECTOR(invalid, invalid, "invalid", false)
+OMP_TRAIT_PROPERTY(invalid, invalid, invalid, "invalid")
+
+__OMP_TRAIT_SET(construct)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, target)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, teams)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, parallel)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, for)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, simd)
+
+__OMP_TRAIT_SET(device)
+
+__OMP_TRAIT_SELECTOR(device, kind, true)
+
+__OMP_TRAIT_PROPERTY(device, kind, host)
+__OMP_TRAIT_PROPERTY(device, kind, nohost)
+__OMP_TRAIT_PROPERTY(device, kind, cpu)
+__OMP_TRAIT_PROPERTY(device, kind, gpu)
+__OMP_TRAIT_PROPERTY(device, kind, fpga)
+__OMP_TRAIT_PROPERTY(device, kind, any)
+
+__OMP_TRAIT_SELECTOR(device, isa, true)
+
+// TODO: What do we want for ISA?
+
+__OMP_TRAIT_SELECTOR(device, arch, true)
+
+__OMP_TRAIT_PROPERTY(device, arch, arm)
+__OMP_TRAIT_PROPERTY(device, arch, armeb)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64_be)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64_32)
+__OMP_TRAIT_PROPERTY(device, arch, ppc)
+__OMP_TRAIT_PROPERTY(device, arch, ppc64)
+__OMP_TRAIT_PROPERTY(device, arch, ppc64le)
+__OMP_TRAIT_PROPERTY(device, arch, x86)
+__OMP_TRAIT_PROPERTY(device, arch, x86_64)
+__OMP_TRAIT_PROPERTY(device, arch, amdgcn)
+__OMP_TRAIT_PROPERTY(device, arch, nvptx)
+__OMP_TRAIT_PROPERTY(device, arch, nvptx64)
+
+__OMP_TRAIT_SET(implementation)
+
+__OMP_TRAIT_SELECTOR(implementation, vendor, true)
+
+__OMP_TRAIT_PROPERTY(implementation, vendor, amd)
+__OMP_TRAIT_PROPERTY(implementation, vendor, arm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, bsc)
+__OMP_TRAIT_PROPERTY(implementation, vendor, cray)
+__OMP_TRAIT_PROPERTY(implementation, vendor, fujitsu)
+__OMP_TRAIT_PROPERTY(implementation, vendor, gnu)
+__OMP_TRAIT_PROPERTY(implementation, vendor, ibm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, intel)
+__OMP_TRAIT_PROPERTY(implementation, vendor, llvm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, pgi)
+__OMP_TRAIT_PROPERTY(implementation, vendor, ti)
+__OMP_TRAIT_PROPERTY(implementation, vendor, unknown)
+
+__OMP_TRAIT_SELECTOR(implementation, extension, true)
+
+__OMP_TRAIT_SET(user)
+
+__OMP_TRAIT_SELECTOR(user, condition, true)
+
+__OMP_TRAIT_PROPERTY(user, condition, true)
+__OMP_TRAIT_PROPERTY(user, condition, false)
+__OMP_TRAIT_PROPERTY(user, condition, unknown)
+
+#undef OMP_TRAIT_SET
+#undef __OMP_TRAIT_SET
+///}
+
+/// Traits for the requires directive
+///
+/// These will (potentially) become trait selectors for the OpenMP context if
+/// the OMP_REQUIRES_TRAIT macro is not defined.
+///
+///{
+
+#ifdef OMP_REQUIRES_TRAIT
+#define __OMP_REQUIRES_TRAIT(Name)                                             \
+  OMP_REQUIRES_TRAIT(OMP_REQUIRES_TRAIT_##Name, #Name)
+#else
+#define __OMP_REQUIRES_TRAIT(Name)                                             \
+  __OMP_TRAIT_SELECTOR_AND_PROPERTY(implementation, Name)
+#endif
+
+__OMP_REQUIRES_TRAIT(unified_address)
+__OMP_REQUIRES_TRAIT(unified_shared_memory)
+__OMP_REQUIRES_TRAIT(reverse_offload)
+__OMP_REQUIRES_TRAIT(dynamic_allocators)
+__OMP_REQUIRES_TRAIT(atomic_default_mem_order)
+
+#undef __OMP_TRAIT_SELECTOR_AND_PROPERTY
+#undef OMP_TRAIT_SELECTOR
+#undef __OMP_TRAIT_SELECTOR
+#undef OMP_TRAIT_PROPERTY
+#undef __OMP_TRAIT_PROPERTY
+#undef __OMP_REQUIRES_TRAIT
+#undef OMP_REQUIRES_TRAIT
 ///}

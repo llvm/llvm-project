@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_Socket_h_
-#define liblldb_Host_Socket_h_
+#ifndef LLDB_HOST_SOCKET_H
+#define LLDB_HOST_SOCKET_H
 
 #include <memory>
 #include <string>
@@ -127,4 +127,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_Host_Socket_h_
+#endif // LLDB_HOST_SOCKET_H

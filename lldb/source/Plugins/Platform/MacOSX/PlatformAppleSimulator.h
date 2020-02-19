@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformAppleSimulator_h_
-#define liblldb_PlatformAppleSimulator_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLESIMULATOR_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLESIMULATOR_H
 
 #include <mutex>
 
@@ -60,4 +60,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformAppleSimulator);
 };
 
-#endif // liblldb_PlatformAppleSimulator_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLESIMULATOR_H

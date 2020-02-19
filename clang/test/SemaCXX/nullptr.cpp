@@ -25,7 +25,7 @@ nullptr_t f(nullptr_t null)
   pf = null;
   void (A::*pmf)() = nullptr;
   pmf = null;
-  bool b = nullptr;
+  bool b = nullptr; // expected-error {{cannot initialize}}
 
   // Can't convert nullptr to integral implicitly.
   uintptr_t i = nullptr; // expected-error {{cannot initialize}}

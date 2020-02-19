@@ -36,6 +36,12 @@ public:
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
   }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    Options.CheckOptions["llvm-qualified-auto.AddConstToQualified"] = "0";
+    return Options;
+  }
 };
 
 // Register the LLVMTidyModule using this statically initialized variable.

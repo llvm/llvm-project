@@ -126,11 +126,10 @@ define <16 x i64> @load_catcat(<4 x i64>* %p) {
 ;
 ; AVX2-LABEL: load_catcat:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %ymm3
 ; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm3[1,1,1,1]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm3[2,2,2,2]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[3,3,3,3]
+; AVX2-NEXT:    vbroadcastsd 8(%rdi), %ymm1
+; AVX2-NEXT:    vbroadcastsd 16(%rdi), %ymm2
+; AVX2-NEXT:    vbroadcastsd 24(%rdi), %ymm3
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_catcat:

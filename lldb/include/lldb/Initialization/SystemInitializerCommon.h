@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INITIALIZATION_SYSTEM_INITIALIZER_COMMON_H
-#define LLDB_INITIALIZATION_SYSTEM_INITIALIZER_COMMON_H
+#ifndef LLDB_INITIALIZATION_SYSTEMINITIALIZERCOMMON_H
+#define LLDB_INITIALIZATION_SYSTEMINITIALIZERCOMMON_H
 
 #include "SystemInitializer.h"
 
@@ -31,4 +31,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_INITIALIZATION_SYSTEM_INITIALIZER_COMMON_H
+#endif // LLDB_INITIALIZATION_SYSTEMINITIALIZERCOMMON_H

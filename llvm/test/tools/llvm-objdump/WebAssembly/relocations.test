@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown -filetype=obj %s -o - | llvm-objdump -r - | FileCheck %s
+; RUN: llc -mtriple=wasm32-unknown-unknown -filetype=obj %s -o - | llvm-objdump -r - | FileCheck %s --strict-whitespace --match-full-lines
 
 @foo = external global i32, align 4
 @bar = global i32* @foo, align 4
@@ -9,8 +9,10 @@ entry:
   ret void
 }
 
-; CHECK:      RELOCATION RECORDS FOR [CODE]:
-; CHECK-NEXT: 00000006 R_WASM_TYPE_INDEX_LEB 1+0
+;      CHECK:RELOCATION RECORDS FOR [CODE]:
+; CHECK-NEXT:OFFSET   TYPE                     VALUE
+; CHECK-NEXT:00000006 R_WASM_TYPE_INDEX_LEB    1+0
 
-; CHECK:      RELOCATION RECORDS FOR [DATA]:
-; CHECK-NEXT: 00000006 R_WASM_MEMORY_ADDR_I32 foo+0
+;      CHECK:RELOCATION RECORDS FOR [DATA]:
+; CHECK-NEXT:OFFSET   TYPE                     VALUE
+; CHECK-NEXT:00000006 R_WASM_MEMORY_ADDR_I32   foo+0

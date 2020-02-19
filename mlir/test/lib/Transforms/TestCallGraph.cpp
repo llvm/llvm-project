@@ -25,6 +25,9 @@ struct TestCallGraphPass : public ModulePass<TestCallGraphPass> {
 };
 } // end anonymous namespace
 
-static PassRegistration<TestCallGraphPass>
-    pass("test-print-callgraph",
-         "Print the contents of a constructed callgraph.");
+namespace mlir {
+void registerTestCallGraphPass() {
+  PassRegistration<TestCallGraphPass> pass(
+      "test-print-callgraph", "Print the contents of a constructed callgraph.");
+}
+} // namespace mlir

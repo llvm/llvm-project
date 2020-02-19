@@ -1,4 +1,4 @@
-# RUN: not llc -run-pass=machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -run-pass=machineverifier %s -o - 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |

@@ -49,6 +49,19 @@ def CC_VE : CallingConv<[
   CCDelegateTo<CC_VE_C_Stack>
 ]>;
 
+// All arguments get passed in stack for varargs function or non-prototyped
+// function.
+def CC_VE2 : CallingConv<[
+  // float --> need special handling like below.
+  //    0      4
+  //    +------+------+
+  //    | empty| float|
+  //    +------+------+
+  CCIfType<[f32], CCCustom<"allocateFloat">>,
+
+  CCAssignToStack<0, 8>
+]>;
+
 def RetCC_VE : CallingConv<[
   // Promote i1/i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,

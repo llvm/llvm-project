@@ -171,8 +171,8 @@ public:
   enum ValueLength { Byte = 1, Half = 2, Long = 4, Quad = 8, ULEB, SLEB };
 
   struct ValueAndLength {
-    uint64_t Value;
-    ValueLength Length;
+    uint64_t Value = 0;
+    ValueLength Length = Byte;
   };
 
   LineTable(uint16_t Version, dwarf::DwarfFormat Format, uint8_t AddrSize,
@@ -213,6 +213,9 @@ private:
 
   void writeProloguePayload(const DWARFDebugLine::Prologue &Prologue,
                             AsmPrinter &Asm) const;
+
+  // Calculate the number of bytes the Contents will take up.
+  size_t getContentsSize() const;
 
   llvm::Optional<DWARFDebugLine::Prologue> Prologue;
   std::vector<ValueAndLength> CustomPrologue;

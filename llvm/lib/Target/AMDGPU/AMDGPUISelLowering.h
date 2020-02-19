@@ -172,6 +172,10 @@ public:
   bool isZExtFree(EVT Src, EVT Dest) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
 
+  NegatibleCost getNegatibleCost(SDValue Op, SelectionDAG &DAG,
+                                 bool LegalOperations, bool ForCodeSize,
+                                 unsigned Depth) const override;
+
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 
   MVT getVectorIdxTy(const DataLayout &) const override;
@@ -432,6 +436,7 @@ enum NodeType : unsigned {
   MUL_LOHI_I24,
   MUL_LOHI_U24,
   PERM,
+  KILL,
   TEXTURE_FETCH,
   R600_EXPORT,
   CONST_ADDRESS,
@@ -476,7 +481,6 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
-  KILL,
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LOAD_D16_HI,

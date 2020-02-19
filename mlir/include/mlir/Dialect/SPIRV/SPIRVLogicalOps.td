@@ -794,7 +794,8 @@ def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual", SPV_Integer, []
 
 // -----
 
-def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
+def SPV_SelectOp : SPV_Op<"Select",
+    [NoSideEffect, AllTypesMatch<["true_value", "false_value", "result"]>]> {
   let summary = [{
     Select between two objects. Before version 1.4, results are only
     computed per component.
@@ -851,6 +852,10 @@ def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
                               Value cond, Value trueValue,
                               Value falseValue}]>];
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($condition) `,` type($result)
+  }];
 }
 
 // -----

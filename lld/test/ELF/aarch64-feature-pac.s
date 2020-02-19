@@ -32,6 +32,10 @@
 # NOPAC-NEXT:           add     x16, x16, #968
 # NOPAC-NEXT:           br      x17
 
+# SOGOTPLT: Hex dump of section '.got.plt':
+# SOGOTPLT-NEXT: 0x000303b0 00000000 00000000 00000000 00000000
+# SOGOTPLT-NEXT: 0x000303c0 00000000 00000000 d0020100 00000000
+
 # NOPACDYN-NOT:   0x0000000070000001 (AARCH64_BTI_PLT)
 # NOPACDYN-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
@@ -41,9 +45,7 @@
 # RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT2 %s
 # RUN: llvm-readelf --dynamic-table %t.so |  FileCheck --check-prefix PACDYN %s
 
-## PAC has no effect on PLT[0], for PLT[N] autia1716 is used to authenticate
-## the address in x17 (context in x16) before branching to it. The dynamic
-## loader is responsible for calling pacia1716 on the entry.
+## PAC has no effect on PLT[0], for PLT[N].
 # PACSO: 0000000000010348 func2:
 # PACSO-NEXT:    10348:         bl      #56 <func3@plt>
 # PACSO-NEXT:                   ret
@@ -53,32 +55,26 @@
 # PACSO: 0000000000010360 .plt:
 # PACSO-NEXT:    10360:         stp     x16, x30, [sp, #-16]!
 # PACSO-NEXT:                   adrp    x16, #131072
-# PACSO-NEXT:                   ldr     x17, [x16, #1144]
-# PACSO-NEXT:                   add     x16, x16, #1144
+# PACSO-NEXT:                   ldr     x17, [x16, #1120]
+# PACSO-NEXT:                   add     x16, x16, #1120
 # PACSO-NEXT:                   br      x17
 # PACSO-NEXT:                   nop
 # PACSO-NEXT:                   nop
 # PACSO-NEXT:                   nop
 # PACSO: 0000000000010380 func3@plt:
 # PACSO-NEXT:    10380:         adrp    x16, #131072
-# PACSO-NEXT:                   ldr     x17, [x16, #1152]
-# PACSO-NEXT:                   add     x16, x16, #1152
-# PACSO-NEXT:                   autia1716
+# PACSO-NEXT:                   ldr     x17, [x16, #1128]
+# PACSO-NEXT:                   add     x16, x16, #1128
 # PACSO-NEXT:                   br      x17
-# PACSO-NEXT:                   nop
-
-# SOGOTPLT: Hex dump of section '.got.plt':
-# SOGOTPLT-NEXT: 0x000303b0 00000000 00000000 00000000 00000000
-# SOGOTPLT-NEXT: 0x000303c0 00000000 00000000 d0020100 00000000
 
 # SOGOTPLT2: Hex dump of section '.got.plt':
-# SOGOTPLT2-NEXT: 0x00030468 00000000 00000000 00000000 00000000
-# SOGOTPLT2-NEXT: 0x00030478 00000000 00000000 60030100 00000000
+# SOGOTPLT2-NEXT: 0x00030450 00000000 00000000 00000000 00000000
+# SOGOTPLT2-NEXT: 0x00030460 00000000 00000000 60030100 00000000
 
 # PACPROP: Properties:    aarch64 feature: PAC
 
 # PACDYN-NOT:      0x0000000070000001 (AARCH64_BTI_PLT)
-# PACDYN:          0x0000000070000003 (AARCH64_PAC_PLT)
+# PACDYN-NOT:      0x0000000070000003 (AARCH64_PAC_PLT)
 
 ## Turn on PAC entries with the -z pac-plt command line option. There are no
 ## warnings in this case as the choice to use PAC in PLT entries is orthogonal
@@ -87,7 +83,7 @@
 
 # RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
-# RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN %s
+# RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN2 %s
 # RUN: llvm-objdump -d -mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
 
 # PACPLT: Disassembly of section .text:
@@ -113,6 +109,9 @@
 # PACPLT-NEXT:                  autia1716
 # PACPLT-NEXT:                  br      x17
 # PACPLT-NEXT:                  nop
+
+# PACDYN2-NOT:      0x0000000070000001 (AARCH64_BTI_PLT)
+# PACDYN2:      0x0000000070000003 (AARCH64_PAC_PLT)
 
 .section ".note.gnu.property", "a"
 .long 4

@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "int_lib.h"
+#define QUAD_PRECISION
+#include "fp_lib.h"
 
-#if _ARCH_PPC
+#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
 
 // Returns: a ^ b
 

@@ -12,8 +12,8 @@
 
 // MODULES_DEFINES: _LIBCPP_DEBUG=0
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib
+// This test requires debug mode, which the library on macOS doesn't have.
+// UNSUPPORTED: with_system_cxx_lib=macosx
 
 // <future>
 

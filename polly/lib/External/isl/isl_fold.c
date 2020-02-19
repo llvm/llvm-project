@@ -20,14 +20,16 @@
 #include <isl_vec_private.h>
 #include <isl_config.h>
 
-#undef BASE
-#define BASE pw_qpolynomial_fold
+#undef EL_BASE
+#define EL_BASE pw_qpolynomial_fold
 
 #include <isl_list_templ.c>
 
 enum isl_fold isl_fold_type_negate(enum isl_fold type)
 {
 	switch (type) {
+	case isl_fold_error:
+		return isl_fold_error;
 	case isl_fold_min:
 		return isl_fold_max;
 	case isl_fold_max:
@@ -40,15 +42,15 @@ enum isl_fold isl_fold_type_negate(enum isl_fold type)
 }
 
 static __isl_give isl_qpolynomial_fold *qpolynomial_fold_alloc(
-	enum isl_fold type, __isl_take isl_space *dim, int n)
+	enum isl_fold type, __isl_take isl_space *space, int n)
 {
 	isl_qpolynomial_fold *fold;
 
-	if (!dim)
+	if (!space)
 		goto error;
 
-	isl_assert(dim->ctx, n >= 0, goto error);
-	fold = isl_calloc(dim->ctx, struct isl_qpolynomial_fold,
+	isl_assert(space->ctx, n >= 0, goto error);
+	fold = isl_calloc(space->ctx, struct isl_qpolynomial_fold,
 			sizeof(struct isl_qpolynomial_fold) +
 			(n - 1) * sizeof(struct isl_qpolynomial *));
 	if (!fold)
@@ -58,11 +60,11 @@ static __isl_give isl_qpolynomial_fold *qpolynomial_fold_alloc(
 	fold->size = n;
 	fold->n = 0;
 	fold->type = type;
-	fold->dim = dim;
+	fold->dim = space;
 
 	return fold;
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -259,12 +261,12 @@ error:
  */
 static int isl_qpolynomial_cst_sign(__isl_keep isl_qpolynomial *qp)
 {
-	struct isl_upoly_cst *cst;
+	isl_poly_cst *cst;
 
 	if (isl_qpolynomial_is_nan(qp))
 		return 0;
 
-	cst = isl_upoly_as_cst(qp->upoly);
+	cst = isl_poly_as_cst(qp->poly);
 	if (!cst)
 		return 0;
 
@@ -329,10 +331,10 @@ done:
 static int isl_qpolynomial_sign(__isl_keep isl_set *set,
 	__isl_keep isl_qpolynomial *qp)
 {
-	int d;
+	isl_size d;
 	int i;
-	int is;
-	struct isl_upoly_rec *rec;
+	isl_bool is;
+	isl_poly_rec *rec;
 	isl_vec *v;
 	isl_int l;
 	enum isl_lp_result res;
@@ -353,18 +355,20 @@ static int isl_qpolynomial_sign(__isl_keep isl_set *set,
 	if (qp->div->n_row > 0)
 		return 0;
 
-	rec = isl_upoly_as_rec(qp->upoly);
+	rec = isl_poly_as_rec(qp->poly);
 	if (!rec)
 		return 0;
 
 	d = isl_space_dim(qp->dim, isl_dim_all);
+	if (d < 0)
+		return 0;
 	v = isl_vec_alloc(set->ctx, 2 + d);
 	if (!v)
 		return 0;
 
 	isl_seq_clr(v->el + 1, 1 + d);
 	isl_int_set_si(v->el[0], 1);
-	isl_int_set_si(v->el[2 + qp->upoly->var], 1);
+	isl_int_set_si(v->el[2 + qp->poly->var], 1);
 
 	isl_int_init(l);
 
@@ -377,16 +381,16 @@ static int isl_qpolynomial_sign(__isl_keep isl_set *set,
 
 		min = isl_qpolynomial_cst_on_domain(isl_space_copy(qp->dim), l);
 		base = isl_qpolynomial_var_pow_on_domain(isl_space_copy(qp->dim),
-						qp->upoly->var, 1);
+						qp->poly->var, 1);
 
 		r = isl_qpolynomial_alloc(isl_space_copy(qp->dim), 0,
-					  isl_upoly_copy(rec->p[rec->n - 1]));
+					  isl_poly_copy(rec->p[rec->n - 1]));
 		q = isl_qpolynomial_copy(r);
 
 		for (i = rec->n - 2; i >= 0; --i) {
 			r = isl_qpolynomial_mul(r, isl_qpolynomial_copy(min));
 			t = isl_qpolynomial_alloc(isl_space_copy(qp->dim), 0,
-						  isl_upoly_copy(rec->p[i]));
+						  isl_poly_copy(rec->p[i]));
 			r = isl_qpolynomial_add(r, t);
 			if (i == 0)
 				break;
@@ -665,14 +669,25 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_gist_params(
 	return isl_qpolynomial_fold_gist(fold, dom_context);
 }
 
+/* Return a zero (i.e., empty) isl_qpolynomial_fold in the given space.
+ *
+ * This is a helper function for isl_pw_*_as_* that ensures a uniform
+ * interface over all piecewise types.
+ */
+static __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_zero_in_space(
+	__isl_take isl_space *space, enum isl_fold type)
+{
+	return isl_qpolynomial_fold_empty(type, isl_space_domain(space));
+}
+
 #define isl_qpolynomial_fold_involves_nan isl_qpolynomial_fold_is_nan
 
 #define HAS_TYPE
 
 #undef PW
 #define PW isl_pw_qpolynomial_fold
-#undef EL
-#define EL isl_qpolynomial_fold
+#undef BASE
+#define BASE qpolynomial_fold
 #undef EL_IS_ZERO
 #define EL_IS_ZERO is_empty
 #undef ZERO
@@ -684,12 +699,13 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_gist_params(
 #undef DEFAULT_IS_ZERO
 #define DEFAULT_IS_ZERO 1
 
-#define NO_NEG
-#define NO_SUB
-#define NO_PULLBACK
-
 #include <isl_pw_templ.c>
 #include <isl_pw_eval.c>
+#include <isl_pw_insert_dims_templ.c>
+#include <isl_pw_lift_templ.c>
+#include <isl_pw_morph_templ.c>
+#include <isl_pw_move_dims_templ.c>
+#include <isl_pw_opt_templ.c>
 
 #undef BASE
 #define BASE pw_qpolynomial_fold
@@ -775,27 +791,30 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_cow(
 	return isl_qpolynomial_fold_dup(fold);
 }
 
-void isl_qpolynomial_fold_free(__isl_take isl_qpolynomial_fold *fold)
+__isl_null isl_qpolynomial_fold *isl_qpolynomial_fold_free(
+	__isl_take isl_qpolynomial_fold *fold)
 {
 	int i;
 
 	if (!fold)
-		return;
+		return NULL;
 	if (--fold->ref > 0)
-		return;
+		return NULL;
 
 	for (i = 0; i < fold->n; ++i)
 		isl_qpolynomial_free(fold->qp[i]);
 	isl_space_free(fold->dim);
 	free(fold);
+
+	return NULL;
 }
 
-int isl_qpolynomial_fold_is_empty(__isl_keep isl_qpolynomial_fold *fold)
+isl_bool isl_qpolynomial_fold_is_empty(__isl_keep isl_qpolynomial_fold *fold)
 {
 	if (!fold)
-		return -1;
+		return isl_bool_error;
 
-	return fold->n == 0;
+	return isl_bool_ok(fold->n == 0);
 }
 
 /* Does "fold" represent max(NaN) or min(NaN)?
@@ -1178,7 +1197,7 @@ error:
 /* Check whether for each quasi-polynomial in "fold2" there is
  * a quasi-polynomial in "fold1" that dominates it on "set".
  */
-static int qpolynomial_fold_covers_on_domain(__isl_keep isl_set *set,
+static isl_bool qpolynomial_fold_covers_on_domain(__isl_keep isl_set *set,
 	__isl_keep isl_qpolynomial_fold *fold1,
 	__isl_keep isl_qpolynomial_fold *fold2)
 {
@@ -1186,7 +1205,7 @@ static int qpolynomial_fold_covers_on_domain(__isl_keep isl_set *set,
 	int covers;
 
 	if (!set || !fold1 || !fold2)
-		return -1;
+		return isl_bool_error;
 
 	covers = fold1->type == isl_fold_max ? 1 : -1;
 
@@ -1204,30 +1223,31 @@ static int qpolynomial_fold_covers_on_domain(__isl_keep isl_set *set,
 				break;
 		}
 		if (j >= fold1->n)
-			return 0;
+			return isl_bool_false;
 	}
 
-	return 1;
+	return isl_bool_true;
 }
 
 /* Check whether "pwf1" dominated "pwf2", i.e., the domain of "pwf1" contains
  * that of "pwf2" and on each cell, the corresponding fold from pwf1 dominates
  * that of pwf2.
  */
-int isl_pw_qpolynomial_fold_covers(__isl_keep isl_pw_qpolynomial_fold *pwf1,
+isl_bool isl_pw_qpolynomial_fold_covers(
+	__isl_keep isl_pw_qpolynomial_fold *pwf1,
 	__isl_keep isl_pw_qpolynomial_fold *pwf2)
 {
 	int i, j;
 	isl_set *dom1, *dom2;
-	int is_subset;
+	isl_bool is_subset;
 
 	if (!pwf1 || !pwf2)
-		return -1;
+		return isl_bool_error;
 
 	if (pwf2->n == 0)
-		return 1;
+		return isl_bool_true;
 	if (pwf1->n == 0)
-		return 0;
+		return isl_bool_false;
 
 	dom1 = isl_pw_qpolynomial_fold_domain(isl_pw_qpolynomial_fold_copy(pwf1));
 	dom2 = isl_pw_qpolynomial_fold_domain(isl_pw_qpolynomial_fold_copy(pwf2));
@@ -1240,9 +1260,9 @@ int isl_pw_qpolynomial_fold_covers(__isl_keep isl_pw_qpolynomial_fold *pwf1,
 
 	for (i = 0; i < pwf2->n; ++i) {
 		for (j = 0; j < pwf1->n; ++j) {
-			int is_empty;
+			isl_bool is_empty;
 			isl_set *common;
-			int covers;
+			isl_bool covers;
 
 			common = isl_set_intersect(isl_set_copy(pwf1->p[j].set),
 						   isl_set_copy(pwf2->p[i].set));
@@ -1250,7 +1270,7 @@ int isl_pw_qpolynomial_fold_covers(__isl_keep isl_pw_qpolynomial_fold *pwf1,
 			if (is_empty < 0 || is_empty) {
 				isl_set_free(common);
 				if (is_empty < 0)
-					return -1;
+					return isl_bool_error;
 				continue;
 			}
 			covers = qpolynomial_fold_covers_on_domain(common,
@@ -1261,7 +1281,7 @@ int isl_pw_qpolynomial_fold_covers(__isl_keep isl_pw_qpolynomial_fold *pwf1,
 		}
 	}
 
-	return 1;
+	return isl_bool_true;
 }
 
 __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_morph_domain(
@@ -1304,15 +1324,25 @@ error:
 enum isl_fold isl_qpolynomial_fold_get_type(__isl_keep isl_qpolynomial_fold *fold)
 {
 	if (!fold)
-		return isl_fold_list;
+		return isl_fold_error;
 	return fold->type;
+}
+
+/* Return the type of this piecewise quasipolynomial reduction.
+ */
+enum isl_fold isl_pw_qpolynomial_fold_get_type(
+	__isl_keep isl_pw_qpolynomial_fold *pwf)
+{
+	if (!pwf)
+		return isl_fold_error;
+	return pwf->type;
 }
 
 enum isl_fold isl_union_pw_qpolynomial_fold_get_type(
 	__isl_keep isl_union_pw_qpolynomial_fold *upwf)
 {
 	if (!upwf)
-		return isl_fold_list;
+		return isl_fold_error;
 	return upwf->type;
 }
 
@@ -1515,24 +1545,24 @@ static isl_bool join_compatible(__isl_keep isl_space *space1,
  */
 __isl_give isl_pw_qpolynomial_fold *isl_map_apply_pw_qpolynomial_fold(
 	__isl_take isl_map *map, __isl_take isl_pw_qpolynomial_fold *pwf,
-	int *tight)
+	isl_bool *tight)
 {
 	isl_ctx *ctx;
 	isl_set *dom;
-	isl_space *map_dim;
-	isl_space *pwf_dim;
-	unsigned n_in;
+	isl_space *map_space;
+	isl_space *pwf_space;
+	isl_size n_in;
 	isl_bool ok;
 
 	ctx = isl_map_get_ctx(map);
 	if (!ctx)
 		goto error;
 
-	map_dim = isl_map_get_space(map);
-	pwf_dim = isl_pw_qpolynomial_fold_get_space(pwf);
-	ok = join_compatible(map_dim, pwf_dim);
-	isl_space_free(map_dim);
-	isl_space_free(pwf_dim);
+	map_space = isl_map_get_space(map);
+	pwf_space = isl_pw_qpolynomial_fold_get_space(pwf);
+	ok = join_compatible(map_space, pwf_space);
+	isl_space_free(map_space);
+	isl_space_free(pwf_space);
 	if (ok < 0)
 		goto error;
 	if (!ok)
@@ -1540,6 +1570,8 @@ __isl_give isl_pw_qpolynomial_fold *isl_map_apply_pw_qpolynomial_fold(
 			goto error);
 
 	n_in = isl_map_dim(map, isl_dim_in);
+	if (n_in < 0)
+		goto error;
 	pwf = isl_pw_qpolynomial_fold_insert_dims(pwf, isl_dim_in, 0, n_in);
 
 	dom = isl_map_wrap(map);
@@ -1558,7 +1590,7 @@ error:
 
 __isl_give isl_pw_qpolynomial_fold *isl_set_apply_pw_qpolynomial_fold(
 	__isl_take isl_set *set, __isl_take isl_pw_qpolynomial_fold *pwf,
-	int *tight)
+	isl_bool *tight)
 {
 	return isl_map_apply_pw_qpolynomial_fold(set, pwf, tight);
 }
@@ -1567,7 +1599,7 @@ struct isl_apply_fold_data {
 	isl_union_pw_qpolynomial_fold *upwf;
 	isl_union_pw_qpolynomial_fold *res;
 	isl_map *map;
-	int tight;
+	isl_bool tight;
 };
 
 static isl_stat pw_qpolynomial_fold_apply(
@@ -1612,7 +1644,7 @@ static isl_stat map_apply(__isl_take isl_map *map, void *user)
 
 __isl_give isl_union_pw_qpolynomial_fold *isl_union_map_apply_union_pw_qpolynomial_fold(
 	__isl_take isl_union_map *umap,
-	__isl_take isl_union_pw_qpolynomial_fold *upwf, int *tight)
+	__isl_take isl_union_pw_qpolynomial_fold *upwf, isl_bool *tight)
 {
 	isl_space *dim;
 	enum isl_fold type;
@@ -1624,7 +1656,7 @@ __isl_give isl_union_pw_qpolynomial_fold *isl_union_map_apply_union_pw_qpolynomi
 				isl_union_pw_qpolynomial_fold_get_space(upwf));
 
 	data.upwf = upwf;
-	data.tight = tight ? 1 : 0;
+	data.tight = tight ? isl_bool_true : isl_bool_false;
 	dim = isl_union_pw_qpolynomial_fold_get_space(upwf);
 	type = isl_union_pw_qpolynomial_fold_get_type(upwf);
 	data.res = isl_union_pw_qpolynomial_fold_zero(dim, type);
@@ -1647,7 +1679,7 @@ error:
 
 __isl_give isl_union_pw_qpolynomial_fold *isl_union_set_apply_union_pw_qpolynomial_fold(
 	__isl_take isl_union_set *uset,
-	__isl_take isl_union_pw_qpolynomial_fold *upwf, int *tight)
+	__isl_take isl_union_pw_qpolynomial_fold *upwf, isl_bool *tight)
 {
 	return isl_union_map_apply_union_pw_qpolynomial_fold(uset, upwf, tight);
 }

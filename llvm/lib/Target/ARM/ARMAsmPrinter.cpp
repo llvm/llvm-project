@@ -57,26 +57,26 @@ ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
 
-void ARMAsmPrinter::EmitFunctionBodyEnd() {
+void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
   // of the function.
   if (!InConstantPool)
     return;
   InConstantPool = false;
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
-void ARMAsmPrinter::EmitFunctionEntryLabel() {
+void ARMAsmPrinter::emitFunctionEntryLabel() {
   if (AFI->isThumbFunction()) {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
-    OutStreamer->EmitThumbFunc(CurrentFnSym);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitThumbFunc(CurrentFnSym);
   } else {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code32);
+    OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
-void ARMAsmPrinter::EmitXXStructor(const DataLayout &DL, const Constant *CV) {
+void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   uint64_t Size = getDataLayout().getTypeAllocSize(CV->getType());
   assert(Size && "C++ constructor pointer had zero size!");
 
@@ -90,17 +90,17 @@ void ARMAsmPrinter::EmitXXStructor(const DataLayout &DL, const Constant *CV) {
                                              : MCSymbolRefExpr::VK_None),
                                             OutContext);
 
-  OutStreamer->EmitValue(E, Size);
+  OutStreamer->emitValue(E, Size);
 }
 
-void ARMAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
+void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (PromotedGlobals.count(GV))
     // The global was promoted into a constant pool. It should not be emitted.
     return;
-  AsmPrinter::EmitGlobalVariable(GV);
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
-/// runOnMachineFunction - This uses the EmitInstruction()
+/// runOnMachineFunction - This uses the emitInstruction()
 /// method to print assembly for each instruction.
 ///
 bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
@@ -158,7 +158,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Emit the rest of the function body.
-  EmitFunctionBody();
+  emitFunctionBody();
 
   // Emit the XRay table for this function.
   emitXRayTable();
@@ -167,10 +167,10 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // These are created per function, rather than per TU, since it's
   // relatively easy to exceed the thumb branch range within a TU.
   if (! ThumbIndirectPads.empty()) {
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
-    EmitAlignment(Align(2));
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+    emitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
-      OutStreamer->EmitLabel(TIP.second);
+      OutStreamer->emitLabel(TIP.second);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
         .addReg(TIP.first)
         // Add predicate operands.
@@ -467,14 +467,14 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);
   if (!EndInfo || WasThumb != isThumb(*EndInfo)) {
-    OutStreamer->EmitAssemblerFlag(WasThumb ? MCAF_Code16 : MCAF_Code32);
+    OutStreamer->emitAssemblerFlag(WasThumb ? MCAF_Code16 : MCAF_Code32);
   }
 }
 
-void ARMAsmPrinter::EmitStartOfAsmFile(Module &M) {
+void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   // Use unified assembler syntax.
-  OutStreamer->EmitAssemblerFlag(MCAF_SyntaxUnified);
+  OutStreamer->emitAssemblerFlag(MCAF_SyntaxUnified);
 
   // Emit ARM Build Attributes
   if (TT.isOSBinFormatELF())
@@ -484,20 +484,20 @@ void ARMAsmPrinter::EmitStartOfAsmFile(Module &M) {
   // if we're thumb for the purposes of the top level code16 assembler
   // flag.
   if (!M.getModuleInlineAsm().empty() && TT.isThumb())
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
 }
 
 static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {
   // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.emitLabel(StubLabel);
   //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+  OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4/*size*/);
   else
     // Internal to current translation unit.
     //
@@ -505,13 +505,13 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
     // pointers need to be indirect and pc-rel. We accomplish this by
     // using NLPs; however, sometimes the types are local to the file.
     // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
+    OutStreamer.emitValue(
         MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
         4 /*size*/);
 }
 
 
-void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
+void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // All darwin targets use mach-o.
@@ -526,7 +526,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(Align(4));
+      emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -539,7 +539,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getThreadLocalPointerSection());
-      EmitAlignment(Align(4));
+      emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -553,7 +553,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
 
   // The last attribute to be emitted is ABI_optimization_goals
@@ -570,7 +570,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
 }
 
 //===----------------------------------------------------------------------===//
-// Helper routines for EmitStartOfAsmFile() and EmitEndOfAsmFile()
+// Helper routines for emitStartOfAsmFile() and emitEndOfAsmFile()
 // FIXME:
 // The following seem like one-off assembler flags, but they actually need
 // to appear in the .ARM.attributes section in ELF.
@@ -856,8 +856,8 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
   llvm_unreachable("unexpected target");
 }
 
-void ARMAsmPrinter::
-EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
+void ARMAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
   const DataLayout &DL = getDataLayout();
   int Size = DL.getTypeAllocSize(MCPV->getType());
 
@@ -877,11 +877,11 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
     for (const auto *GV : ACPC->promotedGlobals()) {
       if (!EmittedPromotedGlobalLabels.count(GV)) {
         MCSymbol *GVSym = getSymbol(GV);
-        OutStreamer->EmitLabel(GVSym);
+        OutStreamer->emitLabel(GVSym);
         EmittedPromotedGlobalLabels.insert(GV);
       }
     }
-    return EmitGlobalConstant(DL, ACPC->getPromotedGlobalInit());
+    return emitGlobalConstant(DL, ACPC->getPromotedGlobalInit());
   }
 
   MCSymbol *MCSym;
@@ -926,29 +926,29 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
       // We want "(<expr> - .)", but MC doesn't have a concept of the '.'
       // label, so just emit a local label end reference that instead.
       MCSymbol *DotSym = OutContext.createTempSymbol();
-      OutStreamer->EmitLabel(DotSym);
+      OutStreamer->emitLabel(DotSym);
       const MCExpr *DotExpr = MCSymbolRefExpr::create(DotSym, OutContext);
       PCRelExpr = MCBinaryExpr::createSub(PCRelExpr, DotExpr, OutContext);
     }
     Expr = MCBinaryExpr::createSub(Expr, PCRelExpr, OutContext);
   }
-  OutStreamer->EmitValue(Expr, Size);
+  OutStreamer->emitValue(Expr, Size);
 }
 
-void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
+void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(Align(4));
+  emitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Mark the jump table as data-in-code.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionJT32);
+  OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -975,23 +975,23 @@ void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
     else if (AFI->isThumbFunction())
       Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(1,OutContext),
                                      OutContext);
-    OutStreamer->EmitValue(Expr, 4);
+    OutStreamer->emitValue(Expr, 4);
   }
   // Mark the end of jump table data-in-code region.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
-void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
+void ARMAsmPrinter::emitJumpTableInsts(const MachineInstr *MI) {
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(Align(4));
+  emitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -1009,17 +1009,17 @@ void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
   }
 }
 
-void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
+void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
                                         unsigned OffsetWidth) {
   assert((OffsetWidth == 1 || OffsetWidth == 2) && "invalid tbb/tbh width");
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
   if (Subtarget->isThumb1Only())
-    EmitAlignment(Align(4));
+    emitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
-  OutStreamer->EmitLabel(JTISymbol);
+  OutStreamer->emitLabel(JTISymbol);
 
   // Emit each entry of the table.
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
@@ -1027,7 +1027,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
   const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
   // Mark the jump table as data-in-code.
-  OutStreamer->EmitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
+  OutStreamer->emitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
                                                : MCDR_DataRegionJT16);
 
   for (auto MBB : JTBBs) {
@@ -1051,15 +1051,15 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
     Expr = MCBinaryExpr::createSub(MBBSymbolExpr, Expr, OutContext);
     Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(2, OutContext),
                                    OutContext);
-    OutStreamer->EmitValue(Expr, OffsetWidth);
+    OutStreamer->emitValue(Expr, OffsetWidth);
   }
   // Mark the end of jump table data-in-code region. 32-bit offsets use
   // actual branch instructions here, so we don't mark those as a data-region
   // at all.
-  OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+  OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 
   // Make sure the next instruction is 2-byte aligned.
-  EmitAlignment(Align(2));
+  emitAlignment(Align(2));
 }
 
 void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
@@ -1242,7 +1242,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 // instructions) auto-generated.
 #include "ARMGenMCPseudoLowering.inc"
 
-void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -1253,7 +1253,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
-    OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
+    OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
     InConstantPool = false;
   }
 
@@ -1514,7 +1514,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // This is a pseudo op for a label used by a branch future instruction
 
     // Emit the label.
-    OutStreamer->EmitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(0).getIndex(), OutContext));
     return;
@@ -1526,7 +1526,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1547,7 +1547,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1578,7 +1578,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // a PC-relative address at the ldr instruction.
 
     // Emit the label.
-    OutStreamer->EmitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -1621,28 +1621,28 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     // If this is the first entry of the pool, mark it.
     if (!InConstantPool) {
-      OutStreamer->EmitDataRegion(MCDR_DataRegion);
+      OutStreamer->emitDataRegion(MCDR_DataRegion);
       InConstantPool = true;
     }
 
-    OutStreamer->EmitLabel(GetCPISymbol(LabelId));
+    OutStreamer->emitLabel(GetCPISymbol(LabelId));
 
     const MachineConstantPoolEntry &MCPE = MCP->getConstants()[CPIdx];
     if (MCPE.isMachineConstantPoolEntry())
-      EmitMachineConstantPoolValue(MCPE.Val.MachineCPVal);
+      emitMachineConstantPoolValue(MCPE.Val.MachineCPVal);
     else
-      EmitGlobalConstant(DL, MCPE.Val.ConstVal);
+      emitGlobalConstant(DL, MCPE.Val.ConstVal);
     return;
   }
   case ARM::JUMPTABLE_ADDRS:
-    EmitJumpTableAddrs(MI);
+    emitJumpTableAddrs(MI);
     return;
   case ARM::JUMPTABLE_INSTS:
-    EmitJumpTableInsts(MI);
+    emitJumpTableInsts(MI);
     return;
   case ARM::JUMPTABLE_TBB:
   case ARM::JUMPTABLE_TBH:
-    EmitJumpTableTBInst(MI, MI->getOpcode() == ARM::JUMPTABLE_TBB ? 1 : 2);
+    emitJumpTableTBInst(MI, MI->getOpcode() == ARM::JUMPTABLE_TBB ? 1 : 2);
     return;
   case ARM::t2BR_JT: {
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tMOVr)
@@ -1657,7 +1657,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case ARM::t2TBH_JT: {
     unsigned Opc = MI->getOpcode() == ARM::t2TBB_JT ? ARM::t2TBB : ARM::t2TBH;
     // Lower and emit the PC label, then the instruction itself.
-    OutStreamer->EmitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
+    OutStreamer->emitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
     EmitToStreamer(*OutStreamer, MCInstBuilder(Opc)
                                      .addReg(MI->getOperand(0).getReg())
                                      .addReg(MI->getOperand(1).getReg())
@@ -1699,7 +1699,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->EmitCodeAlignment(4);
+      OutStreamer->emitCodeAlignment(4);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)
@@ -1741,7 +1741,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
                                      .addImm(ARMCC::AL)
                                      .addReg(0));
 
-    OutStreamer->EmitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
+    OutStreamer->emitLabel(GetCPISymbol(MI->getOperand(3).getImm()));
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                      .addReg(ARM::PC)
                                      .addReg(ARM::PC)
@@ -1810,7 +1810,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case ARM::SPACE:
-    OutStreamer->EmitZeros(MI->getOperand(1).getImm());
+    OutStreamer->emitZeros(MI->getOperand(1).getImm());
     return;
   case ARM::TRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
@@ -1905,7 +1905,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    OutStreamer->EmitLabel(Label);
+    OutStreamer->emitLabel(Label);
     return;
   }
 

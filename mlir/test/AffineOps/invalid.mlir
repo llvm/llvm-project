@@ -168,3 +168,97 @@ func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<(d0) -> (d0)> (%arg0, %arg1)
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<()[s0] -> (s0)> (%arg0, %arg1)
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_max
+func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
+  %0 = affine.max affine_map<(d0) -> (d0)> ()
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{region argument count and num results of upper bounds, lower bounds, and steps must all match}}
+  affine.parallel (%i) = (0, 0) to (100, 100) step (10, 10) {
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{region argument count and num results of upper bounds, lower bounds, and steps must all match}}
+  affine.parallel (%i, %j) = (0) to (100, 100) step (10, 10) {
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{region argument count and num results of upper bounds, lower bounds, and steps must all match}}
+  affine.parallel (%i, %j) = (0, 0) to (100) step (10, 10) {
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{region argument count and num results of upper bounds, lower bounds, and steps must all match}}
+  affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10) {
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  affine.for %x = 0 to 7 {
+    %y = addi %x, %x : index
+    // expected-error@+1 {{operand cannot be used as a dimension id}}
+    affine.parallel (%i, %j) = (0, 0) to (%y, 100) step (10, 10) {
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  affine.for %x = 0 to 7 {
+    %y = addi %x, %x : index
+    // expected-error@+1 {{operand cannot be used as a symbol}}
+    affine.parallel (%i, %j) = (0, 0) to (symbol(%y), 100) step (10, 10) {
+    }
+  }
+  return
+}

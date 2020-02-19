@@ -13,6 +13,7 @@ typedef struct isl_pw_qpolynomial isl_pw_qpolynomial;
 ISL_DECLARE_LIST_TYPE(pw_qpolynomial)
 
 enum isl_fold {
+	isl_fold_error = -1,
 	isl_fold_min,
 	isl_fold_max,
 	isl_fold_list

@@ -37,7 +37,7 @@ constexpr bool testConstexprSpan(Span sp)
     using S2 = decltype(s2);
     ASSERT_SAME_TYPE(typename Span::value_type, typename S1::value_type);
     ASSERT_SAME_TYPE(typename Span::value_type, typename S2::value_type);
-    static_assert(S1::extent == (Span::extent == std::dynamic_extent ? std::dynamic_extent : Count), "");
+    static_assert(S1::extent == Count);
     static_assert(S2::extent == std::dynamic_extent, "");
     return
         s1.data() == s2.data()
@@ -76,7 +76,7 @@ void testRuntimeSpan(Span sp)
     using S2 = decltype(s2);
     ASSERT_SAME_TYPE(typename Span::value_type, typename S1::value_type);
     ASSERT_SAME_TYPE(typename Span::value_type, typename S2::value_type);
-    static_assert(S1::extent == (Span::extent == std::dynamic_extent ? std::dynamic_extent : Count), "");
+    static_assert(S1::extent == Count);
     static_assert(S2::extent == std::dynamic_extent, "");
     assert(s1.data() == s2.data());
     assert(s1.size() == s2.size());

@@ -280,7 +280,8 @@ ConstantExpr::ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind)
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
-                                   ResultStorageKind StorageKind) {
+                                   ResultStorageKind StorageKind,
+                                   bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
@@ -288,6 +289,8 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
+  Self->ConstantExprBits.IsImmediateInvocation =
+      IsImmediateInvocation;
   return Self;
 }
 
@@ -317,7 +320,7 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
 }
 
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
-  assert(getStorageKind(Value) == ConstantExprBits.ResultKind &&
+  assert((unsigned)getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
   ConstantExprBits.APValueKind = Value.getKind();
   switch (ConstantExprBits.ResultKind) {
@@ -1443,19 +1446,28 @@ void CallExpr::updateDependenciesFromArg(Expr *Arg) {
 Decl *Expr::getReferencedDeclOfCallee() {
   Expr *CEE = IgnoreParenImpCasts();
 
-  while (SubstNonTypeTemplateParmExpr *NTTP
-                                = dyn_cast<SubstNonTypeTemplateParmExpr>(CEE)) {
-    CEE = NTTP->getReplacement()->IgnoreParenCasts();
+  while (SubstNonTypeTemplateParmExpr *NTTP =
+             dyn_cast<SubstNonTypeTemplateParmExpr>(CEE)) {
+    CEE = NTTP->getReplacement()->IgnoreParenImpCasts();
   }
 
   // If we're calling a dereference, look at the pointer instead.
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CEE)) {
-    if (BO->isPtrMemOp())
-      CEE = BO->getRHS()->IgnoreParenCasts();
-  } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(CEE)) {
-    if (UO->getOpcode() == UO_Deref)
-      CEE = UO->getSubExpr()->IgnoreParenCasts();
+  while (true) {
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CEE)) {
+      if (BO->isPtrMemOp()) {
+        CEE = BO->getRHS()->IgnoreParenImpCasts();
+        continue;
+      }
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(CEE)) {
+      if (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_AddrOf ||
+          UO->getOpcode() == UO_Plus) {
+        CEE = UO->getSubExpr()->IgnoreParenImpCasts();
+        continue;
+      }
+    }
+    break;
   }
+
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(CEE))
     return DRE->getDecl();
   if (MemberExpr *ME = dyn_cast<MemberExpr>(CEE))
@@ -1466,28 +1478,11 @@ Decl *Expr::getReferencedDeclOfCallee() {
   return nullptr;
 }
 
-/// getBuiltinCallee - If this is a call to a builtin, return the builtin ID. If
-/// not, return 0.
+/// If this is a call to a builtin, return the builtin ID. If not, return 0.
 unsigned CallExpr::getBuiltinCallee() const {
-  // All simple function calls (e.g. func()) are implicitly cast to pointer to
-  // function. As a result, we try and obtain the DeclRefExpr from the
-  // ImplicitCastExpr.
-  const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(getCallee());
-  if (!ICE) // FIXME: deal with more complex calls (e.g. (func)(), (*func)()).
-    return 0;
-
-  const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr());
-  if (!DRE)
-    return 0;
-
-  const FunctionDecl *FDecl = dyn_cast<FunctionDecl>(DRE->getDecl());
-  if (!FDecl)
-    return 0;
-
-  if (!FDecl->getIdentifier())
-    return 0;
-
-  return FDecl->getBuiltinID();
+  auto *FDecl =
+      dyn_cast_or_null<FunctionDecl>(getCallee()->getReferencedDeclOfCallee());
+  return FDecl ? FDecl->getBuiltinID() : 0;
 }
 
 bool CallExpr::isUnevaluatedBuiltinCall(const ASTContext &Ctx) const {
@@ -1685,6 +1680,11 @@ MemberExpr *MemberExpr::Create(
     CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(DC);
     if (RD && RD->isDependentContext() && RD->isCurrentInstantiation(DC))
       E->setTypeDependent(T->isDependentType());
+
+    // Bitfield with value-dependent width is type-dependent.
+    FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl);
+    if (FD && FD->isBitField() && FD->getBitWidth()->isValueDependent())
+      E->setTypeDependent(true);
   }
 
   if (HasQualOrFound) {

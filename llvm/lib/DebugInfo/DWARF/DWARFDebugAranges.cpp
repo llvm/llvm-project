@@ -11,7 +11,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -20,7 +19,9 @@
 
 using namespace llvm;
 
-void DWARFDebugAranges::extract(DataExtractor DebugArangesData) {
+void DWARFDebugAranges::extract(
+    DataExtractor DebugArangesData,
+    function_ref<void(Error)> RecoverableErrorHandler) {
   if (!DebugArangesData.isValidOffset(0))
     return;
   uint64_t Offset = 0;
@@ -28,7 +29,7 @@ void DWARFDebugAranges::extract(DataExtractor DebugArangesData) {
 
   while (DebugArangesData.isValidOffset(Offset)) {
     if (Error E = Set.extract(DebugArangesData, &Offset)) {
-      WithColor::error() << toString(std::move(E)) << '\n';
+      RecoverableErrorHandler(std::move(E));
       return;
     }
     uint64_t CUOffset = Set.getCompileUnitDIEOffset();
@@ -49,7 +50,7 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
   // Extract aranges from .debug_aranges section.
   DataExtractor ArangesData(CTX->getDWARFObj().getArangesSection(),
                             CTX->isLittleEndian(), 0);
-  extract(ArangesData);
+  extract(ArangesData, CTX->getRecoverableErrorHandler());
 
   // Generate aranges from DIEs: even if .debug_aranges section is present,
   // it may describe only a small subset of compilation units, so we need to
@@ -59,7 +60,7 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
     if (ParsedCUOffsets.insert(CUOffset).second) {
       Expected<DWARFAddressRangesVector> CURanges = CU->collectAddressRanges();
       if (!CURanges)
-        WithColor::error() << toString(CURanges.takeError()) << '\n';
+        CTX->getRecoverableErrorHandler()(CURanges.takeError());
       else
         for (const auto &R : *CURanges)
           appendRange(CUOffset, R.LowPC, R.HighPC);

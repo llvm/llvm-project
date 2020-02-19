@@ -10,6 +10,7 @@ config.llvm_build_mode = "@LLVM_BUILD_MODE@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
+config.lldb_libs_dir = "@LLDB_LIBS_DIR@"
 config.cmake_cxx_compiler = "@CMAKE_CXX_COMPILER@"
 config.host_os = "@HOST_OS@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
@@ -45,6 +46,10 @@ try:
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
     config.llvm_build_mode = config.llvm_build_mode % lit_config.params
     config.lldb_executable = config.lldb_executable % lit_config.params
+    config.lldb_libs_dir = config.lldb_libs_dir % lit_config.params
+    config.test_compiler = config.test_compiler % lit_config.params
+    config.dsymutil = config.dsymutil % lit_config.params
+    config.filecheck = config.filecheck % lit_config.params
     config.dotest_args_str = config.dotest_args_str % lit_config.params
 except KeyError as e:
     key, = e.args

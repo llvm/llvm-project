@@ -13,8 +13,12 @@ extern "C" {
 #endif
 
 ISL_DECLARE_MULTI(val)
-ISL_DECLARE_MULTI_NEG(val)
+ISL_DECLARE_MULTI_ARITH(val)
+ISL_DECLARE_MULTI_ZERO(val)
+ISL_DECLARE_MULTI_NAN(val)
 ISL_DECLARE_MULTI_DIMS(val)
+ISL_DECLARE_MULTI_DIM_ID(val)
+ISL_DECLARE_MULTI_TUPLE_ID(val)
 ISL_DECLARE_MULTI_WITH_DOMAIN(val)
 
 __isl_export
@@ -40,12 +44,14 @@ __isl_null isl_val *isl_val_free(__isl_take isl_val *v);
 
 isl_ctx *isl_val_get_ctx(__isl_keep isl_val *val);
 uint32_t isl_val_get_hash(__isl_keep isl_val *val);
+__isl_export
 long isl_val_get_num_si(__isl_keep isl_val *v);
+__isl_export
 long isl_val_get_den_si(__isl_keep isl_val *v);
 __isl_give isl_val *isl_val_get_den_val(__isl_keep isl_val *v);
 double isl_val_get_d(__isl_keep isl_val *v);
-size_t isl_val_n_abs_num_chunks(__isl_keep isl_val *v, size_t size);
-int isl_val_get_abs_num_chunks(__isl_keep isl_val *v, size_t size,
+isl_size isl_val_n_abs_num_chunks(__isl_keep isl_val *v, size_t size);
+isl_stat isl_val_get_abs_num_chunks(__isl_keep isl_val *v, size_t size,
 	void *chunks);
 
 __isl_give isl_val *isl_val_set_si(__isl_take isl_val *v, long i);
@@ -145,11 +151,15 @@ __isl_give isl_printer *isl_printer_print_val(__isl_take isl_printer *p,
 void isl_val_dump(__isl_keep isl_val *v);
 __isl_give char *isl_val_to_str(__isl_keep isl_val *v);
 
+isl_bool isl_multi_val_is_zero(__isl_keep isl_multi_val *mv);
+
+__isl_overload
 __isl_give isl_multi_val *isl_multi_val_add_val(__isl_take isl_multi_val *mv,
 	__isl_take isl_val *v);
 __isl_give isl_multi_val *isl_multi_val_mod_val(__isl_take isl_multi_val *mv,
 	__isl_take isl_val *v);
 
+__isl_constructor
 __isl_give isl_multi_val *isl_multi_val_read_from_str(isl_ctx *ctx,
 	const char *str);
 __isl_give isl_printer *isl_printer_print_multi_val(__isl_take isl_printer *p,
@@ -157,7 +167,7 @@ __isl_give isl_printer *isl_printer_print_multi_val(__isl_take isl_printer *p,
 void isl_multi_val_dump(__isl_keep isl_multi_val *mv);
 __isl_give char *isl_multi_val_to_str(__isl_keep isl_multi_val *mv);
 
-ISL_DECLARE_LIST_FN(val)
+ISL_DECLARE_EXPORTED_LIST_FN(val)
 
 #if defined(__cplusplus)
 }

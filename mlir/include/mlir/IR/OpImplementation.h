@@ -58,6 +58,10 @@ public:
   virtual void printType(Type type) = 0;
   virtual void printAttribute(Attribute attr) = 0;
 
+  /// Print the given attribute without its type. The corresponding parser must
+  /// provide a valid type for the attribute.
+  virtual void printAttributeWithoutType(Attribute attr) = 0;
+
   /// Print a successor, and use list, of a terminator operation given the
   /// terminator and the successor index.
   virtual void printSuccessorAndUseList(Operation *term, unsigned index) = 0;
@@ -101,7 +105,8 @@ public:
     if (types.begin() != types.end())
       printArrowTypeList(types);
   }
-  template <typename TypeRange> void printArrowTypeList(TypeRange &&types) {
+  template <typename TypeRange>
+  void printArrowTypeList(TypeRange &&types) {
     auto &os = getStream() << " -> ";
 
     bool wrapped = !has_single_element(types) ||
@@ -123,7 +128,7 @@ public:
   void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(inputs, os);
+    interleaveComma(inputs, *this);
     os << ")";
     printArrowTypeList(results);
   }
@@ -183,10 +188,9 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, bool value) {
   return p << (value ? StringRef("true") : "false");
 }
 
-template <typename IteratorT>
-inline OpAsmPrinter &
-operator<<(OpAsmPrinter &p,
-           const iterator_range<ValueTypeIterator<IteratorT>> &types) {
+template <typename ValueRangeT>
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
+                                const ValueTypeRange<ValueRangeT> &types) {
   interleaveComma(types, p);
   return p;
 }
@@ -513,7 +517,8 @@ public:
   virtual ParseResult
   parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands, Attribute &map,
                          StringRef attrName,
-                         SmallVectorImpl<NamedAttribute> &attrs) = 0;
+                         SmallVectorImpl<NamedAttribute> &attrs,
+                         Delimiter delimiter = Delimiter::Square) = 0;
 
   //===--------------------------------------------------------------------===//
   // Region Parsing
@@ -575,7 +580,8 @@ public:
   virtual ParseResult parseType(Type &result) = 0;
 
   /// Parse a type of a specific type.
-  template <typename TypeT> ParseResult parseType(TypeT &result) {
+  template <typename TypeT>
+  ParseResult parseType(TypeT &result) {
     llvm::SMLoc loc = getCurrentLocation();
 
     // Parse any kind of type.
@@ -610,7 +616,8 @@ public:
   virtual ParseResult parseColonType(Type &result) = 0;
 
   /// Parse a colon followed by a type of a specific kind, e.g. a FunctionType.
-  template <typename TypeType> ParseResult parseColonType(TypeType &result) {
+  template <typename TypeType>
+  ParseResult parseColonType(TypeType &result) {
     llvm::SMLoc loc = getCurrentLocation();
 
     // Parse any kind of type.

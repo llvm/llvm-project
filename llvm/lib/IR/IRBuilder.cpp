@@ -24,6 +24,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -196,6 +197,30 @@ CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
 
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  return CI;
+}
+
+CallInst *IRBuilderBase::CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign,
+                                            Value *Src, MaybeAlign SrcAlign,
+                                            Value *Size) {
+  Dst = getCastedInt8PtrValue(Dst);
+  Src = getCastedInt8PtrValue(Src);
+  Value *IsVolatile = getInt1(false);
+
+  Value *Ops[] = {Dst, Src, Size, IsVolatile};
+  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
+  Function *F = BB->getParent();
+  Module *M = F->getParent();
+  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy_inline, Tys);
+
+  CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  auto *MCI = cast<MemCpyInlineInst>(CI);
+  if (DstAlign)
+    MCI->setDestAlignment(*DstAlign);
+  if (SrcAlign)
+    MCI->setSourceAlignment(*SrcAlign);
 
   return CI;
 }
@@ -760,3 +785,9 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
   Function *Fn = Intrinsic::getDeclaration(M, ID, Types);
   return createCallHelper(Fn, Args, this, Name, FMFSource);
 }
+
+IRBuilderDefaultInserter::~IRBuilderDefaultInserter() {}
+IRBuilderCallbackInserter::~IRBuilderCallbackInserter() {}
+IRBuilderFolder::~IRBuilderFolder() {}
+void ConstantFolder::anchor() {}
+void NoFolder::anchor() {}

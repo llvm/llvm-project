@@ -120,7 +120,7 @@ def err_enum_template : Error<"enumeration cannot be a template">;
 
 def warn_cxx20_compat_consteval : Warning<
   "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
+  InGroup<CXX20Compat>, DefaultIgnore;
 
 }
 
@@ -239,6 +239,10 @@ def note_invalid_subexpr_in_const_expr : Note<
 let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_type_in_input : Error<
     "invalid type %0 in asm input for constraint '%1'">;
+
+  def warn_stack_clash_protection_inline_asm : Warning<
+    "Unable to protect inline asm that clobbers stack pointer against stack clash">,
+    InGroup<DiagGroup<"stack-protector">>;
 }
 
 // Sema && Serialization

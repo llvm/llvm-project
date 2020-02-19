@@ -50,7 +50,7 @@ SBTypeSynthetic::SBTypeSynthetic(const lldb::SBTypeSynthetic &rhs)
                           rhs);
 }
 
-SBTypeSynthetic::~SBTypeSynthetic() {}
+SBTypeSynthetic::~SBTypeSynthetic() = default;
 
 bool SBTypeSynthetic::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSynthetic, IsValid);

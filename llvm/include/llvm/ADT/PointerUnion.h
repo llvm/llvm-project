@@ -181,7 +181,7 @@ public:
   explicit operator bool() const { return !isNull(); }
 
   /// Test if the Union currently holds the type matching T.
-  template <typename T> int is() const {
+  template <typename T> bool is() const {
     constexpr int Index = pointer_union_detail::TypeIndex<T, PTs...>::Index;
     static_assert(Index < sizeof...(PTs),
                   "PointerUnion::is<T> given type not in the union");

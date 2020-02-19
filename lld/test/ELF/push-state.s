@@ -30,9 +30,9 @@
 // RUN: mkdir -p %t.dir
 // RUN: cp %t.so %t.dir/libfoo.so
 // RUN: ld.lld -o %t.exe -L%t.dir -push-state -static -pop-state  %t1.o -lfoo
-// RUN: not ld.lld -o %t.exe -L%t.dir -push-state -static %t1.o -lfoo
+// RUN: not ld.lld -o /dev/null -L%t.dir -push-state -static %t1.o -lfoo
 
-// RUN: not ld.lld -o %t.exe -pop-state %t.a %t1.o -M 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not ld.lld -o /dev/null -pop-state %t.a %t1.o -M 2>&1 | FileCheck -check-prefix=ERR %s
 // ERR: error: unbalanced --push-state/--pop-state
 
 .globl _start

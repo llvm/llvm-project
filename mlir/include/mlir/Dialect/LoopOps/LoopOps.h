@@ -43,6 +43,10 @@ void ensureLoopTerminator(Region &region, Builder &builder, Location loc);
 /// not an induction variable, then return nullptr.
 ForOp getForInductionVarOwner(Value val);
 
+/// Returns the parallel loop parent of an induction variable. If the provided
+// value is not an induction variable, then return nullptr.
+ParallelOp getParallelForInductionVarOwner(Value val);
+
 } // end namespace loop
 } // end namespace mlir
 #endif // MLIR_LOOPOPS_OPS_H_

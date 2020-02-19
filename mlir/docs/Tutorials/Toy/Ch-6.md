@@ -7,7 +7,7 @@ In the [previous chapter](Ch-5.md), we introduced the
 many of the `Toy` operations to affine loop nests for optimization. In this
 chapter, we will finally lower to LLVM for code generation.
 
-# Lowering to LLVM
+## Lowering to LLVM
 
 For this lowering, we will again use the dialect conversion framework to perform
 the heavy lifting. However, this time, we will be performing a full conversion
@@ -54,7 +54,7 @@ Now that the lowering for the printf operation has been defined, we can specify
 the components necessary for the lowering. These are largely the same as the
 components defined in the [previous chapter](Ch-5.md).
 
-## Conversion Target
+### Conversion Target
 
 For this conversion, aside from the top-level module, we will be lowering
 everything to the LLVM dialect.
@@ -65,7 +65,7 @@ everything to the LLVM dialect.
   target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
 ```
 
-## Type Converter
+### Type Converter
 
 This lowering will also transform the MemRef types which are currently being
 operated on into a representation in LLVM. To perform this conversion, we use a
@@ -79,7 +79,7 @@ enough for our use case.
   LLVMTypeConverter typeConverter(&getContext());
 ```
 
-## Conversion Patterns
+### Conversion Patterns
 
 Now that the conversion target has been defined, we need to provide the patterns
 used for lowering. At this point in the compilation process, we have a
@@ -99,7 +99,7 @@ by relying on [transitive lowering](../../../getting_started/Glossary.md#transit
   patterns.insert<PrintOpLowering>(&getContext());
 ```
 
-## Full Lowering
+### Full Lowering
 
 We want to completely lower to LLVM, so we use a `FullConversion`. This ensures
 that only legal operations will remain after the conversion.
@@ -169,13 +169,13 @@ llvm.func @main() {
 See [Conversion to the LLVM IR Dialect](../../ConversionToLLVMDialect.md) for
 more in-depth details on lowering to the LLVM dialect.
 
-# CodeGen: Getting Out of MLIR
+## CodeGen: Getting Out of MLIR
 
 At this point we are right at the cusp of code generation. We can generate code
 in the LLVM dialect, so now we just need to export to LLVM IR and setup a JIT to
 run it.
 
-## Emitting LLVM IR
+### Emitting LLVM IR
 
 Now that our module is comprised only of operations in the LLVM dialect, we can
 export to LLVM IR. To do this programmatically, we can invoke the following
@@ -270,7 +270,7 @@ int dumpLLVMIR(mlir::ModuleOp module) {
 }
 ```
 
-## Setting up a JIT
+### Setting up a JIT
 
 Setting up a JIT to run the module containing the LLVM dialect can be done using
 the `mlir::ExecutionEngine` infrastructure. This is a utility wrapper around

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H
-#define LLDB_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -103,4 +103,4 @@ private:
 
 } // namespace breakpad
 } // namespace lldb_private
-#endif // LLDB_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_BREAKPAD_OBJECTFILEBREAKPAD_H

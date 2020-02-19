@@ -52,6 +52,7 @@ static TYPE *SF(basic_map_partial_lexopt_symm,SUFFIX)(
 {
 	int i, n, k;
 	int *list = NULL;
+	isl_size bmap_in, bmap_param, bmap_all;
 	unsigned n_in, n_out, n_div;
 	isl_ctx *ctx;
 	isl_vec *var = NULL;
@@ -61,9 +62,13 @@ static TYPE *SF(basic_map_partial_lexopt_symm,SUFFIX)(
 	map_space = isl_basic_map_get_space(bmap);
 	set_space = empty ? isl_basic_set_get_space(dom) : NULL;
 
-	n_in = isl_basic_map_dim(bmap, isl_dim_param) +
-	       isl_basic_map_dim(bmap, isl_dim_in);
-	n_out = isl_basic_map_dim(bmap, isl_dim_all) - n_in;
+	bmap_in = isl_basic_map_dim(bmap, isl_dim_in);
+	bmap_param = isl_basic_map_dim(bmap, isl_dim_param);
+	bmap_all = isl_basic_map_dim(bmap, isl_dim_all);
+	if (bmap_in < 0 || bmap_param < 0 || bmap_all < 0)
+		goto error;
+	n_in = bmap_param + bmap_in;
+	n_out = bmap_all - n_in;
 
 	ctx = isl_basic_map_get_ctx(bmap);
 	list = isl_alloc_array(ctx, int, bmap->n_ineq);

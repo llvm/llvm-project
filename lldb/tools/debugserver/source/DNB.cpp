@@ -57,7 +57,6 @@ typedef std::map<nub_process_t, MachProcessSP> ProcessMap;
 typedef ProcessMap::iterator ProcessMapIter;
 typedef ProcessMap::const_iterator ProcessMapConstIter;
 
-size_t GetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
 static size_t
 GetAllInfosMatchingName(const char *process_name,
                         std::vector<struct kinfo_proc> &matching_proc_infos);
@@ -520,7 +519,7 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
   return INVALID_NUB_PROCESS;
 }
 
-size_t GetAllInfos(std::vector<struct kinfo_proc> &proc_infos) {
+size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos) {
   size_t size = 0;
   int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
   u_int namelen = sizeof(name) / sizeof(int);
@@ -573,7 +572,7 @@ GetAllInfosMatchingName(const char *full_process_name,
 
     const size_t process_name_len = strlen(process_name);
     std::vector<struct kinfo_proc> proc_infos;
-    const size_t num_proc_infos = GetAllInfos(proc_infos);
+    const size_t num_proc_infos = DNBGetAllInfos(proc_infos);
     if (num_proc_infos > 0) {
       uint32_t i;
       for (i = 0; i < num_proc_infos; i++) {

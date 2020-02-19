@@ -202,10 +202,10 @@ public:
   /// If Body returns true then the element just passed in is removed from the
   /// set. If Body returns false then the element is retained.
   template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> typename std::enable_if<
+  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
       std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
                                  std::declval<SymbolLookupFlags>())),
-                   bool>::value>::type {
+                   bool>::value> {
     UnderlyingVector::size_type I = 0;
     while (I != Symbols.size()) {
       const auto &Name = Symbols[I].first;
@@ -224,11 +224,11 @@ public:
   /// returns true then the element just passed in is removed from the set. If
   /// Body returns false then the element is retained.
   template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> typename std::enable_if<
+  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
       std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
                                  std::declval<SymbolLookupFlags>())),
                    Expected<bool>>::value,
-      Error>::type {
+      Error> {
     UnderlyingVector::size_type I = 0;
     while (I != Symbols.size()) {
       const auto &Name = Symbols[I].first;
@@ -1079,7 +1079,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() const { return SSP; }
 
   /// Run the given lambda with the session mutex locked.
-  template <typename Func> auto runSessionLocked(Func &&F) -> decltype(F()) {
+  template <typename Func> decltype(auto) runSessionLocked(Func &&F) {
     std::lock_guard<std::recursive_mutex> Lock(SessionMutex);
     return F();
   }

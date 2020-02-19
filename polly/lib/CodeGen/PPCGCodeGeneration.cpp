@@ -37,6 +37,7 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "isl/union_map.h"
+#include <algorithm>
 
 extern "C" {
 #include "ppcg/cuda.h"
@@ -1402,13 +1403,14 @@ const std::map<std::string, std::string> IntrinsicToLibdeviceFunc = {
 /// so that we use intrinsics whenever possible.
 ///
 /// Return "" if we are not compiling for CUDA.
-std::string getCUDALibDeviceFuntion(StringRef Name) {
+std::string getCUDALibDeviceFuntion(StringRef NameRef) {
+  std::string Name = NameRef.str();
   auto It = IntrinsicToLibdeviceFunc.find(Name);
   if (It != IntrinsicToLibdeviceFunc.end())
     return getCUDALibDeviceFuntion(It->second);
 
   if (CUDALibDeviceFunctions.count(Name))
-    return ("__nv_" + Name).str();
+    return ("__nv_" + Name);
 
   return "";
 }
@@ -1760,7 +1762,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
 void GPUNodeBuilder::setupKernelSubtreeFunctions(
     SetVector<Function *> SubtreeFunctions) {
   for (auto Fn : SubtreeFunctions) {
-    const std::string ClonedFnName = Fn->getName();
+    const std::string ClonedFnName = Fn->getName().str();
     Function *Clone = GPUModule->getFunction(ClonedFnName);
     if (!Clone)
       Clone =
@@ -1779,11 +1781,11 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_ast_node_free(KernelStmt);
 
   if (Kernel->n_grid > 1)
-    DeepestParallel =
-        std::max(DeepestParallel, isl_space_dim(Kernel->space, isl_dim_set));
+    DeepestParallel = std::max(
+        DeepestParallel, (unsigned)isl_space_dim(Kernel->space, isl_dim_set));
   else
-    DeepestSequential =
-        std::max(DeepestSequential, isl_space_dim(Kernel->space, isl_dim_set));
+    DeepestSequential = std::max(
+        DeepestSequential, (unsigned)isl_space_dim(Kernel->space, isl_dim_set));
 
   Value *BlockDimX, *BlockDimY, *BlockDimZ;
   std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
@@ -2377,7 +2379,7 @@ std::string GPUNodeBuilder::createKernelASM() {
 
   PM.run(*GPUModule);
 
-  return ASMStream.str();
+  return ASMStream.str().str();
 }
 
 bool GPUNodeBuilder::requiresCUDALibDevice() {
@@ -3450,7 +3452,9 @@ public:
 
     BasicBlock *EnteringBB = R->getEnteringBlock();
 
-    PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
+    PollyIRBuilder Builder(EnteringBB->getContext(), ConstantFolder(),
+                           IRInserter(Annotator));
+    Builder.SetInsertPoint(EnteringBB->getTerminator());
 
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional

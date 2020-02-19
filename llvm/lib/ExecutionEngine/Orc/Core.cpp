@@ -205,7 +205,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols) {
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const SymbolDependenceMap::value_type &KV) {
-  return OS << "(" << KV.first << ", " << KV.second << ")";
+  return OS << "(" << KV.first->getName() << ", " << KV.second << ")";
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps) {
@@ -940,6 +940,11 @@ void JITDylib::addDependencies(const SymbolStringPtr &Name,
   assert(Symbols.count(Name) && "Name not in symbol table");
   assert(Symbols[Name].isInMaterializationPhase() &&
          "Can not add dependencies for a symbol that is not materializing");
+
+  LLVM_DEBUG({
+      dbgs() << "In " << getName() << " adding dependencies for "
+             << *Name << ": " << Dependencies << "\n";
+    });
 
   // If Name is already in an error state then just bail out.
   if (Symbols[Name].getFlags().hasError())

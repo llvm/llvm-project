@@ -433,12 +433,11 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
 
   // GCC Compatibility: -mno-save-restore is default, unless -msave-restore is
-  // specified...
-  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false)) {
-    // ... but we don't support -msave-restore, so issue a warning.
-    D.Diag(diag::warn_drv_clang_unsupported)
-      << Args.getLastArg(options::OPT_msave_restore)->getAsString(Args);
-  }
+  // specified.
+  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false))
+    Features.push_back("+save-restore");
+  else
+    Features.push_back("-save-restore");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.

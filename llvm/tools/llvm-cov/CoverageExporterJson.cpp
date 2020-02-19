@@ -163,11 +163,9 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
                         ArrayRef<FileCoverageSummary> FileReports,
                         const CoverageViewOptions &Options) {
   auto NumThreads = Options.NumThreads;
-  if (NumThreads == 0) {
-    NumThreads = std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
-                                       unsigned(SourceFiles.size())));
-  }
-  ThreadPool Pool(NumThreads);
+  if (NumThreads == 0)
+    NumThreads = SourceFiles.size();
+  ThreadPool Pool(heavyweight_hardware_concurrency(NumThreads));
   json::Array FileArray;
   std::mutex FileArrayMutex;
 

@@ -76,7 +76,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Emit the rest of the function body.
-  EmitFunctionBody();
+  emitFunctionBody();
 
   // Emit the XRay table for this function.
   emitXRayTable();
@@ -87,7 +87,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-void X86AsmPrinter::EmitFunctionBodyStart() {
+void X86AsmPrinter::emitFunctionBodyStart() {
   if (EmitFPOData) {
     if (auto *XTS =
         static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -97,7 +97,7 @@ void X86AsmPrinter::EmitFunctionBodyStart() {
   }
 }
 
-void X86AsmPrinter::EmitFunctionBodyEnd() {
+void X86AsmPrinter::emitFunctionBodyEnd() {
   if (EmitFPOData) {
     if (auto *XTS =
             static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -124,7 +124,7 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
       GVSym = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
     else
-      GVSym = getSymbol(GV);
+      GVSym = getSymbolPreferLocal(*GV);
 
     // Handle dllimport linkage.
     if (MO.getTargetFlags() == X86II::MO_DLLIMPORT)
@@ -575,7 +575,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
+void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
@@ -597,17 +597,17 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
       // Emitting note header.
       int WordSize = TT.isArch64Bit() ? 8 : 4;
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8));
-      OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
-      OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
-      OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
-      OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8));
+      OutStreamer->emitIntValue(4, 4 /*size*/); // data size for "GNU\0"
+      OutStreamer->emitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
+      OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
+      OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
       // Emitting an Elf_Prop for the CET properties.
-      OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->EmitIntValue(4, 4);               // data size
-      OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
+      OutStreamer->emitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
+      OutStreamer->emitIntValue(4, 4);               // data size
+      OutStreamer->emitIntValue(FeatureFlagsAnd, 4); // data
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);
@@ -639,30 +639,30 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("cfguard"))
       Feat00Flags |= 0x800; // Object is CFG-aware.
 
-    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->EmitAssignment(
+    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
-  OutStreamer->EmitSyntaxDirective();
+  OutStreamer->emitSyntaxDirective();
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
   if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
 }
 
 static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {
   // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.emitLabel(StubLabel);
   //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+  OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4/*size*/);
   else
     // Internal to current translation unit.
     //
@@ -670,7 +670,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
     // pointers need to be indirect and pc-rel. We accomplish this by
     // using NLPs; however, sometimes the types are local to the file.
     // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
+    OutStreamer.emitValue(
         MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
         4 /*size*/);
 }
@@ -698,7 +698,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
   }
 }
 
-void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
+void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
@@ -715,7 +715,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   } else if (TT.isOSBinFormatCOFF()) {
     if (MMI->usesMSVCFloatingPoint()) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
@@ -734,7 +734,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
       StringRef SymbolName =
           (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
-      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;
     }
     emitStackMaps(SM);

@@ -176,6 +176,37 @@ Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
   return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
 }
 
+Attribute::AttrKind Attribute::getAttrKindFromName(StringRef AttrName) {
+  return StringSwitch<Attribute::AttrKind>(AttrName)
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
+  .Case(#DISPLAY_NAME, Attribute::ENUM_NAME)
+#include "llvm/IR/Attributes.inc"
+      .Default(Attribute::None);
+}
+
+StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
+  switch (AttrKind) {
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
+  case Attribute::ENUM_NAME:                                                   \
+    return #DISPLAY_NAME;
+#include "llvm/IR/Attributes.inc"
+  case Attribute::None:
+    return "none";
+  default:
+    llvm_unreachable("invalid Kind");
+  }
+}
+
+bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
+  return AttrKind == Attribute::Alignment ||
+         AttrKind == Attribute::StackAlignment ||
+         AttrKind == Attribute::Dereferenceable ||
+         AttrKind == Attribute::AllocSize ||
+         AttrKind == Attribute::DereferenceableOrNull;
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -1449,8 +1480,7 @@ void AttrBuilder::clear() {
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
-  assert(Val != Attribute::Alignment && Val != Attribute::StackAlignment &&
-         Val != Attribute::Dereferenceable && Val != Attribute::AllocSize &&
+  assert(!Attribute::doesAttrKindHaveArgument(Val) &&
          "Adding integer attribute without adding a value!");
   Attrs[Val] = true;
   return *this;
@@ -1850,8 +1880,49 @@ adjustNullPointerValidAttr(Function &Caller, const Function &Callee) {
   }
 }
 
+struct EnumAttr {
+  static bool isSet(const Function &Fn,
+                    Attribute::AttrKind Kind) {
+    return Fn.hasFnAttribute(Kind);
+  }
+
+  static void set(Function &Fn,
+                  Attribute::AttrKind Kind, bool Val) {
+    if (Val)
+      Fn.addFnAttr(Kind);
+    else
+      Fn.removeFnAttr(Kind);
+  }
+};
+
+struct StrBoolAttr {
+  static bool isSet(const Function &Fn,
+                    StringRef Kind) {
+    auto A = Fn.getFnAttribute(Kind);
+    return A.getValueAsString().equals("true");
+  }
+
+  static void set(Function &Fn,
+                  StringRef Kind, bool Val) {
+    Fn.addFnAttr(Kind, Val ? "true" : "false");
+  }
+};
+
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
+  struct ENUM_NAME##Attr : EnumAttr {                                          \
+    static enum Attribute::AttrKind getKind() {                                \
+      return llvm::Attribute::ENUM_NAME;                                       \
+    }                                                                          \
+  };
+#define ATTRIBUTE_STRBOOL(ENUM_NAME, DISPLAY_NAME)                             \
+  struct ENUM_NAME##Attr : StrBoolAttr {                                       \
+    static StringRef getKind() { return #DISPLAY_NAME; }                       \
+  };
+#include "llvm/IR/Attributes.inc"
+
 #define GET_ATTR_COMPAT_FUNC
-#include "AttributesCompatFunc.inc"
+#include "llvm/IR/Attributes.inc"
 
 bool AttributeFuncs::areInlineCompatible(const Function &Caller,
                                          const Function &Callee) {

@@ -52,7 +52,7 @@ private:
       CounterName = CounterName.trim();
       pfm::PerfEvent PerfEvent(CounterName);
       if (!PerfEvent.valid())
-        report_fatal_error(
+        return make_error<Failure>(
             Twine("invalid perf event '").concat(CounterName).concat("'"));
       pfm::Counter Counter(PerfEvent);
       Scratch->clear();
@@ -67,7 +67,7 @@ private:
         CrashRecoveryContext::Disable();
         // FIXME: Better diagnosis.
         if (Crashed)
-          return make_error<Failure>("snippet crashed while running");
+          return make_error<SnippetCrash>("snippet crashed while running");
       }
       CounterValue += Counter.read();
     }
@@ -79,7 +79,7 @@ private:
 };
 } // namespace
 
-InstructionBenchmark BenchmarkRunner::runConfiguration(
+Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     const BenchmarkCode &BC, unsigned NumRepetitions,
     const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
@@ -101,10 +101,12 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
   {
     SmallString<0> Buffer;
     raw_svector_ostream OS(Buffer);
-    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                     BC.LiveIns, BC.Key.RegisterInitialValues,
-                     Repetitor.Repeat(Instructions, kMinInstructionsForSnippet),
-                     OS);
+    if (Error E = assembleToStream(
+            State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
+            BC.Key.RegisterInitialValues,
+            Repetitor.Repeat(Instructions, kMinInstructionsForSnippet), OS)) {
+      return std::move(E);
+    }
     const ExecutableFunction EF(State.createTargetMachine(),
                                 getObjectFromBuffer(OS.str()));
     const auto FnBytes = EF.getFunctionBytes();
@@ -129,8 +131,11 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
   } else {
     SmallString<0> Buffer;
     raw_svector_ostream OS(Buffer);
-    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                     BC.LiveIns, BC.Key.RegisterInitialValues, Filler, OS);
+    if (Error E = assembleToStream(State.getExegesisTarget(),
+                                   State.createTargetMachine(), BC.LiveIns,
+                                   BC.Key.RegisterInitialValues, Filler, OS)) {
+      return std::move(E);
+    }
     ObjectFile = getObjectFromBuffer(OS.str());
   }
 
@@ -138,6 +143,8 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
                                       Scratch.get());
   auto Measurements = runMeasurements(Executor);
   if (Error E = Measurements.takeError()) {
+    if (!E.isA<SnippetCrash>())
+      return std::move(E);
     InstrBenchmark.Error = toString(std::move(E));
     return InstrBenchmark;
   }
@@ -163,8 +170,11 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
           sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
     return std::move(E);
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
-  assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                   BC.LiveIns, BC.Key.RegisterInitialValues, FillFunction, OFS);
+  if (Error E = assembleToStream(
+          State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
+          BC.Key.RegisterInitialValues, FillFunction, OFS)) {
+    return std::move(E);
+  }
   return std::string(ResultPath.str());
 }
 

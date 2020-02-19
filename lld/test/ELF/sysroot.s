@@ -7,13 +7,13 @@
 // RUN: llvm-ar rcs %t/lib/libls.a %t/st.o
 
 // Should not link because of undefined symbol _bar
-// RUN: not ld.lld -o %t/r %t/m.o 2>&1 \
+// RUN: not ld.lld -o /dev/null %t/m.o 2>&1 \
 // RUN:     | FileCheck --check-prefix=UNDEFINED %s
 // UNDEFINED: error: undefined symbol: _bar
 // UNDEFINED: >>> referenced by {{.*}}:(.text+0x1)
 
 // We need to be sure that there is no suitable library in the /lib directory
-// RUN: not ld.lld -o %t/r %t/m.o -L/lib -l:libls.a 2>&1 \
+// RUN: not ld.lld -o /dev/null %t/m.o -L/lib -l:libls.a 2>&1 \
 // RUN:     | FileCheck --check-prefix=NOLIB %s
 // NOLIB: unable to find library -l:libls.a
 
@@ -32,8 +32,8 @@
 // RUN: ld.lld -o %t/r %t/m.o --sysroot %t -L=lib -l:libls.a
 
 // Should not substitute SysRoot if the directory name does not start with '='
-// RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -Llib -l:libls.a
-// RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -L/lib -l:libls.a
+// RUN: not ld.lld -o /dev/null %r/m.o --sysroot=%t -Llib -l:libls.a
+// RUN: not ld.lld -o /dev/null %r/m.o --sysroot=%t -L/lib -l:libls.a
 
 .globl _start,_bar
 _start:

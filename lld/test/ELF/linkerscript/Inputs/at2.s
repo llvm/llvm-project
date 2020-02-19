@@ -12,3 +12,6 @@
 
 .section .bar3, "aw"
 .quad 0
+
+.section .bar4, "aw"
+.quad 0

@@ -3,7 +3,7 @@
 // RUN: %expect_crash %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Buffer overflow at 0x{{[a-f0-9]+}} ({{[1-9][0-9]*}} bytes to the right
+// CHECK: Buffer Overflow at 0x{{[a-f0-9]+}} ({{[1-9][0-9]*}} bytes to the right
 // CHECK-SAME: of a {{[1-9][0-9]*}}-byte allocation
 
 #include <cstdlib>

@@ -243,7 +243,7 @@ class ValueMapCallbackVH final : public CallbackVH {
   friend struct DenseMapInfo<ValueMapCallbackVH>;
 
   using ValueMapT = ValueMap<KeyT, ValueT, Config>;
-  using KeySansPointerT = typename std::remove_pointer<KeyT>::type;
+  using KeySansPointerT = std::remove_pointer_t<KeyT>;
 
   ValueMapT *Map;
 

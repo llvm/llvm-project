@@ -7,10 +7,11 @@
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-objdump -r %t3 | FileCheck %s -DFILE=%t3 --check-prefixes=FMT,REL --implicit-check-not={{.}}
 
-# FMT: [[FILE]]: file format ELF64-x86-64
+# FMT: [[FILE]]: file format elf64-x86-64
 
 # REL:      RELOCATION RECORDS FOR []:
-# REL-NEXT: 0000000000000123 R_X86_64_NONE *ABS*+0x141
+# REL-NEXT: OFFSET           TYPE                     VALUE
+# REL-NEXT: 0000000000000123 R_X86_64_NONE            *ABS*+0x141
 
 ## Executable.
 --- !ELF

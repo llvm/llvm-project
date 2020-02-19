@@ -523,6 +523,6 @@ struct S {
 };
 
 void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
-  int iAdd = (int) addr;
+  size_t iAdd = (size_t) addr;
   memcpy(((void *) &(s.f)), from, iAdd);
 }

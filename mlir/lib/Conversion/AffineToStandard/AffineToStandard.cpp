@@ -258,16 +258,13 @@ static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
   return value;
 }
 
-/// Emit instructions that correspond to the affine map in the lower bound
-/// applied to the respective operands, and compute the maximum value across
-/// the results.
-Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
-  auto lbValues = expandAffineMap(builder, op.getLoc(), op.getLowerBoundMap(),
-                                  op.getLowerBoundOperands());
-  if (!lbValues)
-    return nullptr;
-  return buildMinMaxReductionSeq(op.getLoc(), CmpIPredicate::sgt, *lbValues,
-                                 builder);
+/// Emit instructions that correspond to computing the maximum value amoung the
+/// values of a (potentially) multi-output affine map applied to `operands`.
+static Value lowerAffineMapMax(OpBuilder &builder, Location loc, AffineMap map,
+                               ValueRange operands) {
+  if (auto values = expandAffineMap(builder, loc, map, operands))
+    return buildMinMaxReductionSeq(loc, CmpIPredicate::sgt, *values, builder);
+  return nullptr;
 }
 
 /// Emit instructions that correspond to computing the minimum value amoung the
@@ -287,6 +284,14 @@ Value mlir::lowerAffineUpperBound(AffineForOp op, OpBuilder &builder) {
                            op.getUpperBoundOperands());
 }
 
+/// Emit instructions that correspond to the affine map in the lower bound
+/// applied to the respective operands, and compute the maximum value across
+/// the results.
+Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
+  return lowerAffineMapMax(builder, op.getLoc(), op.getLowerBoundMap(),
+                           op.getLowerBoundOperands());
+}
+
 namespace {
 class AffineMinLowering : public OpRewritePattern<AffineMinOp> {
 public:
@@ -296,6 +301,22 @@ public:
                                      PatternRewriter &rewriter) const override {
     Value reduced =
         lowerAffineMapMin(rewriter, op.getLoc(), op.map(), op.operands());
+    if (!reduced)
+      return matchFailure();
+
+    rewriter.replaceOp(op, reduced);
+    return matchSuccess();
+  }
+};
+
+class AffineMaxLowering : public OpRewritePattern<AffineMaxOp> {
+public:
+  using OpRewritePattern<AffineMaxOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(AffineMaxOp op,
+                                     PatternRewriter &rewriter) const override {
+    Value reduced =
+        lowerAffineMapMax(rewriter, op.getLoc(), op.map(), op.operands());
     if (!reduced)
       return matchFailure();
 
@@ -546,6 +567,7 @@ void mlir::populateAffineToStdConversionPatterns(
       AffineDmaWaitLowering,
       AffineLoadLowering,
       AffineMinLowering,
+      AffineMaxLowering,
       AffinePrefetchLowering,
       AffineStoreLowering,
       AffineForLowering,

@@ -205,6 +205,11 @@ static void emitInterfaceDecl(OpInterface &interface, raw_ostream &os) {
     emitMethodNameAndArgs(method, os, /*addOperationArg=*/false);
     os << ";\n";
   }
+
+  // Emit any extra declarations.
+  if (Optional<StringRef> extraDecls = interface.getExtraClassDeclaration())
+    os << *extraDecls << "\n";
+
   os << "};\n";
 }
 

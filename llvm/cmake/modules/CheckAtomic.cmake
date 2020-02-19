@@ -12,8 +12,12 @@ function(check_working_cxx_atomics varname)
   CHECK_CXX_SOURCE_COMPILES("
 #include <atomic>
 std::atomic<int> x;
+std::atomic<short> y;
+std::atomic<char> z;
 int main() {
-  return x;
+  ++z;
+  ++y;
+  return ++x;
 }
 " ${varname})
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
@@ -53,6 +57,8 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       message(FATAL_ERROR "Host compiler appears to require libatomic, but cannot find it.")
     endif()
   endif()
+elseif(MSVC)
+  set(HAVE_CXX_ATOMICS_WITHOUT_LIB True)
 endif()
 
 # Check for 64 bit atomic operations.

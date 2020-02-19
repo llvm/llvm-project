@@ -284,7 +284,7 @@ static void genShuffleBland(MVT VT, ArrayRef<uint32_t> Mask,
 static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
   ArrayRef<Value *> Vec, ArrayRef<uint32_t> VPShuf,
   unsigned VecElems, unsigned Stride,
-  IRBuilder<> Builder) {
+  IRBuilder<> &Builder) {
 
   if (VecElems == 16) {
     for (unsigned i = 0; i < Stride; i++)
@@ -519,7 +519,7 @@ static void DecodePALIGNRMask(MVT VT, unsigned Imm,
 // Invec[2] - |8|9|10|11|      Vec[2] - |2|5|8|11|
 
 static void concatSubVector(Value **Vec, ArrayRef<Instruction *> InVec,
-                            unsigned VecElems, IRBuilder<> Builder) {
+                            unsigned VecElems, IRBuilder<> &Builder) {
   if (VecElems == 16) {
     for (int i = 0; i < 3; i++)
       Vec[i] = InVec[i];

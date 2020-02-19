@@ -89,7 +89,6 @@ TEST(GetParents, RespectsTraversalScope) {
   auto &Foo = *TU.lookup(&Ctx.Idents.get("foo")).front();
   auto &Bar = *cast<DeclContext>(Foo).lookup(&Ctx.Idents.get("bar")).front();
 
-  using ast_type_traits::DynTypedNode;
   // Initially, scope is the whole TU.
   EXPECT_THAT(Ctx.getParents(Bar), ElementsAre(DynTypedNode::create(Foo)));
   EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));

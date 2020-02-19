@@ -5,6 +5,7 @@ config.target_flags = "@LIBFUZZER_TEST_FLAGS@"
 config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.stdlib = "@LIBFUZZER_TEST_STDLIB@"
 config.apple_platform = "@LIBFUZZER_TEST_APPLE_PLATFORM@"
+config.apple_platform_min_deployment_target_flag = "@LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
 config.name_suffix = "@LIBFUZZER_TEST_CONFIG_SUFFIX@"
 
 config.osx_sysroot_flag = "@OSX_SYSROOT_FLAG@"

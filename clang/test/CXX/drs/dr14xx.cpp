@@ -8,6 +8,15 @@
 // expected-no-diagnostics
 #endif
 
+namespace dr1423 { // dr1423: 11
+#if __cplusplus >= 201103L
+  bool b1 = nullptr; // expected-error {{cannot initialize}}
+  bool b2(nullptr); // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  bool b3 = {nullptr}; // expected-error {{cannot initialize}}
+  bool b4{nullptr}; // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+#endif
+}
+
 // dr1425: na abi
 
 namespace dr1460 { // dr1460: 3.5

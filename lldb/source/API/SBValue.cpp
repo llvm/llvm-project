@@ -53,7 +53,7 @@ using namespace lldb_private;
 
 class ValueImpl {
 public:
-  ValueImpl() {}
+  ValueImpl() = default;
 
   ValueImpl(lldb::ValueObjectSP in_valobj_sp,
             lldb::DynamicValueType use_dynamic, bool use_synthetic,
@@ -201,7 +201,7 @@ private:
 
 class ValueLocker {
 public:
-  ValueLocker() {}
+  ValueLocker() = default;
 
   ValueObjectSP GetLockedSP(ValueImpl &in_value) {
     return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
@@ -239,7 +239,7 @@ SBValue &SBValue::operator=(const SBValue &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBValue::~SBValue() {}
+SBValue::~SBValue() = default;
 
 bool SBValue::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBValue, IsValid);
@@ -1154,7 +1154,7 @@ bool SBValue::GetExpressionPath(SBStream &description) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    value_sp->GetExpressionPath(description.ref(), false);
+    value_sp->GetExpressionPath(description.ref());
     return true;
   }
   return false;
@@ -1168,7 +1168,7 @@ bool SBValue::GetExpressionPath(SBStream &description,
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    value_sp->GetExpressionPath(description.ref(), qualify_cxx_base_classes);
+    value_sp->GetExpressionPath(description.ref());
     return true;
   }
   return false;

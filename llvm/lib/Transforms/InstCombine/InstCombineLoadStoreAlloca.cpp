@@ -187,9 +187,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
       return nullptr;
 
     // Canonicalize it.
-    Value *V = IC.Builder.getInt32(1);
-    AI.setOperand(0, V);
-    return &AI;
+    return IC.replaceOperand(AI, 0, IC.Builder.getInt32(1));
   }
 
   // Convert: alloca Ty, C - where C is a constant != 1 into: alloca [C x Ty], 1
@@ -230,8 +228,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   Type *IntPtrTy = IC.getDataLayout().getIntPtrType(AI.getType());
   if (AI.getArraySize()->getType() != IntPtrTy) {
     Value *V = IC.Builder.CreateIntCast(AI.getArraySize(), IntPtrTy, false);
-    AI.setOperand(0, V);
-    return &AI;
+    return IC.replaceOperand(AI, 0, V);
   }
 
   return nullptr;
@@ -355,10 +352,9 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
       // For a zero sized alloca there is no point in doing an array allocation.
       // This is helpful if the array size is a complicated expression not used
       // elsewhere.
-      if (AI.isArrayAllocation()) {
-        AI.setOperand(0, ConstantInt::get(AI.getArraySize()->getType(), 1));
-        return &AI;
-      }
+      if (AI.isArrayAllocation())
+        return replaceOperand(AI, 0,
+            ConstantInt::get(AI.getArraySize()->getType(), 1));
 
       // Get the first instruction in the entry block.
       BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
@@ -973,7 +969,7 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
-      Worklist.Add(NewGEPI);
+      Worklist.push(NewGEPI);
       return &LI;
   }
 
@@ -1048,18 +1044,14 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       // load (select (cond, null, P)) -> load P
       if (isa<ConstantPointerNull>(SI->getOperand(1)) &&
           !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace())) {
-        LI.setOperand(0, SI->getOperand(2));
-        return &LI;
-      }
+                                LI.getPointerAddressSpace()))
+        return replaceOperand(LI, 0, SI->getOperand(2));
 
       // load (select (cond, P, null)) -> load P
       if (isa<ConstantPointerNull>(SI->getOperand(2)) &&
           !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace())) {
-        LI.setOperand(0, SI->getOperand(1));
-        return &LI;
-      }
+                                LI.getPointerAddressSpace()))
+        return replaceOperand(LI, 0, SI->getOperand(1));
     }
   }
   return nullptr;
@@ -1328,6 +1320,11 @@ static bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC,
   if (!isMinMaxWithLoads(LoadAddr, CmpLoadTy))
     return false;
 
+  // Make sure the type would actually change.
+  // This condition can be hit with chains of bitcasts.
+  if (LI->getType() == CmpLoadTy)
+    return false;
+
   // Make sure we're not changing the size of the load/store.
   const auto &DL = IC.getDataLayout();
   if (DL.getTypeStoreSizeInBits(LI->getType()) !=
@@ -1384,7 +1381,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Ptr, SI)) {
-      Worklist.Add(NewGEPI);
+      Worklist.push(NewGEPI);
       return &SI;
   }
 
@@ -1434,7 +1431,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
         // Manually add back the original store to the worklist now, so it will
         // be processed after the operands of the removed store, as this may
         // expose additional DSE opportunities.
-        Worklist.Add(&SI);
+        Worklist.push(&SI);
         eraseInstFromFunction(*PrevSI);
         return nullptr;
       }
@@ -1463,11 +1460,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
   // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
   if (canSimplifyNullStoreOrGEP(SI)) {
-    if (!isa<UndefValue>(Val)) {
-      SI.setOperand(0, UndefValue::get(Val->getType()));
-      if (Instruction *U = dyn_cast<Instruction>(Val))
-        Worklist.Add(U);  // Dropped a use.
-    }
+    if (!isa<UndefValue>(Val))
+      return replaceOperand(SI, 0, UndefValue::get(Val->getType()));
     return nullptr;  // Do not modify these!
   }
 

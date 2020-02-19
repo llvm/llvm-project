@@ -2,7 +2,7 @@
 // RUN: cp %s %t-98
 // RUN: not %clang_cc1 -pedantic -Wall -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 %t-98
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 %t-98
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -x c++ -std=c++11 %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -pedantic -fdiagnostics-parseable-fixits -x c++ -std=c++11 %s 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -pedantic -Wall -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 %s
 // RUN: cp %s %t-11
 // RUN: not %clang_cc1 -pedantic -Wall -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 %t-11
@@ -318,17 +318,43 @@ class foo {
 };
 
 namespace dtor_fixit {
-  class foo {
-    ~bar() { }  // expected-error {{expected the class name after '~' to name a destructor}}
+  struct foo {
+    ~bar() { }  // expected-error {{undeclared identifier 'bar' in destructor name}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:6-[[@LINE-1]]:9}:"foo"
   };
 
-  class bar {
+  class bar { // expected-note {{found}}
     ~bar();
   };
   ~bar::bar() {} // expected-error {{'~' in destructor name should be after nested name specifier}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:4}:""
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"~"
+
+  namespace N {
+    typedef foo T;
+    template <typename T> struct X {};
+  }
+  void f(foo *p, N::X<int> *x) {
+    p->~undeclared(); // expected-error {{undeclared}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:19}:"foo"
+
+    p->~bar(); // expected-error {{does not match}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:12}:"foo"
+
+    // FIXME: This is a bad fixit; it'd be better to suggest replacing 'foo'
+    // with 'T'.
+    p->N::T::~foo(); // expected-warning {{requires the name after '::~' to be found in the same scope as the name before}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:12-[[@LINE-1]]:12}:"::foo"
+
+    typedef foo baz; // expected-note {{found}}
+    p->dtor_fixit::foo::~baz(); // expected-warning {{only found in lexical scope}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:25}:""
+
+    // FIXME: This is a bad fixit; it'd be better to suggest adding the
+    // template arguments.
+    x->N::X<int>::~X(); // expected-warning {{same scope}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:17-[[@LINE-1]]:17}:"::X"
+  }
 }
 
 namespace PR5066 {

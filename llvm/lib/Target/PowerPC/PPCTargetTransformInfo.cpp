@@ -33,6 +33,10 @@ EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
                 cl::desc("Enable using coldcc calling conv for cold "
                          "internal functions"));
 
+static cl::opt<bool>
+LsrNoInsnsCost("ppc-lsr-no-insns-cost", cl::Hidden, cl::init(false),
+               cl::desc("Do not add instruction count to lsr cost model"));
+
 // The latency of mtctr is only justified if there are more than 4
 // comparisons that will be removed as a result.
 static cl::opt<unsigned>
@@ -966,4 +970,17 @@ bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
 
   *BI = HWLoopInfo.ExitBranch;
   return true;
+}
+
+bool PPCTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                               TargetTransformInfo::LSRCost &C2) {
+  // PowerPC default behaviour here is "instruction number 1st priority".
+  // If LsrNoInsnsCost is set, call default implementation.
+  if (!LsrNoInsnsCost)
+    return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost, C1.NumIVMuls,
+                    C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost, C2.NumIVMuls,
+                    C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+  else
+    return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }

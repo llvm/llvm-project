@@ -129,11 +129,10 @@ template<class Container>
 */
 
 #include <__config>
-#include <cstddef>      // for ptrdiff_t
-#include <iterator>     // for iterators
 #include <array>        // for array
-#include <type_traits>  // for remove_cv, etc
 #include <cstddef>      // for byte
+#include <iterator>     // for iterators
+#include <type_traits>  // for remove_cv, etc
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -143,7 +142,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
+inline constexpr size_t dynamic_extent = (numeric_limits<size_t>::max)();
 template <typename _Tp, size_t _Extent = dynamic_extent> class span;
 
 
@@ -279,6 +278,7 @@ public:
         -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset>
     {
         static_assert(_Offset <= _Extent, "Offset out of range in span::subspan()");
+        static_assert(_Count == dynamic_extent || _Count <= _Extent - _Offset, "Offset + count out of range in span::subspan()");
         return {data() + _Offset, _Count == dynamic_extent ? size() - _Offset : _Count};
     }
 
@@ -291,7 +291,7 @@ public:
         _LIBCPP_ASSERT(__count  <= size() || __count == dynamic_extent, "Count out of range in span::subspan(offset, count)");
         if (__count == dynamic_extent)
             return {data() + __offset, size() - __offset};
-        _LIBCPP_ASSERT(__offset <= size() - __count, "count + offset out of range in span::subspan(offset, count)");
+        _LIBCPP_ASSERT(__count <= size() - __offset, "Offset + count out of range in span::subspan(offset, count)");
         return {data() + __offset, __count};
     }
 
@@ -301,19 +301,19 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T,N>[] index out of bounds");
+        _LIBCPP_ASSERT(__idx < size(), "span<T,N>[] index out of bounds");
         return __data[__idx];
     }
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
-        static_assert(_Extent > 0, "span<T,N>[].front() on empty span");
+        _LIBCPP_ASSERT(!empty(), "span<T, N>::front() on empty span");
         return __data[0];
     }
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference back() const noexcept
     {
-        static_assert(_Extent > 0, "span<T,N>[].back() on empty span");
+        _LIBCPP_ASSERT(!empty(), "span<T, N>::back() on empty span");
         return __data[size()-1];
     }
 
@@ -445,10 +445,10 @@ public:
 
     template <size_t _Offset, size_t _Count = dynamic_extent>
     _LIBCPP_INLINE_VISIBILITY
-    constexpr span<_Tp, dynamic_extent> subspan() const noexcept
+    constexpr span<element_type, _Count> subspan() const noexcept
     {
         _LIBCPP_ASSERT(_Offset <= size(), "Offset out of range in span::subspan()");
-        _LIBCPP_ASSERT(_Count == dynamic_extent || _Offset + _Count <= size(), "Count out of range in span::subspan()");
+        _LIBCPP_ASSERT(_Count == dynamic_extent || _Count <= size() - _Offset, "Offset + count out of range in span::subspan()");
         return {data() + _Offset, _Count == dynamic_extent ? size() - _Offset : _Count};
     }
 
@@ -460,7 +460,7 @@ public:
         _LIBCPP_ASSERT(__count  <= size() || __count == dynamic_extent, "count out of range in span::subspan(offset, count)");
         if (__count == dynamic_extent)
             return {data() + __offset, size() - __offset};
-        _LIBCPP_ASSERT(__offset <= size() - __count, "Offset + count out of range in span::subspan(offset, count)");
+        _LIBCPP_ASSERT(__count <= size() - __offset, "Offset + count out of range in span::subspan(offset, count)");
         return {data() + __offset, __count};
     }
 
@@ -470,7 +470,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr reference operator[](size_type __idx) const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T>[] index out of bounds");
+        _LIBCPP_ASSERT(__idx < size(), "span<T>[] index out of bounds");
         return __data[__idx];
     }
 

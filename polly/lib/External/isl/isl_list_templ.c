@@ -17,14 +17,8 @@
 #include <isl_tarjan.h>
 #include <isl/printer.h>
 
-#define xCAT(A,B) A ## B
-#define CAT(A,B) xCAT(A,B)
-#undef EL
-#define EL CAT(isl_,BASE)
-#define xFN(TYPE,NAME) TYPE ## _ ## NAME
-#define FN(TYPE,NAME) xFN(TYPE,NAME)
-#define xLIST(EL) EL ## _list
-#define LIST(EL) xLIST(EL)
+#include <isl_list_macro.h>
+
 #define xS(TYPE,NAME) struct TYPE ## _ ## NAME
 #define S(TYPE,NAME) xS(TYPE,NAME)
 
@@ -184,6 +178,15 @@ __isl_give LIST(EL) *FN(LIST(EL),drop)(__isl_take LIST(EL) *list,
 	return list;
 }
 
+/* Remove all elements from "list".
+ */
+__isl_give LIST(EL) *FN(LIST(EL),clear)(__isl_take LIST(EL) *list)
+{
+	if (!list)
+		return NULL;
+	return FN(LIST(EL),drop)(list, 0, list->n);
+}
+
 /* Insert "el" at position "pos" in "list".
  *
  * If there is only one reference to "list" and if it already has space
@@ -248,14 +251,14 @@ __isl_null LIST(EL) *FN(LIST(EL),free)(__isl_take LIST(EL) *list)
 
 /* Return the number of elements in "list".
  */
-int FN(LIST(EL),size)(__isl_keep LIST(EL) *list)
+isl_size FN(LIST(EL),size)(__isl_keep LIST(EL) *list)
 {
-	return list ? list->n : 0;
+	return list ? list->n : isl_size_error;
 }
 
 /* This is an alternative name for the function above.
  */
-int FN(FN(LIST(EL),n),BASE)(__isl_keep LIST(EL) *list)
+isl_size FN(FN(LIST(EL),n),EL_BASE)(__isl_keep LIST(EL) *list)
 {
 	return FN(LIST(EL),size)(list);
 }
@@ -278,14 +281,15 @@ __isl_give EL *FN(LIST(EL),get_at)(__isl_keep LIST(EL) *list, int index)
 
 /* This is an alternative name for the function above.
  */
-__isl_give EL *FN(FN(LIST(EL),get),BASE)(__isl_keep LIST(EL) *list, int index)
+__isl_give EL *FN(FN(LIST(EL),get),EL_BASE)(__isl_keep LIST(EL) *list,
+	int index)
 {
 	return FN(LIST(EL),get_at)(list, index);
 }
 
 /* Replace the element at position "index" in "list" by "el".
  */
-__isl_give LIST(EL) *FN(FN(LIST(EL),set),BASE)(__isl_take LIST(EL) *list,
+__isl_give LIST(EL) *FN(FN(LIST(EL),set),EL_BASE)(__isl_take LIST(EL) *list,
 	int index, __isl_take EL *el)
 {
 	if (!list || !el)
@@ -318,7 +322,7 @@ error:
  * to isl_list_*_restore_*.
  * The only exception is that isl_list_*_free can be called instead.
  */
-static __isl_give EL *FN(FN(LIST(EL),take),BASE)(__isl_keep LIST(EL) *list,
+static __isl_give EL *FN(FN(LIST(EL),take),EL_BASE)(__isl_keep LIST(EL) *list,
 	int index)
 {
 	EL *el;
@@ -326,7 +330,7 @@ static __isl_give EL *FN(FN(LIST(EL),take),BASE)(__isl_keep LIST(EL) *list,
 	if (FN(LIST(EL),check_index)(list, index) < 0)
 		return NULL;
 	if (list->ref != 1)
-		return FN(FN(LIST(EL),get),BASE)(list, index);
+		return FN(FN(LIST(EL),get),EL_BASE)(list, index);
 	el = list->p[index];
 	list->p[index] = NULL;
 	return el;
@@ -336,10 +340,10 @@ static __isl_give EL *FN(FN(LIST(EL),take),BASE)(__isl_keep LIST(EL) *list,
  * where the position may be empty due to a previous call
  * to isl_list_*_take_*.
  */
-static __isl_give LIST(EL) *FN(FN(LIST(EL),restore),BASE)(
+static __isl_give LIST(EL) *FN(FN(LIST(EL),restore),EL_BASE)(
 	__isl_take LIST(EL) *list, int index, __isl_take EL *el)
 {
-	return FN(FN(LIST(EL),set),BASE)(list, index, el);
+	return FN(FN(LIST(EL),set),EL_BASE)(list, index, el);
 }
 
 /* Swap the elements of "list" in positions "pos1" and "pos2".
@@ -351,10 +355,10 @@ __isl_give LIST(EL) *FN(LIST(EL),swap)(__isl_take LIST(EL) *list,
 
 	if (pos1 == pos2)
 		return list;
-	el1 = FN(FN(LIST(EL),take),BASE)(list, pos1);
-	el2 = FN(FN(LIST(EL),take),BASE)(list, pos2);
-	list = FN(FN(LIST(EL),restore),BASE)(list, pos1, el2);
-	list = FN(FN(LIST(EL),restore),BASE)(list, pos2, el1);
+	el1 = FN(FN(LIST(EL),take),EL_BASE)(list, pos1);
+	el2 = FN(FN(LIST(EL),take),EL_BASE)(list, pos2);
+	list = FN(FN(LIST(EL),restore),EL_BASE)(list, pos1, el2);
+	list = FN(FN(LIST(EL),restore),EL_BASE)(list, pos2, el1);
 	return list;
 }
 
@@ -402,11 +406,11 @@ __isl_give LIST(EL) *FN(LIST(EL),map)(__isl_keep LIST(EL) *list,
 
 	n = list->n;
 	for (i = 0; i < n; ++i) {
-		EL *el = FN(FN(LIST(EL),take),BASE)(list, i);
+		EL *el = FN(FN(LIST(EL),take),EL_BASE)(list, i);
 		if (!el)
 			return FN(LIST(EL),free)(list);
 		el = fn(el, user);
-		list = FN(FN(LIST(EL),restore),BASE)(list, i, el);
+		list = FN(FN(LIST(EL),restore),EL_BASE)(list, i, el);
 	}
 
 	return list;
@@ -563,7 +567,7 @@ isl_stat FN(LIST(EL),foreach_scc)(__isl_keep LIST(EL) *list,
 	return n > 0 ? isl_stat_error : isl_stat_ok;
 }
 
-__isl_give LIST(EL) *FN(FN(LIST(EL),from),BASE)(__isl_take EL *el)
+__isl_give LIST(EL) *FN(FN(LIST(EL),from),EL_BASE)(__isl_take EL *el)
 {
 	isl_ctx *ctx;
 	LIST(EL) *list;
@@ -630,7 +634,7 @@ error:
 	return NULL;
 }
 
-__isl_give isl_printer *CAT(isl_printer_print_,LIST(BASE))(
+__isl_give isl_printer *CAT(isl_printer_print_,LIST(EL_BASE))(
 	__isl_take isl_printer *p, __isl_keep LIST(EL) *list)
 {
 	int i;
@@ -641,7 +645,7 @@ __isl_give isl_printer *CAT(isl_printer_print_,LIST(BASE))(
 	for (i = 0; i < list->n; ++i) {
 		if (i)
 			p = isl_printer_print_str(p, ",");
-		p = CAT(isl_printer_print_,BASE)(p, list->p[i]);
+		p = CAT(isl_printer_print_,EL_BASE)(p, list->p[i]);
 	}
 	p = isl_printer_print_str(p, ")");
 	return p;
@@ -650,16 +654,9 @@ error:
 	return NULL;
 }
 
-void FN(LIST(EL),dump)(__isl_keep LIST(EL) *list)
-{
-	isl_printer *printer;
+#undef BASE
+#define BASE LIST(EL_BASE)
 
-	if (!list)
-		return;
-
-	printer = isl_printer_to_file(FN(LIST(EL),get_ctx)(list), stderr);
-	printer = CAT(isl_printer_print_,LIST(BASE))(printer, list);
-	printer = isl_printer_end_line(printer);
-
-	isl_printer_free(printer);
-}
+#define PRINT_DUMP_DEFAULT	0
+#include "print_templ.c"
+#undef PRINT_DUMP_DEFAULT

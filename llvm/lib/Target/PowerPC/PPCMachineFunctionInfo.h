@@ -65,6 +65,10 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// SpillsCR - Indicates whether CR is spilled in the current function.
   bool SpillsCR = false;
 
+  /// DisableNonVolatileCR - Indicates whether non-volatile CR fields would be
+  /// disabled.
+  bool DisableNonVolatileCR = false;
+
   /// Indicates whether VRSAVE is spilled in the current function.
   bool SpillsVRSAVE = false;
 
@@ -129,7 +133,7 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   std::vector<std::pair<unsigned, ISD::ArgFlagsTy>> LiveInAttrs;
 
 public:
-  explicit PPCFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  explicit PPCFunctionInfo(MachineFunction &MF);
 
   int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
   void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
@@ -174,6 +178,9 @@ public:
 
   void setSpillsCR()       { SpillsCR = true; }
   bool isCRSpilled() const { return SpillsCR; }
+
+  void setDisableNonVolatileCR() { DisableNonVolatileCR = true; }
+  bool isNonVolatileCRDisabled() const { return DisableNonVolatileCR; }
 
   void setSpillsVRSAVE()       { SpillsVRSAVE = true; }
   bool isVRSAVESpilled() const { return SpillsVRSAVE; }

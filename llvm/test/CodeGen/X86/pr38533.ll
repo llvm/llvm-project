@@ -14,22 +14,10 @@ define void @constant_fold_vector_to_half() {
 
 ; Similarly this makes sure that the opposite bitcast of the above is also legalized without crashing.
 define void @pr38533_2(half %x) {
-; SSE-LABEL: pr38533_2:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movw %ax, (%rax)
-; SSE-NEXT:    popq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 8
-; SSE-NEXT:    retq
-;
-; AVX512-LABEL: pr38533_2:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    movw %ax, (%rax)
-; AVX512-NEXT:    retq
+; CHECK-LABEL: pr38533_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movw %di, (%rax)
+; CHECK-NEXT:    retq
   %a = bitcast half %x to <4 x i4>
   store volatile <4 x i4> %a, <4 x i4>* undef
   ret void
@@ -37,22 +25,10 @@ define void @pr38533_2(half %x) {
 
 ; This case is a bitcast from fp16 to a 16-bit wide legal vector type. In this case the result type is legal when the bitcast gets type legalized.
 define void @pr38533_3(half %x) {
-; SSE-LABEL: pr38533_3:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movw %ax, (%rax)
-; SSE-NEXT:    popq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 8
-; SSE-NEXT:    retq
-;
-; AVX512-LABEL: pr38533_3:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    movw %ax, (%rax)
-; AVX512-NEXT:    retq
+; CHECK-LABEL: pr38533_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movw %di, (%rax)
+; CHECK-NEXT:    retq
   %a = bitcast half %x to <16 x i1>
   store volatile <16 x i1> %a, <16 x i1>* undef
   ret void

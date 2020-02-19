@@ -1,4 +1,4 @@
-; RUN: not llc -mcpu=mips32r2 -march=mipsel -relocation-model=static < %s 2> %t
+; RUN: not --crash llc -mcpu=mips32r2 -march=mipsel -relocation-model=static < %s 2> %t
 ; RUN: FileCheck %s < %t
 
 ; CHECK: LLVM ERROR: Functions with the interrupt attribute cannot have arguments!

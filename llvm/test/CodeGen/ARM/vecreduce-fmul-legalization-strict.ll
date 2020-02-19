@@ -26,7 +26,7 @@ define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
   %b = call half @llvm.experimental.vector.reduce.v2.fmul.f16.v1f16(half 0.0, <1 x half> %a)
   ret half %b
 }
@@ -42,7 +42,7 @@ define float @test_v1f32(<1 x float> %a) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
   %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v1f32(float 0.0, <1 x float> %a)
   ret float %b
 }
@@ -93,7 +93,7 @@ define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
   %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v3f32(float 0.0, <3 x float> %a)
   ret float %b
 }
@@ -160,7 +160,7 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI6_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
   %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v16f32(float 0.0, <16 x float> %a)
   ret float %b
 }

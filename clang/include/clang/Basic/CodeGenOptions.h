@@ -164,10 +164,10 @@ public:
   std::string FloatABI;
 
   /// The floating-point denormal mode to use.
-  llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::Invalid;
+  llvm::DenormalMode FPDenormalMode;
 
   /// The floating-point subnormal mode to use, for float.
-  llvm::DenormalMode FP32DenormalMode = llvm::DenormalMode::Invalid;
+  llvm::DenormalMode FP32DenormalMode;
 
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;

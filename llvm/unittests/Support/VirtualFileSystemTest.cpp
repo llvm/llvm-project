@@ -2148,11 +2148,9 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
   ASSERT_FALSE(Status.getError());
   EXPECT_TRUE(Status->exists());
 
-#if !defined(_WIN32)
   Status = FS->status("../bar/baz/a");
   ASSERT_FALSE(Status.getError());
   EXPECT_TRUE(Status->exists());
-#endif
 }
 
 TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {

@@ -1211,7 +1211,7 @@ namespace ObjectsUnderConstruction {
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 
   // The lifetime of 'n' begins at the initialization, not before.
-  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{modification}}
+  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{increment of object outside its lifetime}}
 }
 
 namespace PR39728 {

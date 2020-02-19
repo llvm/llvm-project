@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Section_h_
-#define liblldb_Section_h_
+#ifndef LLDB_CORE_SECTION_H
+#define LLDB_CORE_SECTION_H
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Utility/ConstString.h"
@@ -272,4 +272,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Section_h_
+#endif // LLDB_CORE_SECTION_H

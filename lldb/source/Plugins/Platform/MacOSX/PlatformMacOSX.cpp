@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformMacOSX.h"
+#include "PlatformRemoteiOS.h"
 #if defined(__APPLE__)
 #include "PlatformAppleTVSimulator.h"
 #include "PlatformAppleWatchSimulator.h"
@@ -38,10 +39,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(PlatformMacOSX)
+
 static uint32_t g_initialize_count = 0;
 
 void PlatformMacOSX::Initialize() {
   PlatformDarwin::Initialize();
+  PlatformRemoteiOS::Initialize();
 #if defined(__APPLE__)
   PlatformiOSSimulator::Initialize();
   PlatformDarwinKernel::Initialize();
@@ -80,6 +84,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwinKernel::Terminate();
   PlatformiOSSimulator::Terminate();
 #endif
+  PlatformRemoteiOS::Terminate();
   PlatformDarwin::Terminate();
 }
 

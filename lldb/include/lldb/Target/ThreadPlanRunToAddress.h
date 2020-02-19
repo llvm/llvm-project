@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanRunToAddress_h_
-#define liblldb_ThreadPlanRunToAddress_h_
+#ifndef LLDB_TARGET_THREADPLANRUNTOADDRESS_H
+#define LLDB_TARGET_THREADPLANRUNTOADDRESS_H
 
 #include <vector>
 
@@ -64,4 +64,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanRunToAddress_h_
+#endif // LLDB_TARGET_THREADPLANRUNTOADDRESS_H

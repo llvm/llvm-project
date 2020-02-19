@@ -923,6 +923,10 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
       !getFrontendOpts().AuxTriple.empty()) {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
+    if (getFrontendOpts().AuxTargetCPU)
+      TO->CPU = getFrontendOpts().AuxTargetCPU.getValue();
+    if (getFrontendOpts().AuxTargetFeatures)
+      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.getValue();
     TO->HostTriple = getTarget().getTriple().str();
     setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
   }
@@ -1630,15 +1634,15 @@ enum ModuleSource {
 
 /// Select a source for loading the named module and compute the filename to
 /// load it from.
-static ModuleSource
-selectModuleSource(Module *M, StringRef ModuleName, std::string &ModuleFilename,
-                   const std::map<std::string, std::string> &BuiltModules,
-                   HeaderSearch &HS) {
+static ModuleSource selectModuleSource(
+    Module *M, StringRef ModuleName, std::string &ModuleFilename,
+    const std::map<std::string, std::string, std::less<>> &BuiltModules,
+    HeaderSearch &HS) {
   assert(ModuleFilename.empty() && "Already has a module source?");
 
   // Check to see if the module has been built as part of this compilation
   // via a module build pragma.
-  auto BuiltModuleIt = BuiltModules.find(std::string(ModuleName));
+  auto BuiltModuleIt = BuiltModules.find(ModuleName);
   if (BuiltModuleIt != BuiltModules.end()) {
     ModuleFilename = BuiltModuleIt->second;
     return MS_ModuleBuildPragma;

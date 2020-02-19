@@ -1,8 +1,13 @@
-; Verifies that restart trigger forces IPO pipelines restart and the same
-; coroutine is looked at by CoroSplit pass twice.
+; Verifies that the restart trigger that is used by legacy coroutine passes
+; forces the legacy pass manager to restart IPO pipelines, thereby causing the
+; same coroutine to be looked at by CoroSplit pass twice.
 ; REQUIRES: asserts
 ; RUN: opt < %s -S -O0 -enable-coroutines -debug-only=coro-split 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -O1 -enable-coroutines -debug-only=coro-split 2>&1 | FileCheck %s
+; The following tests use the new pass manager, and verify that the coroutine
+; passes re-run the CGSCC pipeline.
+; RUN: opt < %s -S -passes='default<O0>' -enable-coroutines -debug-only=coro-split 2>&1 | FileCheck %s
+; RUN: opt < %s -S -passes='default<O1>' -enable-coroutines -debug-only=coro-split 2>&1 | FileCheck %s
 
 ; CHECK:      CoroSplit: Processing coroutine 'f' state: 0
 ; CHECK-NEXT: CoroSplit: Processing coroutine 'f' state: 1

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanStepOut_h_
-#define liblldb_ThreadPlanStepOut_h_
+#ifndef LLDB_TARGET_THREADPLANSTEPOUT_H
+#define LLDB_TARGET_THREADPLANSTEPOUT_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -90,4 +90,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanStepOut_h_
+#endif // LLDB_TARGET_THREADPLANSTEPOUT_H

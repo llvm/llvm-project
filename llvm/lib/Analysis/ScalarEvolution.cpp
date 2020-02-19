@@ -5736,7 +5736,7 @@ ScalarEvolution::getRangeRef(const SCEV *S,
       // For a SCEVUnknown, ask ValueTracking.
       KnownBits Known = computeKnownBits(U->getValue(), DL, 0, &AC, nullptr, &DT);
       if (Known.getBitWidth() != BitWidth)
-        Known = Known.zextOrTrunc(BitWidth, true);
+        Known = Known.zextOrTrunc(BitWidth);
       // If Known does not result in full-set, intersect with it.
       if (Known.getMinValue() != Known.getMaxValue() + 1)
         ConservativeResult = ConservativeResult.intersectWith(
@@ -6640,7 +6640,7 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
                                           BasicBlock *ExitingBlock,
                                           ExitCountKind Kind) {
   switch (Kind) {
-  case Exact: 
+  case Exact:
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getMax(ExitingBlock, this);
@@ -6657,7 +6657,7 @@ ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
                                                    ExitCountKind Kind) {
   switch (Kind) {
-  case Exact: 
+  case Exact:
     return getBackedgeTakenInfo(L).getExact(L, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getMax(this);

@@ -109,6 +109,10 @@ private:
   /// supported precision, this map indicates what promoted value to use.
   SmallDenseMap<TableId, TableId, 8> PromotedFloats;
 
+  /// For floating-point nodes that have a smaller precision than the smallest
+  /// supported precision, this map indicates the converted value to use.
+  SmallDenseMap<TableId, TableId, 8> SoftPromotedHalfs;
+
   /// For float nodes that need to be expanded this map indicates which operands
   /// are the expanded version of the input.
   SmallDenseMap<TableId, std::pair<TableId, TableId>, 8> ExpandedFloats;
@@ -186,6 +190,7 @@ public:
       ExpandedIntegers.erase(OldId);
       SoftenedFloats.erase(OldId);
       PromotedFloats.erase(OldId);
+      SoftPromotedHalfs.erase(OldId);
       ExpandedFloats.erase(OldId);
       ScalarizedVectors.erase(OldId);
       SplitVectors.erase(OldId);
@@ -650,6 +655,43 @@ private:
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
+
+  //===--------------------------------------------------------------------===//
+  // Half soft promotion support: LegalizeFloatTypes.cpp
+  //===--------------------------------------------------------------------===//
+
+  SDValue GetSoftPromotedHalf(SDValue Op) {
+    TableId &PromotedId = SoftPromotedHalfs[getTableId(Op)];
+    SDValue PromotedOp = getSDValue(PromotedId);
+    assert(PromotedOp.getNode() && "Operand wasn't promoted?");
+    return PromotedOp;
+  }
+  void SetSoftPromotedHalf(SDValue Op, SDValue Result);
+
+  void SoftPromoteHalfResult(SDNode *N, unsigned ResNo);
+  SDValue SoftPromoteHalfRes_BinOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_BITCAST(SDNode *N);
+  SDValue SoftPromoteHalfRes_ConstantFP(SDNode *N);
+  SDValue SoftPromoteHalfRes_EXTRACT_VECTOR_ELT(SDNode *N);
+  SDValue SoftPromoteHalfRes_FCOPYSIGN(SDNode *N);
+  SDValue SoftPromoteHalfRes_FMAD(SDNode *N);
+  SDValue SoftPromoteHalfRes_FPOWI(SDNode *N);
+  SDValue SoftPromoteHalfRes_FP_ROUND(SDNode *N);
+  SDValue SoftPromoteHalfRes_LOAD(SDNode *N);
+  SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
+  SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
+  SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
+  SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
+
+  bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
+  SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
+  SDValue SoftPromoteHalfOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
+  SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Scalarization Support: LegalizeVectorTypes.cpp

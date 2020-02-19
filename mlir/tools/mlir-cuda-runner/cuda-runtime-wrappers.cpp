@@ -96,11 +96,34 @@ void mcuMemHostRegisterMemRef(const MemRefType<T, N> *arg, T value) {
   std::fill_n(arg->data, count, value);
   mcuMemHostRegister(arg->data, count * sizeof(T));
 }
-extern "C" void
-mcuMemHostRegisterMemRef1dFloat(const MemRefType<float, 1> *arg) {
-  mcuMemHostRegisterMemRef(arg, 1.23f);
+
+extern "C" void mcuMemHostRegisterMemRef1dFloat(float *allocated,
+                                                float *aligned, int64_t offset,
+                                                int64_t size, int64_t stride) {
+  MemRefType<float, 1> descriptor;
+  descriptor.basePtr = allocated;
+  descriptor.data = aligned;
+  descriptor.offset = offset;
+  descriptor.sizes[0] = size;
+  descriptor.strides[0] = stride;
+  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
 }
-extern "C" void
-mcuMemHostRegisterMemRef3dFloat(const MemRefType<float, 3> *arg) {
-  mcuMemHostRegisterMemRef(arg, 1.23f);
+
+extern "C" void mcuMemHostRegisterMemRef3dFloat(float *allocated,
+                                                float *aligned, int64_t offset,
+                                                int64_t size0, int64_t size1,
+                                                int64_t size2, int64_t stride0,
+                                                int64_t stride1,
+                                                int64_t stride2) {
+  MemRefType<float, 3> descriptor;
+  descriptor.basePtr = allocated;
+  descriptor.data = aligned;
+  descriptor.offset = offset;
+  descriptor.sizes[0] = size0;
+  descriptor.strides[0] = stride0;
+  descriptor.sizes[1] = size1;
+  descriptor.strides[1] = stride1;
+  descriptor.sizes[2] = size2;
+  descriptor.strides[2] = stride2;
+  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
 }

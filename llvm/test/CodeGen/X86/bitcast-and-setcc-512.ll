@@ -282,19 +282,15 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ; AVX2-LABEL: v32i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpacksswb %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpgtw %ymm7, %ymm5, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm4, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpacksswb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vzeroupper
@@ -534,28 +530,28 @@ define i16 @v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x floa
 define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ; SSE-LABEL: v64i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    pcmpgtb %xmm7, %xmm3
-; SSE-NEXT:    pcmpgtb %xmm6, %xmm2
-; SSE-NEXT:    pcmpgtb %xmm5, %xmm1
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    pand %xmm3, %xmm9
-; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    pand %xmm2, %xmm8
+; SSE-NEXT:    pcmpgtb %xmm5, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm6, %xmm2
+; SSE-NEXT:    pcmpgtb %xmm7, %xmm3
 ; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pand %xmm1, %xmm11
+; SSE-NEXT:    pand %xmm0, %xmm11
 ; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    pand %xmm0, %xmm10
-; SSE-NEXT:    pmovmskb %xmm10, %eax
-; SSE-NEXT:    pmovmskb %xmm11, %ecx
+; SSE-NEXT:    pand %xmm1, %xmm10
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm9
+; SSE-NEXT:    pand %xmm2, %xmm9
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm8
+; SSE-NEXT:    pand %xmm3, %xmm8
+; SSE-NEXT:    pmovmskb %xmm11, %eax
+; SSE-NEXT:    pmovmskb %xmm10, %ecx
 ; SSE-NEXT:    shll $16, %ecx
 ; SSE-NEXT:    orl %eax, %ecx
-; SSE-NEXT:    pmovmskb %xmm8, %edx
-; SSE-NEXT:    pmovmskb %xmm9, %eax
+; SSE-NEXT:    pmovmskb %xmm9, %edx
+; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    shll $16, %eax
 ; SSE-NEXT:    orl %edx, %eax
 ; SSE-NEXT:    shlq $32, %rax
@@ -599,12 +595,12 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ;
 ; AVX2-LABEL: v64i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpgtb %ymm7, %ymm5, %ymm2
-; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpgtb %ymm6, %ymm4, %ymm2
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpgtb %ymm7, %ymm5, %ymm2
+; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX2-NEXT:    shlq $32, %rax

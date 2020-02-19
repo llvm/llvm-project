@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_AppleGetQueuesHandler_h_
-#define lldb_AppleGetQueuesHandler_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETQUEUESHANDLER_H
+#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETQUEUESHANDLER_H
 
 #include <map>
 #include <mutex>
@@ -106,4 +106,4 @@ private:
 
 } // using namespace lldb_private
 
-#endif // lldb_AppleGetQueuesHandler_h_
+#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETQUEUESHANDLER_H

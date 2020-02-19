@@ -190,7 +190,7 @@ public:
   uint64_t getValue() const { return Integer; }
   void setValue(uint64_t Val) { Integer = Val; }
 
-  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -207,7 +207,7 @@ public:
   /// Get MCExpr.
   const MCExpr *getValue() const { return Expr; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -224,7 +224,7 @@ public:
   /// Get MCSymbol.
   const MCSymbol *getValue() const { return Label; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -242,7 +242,7 @@ public:
     : CU(TheCU), Index(Idx) {}
 
   /// EmitValue - Emit base type reference.
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   /// SizeOf - Determine size of the base type reference in bytes.
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
@@ -259,7 +259,7 @@ class DIEDelta {
 public:
   DIEDelta(const MCSymbol *Hi, const MCSymbol *Lo) : LabelHi(Hi), LabelLo(Lo) {}
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -278,7 +278,7 @@ public:
   /// Grab the string out of the object.
   StringRef getString() const { return S.getString(); }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -300,7 +300,7 @@ public:
   /// Grab the string out of the object.
   StringRef getString() const { return S; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -319,7 +319,7 @@ public:
 
   DIE &getEntry() const { return *Entry; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -338,7 +338,7 @@ public:
   /// Grab the current index out.
   size_t getValue() const { return Index; }
 
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -485,7 +485,7 @@ public:
 #include "llvm/CodeGen/DIEValue.def"
 
   /// Emit value via the Dwarf writer.
-  void EmitValue(const AsmPrinter *AP) const;
+  void emitValue(const AsmPrinter *AP) const;
 
   /// Return the size of a value in bytes.
   unsigned SizeOf(const AsmPrinter *AP) const;
@@ -928,7 +928,7 @@ public:
     return dwarf::DW_FORM_block;
   }
 
-  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
@@ -962,7 +962,7 @@ public:
     return dwarf::DW_FORM_block;
   }
 
-  void EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
+  void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;

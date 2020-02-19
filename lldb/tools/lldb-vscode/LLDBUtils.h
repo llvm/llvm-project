@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_LLDBUTILS_H_
-#define LLDBVSCODE_LLDBUTILS_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_LLDBUTILS_H
+#define LLDB_TOOLS_LLDB_VSCODE_LLDBUTILS_H
 
 #include "VSCodeForward.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -106,46 +106,6 @@ uint32_t GetLLDBThreadIndexID(uint64_t dap_frame_id);
 ///     The LLDB frame index ID.
 uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 
-/// Given a LLDB breakpoint, make a breakpoint ID that is unique to a
-/// specific breakpoint and breakpoint location.
-///
-/// VSCode requires a Breakpoint "id" to be unique, so we use the
-/// breakpoint ID in the lower BREAKPOINT_ID_SHIFT bits and the
-/// breakpoint location ID in the upper BREAKPOINT_ID_SHIFT bits.
-///
-/// \param[in] bp_loc
-///     The LLDB break point location.
-///
-/// \return
-///     A unique integer that allows us to easily find the right
-///     stack frame within a thread on subsequent VS code requests.
-int64_t MakeVSCodeBreakpointID(lldb::SBBreakpointLocation &bp_loc);
-
-/// Given a VSCode breakpoint ID, convert to a LLDB breakpoint ID.
-///
-/// VSCode requires a Breakpoint "id" to be unique, so we use the
-/// breakpoint ID in the lower BREAKPOINT_ID_SHIFT bits and the
-/// breakpoint location ID in the upper BREAKPOINT_ID_SHIFT bits.
-///
-/// \param[in] dap_breakpoint_id
-///     The VSCode breakpoint ID to convert to an LLDB breakpoint ID.
-///
-/// \return
-///     The LLDB breakpoint ID.
-uint32_t GetLLDBBreakpointID(uint64_t dap_breakpoint_id);
-
-/// Given a VSCode breakpoint ID, convert to a LLDB breakpoint location ID.
-///
-/// VSCode requires a Breakpoint "id" to be unique, so we use the
-/// breakpoint ID in the lower BREAKPOINT_ID_SHIFT bits and the
-/// breakpoint location ID in the upper BREAKPOINT_ID_SHIFT bits.
-///
-/// \param[in] dap_breakpoint_id
-///     The VSCode frame ID to convert to a breakpoint location ID.
-///
-/// \return
-///     The LLDB breakpoint location ID.
-uint32_t GetLLDBBreakpointLocationID(uint64_t dap_breakpoint_id);
 } // namespace lldb_vscode
 
 #endif

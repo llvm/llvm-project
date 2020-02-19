@@ -14,7 +14,7 @@
 # RUN:         -mcpu=mips3 %S/Inputs/mips-dynamic.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mcpu=mips32 -mattr=+fp64 %s -o %t2.o
-# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=R3R32 %s
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null 2>&1 | FileCheck -check-prefix=R3R32 %s
 
 # Check that lld does not allow to link incompatible ISAs.
 
@@ -22,7 +22,7 @@
 # RUN:         -mcpu=mips64r6 %S/Inputs/mips-dynamic.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
 # RUN:         -position-independent -mcpu=octeon %s -o %t2.o
-# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck -check-prefix=R6OCTEON %s
 
 # Check that lld take in account EF_MIPS_MACH_XXX ISA flags

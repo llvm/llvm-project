@@ -339,6 +339,9 @@ namespace llvm {
     bool CoveredBySubRegs;
     /// A register class is artificial if all its members are artificial.
     bool Artificial;
+    /// Generate register pressure set for this register class and any class
+    /// synthesized from it.
+    bool GeneratePressureSet;
 
     // Return the Record that defined this class, or NULL if the class was
     // created by TableGen.
@@ -437,6 +440,9 @@ namespace llvm {
 
     // Get a bit vector of TopoSigs present in this register class.
     const BitVector &getTopoSigs() const { return TopoSigs; }
+
+    // Get a weight of this register class.
+    unsigned getWeight(const CodeGenRegBank&) const;
 
     // Populate a unique sorted list of units from a register set.
     void buildRegUnitSet(const CodeGenRegBank &RegBank,
@@ -626,8 +632,12 @@ namespace llvm {
       return SubRegIndices;
     }
 
-    // Find a SubRegIndex form its Record def.
+    // Find a SubRegIndex from its Record def or add to the list if it does
+    // not exist there yet.
     CodeGenSubRegIndex *getSubRegIdx(Record*);
+
+    // Find a SubRegIndex from its Record def.
+    const CodeGenSubRegIndex *findSubRegIdx(const Record* Def) const;
 
     // Find or create a sub-register index representing the A+B composition.
     CodeGenSubRegIndex *getCompositeSubRegIndex(CodeGenSubRegIndex *A,

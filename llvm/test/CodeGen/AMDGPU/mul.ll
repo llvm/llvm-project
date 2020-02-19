@@ -278,7 +278,7 @@ define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, [8 x i32], i128 %
 
 ; GCN: {{buffer|flat}}_store_dwordx4
 define amdgpu_kernel void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %aptr, i128 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.a = getelementptr inbounds i128, i128 addrspace(1)* %aptr, i32 %tid
   %gep.b = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
   %gep.out = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
@@ -289,7 +289,7 @@ define amdgpu_kernel void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone}

@@ -42,7 +42,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     auto args = block->getArguments();
     auto e = std::min(arrayAttr.size(), args.size());
     for (unsigned i = 0; i < e; ++i) {
-      if (auto strAttr = arrayAttr.getValue()[i].dyn_cast<StringAttr>())
+      if (auto strAttr = arrayAttr[i].dyn_cast<StringAttr>())
         setNameFn(args[i], strAttr.getValue());
     }
   }

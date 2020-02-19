@@ -81,6 +81,13 @@ public:
                              MachineIRBuilder &B) const;
   bool legalizeFlog(MachineInstr &MI, MachineIRBuilder &B,
                     double Log2BaseInverted) const;
+  bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &B) const;
+
+  bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
 
@@ -89,6 +96,20 @@ public:
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
+
+  bool legalizeUDIV_UREM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
+
+  void legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
+                               Register DstReg, Register Num, Register Den,
+                               bool IsRem) const;
+  bool legalizeUDIV_UREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+
+  bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B) const;
+  bool legalizeSDIV_SREM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool legalizeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
@@ -133,6 +154,10 @@ public:
       MachineInstr &MI, MachineIRBuilder &B,
       GISelChangeObserver &Observer,
       const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
+
+  bool legalizeSBufferLoad(
+    MachineInstr &MI, MachineIRBuilder &B,
+    GISelChangeObserver &Observer) const;
 
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;

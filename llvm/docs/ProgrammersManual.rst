@@ -453,8 +453,8 @@ recovery.
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
    the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and exit the
-   program.
+   which will call installed error handlers, print a message, and abort the
+   program. The use of `report_fatal_error` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -847,7 +847,7 @@ this, use the named constructor idiom and return an ``Expected<T>``:
   public:
 
     static Expected<Foo> Create(Resource R1, Resource R2) {
-      Error Err;
+      Error Err = Error::success();
       Foo F(R1, R2, Err);
       if (Err)
         return std::move(Err);
@@ -946,7 +946,7 @@ following natural iteration idiom for fallible containers like Archive:
 
 .. code-block:: c++
 
-  Error Err;
+  Error Err = Error::success();
   for (auto &Child : Ar->children(Err)) {
     // Use Child - only enter the loop when it's valid
 

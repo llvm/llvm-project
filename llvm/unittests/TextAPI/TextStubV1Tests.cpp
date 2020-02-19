@@ -6,6 +6,7 @@
 //
 //===-----------------------------------------------------------------------===/
 
+#include "TextStubHelpers.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 #include "llvm/TextAPI/MachO/TextAPIWriter.h"
@@ -15,23 +16,6 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
-
-struct ExportedSymbol {
-  SymbolKind Kind;
-  std::string Name;
-  bool WeakDefined;
-  bool ThreadLocalValue;
-};
-using ExportedSymbolSeq = std::vector<ExportedSymbol>;
-
-inline bool operator<(const ExportedSymbol &lhs, const ExportedSymbol &rhs) {
-  return std::tie(lhs.Kind, lhs.Name) < std::tie(rhs.Kind, rhs.Name);
-}
-
-inline bool operator==(const ExportedSymbol &lhs, const ExportedSymbol &rhs) {
-  return std::tie(lhs.Kind, lhs.Name, lhs.WeakDefined, lhs.ThreadLocalValue) ==
-         std::tie(rhs.Kind, rhs.Name, rhs.WeakDefined, rhs.ThreadLocalValue);
-}
 
 static ExportedSymbol TBDv1Symbols[] = {
     {SymbolKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},

@@ -49,6 +49,9 @@ public:
 
   Kind getKind() const { return kind; }
 
+  // Returns the Tablegen definition this operator was constructed from.
+  const llvm::Record &getDef() const { return *def; }
+
 protected:
   // The TableGen definition of this trait.
   const llvm::Record *def;

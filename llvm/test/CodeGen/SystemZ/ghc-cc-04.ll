@@ -1,7 +1,7 @@
 ; Check that the GHC calling convention works (s390x)
 ; Thread local storage is not supported in GHC calling convention
 ;
-; RUN: not llc -mtriple=s390x-ibm-linux < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=s390x-ibm-linux < %s 2>&1 | FileCheck %s
 
 @x = thread_local global i32 0
 

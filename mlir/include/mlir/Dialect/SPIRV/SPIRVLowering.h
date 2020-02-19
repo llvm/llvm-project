@@ -25,12 +25,9 @@ namespace mlir {
 /// For composite types, this converter additionally performs type wrapping to
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
-class SPIRVTypeConverter final : public TypeConverter {
+class SPIRVTypeConverter : public TypeConverter {
 public:
-  using TypeConverter::TypeConverter;
-
-  /// Converts the given standard `type` to SPIR-V correspondence.
-  Type convertType(Type type) override;
+  SPIRVTypeConverter();
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
@@ -58,6 +55,9 @@ void populateBuiltinFuncToSPIRVPatterns(MLIRContext *context,
                                         OwningRewritePatternList &patterns);
 
 namespace spirv {
+class AccessChainOp;
+class FuncOp;
+
 class SPIRVConversionTarget : public ConversionTarget {
 public:
   /// Creates a SPIR-V conversion target for the given target environment.
@@ -90,9 +90,20 @@ private:
 Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
                               OpBuilder &builder);
 
+/// Performs the index computation to get to the element at `indices` of the
+/// memory pointed to by `basePtr`, using the layout map of `baseType`.
+
+// TODO(ravishankarm) : This method assumes that the `baseType` is a MemRefType
+// with AffineMap that has static strides. Extend to handle dynamic strides.
+spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
+                                   MemRefType baseType, Value basePtr,
+                                   ArrayRef<Value> indices, Location loc,
+                                   OpBuilder &builder);
+
 /// Sets the InterfaceVarABIAttr and EntryPointABIAttr for a function and its
 /// arguments.
-LogicalResult setABIAttrs(FuncOp funcOp, EntryPointABIAttr entryPointInfo,
+LogicalResult setABIAttrs(spirv::FuncOp funcOp,
+                          EntryPointABIAttr entryPointInfo,
                           ArrayRef<InterfaceVarABIAttr> argABIInfo);
 } // namespace spirv
 } // namespace mlir

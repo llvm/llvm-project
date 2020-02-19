@@ -4,7 +4,7 @@
 
 spv.module "Logical" "GLSL450" {
   // for (int i = 0; i < count; ++i) {}
-  func @loop(%count : i32) -> () {
+  spv.func @loop(%count : i32) -> () "None" {
     %zero = spv.constant 0: i32
     %one = spv.constant 1: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
@@ -51,7 +51,7 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
-  func @main() -> () {
+  spv.func @main() -> () "None" {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main
@@ -64,7 +64,7 @@ spv.module "Logical" "GLSL450" {
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @GV1 bind(0, 0) : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
   spv.globalVariable @GV2 bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
-  func @loop_kernel() {
+  spv.func @loop_kernel() "None" {
     %0 = spv._address_of @GV1 : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
     %1 = spv.constant 0 : i32
     %2 = spv.AccessChain %0[%1] : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
@@ -113,7 +113,7 @@ spv.module "Logical" "GLSL450" {
   // for (int i = 0; i < count; ++i) {
   //   for (int j = 0; j < count; ++j) { }
   // }
-  func @loop(%count : i32) -> () {
+  spv.func @loop(%count : i32) -> () "None" {
     %zero = spv.constant 0: i32
     %one = spv.constant 1: i32
     %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
@@ -203,7 +203,7 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
-  func @main() -> () {
+  spv.func @main() -> () "None" {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main

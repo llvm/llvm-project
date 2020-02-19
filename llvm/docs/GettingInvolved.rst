@@ -16,6 +16,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    HowToSubmitABug
    BugLifeCycle
    CodingStandards
+   GitBisecting
 
 :doc:`Contributing`
    An overview on how to contribute to LLVM.
@@ -41,6 +42,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 :doc:`CodingStandards`
   Details the LLVM coding standards and provides useful information on writing
   efficient C++ code.
+
+:doc:`GitBisecting`
+  Describes how to use ``git bisect`` on LLVM's repository.
 
 .. _development-process:
 
@@ -182,6 +186,7 @@ can be better.
    Proposals/TestSuite
    Proposals/VariableNames
    Proposals/VectorizationPlan
+   Proposals/VectorPredication
 
 :doc:`CodeOfConduct`
    Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
@@ -204,3 +209,6 @@ can be better.
 
 :doc:`Proposals/VectorizationPlan`
    Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.
+
+:doc:`Proposals/VectorPredication`
+   Proposal for predicated vector instructions in LLVM.

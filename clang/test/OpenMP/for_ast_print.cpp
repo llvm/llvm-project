@@ -161,8 +161,8 @@ int main(int argc, char **argv) {
   float arr[20];
   static int a;
 // CHECK: static int a;
-#pragma omp for schedule(guided, argc) reduction(+:argv[0][:1])
-  // CHECK-NEXT: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1])
+#pragma omp for schedule(guided, argc) reduction(+:argv[0][:1]) order(concurrent)
+  // CHECK-NEXT: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1]) order(concurrent)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PThreadCondition_h__
-#define __PThreadCondition_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADCONDITION_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADCONDITION_H
 
 #include <pthread.h>
 

@@ -1575,11 +1575,8 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
 
     // If the sign bit of the XorCst is not set, there is no change to
     // the operation, just stop using the Xor.
-    if (!XorC->isNegative()) {
-      Cmp.setOperand(0, X);
-      Worklist.Add(Xor);
-      return &Cmp;
-    }
+    if (!XorC->isNegative())
+      return replaceOperand(Cmp, 0, X);
 
     // Emit the opposite comparison.
     if (TrueIfSigned)
@@ -1645,51 +1642,53 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
   bool IsShl = ShiftOpcode == Instruction::Shl;
   const APInt *C3;
   if (match(Shift->getOperand(1), m_APInt(C3))) {
-    bool CanFold = false;
+    APInt NewAndCst, NewCmpCst;
+    bool AnyCmpCstBitsShiftedOut;
     if (ShiftOpcode == Instruction::Shl) {
       // For a left shift, we can fold if the comparison is not signed. We can
       // also fold a signed comparison if the mask value and comparison value
       // are not negative. These constraints may not be obvious, but we can
       // prove that they are correct using an SMT solver.
-      if (!Cmp.isSigned() || (!C2.isNegative() && !C1.isNegative()))
-        CanFold = true;
-    } else {
-      bool IsAshr = ShiftOpcode == Instruction::AShr;
+      if (Cmp.isSigned() && (C2.isNegative() || C1.isNegative()))
+        return nullptr;
+
+      NewCmpCst = C1.lshr(*C3);
+      NewAndCst = C2.lshr(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.shl(*C3) != C1;
+    } else if (ShiftOpcode == Instruction::LShr) {
       // For a logical right shift, we can fold if the comparison is not signed.
       // We can also fold a signed comparison if the shifted mask value and the
       // shifted comparison value are not negative. These constraints may not be
       // obvious, but we can prove that they are correct using an SMT solver.
-      // For an arithmetic shift right we can do the same, if we ensure
-      // the And doesn't use any bits being shifted in. Normally these would
-      // be turned into lshr by SimplifyDemandedBits, but not if there is an
-      // additional user.
-      if (!IsAshr || (C2.shl(*C3).lshr(*C3) == C2)) {
-        if (!Cmp.isSigned() ||
-            (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
-          CanFold = true;
-      }
+      NewCmpCst = C1.shl(*C3);
+      NewAndCst = C2.shl(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.lshr(*C3) != C1;
+      if (Cmp.isSigned() && (NewAndCst.isNegative() || NewCmpCst.isNegative()))
+        return nullptr;
+    } else {
+      // For an arithmetic shift, check that both constants don't use (in a
+      // signed sense) the top bits being shifted out.
+      assert(ShiftOpcode == Instruction::AShr && "Unknown shift opcode");
+      NewCmpCst = C1.shl(*C3);
+      NewAndCst = C2.shl(*C3);
+      AnyCmpCstBitsShiftedOut = NewCmpCst.ashr(*C3) != C1;
+      if (NewAndCst.ashr(*C3) != C2)
+        return nullptr;
     }
 
-    if (CanFold) {
-      APInt NewCst = IsShl ? C1.lshr(*C3) : C1.shl(*C3);
-      APInt SameAsC1 = IsShl ? NewCst.shl(*C3) : NewCst.lshr(*C3);
-      // Check to see if we are shifting out any of the bits being compared.
-      if (SameAsC1 != C1) {
-        // If we shifted bits out, the fold is not going to work out. As a
-        // special case, check to see if this means that the result is always
-        // true or false now.
-        if (Cmp.getPredicate() == ICmpInst::ICMP_EQ)
-          return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
-        if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
-          return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
-      } else {
-        Cmp.setOperand(1, ConstantInt::get(And->getType(), NewCst));
-        APInt NewAndCst = IsShl ? C2.lshr(*C3) : C2.shl(*C3);
-        And->setOperand(1, ConstantInt::get(And->getType(), NewAndCst));
-        And->setOperand(0, Shift->getOperand(0));
-        Worklist.Add(Shift); // Shift is dead.
-        return &Cmp;
-      }
+    if (AnyCmpCstBitsShiftedOut) {
+      // If we shifted bits out, the fold is not going to work out. As a
+      // special case, check to see if this means that the result is always
+      // true or false now.
+      if (Cmp.getPredicate() == ICmpInst::ICMP_EQ)
+        return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
+      if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
+        return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
+    } else {
+      Value *NewAnd = Builder.CreateAnd(
+          Shift->getOperand(0), ConstantInt::get(And->getType(), NewAndCst));
+      return new ICmpInst(Cmp.getPredicate(),
+          NewAnd, ConstantInt::get(And->getType(), NewCmpCst));
     }
   }
 
@@ -1705,8 +1704,7 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    Cmp.setOperand(0, NewAnd);
-    return &Cmp;
+    return replaceOperand(Cmp, 0, NewAnd);
   }
 
   return nullptr;
@@ -1812,8 +1810,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
       }
       if (NewOr) {
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        Cmp.setOperand(0, NewAnd);
-        return &Cmp;
+        return replaceOperand(Cmp, 0, NewAnd);
       }
     }
   }
@@ -4159,9 +4156,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     if (X) { // Build (X^Y) & Z
       Op1 = Builder.CreateXor(X, Y);
       Op1 = Builder.CreateAnd(Op1, Z);
-      I.setOperand(0, Op1);
-      I.setOperand(1, Constant::getNullValue(Op1->getType()));
-      return &I;
+      return new ICmpInst(Pred, Op1, Constant::getNullValue(Op1->getType()));
     }
   }
 
@@ -4658,7 +4653,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   Function *F = Intrinsic::getDeclaration(
       I.getModule(), Intrinsic::umul_with_overflow, MulType);
   CallInst *Call = Builder.CreateCall(F, {MulA, MulB}, "umul");
-  IC.Worklist.Add(MulInstr);
+  IC.Worklist.push(MulInstr);
 
   // If there are uses of mul result other than the comparison, we know that
   // they are truncation or binary AND. Change them to use result of
@@ -4685,11 +4680,11 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
       } else {
         llvm_unreachable("Unexpected Binary operation");
       }
-      IC.Worklist.Add(cast<Instruction>(U));
+      IC.Worklist.push(cast<Instruction>(U));
     }
   }
   if (isa<Instruction>(OtherVal))
-    IC.Worklist.Add(cast<Instruction>(OtherVal));
+    IC.Worklist.push(cast<Instruction>(OtherVal));
 
   // The original icmp gets replaced with the overflow value, maybe inverted
   // depending on predicate.
@@ -6031,14 +6026,11 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
-    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, &TLI)) {
-      I.setOperand(0, ConstantFP::getNullValue(OpType));
-      return &I;
-    }
-    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, &TLI)) {
-      I.setOperand(1, ConstantFP::getNullValue(OpType));
-      return &I;
-    }
+    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, &TLI))
+      return replaceOperand(I, 0, ConstantFP::getNullValue(OpType));
+
+    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, &TLI))
+      return replaceOperand(I, 1, ConstantFP::getNullValue(OpType));
   }
 
   // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
@@ -6063,10 +6055,8 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
 
   // The sign of 0.0 is ignored by fcmp, so canonicalize to +0.0:
   // fcmp Pred X, -0.0 --> fcmp Pred X, 0.0
-  if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP())) {
-    I.setOperand(1, ConstantFP::getNullValue(OpType));
-    return &I;
-  }
+  if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP()))
+    return replaceOperand(I, 1, ConstantFP::getNullValue(OpType));
 
   // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;

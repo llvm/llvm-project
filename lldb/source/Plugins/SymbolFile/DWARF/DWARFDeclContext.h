@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDeclContext_h_
-#define SymbolFileDWARF_DWARFDeclContext_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
 
 #include <string>
 #include <vector>
@@ -85,4 +85,4 @@ protected:
   lldb::LanguageType m_language;
 };
 
-#endif // SymbolFileDWARF_DWARFDeclContext_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H

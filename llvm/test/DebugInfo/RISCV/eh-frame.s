@@ -8,7 +8,7 @@ func:
   ret
   .cfi_endproc
 
-# CHECK: 00000000 00000010 ffffffff CIE
+# CHECK: 00000000 00000010 00000000 CIE
 # CHECK:   Version:               1
 # CHECK:   Augmentation:          "zR"
 # CHECK:   Code alignment factor: 1

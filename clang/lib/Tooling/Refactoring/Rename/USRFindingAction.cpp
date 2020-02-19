@@ -135,6 +135,13 @@ private:
 
     for (const auto *CtorDecl : RecordDecl->ctors())
       USRSet.insert(getUSRForDecl(CtorDecl));
+    // Add template constructor decls, they are not in ctors() unfortunately.
+    if (RecordDecl->hasUserDeclaredConstructor())
+      for (const auto *D : RecordDecl->decls())
+        if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+          if (const auto *Ctor =
+                  dyn_cast<CXXConstructorDecl>(FTD->getTemplatedDecl()))
+            USRSet.insert(getUSRForDecl(Ctor));
 
     USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
     USRSet.insert(getUSRForDecl(RecordDecl));

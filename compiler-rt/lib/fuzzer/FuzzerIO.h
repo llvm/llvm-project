@@ -42,7 +42,7 @@ std::string DirName(const std::string &FileName);
 // Returns path to a TmpDir.
 std::string TmpDir();
 
-std::string TempPath(const char *Extension);
+std::string TempPath(const char *Prefix, const char *Extension);
 
 bool IsInterestingCoverageFile(const std::string &FileName);
 

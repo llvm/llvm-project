@@ -618,11 +618,10 @@ body:             |
   ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[DEF]](s64), %bb.0
-  ; CHECK:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[DEF1]](s64), %bb.0
+  ; CHECK:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[DEF]](s64), %bb.0
   ; CHECK:   [[PHI2:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.0
   ; CHECK:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[PHI]](s64), [[PHI1]](s64)
   ; CHECK:   G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointResolverFileLine_h_
-#define liblldb_BreakpointResolverFileLine_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERFILELINE_H
+#define LLDB_BREAKPOINT_BREAKPOINTRESOLVERFILELINE_H
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 
@@ -72,4 +72,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointResolverFileLine_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTRESOLVERFILELINE_H

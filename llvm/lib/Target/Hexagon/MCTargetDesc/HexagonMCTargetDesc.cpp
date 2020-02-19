@@ -251,7 +251,7 @@ public:
   }
 
 
-  void EmitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
+  void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                               unsigned ByteAlignment,
                               unsigned AccessSize) override {
     HexagonMCELFStreamer &HexagonELFStreamer =
@@ -260,7 +260,7 @@ public:
                                                  AccessSize);
   }
 
-  void EmitLocalCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
+  void emitLocalCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                                    unsigned ByteAlignment,
                                    unsigned AccessSize) override {
     HexagonMCELFStreamer &HexagonELFStreamer =
@@ -530,6 +530,10 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
   auto F = ElfFlags.find(STI.getCPU());
   assert(F != ElfFlags.end() && "Unrecognized Architecture");
   return F->second;
+}
+
+llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {
+  return makeArrayRef(VectRegRev);
 }
 
 namespace {

@@ -18,7 +18,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Scalar.h"
-#include "lldb/Utility/SharingPtr.h"
 
 #include <string>
 

@@ -133,7 +133,7 @@ template <> struct bind_helper<MachineInstr *> {
 };
 
 template <> struct bind_helper<LLT> {
-  static bool bind(const MachineRegisterInfo &MRI, LLT &Ty, Register Reg) {
+  static bool bind(const MachineRegisterInfo &MRI, LLT Ty, Register Reg) {
     Ty = MRI.getType(Reg);
     if (Ty.isValid())
       return true;
@@ -163,7 +163,7 @@ template <typename Class> struct bind_ty {
 
 inline bind_ty<Register> m_Reg(Register &R) { return R; }
 inline bind_ty<MachineInstr *> m_MInstr(MachineInstr *&MI) { return MI; }
-inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
+inline bind_ty<LLT> m_Type(LLT Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 
@@ -239,6 +239,12 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true> m_GOr(const LHS &L,
                                                                 const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_LSHR, false>
+m_GLShr(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_LSHR, false>(L, R);
 }
 
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
@@ -365,7 +371,7 @@ m_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
 // Helper for checking if a Reg is of specific type.
 struct CheckType {
   LLT Ty;
-  CheckType(const LLT &Ty) : Ty(Ty) {}
+  CheckType(const LLT Ty) : Ty(Ty) {}
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return MRI.getType(Reg) == Ty;

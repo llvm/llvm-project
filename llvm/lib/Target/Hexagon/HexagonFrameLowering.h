@@ -45,8 +45,9 @@ public:
   bool enableCalleeSaveSkip(const MachineFunction &MF) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator MI, const std::vector<CalleeSavedInfo> &CSI,
-      const TargetRegisterInfo *TRI) const override {
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override {
     return true;
   }
 

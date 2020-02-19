@@ -53,6 +53,7 @@ macro(test_fuzzer stdlib)
 
     set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
     set(LIBFUZZER_TEST_APPLE_PLATFORM "osx")
+    set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_osx_MIN_VER_FLAG}")
 
     set(LIBFUZZER_TEST_STDLIB ${stdlib})
 
@@ -89,7 +90,6 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 
 if (APPLE)
-  set(EXCLUDE_FROM_ALL ON)
   set(LIBFUZZER_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
   set(FUZZER_APPLE_PLATFORMS ${FUZZER_SUPPORTED_OS})
   foreach(platform ${FUZZER_APPLE_PLATFORMS})
@@ -114,14 +114,15 @@ if (APPLE)
       set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
       set(LIBFUZZER_TEST_APPLE_PLATFORM "${platform}")
       set(LIBFUZZER_TEST_TARGET_ARCH "${arch}")
+      set(LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
       configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py
         )
       add_lit_testsuite(check-fuzzer-${platform}-${arch} "libFuzzer ${platform} ${arch} tests"
+        EXCLUDE_FROM_CHECK_ALL
         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
         DEPENDS ${LIBFUZZER_TEST_DEPS})
     endforeach()
   endforeach()
-  set(EXCLUDE_FROM_ALL OFF)
 endif()

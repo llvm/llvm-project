@@ -1,8 +1,8 @@
 # RUN: rm -rf %t
 # RUN: mkdir %t
 # RUN: cd %t
-# RUN: yaml2obj -docnum=1 %s > test.wasm
-# RUN: yaml2obj -docnum=2 %s > test_sym.wasm
+# RUN: yaml2obj --docnum=1 %s > test.wasm
+# RUN: yaml2obj --docnum=2 %s > test_sym.wasm
 # RUN: lldb-test object-file test.wasm | FileCheck %s
 
 # This test checks that SymbolVendorWasm correctly loads DWARF debug sections
@@ -13,11 +13,11 @@
 # CHECK: Plugin name: wasm
 # CHECK: Architecture: wasm32-unknown-unknown-wasm
 # CHECK: UUID: 
-# CHECK: Executable: true
+# CHECK: Executable: false
 # CHECK: Stripped: true
-# CHECK: Type: executable
+# CHECK: Type: shared library
 # CHECK: Strata: user
-# CHECK: Base VM address: 0xa
+# CHECK: Base VM address: 0x0
 
 # CHECK: Name: code
 # CHECK: Type: code

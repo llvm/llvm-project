@@ -84,11 +84,10 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
-    Register AddrReg = MRI.createGenericVirtualRegister(
-      LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32));
-    MIRBuilder.buildFrameIndex(AddrReg, FI);
+    auto AddrReg = MIRBuilder.buildFrameIndex(
+        LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32), FI);
     StackUsed = std::max(StackUsed, Size + Offset);
-    return AddrReg;
+    return AddrReg.getReg(0);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -222,9 +221,6 @@ static void unpackRegsToOrigType(MachineIRBuilder &B,
                                  LLT PartTy) {
   assert(DstRegs.size() > 1 && "Nothing to unpack");
 
-  MachineFunction &MF = B.getMF();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
   const unsigned SrcSize = SrcTy.getSizeInBits();
   const unsigned PartSize = PartTy.getSizeInBits();
 
@@ -248,12 +244,11 @@ static void unpackRegsToOrigType(MachineIRBuilder &B,
   LLT BigTy = getMultipleType(PartTy, NumRoundedParts);
   auto ImpDef = B.buildUndef(BigTy);
 
-  Register BigReg = MRI.createGenericVirtualRegister(BigTy);
-  B.buildInsert(BigReg, ImpDef.getReg(0), SrcReg, 0).getReg(0);
+  auto Big = B.buildInsert(BigTy, ImpDef.getReg(0), SrcReg, 0).getReg(0);
 
   int64_t Offset = 0;
   for (unsigned i = 0, e = DstRegs.size(); i != e; ++i, Offset += PartSize)
-    B.buildExtract(DstRegs[i], BigReg, Offset);
+    B.buildExtract(DstRegs[i], Big, Offset);
 }
 
 /// Lower the return value for the already existing \p Ret. This assumes that
@@ -348,17 +343,13 @@ Register AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &B,
   const DataLayout &DL = F.getParent()->getDataLayout();
   PointerType *PtrTy = PointerType::get(ParamTy, AMDGPUAS::CONSTANT_ADDRESS);
   LLT PtrType = getLLTForType(*PtrTy, DL);
-  Register DstReg = MRI.createGenericVirtualRegister(PtrType);
   Register KernArgSegmentPtr =
     MFI->getPreloadedReg(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   Register KernArgSegmentVReg = MRI.getLiveInVirtReg(KernArgSegmentPtr);
 
-  Register OffsetReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
-  B.buildConstant(OffsetReg, Offset);
+  auto OffsetReg = B.buildConstant(LLT::scalar(64), Offset);
 
-  B.buildPtrAdd(DstReg, KernArgSegmentVReg, OffsetReg);
-
-  return DstReg;
+  return B.buildPtrAdd(PtrType, KernArgSegmentVReg, OffsetReg).getReg(0);
 }
 
 void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B,

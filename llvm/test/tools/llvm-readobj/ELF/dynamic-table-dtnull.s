@@ -1,6 +1,6 @@
 # Check we are able to dump the dynamic section without a DT_NULL entry correctly.
 
-# RUN: yaml2obj -docnum=1 %s -o %t.o
+# RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL-LLVM
 # RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=NONULL-GNU
 
@@ -42,7 +42,7 @@ ProgramHeaders:
 # length of its entries. In this case, we should not try to dump anything
 # past the DT_NULL entry, which works as a terminator.
 
-# RUN: yaml2obj -docnum=2 %s -o %t.o
+# RUN: yaml2obj --docnum=2 %s -o %t.o
 # RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix=LONG-LLVM
 # RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix=LONG-GNU
 

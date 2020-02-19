@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AddressSanitizerRuntime_h_
-#define liblldb_AddressSanitizerRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_ASAN_INSTRUMENTATIONRUNTIMEASAN_H
+#define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_ASAN_INSTRUMENTATIONRUNTIMEASAN_H
 
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Process.h"
@@ -63,4 +63,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_AddressSanitizerRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_ASAN_INSTRUMENTATIONRUNTIMEASAN_H

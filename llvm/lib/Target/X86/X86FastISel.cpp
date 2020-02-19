@@ -2194,7 +2194,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   unsigned CmpRHSReg = getRegForValue(CmpRHS);
   bool CmpRHSIsKill = hasTrivialKill(CmpRHS);
 
-  if (!LHSReg || !RHSReg || !CmpLHS || !CmpRHS)
+  if (!LHSReg || !RHSReg || !CmpLHSReg || !CmpRHSReg)
     return false;
 
   const TargetRegisterClass *RC = TLI.getRegClassFor(RetVT);
@@ -2632,12 +2632,15 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       // used to provide rounding control: use MXCSR.RC, encoded as 0b100.
       // It's consistent with the other FP instructions, which are usually
       // controlled by MXCSR.
-      InputReg = fastEmitInst_ri(X86::VCVTPS2PHrr, RC, InputReg, false, 4);
+      unsigned Opc = Subtarget->hasVLX() ? X86::VCVTPS2PHZ128rr
+                                         : X86::VCVTPS2PHrr;
+      InputReg = fastEmitInst_ri(Opc, RC, InputReg, false, 4);
 
       // Move the lower 32-bits of ResultReg to another register of class GR32.
+      Opc = Subtarget->hasAVX512() ? X86::VMOVPDI2DIZrr
+                                   : X86::VMOVPDI2DIrr;
       ResultReg = createResultReg(&X86::GR32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(X86::VMOVPDI2DIrr), ResultReg)
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
           .addReg(InputReg, RegState::Kill);
 
       // The result value is in the lower 16-bits of ResultReg.
@@ -2645,19 +2648,21 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       ResultReg = fastEmitInst_extractsubreg(MVT::i16, ResultReg, true, RegIdx);
     } else {
       assert(Op->getType()->isIntegerTy(16) && "Expected a 16-bit integer!");
-      // Explicitly sign-extend the input to 32-bit.
-      InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::SIGN_EXTEND, InputReg,
+      // Explicitly zero-extend the input to 32-bit.
+      InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::ZERO_EXTEND, InputReg,
                             /*Kill=*/false);
 
       // The following SCALAR_TO_VECTOR will be expanded into a VMOVDI2PDIrr.
       InputReg = fastEmit_r(MVT::i32, MVT::v4i32, ISD::SCALAR_TO_VECTOR,
                             InputReg, /*Kill=*/true);
 
-      InputReg = fastEmitInst_r(X86::VCVTPH2PSrr, RC, InputReg, /*Kill=*/true);
+      unsigned Opc = Subtarget->hasVLX() ? X86::VCVTPH2PSZ128rr
+                                         : X86::VCVTPH2PSrr;
+      InputReg = fastEmitInst_r(Opc, RC, InputReg, /*Kill=*/true);
 
       // The result value is in the lower 32-bits of ResultReg.
       // Emit an explicit copy from register class VR128 to register class FR32.
-      ResultReg = createResultReg(&X86::FR32RegClass);
+      ResultReg = createResultReg(TLI.getRegClassFor(MVT::f32));
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), ResultReg)
           .addReg(InputReg, RegState::Kill);

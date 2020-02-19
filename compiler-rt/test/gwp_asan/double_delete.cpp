@@ -1,9 +1,9 @@
 // REQUIRES: gwp_asan
 // RUN: %clangxx_gwp_asan %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Double free at 0x{{[a-f0-9]+}} (a 1-byte allocation)
+// CHECK: Double Free at 0x{{[a-f0-9]+}} (a 1-byte allocation)
 
 #include <cstdlib>
 

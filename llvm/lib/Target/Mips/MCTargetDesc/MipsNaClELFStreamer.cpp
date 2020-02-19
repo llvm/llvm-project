@@ -105,7 +105,7 @@ private:
     MaskInst.addOperand(MCOperand::createReg(AddrReg));
     MaskInst.addOperand(MCOperand::createReg(AddrReg));
     MaskInst.addOperand(MCOperand::createReg(MaskReg));
-    MipsELFStreamer::EmitInstruction(MaskInst, STI);
+    MipsELFStreamer::emitInstruction(MaskInst, STI);
   }
 
   // Sandbox indirect branch or return instruction by inserting mask operation
@@ -113,10 +113,10 @@ private:
   void sandboxIndirectJump(const MCInst &MI, const MCSubtargetInfo &STI) {
     unsigned AddrReg = MI.getOperand(0).getReg();
 
-    EmitBundleLock(false);
+    emitBundleLock(false);
     emitMask(AddrReg, IndirectBranchMaskReg, STI);
-    MipsELFStreamer::EmitInstruction(MI, STI);
-    EmitBundleUnlock();
+    MipsELFStreamer::emitInstruction(MI, STI);
+    emitBundleUnlock();
   }
 
   // Sandbox memory access or SP change.  Insert mask operation before and/or
@@ -124,26 +124,26 @@ private:
   void sandboxLoadStoreStackChange(const MCInst &MI, unsigned AddrIdx,
                                    const MCSubtargetInfo &STI, bool MaskBefore,
                                    bool MaskAfter) {
-    EmitBundleLock(false);
+    emitBundleLock(false);
     if (MaskBefore) {
       // Sandbox memory access.
       unsigned BaseReg = MI.getOperand(AddrIdx).getReg();
       emitMask(BaseReg, LoadStoreStackMaskReg, STI);
     }
-    MipsELFStreamer::EmitInstruction(MI, STI);
+    MipsELFStreamer::emitInstruction(MI, STI);
     if (MaskAfter) {
       // Sandbox SP change.
       unsigned SPReg = MI.getOperand(0).getReg();
       assert((Mips::SP == SPReg) && "Unexpected stack-pointer register.");
       emitMask(SPReg, LoadStoreStackMaskReg, STI);
     }
-    EmitBundleUnlock();
+    emitBundleUnlock();
   }
 
 public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer.  We override it to mask dangerous instructions.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     // Sandbox indirect jumps.
     if (isIndirectJump(Inst)) {
@@ -181,25 +181,25 @@ public:
         report_fatal_error("Dangerous instruction in branch delay slot!");
 
       // Start the sandboxing sequence by emitting call.
-      EmitBundleLock(true);
+      emitBundleLock(true);
       if (IsIndirectCall) {
         unsigned TargetReg = Inst.getOperand(1).getReg();
         emitMask(TargetReg, IndirectBranchMaskReg, STI);
       }
-      MipsELFStreamer::EmitInstruction(Inst, STI);
+      MipsELFStreamer::emitInstruction(Inst, STI);
       PendingCall = true;
       return;
     }
     if (PendingCall) {
       // Finish the sandboxing sequence by emitting branch delay.
-      MipsELFStreamer::EmitInstruction(Inst, STI);
-      EmitBundleUnlock();
+      MipsELFStreamer::emitInstruction(Inst, STI);
+      emitBundleUnlock();
       PendingCall = false;
       return;
     }
 
     // None of the sandboxing applies, just emit the instruction.
-    MipsELFStreamer::EmitInstruction(Inst, STI);
+    MipsELFStreamer::emitInstruction(Inst, STI);
   }
 };
 
@@ -270,7 +270,7 @@ MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context,
     S->getAssembler().setRelaxAll(true);
 
   // Set bundle-alignment as required by the NaCl ABI for the target.
-  S->EmitBundleAlignMode(Log2(MIPS_NACL_BUNDLE_ALIGN));
+  S->emitBundleAlignMode(Log2(MIPS_NACL_BUNDLE_ALIGN));
 
   return S;
 }

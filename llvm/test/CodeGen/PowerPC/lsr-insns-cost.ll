@@ -1,5 +1,7 @@
-; RUN: llc -ppc-asm-full-reg-names  -verify-machineinstrs < %s \
-; RUN:   -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
+; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=INST
+; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs -ppc-lsr-no-insns-cost=true \
+; RUN:   < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=REG
 
 ; void test(unsigned *a, unsigned *b, unsigned *c)
 ; {
@@ -10,16 +12,25 @@
 ; compile with -fno-unroll-loops
 
 define void @lsr-insts-cost(i32* %0, i32* %1, i32* %2) {
-; CHECK-LABEL: lsr-insts-cost
-; CHECK:       .LBB0_4: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lxvd2x vs34, 0, r3
-; CHECK-NEXT:    lxvd2x vs35, 0, r4
-; CHECK-NEXT:    addi r4, r4, 16
-; CHECK-NEXT:    addi r3, r3, 16
-; CHECK-NEXT:    vadduwm v2, v3, v2
-; CHECK-NEXT:    stxvd2x vs34, 0, r5
-; CHECK-NEXT:    addi r5, r5, 16
-; CHECK-NEXT:    bdnz .LBB0_4
+; INST-LABEL: lsr-insts-cost
+; INST:       .LBB0_4: # =>This Inner Loop Header: Depth=1
+; INST-NEXT:    lxvd2x vs34, r3, r6
+; INST-NEXT:    lxvd2x vs35, r4, r6
+; INST-NEXT:    vadduwm v2, v3, v2
+; INST-NEXT:    stxvd2x vs34, r5, r6
+; INST-NEXT:    addi r6, r6, 16
+; INST-NEXT:    bdnz .LBB0_4
+;
+; REG-LABEL: lsr-insts-cost
+; REG:       .LBB0_4: # =>This Inner Loop Header: Depth=1
+; REG-NEXT:    lxvd2x vs34, 0, r3
+; REG-NEXT:    lxvd2x vs35, 0, r4
+; REG-NEXT:    addi r4, r4, 16
+; REG-NEXT:    addi r3, r3, 16
+; REG-NEXT:    vadduwm v2, v3, v2
+; REG-NEXT:    stxvd2x vs34, 0, r5
+; REG-NEXT:    addi r5, r5, 16
+; REG-NEXT:    bdnz .LBB0_4
   %4 = getelementptr i32, i32* %2, i64 1024
   %5 = getelementptr i32, i32* %0, i64 1024
   %6 = getelementptr i32, i32* %1, i64 1024

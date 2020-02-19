@@ -51,6 +51,13 @@ static __isl_give MULTI(BASE) *FN(MULTI(BASE),copy_explicit_domain)(
 	return dst;
 }
 
+/* Only used by multi-expressions that include "isl_multi_product_templ.c".
+ */
+static __isl_give MULTI(BASE) *
+FN(MULTI(BASE),intersect_explicit_domain_product)(
+	__isl_take MULTI(BASE) *dst, __isl_keep MULTI(BASE) *src1,
+	__isl_keep MULTI(BASE) *src2) __attribute__ ((unused));
+
 /* Intersect the domain of "dst" with the domain product
  * of the explicit domains of "src1" and "src2".
  * This function is only called if at least one of "src1" or "src2"

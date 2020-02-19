@@ -1,4 +1,5 @@
 add_llvm_library(MLIRTestTransforms
+  TestAffineDataCopy.cpp
   TestAllReduceLowering.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
@@ -10,14 +11,18 @@ add_llvm_library(MLIRTestTransforms
   TestLoopMapping.cpp
   TestLoopParametricTiling.cpp
   TestOpaqueLoc.cpp
+  TestMemRefBoundCheck.cpp
+  TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
+  TestParallelismDetection.cpp
   TestVectorToLoopsConversion.cpp
   TestVectorTransforms.cpp
   TestVectorizationUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
-  )
+)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../TestDialect)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../TestDialect)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
@@ -36,5 +41,7 @@ target_link_libraries(MLIRTestTransforms
   MLIRGPU
   MLIRPass
   MLIRTestDialect
+  MLIRTransformUtils
+  MLIRVectorToLoops
   MLIRVectorOps
   )

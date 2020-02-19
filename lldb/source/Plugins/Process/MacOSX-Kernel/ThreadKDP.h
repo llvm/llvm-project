@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadKDP_h_
-#define liblldb_ThreadKDP_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_THREADKDP_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_THREADKDP_H
 
 #include <string>
 
@@ -69,4 +69,4 @@ protected:
   virtual bool CalculateStopInfo();
 };
 
-#endif // liblldb_ThreadKDP_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_THREADKDP_H

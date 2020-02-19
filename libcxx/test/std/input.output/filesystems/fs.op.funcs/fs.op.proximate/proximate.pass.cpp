@@ -71,7 +71,7 @@ TEST_CASE(basic_test) {
       {cwd, "a", ".."},
       {parent_cwd, "a", "../.."},
       {"a", cwd, "a"},
-      {"a", parent_cwd, "fs.op.proximate/a"},
+      {"a", parent_cwd, curdir / "a"},
       {"/", "a", dot_dot_to_root / ".."},
       {"/", "a/b", dot_dot_to_root / "../.."},
       {"/", "a/b/", dot_dot_to_root / "../.."},

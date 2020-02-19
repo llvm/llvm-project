@@ -43,6 +43,23 @@ TEST_F(ValueLatticeTest, ValueLatticeGetters) {
   EXPECT_TRUE(ValueLatticeElement::getNot(C2).isNotConstant());
 }
 
+TEST_F(ValueLatticeTest, MarkConstantRange) {
+  auto LV1 =
+      ValueLatticeElement::getRange({APInt(32, 10, true), APInt(32, 20, true)});
+
+  // Test markConstantRange() with an equal range.
+  EXPECT_FALSE(
+      LV1.markConstantRange({APInt(32, 10, true), APInt(32, 20, true)}));
+
+  // Test markConstantRange() with supersets of existing range.
+  EXPECT_TRUE(LV1.markConstantRange({APInt(32, 5, true), APInt(32, 20, true)}));
+  EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 5U);
+  EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 20U);
+  EXPECT_TRUE(LV1.markConstantRange({APInt(32, 5, true), APInt(32, 23, true)}));
+  EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 5U);
+  EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 23U);
+}
+
 TEST_F(ValueLatticeTest, MergeIn) {
   auto I32Ty = IntegerType::get(Context, 32);
   auto *C1 = ConstantInt::get(I32Ty, 1);

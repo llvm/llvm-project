@@ -1,6 +1,5 @@
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
-include(CMakeDependentOption)
 
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")

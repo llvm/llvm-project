@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContext_h_
-#define liblldb_RegisterContext_h_
+#ifndef LLDB_TARGET_REGISTERCONTEXT_H
+#define LLDB_TARGET_REGISTERCONTEXT_H
 
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/lldb-private.h"
@@ -206,4 +206,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_RegisterContext_h_
+#endif // LLDB_TARGET_REGISTERCONTEXT_H

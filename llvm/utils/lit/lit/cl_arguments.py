@@ -15,7 +15,9 @@ def parse_args():
     parser.add_argument("--version",
             dest="show_version",
             help="Show version and exit",
-            action="store_true")
+            version="lit " + lit.__version__,
+            action="version")
+
     parser.add_argument("-j", "--threads", "--workers",
             dest="workers",
             metavar="N",

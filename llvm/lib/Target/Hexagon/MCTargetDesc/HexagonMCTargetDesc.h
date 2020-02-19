@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCTARGETDESC_H
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCTARGETDESC_H
 
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <string>
@@ -82,6 +83,8 @@ namespace Hexagon_MC {
   void addArchSubtarget(MCSubtargetInfo const *STI,
                         StringRef FS);
   unsigned GetELFFlags(const MCSubtargetInfo &STI);
+
+  llvm::ArrayRef<MCPhysReg> GetVectRegRev();
 }
 
 MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,

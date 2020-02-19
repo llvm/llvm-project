@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachVMMemory_h__
-#define __MachVMMemory_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMMEMORY_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMMEMORY_H
 
 #include "DNBDefs.h"
 #include "DNBError.h"
@@ -44,4 +44,4 @@ protected:
   DNBError m_err;
 };
 
-#endif //    #ifndef __MachVMMemory_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHVMMEMORY_H

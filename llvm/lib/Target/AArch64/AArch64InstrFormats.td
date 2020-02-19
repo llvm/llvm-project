@@ -66,6 +66,7 @@ class Pseudo<dag oops, dag iops, list<dag> pattern, string cstr = "">
   dag InOperandList  = iops;
   let Pattern        = pattern;
   let isCodeGenOnly  = 1;
+  let isPseudo       = 1;
 }
 
 // Real instructions (have encoding information)
@@ -328,6 +329,18 @@ def simm5_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -16 && Imm < 16; }]>
 def simm5_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -16 && Imm < 16; }]> {
   let ParserMatchClass = SImm5Operand;
   let DecoderMethod = "DecodeSImm<5>";
+}
+
+def simm5_8b : Operand<i32>, ImmLeaf<i32, [{ return (int8_t)Imm >= -16 && (int8_t)Imm < 16; }]> {
+  let ParserMatchClass = SImm5Operand;
+  let DecoderMethod = "DecodeSImm<5>";
+  let PrintMethod = "printSImm<8>";
+}
+
+def simm5_16b : Operand<i32>, ImmLeaf<i32, [{ return (int16_t)Imm >= -16 && (int16_t)Imm < 16; }]> {
+  let ParserMatchClass = SImm5Operand;
+  let DecoderMethod = "DecodeSImm<5>";
+  let PrintMethod = "printSImm<16>";
 }
 
 // simm7sN predicate - True if the immediate is a multiple of N in the range
@@ -5207,6 +5220,47 @@ class BaseSIMDThreeSameVectorTied<bit Q, bit U, bits<3> size, bits<5> opcode,
   let Inst{4-0}   = Rd;
 }
 
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
+class BaseSIMDThreeSameVectorPseudo<RegisterOperand regtype, list<dag> pattern>
+  : Pseudo<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype:$Rm), pattern>,
+    Sched<[WriteV]>;
+
+multiclass SIMDLogicalThreeVectorPseudo<SDPatternOperator OpNode> {
+  def v8i8  : BaseSIMDThreeSameVectorPseudo<V64,
+             [(set (v8i8 V64:$dst),
+                   (OpNode (v8i8 V64:$Rd), (v8i8 V64:$Rn), (v8i8 V64:$Rm)))]>;
+  def v16i8  : BaseSIMDThreeSameVectorPseudo<V128,
+             [(set (v16i8 V128:$dst),
+                   (OpNode (v16i8 V128:$Rd), (v16i8 V128:$Rn),
+                           (v16i8 V128:$Rm)))]>;
+
+  def : Pat<(v4i16 (OpNode (v4i16 V64:$LHS), (v4i16 V64:$MHS),
+                           (v4i16 V64:$RHS))),
+          (!cast<Instruction>(NAME#"v8i8")
+            V64:$LHS, V64:$MHS, V64:$RHS)>;
+  def : Pat<(v2i32 (OpNode (v2i32 V64:$LHS), (v2i32 V64:$MHS),
+                           (v2i32 V64:$RHS))),
+          (!cast<Instruction>(NAME#"v8i8")
+            V64:$LHS, V64:$MHS, V64:$RHS)>;
+  def : Pat<(v1i64 (OpNode (v1i64 V64:$LHS), (v1i64 V64:$MHS),
+                           (v1i64 V64:$RHS))),
+          (!cast<Instruction>(NAME#"v8i8")
+            V64:$LHS, V64:$MHS, V64:$RHS)>;
+
+  def : Pat<(v8i16 (OpNode (v8i16 V128:$LHS), (v8i16 V128:$MHS),
+                           (v8i16 V128:$RHS))),
+      (!cast<Instruction>(NAME#"v16i8")
+        V128:$LHS, V128:$MHS, V128:$RHS)>;
+  def : Pat<(v4i32 (OpNode (v4i32 V128:$LHS), (v4i32 V128:$MHS),
+                           (v4i32 V128:$RHS))),
+      (!cast<Instruction>(NAME#"v16i8")
+        V128:$LHS, V128:$MHS, V128:$RHS)>;
+  def : Pat<(v2i64 (OpNode (v2i64 V128:$LHS), (v2i64 V128:$MHS),
+                           (v2i64 V128:$RHS))),
+      (!cast<Instruction>(NAME#"v16i8")
+        V128:$LHS, V128:$MHS, V128:$RHS)>;
+}
+
 // All operand sizes distinguished in the encoding.
 multiclass SIMDThreeSameVector<bit U, bits<5> opc, string asm,
                                SDPatternOperator OpNode> {
@@ -5427,7 +5481,7 @@ multiclass SIMDLogicalThreeVector<bit U, bits<2> size, string asm,
 }
 
 multiclass SIMDLogicalThreeVectorTied<bit U, bits<2> size,
-                                  string asm, SDPatternOperator OpNode> {
+                                  string asm, SDPatternOperator OpNode = null_frag> {
   def v8i8  : BaseSIMDThreeSameVectorTied<0, U, {size,1}, 0b00011, V64,
                                      asm, ".8b",
              [(set (v8i8 V64:$dst),
@@ -10277,15 +10331,15 @@ class ComplexRotationOperand<int Angle, int Remainder, string Type>
   let DiagnosticType = "InvalidComplexRotation" # Type;
   let Name = "ComplexRotation" # Type;
 }
-def complexrotateop : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
-                                                 SDNodeXForm<imm, [{
+def complexrotateop : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                  SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant((N->getSExtValue() / 90), SDLoc(N), MVT::i32);
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<90, 0, "Even">;
   let PrintMethod = "printComplexRotationOp<90, 0>";
 }
-def complexrotateopodd : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
-                                                 SDNodeXForm<imm, [{
+def complexrotateopodd : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                  SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(((N->getSExtValue() - 90) / 180), SDLoc(N), MVT::i32);
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd">;

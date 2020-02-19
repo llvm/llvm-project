@@ -900,6 +900,19 @@ void AArch64InstPrinter::printImmHex(const MCInst *MI, unsigned OpNo,
   O << format("#%#llx", Op.getImm());
 }
 
+template<int Size>
+void AArch64InstPrinter::printSImm(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Size == 8)
+    O << "#" << formatImm((signed char)Op.getImm());
+  else if (Size == 16)
+    O << "#" << formatImm((signed short)Op.getImm());
+  else
+    O << "#" << formatImm(Op.getImm());
+}
+
 void AArch64InstPrinter::printPostIncOperand(const MCInst *MI, unsigned OpNo,
                                              unsigned Imm, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
@@ -1411,6 +1424,12 @@ void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
     return;
   }
 
+  // Horrible hack for two different registers having the same encoding.
+  if (Val == AArch64SysReg::TRCEXTINSELR) {
+    O << "TRCEXTINSELR";
+    return;
+  }
+
   const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
   if (Reg && Reg->Readable && Reg->haveFeatures(STI.getFeatureBits()))
     O << Reg->Name;
@@ -1428,6 +1447,12 @@ void AArch64InstPrinter::printMSRSystemRegister(const MCInst *MI, unsigned OpNo,
   // going to get the wrong entry
   if (Val == AArch64SysReg::DBGDTRTX_EL0) {
     O << "DBGDTRTX_EL0";
+    return;
+  }
+
+  // Horrible hack for two different registers having the same encoding.
+  if (Val == AArch64SysReg::TRCEXTINSELR) {
+    O << "TRCEXTINSELR";
     return;
   }
 
@@ -1499,7 +1524,7 @@ void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
 
 template <typename T>
 void AArch64InstPrinter::printImmSVE(T Value, raw_ostream &O) {
-  typename std::make_unsigned<T>::type HexValue = Value;
+  std::make_unsigned_t<T> HexValue = Value;
 
   if (getPrintImmHex())
     O << '#' << formatHex((uint64_t)HexValue);
@@ -1544,8 +1569,8 @@ template <typename T>
 void AArch64InstPrinter::printSVELogicalImm(const MCInst *MI, unsigned OpNum,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
-  typedef typename std::make_signed<T>::type SignedT;
-  typedef typename std::make_unsigned<T>::type UnsignedT;
+  typedef std::make_signed_t<T> SignedT;
+  typedef std::make_unsigned_t<T> UnsignedT;
 
   uint64_t Val = MI->getOperand(OpNum).getImm();
   UnsignedT PrintVal = AArch64_AM::decodeLogicalImmediate(Val, 64);

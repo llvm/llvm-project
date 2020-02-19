@@ -285,7 +285,7 @@ private:
     Value subgroupSize = create<ConstantIntOp>(kSubgroupSize, int32Type);
     Value isPartialSubgroup =
         create<CmpIOp>(CmpIPredicate::slt, activeWidth, subgroupSize);
-    SmallVector<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
+    std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
     auto xorAttr = rewriter.getStringAttr("xor");
 
     createIf(

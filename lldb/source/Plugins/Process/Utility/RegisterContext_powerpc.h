@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContext_powerpc_H_
-#define liblldb_RegisterContext_powerpc_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_POWERPC_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_POWERPC_H
 
 // eh_frame and DWARF Register numbers (eRegisterKindEHFrame &
 // eRegisterKindDWARF)
@@ -120,4 +120,4 @@ enum {
   dwarf_v31_powerpc,
 };
 
-#endif // liblldb_RegisterContext_powerpc_H_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXT_POWERPC_H

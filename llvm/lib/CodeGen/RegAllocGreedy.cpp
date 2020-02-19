@@ -124,12 +124,6 @@ static cl::opt<bool> EnableDeferredSpilling(
              "variable because of other evicted variables."),
     cl::init(false));
 
-static cl::opt<unsigned>
-    HugeSizeForSplit("huge-size-for-split", cl::Hidden,
-                     cl::desc("A threshold of live range size which may cause "
-                              "high compile time cost in global splitting."),
-                     cl::init(5000));
-
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
@@ -486,7 +480,6 @@ private:
                     const SmallVirtRegSet&);
   unsigned tryRegionSplit(LiveInterval&, AllocationOrder&,
                           SmallVectorImpl<unsigned>&);
-  unsigned isSplitBenefitWorthCost(LiveInterval &VirtReg);
   /// Calculate cost of region splitting.
   unsigned calculateRegionSplitCost(LiveInterval &VirtReg,
                                     AllocationOrder &Order,
@@ -1815,20 +1808,9 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     MF->verify(this, "After splitting live range around region");
 }
 
-// Global split has high compile time cost especially for large live range.
-// Return false for the case here where the potential benefit will never
-// worth the cost.
-unsigned RAGreedy::isSplitBenefitWorthCost(LiveInterval &VirtReg) {
-  MachineInstr *MI = MRI->getUniqueVRegDef(VirtReg.reg);
-  if (MI && TII->isTriviallyReMaterializable(*MI, AA) &&
-      VirtReg.size() > HugeSizeForSplit)
-    return false;
-  return true;
-}
-
 unsigned RAGreedy::tryRegionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
                                   SmallVectorImpl<unsigned> &NewVRegs) {
-  if (!isSplitBenefitWorthCost(VirtReg))
+  if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return 0;
   unsigned NumCands = 0;
   BlockFrequency SpillCost = calcSpillCost();

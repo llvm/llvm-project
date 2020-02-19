@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AppleObjCDeclVendor_h_
-#define liblldb_AppleObjCDeclVendor_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
 
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 namespace lldb_private {
 
@@ -50,4 +50,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_AppleObjCDeclVendor_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H

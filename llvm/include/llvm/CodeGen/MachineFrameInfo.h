@@ -461,13 +461,22 @@ public:
   }
 
   /// Return the alignment of the specified stack object.
+  /// FIXME: Remove this function once transition to Align is over.
   unsigned getObjectAlignment(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx + NumFixedObjects].Alignment.value();
   }
 
+  /// Return the alignment of the specified stack object.
+  Align getObjectAlign(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return Objects[ObjectIdx + NumFixedObjects].Alignment;
+  }
+
   /// setObjectAlignment - Change the alignment of the specified stack object.
+  /// FIXME: Remove this function once transition to Align is over.
   void setObjectAlignment(int ObjectIdx, unsigned Align) {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
@@ -476,6 +485,17 @@ public:
     // Only ensure max alignment for the default stack.
     if (getStackID(ObjectIdx) == 0)
       ensureMaxAlignment(Align);
+  }
+
+  /// setObjectAlignment - Change the alignment of the specified stack object.
+  void setObjectAlignment(int ObjectIdx, Align Alignment) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].Alignment = Alignment;
+
+    // Only ensure max alignment for the default stack.
+    if (getStackID(ObjectIdx) == 0)
+      ensureMaxAlignment(Alignment);
   }
 
   /// Return the underlying Alloca of the specified
@@ -777,8 +797,8 @@ public:
 
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.
-  void setCalleeSavedInfo(const std::vector<CalleeSavedInfo> &CSI) {
-    CSInfo = CSI;
+  void setCalleeSavedInfo(std::vector<CalleeSavedInfo> CSI) {
+    CSInfo = std::move(CSI);
   }
 
   /// Has the callee saved info been calculated yet?

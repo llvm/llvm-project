@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Connection_h_
-#define liblldb_Connection_h_
+#ifndef LLDB_UTILITY_CONNECTION_H
+#define LLDB_UTILITY_CONNECTION_H
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -180,4 +180,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Connection_h_
+#endif // LLDB_UTILITY_CONNECTION_H

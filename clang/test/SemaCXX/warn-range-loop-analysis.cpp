@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wall -Wno-unused -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wall -Wrange-loop-bind-reference -Wno-unused -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wrange-loop-analysis -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s

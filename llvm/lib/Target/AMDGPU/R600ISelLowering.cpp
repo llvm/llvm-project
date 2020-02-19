@@ -615,21 +615,27 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       return LowerImplicitParameter(DAG, VT, DL, 8);
 
     case Intrinsic::r600_read_tgid_x:
+    case Intrinsic::amdgcn_workgroup_id_x:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T1_X, VT);
     case Intrinsic::r600_read_tgid_y:
+    case Intrinsic::amdgcn_workgroup_id_y:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T1_Y, VT);
     case Intrinsic::r600_read_tgid_z:
+    case Intrinsic::amdgcn_workgroup_id_z:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T1_Z, VT);
     case Intrinsic::r600_read_tidig_x:
+    case Intrinsic::amdgcn_workitem_id_x:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T0_X, VT);
     case Intrinsic::r600_read_tidig_y:
+    case Intrinsic::amdgcn_workitem_id_y:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T0_Y, VT);
     case Intrinsic::r600_read_tidig_z:
+    case Intrinsic::amdgcn_workitem_id_z:
       return CreateLiveInRegisterRaw(DAG, &R600::R600_TReg32RegClass,
                                      R600::T0_Z, VT);
 

@@ -38,7 +38,8 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   # parsing mechanism of sanitizer_common. Once Scudo has its own flag parsing,
   # and parses GwpAsan options, you can remove this dependency.
   list(APPEND SCUDO_MINIMAL_OBJECT_LIBS RTGwpAsan RTGwpAsanOptionsParser
-                                        RTGwpAsanBacktraceLibc)
+                                        RTGwpAsanBacktraceLibc
+                                        RTGwpAsanSegvHandler)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 

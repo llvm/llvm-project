@@ -8,10 +8,10 @@
 
 #include "ASTResultSynthesizer.h"
 
+#include "ClangASTImporter.h"
 #include "ClangPersistentVariables.h"
 
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangASTImporter.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -325,7 +325,8 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
     else
       result_ptr_id = &Ctx.Idents.get("$__lldb_expr_result_ptr");
 
-    m_sema->RequireCompleteType(SourceLocation(), expr_qual_type,
+    m_sema->RequireCompleteType(last_expr->getSourceRange().getBegin(),
+                                expr_qual_type,
                                 clang::diag::err_incomplete_type);
 
     QualType ptr_qual_type;

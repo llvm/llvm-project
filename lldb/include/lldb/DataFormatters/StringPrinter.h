@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StringPrinter_h_
-#define liblldb_StringPrinter_h_
+#ifndef LLDB_DATAFORMATTERS_STRINGPRINTER_H
+#define LLDB_DATAFORMATTERS_STRINGPRINTER_H
 
 #include <functional>
 #include <string>
@@ -147,31 +147,25 @@ public:
   // pointers I don't need to free - which is what this class essentially is
   // It's very specialized to the needs of this file, and not suggested for
   // general use
-  template <typename T = uint8_t, typename U = char, typename S = size_t>
   struct StringPrinterBufferPointer {
   public:
-    typedef std::function<void(const T *)> Deleter;
+    typedef std::function<void(const uint8_t *)> Deleter;
 
     StringPrinterBufferPointer(std::nullptr_t ptr)
         : m_data(nullptr), m_size(0), m_deleter() {}
 
-    StringPrinterBufferPointer(const T *bytes, S size,
+    StringPrinterBufferPointer(const uint8_t *bytes, size_t size,
                                Deleter deleter = nullptr)
         : m_data(bytes), m_size(size), m_deleter(deleter) {}
 
-    StringPrinterBufferPointer(const U *bytes, S size,
+    StringPrinterBufferPointer(const char *bytes, size_t size,
                                Deleter deleter = nullptr)
-        : m_data(reinterpret_cast<const T *>(bytes)), m_size(size),
+        : m_data(reinterpret_cast<const uint8_t *>(bytes)), m_size(size),
           m_deleter(deleter) {}
 
     StringPrinterBufferPointer(StringPrinterBufferPointer &&rhs)
         : m_data(rhs.m_data), m_size(rhs.m_size), m_deleter(rhs.m_deleter) {
       rhs.m_data = nullptr;
-    }
-
-    StringPrinterBufferPointer(const StringPrinterBufferPointer &rhs)
-        : m_data(rhs.m_data), m_size(rhs.m_size), m_deleter(rhs.m_deleter) {
-      rhs.m_data = nullptr; // this is why m_data has to be mutable
     }
 
     ~StringPrinterBufferPointer() {
@@ -180,12 +174,12 @@ public:
       m_data = nullptr;
     }
 
-    const T *GetBytes() const { return m_data; }
+    const uint8_t *GetBytes() const { return m_data; }
 
-    const S GetSize() const { return m_size; }
+    size_t GetSize() const { return m_size; }
 
     StringPrinterBufferPointer &
-    operator=(const StringPrinterBufferPointer &rhs) {
+    operator=(StringPrinterBufferPointer &&rhs) {
       if (m_data && m_deleter)
         m_deleter(m_data);
       m_data = rhs.m_data;
@@ -196,13 +190,15 @@ public:
     }
 
   private:
-    mutable const T *m_data;
+    DISALLOW_COPY_AND_ASSIGN(StringPrinterBufferPointer);
+
+    const uint8_t *m_data;
     size_t m_size;
     Deleter m_deleter;
   };
 
-  typedef std::function<StringPrinter::StringPrinterBufferPointer<
-      uint8_t, char, size_t>(uint8_t *, uint8_t *, uint8_t *&)>
+  typedef std::function<StringPrinter::StringPrinterBufferPointer(
+      uint8_t *, uint8_t *, uint8_t *&)>
       EscapingHelper;
   typedef std::function<EscapingHelper(GetPrintableElementType)>
       EscapingHelperGenerator;
@@ -222,4 +218,4 @@ public:
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_StringPrinter_h_
+#endif // LLDB_DATAFORMATTERS_STRINGPRINTER_H

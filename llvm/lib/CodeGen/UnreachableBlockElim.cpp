@@ -151,7 +151,7 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
   for (unsigned i = 0, e = DeadBlocks.size(); i != e; ++i) {
     // Remove any call site information for calls in the block.
     for (auto &I : DeadBlocks[i]->instrs())
-      if (I.isCall(MachineInstr::IgnoreBundle))
+      if (I.isCandidateForCallSiteEntry())
         DeadBlocks[i]->getParent()->eraseCallSiteInfo(&I);
 
     DeadBlocks[i]->eraseFromParent();

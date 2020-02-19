@@ -40,6 +40,10 @@ Or for Intel syntax:
 
   $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
 
+(:program:`llvm-mca` detects Intel syntax by the presence of an `.intel_syntax`
+directive at the beginning of the input.  By default its output syntax matches
+that of its input.)
+
 Scheduling models are not just used to compute instruction latencies and
 throughput, but also to understand what processor resources are available
 and how to simulate them.

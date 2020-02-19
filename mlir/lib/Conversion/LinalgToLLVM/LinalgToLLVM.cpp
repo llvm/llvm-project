@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
+
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
@@ -16,8 +17,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -33,7 +33,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
-
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
@@ -47,24 +46,22 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::LLVM;
 using namespace mlir::linalg;
 
-using add = ValueBuilder<mlir::LLVM::AddOp>;
-using addi = ValueBuilder<mlir::AddIOp>;
-using bitcast = ValueBuilder<mlir::LLVM::BitcastOp>;
-using cmpi = ValueBuilder<mlir::CmpIOp>;
-using constant = ValueBuilder<mlir::LLVM::ConstantOp>;
-using extractvalue = ValueBuilder<mlir::LLVM::ExtractValueOp>;
-using gep = ValueBuilder<mlir::LLVM::GEPOp>;
-using insertvalue = ValueBuilder<mlir::LLVM::InsertValueOp>;
-using llvm_call = OperationBuilder<mlir::LLVM::CallOp>;
+using llvm_add = ValueBuilder<LLVM::AddOp>;
+using llvm_bitcast = ValueBuilder<LLVM::BitcastOp>;
+using llvm_constant = ValueBuilder<LLVM::ConstantOp>;
+using llvm_extractvalue = ValueBuilder<LLVM::ExtractValueOp>;
+using llvm_gep = ValueBuilder<LLVM::GEPOp>;
+using llvm_insertvalue = ValueBuilder<LLVM::InsertValueOp>;
+using llvm_call = OperationBuilder<LLVM::CallOp>;
 using llvm_icmp = ValueBuilder<LLVM::ICmpOp>;
 using llvm_load = ValueBuilder<LLVM::LoadOp>;
 using llvm_store = OperationBuilder<LLVM::StoreOp>;
 using llvm_select = ValueBuilder<LLVM::SelectOp>;
-using mul = ValueBuilder<mlir::LLVM::MulOp>;
-using ptrtoint = ValueBuilder<mlir::LLVM::PtrToIntOp>;
-using sub = ValueBuilder<mlir::LLVM::SubOp>;
-using llvm_undef = ValueBuilder<mlir::LLVM::UndefOp>;
-using urem = ValueBuilder<mlir::LLVM::URemOp>;
+using llvm_mul = ValueBuilder<LLVM::MulOp>;
+using llvm_ptrtoint = ValueBuilder<LLVM::PtrToIntOp>;
+using llvm_sub = ValueBuilder<LLVM::SubOp>;
+using llvm_undef = ValueBuilder<LLVM::UndefOp>;
+using llvm_urem = ValueBuilder<LLVM::URemOp>;
 using llvm_alloca = ValueBuilder<LLVM::AllocaOp>;
 using llvm_return = OperationBuilder<LLVM::ReturnOp>;
 
@@ -76,30 +73,19 @@ static LLVMType getPtrToElementType(T containerType,
       .getPointerTo();
 }
 
-// Convert the given type to the LLVM IR Dialect type.  The following
-// conversions are supported:
-//   - an Index type is converted into an LLVM integer type with pointer
-//     bitwidth (analogous to intptr_t in C);
-//   - an Integer type is converted into an LLVM integer type of the same width;
-//   - an F32 type is converted into an LLVM float type
-//   - a Buffer, Range or View is converted into an LLVM structure type
-//     containing the respective dynamic values.
-static Type convertLinalgType(Type t, LLVMTypeConverter &lowering) {
+/// Convert the given range descriptor type to the LLVMIR dialect.
+/// Range descriptor contains the range bounds and the step as 64-bit integers.
+///
+/// struct {
+///   int64_t min;
+///   int64_t max;
+///   int64_t step;
+/// };
+static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
   auto *context = t.getContext();
-  auto int64Ty = lowering.convertType(IntegerType::get(64, context))
+  auto int64Ty = converter.convertType(IntegerType::get(64, context))
                      .cast<LLVM::LLVMType>();
-
-  // Range descriptor contains the range bounds and the step as 64-bit integers.
-  //
-  // struct {
-  //   int64_t min;
-  //   int64_t max;
-  //   int64_t step;
-  // };
-  if (t.isa<RangeType>())
-    return LLVMType::getStructTy(int64Ty, int64Ty, int64Ty);
-
-  return Type();
+  return LLVMType::getStructTy(int64Ty, int64Ty, int64Ty);
 }
 
 namespace {
@@ -139,26 +125,26 @@ private:
 };
 
 // RangeOp creates a new range descriptor.
-class RangeOpConversion : public LLVMOpLowering {
+class RangeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit RangeOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(RangeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(RangeOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
     auto rangeDescriptorTy =
-        convertLinalgType(rangeOp.getResult().getType(), lowering);
+        convertRangeType(rangeOp.getType().cast<RangeType>(), typeConverter);
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
     // Fill in an aggregate value of the descriptor.
     RangeOpOperandAdaptor adaptor(operands);
     Value desc = llvm_undef(rangeDescriptorTy);
-    desc = insertvalue(desc, adaptor.min(), rewriter.getI64ArrayAttr(0));
-    desc = insertvalue(desc, adaptor.max(), rewriter.getI64ArrayAttr(1));
-    desc = insertvalue(desc, adaptor.step(), rewriter.getI64ArrayAttr(2));
+    desc = llvm_insertvalue(desc, adaptor.min(), rewriter.getI64ArrayAttr(0));
+    desc = llvm_insertvalue(desc, adaptor.max(), rewriter.getI64ArrayAttr(1));
+    desc = llvm_insertvalue(desc, adaptor.step(), rewriter.getI64ArrayAttr(2));
     rewriter.replaceOp(op, desc);
     return matchSuccess();
   }
@@ -167,11 +153,12 @@ public:
 // ReshapeOp creates a new view descriptor of the proper rank.
 // For now, the only conversion supported is for target MemRef with static sizes
 // and strides.
-class ReshapeOpConversion : public LLVMOpLowering {
+class ReshapeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit ReshapeOpConversion(MLIRContext *context,
                                LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(ReshapeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(ReshapeOp::getOperationName(), context,
+                             lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -193,7 +180,7 @@ public:
     edsc::ScopedContext context(rewriter, op->getLoc());
     ReshapeOpOperandAdaptor adaptor(operands);
     BaseViewConversionHelper baseDesc(adaptor.view());
-    BaseViewConversionHelper desc(lowering.convertType(dstType));
+    BaseViewConversionHelper desc(typeConverter.convertType(dstType));
     desc.setAllocatedPtr(baseDesc.allocatedPtr());
     desc.setAlignedPtr(baseDesc.alignedPtr());
     desc.setOffset(baseDesc.offset());
@@ -214,10 +201,10 @@ public:
 ///      the parent view.
 ///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The linalg.slice op is replaced by the alloca'ed pointer.
-class SliceOpConversion : public LLVMOpLowering {
+class SliceOpConversion : public ConvertToLLVMPattern {
 public:
   explicit SliceOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(SliceOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(SliceOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -228,11 +215,11 @@ public:
 
     auto sliceOp = cast<SliceOp>(op);
     auto memRefType = sliceOp.getBaseViewType();
-    auto int64Ty = lowering.convertType(rewriter.getIntegerType(64))
+    auto int64Ty = typeConverter.convertType(rewriter.getIntegerType(64))
                        .cast<LLVM::LLVMType>();
 
     BaseViewConversionHelper desc(
-        lowering.convertType(sliceOp.getShapedType()));
+        typeConverter.convertType(sliceOp.getShapedType()));
 
     // TODO(ntv): extract sizes and emit asserts.
     SmallVector<Value, 4> strides(memRefType.getRank());
@@ -249,8 +236,8 @@ public:
       Value indexing = adaptor.indexings()[i];
       Value min = indexing;
       if (sliceOp.indexing(i).getType().isa<RangeType>())
-        min = extractvalue(int64Ty, indexing, pos(0));
-      baseOffset = add(baseOffset, mul(min, strides[i]));
+        min = llvm_extractvalue(int64Ty, indexing, pos(0));
+      baseOffset = llvm_add(baseOffset, llvm_mul(min, strides[i]));
     }
 
     // Insert the base and aligned pointers.
@@ -264,8 +251,8 @@ public:
     if (sliceOp.getShapedType().getRank() == 0)
       return rewriter.replaceOp(op, {desc}), matchSuccess();
 
-    Value zero =
-        constant(int64Ty, rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
+    Value zero = llvm_constant(
+        int64Ty, rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
     // Compute and insert view sizes (max - min along the range) and strides.
     // Skip the non-range operands as they will be projected away from the view.
     int numNewDims = 0;
@@ -274,19 +261,19 @@ public:
       if (indexing.getType().isa<RangeType>()) {
         int rank = en.index();
         Value rangeDescriptor = adaptor.indexings()[rank];
-        Value min = extractvalue(int64Ty, rangeDescriptor, pos(0));
-        Value max = extractvalue(int64Ty, rangeDescriptor, pos(1));
-        Value step = extractvalue(int64Ty, rangeDescriptor, pos(2));
+        Value min = llvm_extractvalue(int64Ty, rangeDescriptor, pos(0));
+        Value max = llvm_extractvalue(int64Ty, rangeDescriptor, pos(1));
+        Value step = llvm_extractvalue(int64Ty, rangeDescriptor, pos(2));
         Value baseSize = baseDesc.size(rank);
 
         // Bound upper by base view upper bound.
         max = llvm_select(llvm_icmp(ICmpPredicate::slt, max, baseSize), max,
                           baseSize);
-        Value size = sub(max, min);
+        Value size = llvm_sub(max, min);
         // Bound lower by zero.
         size =
             llvm_select(llvm_icmp(ICmpPredicate::slt, size, zero), zero, size);
-        Value stride = mul(strides[rank], step);
+        Value stride = llvm_mul(strides[rank], step);
         desc.setSize(numNewDims, size);
         desc.setStride(numNewDims, stride);
         ++numNewDims;
@@ -305,11 +292,12 @@ public:
 ///      and stride. Size and stride are permutations of the original values.
 ///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The linalg.transpose op is replaced by the alloca'ed pointer.
-class TransposeOpConversion : public LLVMOpLowering {
+class TransposeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit TransposeOpConversion(MLIRContext *context,
                                  LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(TransposeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(TransposeOp::getOperationName(), context,
+                             lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -325,7 +313,7 @@ public:
       return rewriter.replaceOp(op, {baseDesc}), matchSuccess();
 
     BaseViewConversionHelper desc(
-        lowering.convertType(transposeOp.getShapedType()));
+        typeConverter.convertType(transposeOp.getShapedType()));
 
     // Copy the base and aligned pointers from the old descriptor to the new
     // one.
@@ -349,10 +337,10 @@ public:
 };
 
 // YieldOp produces and LLVM::ReturnOp.
-class YieldOpConversion : public LLVMOpLowering {
+class YieldOpConversion : public ConvertToLLVMPattern {
 public:
   explicit YieldOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(YieldOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(YieldOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -419,12 +407,6 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   return fnNameAttr;
 }
 
-Type LinalgTypeConverter::convertType(Type t) {
-  if (auto result = LLVMTypeConverter::convertType(t))
-    return result;
-  return convertLinalgType(t, *this);
-}
-
 namespace {
 
 // LinalgOpConversion<LinalgOp> creates a new call to the
@@ -450,8 +432,7 @@ public:
 
 /// Conversion pattern specialization for CopyOp. This kicks in when both input
 /// and output permutations are left unspecified or are the identity.
-template <>
-class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
+template <> class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
 public:
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
@@ -557,10 +538,14 @@ populateLinalgToStandardConversionPatterns(OwningRewritePatternList &patterns,
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(
-    LinalgTypeConverter &converter, OwningRewritePatternList &patterns,
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     MLIRContext *ctx) {
   patterns.insert<RangeOpConversion, ReshapeOpConversion, SliceOpConversion,
                   TransposeOpConversion, YieldOpConversion>(ctx, converter);
+
+  // Populate the type conversions for the linalg types.
+  converter.addConversion(
+      [&](RangeType type) { return convertRangeType(type, converter); });
 }
 
 namespace {
@@ -574,10 +559,11 @@ void ConvertLinalgToLLVMPass::runOnModule() {
 
   // Convert to the LLVM IR dialect using the converter defined above.
   OwningRewritePatternList patterns;
-  LinalgTypeConverter converter(&getContext());
+  LLVMTypeConverter converter(&getContext());
   populateAffineToStdConversionPatterns(patterns, &getContext());
   populateLoopToStdConversionPatterns(patterns, &getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns);
+  populateStdToLLVMConversionPatterns(converter, patterns, /*useAlloca=*/false,
+                                      /*emitCWrappers=*/true);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateLinalgToStandardConversionPatterns(patterns, &getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns, &getContext());

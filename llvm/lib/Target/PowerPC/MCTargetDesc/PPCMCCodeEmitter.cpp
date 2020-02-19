@@ -183,9 +183,8 @@ PPCMCCodeEmitter::getMemRI34Encoding(const MCInst &MI, unsigned OpNo,
   // Encode (imm, reg) as a memri34, which has the low 34-bits as the
   // displacement and the next 5 bits as the register #.
   assert(MI.getOperand(OpNo + 1).isReg() && "Expecting a register.");
-  uint64_t RegBits =
-    getMachineOpValue(MI, MI.getOperand(OpNo + 1), Fixups, STI) << 34;
-
+  uint64_t RegBits = getMachineOpValue(MI, MI.getOperand(OpNo + 1), Fixups, STI)
+                     << 34;
   const MCOperand &MO = MI.getOperand(OpNo);
   return ((getMachineOpValue(MI, MO, Fixups, STI)) & 0x3FFFFFFFFUL) | RegBits;
 }

@@ -388,8 +388,7 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
     // demand the sign bit (and many others) here??
     Value *Rem = Builder.CreateAnd(A, ConstantInt::get(I.getType(), *B - 1),
                                    Op1->getName());
-    I.setOperand(1, Rem);
-    return &I;
+    return replaceOperand(I, 1, Rem);
   }
 
   if (Instruction *Logic = foldShiftOfShiftedLogic(I, Builder))
@@ -605,7 +604,7 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   }
 
   Instruction *I = cast<Instruction>(V);
-  IC.Worklist.Add(I);
+  IC.Worklist.push(I);
 
   switch (I->getOpcode()) {
   default: llvm_unreachable("Inconsistency with CanEvaluateShifted");

@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
-# RUN: not ld.lld --gdb-index %t1.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld --gdb-index %t1.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: {{.*}}:(.debug_info): invalid reference to or invalid content in .debug_str_offsets[.dwo]: insufficient space for 32 bit header prefix
 

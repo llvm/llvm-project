@@ -9,6 +9,6 @@ define double @f1() {
 ; CHECK: ld %f0, 0([[REGISTER]])
 ; CHECK: br %r14
 ;
-; CONST: .quad 4607182419068452864
+; CONST: .quad 0x3ff0000010000000
   ret double 0x3ff0000010000000
 }

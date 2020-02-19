@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MinidumpTypes_h_
-#define liblldb_MinidumpTypes_h_
-
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPTYPES_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPTYPES_H
 
 #include "lldb/Utility/Status.h"
 
@@ -120,4 +119,4 @@ private:
 
 } // namespace minidump
 } // namespace lldb_private
-#endif // liblldb_MinidumpTypes_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPTYPES_H

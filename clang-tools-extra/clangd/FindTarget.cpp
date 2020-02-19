@@ -379,6 +379,10 @@ public:
         Outer.add(TT->getAsTagDecl(), Flags);
       }
 
+      void VisitElaboratedType(const ElaboratedType *ET) {
+        Outer.add(ET->desugar(), Flags);
+      }
+
       void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
         Outer.add(ICNT->getDecl(), Flags);
       }
@@ -667,6 +671,17 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
           /*IsDecl=*/false,
           // Select the getter, setter, or @property depending on the call.
           explicitReferenceTargets(DynTypedNode::create(*E), {})});
+    }
+
+    void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
+      for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
+        if (!D.isFieldDesignator())
+          continue;
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    D.getFieldLoc(),
+                                    /*IsDecl=*/false,
+                                    {D.getField()}});
+      }
     }
   };
 

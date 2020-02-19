@@ -3,8 +3,6 @@
 
 # Test that, though the vctp operand is defined at the end of the block,
 # that the correct value is used for the dlstp.
-# TODO: The pass currently just bails instead of finding the correct
-# value.
 
 --- |
   define dso_local arm_aapcs_vfpcc void @start_before_elems(i32* noalias nocapture %a, i8* nocapture readonly %b, i8* nocapture readonly %c, i32 %N) local_unnamed_addr #0 {

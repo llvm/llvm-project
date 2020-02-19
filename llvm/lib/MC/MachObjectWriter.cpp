@@ -831,11 +831,11 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
     SectionDataFileSize = std::max(SectionDataFileSize, Address + FileSize);
   }
 
-  // The section data is padded to 4 bytes.
+  // The section data is padded to pointer size bytes.
   //
   // FIXME: Is this machine dependent?
   unsigned SectionDataPadding =
-      offsetToAlignment(SectionDataFileSize, Align(4));
+      offsetToAlignment(SectionDataFileSize, is64Bit() ? Align(8) : Align(4));
   SectionDataFileSize += SectionDataPadding;
 
   // Write the prolog, starting with the header and load command...

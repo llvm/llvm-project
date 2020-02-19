@@ -31,8 +31,7 @@ template <typename T, typename Enable = void> struct StreamSwitch {
 
 // printable() returns a version of its argument that can be streamed into a
 // std::ostream. This may be the argument itself, or some other representation.
-template <typename T>
-auto printable(const T &V) -> decltype(StreamSwitch<T>::printable(V)) {
+template <typename T> decltype(auto) printable(const T &V) {
   // We delegate to the trait, to allow partial specialization.
   return StreamSwitch<T>::printable(V);
 }

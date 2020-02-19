@@ -57,7 +57,7 @@ namespace {
                          const char *ExtraCode, raw_ostream &O) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &O) override;
-    void EmitInstruction(const MachineInstr *MI) override;
+    void emitInstruction(const MachineInstr *MI) override;
 
     void EmitInterruptVectorSection(MachineFunction &ISR);
   };
@@ -148,7 +148,7 @@ bool MSP430AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 //===----------------------------------------------------------------------===//
-void MSP430AsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void MSP430AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MSP430MCInstLower MCInstLowering(OutContext, *this);
 
   MCInst TmpInst;
@@ -169,7 +169,7 @@ void MSP430AsmPrinter::EmitInterruptVectorSection(MachineFunction &ISR) {
   OutStreamer->SwitchSection(IV);
 
   const MCSymbol *FunctionSymbol = getSymbol(F);
-  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   OutStreamer->SwitchSection(Cur);
 }
 
@@ -180,7 +180,7 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   SetupMachineFunction(MF);
-  EmitFunctionBody();
+  emitFunctionBody();
   return false;
 }
 

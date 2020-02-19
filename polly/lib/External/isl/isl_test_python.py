@@ -14,6 +14,7 @@ import isl
 #  - construction from an integer
 #  - static constructor without a parameter
 #  - conversion construction
+#  - construction of empty union set
 #
 #  The tests to construct from integers and strings cover functionality that
 #  is also tested in the parameter type tests, but here the presence of
@@ -33,6 +34,10 @@ def test_constructors():
 	result = isl.set("{ [1] }")
 	s = isl.set(bs)
 	assert(s.is_equal(result))
+
+	us = isl.union_set("{ A[1]; B[2, 3] }")
+	empty = isl.union_set.empty()
+	assert(us.is_equal(us.union(empty)))
 
 # Test integer function parameters for a particular integer value.
 #
@@ -187,6 +192,239 @@ def test_foreach():
 		caught = True
 	assert(caught)
 
+# Test the functionality of "every" functions.
+#
+# In particular, test the generic functionality and
+# test that exceptions are properly propagated.
+#
+def test_every():
+	us = isl.union_set("{ A[i]; B[j] }")
+
+	def is_empty(s):
+		return s.is_empty()
+	assert(not us.every_set(is_empty))
+
+	def is_non_empty(s):
+		return not s.is_empty()
+	assert(us.every_set(is_non_empty))
+
+	def in_A(s):
+		return s.is_subset(isl.set("{ A[x] }"))
+	assert(not us.every_set(in_A))
+
+	def not_in_A(s):
+		return not s.is_subset(isl.set("{ A[x] }"))
+	assert(not us.every_set(not_in_A))
+
+	def fail(s):
+		raise "fail"
+
+	caught = False
+	try:
+		us.ever_set(fail)
+	except:
+		caught = True
+	assert(caught)
+
+# Check basic construction of spaces.
+#
+def test_space():
+	unit = isl.space.unit()
+	set_space = unit.add_named_tuple("A", 3)
+	map_space = set_space.add_named_tuple("B", 2)
+
+	set = isl.set.universe(set_space)
+	map = isl.map.universe(map_space)
+	assert(set.is_equal(isl.set("{ A[*,*,*] }")))
+	assert(map.is_equal(isl.map("{ A[*,*,*] -> B[*,*] }")))
+
+# Construct a simple schedule tree with an outer sequence node and
+# a single-dimensional band node in each branch, with one of them
+# marked coincident.
+#
+def construct_schedule_tree():
+	A = isl.union_set("{ A[i] : 0 <= i < 10 }")
+	B = isl.union_set("{ B[i] : 0 <= i < 20 }")
+
+	node = isl.schedule_node.from_domain(A.union(B))
+	node = node.child(0)
+
+	filters = isl.union_set_list(A).add(B)
+	node = node.insert_sequence(filters)
+
+	f_A = isl.multi_union_pw_aff("[ { A[i] -> [i] } ]")
+	node = node.child(0)
+	node = node.child(0)
+	node = node.insert_partial_schedule(f_A)
+	node = node.member_set_coincident(0, True)
+	node = node.ancestor(2)
+
+	f_B = isl.multi_union_pw_aff("[ { B[i] -> [i] } ]")
+	node = node.child(1)
+	node = node.child(0)
+	node = node.insert_partial_schedule(f_B)
+	node = node.ancestor(2)
+
+	return node.schedule()
+
+# Test basic schedule tree functionality.
+#
+# In particular, create a simple schedule tree and
+# - check that the root node is a domain node
+# - test map_descendant_bottom_up
+# - test foreach_descendant_top_down
+# - test every_descendant
+#
+def test_schedule_tree():
+	schedule = construct_schedule_tree()
+	root = schedule.root()
+
+	assert(type(root) == isl.schedule_node_domain)
+
+	count = [0]
+	def inc_count(node):
+		count[0] += 1
+		return node
+	root = root.map_descendant_bottom_up(inc_count)
+	assert(count[0] == 8)
+
+	def fail_map(node):
+		raise "fail"
+		return node
+	caught = False
+	try:
+		root.map_descendant_bottom_up(fail_map)
+	except:
+		caught = True
+	assert(caught)
+
+	count = [0]
+	def inc_count(node):
+		count[0] += 1
+		return True
+	root.foreach_descendant_top_down(inc_count)
+	assert(count[0] == 8)
+
+	count = [0]
+	def inc_count(node):
+		count[0] += 1
+		return False
+	root.foreach_descendant_top_down(inc_count)
+	assert(count[0] == 1)
+
+	def is_not_domain(node):
+		return type(node) != isl.schedule_node_domain
+	assert(root.child(0).every_descendant(is_not_domain))
+	assert(not root.every_descendant(is_not_domain))
+
+	def fail(node):
+		raise "fail"
+	caught = False
+	try:
+		root.every_descendant(fail)
+	except:
+		caught = True
+	assert(caught)
+
+	domain = root.domain()
+	filters = [isl.union_set("{}")]
+	def collect_filters(node):
+		if type(node) == isl.schedule_node_filter:
+			filters[0] = filters[0].union(node.filter())
+		return True
+	root.every_descendant(collect_filters)
+	assert(domain.is_equal(filters[0]))
+
+# Test marking band members for unrolling.
+# "schedule" is the schedule created by construct_schedule_tree.
+# It schedules two statements, with 10 and 20 instances, respectively.
+# Unrolling all band members therefore results in 30 at-domain calls
+# by the AST generator.
+#
+def test_ast_build_unroll(schedule):
+	root = schedule.root()
+	def mark_unroll(node):
+		if type(node) == isl.schedule_node_band:
+			node = node.member_set_ast_loop_unroll(0)
+		return node
+	root = root.map_descendant_bottom_up(mark_unroll)
+	schedule = root.schedule()
+
+	count_ast = [0]
+	def inc_count_ast(node, build):
+		count_ast[0] += 1
+		return node
+
+	build = isl.ast_build()
+	build = build.set_at_each_domain(inc_count_ast)
+	ast = build.node_from(schedule)
+	assert(count_ast[0] == 30)
+
+# Test basic AST generation from a schedule tree.
+#
+# In particular, create a simple schedule tree and
+# - generate an AST from the schedule tree
+# - test at_each_domain
+# - test unrolling
+#
+def test_ast_build():
+	schedule = construct_schedule_tree()
+
+	count_ast = [0]
+	def inc_count_ast(node, build):
+		count_ast[0] += 1
+		return node
+
+	build = isl.ast_build()
+	build_copy = build.set_at_each_domain(inc_count_ast)
+	ast = build.node_from(schedule)
+	assert(count_ast[0] == 0)
+	count_ast[0] = 0
+	ast = build_copy.node_from(schedule)
+	assert(count_ast[0] == 2)
+	build = build_copy
+	count_ast[0] = 0
+	ast = build.node_from(schedule)
+	assert(count_ast[0] == 2)
+
+	do_fail = True
+	count_ast_fail = [0]
+	def fail_inc_count_ast(node, build):
+		count_ast_fail[0] += 1
+		if do_fail:
+			raise "fail"
+		return node
+	build = isl.ast_build()
+	build = build.set_at_each_domain(fail_inc_count_ast)
+	caught = False
+	try:
+		ast = build.node_from(schedule)
+	except:
+		caught = True
+	assert(caught)
+	assert(count_ast_fail[0] > 0)
+	build_copy = build
+	build_copy = build_copy.set_at_each_domain(inc_count_ast)
+	count_ast[0] = 0
+	ast = build_copy.node_from(schedule)
+	assert(count_ast[0] == 2)
+	count_ast_fail[0] = 0
+	do_fail = False
+	ast = build.node_from(schedule)
+	assert(count_ast_fail[0] == 2)
+
+	test_ast_build_unroll(schedule)
+
+# Test basic AST expression generation from an affine expression.
+#
+def test_ast_build_expr():
+	pa = isl.pw_aff("[n] -> { [n + 1] }")
+	build = isl.ast_build.from_context(pa.domain())
+
+	op = build.expr_from(pa)
+	assert(type(op) == isl.ast_expr_op_add)
+	assert(op.n_arg() == 2)
+
 # Test the isl Python interface
 #
 # This includes:
@@ -194,8 +432,18 @@ def test_foreach():
 #  - Different parameter types
 #  - Different return types
 #  - Foreach functions
+#  - Every functions
+#  - Spaces
+#  - Schedule trees
+#  - AST generation
+#  - AST expression generation
 #
 test_constructors()
 test_parameters()
 test_return()
 test_foreach()
+test_every()
+test_space()
+test_schedule_tree()
+test_ast_build()
+test_ast_build_expr()

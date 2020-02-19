@@ -8,6 +8,7 @@
 @.str = private unnamed_addr constant [4 x i8] c"abc\00", section "__TEXT,__cstring,cstring_literals", align 1
 @.str1 = private unnamed_addr constant [4 x i8] c"def\00", section "__TEXT,__cstring,cstring_literals", align 1
 @_unnamed_cfstring_ = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 3 }, section "__DATA,__cfstring", align 8 #0
+@_unnamed_cfstring_.1 = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), i64 3 }, section "__DATA,__cfstring", align 8 #0
 @_unnamed_cfstring_wo_attr = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), i64 3 }, section "__DATA,__cfstring", align 8
 @_NSConcreteGlobalBlock = external global i8*
 @.str.1 = private unnamed_addr constant [6 x i8] c"v8@?0\00", align 1
@@ -51,6 +52,73 @@ define void (...)* @globalBlock() {
 
 define internal void @__globalBlock_block_invoke(i8* nocapture readnone) {
   tail call void @foo()
+  ret void
+}
+
+; CHECK: define %[[V0:.*]]* @test_conditional0(
+; CHECK: %[[PHI0:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ null, %{{.*}} ]
+
+; CHECK: %[[PHI1:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ %[[PHI0]], %{{.*}} ]
+; CHECK-NEXT: %[[PHI2:.*]] = phi %[[V0]]* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %[[V0]]*), %{{.*}} ], [ %{{.*}}, %{{.*}} ]
+; CHECK-NEXT: %[[V2:.*]] = bitcast %[[V0]]* %[[PHI1]] to i8*
+; CHECK-NEXT: %[[V4:.*]] = bitcast %[[V0]]* %[[PHI2]] to i8*
+; CHECK-NEXT: %[[V5:.*]] = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[V4]])
+; CHECK-NEXT: ret %[[V0]]* %[[PHI2]]
+
+define %0* @test_conditional0(i32 %i, %0* %b) {
+entry:
+  %v0 = icmp eq i32 %i, 1
+  br i1 %v0, label %bb2, label %bb1
+
+bb1:
+  %v1 = icmp eq i32 %i, 2
+  br i1 %v1, label %bb2, label %return
+
+bb2:
+  %phi0 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %entry ], [ null, %bb1 ]
+  br label %return
+
+return:
+  %phi1 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %bb1 ], [ %phi0, %bb2 ]
+  %phi2 = phi %0* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to %0*), %bb1 ], [ %b, %bb2 ]
+  %v2 = bitcast %0* %phi1 to i8*
+  %v3 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %v2)
+  %v4 = bitcast %0* %phi2 to i8*
+  %v5 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %v4)
+  ret %0* %phi2
+}
+
+; CHECK-LABEL: define void @test_conditional1(
+; CHECK-NOT: @llvm.objc
+; CHECK: ret void
+
+define void @test_conditional1(i32 %i) {
+entry:
+  %v0 = add nsw i32 %i, -1
+  %c1 = icmp eq i32 %v0, 0
+  br i1 %c1, label %while.end, label %while.body
+
+while.body:
+  %v1 = phi i32 [ %v5, %if.end ], [ %v0, %entry ]
+  %v2 = phi i8* [ %v4, %if.end ], [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_.1 to i8*), %entry ]
+  %v3 = tail call i8* @llvm.objc.retain(i8* %v2)
+  %cmp = icmp eq i32 %v1, 2
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  call void @llvm.objc.release(i8* %v2)
+  br label %if.end
+
+if.end:
+  %v4 = phi i8* [ bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_ to i8*), %if.then ], [ %v2, %while.body ]
+  call void @llvm.objc.release(i8* %v2)
+  %v5 = add nsw i32 %v1, -1
+  %tobool = icmp eq i32 %v5, 0
+  br i1 %tobool, label %while.end, label %while.body
+
+while.end:
+  %v6 = phi i8* [ null, %entry ], [ %v4, %if.end ]
+  call void @llvm.objc.release(i8* %v6)
   ret void
 }
 

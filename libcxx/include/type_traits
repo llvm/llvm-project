@@ -735,34 +735,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_null_pointer_v
 
 // is_integral
 
-template <class _Tp> struct __libcpp_is_integral                     : public false_type {};
-template <>          struct __libcpp_is_integral<bool>               : public true_type {};
-template <>          struct __libcpp_is_integral<char>               : public true_type {};
-template <>          struct __libcpp_is_integral<signed char>        : public true_type {};
-template <>          struct __libcpp_is_integral<unsigned char>      : public true_type {};
-template <>          struct __libcpp_is_integral<wchar_t>            : public true_type {};
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
-template <>          struct __libcpp_is_integral<char8_t>            : public true_type {};
-#endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-template <>          struct __libcpp_is_integral<char16_t>           : public true_type {};
-template <>          struct __libcpp_is_integral<char32_t>           : public true_type {};
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
-template <>          struct __libcpp_is_integral<short>              : public true_type {};
-template <>          struct __libcpp_is_integral<unsigned short>     : public true_type {};
-template <>          struct __libcpp_is_integral<int>                : public true_type {};
-template <>          struct __libcpp_is_integral<unsigned int>       : public true_type {};
-template <>          struct __libcpp_is_integral<long>               : public true_type {};
-template <>          struct __libcpp_is_integral<unsigned long>      : public true_type {};
-template <>          struct __libcpp_is_integral<long long>          : public true_type {};
-template <>          struct __libcpp_is_integral<unsigned long long> : public true_type {};
-#ifndef _LIBCPP_HAS_NO_INT128
-template <>          struct __libcpp_is_integral<__int128_t>         : public true_type {};
-template <>          struct __libcpp_is_integral<__uint128_t>        : public true_type {};
-#endif
-
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_integral
-    : public __libcpp_is_integral<typename remove_cv<_Tp>::type> {};
+    : public _BoolConstant<__libcpp_is_integral<typename remove_cv<_Tp>::type>::value> {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -4046,29 +4020,7 @@ _LIBCPP_END_NAMESPACE_STD
 // std::byte
 namespace std  // purposefully not versioned
 {
-template <class _Integer>
-  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
-  operator<<=(byte& __lhs, _Integer __shift) noexcept
-  { return __lhs = __lhs << __shift; }
 
-template <class _Integer>
-  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
-  operator<< (byte  __lhs, _Integer __shift) noexcept
-  { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) << __shift)); }
-
-template <class _Integer>
-  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
-  operator>>=(byte& __lhs, _Integer __shift) noexcept
-  { return __lhs = __lhs >> __shift; }
-
-template <class _Integer>
-  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
-  operator>> (byte  __lhs, _Integer __shift) noexcept
-  { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) >> __shift)); }
-
-template <class _Integer>
-  constexpr typename enable_if<is_integral_v<_Integer>, _Integer>::type
-  to_integer(byte __b) noexcept { return static_cast<_Integer>(__b); }
 
 }
 #endif

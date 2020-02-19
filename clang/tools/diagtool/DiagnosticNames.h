@@ -76,11 +76,11 @@ namespace diagtool {
         return *this;
       }
 
-      bool operator==(group_iterator &Other) const {
+      bool operator==(const group_iterator &Other) const {
         return CurrentID == Other.CurrentID;
       }
 
-      bool operator!=(group_iterator &Other) const {
+      bool operator!=(const group_iterator &Other) const {
         return CurrentID != Other.CurrentID;
       }
     };

@@ -206,12 +206,12 @@ namespace OverloadUse {
 }
 
 namespace test7 {
-  typedef struct {
-    void bar();
+  typedef struct { // expected-warning {{add a tag name}}
+    void bar(); // expected-note {{this member}}
     void foo() {
       bar();
     }
-  } A;
+  } A; // expected-note {{this typedef}}
 }
 
 namespace test8 {

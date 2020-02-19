@@ -53,7 +53,7 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
   return nullptr;
 }
 
-std::unique_ptr<BenchmarkRunner>
+Expected<std::unique_ptr<BenchmarkRunner>>
 ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
                                       const LLVMState &State) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
@@ -66,14 +66,16 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
       const char *ModeName = Mode == InstructionBenchmark::Latency
                                  ? "latency"
                                  : "inverse_throughput";
-      report_fatal_error(Twine("can't run '").concat(ModeName).concat("' mode, "
-                               "sched model does not define a cycle counter."));
+      return make_error<Failure>(
+          Twine("can't run '")
+              .concat(ModeName)
+              .concat("' mode, sched model does not define a cycle counter."));
     }
     return createLatencyBenchmarkRunner(State, Mode);
   case InstructionBenchmark::Uops:
     if (!PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
-      report_fatal_error("can't run 'uops' mode, sched model does not define "
-                         "uops or issue counters.");
+      return make_error<Failure>("can't run 'uops' mode, sched model does not "
+                                 "define uops or issue counters.");
     return createUopsBenchmarkRunner(State);
   }
   return nullptr;

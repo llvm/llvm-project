@@ -717,6 +717,26 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+
+**InsertTrailingCommas** (``TrailingCommaStyle``) can be set to ``TCS_Wrapped``
+  to insert trailing commas in container literals (arrays and objects) that wrap
+  across multiple lines. It is currently only available for JavaScript and
+  disabled by default (``TCS_None``).
+
+  ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments`` as
+  inserting the comma disables bin-packing.
+
+  .. code-block:: c++
+
+    TSC_Wrapped:
+    const someArray = [
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      //                        ^ inserted
+    ]
+
+
 **BinPackParameters** (``bool``)
   If ``false``, a function declaration's or function definition's
   parameters will either all be on the same line or will have one line each.
@@ -947,6 +967,24 @@ the configuration (without a prefix: ``Auto``).
       if (foo()) {
       } else {
       }
+
+  * ``bool BeforeLambdaBody`` Wrap lambda block.
+
+    .. code-block:: c++
+
+      true:
+      connect(
+        []()
+        {
+          foo();
+          bar();
+        });
+
+      false:
+      connect([]() {
+        foo();
+        bar();
+      });
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
@@ -2016,6 +2054,29 @@ the configuration (without a prefix: ``Auto``).
      [operation setCompletionBlock:^{
          [self onOperationDone];
      }];
+
+**ObjCBreakBeforeNestedBlockParam** (``bool``)
+  Break parameters list into lines when there is nested block
+  parameters in a fuction call.
+
+  .. code-block:: c++
+
+    false:
+     - (void)_aMethod
+     {
+         [self.test1 t:self w:self callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+             u = c;
+         }]
+     }
+     true:
+     - (void)_aMethod
+     {
+        [self.test1 t:self
+                     w:self
+            callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+                 u = c;
+             }]
+     }
 
 **ObjCSpaceAfterProperty** (``bool``)
   Add a space after ``@property`` in Objective-C, i.e. use

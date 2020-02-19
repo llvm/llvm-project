@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterContextMacOSXFrameBackchain_h_
-#define lldb_RegisterContextMacOSXFrameBackchain_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACOSXFRAMEBACKCHAIN_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACOSXFRAMEBACKCHAIN_H
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
@@ -53,4 +53,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RegisterContextMacOSXFrameBackchain);
 };
 
-#endif // lldb_RegisterContextMacOSXFrameBackchain_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMACOSXFRAMEBACKCHAIN_H

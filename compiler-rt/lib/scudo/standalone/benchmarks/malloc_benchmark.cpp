@@ -69,12 +69,14 @@ static void BM_malloc_free_loop(benchmark::State &State) {
   void *Ptrs[NumIters];
 
   for (auto _ : State) {
+    size_t SizeLog2 = 0;
     for (void *&Ptr : Ptrs) {
-      Ptr = Allocator->allocate(8192, scudo::Chunk::Origin::Malloc);
+      Ptr = Allocator->allocate(1 << SizeLog2, scudo::Chunk::Origin::Malloc);
       auto *Data = reinterpret_cast<uint8_t *>(Ptr);
-      for (size_t I = 0; I < 8192; I += PageSize)
+      for (size_t I = 0; I < 1 << SizeLog2; I += PageSize)
         Data[I] = 1;
       benchmark::DoNotOptimize(Ptr);
+      SizeLog2 = (SizeLog2 + 1) % 16;
     }
     for (void *&Ptr : Ptrs)
       Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc);

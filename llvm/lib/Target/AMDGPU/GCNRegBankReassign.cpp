@@ -372,19 +372,19 @@ unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
     unsigned ShiftedBank = Bank;
 
     if (Bank != -1 && R == Reg && Op.getSubReg()) {
-      unsigned LM = TRI->getSubRegIndexLaneMask(Op.getSubReg()).getAsInteger();
-      if (!(LM & 1) && (Bank < NUM_VGPR_BANKS)) {
+      unsigned Offset = TRI->getChannelFromSubReg(Op.getSubReg());
+      LaneBitmask LM = TRI->getSubRegIndexLaneMask(Op.getSubReg());
+      if (Offset && Bank < NUM_VGPR_BANKS) {
         // If a register spans all banks we cannot shift it to avoid conflict.
-        if (countPopulation(LM) >= NUM_VGPR_BANKS)
+        if (TRI->getNumCoveredRegs(LM) >= NUM_VGPR_BANKS)
           continue;
-        ShiftedBank = (Bank + countTrailingZeros(LM)) % NUM_VGPR_BANKS;
-      } else if (!(LM & 3) && (Bank >= SGPR_BANK_OFFSET)) {
+        ShiftedBank = (Bank + Offset) % NUM_VGPR_BANKS;
+      } else if (Offset > 1 && Bank >= SGPR_BANK_OFFSET) {
         // If a register spans all banks we cannot shift it to avoid conflict.
-        if (countPopulation(LM) / 2 >= NUM_SGPR_BANKS)
+        if (TRI->getNumCoveredRegs(LM) / 2 >= NUM_SGPR_BANKS)
           continue;
-        ShiftedBank = SGPR_BANK_OFFSET + (Bank - SGPR_BANK_OFFSET +
-                                          (countTrailingZeros(LM) >> 1)) %
-                                             NUM_SGPR_BANKS;
+        ShiftedBank = SGPR_BANK_OFFSET +
+          (Bank - SGPR_BANK_OFFSET + (Offset >> 1)) % NUM_SGPR_BANKS;
       }
     }
 
@@ -496,16 +496,16 @@ unsigned GCNRegBankReassign::getFreeBanks(unsigned Reg,
 
   unsigned FreeBanks = getFreeBanks(Mask, UsedBanks);
 
-  unsigned LM = TRI->getSubRegIndexLaneMask(SubReg).getAsInteger();
-  if (!(LM & 1) && (Mask & VGPR_BANK_MASK)) {
-    unsigned Shift = countTrailingZeros(LM);
+  unsigned Offset = TRI->getChannelFromSubReg(SubReg);
+  if (Offset && (Mask & VGPR_BANK_MASK)) {
+    unsigned Shift = Offset;
     if (Shift >= NUM_VGPR_BANKS)
       return 0;
     unsigned VB = FreeBanks & VGPR_BANK_MASK;
     FreeBanks = ((VB >> Shift) | (VB << (NUM_VGPR_BANKS - Shift))) &
                 VGPR_BANK_MASK;
-  } else if (!(LM & 3) && (Mask & SGPR_BANK_MASK)) {
-    unsigned Shift = countTrailingZeros(LM) >> 1;
+  } else if (Offset > 1 && (Mask & SGPR_BANK_MASK)) {
+    unsigned Shift = Offset >> 1;
     if (Shift >= NUM_SGPR_BANKS)
       return 0;
     unsigned SB = FreeBanks >> SGPR_BANK_OFFSET;

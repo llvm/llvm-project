@@ -142,48 +142,6 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Utility functions for operation conversion
-//===----------------------------------------------------------------------===//
-
-/// Performs the index computation to get to the element pointed to by
-/// `indices` using the layout map of `baseType`.
-
-// TODO(ravishankarm) : This method assumes that the `origBaseType` is a
-// MemRefType with AffineMap that has static strides. Handle dynamic strides
-static spirv::AccessChainOp getElementPtr(OpBuilder &builder,
-                                          SPIRVTypeConverter &typeConverter,
-                                          Location loc, MemRefType origBaseType,
-                                          Value basePtr,
-                                          ArrayRef<Value> indices) {
-  // Get base and offset of the MemRefType and verify they are static.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(origBaseType, strides, offset)) ||
-      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset())) {
-    return nullptr;
-  }
-
-  auto indexType = typeConverter.getIndexType(builder.getContext());
-
-  Value ptrLoc = nullptr;
-  assert(indices.size() == strides.size());
-  for (auto index : enumerate(indices)) {
-    Value strideVal = builder.create<spirv::ConstantOp>(
-        loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
-    Value update = builder.create<spirv::IMulOp>(loc, strideVal, index.value());
-    ptrLoc =
-        (ptrLoc ? builder.create<spirv::IAddOp>(loc, ptrLoc, update).getResult()
-                : update);
-  }
-  SmallVector<Value, 2> linearizedIndices;
-  // Add a '0' at the start to index into the struct.
-  linearizedIndices.push_back(builder.create<spirv::ConstantOp>(
-      loc, indexType, IntegerAttr::get(indexType, 0)));
-  linearizedIndices.push_back(ptrLoc);
-  return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
-}
-
-//===----------------------------------------------------------------------===//
 // ConstantOp with composite type.
 //===----------------------------------------------------------------------===//
 
@@ -331,9 +289,9 @@ PatternMatchResult
 LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   LoadOpOperandAdaptor loadOperands(operands);
-  auto loadPtr = getElementPtr(rewriter, typeConverter, loadOp.getLoc(),
-                               loadOp.memref().getType().cast<MemRefType>(),
-                               loadOperands.memref(), loadOperands.indices());
+  auto loadPtr = spirv::getElementPtr(
+      typeConverter, loadOp.memref().getType().cast<MemRefType>(),
+      loadOperands.memref(), loadOperands.indices(), loadOp.getLoc(), rewriter);
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
   return matchSuccess();
 }
@@ -374,10 +332,10 @@ PatternMatchResult
 StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
   StoreOpOperandAdaptor storeOperands(operands);
-  auto storePtr =
-      getElementPtr(rewriter, typeConverter, storeOp.getLoc(),
-                    storeOp.memref().getType().cast<MemRefType>(),
-                    storeOperands.memref(), storeOperands.indices());
+  auto storePtr = spirv::getElementPtr(
+      typeConverter, storeOp.memref().getType().cast<MemRefType>(),
+      storeOperands.memref(), storeOperands.indices(), storeOp.getLoc(),
+      rewriter);
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
                                               storeOperands.value());
   return matchSuccess();

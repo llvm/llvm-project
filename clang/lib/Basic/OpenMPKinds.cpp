@@ -20,49 +20,6 @@
 using namespace clang;
 using namespace llvm::omp;
 
-OpenMPContextSelectorSetKind
-clang::getOpenMPContextSelectorSet(llvm::StringRef Str) {
-  return llvm::StringSwitch<OpenMPContextSelectorSetKind>(Str)
-#define OPENMP_CONTEXT_SELECTOR_SET(Name) .Case(#Name, OMP_CTX_SET_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-      .Default(OMP_CTX_SET_unknown);
-}
-
-llvm::StringRef
-clang::getOpenMPContextSelectorSetName(OpenMPContextSelectorSetKind Kind) {
-  switch (Kind) {
-  case OMP_CTX_SET_unknown:
-    return "unknown";
-#define OPENMP_CONTEXT_SELECTOR_SET(Name)                                      \
-  case OMP_CTX_SET_##Name:                                                     \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
-    break;
-  }
-  llvm_unreachable("Invalid OpenMP context selector set kind");
-}
-
-OpenMPContextSelectorKind clang::getOpenMPContextSelector(llvm::StringRef Str) {
-  return llvm::StringSwitch<OpenMPContextSelectorKind>(Str)
-#define OPENMP_CONTEXT_SELECTOR(Name) .Case(#Name, OMP_CTX_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-      .Default(OMP_CTX_unknown);
-}
-
-llvm::StringRef
-clang::getOpenMPContextSelectorName(OpenMPContextSelectorKind Kind) {
-  switch (Kind) {
-  case OMP_CTX_unknown:
-    return "unknown";
-#define OPENMP_CONTEXT_SELECTOR(Name)                                          \
-  case OMP_CTX_##Name:                                                         \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
-    break;
-  }
-  llvm_unreachable("Invalid OpenMP context selector kind");
-}
-
 OpenMPClauseKind clang::getOpenMPClauseKind(StringRef Str) {
   // 'flush' clause cannot be specified explicitly, because this is an implicit
   // clause for 'flush' directive. If the 'flush' clause is explicitly specified
@@ -104,10 +61,10 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
                                           StringRef Str) {
   switch (Kind) {
   case OMPC_default:
-    return llvm::StringSwitch<OpenMPDefaultClauseKind>(Str)
-#define OPENMP_DEFAULT_KIND(Name) .Case(#Name, OMPC_DEFAULT_##Name)
-#include "clang/Basic/OpenMPKinds.def"
-        .Default(OMPC_DEFAULT_unknown);
+    return llvm::StringSwitch<unsigned>(Str)
+#define OMP_DEFAULT_KIND(Enum, Name) .Case(Name, unsigned(Enum))
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+        .Default(unsigned(llvm::omp::OMP_DEFAULT_unknown));
   case OMPC_proc_bind:
     return llvm::StringSwitch<unsigned>(Str)
 #define OMP_PROC_BIND_KIND(Enum, Name, Value) .Case(Name, Value)
@@ -180,6 +137,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #define OPENMP_LASTPRIVATE_KIND(Name) .Case(#Name, OMPC_LASTPRIVATE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_LASTPRIVATE_unknown);
+  case OMPC_order:
+    return llvm::StringSwitch<OpenMPOrderClauseKind>(Str)
+#define OPENMP_ORDER_KIND(Name) .Case(#Name, OMPC_ORDER_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_ORDER_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -209,6 +171,10 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
@@ -237,13 +203,11 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
                                                  unsigned Type) {
   switch (Kind) {
   case OMPC_default:
-    switch (Type) {
-    case OMPC_DEFAULT_unknown:
-      return "unknown";
-#define OPENMP_DEFAULT_KIND(Name)                                              \
-  case OMPC_DEFAULT_##Name:                                                    \
-    return #Name;
-#include "clang/Basic/OpenMPKinds.def"
+    switch (llvm::omp::DefaultKind(Type)) {
+#define OMP_DEFAULT_KIND(Enum, Name)                                           \
+  case Enum:                                                                   \
+    return Name;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'default' clause type");
   case OMPC_proc_bind:
@@ -382,6 +346,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'lastprivate' clause type");
+  case OMPC_order:
+    switch (Type) {
+    case OMPC_ORDER_unknown:
+      return "unknown";
+#define OPENMP_ORDER_KIND(Name)                                                \
+    case OMPC_ORDER_##Name:                                                    \
+      return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'order' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -411,6 +385,10 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
@@ -442,6 +420,9 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   assert(CKind <= OMPC_unknown);
   // Nontemporal clause is not supported in OpenMP < 5.0.
   if (OpenMPVersion < 50 && CKind == OMPC_nontemporal)
+    return false;
+  // Order clause is not supported in OpenMP < 5.0.
+  if (OpenMPVersion < 50 && CKind == OMPC_order)
     return false;
   switch (DKind) {
   case OMPD_parallel:
@@ -559,9 +540,24 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
     }
     break;
   case OMPD_flush:
-    return CKind == OMPC_flush;
+    if (CKind == OMPC_flush)
+      return true;
+    if (OpenMPVersion < 50)
+      return false;
+    switch (CKind) {
+#define OPENMP_FLUSH_CLAUSE(Name)                                              \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
     break;
   case OMPD_atomic:
+    if (OpenMPVersion < 50 &&
+        (CKind == OMPC_acq_rel || CKind == OMPC_acquire ||
+         CKind == OMPC_release || CKind == OMPC_relaxed || CKind == OMPC_hint))
+      return false;
     switch (CKind) {
 #define OPENMP_ATOMIC_CLAUSE(Name)                                             \
   case OMPC_##Name:                                                            \

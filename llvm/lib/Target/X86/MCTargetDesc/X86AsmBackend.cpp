@@ -93,7 +93,6 @@ cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
              "\ncall     indicates direct and indirect calls"
              "\nret      indicates rets"
              "\nindirect indicates indirect unconditional jumps"),
-    cl::value_desc("jcc, fused, jmp, call, ret, indirect"),
     cl::location(X86AlignBranchKindLoc));
 
 cl::opt<bool> X86AlignBranchWithin32BBoundaries(

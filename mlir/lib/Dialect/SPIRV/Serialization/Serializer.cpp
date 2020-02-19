@@ -112,8 +112,10 @@ public:
   /// Collects the final SPIR-V `binary`.
   void collect(SmallVectorImpl<uint32_t> &binary);
 
+#ifndef NDEBUG
   /// (For debugging) prints each value and its corresponding result <id>.
   void printValueIDMap(raw_ostream &os);
+#endif
 
 private:
   // Note that there are two main categories of methods in this class:
@@ -177,7 +179,7 @@ private:
   LogicalResult processName(uint32_t resultID, StringRef name);
 
   /// Processes a SPIR-V function op.
-  LogicalResult processFuncOp(FuncOp op);
+  LogicalResult processFuncOp(spirv::FuncOp op);
 
   LogicalResult processVariableOp(spirv::VariableOp op);
 
@@ -501,6 +503,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(functions.begin(), functions.end());
 }
 
+#ifndef NDEBUG
 void Serializer::printValueIDMap(raw_ostream &os) {
   os << "\n= Value <id> Map =\n\n";
   for (auto valueIDPair : valueIDMap) {
@@ -517,6 +520,7 @@ void Serializer::printValueIDMap(raw_ostream &os) {
     os << '\n';
   }
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Module structure
@@ -678,7 +682,7 @@ Serializer::processMemberDecoration(uint32_t structID, uint32_t memberIndex,
 }
 } // namespace
 
-LogicalResult Serializer::processFuncOp(FuncOp op) {
+LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   LLVM_DEBUG(llvm::dbgs() << "-- start function '" << op.getName() << "' --\n");
   assert(functionHeader.empty() && functionBody.empty());
 
@@ -1638,7 +1642,7 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processBranchConditionalOp(op);
       })
       .Case([&](spirv::ConstantOp op) { return processConstantOp(op); })
-      .Case([&](FuncOp op) { return processFuncOp(op); })
+      .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
       })

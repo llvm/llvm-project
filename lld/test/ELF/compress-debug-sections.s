@@ -26,7 +26,7 @@
 # RUN: llvm-objdump -s %t2 | FileCheck %s --check-prefix=ZLIBCONTENT
 # RUN: llvm-readobj -S %t2 | FileCheck %s --check-prefix=ZLIBFLAGS
 
-# RUN: not ld.lld %t.o -o %t1 --compress-debug-sections=zlib-gabi 2>&1 | \
+# RUN: not ld.lld %t.o -o /dev/null --compress-debug-sections=zlib-gabi 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR %s
 # ERR: unknown --compress-debug-sections value: zlib-gabi
 

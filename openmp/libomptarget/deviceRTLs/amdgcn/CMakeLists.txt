@@ -98,7 +98,7 @@ endif()
 
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
-    -std=c++11
+    -std=c++14
     -fcuda-rdc
     -fvisibility=default
     --cuda-device-only

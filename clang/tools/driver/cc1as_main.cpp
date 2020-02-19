@@ -46,6 +46,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -497,7 +498,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
     Str.get()->SwitchSection(AsmLabel);
-    Str.get()->EmitZeros(1);
+    Str.get()->emitZeros(1);
   }
 
   // Assembly to object compilation should leverage assembly info.
@@ -555,7 +556,7 @@ static void LLVMErrorHandler(void *UserData, const std::string &Message,
   Diags.Report(diag::err_fe_error_backend) << Message;
 
   // We cannot recover from llvm errors.
-  exit(1);
+  sys::Process::Exit(1);
 }
 
 int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {

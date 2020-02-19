@@ -64,5 +64,9 @@ void TestConstantFold::runOnFunction() {
   }
 }
 
-static PassRegistration<TestConstantFold>
-    pass("test-constant-fold", "Test operation constant folding");
+namespace mlir {
+void registerTestConstantFold() {
+  PassRegistration<TestConstantFold>("test-constant-fold",
+                                     "Test operation constant folding");
+}
+} // namespace mlir

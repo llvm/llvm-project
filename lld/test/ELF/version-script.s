@@ -22,13 +22,13 @@
 
 # RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t5.script
 # RUN: echo "{ global: foo3; local: *; };" >> %t5.script
-# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
+# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o /dev/null 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR1 %s
 # ERR1: anonymous version definition is used in combination with other version definitions
 
 # RUN: echo "{ global: foo1; local: *; };" > %t5.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" >> %t5.script
-# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
+# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o /dev/null 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR2 %s
 # ERR2: EOF expected, but got VERSION_2.0
 

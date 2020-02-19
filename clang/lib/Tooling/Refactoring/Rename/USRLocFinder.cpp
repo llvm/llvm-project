@@ -427,8 +427,7 @@ public:
               StartLoc,
               EndLoc,
               TemplateSpecType->getTemplateName().getAsTemplateDecl(),
-              getClosestAncestorDecl(
-                  ast_type_traits::DynTypedNode::create(TargetLoc)),
+              getClosestAncestorDecl(DynTypedNode::create(TargetLoc)),
               GetNestedNameForType(TargetLoc),
               /*IgnorePrefixQualifers=*/false};
           RenameInfos.push_back(Info);
@@ -467,8 +466,7 @@ private:
     // FIXME: figure out how to handle it when there are multiple parents.
     if (Parents.size() != 1)
       return nullptr;
-    if (ast_type_traits::ASTNodeKind::getFromNodeKind<Decl>().isBaseOf(
-            Parents[0].getNodeKind()))
+    if (ASTNodeKind::getFromNodeKind<Decl>().isBaseOf(Parents[0].getNodeKind()))
       return Parents[0].template get<Decl>();
     return getClosestAncestorDecl(Parents[0]);
   }

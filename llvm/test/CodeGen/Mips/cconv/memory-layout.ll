@@ -44,7 +44,7 @@
 
 ; ALL:           .p2align 2
 ; ALL-LABEL: float:
-; ALL:           .4byte 1065353216
+; ALL:           .4byte 0x3f800000
 ; ALL:           .size float, 4
 
 ; ALL:           .p2align 3
@@ -54,7 +54,7 @@
 
 ; ALL:           .p2align 3
 ; ALL-LABEL: double:
-; ALL:           .8byte 4607182418800017408
+; ALL:           .8byte 0x3ff0000000000000
 ; ALL:           .size double, 8
 
 ; O32:           .p2align 2
@@ -95,8 +95,8 @@
 
 ; ALL:           .p2align 2
 ; ALL-LABEL: float_array:
-; ALL:           .4byte 1065353216
-; ALL:           .4byte 1073741824
+; ALL:           .4byte 0x3f800000
+; ALL:           .4byte 0x40000000
 ; ALL:           .size float_array, 8
 
 ; ALL:           .p2align 3
@@ -107,8 +107,8 @@
 
 ; ALL:           .p2align 3
 ; ALL-LABEL: double_array:
-; ALL:           .8byte 4607182418800017408
-; ALL:           .8byte 4611686018427387904
+; ALL:           .8byte 0x3ff0000000000000
+; ALL:           .8byte 0x4000000000000000
 ; ALL:           .size double_array, 16
 
 ; O32:           .p2align 2
@@ -132,7 +132,7 @@
 ; ALL-LABEL: mixed:
 ; ALL:           .byte 1
 ; ALL:           .space 7
-; ALL:           .8byte 4607182418800017408
+; ALL:           .8byte 0x3ff0000000000000
 ; ALL:           .2byte 515
 ; ALL:           .space 6
 ; ALL:           .size mixed, 24

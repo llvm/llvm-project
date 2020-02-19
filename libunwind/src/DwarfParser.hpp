@@ -360,13 +360,25 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
   PrologInfoStackEntry *rememberStack = NULL;
 
   // parse CIE then FDE instructions
-  return parseInstructions(addressSpace, cieInfo.cieInstructions,
-                           cieInfo.cieStart + cieInfo.cieLength, cieInfo,
-                           (pint_t)(-1), rememberStack, arch, results) &&
-         parseInstructions(addressSpace, fdeInfo.fdeInstructions,
-                           fdeInfo.fdeStart + fdeInfo.fdeLength, cieInfo,
-                           upToPC - fdeInfo.pcStart, rememberStack, arch,
-                           results);
+  bool returnValue =
+      parseInstructions(addressSpace, cieInfo.cieInstructions,
+                        cieInfo.cieStart + cieInfo.cieLength, cieInfo,
+                        (pint_t)(-1), rememberStack, arch, results) &&
+      parseInstructions(addressSpace, fdeInfo.fdeInstructions,
+                        fdeInfo.fdeStart + fdeInfo.fdeLength, cieInfo,
+                        upToPC - fdeInfo.pcStart, rememberStack, arch, results);
+
+  // Clean up rememberStack. Even in the case where every DW_CFA_remember_state
+  // is paired with a DW_CFA_restore_state, parseInstructions can skip restore
+  // opcodes if it reaches the target PC and stops interpreting, so we have to
+  // make sure we don't leak memory.
+  while (rememberStack) {
+    PrologInfoStackEntry *next = rememberStack->next;
+    free(rememberStack);
+    rememberStack = next;
+  }
+
+  return returnValue;
 }
 
 /// "run" the DWARF instructions

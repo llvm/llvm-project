@@ -3745,7 +3745,7 @@ CINDEX_LINKAGE unsigned clang_Type_getNumObjCProtocolRefs(CXType T);
 CINDEX_LINKAGE CXCursor clang_Type_getObjCProtocolDecl(CXType T, unsigned i);
 
 /**
- * Retreive the number of type arguments associated with an ObjC object.
+ * Retrieve the number of type arguments associated with an ObjC object.
  *
  * If the type is not an ObjC object, 0 is returned.
  */

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxxAtomic.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -100,8 +101,6 @@ public:
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
-  lldb::ValueObjectSP GetSyntheticValue() override;
-
 private:
   ValueObject *m_real_child;
 };
@@ -127,26 +126,20 @@ bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     CalculateNumChildren() {
-  return m_real_child ? m_real_child->GetNumChildren() : 0;
+  return m_real_child ? 1 : 0;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  return m_real_child ? m_real_child->GetChildAtIndex(idx, true) : nullptr;
+  if (idx == 0)
+    return m_real_child->GetSP()->Clone(ConstString("Value"));
+  return nullptr;
 }
 
 size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  return m_real_child ? m_real_child->GetIndexOfChildWithName(name)
-                      : UINT32_MAX;
-}
-
-lldb::ValueObjectSP lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    GetSyntheticValue() {
-  if (m_real_child && m_real_child->CanProvideValue())
-    return m_real_child->GetSP();
-  return nullptr;
+  return formatters::ExtractIndexFromString(name.GetCString());
 }
 
 SyntheticChildrenFrontEnd *

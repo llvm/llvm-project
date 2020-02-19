@@ -259,7 +259,7 @@ public:
   /// when other randomness consuming passes are added or removed. In
   /// addition, the random stream will be reproducible across LLVM
   /// versions when the pass does not change.
-  std::unique_ptr<RandomNumberGenerator> createRNG(const Pass* P) const;
+  std::unique_ptr<RandomNumberGenerator> createRNG(const StringRef Name) const;
 
   /// Return true if size-info optimization remark is enabled, false
   /// otherwise.
@@ -847,6 +847,12 @@ public:
   /// sensitive profile summary.
   Metadata *getProfileSummary(bool IsCS);
   /// @}
+
+  /// Returns whether semantic interposition is to be respected.
+  bool getSemanticInterposition() const;
+
+  /// Set whether semantic interposition is to be respected.
+  void setSemanticInterposition(bool);
 
   /// Returns true if PLT should be avoided for RTLib calls.
   bool getRtLibUseGOT() const;

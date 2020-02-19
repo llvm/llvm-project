@@ -24,7 +24,7 @@ TEST_F(DefaultGuardedPoolAllocator, NullptrIsNotMine) {
 TEST_F(CustomGuardedPoolAllocator, SizedAllocations) {
   InitNumSlots(1);
 
-  std::size_t MaxAllocSize = GPA.maximumAllocationSize();
+  std::size_t MaxAllocSize = GPA.getAllocatorState()->maximumAllocationSize();
   EXPECT_TRUE(MaxAllocSize > 0);
 
   for (unsigned AllocSize = 1; AllocSize <= MaxAllocSize; AllocSize <<= 1) {
@@ -37,7 +37,8 @@ TEST_F(CustomGuardedPoolAllocator, SizedAllocations) {
 }
 
 TEST_F(DefaultGuardedPoolAllocator, TooLargeAllocation) {
-  EXPECT_EQ(nullptr, GPA.allocate(GPA.maximumAllocationSize() + 1));
+  EXPECT_EQ(nullptr,
+            GPA.allocate(GPA.getAllocatorState()->maximumAllocationSize() + 1));
 }
 
 TEST_F(CustomGuardedPoolAllocator, AllocAllSlots) {

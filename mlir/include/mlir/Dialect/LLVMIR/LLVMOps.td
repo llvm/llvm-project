@@ -344,7 +344,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
 }
 
 def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
-                        Arguments<(ins UnitAttr:$cleanup, 
+                        Arguments<(ins UnitAttr:$cleanup,
                                        Variadic<LLVM_Type>)> {
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return parseLandingpadOp(parser, result); }];
@@ -354,9 +354,18 @@ def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
 def LLVM_CallOp : LLVM_Op<"call">,
                   Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                              Variadic<LLVM_Type>)>,
-                  Results<(outs Variadic<LLVM_Type>)>,
-                  LLVM_TwoBuilders<LLVM_OneResultOpBuilder,
-                                   LLVM_ZeroResultOpBuilder> {
+                  Results<(outs Variadic<LLVM_Type>)> {
+  let builders = [OpBuilder<
+    "Builder *builder, OperationState &result, LLVMFuncOp func,"
+    "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
+    [{
+      LLVMType resultType = func.getType().getFunctionResultType();
+      if (!resultType.isVoidTy())
+        result.addTypes(resultType);
+      result.addAttribute("callee", builder->getSymbolRefAttr(func));
+      result.addAttributes(attributes);
+      result.addOperands(operands);
+    }]>];
   let verifier = [{
     if (getNumResults() > 1)
       return emitOpError("must have 0 or 1 result");
@@ -435,7 +444,8 @@ def LLVM_ShuffleVectorOp
 
 // Misc operations.
 def LLVM_SelectOp
-    : LLVM_OneResultOp<"select", [NoSideEffect]>,
+    : LLVM_OneResultOp<"select",
+          [NoSideEffect, AllTypesMatch<["trueValue", "falseValue", "res"]>]>,
       Arguments<(ins LLVM_Type:$condition, LLVM_Type:$trueValue,
                  LLVM_Type:$falseValue)>,
       LLVM_Builder<
@@ -445,8 +455,7 @@ def LLVM_SelectOp
     "Value rhs", [{
       build(b, result, lhs.getType(), condition, lhs, rhs);
     }]>];
-  let parser = [{ return parseSelectOp(parser, result); }];
-  let printer = [{ printSelectOp(p, *this); }];
+  let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
 }
 
 // Terminators.
@@ -723,6 +732,7 @@ def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
+def LLVM_FMAOp : LLVM_TernarySameArgsIntrinsicOp<"fma">;
 def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrinsicOp<"fmuladd">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 
@@ -769,6 +779,29 @@ def LLVM_Prefetch : LLVM_ZeroResultOp<"intr.prefetch">,
     builder.CreateCall(fn, {$addr, $rw, $hint, $cache});
   }];
 }
+
+//
+// Vector Reductions.
+//
+
+def LLVM_experimental_vector_reduce_add : LLVM_VectorReduction<"add">;
+def LLVM_experimental_vector_reduce_and : LLVM_VectorReduction<"and">;
+def LLVM_experimental_vector_reduce_mul : LLVM_VectorReduction<"mul">;
+def LLVM_experimental_vector_reduce_fmax : LLVM_VectorReduction<"fmax">;
+def LLVM_experimental_vector_reduce_fmin : LLVM_VectorReduction<"fmin">;
+def LLVM_experimental_vector_reduce_or : LLVM_VectorReduction<"or">;
+def LLVM_experimental_vector_reduce_smax : LLVM_VectorReduction<"smax">;
+def LLVM_experimental_vector_reduce_smin : LLVM_VectorReduction<"smin">;
+def LLVM_experimental_vector_reduce_umax : LLVM_VectorReduction<"umax">;
+def LLVM_experimental_vector_reduce_umin : LLVM_VectorReduction<"umin">;
+def LLVM_experimental_vector_reduce_xor : LLVM_VectorReduction<"xor">;
+
+def LLVM_experimental_vector_reduce_v2_fadd : LLVM_VectorReductionV2<"fadd">;
+def LLVM_experimental_vector_reduce_v2_fmul : LLVM_VectorReductionV2<"fmul">;
+
+//
+// Atomic operations.
+//
 
 def AtomicBinOpXchg : I64EnumAttrCase<"xchg", 0>;
 def AtomicBinOpAdd  : I64EnumAttrCase<"add", 1>;
@@ -835,6 +868,16 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg">,
   let parser = [{ return parseAtomicCmpXchgOp(parser, result); }];
   let printer = [{ printAtomicCmpXchgOp(p, *this); }];
   let verifier = "return ::verify(*this);";
+}
+
+def LLVM_AssumeOp : LLVM_Op<"intr.assume", []>,
+                    Arguments<(ins LLVM_Type:$cond)> {
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *fn =
+        llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::assume, {});
+    builder.CreateCall(fn, {$cond});
+  }];
 }
 
 #endif // LLVMIR_OPS

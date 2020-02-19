@@ -32,6 +32,15 @@ public:
     valueMap[from.getAsOpaquePointer()] = to.getAsOpaquePointer();
   }
 
+  template <
+      typename S, typename T,
+      std::enable_if_t<!std::is_assignable<Value, S>::value &&
+                       !std::is_assignable<Block *, S>::value> * = nullptr>
+  void map(S &&from, T &&to) {
+    for (auto pair : llvm::zip(from, to))
+      map(std::get<0>(pair), std::get<1>(pair));
+  }
+
   /// Erases a mapping for 'from'.
   void erase(Block *from) { valueMap.erase(from); }
   void erase(Value from) { valueMap.erase(from.getAsOpaquePointer()); }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Watchpoint_h_
-#define liblldb_Watchpoint_h_
+#ifndef LLDB_BREAKPOINT_WATCHPOINT_H
+#define LLDB_BREAKPOINT_WATCHPOINT_H
 
 #include <memory>
 #include <string>
@@ -160,8 +160,8 @@ private:
   void ResetHitCount() { m_hit_count = 0; }
 
   void ResetHistoricValues() {
-    m_old_value_sp.reset(nullptr);
-    m_new_value_sp.reset(nullptr);
+    m_old_value_sp.reset();
+    m_new_value_sp.reset();
   }
 
   Target &m_target;
@@ -209,4 +209,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Watchpoint_h_
+#endif // LLDB_BREAKPOINT_WATCHPOINT_H

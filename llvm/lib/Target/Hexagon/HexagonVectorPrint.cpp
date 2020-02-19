@@ -71,9 +71,10 @@ public:
 char HexagonVectorPrint::ID = 0;
 
 static bool isVecReg(unsigned Reg) {
-  return (Reg >= Hexagon::V0 && Reg <= Hexagon::V31)
-      || (Reg >= Hexagon::W0 && Reg <= Hexagon::W15)
-      || (Reg >= Hexagon::Q0 && Reg <= Hexagon::Q3);
+  return (Reg >= Hexagon::V0 && Reg <= Hexagon::V31) ||
+         (Reg >= Hexagon::W0 && Reg <= Hexagon::W15) ||
+         (Reg >= Hexagon::WR0 && Reg <= Hexagon::WR15) ||
+         (Reg >= Hexagon::Q0 && Reg <= Hexagon::Q3);
 }
 
 static std::string getStringReg(unsigned R) {

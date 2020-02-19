@@ -449,3 +449,42 @@ TEST(DirectoryWatcherTest, InvalidatedWatcher) {
 
   checkEventualResultWithTimeout(TestConsumer);
 }
+
+TEST(DirectoryWatcherTest, InvalidatedWatcherAsync) {
+  DirectoryWatcherTestFixture fixture;
+  fixture.addFile("a");
+
+  // This test is checking that we get the initial notification for 'a' before
+  // the final 'invalidated'. Strictly speaking, we do not care whether 'a' is
+  // processed or not, only that it is neither racing with, nor after
+  // 'invalidated'. In practice, it is always processed in our implementations.
+  VerifyingConsumer TestConsumer{
+      {{EventKind::Modified, "a"}},
+      {{EventKind::WatcherGotInvalidated, ""}},
+      // We have to ignore these as it's a race between the test process
+      // which is scanning the directory and kernel which is sending
+      // notification.
+      {{EventKind::Modified, "a"}},
+  };
+
+  // A counter that can help detect data races on the event receiver,
+  // particularly if used with TSan. Expected count will be 2 or 3 depending on
+  // whether we get the kernel event or not (see comment above).
+  unsigned Count = 0;
+  {
+    llvm::Expected<std::unique_ptr<DirectoryWatcher>> DW =
+        DirectoryWatcher::create(
+            fixture.TestWatchedDir,
+            [&TestConsumer,
+             &Count](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                     bool IsInitial) {
+              Count += 1;
+              TestConsumer.consume(Events, IsInitial);
+            },
+            /*waitForInitialSync=*/false);
+    ASSERT_THAT_ERROR(DW.takeError(), Succeeded());
+  } // DW is destructed here.
+
+  checkEventualResultWithTimeout(TestConsumer);
+  ASSERT_TRUE(Count == 2u || Count == 3u);
+}

@@ -68,7 +68,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm,
       LLVM_FALLTHROUGH;
 
     case MCDisassembler::Success:
-      Streamer.EmitInstruction(Inst, STI);
+      Streamer.emitInstruction(Inst, STI);
       break;
     }
   }

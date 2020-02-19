@@ -10,6 +10,6 @@ define double @f1() {
 ; CHECK: ldeb %f0, 0([[REGISTER]])
 ; CHECK: br %r14
 ;
-; CONST: .long 1065353217
+; CONST: .long 0x3f800001
   ret double 0x3ff0000020000000
 }

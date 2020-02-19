@@ -46,7 +46,7 @@ Error CodeViewRecordIO::endRecord() {
     while (PaddingBytes > 0) {
       char Pad = static_cast<uint8_t>(LF_PAD0 + PaddingBytes);
       StringRef BytesSR = StringRef(&Pad, sizeof(Pad));
-      Streamer->EmitBytes(BytesSR);
+      Streamer->emitBytes(BytesSR);
       --PaddingBytes;
     }
     resetStreamedLen();
@@ -101,7 +101,7 @@ Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes,
                                           const Twine &Comment) {
   if (isStreaming()) {
     emitComment(Comment);
-    Streamer->EmitBinaryData(toStringRef(Bytes));
+    Streamer->emitBinaryData(toStringRef(Bytes));
     incrStreamedLen(Bytes.size());
   } else if (isWriting()) {
     if (auto EC = Writer->writeBytes(Bytes))
@@ -131,7 +131,7 @@ Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd, const Twine &Comment) {
       emitComment(Comment + ": " + TypeNameStr);
     else
       emitComment(Comment);
-    Streamer->EmitIntValue(TypeInd.getIndex(), sizeof(TypeInd.getIndex()));
+    Streamer->emitIntValue(TypeInd.getIndex(), sizeof(TypeInd.getIndex()));
     incrStreamedLen(sizeof(TypeInd.getIndex()));
   } else if (isWriting()) {
     if (auto EC = Writer->writeInteger(TypeInd.getIndex()))
@@ -205,7 +205,7 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value, const Twine &Comment) {
   if (isStreaming()) {
     auto NullTerminatedString = StringRef(Value.data(), Value.size() + 1);
     emitComment(Comment);
-    Streamer->EmitBytes(NullTerminatedString);
+    Streamer->emitBytes(NullTerminatedString);
     incrStreamedLen(NullTerminatedString.size());
   } else if (isWriting()) {
     // Truncate if we attempt to write too much.
@@ -226,7 +226,7 @@ Error CodeViewRecordIO::mapGuid(GUID &Guid, const Twine &Comment) {
     StringRef GuidSR =
         StringRef((reinterpret_cast<const char *>(&Guid)), GuidSize);
     emitComment(Comment);
-    Streamer->EmitBytes(GuidSR);
+    Streamer->emitBytes(GuidSR);
     incrStreamedLen(GuidSize);
     return Error::success();
   }
@@ -275,24 +275,24 @@ void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
                                                 const Twine &Comment) {
   assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
-    Streamer->EmitIntValue(LF_CHAR, 2);
+    Streamer->emitIntValue(LF_CHAR, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 1);
+    Streamer->emitIntValue(Value, 1);
     incrStreamedLen(3);
   } else if (Value >= std::numeric_limits<int16_t>::min()) {
-    Streamer->EmitIntValue(LF_SHORT, 2);
+    Streamer->emitIntValue(LF_SHORT, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 2);
+    Streamer->emitIntValue(Value, 2);
     incrStreamedLen(4);
   } else if (Value >= std::numeric_limits<int32_t>::min()) {
-    Streamer->EmitIntValue(LF_LONG, 2);
+    Streamer->emitIntValue(LF_LONG, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 4);
+    Streamer->emitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
-    Streamer->EmitIntValue(LF_QUADWORD, 2);
+    Streamer->emitIntValue(LF_QUADWORD, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 4);
+    Streamer->emitIntValue(Value, 4);
     incrStreamedLen(6);
   }
 }
@@ -301,22 +301,22 @@ void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
                                                   const Twine &Comment) {
   if (Value < LF_NUMERIC) {
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 2);
+    Streamer->emitIntValue(Value, 2);
     incrStreamedLen(2);
   } else if (Value <= std::numeric_limits<uint16_t>::max()) {
-    Streamer->EmitIntValue(LF_USHORT, 2);
+    Streamer->emitIntValue(LF_USHORT, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 2);
+    Streamer->emitIntValue(Value, 2);
     incrStreamedLen(4);
   } else if (Value <= std::numeric_limits<uint32_t>::max()) {
-    Streamer->EmitIntValue(LF_ULONG, 2);
+    Streamer->emitIntValue(LF_ULONG, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 4);
+    Streamer->emitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
-    Streamer->EmitIntValue(LF_UQUADWORD, 2);
+    Streamer->emitIntValue(LF_UQUADWORD, 2);
     emitComment(Comment);
-    Streamer->EmitIntValue(Value, 8);
+    Streamer->emitIntValue(Value, 8);
     incrStreamedLen(6);
   }
 }

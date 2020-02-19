@@ -72,6 +72,10 @@ class HexagonMCChecker {
   using ReadOnlyIterator = std::set<unsigned>::iterator;
   std::set<unsigned> ReadOnly;
 
+  // Contains the vector-pair-registers with the even number
+  // first ("v0:1", e.g.) used/def'd in this packet.
+  std::set<unsigned> ReversePairs;
+
   void init();
   void init(MCInst const &);
   void initReg(MCInst const &, unsigned, unsigned &PredReg, bool &isTrue);
@@ -94,6 +98,7 @@ class HexagonMCChecker {
   bool checkAXOK();
   bool checkHWLoop();
   bool checkCOFMax1();
+  bool checkLegalVecRegPair();
 
   static void compoundRegisterMap(unsigned &);
 

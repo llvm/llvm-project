@@ -178,7 +178,7 @@ __isl_give isl_schedule_tree *isl_schedule_tree_first_schedule_descendant(
 __isl_give isl_union_map *isl_schedule_tree_get_subtree_schedule_union_map(
 	__isl_keep isl_schedule_tree *tree);
 
-unsigned isl_schedule_tree_band_n_member(__isl_keep isl_schedule_tree *tree);
+isl_size isl_schedule_tree_band_n_member(__isl_keep isl_schedule_tree *tree);
 
 isl_bool isl_schedule_tree_band_member_get_coincident(
 	__isl_keep isl_schedule_tree *tree, int pos);
@@ -190,7 +190,7 @@ __isl_give isl_schedule_tree *isl_schedule_tree_band_set_permutable(
 	__isl_take isl_schedule_tree *tree, int permutable);
 
 int isl_schedule_tree_has_children(__isl_keep isl_schedule_tree *tree);
-int isl_schedule_tree_n_children(__isl_keep isl_schedule_tree *tree);
+isl_size isl_schedule_tree_n_children(__isl_keep isl_schedule_tree *tree);
 __isl_give isl_schedule_tree *isl_schedule_tree_get_child(
 	__isl_keep isl_schedule_tree *tree, int pos);
 

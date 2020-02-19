@@ -32,21 +32,27 @@ ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
                                         lldb::TypeSP &type_sp) {
-  return (new ValueObjectMemory(exe_scope, name, address, type_sp))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectMemory(exe_scope, *manager_sp, name, address, type_sp))
+      ->GetSP();
 }
 
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
                                         const CompilerType &ast_type) {
-  return (new ValueObjectMemory(exe_scope, name, address, ast_type))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectMemory(exe_scope, *manager_sp, name, address,
+                                ast_type))
+      ->GetSP();
 }
 
 ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
+                                     ValueObjectManager &manager,
                                      llvm::StringRef name,
                                      const Address &address,
                                      lldb::TypeSP &type_sp)
-    : ValueObject(exe_scope), m_address(address), m_type_sp(type_sp),
+    : ValueObject(exe_scope, manager), m_address(address), m_type_sp(type_sp),
       m_compiler_type() {
   // Do not attempt to construct one of these objects with no variable!
   assert(m_type_sp.get() != nullptr);
@@ -70,10 +76,11 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
 }
 
 ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
+                                     ValueObjectManager &manager,
                                      llvm::StringRef name,
                                      const Address &address,
                                      const CompilerType &ast_type)
-    : ValueObject(exe_scope), m_address(address), m_type_sp(),
+    : ValueObject(exe_scope, manager), m_address(address), m_type_sp(),
       m_compiler_type(ast_type) {
   // Do not attempt to construct one of these objects with no variable!
   assert(m_compiler_type.GetTypeSystem());
@@ -82,8 +89,6 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
   TargetSP target_sp(GetTargetSP());
 
   SetName(ConstString(name));
-  //    m_value.SetContext(Value::eContextTypeClangType,
-  //    m_compiler_type.GetOpaqueQualType());
   m_value.SetCompilerType(m_compiler_type);
   lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
   if (load_address != LLDB_INVALID_ADDRESS) {
@@ -112,7 +117,7 @@ CompilerType ValueObjectMemory::GetCompilerTypeImpl() {
 ConstString ValueObjectMemory::GetTypeName() {
   if (m_type_sp)
     return m_type_sp->GetName();
-  return m_compiler_type.GetConstTypeName();
+  return m_compiler_type.GetTypeName();
 }
 
 ConstString ValueObjectMemory::GetDisplayTypeName() {
@@ -204,8 +209,6 @@ bool ValueObjectMemory::UpdateValue() {
         if (m_type_sp)
           value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
         else {
-          // value.SetContext(Value::eContextTypeClangType,
-          // m_compiler_type.GetOpaqueQualType());
           value.SetCompilerType(m_compiler_type);
         }
 

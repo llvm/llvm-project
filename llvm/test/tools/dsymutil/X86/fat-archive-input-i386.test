@@ -1,4 +1,3 @@
-# REQUIRES: object-emission
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ---

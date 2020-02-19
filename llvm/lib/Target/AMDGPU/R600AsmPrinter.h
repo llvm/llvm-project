@@ -26,7 +26,7 @@ public:
   StringRef getPassName() const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   /// Implemented in AMDGPUMCInstLower.cpp
-  void EmitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
   /// Lower the specified LLVM Constant to an MCExpr.
   /// The AsmPrinter::lowerConstantof does not know how to lower
   /// addrspacecast, therefore they should be lowered by this function.

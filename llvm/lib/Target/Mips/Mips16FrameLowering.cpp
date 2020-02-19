@@ -109,11 +109,9 @@ void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
   TII.restoreFrame(Mips::SP, StackSize, MBB, MBBI);
 }
 
-bool Mips16FrameLowering::
-spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MI,
-                          const std::vector<CalleeSavedInfo> &CSI,
-                          const TargetRegisterInfo *TRI) const {
+bool Mips16FrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
 
   //

@@ -1482,7 +1482,7 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^RBITv")>;
 // ASIMD bitwise insert, D-form
 // ASIMD bitwise insert, Q-form
 def : InstRW<[THX2T99Write_5Cyc_F01],
-            (instregex "^BIFv", "^BITv", "^BSLv")>;
+            (instregex "^BIFv", "^BITv", "^BSLv", "^BSPv")>;
 
 // ASIMD count, D-form
 // ASIMD count, Q-form

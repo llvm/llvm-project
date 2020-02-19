@@ -11,8 +11,8 @@
 #include <isl_ctx_private.h>
 #include <isl_val_private.h>
 
-#undef BASE
-#define BASE val
+#undef EL_BASE
+#define EL_BASE val
 
 #include <isl_list_templ.c>
 
@@ -969,7 +969,7 @@ isl_bool isl_val_is_divisible_by(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 		isl_die(isl_val_get_ctx(v1), isl_error_invalid,
 			"expecting two integers", return isl_bool_error);
 
-	return isl_int_is_divisible_by(v1->n, v2->n);
+	return isl_bool_ok(isl_int_is_divisible_by(v1->n, v2->n));
 }
 
 /* Given two integer values "v1" and "v2", return the residue of "v1"
@@ -1142,7 +1142,7 @@ isl_bool isl_val_is_int(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_one(v->d);
+	return isl_bool_ok(isl_int_is_one(v->d));
 }
 
 /* Does "v" represent a rational value?
@@ -1152,7 +1152,7 @@ isl_bool isl_val_is_rat(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return !isl_int_is_zero(v->d);
+	return isl_bool_ok(!isl_int_is_zero(v->d));
 }
 
 /* Does "v" represent NaN?
@@ -1162,7 +1162,7 @@ isl_bool isl_val_is_nan(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_zero(v->n) && isl_int_is_zero(v->d);
+	return isl_bool_ok(isl_int_is_zero(v->n) && isl_int_is_zero(v->d));
 }
 
 /* Does "v" represent +infinity?
@@ -1172,7 +1172,7 @@ isl_bool isl_val_is_infty(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_pos(v->n) && isl_int_is_zero(v->d);
+	return isl_bool_ok(isl_int_is_pos(v->n) && isl_int_is_zero(v->d));
 }
 
 /* Does "v" represent -infinity?
@@ -1182,7 +1182,7 @@ isl_bool isl_val_is_neginfty(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_neg(v->n) && isl_int_is_zero(v->d);
+	return isl_bool_ok(isl_int_is_neg(v->n) && isl_int_is_zero(v->d));
 }
 
 /* Does "v" represent the integer zero?
@@ -1192,7 +1192,7 @@ isl_bool isl_val_is_zero(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_zero(v->n) && !isl_int_is_zero(v->d);
+	return isl_bool_ok(isl_int_is_zero(v->n) && !isl_int_is_zero(v->d));
 }
 
 /* Does "v" represent the integer one?
@@ -1205,7 +1205,7 @@ isl_bool isl_val_is_one(__isl_keep isl_val *v)
 	if (isl_val_is_nan(v))
 		return isl_bool_false;
 
-	return isl_int_eq(v->n, v->d);
+	return isl_bool_ok(isl_int_eq(v->n, v->d));
 }
 
 /* Does "v" represent the integer negative one?
@@ -1215,7 +1215,7 @@ isl_bool isl_val_is_negone(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_neg(v->n) && isl_int_abs_eq(v->n, v->d);
+	return isl_bool_ok(isl_int_is_neg(v->n) && isl_int_abs_eq(v->n, v->d));
 }
 
 /* Is "v" (strictly) positive?
@@ -1225,7 +1225,7 @@ isl_bool isl_val_is_pos(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_pos(v->n);
+	return isl_bool_ok(isl_int_is_pos(v->n));
 }
 
 /* Is "v" (strictly) negative?
@@ -1235,7 +1235,7 @@ isl_bool isl_val_is_neg(__isl_keep isl_val *v)
 	if (!v)
 		return isl_bool_error;
 
-	return isl_int_is_neg(v->n);
+	return isl_bool_ok(isl_int_is_neg(v->n));
 }
 
 /* Is "v" non-negative?
@@ -1248,7 +1248,7 @@ isl_bool isl_val_is_nonneg(__isl_keep isl_val *v)
 	if (isl_val_is_nan(v))
 		return isl_bool_false;
 
-	return isl_int_is_nonneg(v->n);
+	return isl_bool_ok(isl_int_is_nonneg(v->n));
 }
 
 /* Is "v" non-positive?
@@ -1261,7 +1261,7 @@ isl_bool isl_val_is_nonpos(__isl_keep isl_val *v)
 	if (isl_val_is_nan(v))
 		return isl_bool_false;
 
-	return isl_int_is_nonpos(v->n);
+	return isl_bool_ok(isl_int_is_nonpos(v->n));
 }
 
 /* Return the sign of "v".
@@ -1289,7 +1289,7 @@ isl_bool isl_val_lt(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	if (!v1 || !v2)
 		return isl_bool_error;
 	if (isl_val_is_int(v1) && isl_val_is_int(v2))
-		return isl_int_lt(v1->n, v2->n);
+		return isl_bool_ok(isl_int_lt(v1->n, v2->n));
 	if (isl_val_is_nan(v1) || isl_val_is_nan(v2))
 		return isl_bool_false;
 	if (isl_val_eq(v1, v2))
@@ -1306,7 +1306,7 @@ isl_bool isl_val_lt(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	isl_int_init(t);
 	isl_int_mul(t, v1->n, v2->d);
 	isl_int_submul(t, v2->n, v1->d);
-	lt = isl_int_is_neg(t);
+	lt = isl_bool_ok(isl_int_is_neg(t));
 	isl_int_clear(t);
 
 	return lt;
@@ -1329,7 +1329,7 @@ isl_bool isl_val_gt_si(__isl_keep isl_val *v, long i)
 	if (!v)
 		return isl_bool_error;
 	if (isl_val_is_int(v))
-		return isl_int_cmp_si(v->n, i) > 0;
+		return isl_bool_ok(isl_int_cmp_si(v->n, i) > 0);
 	if (isl_val_is_nan(v))
 		return isl_bool_false;
 	if (isl_val_is_infty(v))
@@ -1338,7 +1338,7 @@ isl_bool isl_val_gt_si(__isl_keep isl_val *v, long i)
 		return isl_bool_false;
 
 	vi = isl_val_int_from_si(isl_val_get_ctx(v), i);
-	res = isl_val_gt(v, vi);
+	res = isl_bool_ok(isl_val_gt(v, vi));
 	isl_val_free(vi);
 
 	return res;
@@ -1354,7 +1354,7 @@ isl_bool isl_val_le(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	if (!v1 || !v2)
 		return isl_bool_error;
 	if (isl_val_is_int(v1) && isl_val_is_int(v2))
-		return isl_int_le(v1->n, v2->n);
+		return isl_bool_ok(isl_int_le(v1->n, v2->n));
 	if (isl_val_is_nan(v1) || isl_val_is_nan(v2))
 		return isl_bool_false;
 	if (isl_val_eq(v1, v2))
@@ -1371,7 +1371,7 @@ isl_bool isl_val_le(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	isl_int_init(t);
 	isl_int_mul(t, v1->n, v2->d);
 	isl_int_submul(t, v2->n, v1->d);
-	le = isl_int_is_nonpos(t);
+	le = isl_bool_ok(isl_int_is_nonpos(t));
 	isl_int_clear(t);
 
 	return le;
@@ -1424,7 +1424,8 @@ isl_bool isl_val_eq(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	if (isl_val_is_nan(v1) || isl_val_is_nan(v2))
 		return isl_bool_false;
 
-	return isl_int_eq(v1->n, v2->n) && isl_int_eq(v1->d, v2->d);
+	return isl_bool_ok(isl_int_eq(v1->n, v2->n) &&
+			   isl_int_eq(v1->d, v2->d));
 }
 
 /* Is "v1" equal to "v2" in absolute value?
@@ -1436,7 +1437,8 @@ isl_bool isl_val_abs_eq(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	if (isl_val_is_nan(v1) || isl_val_is_nan(v2))
 		return isl_bool_false;
 
-	return isl_int_abs_eq(v1->n, v2->n) && isl_int_eq(v1->d, v2->d);
+	return isl_bool_ok(isl_int_abs_eq(v1->n, v2->n) &&
+			   isl_int_eq(v1->d, v2->d));
 }
 
 /* Is "v1" different from "v2"?
@@ -1448,7 +1450,8 @@ isl_bool isl_val_ne(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	if (isl_val_is_nan(v1) || isl_val_is_nan(v2))
 		return isl_bool_false;
 
-	return isl_int_ne(v1->n, v2->n) || isl_int_ne(v1->d, v2->d);
+	return isl_bool_ok(isl_int_ne(v1->n, v2->n) ||
+			   isl_int_ne(v1->d, v2->d));
 }
 
 /* Print a textual representation of "v" onto "p".
@@ -1487,7 +1490,8 @@ __isl_give isl_printer *isl_printer_print_val(__isl_take isl_printer *p,
  * This is a private copy of isl_val_eq for use in the generic
  * isl_multi_*_plain_is_equal instantiated for isl_val.
  */
-int isl_val_plain_is_equal(__isl_keep isl_val *val1, __isl_keep isl_val *val2)
+isl_bool isl_val_plain_is_equal(__isl_keep isl_val *val1,
+	__isl_keep isl_val *val2)
 {
 	return isl_val_eq(val1, val2);
 }
@@ -1522,19 +1526,6 @@ __isl_give isl_val *isl_val_insert_dims(__isl_take isl_val *v,
 	return v;
 }
 
-/* Drop the "n" first dimensions of type "type" at position "first".
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * does not do anything.
- */
-__isl_give isl_val *isl_val_drop_dims(__isl_take isl_val *v,
-	enum isl_dim_type type, unsigned first, unsigned n)
-{
-	return v;
-}
-
 /* Change the name of the dimension of type "type" at position "pos" to "s".
  *
  * This function is only meant to be used in the generic isl_multi_*
@@ -1545,73 +1536,6 @@ __isl_give isl_val *isl_val_drop_dims(__isl_take isl_val *v,
 __isl_give isl_val *isl_val_set_dim_name(__isl_take isl_val *v,
 	enum isl_dim_type type, unsigned pos, const char *s)
 {
-	return v;
-}
-
-/* Return the space of "v".
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  The conditions surrounding the call to this function make sure
- * that this function will never actually get called.  We return a valid
- * space anyway, just in case.
- */
-__isl_give isl_space *isl_val_get_space(__isl_keep isl_val *v)
-{
-	if (!v)
-		return NULL;
-
-	return isl_space_params_alloc(isl_val_get_ctx(v), 0);
-}
-
-/* Reset the domain space of "v" to "space".
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * does not do anything, apart from error handling and cleaning up memory.
- */
-__isl_give isl_val *isl_val_reset_domain_space(__isl_take isl_val *v,
-	__isl_take isl_space *space)
-{
-	if (!space)
-		return isl_val_free(v);
-	isl_space_free(space);
-	return v;
-}
-
-/* Align the parameters of "v" to those of "space".
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * does not do anything, apart from error handling and cleaning up memory.
- * Note that the conditions surrounding the call to this function make sure
- * that this function will never actually get called.
- */
-__isl_give isl_val *isl_val_align_params(__isl_take isl_val *v,
-	__isl_take isl_space *space)
-{
-	if (!space)
-		return isl_val_free(v);
-	isl_space_free(space);
-	return v;
-}
-
-/* Reorder the dimensions of the domain of "v" according
- * to the given reordering.
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * does not do anything, apart from error handling and cleaning up memory.
- */
-__isl_give isl_val *isl_val_realign_domain(__isl_take isl_val *v,
-	__isl_take isl_reordering *r)
-{
-	if (!r)
-		return isl_val_free(v);
-	isl_reordering_free(r);
 	return v;
 }
 
@@ -1633,48 +1557,29 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
 	return isl_val_zero(ctx);
 }
 
-/* Do the parameters of "v" match those of "space"?
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * simply returns true, except if "v" or "space" are NULL.
- */
-isl_bool isl_val_matching_params(__isl_keep isl_val *v,
-	__isl_keep isl_space *space)
-{
-	if (!v || !space)
-		return isl_bool_error;
-	return isl_bool_true;
-}
-
-/* Check that the domain space of "v" matches "space".
- *
- * This function is only meant to be used in the generic isl_multi_*
- * functions which have to deal with base objects that have an associated
- * space.  Since an isl_val does not have an associated space, this function
- * simply returns 0, except if "v" or "space" are NULL.
- */
-isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
-	__isl_keep isl_space *space)
-{
-	if (!v || !space)
-		return isl_stat_error;
-	return isl_stat_ok;
-}
-
 #define isl_val_involves_nan isl_val_is_nan
 
 #undef BASE
 #define BASE val
 
-#define NO_DOMAIN
-#define NO_IDENTITY
-#define NO_FROM_BASE
-#define NO_MOVE_DIMS
+#include <isl_multi_no_domain_templ.c>
 #include <isl_multi_no_explicit_domain.c>
 #include <isl_multi_templ.c>
+#include <isl_multi_arith_templ.c>
+#include <isl_multi_dim_id_templ.c>
 #include <isl_multi_dims.c>
+#include <isl_multi_nan_templ.c>
+#include <isl_multi_product_templ.c>
+#include <isl_multi_splice_templ.c>
+#include <isl_multi_tuple_id_templ.c>
+#include <isl_multi_zero_templ.c>
+
+/* Does "mv" consist of only zeros?
+ */
+isl_bool isl_multi_val_is_zero(__isl_keep isl_multi_val *mv)
+{
+	return isl_multi_val_every(mv, &isl_val_is_zero);
+}
 
 /* Apply "fn" to each of the elements of "mv" with as second argument "v".
  */

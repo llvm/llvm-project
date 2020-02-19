@@ -789,11 +789,9 @@ int MipsSEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
          getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
 }
 
-bool MipsSEFrameLowering::
-spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MI,
-                          const std::vector<CalleeSavedInfo> &CSI,
-                          const TargetRegisterInfo *TRI) const {
+bool MipsSEFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 

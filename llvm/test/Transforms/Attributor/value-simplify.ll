@@ -3,7 +3,7 @@
 ; TODO: Add max-iteration check
 
 ; Disable update test checks and enable it where required.
-; UTC_ARGS: --turn off
+; UTC_ARGS: --disable
 
 ; ModuleID = 'value-simplify.ll'
 source_filename = "value-simplify.ll"
@@ -136,14 +136,6 @@ f:
 }
 
 define internal i1 @ipccp2i(i1 %a) {
-; CHECK-LABEL: define {{[^@]+}}@ipccp2i
-; CHECK-SAME: (i1 returned [[A:%.*]])
-; CHECK-NEXT:    br label %t
-; CHECK:       t:
-; CHECK-NEXT:    ret i1 true
-; CHECK:       f:
-; CHECK-NEXT:    unreachable
-;
   br i1 %a, label %t, label %f
 t:
   ret i1 %a
@@ -154,22 +146,30 @@ f:
 
 define i1 @ipccp2() {
 ; CHECK-LABEL: define {{[^@]+}}@ipccp2()
-; CHECK-NEXT:    [[R:%.*]] = call i1 @ipccp2i(i1 true)
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %r = call i1 @ipccp2i(i1 true)
   ret i1 %r
 }
 
-define internal i32 @ipccp3i(i32 %a) {
-; CHECK-LABEL: define {{[^@]+}}@ipccp3i
-; CHECK-SAME: (i32 returned [[A:%.*]])
-; CHECK-NEXT:    br label [[T:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    ret i32 7
-; CHECK:       f:
-; CHECK-NEXT:    unreachable
+define internal i1 @ipccp2ib(i1 %a) {
+  br i1 %a, label %t, label %f
+t:
+  ret i1 true
+f:
+  %r = call i1 @ipccp2ib(i1 false)
+  ret i1 %r
+}
+
+define i1 @ipccp2b() {
+; CHECK-LABEL: define {{[^@]+}}@ipccp2b()
+; CHECK-NEXT:    ret i1 true
 ;
+  %r = call i1 @ipccp2ib(i1 true)
+  ret i1 %r
+}
+
+define internal i32 @ipccp3i(i32 %a) {
   %c = icmp eq i32 %a, 7
   br i1 %c, label %t, label %f
 t:
@@ -181,14 +181,12 @@ f:
 
 define i32 @ipccp3() {
 ; CHECK-LABEL: define {{[^@]+}}@ipccp3()
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ipccp3i(i32 7)
-; CHECK-NEXT:    ret i32 [[R]]
-; FIXME: R should be replaced with 7
+; CHECK-NEXT:    ret i32 7
   %r = call i32 @ipccp3i(i32 7)
   ret i32 %r
 }
 
-; UTC_ARGS: --turn on
+; UTC_ARGS: --enable
 
 ; Do not touch complicated arguments (for now)
 %struct.X = type { i8* }
@@ -245,23 +243,36 @@ define %struct.X* @complicated_args_nest() {
 
 @S = external global %struct.X
 define internal void @test_byval(%struct.X* byval %a) {
-; CHECK-LABEL: define {{[^@]+}}@test_byval
-; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
-; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
-; CHECK-NEXT:    store i8* null, i8** [[G0]], align 8
-; CHECK-NEXT:    ret void
-;
   %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0
   store i8* null, i8** %g0
   ret void
 }
 define void @complicated_args_byval() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval()
-; CHECK-NEXT:    call void @test_byval(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
 ; CHECK-NEXT:    ret void
 ;
   call void @test_byval(%struct.X* @S)
   ret void
+}
+
+define internal i8*@test_byval2(%struct.X* byval %a) {
+; CHECK-LABEL: define {{[^@]+}}@test_byval2
+; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[A:%.*]])
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
+; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
+; CHECK-NEXT:    ret i8* [[L]]
+;
+  %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0
+  %l = load i8*, i8** %g0
+  ret i8* %l
+}
+define i8* @complicated_args_byval2() {
+; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval2()
+; CHECK-NEXT:    [[C:%.*]] = call i8* @test_byval2(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
+; CHECK-NEXT:    ret i8* [[C]]
+;
+  %c = call i8* @test_byval2(%struct.X* @S)
+  ret i8* %c
 }
 
 define void @fixpoint_changed(i32* %p) {
@@ -313,4 +324,63 @@ for.end:
   ret void
 }
 
-; UTC_ARGS: --turn off
+; Check we merge undef and a constant properly.
+; FIXME fold the addition and return the constant.
+define i8 @caller0() {
+; CHECK-LABEL: define {{[^@]+}}@caller0()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller1() {
+; CHECK-LABEL: define {{[^@]+}}@caller1()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller2() {
+; CHECK-LABEL: define {{[^@]+}}@caller2()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller_middle() {
+; CHECK-LABEL: define {{[^@]+}}@caller_middle()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 42)
+  ret i8 %c
+}
+define i8 @caller3() {
+; CHECK-LABEL: define {{[^@]+}}@caller3()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define i8 @caller4() {
+; CHECK-LABEL: define {{[^@]+}}@caller4()
+; CHECK-NEXT:    [[C:%.*]] = call i8 @callee()
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = call i8 @callee(i8 undef)
+  ret i8 %c
+}
+define internal i8 @callee(i8 %a) {
+; CHECK-LABEL: define {{[^@]+}}@callee()
+; CHECK-NEXT:    [[C:%.*]] = add i8 42, 7
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %c = add i8 %a, 7
+  ret i8 %c
+}
+
+; UTC_ARGS: --disable

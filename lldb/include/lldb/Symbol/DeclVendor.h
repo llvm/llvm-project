@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DeclVendor_h_
-#define liblldb_DeclVendor_h_
+#ifndef LLDB_SYMBOL_DECLVENDOR_H
+#define LLDB_SYMBOL_DECLVENDOR_H
 
 #include "lldb/lldb-defines.h"
 

@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_TypeFormat_h_
-#define lldb_TypeFormat_h_
-
+#ifndef LLDB_DATAFORMATTERS_TYPEFORMAT_H
+#define LLDB_DATAFORMATTERS_TYPEFORMAT_H
 
 #include <functional>
 #include <string>
@@ -214,4 +213,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // lldb_TypeFormat_h_
+#endif // LLDB_DATAFORMATTERS_TYPEFORMAT_H

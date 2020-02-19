@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessMachCore_h_
-#define liblldb_ProcessMachCore_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H
 
 #include <list>
 #include <vector>
@@ -124,4 +124,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ProcessMachCore);
 };
 
-#endif // liblldb_ProcessMachCore_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H

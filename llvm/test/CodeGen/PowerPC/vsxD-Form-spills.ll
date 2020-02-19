@@ -8,19 +8,19 @@ define <4 x i32> @testSpill(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-DAG:    li [[REG64:[0-9]+]], 64
 ; CHECK-DAG:    li [[REG80:[0-9]+]], 80
 ; CHECK-DAG:    li [[REG96:[0-9]+]], 96
-; CHECK-DAG:    stxvd2x 60, 1, [[REG48]] # 16-byte Folded Spill
-; CHECK-DAG:    stxvd2x 61, 1, [[REG64]] # 16-byte Folded Spill
-; CHECK-DAG:    stxvd2x 62, 1, [[REG80]] # 16-byte Folded Spill
-; CHECK-DAG:    stxvd2x 63, 1, [[REG96]] # 16-byte Folded Spill
+; CHECK-DAG:    stvx 28, 1, [[REG48]] # 16-byte Folded Spill
+; CHECK-DAG:    stvx 29, 1, [[REG64]] # 16-byte Folded Spill
+; CHECK-DAG:    stvx 30, 1, [[REG80]] # 16-byte Folded Spill
+; CHECK-DAG:    stvx 31, 1, [[REG96]] # 16-byte Folded Spill
 ; CHECK:        .LBB0_3
 ; CHECK-DAG:    li [[REG96_LD:[0-9]+]], 96
 ; CHECK-DAG:    li [[REG80_LD:[0-9]+]], 80
 ; CHECK-DAG:    li [[REG64_LD:[0-9]+]], 64
 ; CHECK-DAG:    li [[REG48_LD:[0-9]+]], 48
-; CHECK-DAG:    lxvd2x 63, 1, [[REG96_LD]] # 16-byte Folded Reload
-; CHECK-DAG:    lxvd2x 62, 1, [[REG80_LD]] # 16-byte Folded Reload
-; CHECK-DAG:    lxvd2x 61, 1, [[REG64_LD]] # 16-byte Folded Reload
-; CHECK-DAG:    lxvd2x 60, 1, [[REG48_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lvx 31, 1, [[REG96_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lvx 30, 1, [[REG80_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lvx 29, 1, [[REG64_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lvx 28, 1, [[REG48_LD]] # 16-byte Folded Reload
 ; CHECK:    mtlr 0
 ; CHECK-NEXT:    blr
 ;

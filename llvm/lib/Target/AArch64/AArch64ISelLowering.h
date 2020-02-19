@@ -90,9 +90,9 @@ enum NodeType : unsigned {
   BICi,
   ORRi,
 
-  // Vector bit select: similar to ISD::VSELECT but not all bits within an
+  // Vector bitwise select: similar to ISD::VSELECT but not all bits within an
   // element must be identical.
-  BSL,
+  BSP,
 
   // Vector arithmetic negation
   NEG,
@@ -166,7 +166,7 @@ enum NodeType : unsigned {
   // Vector bitwise negation
   NOT,
 
-  // Vector bitwise selection
+  // Vector bitwise insertion
   BIT,
 
   // Compare-and-branch
@@ -214,6 +214,9 @@ enum NodeType : unsigned {
   INSR,
   PTEST,
   PTRUE,
+
+  DUP_PRED,
+  INDEX_VECTOR,
 
   LDNF1,
   LDNF1S,
@@ -386,9 +389,6 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
-  MachineBasicBlock *EmitLoweredCatchPad(MachineInstr &MI,
-                                         MachineBasicBlock *BB) const;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
@@ -428,13 +428,11 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override;
 
-  EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
-                          bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
+  EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
-  LLT getOptimalMemOpLLT(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
-                          bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                          const AttributeList &FuncAttributes) const override;
+  LLT getOptimalMemOpLLT(const MemOp &Op,
+                         const AttributeList &FuncAttributes) const override;
 
   /// Return true if the addressing mode represented by AM is legal for this
   /// target, for a load/store of the specified type.
@@ -472,6 +470,13 @@ public:
   /// with this index.
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
+
+  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                            bool MathUsed) const override {
+    // Using overflow ops for overflow checks only should beneficial on
+    // AArch64.
+    return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+  }
 
   Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
                         AtomicOrdering Ord) const override;

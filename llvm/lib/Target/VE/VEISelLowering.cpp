@@ -13,6 +13,7 @@
 
 #include "VEISelLowering.h"
 #include "MCTargetDesc/VEMCExpr.h"
+#include "VEMachineFunctionInfo.h"
 #include "VERegisterInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -203,7 +204,20 @@ SDValue VETargetLowering::LowerFormalArguments(
                     MachinePointerInfo::getFixedStack(MF, FI)));
   }
 
-  assert(!IsVarArg && "TODO implement var args");
+  if (!IsVarArg)
+    return Chain;
+
+  // This function takes variable arguments, some of which may have been passed
+  // in registers %s0-%s8.
+  //
+  // The va_start intrinsic needs to know the offset to the first variable
+  // argument.
+  // TODO: need to calculate offset correctly once we support f128.
+  unsigned ArgOffset = ArgLocs.size() * 8;
+  VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+  // Skip the 176 bytes of register save area.
+  FuncInfo->setVarArgsFrameOffset(ArgOffset + ArgsBaseOffset);
+
   return Chain;
 }
 
@@ -258,7 +272,16 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // by CC_VE would be correct now.
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
 
-  assert(!CLI.IsVarArg);
+  // VE requires to use both register and stack for varargs or no-prototyped
+  // functions.
+  bool UseBoth = CLI.IsVarArg;
+
+  // Analyze operands again if it is required to store BOTH.
+  SmallVector<CCValAssign, 16> ArgLocs2;
+  CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
+                  ArgLocs2, *DAG.getContext());
+  if (UseBoth)
+    CCInfo2.AnalyzeCallOperands(CLI.Outs, CC_VE2);
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -289,16 +312,42 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
 
-  assert(!isPositionIndependent() && "TODO PIC");
+  bool IsPICCall = isPositionIndependent();
+
+  // PC-relative references to external symbols should go through $stub.
+  // If so, we need to prepare GlobalBaseReg first.
+  const TargetMachine &TM = DAG.getTarget();
+  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+  const GlobalValue *GV = nullptr;
+  auto *CalleeG = dyn_cast<GlobalAddressSDNode>(Callee);
+  if (CalleeG)
+    GV = CalleeG->getGlobal();
+  bool Local = TM.shouldAssumeDSOLocal(*Mod, GV);
+  bool UsePlt = !Local;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Turn GlobalAddress/ExternalSymbol node into a value node
   // containing the address of them here.
-  if (isa<GlobalAddressSDNode>(Callee)) {
-    Callee =
-        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
-  } else if (isa<ExternalSymbolSDNode>(Callee)) {
-    Callee =
-        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  if (CalleeG) {
+    if (IsPICCall) {
+      if (UsePlt)
+        Subtarget->getInstrInfo()->getGlobalBaseReg(&MF);
+      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, 0);
+      Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
+    } else {
+      Callee =
+          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    }
+  } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    if (IsPICCall) {
+      if (UsePlt)
+        Subtarget->getInstrInfo()->getGlobalBaseReg(&MF);
+      Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
+      Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
+    } else {
+      Callee =
+          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    }
   }
 
   RegsToPass.push_back(std::make_pair(VE::SX12, Callee));
@@ -326,7 +375,9 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
-      continue;
+      if (!UseBoth)
+        continue;
+      VA = ArgLocs2[i];
     }
 
     assert(VA.isMemLoc());
@@ -497,24 +548,77 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f32, &VE::F32RegClass);
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
+  /// Load & Store {
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
+      // Turn FP extload into load/fpextend
+      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
+
+      // Turn FP truncstore into trunc + store.
+      setTruncStoreAction(FPVT, OtherFPVT, Expand);
+    }
+  }
+
+  // VE doesn't have i1 sign extending load
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setTruncStoreAction(VT, MVT::i1, Expand);
+  }
+  /// } Load & Store
+
   // Custom legalize address nodes into LO/HI parts.
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+  setOperationAction(ISD::GlobalTLSAddress, PtrVT, Custom);
 
-  // VE has no REM or DIVREM operations.
-  for (MVT IntVT : MVT::integer_valuetypes()) {
+  /// VAARG handling {
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+  // VAARG needs to be lowered to access with 8 bytes alignment.
+  setOperationAction(ISD::VAARG, MVT::Other, Custom);
+  // Use the default implementation.
+  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
+  setOperationAction(ISD::VAEND, MVT::Other, Expand);
+  /// } VAARG handling
+
+  /// Int Ops {
+  for (MVT IntVT : {MVT::i32, MVT::i64}) {
+    // VE has no REM or DIVREM operations.
     setOperationAction(ISD::UREM, IntVT, Expand);
     setOperationAction(ISD::SREM, IntVT, Expand);
     setOperationAction(ISD::SDIVREM, IntVT, Expand);
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
-  }
 
+    setOperationAction(ISD::CTTZ, IntVT, Expand);
+    setOperationAction(ISD::ROTL, IntVT, Expand);
+    setOperationAction(ISD::ROTR, IntVT, Expand);
+
+    // Use isel patterns for i32 and i64
+    setOperationAction(ISD::BSWAP, IntVT, Legal);
+    setOperationAction(ISD::CTLZ, IntVT, Legal);
+    setOperationAction(ISD::CTPOP, IntVT, Legal);
+
+    // Use isel patterns for i64, Promote i32
+    LegalizeAction Act = (IntVT == MVT::i32) ? Promote : Legal;
+    setOperationAction(ISD::BITREVERSE, IntVT, Act);
+  }
+  /// } Int Ops
+
+  /// Conversion {
   // VE doesn't have instructions for fp<->uint, so expand them by llvm
   setOperationAction(ISD::FP_TO_UINT, MVT::i32, Promote); // use i64
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote); // use i64
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
+
+  // fp16 not supported
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FP16_TO_FP, FPVT, Expand);
+    setOperationAction(ISD::FP_TO_FP16, FPVT, Expand);
+  }
+  /// } Conversion
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
@@ -536,8 +640,11 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
     TARGET_NODE_CASE(Lo)
     TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(GETFUNPLT)
+    TARGET_NODE_CASE(GETTLSADDR)
     TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(RET_FLAG)
+    TARGET_NODE_CASE(GLOBAL_BASE_REG)
   }
 #undef TARGET_NODE_CASE
   return nullptr;
@@ -559,6 +666,10 @@ SDValue VETargetLowering::withTargetFlags(SDValue Op, unsigned TF,
     return DAG.getTargetBlockAddress(BA->getBlockAddress(), Op.getValueType(),
                                      0, TF);
 
+  if (const ExternalSymbolSDNode *ES = dyn_cast<ExternalSymbolSDNode>(Op))
+    return DAG.getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0),
+                                       TF);
+
   llvm_unreachable("Unhandled address SDNode");
 }
 
@@ -577,8 +688,43 @@ SDValue VETargetLowering::makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
 // or ExternalSymbol SDNode.
 SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  EVT PtrVT = Op.getValueType();
 
-  assert(!isPositionIndependent() && "TODO implement PIC");
+  // Handle PIC mode first. VE needs a got load for every variable!
+  if (isPositionIndependent()) {
+    // GLOBAL_BASE_REG codegen'ed with call. Inform MFI that this
+    // function has calls.
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+    MFI.setHasCalls(true);
+    auto GlobalN = dyn_cast<GlobalAddressSDNode>(Op);
+
+    if (isa<ConstantPoolSDNode>(Op) ||
+        (GlobalN && GlobalN->getGlobal()->hasLocalLinkage())) {
+      // Create following instructions for local linkage PIC code.
+      //     lea %s35, %gotoff_lo(.LCPI0_0)
+      //     and %s35, %s35, (32)0
+      //     lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35)
+      //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
+      // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+      SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
+                                  VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+      SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
+      return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
+    }
+    // Create following instructions for not local linkage PIC code.
+    //     lea %s35, %got_lo(.LCPI0_0)
+    //     and %s35, %s35, (32)0
+    //     lea.sl %s35, %got_hi(.LCPI0_0)(%s35)
+    //     adds.l %s35, %s15, %s35                  ; %s15 is GOT
+    //     ld     %s35, (,%s35)
+    // FIXME: use lea.sl %s35, %gotoff_hi(.LCPI0_0)(%s35, %s15)
+    SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
+                                VEMCExpr::VK_VE_GOT_LO32, DAG);
+    SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
+    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
+    return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), AbsAddr,
+                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
 
   // This is one of the absolute code models.
   switch (getTargetMachine().getCodeModel()) {
@@ -604,6 +750,116 @@ SDValue VETargetLowering::LowerBlockAddress(SDValue Op,
   return makeAddress(Op, DAG);
 }
 
+SDValue
+VETargetLowering::LowerToTLSGeneralDynamicModel(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+
+  // Generate the following code:
+  //   t1: ch,glue = callseq_start t0, 0, 0
+  //   t2: i64,ch,glue = VEISD::GETTLSADDR t1, label, t1:1
+  //   t3: ch,glue = callseq_end t2, 0, 0, t2:2
+  //   t4: i64,ch,glue = CopyFromReg t3, Register:i64 $sx0, t3:1
+  SDValue Label = withTargetFlags(Op, 0, DAG);
+  EVT PtrVT = Op.getValueType();
+
+  // Lowering the machine isd will make sure everything is in the right
+  // location.
+  SDValue Chain = DAG.getEntryNode();
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  const uint32_t *Mask = Subtarget->getRegisterInfo()->getCallPreservedMask(
+      DAG.getMachineFunction(), CallingConv::C);
+  Chain = DAG.getCALLSEQ_START(Chain, 64, 0, dl);
+  SDValue Args[] = {Chain, Label, DAG.getRegisterMask(Mask), Chain.getValue(1)};
+  Chain = DAG.getNode(VEISD::GETTLSADDR, dl, NodeTys, Args);
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(64, dl, true),
+                             DAG.getIntPtrConstant(0, dl, true),
+                             Chain.getValue(1), dl);
+  Chain = DAG.getCopyFromReg(Chain, dl, VE::SX0, PtrVT, Chain.getValue(1));
+
+  // GETTLSADDR will be codegen'ed as call. Inform MFI that function has calls.
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setHasCalls(true);
+
+  // Also generate code to prepare a GOT register if it is PIC.
+  if (isPositionIndependent()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    Subtarget->getInstrInfo()->getGlobalBaseReg(&MF);
+  }
+
+  return Chain;
+}
+
+SDValue VETargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // The current implementation of nld (2.26) doesn't allow local exec model
+  // code described in VE-tls_v1.1.pdf (*1) as its input. Instead, we always
+  // generate the general dynamic model code sequence.
+  //
+  // *1: https://www.nec.com/en/global/prod/hpc/aurora/document/VE-tls_v1.1.pdf
+  return LowerToTLSGeneralDynamicModel(Op, DAG);
+}
+
+SDValue VETargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // Need frame address to find the address of VarArgsFrameIndex.
+  MF.getFrameInfo().setFrameAddressIsTaken(true);
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  SDLoc DL(Op);
+  SDValue Offset =
+      DAG.getNode(ISD::ADD, DL, PtrVT, DAG.getRegister(VE::SX9, PtrVT),
+                  DAG.getIntPtrConstant(FuncInfo->getVarArgsFrameOffset(), DL));
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, Offset, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+SDValue VETargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  EVT VT = Node->getValueType(0);
+  SDValue InChain = Node->getOperand(0);
+  SDValue VAListPtr = Node->getOperand(1);
+  EVT PtrVT = VAListPtr.getValueType();
+  const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
+  SDLoc DL(Node);
+  SDValue VAList =
+      DAG.getLoad(PtrVT, DL, InChain, VAListPtr, MachinePointerInfo(SV));
+  SDValue Chain = VAList.getValue(1);
+  SDValue NextPtr;
+
+  if (VT == MVT::f32) {
+    // float --> need special handling like below.
+    //    0      4
+    //    +------+------+
+    //    | empty| float|
+    //    +------+------+
+    // Increment the pointer, VAList, by 8 to the next vaarg.
+    NextPtr =
+        DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(8, DL));
+    // Then, adjust VAList.
+    unsigned InternalOffset = 4;
+    VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
+                         DAG.getConstant(InternalOffset, DL, PtrVT));
+  } else {
+    // Increment the pointer, VAList, by 8 to the next vaarg.
+    NextPtr =
+        DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(8, DL));
+  }
+
+  // Store the incremented VAList to the legalized pointer.
+  InChain = DAG.getStore(Chain, DL, NextPtr, VAListPtr, MachinePointerInfo(SV));
+
+  // Load the actual argument out of the pointer VAList.
+  // We can't count on greater alignment than the word size.
+  return DAG.getLoad(VT, DL, InChain, VAList, MachinePointerInfo(),
+                     std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8);
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -612,6 +868,12 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBlockAddress(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
+  case ISD::VASTART:
+    return LowerVASTART(Op, DAG);
+  case ISD::VAARG:
+    return LowerVAARG(Op, DAG);
   }
 }
 /// } Custom Lower

@@ -13,8 +13,8 @@ define void @f1(fp128 *%x) {
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
 ;
-; CONST: .quad 4611404543450677248
-; CONST: .quad 1
+; CONST: .quad 0x3fff000000000000
+; CONST: .quad 0x0000000000000001
   store fp128 0xL00000000000000013fff000000000000, fp128 *%x
   ret void
 }

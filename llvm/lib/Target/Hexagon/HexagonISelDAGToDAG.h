@@ -51,7 +51,7 @@ public:
     return true;
   }
   void PreprocessISelDAG() override;
-  void EmitFunctionEntryCode() override;
+  void emitFunctionEntryCode() override;
 
   void Select(SDNode *N) override;
 

@@ -96,7 +96,8 @@ namespace {
 
     /// Split critical edges where necessary for good coalescer performance.
     bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
-                       MachineLoopInfo *MLI);
+                       MachineLoopInfo *MLI,
+                       std::vector<SparseBitVector<>> *LiveInSets);
 
     // These functions are temporary abstractions around LiveVariables and
     // LiveIntervals, so they can go away when LiveVariables does.
@@ -151,15 +152,44 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  // This pass takes the function out of SSA form.
-  MRI->leaveSSA();
-
   // Split critical edges to help the coalescer.
   if (!DisableEdgeSplitting && (LV || LIS)) {
+    // A set of live-in regs for each MBB which is used to update LV
+    // efficiently also with large functions.
+    std::vector<SparseBitVector<>> LiveInSets;
+    if (LV) {
+      LiveInSets.resize(MF.size());
+      for (unsigned Index = 0, e = MRI->getNumVirtRegs(); Index != e; ++Index) {
+        // Set the bit for this register for each MBB where it is
+        // live-through or live-in (killed).
+        unsigned VirtReg = Register::index2VirtReg(Index);
+        MachineInstr *DefMI = MRI->getVRegDef(VirtReg);
+        if (!DefMI)
+          continue;
+        LiveVariables::VarInfo &VI = LV->getVarInfo(VirtReg);
+        SparseBitVector<>::iterator AliveBlockItr = VI.AliveBlocks.begin();
+        SparseBitVector<>::iterator EndItr = VI.AliveBlocks.end();
+        while (AliveBlockItr != EndItr) {
+          unsigned BlockNum = *(AliveBlockItr++);
+          LiveInSets[BlockNum].set(Index);
+        }
+        // The register is live into an MBB in which it is killed but not
+        // defined. See comment for VarInfo in LiveVariables.h.
+        MachineBasicBlock *DefMBB = DefMI->getParent();
+        if (VI.Kills.size() > 1 ||
+            (!VI.Kills.empty() && VI.Kills.front()->getParent() != DefMBB))
+          for (auto *MI : VI.Kills)
+            LiveInSets[MI->getParent()->getNumber()].set(Index);
+      }
+    }
+
     MachineLoopInfo *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
     for (auto &MBB : MF)
-      Changed |= SplitPHIEdges(MF, MBB, MLI);
+      Changed |= SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr));
   }
+
+  // This pass takes the function out of SSA form.
+  MRI->leaveSSA();
 
   // Populate VRegPHIUseCount
   analyzePHINodes(MF);
@@ -561,7 +591,8 @@ void PHIElimination::analyzePHINodes(const MachineFunction& MF) {
 
 bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
                                    MachineBasicBlock &MBB,
-                                   MachineLoopInfo *MLI) {
+                                   MachineLoopInfo *MLI,
+                                   std::vector<SparseBitVector<>> *LiveInSets) {
   if (MBB.empty() || !MBB.front().isPHI() || MBB.isEHPad())
     return false;   // Quick exit for basic blocks without PHIs.
 
@@ -628,7 +659,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       }
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
-      if (!PreMBB->SplitCriticalEdge(&MBB, *this)) {
+      if (!PreMBB->SplitCriticalEdge(&MBB, *this, LiveInSets)) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
       }

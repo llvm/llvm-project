@@ -24,7 +24,7 @@ define void @t0_caller(i32* %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
 ; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias align 536870912 null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 99, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias align 536870912 null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -78,7 +78,7 @@ define void @t1_caller(i32* noalias %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
 ; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 99, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -130,7 +130,7 @@ define void @t2_caller(i32* noalias %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
 ; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 99, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

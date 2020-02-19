@@ -32,11 +32,11 @@ void AVRTargetStreamer::finish() {
 
   OS.emitRawComment(" Declaring this symbol tells the CRT that it should");
   OS.emitRawComment("copy all variables from program memory to RAM on startup");
-  OS.EmitSymbolAttribute(DoCopyData, MCSA_Global);
+  OS.emitSymbolAttribute(DoCopyData, MCSA_Global);
 
   OS.emitRawComment(" Declaring this symbol tells the CRT that it should");
   OS.emitRawComment("clear the zeroed data section on startup");
-  OS.EmitSymbolAttribute(DoClearBss, MCSA_Global);
+  OS.emitSymbolAttribute(DoClearBss, MCSA_Global);
 }
 
 } // end namespace llvm

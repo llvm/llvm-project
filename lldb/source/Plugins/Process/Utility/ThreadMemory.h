@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadMemory_h_
-#define liblldb_ThreadMemory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H
 
 #include <string>
 
@@ -103,4 +103,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ThreadMemory);
 };
 
-#endif // liblldb_ThreadMemory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H

@@ -186,12 +186,9 @@ void PrinterContext<ELFT>::printEHFrame(
   if (Error E = Result.takeError())
     reportError(std::move(E), ObjF->getFileName());
 
-  auto Contents = Result.get();
-  DWARFDataExtractor DE(
-      StringRef(reinterpret_cast<const char *>(Contents.data()),
-                Contents.size()),
-      ELFT::TargetEndianness == support::endianness::little,
-      ELFT::Is64Bits ? 8 : 4);
+  DWARFDataExtractor DE(*Result,
+                        ELFT::TargetEndianness == support::endianness::little,
+                        ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF->getArch()), /*IsEH=*/true,
                           /*EHFrameAddress=*/Address);
   EHFrame.parse(DE);

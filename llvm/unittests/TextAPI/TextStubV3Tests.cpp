@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
-
+#include "TextStubHelpers.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 #include "llvm/TextAPI/MachO/TextAPIWriter.h"
@@ -15,29 +15,6 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
-
-struct ExportedSymbol {
-  SymbolKind Kind;
-  std::string Name;
-  bool WeakDefined;
-  bool ThreadLocalValue;
-};
-using ExportedSymbolSeq = std::vector<ExportedSymbol>;
-using UUIDs = std::vector<std::pair<Target, std::string>>;
-
-inline bool operator<(const ExportedSymbol &lhs, const ExportedSymbol &rhs) {
-  return std::tie(lhs.Kind, lhs.Name) < std::tie(rhs.Kind, rhs.Name);
-}
-
-inline bool operator==(const ExportedSymbol &lhs, const ExportedSymbol &rhs) {
-  return std::tie(lhs.Kind, lhs.Name, lhs.WeakDefined, lhs.ThreadLocalValue) ==
-         std::tie(rhs.Kind, rhs.Name, rhs.WeakDefined, rhs.ThreadLocalValue);
-}
-
-inline std::string stripWhitespace(std::string s) {
-  s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
-  return s;
-}
 
 static ExportedSymbol TBDv3Symbols[] = {
     {SymbolKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
@@ -361,6 +338,78 @@ TEST(TBDv3, Platform_zippered) {
   auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(tbd_v3_platform_zip),
+            stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv3, Platform_iOSSim) {
+  static const char tbd_v3_platform_iossim[] = "--- !tapi-tbd-v3\n"
+                                               "archs: [ x86_64 ]\n"
+                                               "platform: ios\n"
+                                               "install-name: Test.dylib\n"
+                                               "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v3_platform_iossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::iOSSimulator;
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_iossim),
+            stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv3, Platform_watchOSSim) {
+  static const char tbd_v3_platform_watchossim[] = "--- !tapi-tbd-v3\n"
+                                                   "archs: [ x86_64 ]\n"
+                                                   "platform: watchos\n"
+                                                   "install-name: Test.dylib\n"
+                                                   "...\n";
+
+  auto Result = TextAPIReader::get(
+      MemoryBufferRef(tbd_v3_platform_watchossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::watchOSSimulator;
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_watchossim),
+            stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv3, Platform_tvOSSim) {
+  static const char tbd_v3_platform_tvossim[] = "--- !tapi-tbd-v3\n"
+                                                "archs: [ x86_64 ]\n"
+                                                "platform: tvos\n"
+                                                "install-name: Test.dylib\n"
+                                                "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v3_platform_tvossim, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  auto Platform = PlatformKind::tvOSSimulator;
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_tvossim),
             stripWhitespace(Buffer.c_str()));
 }
 

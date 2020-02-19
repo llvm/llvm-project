@@ -52,4 +52,3 @@ namespace ROCDL {
 } // namespace ROCDL
 } // namespace mlir
 
-static DialectRegistration<ROCDLDialect> rocdlDialect;

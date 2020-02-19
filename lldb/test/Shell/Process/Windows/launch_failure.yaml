@@ -7,7 +7,7 @@
 # RUN: yaml2obj %s > %t.exe
 # RUN: %lldb %t.exe -o run 2>&1 | FileCheck %s
 
-# CHECK: error: process launch failed: unknown error
+# CHECK: error: unknown error
 
 --- !COFF
 OptionalHeader:

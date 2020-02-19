@@ -193,6 +193,10 @@ module weird_objc {
   header "weird_objc.h"
 }
 
+module objc_type_param {
+  header "objc_type_param.h"
+}
+
 module ignored_macros {
   header "ignored_macros.h"
 }

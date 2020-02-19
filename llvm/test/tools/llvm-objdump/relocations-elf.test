@@ -2,15 +2,16 @@
 # RUN: llvm-objdump --reloc %t > %t1
 # RUN: llvm-objdump -r      %t > %t2
 # RUN: cmp %t1 %t2
-# RUN: FileCheck %s --input-file=%t1
+# RUN: FileCheck %s --input-file=%t1 --strict-whitespace --match-full-lines
 
-# CHECK:      RELOCATION RECORDS FOR [.text]:
-# CHECK-NEXT: 0000000000000001 R_X86_64_32 glob1
-# CHECK-NEXT: 0000000000000001 R_X86_64_32S glob2
-# CHECK-NEXT: 0000000000000002 R_X86_64_64 loc1
-# CHECK-NEXT: 0000000000000001 R_X86_64_32 glob1+0x1
-# CHECK-NEXT: 0000000000000001 R_X86_64_32S glob2+0x2
-# CHECK-NEXT: 0000000000000002 R_X86_64_64 loc1+0x3
+#      CHECK:RELOCATION RECORDS FOR [.text]:
+# CHECK-NEXT:OFFSET           TYPE                     VALUE
+# CHECK-NEXT:0000000000000001 R_X86_64_32              glob1
+# CHECK-NEXT:0000000000000001 R_X86_64_32S             glob2
+# CHECK-NEXT:0000000000000002 R_X86_64_64              loc1
+# CHECK-NEXT:0000000000000001 R_X86_64_32              glob1+0x1
+# CHECK-NEXT:0000000000000001 R_X86_64_32S             glob2+0x2
+# CHECK-NEXT:0000000000000002 R_X86_64_64              loc1+0x3
 
 --- !ELF
 FileHeader: !FileHeader
@@ -142,4 +143,51 @@ Symbols:
     Section: .text
     Value:   0x0
     Size:    0
+    Binding: STB_GLOBAL
+
+## Check relocation formatting on 32 bit as well to verify the formatting is correct.
+# RUN: yaml2obj --docnum=4 %s > %t4
+# RUN: llvm-objdump -r %t4 | FileCheck %s --check-prefix=ELF32 --strict-whitespace --match-full-lines
+
+#      ELF32:RELOCATION RECORDS FOR [.text]:
+# ELF32-NEXT:OFFSET   TYPE                     VALUE
+# ELF32-NEXT:00000001 R_386_32                 global
+# ELF32-NEXT:00000002 R_386_PC32               local
+# ELF32-NEXT:00000001 R_386_NONE               global+0x1
+# ELF32-NEXT:00000002 R_386_NONE               local+0x2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+- Name: .rel.text
+  Type: SHT_REL
+  Info: .text
+  Relocations:
+    - Offset: 0x1
+      Symbol: global
+      Type:   R_386_32
+    - Offset: 0x2
+      Symbol: local
+      Type:   R_386_PC32
+- Name: .rela.text
+  Type: SHT_RELA
+  Info: .text
+  Relocations:
+    - Offset: 0x1
+      Addend: 1
+      Symbol: global
+      Type:   R_386_NONE
+    - Offset: 0x2
+      Addend: 2
+      Symbol: local
+      Type:   R_386_NONE
+Symbols:
+  - Name:    local
+  - Name:    global
     Binding: STB_GLOBAL

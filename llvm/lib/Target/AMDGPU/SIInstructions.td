@@ -169,7 +169,8 @@ def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
 def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
-  let Defs = [EXEC];
+  let Uses = [EXEC];
+  let Defs = [EXEC, SCC];
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -748,12 +749,6 @@ def : GCNPat<
 def : GCNPat<
   (AMDGPUelse i1:$src, bb:$target),
   (SI_ELSE $src, $target, 0)
->;
-
-def : Pat <
-  // -1.0 as i32 (LowerINTRINSIC_VOID converts all other constants to -1.0)
-  (AMDGPUkill (i32 -1082130432)),
-  (SI_KILL_I1_PSEUDO (i1 0), 0)
 >;
 
 def : Pat <
@@ -1926,9 +1921,77 @@ def : GCNPat <
 def : GCNPat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 24)),
-             (V_ALIGNBIT_B32 $a, $a, (i32 8)))
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 24)),
+             (V_ALIGNBIT_B32 VSrc_b32:$a, VSrc_b32:$a, (i32 8)))
 >;
+
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+def : GCNPat <
+  (i64 (bswap i64:$a)),
+  (REG_SEQUENCE VReg_64,
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 24)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                             (i32 8))),
+  sub0,
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 24)),
+             (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                             (i32 8))),
+  sub1)
+>;
+
+// FIXME: The AddedComplexity should not be needed, but in GlobalISel
+// the BFI pattern ends up taking precedence without it.
+let SubtargetPredicate = isGFX8Plus, AddedComplexity = 1 in {
+// Magic number: 3 | (2 << 8) | (1 << 16) | (0 << 24)
+//
+// My reading of the manual suggests we should be using src0 for the
+// register value, but this is what seems to work.
+def : GCNPat <
+  (i32 (bswap i32:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x00010203)))
+>;
+
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+def : GCNPat <
+  (i64 (bswap i64:$a)),
+  (REG_SEQUENCE VReg_64,
+  (V_PERM_B32 (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub1),
+              (S_MOV_B32 (i32 0x00010203))),
+  sub0,
+  (V_PERM_B32 (i32 0), (EXTRACT_SUBREG VReg_64:$a, sub0),
+              (S_MOV_B32 (i32 0x00010203))),
+  sub1)
+>;
+
+// Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
+// The 12s emit 0s.
+def : GCNPat <
+  (i16 (bswap i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+def : GCNPat <
+  (i32 (zext (bswap i16:$a))),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+
+// Magic number: 1 | (0 << 8) | (3 << 16) | (2 << 24)
+def : GCNPat <
+  (v2i16 (bswap v2i16:$a)),
+  (V_PERM_B32 (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x02030001)))
+>;
+
+}
 
 let OtherPredicates = [NoFP16Denormals] in {
 def : GCNPat<
@@ -2124,6 +2187,11 @@ let SubtargetPredicate = isGFX6 in {
 //    fract(x) = isnan(x) ? x : min(V_FRACT(x), 0.99999999999999999)
 
 // Convert floor(x) to (x - fract(x))
+
+// Don't bother handling this for GlobalISel, it's handled during
+// lowering.
+//
+// FIXME: DAG should also custom lower this.
 def : GCNPat <
   (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))),
   (V_ADD_F64
@@ -2284,6 +2352,12 @@ def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_AMDGPU_RCP_IFLAG : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = 0;
+}
+
 class BufferLoadGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -2339,6 +2413,18 @@ def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
 
+def G_AMDGPU_FMIN_LEGACY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAX_LEGACY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1);
+  let hasSideEffects = 0;
+}
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.
@@ -2386,4 +2472,15 @@ def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 1;
+}
+
+// Wrapper around llvm.amdgcn.s.buffer.load. This is mostly needed as
+// a workaround for the intrinsic being defined as readnone, but
+// really needs a memory operand.
+def G_AMDGPU_S_BUFFER_LOAD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$offset, untyped_imm_0:$cachepolicy);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
 }

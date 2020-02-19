@@ -255,7 +255,7 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.5:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %vector.ph
@@ -532,7 +532,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    .long 2 @ 0x2
 ; CHECK-NEXT:    .long 3 @ 0x3
 ; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 0 @ float 0
+; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %vector.ph

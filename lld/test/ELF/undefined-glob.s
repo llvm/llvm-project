@@ -49,7 +49,7 @@
 # FOO13: foo32
 # FOO13-NOT: bar
 
-# RUN: not ld.lld -o %t.exe %t.o %t.a --undefined-glob '[' 2>&1 | \
+# RUN: not ld.lld -o /dev/null %t.o %t.a --undefined-glob '[' 2>&1 | \
 # RUN:   FileCheck -check-prefix=BAD-PATTERN %s
 
 # BAD-PATTERN: --undefined-glob: invalid glob pattern: [

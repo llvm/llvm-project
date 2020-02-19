@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunication_h_
-#define liblldb_GDBRemoteCommunication_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
 
 #include "GDBRemoteCommunicationHistory.h"
 
@@ -239,4 +239,4 @@ struct format_provider<
 };
 } // namespace llvm
 
-#endif // liblldb_GDBRemoteCommunication_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H

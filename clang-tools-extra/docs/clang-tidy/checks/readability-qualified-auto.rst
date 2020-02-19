@@ -3,23 +3,16 @@
 readability-qualified-auto
 ==========================
 
-Adds pointer and ``const`` qualifications to ``auto``-typed variables that are deduced
-to pointers and ``const`` pointers.
+Adds pointer qualifications to ``auto``-typed variables that are deduced to 
+pointers.
 
-`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_ advises to
-make it obvious if a ``auto`` typed variable is a pointer, constant pointer or 
-constant reference. This check will transform ``auto`` to ``auto *`` when the 
-type is deduced to be a pointer, as well as adding ``const`` when applicable to
-``auto`` pointers or references
+`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html#beware-unnecessary-copies-with-auto>`_
+advises to make it obvious if a ``auto`` typed variable is a pointer. This 
+check will transform ``auto`` to ``auto *`` when the type is deduced to be a
+pointer.
 
 .. code-block:: c++
 
-  for (auto &Data : MutatableContainer) {
-    change(Data);
-  }
-  for (auto &Data : ConstantContainer) {
-    observe(Data);
-  }
   for (auto Data : MutatablePtrContainer) {
     change(*Data);
   }
@@ -31,12 +24,6 @@ Would be transformed into:
 
 .. code-block:: c++
 
-  for (auto &Data : MutatableContainer) {
-    change(Data);
-  }
-  for (const auto &Data : ConstantContainer) {
-    observe(Data);
-  }
   for (auto *Data : MutatablePtrContainer) {
     change(*Data);
   }
@@ -44,13 +31,15 @@ Would be transformed into:
     observe(*Data);
   }
 
-Note const volatile qualified types will retain their const and volatile qualifiers.
+Note ``const`` ``volatile`` qualified types will retain their ``const`` and 
+``volatile`` qualifiers. Pointers to pointers will not be fully qualified.
 
 .. code-block:: c++
 
   const auto Foo = cast<int *>(Baz1);
   const auto Bar = cast<const int *>(Baz2);
-  volatile auto FooBar = cast<int*>(Baz3);
+  volatile auto FooBar = cast<int *>(Baz3);
+  auto BarFoo = cast<int **>(Baz4);
 
 Would be transformed into:
 
@@ -58,7 +47,38 @@ Would be transformed into:
 
   auto *const Foo = cast<int *>(Baz1);
   const auto *const Bar = cast<const int *>(Baz2);
-  auto *volatile FooBar = cast<int*>(Baz3);
+  auto *volatile FooBar = cast<int *>(Baz3);
+  auto *BarFoo = cast<int **>(Baz4);
 
-This check helps to enforce this `LLVM Coding Standards recommendation
-<https://llvm.org/docs/CodingStandards.html#beware-unnecessary-copies-with-auto>`_.
+Options
+-------
+
+.. option:: AddConstToQualified
+   
+   When set to `1` the check will add const qualifiers variables defined as
+   ``auto *`` or ``auto &`` when applicable.
+   Default value is '1'.
+
+.. code-block:: c++
+
+   auto Foo1 = cast<const int *>(Bar1);
+   auto *Foo2 = cast<const int *>(Bar2);
+   auto &Foo3 = cast<const int &>(Bar3);
+
+If AddConstToQualified is set to `0`,  it will be transformed into:
+
+.. code-block:: c++
+
+   const auto *Foo1 = cast<const int *>(Bar1);
+   auto *Foo2 = cast<const int *>(Bar2);
+   auto &Foo3 = cast<const int &>(Bar3);
+
+Otherwise it will be transformed into:
+
+.. code-block:: c++
+
+   const auto *Foo1 = cast<const int *>(Bar1);
+   const auto *Foo2 = cast<const int *>(Bar2);
+   const auto &Foo3 = cast<const int &>(Bar3);
+
+Note in the LLVM alias, the default value is `0`.

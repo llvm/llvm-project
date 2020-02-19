@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointResolverName_h_
-#define liblldb_BreakpointResolverName_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H
+#define LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H
 
 #include <string>
 #include <vector>
@@ -91,4 +91,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointResolverName_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTRESOLVERNAME_H

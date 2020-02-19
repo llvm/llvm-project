@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_x86AssemblyInspectionEngine_h_
-#define liblldb_x86AssemblyInspectionEngine_h_
+#ifndef LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_X86ASSEMBLYINSPECTIONENGINE_H
+#define LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_X86ASSEMBLYINSPECTIONENGINE_H
 
 #include "llvm-c/Disassembler.h"
 
@@ -196,4 +196,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_x86AssemblyInspectionEngine_h_
+#endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_X86_X86ASSEMBLYINSPECTIONENGINE_H

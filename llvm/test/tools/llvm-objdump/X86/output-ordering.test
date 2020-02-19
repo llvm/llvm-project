@@ -10,7 +10,7 @@
 ## --reloc, so we test them independently.
 
 ## File headers (-f)
-# CHECK: file format ELF64-x86-64
+# CHECK: file format elf64-x86-64
 # CHECK: architecture: x86_64
 # CHECK: start address: 0x0000000000000000
 ## Private headers (-p)

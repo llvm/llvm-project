@@ -1249,8 +1249,7 @@ static StringRef ClassifyDiagnostic(const ValueDecl *VD) {
 }
 
 template <typename AttrTy>
-static typename std::enable_if<!has_arg_iterator_range<AttrTy>::value,
-                               StringRef>::type
+static std::enable_if_t<!has_arg_iterator_range<AttrTy>::value, StringRef>
 ClassifyDiagnostic(const AttrTy *A) {
   if (const ValueDecl *VD = getValueDecl(A->getArg()))
     return ClassifyDiagnostic(VD);
@@ -1258,8 +1257,7 @@ ClassifyDiagnostic(const AttrTy *A) {
 }
 
 template <typename AttrTy>
-static typename std::enable_if<has_arg_iterator_range<AttrTy>::value,
-                               StringRef>::type
+static std::enable_if_t<has_arg_iterator_range<AttrTy>::value, StringRef>
 ClassifyDiagnostic(const AttrTy *A) {
   for (const auto *Arg : A->args()) {
     if (const ValueDecl *VD = getValueDecl(Arg))

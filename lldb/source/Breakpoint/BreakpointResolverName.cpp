@@ -199,7 +199,7 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
     for (auto lookup : m_lookups) {
       names_sp->AddItem(StructuredData::StringSP(
-          new StructuredData::String(lookup.GetName().AsCString())));
+          new StructuredData::String(lookup.GetName().GetStringRef())));
       name_masks_sp->AddItem(StructuredData::IntegerSP(
           new StructuredData::Integer(lookup.GetNameTypeMask())));
     }
@@ -278,8 +278,9 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       for (const auto &lookup : m_lookups) {
         const size_t start_func_idx = func_list.GetSize();
         context.module_sp->FindFunctions(
-            lookup.GetLookupName(), nullptr, lookup.GetNameTypeMask(),
-            include_symbols, include_inlines, func_list);
+            lookup.GetLookupName(), CompilerDeclContext(),
+            lookup.GetNameTypeMask(), include_symbols, include_inlines,
+            func_list);
 
         const size_t end_func_idx = func_list.GetSize();
 

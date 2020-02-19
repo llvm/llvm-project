@@ -138,13 +138,11 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   if (RMWI.getType()->isIntegerTy() &&
       RMWI.getOperation() != AtomicRMWInst::Or) {
     RMWI.setOperation(AtomicRMWInst::Or);
-    RMWI.setOperand(1, ConstantInt::get(RMWI.getType(), 0));
-    return &RMWI;
+    return replaceOperand(RMWI, 1, ConstantInt::get(RMWI.getType(), 0));
   } else if (RMWI.getType()->isFloatingPointTy() &&
              RMWI.getOperation() != AtomicRMWInst::FAdd) {
     RMWI.setOperation(AtomicRMWInst::FAdd);
-    RMWI.setOperand(1, ConstantFP::getNegativeZero(RMWI.getType()));
-    return &RMWI;
+    return replaceOperand(RMWI, 1, ConstantFP::getNegativeZero(RMWI.getType()));
   }
 
   // Check if the required ordering is compatible with an atomic load.

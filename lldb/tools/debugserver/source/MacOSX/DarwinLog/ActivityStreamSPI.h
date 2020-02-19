@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ActivityStreamSPI_h
-#define ActivityStreamSPI_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTREAMSPI_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTREAMSPI_H
 
 #include <sys/time.h>
 #include <xpc/xpc.h>
@@ -187,4 +187,4 @@ typedef char *(*os_log_copy_formatted_message_t)(os_log_message_t log_message);
 typedef void (*os_activity_stream_set_event_handler_t)(
     os_activity_stream_t stream, os_activity_stream_event_block_t block);
 
-#endif /* ActivityStreamSPI_h */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_ACTIVITYSTREAMSPI_H

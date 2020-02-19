@@ -47,26 +47,21 @@
 // RUN:    | FileCheck --check-prefix=LLVM-LINK %s
 // LLVM-LINK: -emit-llvm cannot be used when linking
 
-// -flto should cause link using gold plugin
-// RUN: %clangxx -nocudainc -nocudalib \
-// RUN:          -target x86_64-unknown-linux -### %s -flto 2> %t
-// RUN: FileCheck -check-prefix=CHECK-LINK-LTO-ACTION < %t %s
+/// With ld.bfd or gold, link against LLVMgold.
+// RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=bfd -flto=thin -### 2>&1 | FileCheck --check-prefix=LLVMGOLD %s
+// RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=gold -flto=full -### 2>&1 | FileCheck --check-prefix=LLVMGOLD %s
 //
-// CHECK-LINK-LTO-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
+// LLVMGOLD: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
-// -flto=full should cause link using gold plugin
-// RUN: %clangxx -nocudainc -nocudalib \
-// RUN:          -target x86_64-unknown-linux -### %s -flto=full 2> %t
-// RUN: FileCheck -check-prefix=CHECK-LINK-FULL-ACTION < %t %s
+/// lld does not need LLVMgold.
+// RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto=full -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
+// RUN: %clangxx -nocudainc -nocudalib -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=gold -flto=full -fno-lto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 //
-// CHECK-LINK-FULL-ACTION: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
-
-// Check that subsequent -fno-lto takes precedence
-// RUN: %clangxx -nocudainc -nocudalib \
-// RUN:          -target x86_64-unknown-linux -### %s -flto=full -fno-lto 2> %t
-// RUN: FileCheck -check-prefix=CHECK-LINK-NOLTO-ACTION < %t %s
-//
-// CHECK-LINK-NOLTO-ACTION-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
+// NO-LLVMGOLD-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // -flto passes along an explicit debugger tuning argument.
 // RUN: %clangxx -nocudainc -nocudalib \

@@ -90,7 +90,7 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   while (Offset < Size) {
     auto OldOffset = Data.getU32(&Offset);
     auto NewOffset = OffsetRemapping[OldOffset];
-    Out.EmitIntValue(NewOffset, 4);
+    Out.emitIntValue(NewOffset, 4);
   }
 }
 
@@ -140,6 +140,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   DataExtractor InfoData(Info, true, 0);
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
   uint64_t Length = InfoData.getU32(&Offset);
+  CompileUnitIdentifiers ID;
+  Optional<uint64_t> Signature = None;
   // If the length is 0xffffffff, then this indictes that this is a DWARF 64
   // stream and the length is actually encoded into a 64 bit value that follows.
   if (Length == 0xffffffffU) {
@@ -147,9 +149,18 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
     Length = InfoData.getU64(&Offset);
   }
   uint16_t Version = InfoData.getU16(&Offset);
+  if (Version >= 5) {
+    auto UnitType = InfoData.getU8(&Offset);
+    if (UnitType != dwarf::DW_UT_split_compile)
+      return make_error<DWPError>(
+          std::string("unit type DW_UT_split_compile type not found in "
+                      "debug_info header. Unexpected unit type 0x" +
+                      utostr(UnitType) + " found!"));
+  }
   InfoData.getU32(&Offset); // Abbrev offset (should be zero)
   uint8_t AddrSize = InfoData.getU8(&Offset);
-
+  if (Version >= 5)
+    Signature = InfoData.getU64(&Offset);
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
 
   DataExtractor AbbrevData(Abbrev, true, 0);
@@ -161,8 +172,6 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   AbbrevData.getU8(&AbbrevOffset);
   uint32_t Name;
   dwarf::Form Form;
-  CompileUnitIdentifiers ID;
-  Optional<uint64_t> Signature = None;
   while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
          (Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset))) &&
          (Name != 0 || Form != 0)) {
@@ -175,7 +184,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       ID.Name = *EName;
       break;
     }
-    case dwarf::DW_AT_GNU_dwo_name: {
+    case dwarf::DW_AT_GNU_dwo_name:
+    case dwarf::DW_AT_dwo_name: {
       Expected<const char *> EName =
           getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
       if (!EName)
@@ -235,7 +245,7 @@ static void addAllTypesFromDWP(
       ++I;
     }
     auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    Out.EmitBytes(Types.substr(
+    Out.emitBytes(Types.substr(
         C.Offset - TUEntry.Contributions[DW_SECT_TYPES - DW_SECT_INFO].Offset,
         C.Length));
     C.Offset = TypesOffset;
@@ -272,7 +282,7 @@ static void addAllTypes(MCStreamer &Out,
       if (!P.second)
         continue;
 
-      Out.EmitBytes(Types.substr(PrevOffset, C.Length));
+      Out.emitBytes(Types.substr(PrevOffset, C.Length));
       TypesOffset += C.Length;
     }
   }
@@ -285,7 +295,7 @@ writeIndexTable(MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
   for (const auto &E : IndexEntries)
     for (size_t i = 0; i != array_lengthof(E.second.Contributions); ++i)
       if (ContributionOffsets[i])
-        Out.EmitIntValue(E.second.Contributions[i].*Field, 4);
+        Out.emitIntValue(E.second.Contributions[i].*Field, 4);
 }
 
 static void
@@ -317,23 +327,23 @@ writeIndex(MCStreamer &Out, MCSection *Section,
   }
 
   Out.SwitchSection(Section);
-  Out.EmitIntValue(2, 4);                   // Version
-  Out.EmitIntValue(Columns, 4);             // Columns
-  Out.EmitIntValue(IndexEntries.size(), 4); // Num Units
-  Out.EmitIntValue(Buckets.size(), 4);      // Num Buckets
+  Out.emitIntValue(2, 4);                   // Version
+  Out.emitIntValue(Columns, 4);             // Columns
+  Out.emitIntValue(IndexEntries.size(), 4); // Num Units
+  Out.emitIntValue(Buckets.size(), 4);      // Num Buckets
 
   // Write the signatures.
   for (const auto &I : Buckets)
-    Out.EmitIntValue(I ? IndexEntries.begin()[I - 1].first : 0, 8);
+    Out.emitIntValue(I ? IndexEntries.begin()[I - 1].first : 0, 8);
 
   // Write the indexes.
   for (const auto &I : Buckets)
-    Out.EmitIntValue(I, 4);
+    Out.emitIntValue(I, 4);
 
   // Write the column headers (which sections will appear in the table)
   for (size_t i = 0; i != ContributionOffsets.size(); ++i)
     if (ContributionOffsets[i])
-      Out.EmitIntValue(i + DW_SECT_INFO, 4);
+      Out.emitIntValue(i + DW_SECT_INFO, 4);
 
   // Write the offsets.
   writeIndexTable(Out, ContributionOffsets, IndexEntries,
@@ -458,7 +468,7 @@ static Error handleSection(
     CurTUIndexSection = Contents;
   else {
     Out.SwitchSection(OutSection);
-    Out.EmitBytes(Contents);
+    Out.emitBytes(Contents);
   }
   return Error::success();
 }

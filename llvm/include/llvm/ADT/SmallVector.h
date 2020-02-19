@@ -284,8 +284,8 @@ protected:
   template <typename T1, typename T2>
   static void uninitialized_copy(
       T1 *I, T1 *E, T2 *Dest,
-      typename std::enable_if<std::is_same<typename std::remove_const<T1>::type,
-                                           T2>::value>::type * = nullptr) {
+      std::enable_if_t<std::is_same<typename std::remove_const<T1>::type,
+                                    T2>::value> * = nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
     // use memcpy here. Note that I and E are iterators and thus might be
@@ -381,9 +381,9 @@ public:
 
   /// Add the specified range to the end of the SmallVector.
   template <typename in_iter,
-            typename = typename std::enable_if<std::is_convertible<
+            typename = std::enable_if_t<std::is_convertible<
                 typename std::iterator_traits<in_iter>::iterator_category,
-                std::input_iterator_tag>::value>::type>
+                std::input_iterator_tag>::value>>
   void append(in_iter in_start, in_iter in_end) {
     size_type NumInputs = std::distance(in_start, in_end);
     if (NumInputs > this->capacity() - this->size())
@@ -418,9 +418,9 @@ public:
   }
 
   template <typename in_iter,
-            typename = typename std::enable_if<std::is_convertible<
+            typename = std::enable_if_t<std::is_convertible<
                 typename std::iterator_traits<in_iter>::iterator_category,
-                std::input_iterator_tag>::value>::type>
+                std::input_iterator_tag>::value>>
   void assign(in_iter in_start, in_iter in_end) {
     clear();
     append(in_start, in_end);
@@ -575,9 +575,9 @@ public:
   }
 
   template <typename ItTy,
-            typename = typename std::enable_if<std::is_convertible<
+            typename = std::enable_if_t<std::is_convertible<
                 typename std::iterator_traits<ItTy>::iterator_category,
-                std::input_iterator_tag>::value>::type>
+                std::input_iterator_tag>::value>>
   iterator insert(iterator I, ItTy From, ItTy To) {
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
@@ -849,9 +849,9 @@ public:
   }
 
   template <typename ItTy,
-            typename = typename std::enable_if<std::is_convertible<
+            typename = std::enable_if_t<std::is_convertible<
                 typename std::iterator_traits<ItTy>::iterator_category,
-                std::input_iterator_tag>::value>::type>
+                std::input_iterator_tag>::value>>
   SmallVector(ItTy S, ItTy E) : SmallVectorImpl<T>(N) {
     this->append(S, E);
   }

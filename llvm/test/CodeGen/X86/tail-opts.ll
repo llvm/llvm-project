@@ -846,6 +846,72 @@ cont4:
   ret void
 }
 
+; This triggers a situation where a new block (bb4 is split) is created and then
+; would be passed to the PGSO interface llvm::shouldOptimizeForSize().
+@GV = global i32 0
+define void @bfi_new_block_pgso(i32 %c) nounwind {
+; CHECK-LABEL: bfi_new_block_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB14_4
+; CHECK-NEXT:  # %bb.1: # %bb1
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    cmpl $16, %edi
+; CHECK-NEXT:    je .LBB14_6
+; CHECK-NEXT:  # %bb.2: # %bb1
+; CHECK-NEXT:    cmpl $17, %edi
+; CHECK-NEXT:    je .LBB14_7
+; CHECK-NEXT:  # %bb.3: # %bb4
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    jmp tail_call_me # TAILCALL
+; CHECK-NEXT:  .LBB14_4: # %bb5
+; CHECK-NEXT:    cmpl $128, %edi
+; CHECK-NEXT:    jne .LBB14_8
+; CHECK-NEXT:  # %bb.5: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB14_6: # %bb3
+; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:  .LBB14_7: # %bb4
+; CHECK-NEXT:    callq func
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:  .LBB14_8: # %bb6
+; CHECK-NEXT:    jmp tail_call_me # TAILCALL
+entry:
+  %0 = icmp eq i32 %c, 0
+  br i1 %0, label %bb5, label %bb1
+
+bb1:
+  switch i32 %c, label %bb4 [
+    i32 16, label %bb3
+    i32 17, label %bb2
+  ]
+
+bb2:
+  call void @func()
+  br label %bb4
+
+bb3:
+  store i32 0, i32* @GV
+  call void @func()
+  br label %bb4
+
+bb4:
+  tail call void @tail_call_me()
+  br label %return
+
+bb5:
+  switch i32 %c, label %bb6 [
+    i32 128, label %return
+  ]
+
+bb6:
+  tail call void @tail_call_me()
+  br label %return
+
+return:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

@@ -2918,8 +2918,15 @@ static bool SimplifyTree(TreePatternNodePtr &N) {
 
   // If we have a bitconvert with a resolved type and if the source and
   // destination types are the same, then the bitconvert is useless, remove it.
+  //
+  // We make an exception if the types are completely empty. This can come up
+  // when the pattern being simplified is in the Fragments list of a PatFrags,
+  // so that the operand is just an untyped "node". In that situation we leave
+  // bitconverts unsimplified, and simplify them later once the fragment is
+  // expanded into its true context.
   if (N->getOperator()->getName() == "bitconvert" &&
       N->getExtType(0).isValueTypeByHwMode(false) &&
+      !N->getExtType(0).empty() &&
       N->getExtType(0) == N->getChild(0)->getExtType(0) &&
       N->getName().empty()) {
     N = N->getChildShared(0);

@@ -6,7 +6,7 @@ define i64 @testmsxs_builtin(float %x) {
 ; CHECK:         .functype testmsxs_builtin (f32) -> (i64)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.call llroundf
+; CHECK-NEXT:    call llroundf
 ; CHECK-NEXT:    # fallthrough-return
 ; CHECK-NEXT:    end_function
 entry:
@@ -19,7 +19,7 @@ define i64 @testmsxd_builtin(double %x) {
 ; CHECK:         .functype testmsxd_builtin (f64) -> (i64)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.call llround
+; CHECK-NEXT:    call llround
 ; CHECK-NEXT:    # fallthrough-return
 ; CHECK-NEXT:    end_function
 entry:

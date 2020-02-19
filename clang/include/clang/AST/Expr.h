@@ -693,7 +693,8 @@ public:
 
   /// Evaluate an expression that is required to be a constant expression.
   bool EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
-                              const ASTContext &Ctx) const;
+                              const ASTContext &Ctx,
+                              bool InPlace = false) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the number of bytes available where the pointer is pointing.
@@ -1008,7 +1009,7 @@ private:
            "invalid accessor");
     return *getTrailingObjects<APValue>();
   }
-  const APValue &APValueResult() const {
+  APValue &APValueResult() const {
     return const_cast<ConstantExpr *>(this)->APValueResult();
   }
 
@@ -1022,7 +1023,8 @@ public:
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               const APValue &Result);
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
-                              ResultStorageKind Storage = RSK_None);
+                              ResultStorageKind Storage = RSK_None,
+                              bool IsImmediateInvocation = false);
   static ConstantExpr *CreateEmpty(const ASTContext &Context,
                                    ResultStorageKind StorageKind,
                                    EmptyShell Empty);
@@ -1053,8 +1055,11 @@ public:
   ResultStorageKind getResultStorageKind() const {
     return static_cast<ResultStorageKind>(ConstantExprBits.ResultKind);
   }
+  bool isImmediateInvocation() const {
+    return ConstantExprBits.IsImmediateInvocation;
+  }
   APValue getAPValueResult() const;
-  const APValue &getResultAsAPValue() const { return APValueResult(); }
+  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -5277,10 +5282,9 @@ class GenericSelectionExpr final
   template <bool Const> class AssociationTy {
     friend class GenericSelectionExpr;
     template <bool OtherConst> friend class AssociationIteratorTy;
-    using ExprPtrTy =
-        typename std::conditional<Const, const Expr *, Expr *>::type;
-    using TSIPtrTy = typename std::conditional<Const, const TypeSourceInfo *,
-                                               TypeSourceInfo *>::type;
+    using ExprPtrTy = std::conditional_t<Const, const Expr *, Expr *>;
+    using TSIPtrTy =
+        std::conditional_t<Const, const TypeSourceInfo *, TypeSourceInfo *>;
     ExprPtrTy E;
     TSIPtrTy TSI;
     bool Selected;
@@ -5322,10 +5326,9 @@ class GenericSelectionExpr final
     //    const Association &Assoc = *It++; // Oops, Assoc is dangling.
     using BaseTy = typename AssociationIteratorTy::iterator_facade_base;
     using StmtPtrPtrTy =
-        typename std::conditional<Const, const Stmt *const *, Stmt **>::type;
-    using TSIPtrPtrTy =
-        typename std::conditional<Const, const TypeSourceInfo *const *,
-                                  TypeSourceInfo **>::type;
+        std::conditional_t<Const, const Stmt *const *, Stmt **>;
+    using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
+                                           TypeSourceInfo **>;
     StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;

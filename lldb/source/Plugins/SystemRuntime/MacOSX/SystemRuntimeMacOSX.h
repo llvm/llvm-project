@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SystemRuntimeMacOSX_h_
-#define liblldb_SystemRuntimeMacOSX_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H
+#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H
 
 #include <mutex>
 #include <string>
@@ -289,4 +289,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SystemRuntimeMacOSX);
 };
 
-#endif // liblldb_SystemRuntimeMacOSX_h_
+#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H

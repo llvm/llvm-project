@@ -1,5 +1,5 @@
-#ifndef ISL_AST_CONTEXT_H
-#define ISL_AST_CONTEXT_H
+#ifndef ISL_AST_BUILD_H
+#define ISL_AST_BUILD_H
 
 #include <isl/ctx.h>
 #include <isl/set.h>
@@ -52,6 +52,7 @@ __isl_give isl_ast_build *isl_ast_build_from_context(__isl_take isl_set *set);
 
 __isl_give isl_space *isl_ast_build_get_schedule_space(
 	__isl_keep isl_ast_build *build);
+__isl_export
 __isl_give isl_union_map *isl_ast_build_get_schedule(
 	__isl_keep isl_ast_build *build);
 
@@ -69,6 +70,7 @@ __isl_give isl_ast_build *isl_ast_build_set_options(
 __isl_give isl_ast_build *isl_ast_build_set_iterators(
 	__isl_take isl_ast_build *build,
 	__isl_take isl_id_list *iterators);
+__isl_export
 __isl_give isl_ast_build *isl_ast_build_set_at_each_domain(
 	__isl_take isl_ast_build *build,
 	__isl_give isl_ast_node *(*fn)(__isl_take isl_ast_node *node,
@@ -113,6 +115,7 @@ __isl_overload
 __isl_give isl_ast_expr *isl_ast_build_call_from_multi_pw_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_multi_pw_aff *mpa);
 
+__isl_overload
 __isl_give isl_ast_node *isl_ast_build_node_from_schedule(
 	__isl_keep isl_ast_build *build, __isl_take isl_schedule *schedule);
 __isl_export

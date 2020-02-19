@@ -11,7 +11,7 @@ MEMORY {
 SECTIONS {
  .text : { *(.text) } > FLASH
  .sec1 : { *(.sec1) } > RAM AT > FLASH
- .sec2 : { *(.sec2) } > RAM
+ .sec2 : { *(.sec2) } > RAM AT > FLASH
  .sec3 : { *(.sec3) } > RAM AT > FLASH
 }
 

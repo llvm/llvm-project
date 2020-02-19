@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_ThreadLauncher_h_
-#define lldb_Host_ThreadLauncher_h_
+#ifndef LLDB_HOST_THREADLAUNCHER_H
+#define LLDB_HOST_THREADLAUNCHER_H
 
 #include "lldb/Host/HostThread.h"
 #include "lldb/lldb-types.h"

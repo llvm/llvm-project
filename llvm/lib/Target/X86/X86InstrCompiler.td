@@ -111,6 +111,23 @@ def SEG_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
                       [(set GR64:$dst,
                          (X86SegAlloca GR64:$size))]>,
                     Requires<[In64BitMode]>;
+
+// To protect against stack clash, dynamic allocation should perform a memory
+// probe at each page.
+
+let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
+def PROBED_ALLOCA_32 : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$size),
+                      "# variable sized alloca with probing",
+                      [(set GR32:$dst,
+                         (X86ProbedAlloca GR32:$size))]>,
+                    Requires<[NotLP64]>;
+
+let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
+def PROBED_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
+                      "# variable sized alloca with probing",
+                      [(set GR64:$dst,
+                         (X86ProbedAlloca GR64:$size))]>,
+                    Requires<[In64BitMode]>;
 }
 
 // Dynamic stack allocation yields a _chkstk or _alloca call for all Windows
@@ -176,18 +193,6 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
                      "# CATCHRET",
                      [(catchret bb:$dst, bb:$from)]>;
 }
-
-let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1,
-    usesCustomInserter = 1 in
-def CATCHPAD : I<0, Pseudo, (outs), (ins), "# CATCHPAD", [(catchpad)]>;
-
-// This instruction is responsible for re-establishing stack pointers after an
-// exception has been caught and we are rejoining normal control flow in the
-// parent function or funclet. It generally sets ESP and EBP, and optionally
-// ESI. It is only needed for 32-bit WinEH, as the runtime restores CSRs for us
-// elsewhere.
-let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1 in
-def EH_RESTORE : I<0, Pseudo, (outs), (ins), "# EH_RESTORE", []>;
 
 let hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
     usesCustomInserter = 1 in {
@@ -320,56 +325,14 @@ def mov64imm32 : ComplexPattern<i64, 1, "selectMOV64Imm32", [imm, X86Wrapper]>;
 def : Pat<(i64 mov64imm32:$src), (MOV32ri64 mov64imm32:$src)>;
 
 // Use sbb to materialize carry bit.
-let Uses = [EFLAGS], Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteALU] in {
+let Uses = [EFLAGS], Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteADC],
+    hasSideEffects = 0 in {
 // FIXME: These are pseudo ops that should be replaced with Pat<> patterns.
 // However, Pat<> can't replicate the destination reg into the inputs of the
 // result.
-def SETB_C8r : I<0, Pseudo, (outs GR8:$dst), (ins), "",
-                 [(set GR8:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C16r : I<0, Pseudo, (outs GR16:$dst), (ins), "",
-                 [(set GR16:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C32r : I<0, Pseudo, (outs GR32:$dst), (ins), "",
-                 [(set GR32:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
-def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "",
-                 [(set GR64:$dst, (X86setcc_c X86_COND_B, EFLAGS))]>;
+def SETB_C32r : I<0, Pseudo, (outs GR32:$dst), (ins), "", []>;
+def SETB_C64r : I<0, Pseudo, (outs GR64:$dst), (ins), "", []>;
 } // isCodeGenOnly
-
-
-def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i64 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C64r)>;
-
-def : Pat<(i16 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i64 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C64r)>;
-
-// We canonicalize 'setb' to "(and (sbb reg,reg), 1)" on the hope that the and
-// will be eliminated and that the sbb can be extended up to a wider type.  When
-// this happens, it is great.  However, if we are left with an 8-bit sbb and an
-// and, we might as well just match it as a setb.
-def : Pat<(and (i8 (X86setcc_c X86_COND_B, EFLAGS)), 1),
-          (SETCCr (i8 2))>;
-
-// Patterns to give priority when both inputs are zero so that we don't use
-// an immediate for the RHS.
-// TODO: Should we use a 32-bit sbb for 8/16 to push the extract_subreg out?
-def : Pat<(X86sbb_flag (i8 0), (i8 0), EFLAGS),
-          (SBB8rr (EXTRACT_SUBREG (MOV32r0), sub_8bit),
-                  (EXTRACT_SUBREG (MOV32r0), sub_8bit))>;
-def : Pat<(X86sbb_flag (i16 0), (i16 0), EFLAGS),
-          (SBB16rr (EXTRACT_SUBREG (MOV32r0), sub_16bit),
-                   (EXTRACT_SUBREG (MOV32r0), sub_16bit))>;
-def : Pat<(X86sbb_flag (i32 0), (i32 0), EFLAGS),
-          (SBB32rr (MOV32r0), (MOV32r0))>;
-def : Pat<(X86sbb_flag (i64 0), (i64 0), EFLAGS),
-          (SBB64rr (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit),
-                   (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit))>;
 
 //===----------------------------------------------------------------------===//
 // String Pseudo Instructions
@@ -1918,15 +1881,6 @@ multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
 defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
-
-
-// (anyext (setcc_carry)) -> (setcc_carry)
-def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C16r)>;
-def : Pat<(i32 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
-def : Pat<(i32 (anyext (i16 (X86setcc_c X86_COND_B, EFLAGS)))),
-          (SETB_C32r)>;
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns

@@ -21,6 +21,7 @@
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/RegionPass.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassManagerImpl.h"
 
 using namespace llvm;
 

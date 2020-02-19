@@ -42,6 +42,20 @@ using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
 
+// Round the number of elements to the next power of two elements
+static LLT getPow2VectorType(LLT Ty) {
+  unsigned NElts = Ty.getNumElements();
+  unsigned Pow2NElts = 1 <<  Log2_32_Ceil(NElts);
+  return Ty.changeNumElements(Pow2NElts);
+}
+
+// Round the number of bits to the next power of two bits
+static LLT getPow2ScalarType(LLT Ty) {
+  unsigned Bits = Ty.getSizeInBits();
+  unsigned Pow2Bits = 1 <<  Log2_32_Ceil(Bits);
+  return LLT::scalar(Pow2Bits);
+}
+
 static LegalityPredicate isMultiple32(unsigned TypeIdx,
                                       unsigned MaxSize = 1024) {
   return [=](const LegalityQuery &Query) {
@@ -151,7 +165,8 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
 
 static LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT Type) {
   return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx].getElementType() == Type;
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && QueryTy.getElementType() == Type;
   };
 }
 
@@ -160,6 +175,20 @@ static LegalityPredicate isWideScalarTruncStore(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
            Query.MMODescrs[0].SizeInBits < Ty.getSizeInBits();
+  };
+}
+
+static LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx0].getSizeInBits() <
+           Query.Types[TypeIdx1].getSizeInBits();
+  };
+}
+
+static LegalityPredicate greaterThan(unsigned TypeIdx0, unsigned TypeIdx1) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx0].getSizeInBits() >
+           Query.Types[TypeIdx1].getSizeInBits();
   };
 }
 
@@ -173,11 +202,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const LLT S1 = LLT::scalar(1);
-  const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
-  const LLT S96 = LLT::scalar(96);
   const LLT S128 = LLT::scalar(128);
   const LLT S256 = LLT::scalar(256);
   const LLT S1024 = LLT::scalar(1024);
@@ -247,7 +274,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  const LLT MinLegalScalarShiftTy = ST.has16BitInsts() ? S16 : S32;
+  const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   setAction({G_BRCOND, S1}, Legal); // VCC branches
   setAction({G_BRCOND, S32}, Legal); // SCC branches
@@ -270,7 +297,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16})
       .clampScalar(0, S16, S32)
-      .scalarize(0);
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32);
   } else {
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32})
@@ -280,7 +308,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // FIXME: Not really legal. Placeholder for custom lowering.
   getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
-    .legalFor({S32, S64})
+    .customFor({S32, S64})
     .clampScalar(0, S32, S64)
     .widenScalarToNextPow2(0, 32)
     .scalarize(0);
@@ -309,8 +337,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
     .legalIf(all(isRegisterType(0), isRegisterType(1)))
-    // FIXME: Testing hack
-    .legalForCartesianProduct({S16, LLT::vector(2, 8), })
     .lower();
 
 
@@ -336,7 +362,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-    .customFor({LocalPtr, GlobalPtr, ConstantPtr, Constant32Ptr});
+    .unsupportedFor({PrivatePtr})
+    .custom();
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
@@ -403,15 +430,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .clampScalar(0, S16, S64);
   } else {
-    getActionDefinitionsBuilder({G_FSQRT, G_FFLOOR})
+    getActionDefinitionsBuilder(G_FSQRT)
       .legalFor({S32, S64})
       .scalarize(0)
       .clampScalar(0, S32, S64);
+
+    if (ST.hasFractBug()) {
+      getActionDefinitionsBuilder(G_FFLOOR)
+        .customFor({S64})
+        .legalFor({S32, S64})
+        .scalarize(0)
+        .clampScalar(0, S32, S64);
+    } else {
+      getActionDefinitionsBuilder(G_FFLOOR)
+        .legalFor({S32, S64})
+        .scalarize(0)
+        .clampScalar(0, S32, S64);
+    }
   }
 
   getActionDefinitionsBuilder(G_FPTRUNC)
     .legalFor({{S32, S64}, {S16, S32}})
-    .scalarize(0);
+    .scalarize(0)
+    .lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})
@@ -435,15 +476,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   FMad.scalarize(0)
       .lower();
 
+  getActionDefinitionsBuilder(G_TRUNC)
+    .alwaysLegal();
+
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
-               {S32, S1}, {S64, S1}, {S16, S1},
-               {S96, S32},
-               // FIXME: Hack
-               {S64, LLT::scalar(33)},
-               {S32, S8}, {S32, LLT::scalar(24)}})
+               {S32, S1}, {S64, S1}, {S16, S1}})
     .scalarize(0)
-    .clampScalar(0, S32, S64);
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(1, 32);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
@@ -454,7 +495,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.has16BitInsts())
     IToFP.legalFor({{S16, S16}});
   IToFP.clampScalar(1, S32, S64)
-       .scalarize(0);
+       .scalarize(0)
+       .widenScalarToNextPow2(1);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
     .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
@@ -526,21 +568,25 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .scalarize(0);
 
-  // FIXME: fexp, flog2, flog10 needs to be custom lowered.
-  getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
-                               G_FLOG2})
-    .legalFor({S32})
-    .scalarize(0);
+  // FIXME: fpow has a selection pattern that should move to custom lowering.
+  auto &Exp2Ops = getActionDefinitionsBuilder({G_FEXP2, G_FLOG2, G_FPOW});
+  if (ST.has16BitInsts())
+    Exp2Ops.legalFor({S32, S16});
+  else
+    Exp2Ops.legalFor({S32});
+  Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
+  Exp2Ops.scalarize(0);
 
-  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
-    .customFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10});
+  if (ST.has16BitInsts())
+    ExpOps.customFor({{S32}, {S16}});
+  else
+    ExpOps.customFor({S32});
+  ExpOps.clampScalar(0, MinScalarFPTy, S32)
+        .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF,
-                               G_CTTZ, G_CTTZ_ZERO_UNDEF,
-                               G_CTPOP})
+  getActionDefinitionsBuilder(G_CTPOP)
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
     .clampScalar(1, S32, S64)
@@ -548,13 +594,41 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .widenScalarToNextPow2(1, 32);
 
-  // TODO: Expand for > s32
-  getActionDefinitionsBuilder({G_BSWAP, G_BITREVERSE})
+  // The hardware instructions return a different result on 0 than the generic
+  // instructions expect. The hardware produces -1, but these produce the
+  // bitwidth.
+  getActionDefinitionsBuilder({G_CTLZ, G_CTTZ})
+    .scalarize(0)
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32)
+    .lower();
+
+  // The 64-bit versions produce 32-bit results, but only on the SALU.
+  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
+    .legalFor({{S32, S32}, {S32, S64}})
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64)
+    .scalarize(0)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_BITREVERSE)
     .legalFor({S32})
     .clampScalar(0, S32, S32)
     .scalarize(0);
 
   if (ST.has16BitInsts()) {
+    getActionDefinitionsBuilder(G_BSWAP)
+      .legalFor({S16, S32, V2S16})
+      .clampMaxNumElements(0, S16, 2)
+      // FIXME: Fixing non-power-of-2 before clamp is workaround for
+      // narrowScalar limitation.
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, S16, S32)
+      .scalarize(0);
+
     if (ST.hasVOP3PInsts()) {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
         .legalFor({S32, S16, V2S16})
@@ -571,26 +645,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
     }
   } else {
+    // TODO: Should have same legality without v_perm_b32
+    getActionDefinitionsBuilder(G_BSWAP)
+      .legalFor({S32})
+      .lowerIf(narrowerThan(0, 32))
+      // FIXME: Fixing non-power-of-2 before clamp is workaround for
+      // narrowScalar limitation.
+      .widenScalarToNextPow2(0)
+      .maxScalar(0, S32)
+      .scalarize(0)
+      .lower();
+
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({S32})
       .clampScalar(0, S32, S32)
       .widenScalarToNextPow2(0)
       .scalarize(0);
   }
-
-  auto smallerThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
-    return [=](const LegalityQuery &Query) {
-      return Query.Types[TypeIdx0].getSizeInBits() <
-             Query.Types[TypeIdx1].getSizeInBits();
-    };
-  };
-
-  auto greaterThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
-    return [=](const LegalityQuery &Query) {
-      return Query.Types[TypeIdx0].getSizeInBits() >
-             Query.Types[TypeIdx1].getSizeInBits();
-    };
-  };
 
   getActionDefinitionsBuilder(G_INTTOPTR)
     // List the common cases
@@ -632,7 +703,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
   // handle some operations by just promoting the register during
   // selection. There are also d16 loads on GFX9+ which preserve the high bits.
-  auto maxSizeForAddrSpace = [this](unsigned AS) -> unsigned {
+  auto maxSizeForAddrSpace = [this](unsigned AS, bool IsLoad) -> unsigned {
     switch (AS) {
     // FIXME: Private element size.
     case AMDGPUAS::PRIVATE_ADDRESS:
@@ -649,13 +720,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // a kernel.
     case AMDGPUAS::CONSTANT_ADDRESS:
     case AMDGPUAS::GLOBAL_ADDRESS:
-      return 512;
+      return IsLoad ? 512 : 128;
     default:
       return 128;
     }
   };
 
-  const auto needToSplitLoad = [=](const LegalityQuery &Query) -> bool {
+  const auto needToSplitMemOp = [=](const LegalityQuery &Query,
+                                    bool IsLoad) -> bool {
     const LLT DstTy = Query.Types[0];
 
     // Split vector extloads.
@@ -670,14 +742,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     const LLT PtrTy = Query.Types[1];
     unsigned AS = PtrTy.getAddressSpace();
-    if (MemSize > maxSizeForAddrSpace(AS))
+    if (MemSize > maxSizeForAddrSpace(AS, IsLoad))
       return true;
 
     // Catch weird sized loads that don't evenly divide into the access sizes
     // TODO: May be able to widen depending on alignment etc.
-    unsigned NumRegs = MemSize / 32;
-    if (NumRegs == 3 && !ST.hasDwordx3LoadStores())
-      return true;
+    unsigned NumRegs = (MemSize + 31) / 32;
+    if (NumRegs == 3) {
+      if (!ST.hasDwordx3LoadStores())
+        return true;
+    } else {
+      // If the alignment allows, these should have been widened.
+      if (!isPowerOf2_32(NumRegs))
+        return true;
+    }
 
     if (Align < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
@@ -685,6 +763,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     }
 
     return false;
+  };
+
+  const auto shouldWidenLoadResult = [=](const LegalityQuery &Query) -> bool {
+    unsigned Size = Query.Types[0].getSizeInBits();
+    if (isPowerOf2_32(Size))
+      return false;
+
+    if (Size == 96 && ST.hasDwordx3LoadStores())
+      return false;
+
+    unsigned AddrSpace = Query.Types[1].getAddressSpace();
+    if (Size >= maxSizeForAddrSpace(AddrSpace, true))
+      return false;
+
+    unsigned Align = Query.MMODescrs[0].AlignInBits;
+    unsigned RoundedSize = NextPowerOf2(Size);
+    return (Align >= RoundedSize);
   };
 
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccess() ? 0 : 32;
@@ -700,14 +795,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     auto &Actions = getActionDefinitionsBuilder(Op);
     // Whitelist the common cases.
-    // TODO: Pointer loads
-    // TODO: Wide constant loads
-    // TODO: Only CI+ has 3x loads
     // TODO: Loads to s16 on gfx9
     Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, 32, GlobalAlign32},
                                       {V2S32, GlobalPtr, 64, GlobalAlign32},
-                                      {V3S32, GlobalPtr, 96, GlobalAlign32},
-                                      {S96, GlobalPtr, 96, GlobalAlign32},
                                       {V4S32, GlobalPtr, 128, GlobalAlign32},
                                       {S128, GlobalPtr, 128, GlobalAlign32},
                                       {S64, GlobalPtr, 64, GlobalAlign32},
@@ -735,16 +825,27 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
                                       {S32, ConstantPtr, 32, GlobalAlign32},
                                       {V2S32, ConstantPtr, 64, GlobalAlign32},
-                                      {V3S32, ConstantPtr, 96, GlobalAlign32},
                                       {V4S32, ConstantPtr, 128, GlobalAlign32},
                                       {S64, ConstantPtr, 64, GlobalAlign32},
                                       {S128, ConstantPtr, 128, GlobalAlign32},
                                       {V2S32, ConstantPtr, 32, GlobalAlign32}});
     Actions
         .customIf(typeIs(1, Constant32Ptr))
+        // Widen suitably aligned loads by loading extra elements.
+        .moreElementsIf([=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            return Op == G_LOAD && Ty.isVector() &&
+                   shouldWidenLoadResult(Query);
+          }, moreElementsToNextPow2(0))
+        .widenScalarIf([=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            return Op == G_LOAD && !Ty.isVector() &&
+                   shouldWidenLoadResult(Query);
+          }, widenScalarOrEltToNextPow2(0))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
-              return !Query.Types[0].isVector() && needToSplitLoad(Query);
+              return !Query.Types[0].isVector() &&
+                     needToSplitMemOp(Query, Op == G_LOAD);
             },
             [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
               const LLT DstTy = Query.Types[0];
@@ -757,13 +858,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (DstSize > MemSize)
                 return std::make_pair(0, LLT::scalar(MemSize));
 
+              if (!isPowerOf2_32(DstSize)) {
+                // We're probably decomposing an odd sized store. Try to split
+                // to the widest type. TODO: Account for alignment. As-is it
+                // should be OK, since the new parts will be further legalized.
+                unsigned FloorSize = PowerOf2Floor(DstSize);
+                return std::make_pair(0, LLT::scalar(FloorSize));
+              }
+
               if (DstSize > 32 && (DstSize % 32 != 0)) {
                 // FIXME: Need a way to specify non-extload of larger size if
                 // suitably aligned.
                 return std::make_pair(0, LLT::scalar(32 * (DstSize / 32)));
               }
 
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace());
+              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+                                                     Op == G_LOAD);
               if (MemSize > MaxSize)
                 return std::make_pair(0, LLT::scalar(MaxSize));
 
@@ -772,18 +882,31 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
-              return Query.Types[0].isVector() && needToSplitLoad(Query);
+              return Query.Types[0].isVector() &&
+                     needToSplitMemOp(Query, Op == G_LOAD);
             },
             [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
               const LLT DstTy = Query.Types[0];
               const LLT PtrTy = Query.Types[1];
 
               LLT EltTy = DstTy.getElementType();
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace());
+              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+                                                     Op == G_LOAD);
+
+              // FIXME: Handle widened to power of 2 results better. This ends
+              // up scalarizing.
+              // FIXME: 3 element stores scalarized on SI
 
               // Split if it's too large for the address space.
               if (Query.MMODescrs[0].SizeInBits > MaxSize) {
                 unsigned NumElts = DstTy.getNumElements();
+                unsigned EltSize = EltTy.getSizeInBits();
+
+                if (MaxSize % EltSize == 0) {
+                  return std::make_pair(
+                    0, LLT::scalarOrVector(MaxSize / EltSize, EltTy));
+                }
+
                 unsigned NumPieces = Query.MMODescrs[0].SizeInBits / MaxSize;
 
                 // FIXME: Refine when odd breakdowns handled
@@ -796,9 +919,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       LLT::vector(NumElts / NumPieces, EltTy));
               }
 
+              // FIXME: We could probably handle weird extending loads better.
+              unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+              if (DstTy.getSizeInBits() > MemSize)
+                return std::make_pair(0, EltTy);
+
+              unsigned EltSize = EltTy.getSizeInBits();
+              unsigned DstSize = DstTy.getSizeInBits();
+              if (!isPowerOf2_32(DstSize)) {
+                // We're probably decomposing an odd sized store. Try to split
+                // to the widest type. TODO: Account for alignment. As-is it
+                // should be OK, since the new parts will be further legalized.
+                unsigned FloorSize = PowerOf2Floor(DstSize);
+                return std::make_pair(
+                  0, LLT::scalarOrVector(FloorSize / EltSize, EltTy));
+              }
+
               // Need to split because of alignment.
               unsigned Align = Query.MMODescrs[0].AlignInBits;
-              unsigned EltSize = EltTy.getSizeInBits();
               if (EltSize > Align &&
                   (EltSize / Align < DstTy.getNumElements())) {
                 return std::make_pair(0, LLT::vector(EltSize / Align, EltTy));
@@ -846,7 +984,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           }
         })
         .widenScalarToNextPow2(0)
-        // TODO: v3s32->v4s32 with alignment
         .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0));
   }
 
@@ -998,23 +1135,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampNumElements(0, V2S64, V16S64)
     .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16));
 
-  if (ST.hasScalarPackInsts())
-    BuildVector.legalFor({V2S16, S32});
-
-  BuildVector
-    .minScalarSameAs(1, 0)
-    .legalIf(isRegisterType(0))
-    .minScalarOrElt(0, S32);
-
   if (ST.hasScalarPackInsts()) {
+    BuildVector
+      // FIXME: Should probably widen s1 vectors straight to s32
+      .minScalarOrElt(0, S16)
+      // Widen source elements and produce a G_BUILD_VECTOR_TRUNC
+      .minScalar(1, S32);
+
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
       .legalFor({V2S16, S32})
       .lower();
+    BuildVector.minScalarOrElt(0, S32);
   } else {
+    BuildVector.customFor({V2S16, S16});
+    BuildVector.minScalarOrElt(0, S32);
+
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
+      .customFor({V2S16, S32})
       .lower();
   }
 
+  BuildVector.legalIf(isRegisterType(0));
+
+  // FIXME: Clamp maximum size
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
     .legalIf(isRegisterType(0));
 
@@ -1115,9 +1258,28 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(1);
   }
 
-  // TODO: Make legal for s32, s64. s64 case needs break down in regbankselect.
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-    .clampScalar(0, MinLegalScalarShiftTy, S64)
+  // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
+  // RegBankSelect.
+  auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
+    .legalFor({{S32}, {S64}});
+
+  if (ST.hasVOP3PInsts()) {
+    SextInReg.lowerFor({{V2S16}})
+      // Prefer to reduce vector widths for 16-bit vectors before lowering, to
+      // get more vector shift opportunities, since we'll get those when
+      // expanded.
+      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16));
+  } else if (ST.has16BitInsts()) {
+    SextInReg.lowerFor({{S32}, {S64}, {S16}});
+  } else {
+    // Prefer to promote to s32 before lowering if we don't have 16-bit
+    // shifts. This avoid a lot of intermediate truncate and extend operations.
+    SextInReg.lowerFor({{S32}, {S64}});
+  }
+
+  SextInReg
+    .scalarize(0)
+    .clampScalar(0, S32, S64)
     .lower();
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
@@ -1189,12 +1351,24 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
     return legalizeFDIV(MI, MRI, B);
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_UREM:
+    return legalizeUDIV_UREM(MI, MRI, B);
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_SREM:
+    return legalizeSDIV_SREM(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
     return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
   case TargetOpcode::G_FLOG10:
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
+  case TargetOpcode::G_FEXP:
+    return legalizeFExp(MI, B);
+  case TargetOpcode::G_FFLOOR:
+    return legalizeFFloor(MI, MRI, B);
+  case TargetOpcode::G_BUILD_VECTOR:
+    return legalizeBuildVector(MI, MRI, B);
   default:
     return false;
   }
@@ -1226,7 +1400,6 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
         Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
         WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
 
-    Register ApertureReg = MRI.createGenericVirtualRegister(S32);
     Register GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
     B.buildInstr(AMDGPU::S_GETREG_B32)
@@ -1235,12 +1408,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     MRI.setType(GetReg, S32);
 
     auto ShiftAmt = B.buildConstant(S32, WidthM1 + 1);
-    B.buildInstr(TargetOpcode::G_SHL)
-      .addDef(ApertureReg)
-      .addUse(GetReg)
-      .addUse(ShiftAmt.getReg(0));
-
-    return ApertureReg;
+    return B.buildShl(S32, GetReg, ShiftAmt).getReg(0);
   }
 
   Register QueuePtr = MRI.createGenericVirtualRegister(
@@ -1264,12 +1432,10 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     4,
     MinAlign(64, StructOffset));
 
-  Register LoadResult = MRI.createGenericVirtualRegister(S32);
   Register LoadAddr;
 
   B.materializePtrAdd(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
-  B.buildLoad(LoadResult, LoadAddr, *MMO);
-  return LoadResult;
+  return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
 bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
@@ -1317,7 +1483,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     // extra ptrtoint would be kind of pointless.
     auto HighAddr = B.buildConstant(
       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
-    B.buildMerge(Dst, {Src, HighAddr.getReg(0)});
+    B.buildMerge(Dst, {Src, HighAddr});
     MI.eraseFromParent();
     return true;
   }
@@ -1330,13 +1496,11 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
     auto FlatNull = B.buildConstant(SrcTy, 0);
 
-    Register PtrLo32 = MRI.createGenericVirtualRegister(DstTy);
-
     // Extract low 32-bits of the pointer.
-    B.buildExtract(PtrLo32, Src, 0);
+    auto PtrLo32 = B.buildExtract(DstTy, Src, 0);
 
-    Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    B.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNull.getReg(0));
+    auto CmpRes =
+        B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, FlatNull.getReg(0));
     B.buildSelect(Dst, CmpRes, PtrLo32, SegmentNull.getReg(0));
 
     MI.eraseFromParent();
@@ -1358,21 +1522,16 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (!ApertureReg.isValid())
     return false;
 
-  Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-  B.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNull.getReg(0));
-
-  Register BuildPtr = MRI.createGenericVirtualRegister(DstTy);
+  auto CmpRes =
+      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
 
   // Coerce the type of the low half of the result so we can use merge_values.
-  Register SrcAsInt = MRI.createGenericVirtualRegister(S32);
-  B.buildInstr(TargetOpcode::G_PTRTOINT)
-    .addDef(SrcAsInt)
-    .addUse(Src);
+  Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
-  B.buildMerge(BuildPtr, {SrcAsInt, ApertureReg});
-  B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull.getReg(0));
+  auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
+  B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull);
 
   MI.eraseFromParent();
   return true;
@@ -1420,7 +1579,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   // if (src > 0.0 && src != result)
   //   result += 1.0
 
-  auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {S64}, {Src});
+  auto Trunc = B.buildIntrinsicTrunc(S64, Src);
 
   const auto Zero = B.buildFConstant(S64, 0.0);
   const auto One = B.buildFConstant(S64, 1.0);
@@ -1481,7 +1640,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   const auto Zero32 = B.buildConstant(S32, 0);
 
   // Extend back to 64-bits.
-  auto SignBit64 = B.buildMerge(S64, {Zero32.getReg(0), SignBit.getReg(0)});
+  auto SignBit64 = B.buildMerge(S64, {Zero32, SignBit});
 
   auto Shr = B.buildAShr(S64, FractMask, Exp);
   auto Not = B.buildNot(S64, Shr);
@@ -1558,7 +1717,7 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
     B.buildFPTOUI(S32, FloorMul);
   auto Lo = B.buildFPTOUI(S32, Fma);
 
-  B.buildMerge(Dst, { Lo.getReg(0), Hi.getReg(0) });
+  B.buildMerge(Dst, { Lo, Hi });
   MI.eraseFromParent();
 
   return true;
@@ -1594,8 +1753,12 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   // TODO: Should move some of this into LegalizerHelper.
 
   // TODO: Promote dynamic indexing of s16 to s32
-  // TODO: Dynamic s64 indexing is only legal for SGPR.
-  Optional<int64_t> IdxVal = getConstantVRegVal(MI.getOperand(2).getReg(), MRI);
+
+  // FIXME: Artifact combiner probably should have replaced the truncated
+  // constant before this, so we shouldn't need
+  // getConstantVRegValWithLookThrough.
+  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
+    MI.getOperand(2).getReg(), MRI);
   if (!IdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -1608,8 +1771,8 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
 
   B.setInstr(MI);
 
-  if (IdxVal.getValue() < VecTy.getNumElements())
-    B.buildExtract(Dst, Vec, IdxVal.getValue() * EltTy.getSizeInBits());
+  if (IdxVal->Value < VecTy.getNumElements())
+    B.buildExtract(Dst, Vec, IdxVal->Value * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
@@ -1623,8 +1786,12 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   // TODO: Should move some of this into LegalizerHelper.
 
   // TODO: Promote dynamic indexing of s16 to s32
-  // TODO: Dynamic s64 indexing is only legal for SGPR.
-  Optional<int64_t> IdxVal = getConstantVRegVal(MI.getOperand(3).getReg(), MRI);
+
+  // FIXME: Artifact combiner probably should have replaced the truncated
+  // constant before this, so we shouldn't need
+  // getConstantVRegValWithLookThrough.
+  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
+    MI.getOperand(3).getReg(), MRI);
   if (!IdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
@@ -1638,8 +1805,8 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   B.setInstr(MI);
 
-  if (IdxVal.getValue() < VecTy.getNumElements())
-    B.buildInsert(Dst, Vec, Ins, IdxVal.getValue() * EltTy.getSizeInBits());
+  if (IdxVal->Value < VecTy.getNumElements())
+    B.buildInsert(Dst, Vec, Ins, IdxVal->Value * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
@@ -1861,11 +2028,11 @@ bool AMDGPULegalizerInfo::legalizeFMad(
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // TODO: Always legal with future ftz flag.
-  if (Ty == LLT::scalar(32) && !MFI->getMode().FP32Denormals)
+  // FIXME: Do we need just output?
+  if (Ty == LLT::scalar(32) && !MFI->getMode().allFP32Denormals())
     return true;
-  if (Ty == LLT::scalar(16) && !MFI->getMode().FP64FP16Denormals)
+  if (Ty == LLT::scalar(16) && !MFI->getMode().allFP64FP16Denormals())
     return true;
-
 
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -1913,6 +2080,114 @@ bool AMDGPULegalizerInfo::legalizeFlog(
   auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
 
   B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = B.getMRI()->getType(Dst);
+  B.setInstr(MI);
+
+  auto K = B.buildFConstant(Ty, numbers::log2e);
+  auto Mul = B.buildFMul(Ty, Src, K, Flags);
+  B.buildFExp2(Dst, Mul, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+// Find a source register, ignoring any possible source modifiers.
+static Register stripAnySourceMods(Register OrigSrc, MachineRegisterInfo &MRI) {
+  Register ModSrc = OrigSrc;
+  if (MachineInstr *SrcFNeg = getOpcodeDef(AMDGPU::G_FNEG, ModSrc, MRI)) {
+    ModSrc = SrcFNeg->getOperand(1).getReg();
+    if (MachineInstr *SrcFAbs = getOpcodeDef(AMDGPU::G_FABS, ModSrc, MRI))
+      ModSrc = SrcFAbs->getOperand(1).getReg();
+  } else if (MachineInstr *SrcFAbs = getOpcodeDef(AMDGPU::G_FABS, ModSrc, MRI))
+    ModSrc = SrcFAbs->getOperand(1).getReg();
+  return ModSrc;
+}
+
+bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  const LLT S1 = LLT::scalar(1);
+  const LLT S64 = LLT::scalar(64);
+  Register Dst = MI.getOperand(0).getReg();
+  Register OrigSrc = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  assert(ST.hasFractBug() && MRI.getType(Dst) == S64 &&
+         "this should not have been custom lowered");
+
+  // V_FRACT is buggy on SI, so the F32 version is never used and (x-floor(x))
+  // is used instead. However, SI doesn't have V_FLOOR_F64, so the most
+  // efficient way to implement it is using V_FRACT_F64. The workaround for the
+  // V_FRACT bug is:
+  //    fract(x) = isnan(x) ? x : min(V_FRACT(x), 0.99999999999999999)
+  //
+  // Convert floor(x) to (x - fract(x))
+
+  auto Fract = B.buildIntrinsic(Intrinsic::amdgcn_fract, {S64}, false)
+    .addUse(OrigSrc)
+    .setMIFlags(Flags);
+
+  // Give source modifier matching some assistance before obscuring a foldable
+  // pattern.
+
+  // TODO: We can avoid the neg on the fract? The input sign to fract
+  // shouldn't matter?
+  Register ModSrc = stripAnySourceMods(OrigSrc, MRI);
+
+  auto Const = B.buildFConstant(S64, BitsToDouble(0x3fefffffffffffff));
+
+  Register Min = MRI.createGenericVirtualRegister(S64);
+
+  // We don't need to concern ourselves with the snan handling difference, so
+  // use the one which will directly select.
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  if (MFI->getMode().IEEE)
+    B.buildFMinNumIEEE(Min, Fract, Const, Flags);
+  else
+    B.buildFMinNum(Min, Fract, Const, Flags);
+
+  Register CorrectedFract = Min;
+  if (!MI.getFlag(MachineInstr::FmNoNans)) {
+    auto IsNan = B.buildFCmp(CmpInst::FCMP_ORD, S1, ModSrc, ModSrc, Flags);
+    CorrectedFract = B.buildSelect(S64, IsNan, ModSrc, Min, Flags).getReg(0);
+  }
+
+  auto NegFract = B.buildFNeg(S64, CorrectedFract, Flags);
+  B.buildFAdd(Dst, OrigSrc, NegFract, Flags);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Turn an illegal packed v2s16 build vector into bit operations.
+// TODO: This should probably be a bitcast action in LegalizerHelper.
+bool AMDGPULegalizerInfo::legalizeBuildVector(
+  MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S16 = LLT::vector(2, 16);
+  (void)DstTy;
+  (void)V2S16;
+  assert(DstTy == V2S16);
+
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  assert(MRI.getType(Src0) == LLT::scalar(16));
+
+  B.setInstr(MI);
+  auto Merge = B.buildMerge(S32, {Src0, Src1});
+  B.buildBitcast(Dst, Merge);
+
   MI.eraseFromParent();
   return true;
 }
@@ -2047,6 +2322,173 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   return false;
 }
 
+static Register buildDivRCP(MachineIRBuilder &B, Register Src) {
+  const LLT S32 = LLT::scalar(32);
+
+  auto Cvt0 = B.buildUITOFP(S32, Src);
+  auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Cvt0});
+  auto FPUIntMaxPlus1 = B.buildFConstant(S32, BitsToFloat(0x4f800000));
+  auto Mul = B.buildFMul(S32, RcpIFlag, FPUIntMaxPlus1);
+  return B.buildFPTOUI(S32, Mul).getReg(0);
+}
+
+void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
+                                                  Register DstReg,
+                                                  Register Num,
+                                                  Register Den,
+                                                  bool IsRem) const {
+  const LLT S1 = LLT::scalar(1);
+  const LLT S32 = LLT::scalar(32);
+
+  // RCP =  URECIP(Den) = 2^32 / Den + e
+  // e is rounding error.
+  auto RCP = buildDivRCP(B, Den);
+
+  // RCP_LO = mul(RCP, Den)
+  auto RCP_LO = B.buildMul(S32, RCP, Den);
+
+  // RCP_HI = mulhu (RCP, Den) */
+  auto RCP_HI = B.buildUMulH(S32, RCP, Den);
+
+  // NEG_RCP_LO = -RCP_LO
+  auto Zero = B.buildConstant(S32, 0);
+  auto NEG_RCP_LO = B.buildSub(S32, Zero, RCP_LO);
+
+  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
+  auto CmpRcpHiZero = B.buildICmp(CmpInst::ICMP_EQ, S1, RCP_HI, Zero);
+  auto ABS_RCP_LO = B.buildSelect(S32, CmpRcpHiZero, NEG_RCP_LO, RCP_LO);
+
+  // Calculate the rounding error from the URECIP instruction
+  // E = mulhu(ABS_RCP_LO, RCP)
+  auto E = B.buildUMulH(S32, ABS_RCP_LO, RCP);
+
+  // RCP_A_E = RCP + E
+  auto RCP_A_E = B.buildAdd(S32, RCP, E);
+
+  // RCP_S_E = RCP - E
+  auto RCP_S_E = B.buildSub(S32, RCP, E);
+
+  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
+  auto Tmp0 = B.buildSelect(S32, CmpRcpHiZero, RCP_A_E, RCP_S_E);
+
+  // Quotient = mulhu(Tmp0, Num)stmp
+  auto Quotient = B.buildUMulH(S32, Tmp0, Num);
+
+  // Num_S_Remainder = Quotient * Den
+  auto Num_S_Remainder = B.buildMul(S32, Quotient, Den);
+
+  // Remainder = Num - Num_S_Remainder
+  auto Remainder = B.buildSub(S32, Num, Num_S_Remainder);
+
+  // Remainder_GE_Den = Remainder >= Den
+  auto Remainder_GE_Den = B.buildICmp(CmpInst::ICMP_UGE, S1, Remainder, Den);
+
+  // Remainder_GE_Zero = Num >= Num_S_Remainder;
+  auto Remainder_GE_Zero = B.buildICmp(CmpInst::ICMP_UGE, S1,
+                                       Num, Num_S_Remainder);
+
+  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
+  auto Tmp1 = B.buildAnd(S1, Remainder_GE_Den, Remainder_GE_Zero);
+
+  // Calculate Division result:
+
+  // Quotient_A_One = Quotient + 1
+  auto One = B.buildConstant(S32, 1);
+  auto Quotient_A_One = B.buildAdd(S32, Quotient, One);
+
+  // Quotient_S_One = Quotient - 1
+  auto Quotient_S_One = B.buildSub(S32, Quotient, One);
+
+  // Div = (Tmp1 == 0 ? Quotient_A_One : Quotient)
+  auto Div = B.buildSelect(S32, Tmp1, Quotient, Quotient_A_One);
+
+  // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
+  if (IsRem) {
+    Div = B.buildSelect(S32, Remainder_GE_Zero, Div, Quotient_S_One);
+
+    // Calculate Rem result:
+    auto Remainder_S_Den = B.buildSub(S32, Remainder, Den);
+
+    // Remainder_A_Den = Remainder + Den
+    auto Remainder_A_Den = B.buildAdd(S32, Remainder, Den);
+
+    // Rem = (Tmp1 ? Remainder_S_Den : Remainder)
+    auto Rem = B.buildSelect(S32, Tmp1, Remainder_S_Den, Remainder);
+
+    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
+    B.buildSelect(DstReg, Remainder_GE_Zero, Rem, Remainder_A_Den);
+  } else {
+    B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  const bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Num = MI.getOperand(1).getReg();
+  Register Den = MI.getOperand(2).getReg();
+  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsRem);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+    return legalizeUDIV_UREM32(MI, MRI, B);
+  return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  const LLT S32 = LLT::scalar(32);
+
+  const bool IsRem = MI.getOpcode() == AMDGPU::G_SREM;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  auto ThirtyOne = B.buildConstant(S32, 31);
+  auto LHSign = B.buildAShr(S32, LHS, ThirtyOne);
+  auto RHSign = B.buildAShr(S32, LHS, ThirtyOne);
+
+  LHS = B.buildAdd(S32, LHS, LHSign).getReg(0);
+  RHS = B.buildAdd(S32, RHS, RHSign).getReg(0);
+
+  LHS = B.buildXor(S32, LHS, LHSign).getReg(0);
+  RHS = B.buildXor(S32, RHS, RHSign).getReg(0);
+
+  Register UDivRem = MRI.createGenericVirtualRegister(S32);
+  legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsRem);
+
+  if (IsRem) {
+    auto RSign = LHSign; // Remainder sign is the same as LHS
+    UDivRem = B.buildXor(S32, UDivRem, RSign).getReg(0);
+    B.buildSub(DstReg, UDivRem, RSign);
+  } else {
+    auto DSign = B.buildXor(S32, LHSign, RHSign);
+    UDivRem = B.buildXor(S32, UDivRem, DSign).getReg(0);
+    B.buildSub(DstReg, UDivRem, DSign);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeSDIV_SREM(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+    return legalizeSDIV_SREM32(MI, MRI, B);
+  return false;
+}
+
 bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
                                                  MachineRegisterInfo &MRI,
                                                  MachineIRBuilder &B) const {
@@ -2068,7 +2510,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     return false;
 
   if (!Unsafe && ResTy == S32 &&
-      MF.getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals)
+      MF.getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals())
     return false;
 
   if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
@@ -2149,15 +2591,13 @@ static void toggleSPDenormMode(bool Enable,
                                AMDGPU::SIModeRegisterDefaults Mode) {
   // Set SP denorm mode to this value.
   unsigned SPDenormMode =
-    Enable ? FP_DENORM_FLUSH_NONE : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    Enable ? FP_DENORM_FLUSH_NONE : Mode.fpDenormModeSPValue();
 
   if (ST.hasDenormModeInst()) {
     // Preserve default FP64FP16 denorm mode while updating FP32 mode.
-    unsigned DPDenormModeDefault = Mode.FP64FP16Denormals
-                                   ? FP_DENORM_FLUSH_NONE
-                                   : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    uint32_t DPDenormModeDefault = Mode.fpDenormModeDPValue();
 
-    unsigned NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
+    uint32_t NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
     B.buildInstr(AMDGPU::S_DENORM_MODE)
       .addImm(NewDenormModeValue);
 
@@ -2210,7 +2650,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
   // aren't modeled as reading it.
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(true, B, ST, Mode);
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
@@ -2220,7 +2660,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
   auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
 
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(false, B, ST, Mode);
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32}, false)
@@ -2286,8 +2726,6 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
     // Workaround a hardware bug on SI where the condition output from div_scale
     // is not usable.
 
-    Scale = MRI.createGenericVirtualRegister(S1);
-
     LLT S32 = LLT::scalar(32);
 
     auto NumUnmerge = B.buildUnmerge(S32, LHS);
@@ -2299,7 +2737,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
                               Scale1Unmerge.getReg(1));
     auto CmpDen = B.buildICmp(ICmpInst::ICMP_EQ, S1, DenUnmerge.getReg(1),
                               Scale0Unmerge.getReg(1));
-    B.buildXor(Scale, CmpNum, CmpDen);
+    Scale = B.buildXor(S1, CmpNum, CmpDen).getReg(0);
   } else {
     Scale = DivScale1.getReg(1);
   }
@@ -2838,26 +3276,96 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
+// Produce a vector of s16 elements from s32 pieces.
+static void truncToS16Vector(MachineIRBuilder &B, Register DstReg,
+                             ArrayRef<Register> UnmergeParts) {
+  const LLT S16 = LLT::scalar(16);
+
+  SmallVector<Register, 4> RemergeParts(UnmergeParts.size());
+  for (int I = 0, E = UnmergeParts.size(); I != E; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, UnmergeParts[I]).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+}
+
+/// Convert a set of s32 registers to a result vector with s16 elements.
+static void bitcastToS16Vector(MachineIRBuilder &B, Register DstReg,
+                               ArrayRef<Register> UnmergeParts) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const LLT V2S16 = LLT::vector(2, 16);
+  LLT TargetTy = MRI.getType(DstReg);
+  int NumElts = UnmergeParts.size();
+
+  if (NumElts == 1) {
+    assert(TargetTy == V2S16);
+    B.buildBitcast(DstReg, UnmergeParts[0]);
+    return;
+  }
+
+  SmallVector<Register, 4> RemergeParts(NumElts);
+  for (int I = 0; I != NumElts; ++I)
+    RemergeParts[I] = B.buildBitcast(V2S16, UnmergeParts[I]).getReg(0);
+
+  if (TargetTy.getSizeInBits() == 32u * NumElts) {
+    B.buildConcatVectors(DstReg, RemergeParts);
+    return;
+  }
+
+  const LLT V3S16 = LLT::vector(3, 16);
+  const LLT V6S16 = LLT::vector(6, 16);
+
+  // Widen to v6s16 and unpack v3 parts.
+  assert(TargetTy == V3S16);
+
+  RemergeParts.push_back(B.buildUndef(V2S16).getReg(0));
+  auto Concat = B.buildConcatVectors(V6S16, RemergeParts);
+  B.buildUnmerge({DstReg, MRI.createGenericVirtualRegister(V3S16)}, Concat);
+}
+
+// FIXME: Just vector trunc should be sufficent, but legalization currently
+// broken.
+static void repackUnpackedD16Load(MachineIRBuilder &B, Register DstReg,
+                                  Register WideDstReg) {
+  const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
+
+  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
+
+  int NumOps = Unmerge->getNumOperands() - 1;
+  SmallVector<Register, 4> RemergeParts(NumOps);
+  for (int I = 0; I != NumOps; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+}
+
 bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B,
     GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const {
+  bool IsTFE = MI.getNumExplicitDefs() == 2;
+
   // We are only processing the operands of d16 image operations on subtargets
-  // that use the unpacked register layout.
-  if (!ST.hasUnpackedD16VMem())
+  // that use the unpacked register layout, or need to repack the TFE result.
+
+  // TODO: Need to handle a16 images too
+  // TODO: Do we need to guard against already legalized intrinsics?
+  if (!IsTFE && !ST.hasUnpackedD16VMem())
     return true;
 
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
     AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
 
-  if (BaseOpcode->Atomic) // No d16 atomics
+  if (BaseOpcode->Atomic) // No d16 atomics, or TFE.
     return true;
+
+  B.setInstr(MI);
 
   MachineRegisterInfo *MRI = B.getMRI();
   const LLT S32 = LLT::scalar(32);
   const LLT S16 = LLT::scalar(16);
 
-  if (BaseOpcode->Store) {
+  if (BaseOpcode->Store) { // No TFE for stores?
     Register VData = MI.getOperand(1).getReg();
     LLT Ty = MRI->getType(VData);
     if (!Ty.isVector() || Ty.getElementType() != S16)
@@ -2871,9 +3379,87 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return true;
   }
 
-  // Must be an image load.
   Register DstReg = MI.getOperand(0).getReg();
   LLT Ty = MRI->getType(DstReg);
+  const LLT EltTy = Ty.getScalarType();
+  const bool IsD16 = Ty.getScalarType() == S16;
+  const unsigned NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
+
+  if (IsTFE) {
+    // In the IR, TFE is supposed to be used with a 2 element struct return
+    // type. The intruction really returns these two values in one contiguous
+    // register, with one additional dword beyond the loaded data. Rewrite the
+    // return type to use a single register result.
+    Register Dst1Reg = MI.getOperand(1).getReg();
+    if (MRI->getType(Dst1Reg) != S32)
+      return false;
+
+    // TODO: Make sure the TFE operand bit is set.
+
+    // The raw dword aligned data component of the load. The only legal cases
+    // where this matters should be when using the packed D16 format, for
+    // s16 -> <2 x s16>, and <3 x s16> -> <4 x s16>,
+    LLT RoundedTy;
+    LLT TFETy;
+
+    if (IsD16 && ST.hasUnpackedD16VMem()) {
+      RoundedTy = LLT::scalarOrVector(NumElts, 32);
+      TFETy = LLT::vector(NumElts + 1, 32);
+    } else {
+      unsigned EltSize = Ty.getScalarSizeInBits();
+      unsigned RoundedElts = (Ty.getSizeInBits() + 31) / 32;
+      unsigned RoundedSize = 32 * RoundedElts;
+      RoundedTy = LLT::scalarOrVector(RoundedSize / EltSize, EltSize);
+      TFETy = LLT::vector(RoundedSize / 32 + 1, S32);
+    }
+
+    Register TFEReg = MRI->createGenericVirtualRegister(TFETy);
+    Observer.changingInstr(MI);
+
+    MI.getOperand(0).setReg(TFEReg);
+    MI.RemoveOperand(1);
+
+    Observer.changedInstr(MI);
+
+    // Insert after the instruction.
+    B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+    // Now figure out how to copy the new result register back into the old
+    // result.
+
+    SmallVector<Register, 5> UnmergeResults(TFETy.getNumElements(), Dst1Reg);
+    int NumDataElts = TFETy.getNumElements() - 1;
+
+    if (!Ty.isVector()) {
+      // Simplest case is a trivial unmerge (plus a truncate for d16).
+      UnmergeResults[0] = Ty == S32 ?
+        DstReg : MRI->createGenericVirtualRegister(S32);
+
+      B.buildUnmerge(UnmergeResults, TFEReg);
+      if (Ty != S32)
+        B.buildTrunc(DstReg, UnmergeResults[0]);
+      return true;
+    }
+
+    // We have to repack into a new vector of some kind.
+    for (int I = 0; I != NumDataElts; ++I)
+      UnmergeResults[I] = MRI->createGenericVirtualRegister(S32);
+    B.buildUnmerge(UnmergeResults, TFEReg);
+
+    // Drop the final TFE element.
+    ArrayRef<Register> DataPart(UnmergeResults.data(), NumDataElts);
+
+    if (EltTy == S32)
+      B.buildBuildVector(DstReg, DataPart);
+    else if (ST.hasUnpackedD16VMem())
+      truncToS16Vector(B, DstReg, DataPart);
+    else
+      bitcastToS16Vector(B, DstReg, DataPart);
+
+    return true;
+  }
+
+  // Must be an image load.
   if (!Ty.isVector() || Ty.getElementType() != S16)
     return true;
 
@@ -2886,16 +3472,50 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   MI.getOperand(0).setReg(WideDstReg);
   Observer.changedInstr(MI);
 
-  // FIXME: Just vector trunc should be sufficent, but legalization currently
-  // broken.
-  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
+  repackUnpackedD16Load(B, DstReg, WideDstReg);
+  return true;
+}
 
-  int NumOps = Unmerge->getNumOperands() - 1;
-  SmallVector<Register, 4> RemergeParts(NumOps);
-  for (int I = 0; I != NumOps; ++I)
-    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
+bool AMDGPULegalizerInfo::legalizeSBufferLoad(
+  MachineInstr &MI, MachineIRBuilder &B,
+  GISelChangeObserver &Observer) const {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = B.getMRI()->getType(Dst);
+  unsigned Size = Ty.getSizeInBits();
+  MachineFunction &MF = B.getMF();
 
-  B.buildBuildVector(DstReg, RemergeParts);
+  Observer.changingInstr(MI);
+
+  // FIXME: We don't really need this intermediate instruction. The intrinsic
+  // should be fixed to have a memory operand. Since it's readnone, we're not
+  // allowed to add one.
+  MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_LOAD));
+  MI.RemoveOperand(1); // Remove intrinsic ID
+
+  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
+  // TODO: Should this use datalayout alignment?
+  const unsigned MemSize = (Size + 7) / 8;
+  const unsigned MemAlign = 4;
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+    MachinePointerInfo(),
+    MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+    MachineMemOperand::MOInvariant, MemSize, MemAlign);
+  MI.addMemOperand(MF, MMO);
+
+  // There are no 96-bit result scalar loads, but widening to 128-bit should
+  // always be legal. We may need to restore this to a 96-bit result if it turns
+  // out this needs to be converted to a vector load during RegBankSelect.
+  if (!isPowerOf2_32(Size)) {
+    LegalizerHelper Helper(MF, *this, Observer, B);
+    B.setInstr(MI);
+
+    if (Ty.isVector())
+      Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
+    else
+      Helper.widenScalarDst(MI, getPow2ScalarType(Ty), 0);
+  }
+
+  Observer.changedInstr(MI);
   return true;
 }
 
@@ -2955,11 +3575,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
 
       B.setInstr(*BrCond);
 
-      // FIXME: Need to adjust branch targets based on unconditional branch.
+      MachineBasicBlock *BrTarget = BrCond->getOperand(1).getMBB();
+      if (Br)
+        BrTarget = Br->getOperand(0).getMBB();
+
       Register Reg = MI.getOperand(2).getReg();
       B.buildInstr(AMDGPU::SI_LOOP)
         .addUse(Reg)
-        .addMBB(BrCond->getOperand(1).getMBB());
+        .addMBB(BrTarget);
+
+      if (Br)
+        Br->getOperand(0).setMBB(BrCond->getOperand(1).getMBB());
+
       MI.eraseFromParent();
       BrCond->eraseFromParent();
       MRI.setRegClass(Reg, TRI->getWaveMaskRegClass());
@@ -3015,6 +3642,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_s_buffer_load:
+    return legalizeSBufferLoad(MI, B, Observer);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_struct_buffer_store:
     return legalizeBufferStore(MI, MRI, B, false, false);

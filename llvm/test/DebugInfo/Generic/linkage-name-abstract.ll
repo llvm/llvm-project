@@ -5,7 +5,6 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -v -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
-; REQUIRES: object-emission
 
 ; Verify that the only linkage-name present is the abstract origin of the
 ; inlined subprogram.

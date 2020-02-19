@@ -16,6 +16,8 @@
 #include "WindowsSupport.h"
 #include <process.h>
 
+#include <bitset>
+
 // Windows will at times define MemoryFence.
 #ifdef MemoryFence
 #undef MemoryFence
@@ -122,3 +124,163 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
              ? SetThreadPriorityResult::SUCCESS
              : SetThreadPriorityResult::FAILURE;
 }
+
+struct ProcessorGroup {
+  unsigned ID;
+  unsigned AllThreads;
+  unsigned UsableThreads;
+  unsigned ThreadsPerCore;
+  uint64_t Affinity;
+};
+
+template <typename F>
+static bool IterateProcInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, F Fn) {
+  DWORD Len = 0;
+  BOOL R = ::GetLogicalProcessorInformationEx(Relationship, NULL, &Len);
+  if (R || GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+    return false;
+  }
+  auto *Info = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)calloc(1, Len);
+  R = ::GetLogicalProcessorInformationEx(Relationship, Info, &Len);
+  if (R) {
+    auto *End =
+        (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)((uint8_t *)Info + Len);
+    for (auto *Curr = Info; Curr < End;
+         Curr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)((uint8_t *)Curr +
+                                                            Curr->Size)) {
+      if (Curr->Relationship != Relationship)
+        continue;
+      Fn(Curr);
+    }
+  }
+  free(Info);
+  return true;
+}
+
+static ArrayRef<ProcessorGroup> getProcessorGroups() {
+  auto computeGroups = []() {
+    SmallVector<ProcessorGroup, 4> Groups;
+
+    auto HandleGroup = [&](SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *ProcInfo) {
+      GROUP_RELATIONSHIP &El = ProcInfo->Group;
+      for (unsigned J = 0; J < El.ActiveGroupCount; ++J) {
+        ProcessorGroup G;
+        G.ID = Groups.size();
+        G.AllThreads = El.GroupInfo[J].MaximumProcessorCount;
+        G.UsableThreads = El.GroupInfo[J].ActiveProcessorCount;
+        assert(G.UsableThreads <= 64);
+        G.Affinity = El.GroupInfo[J].ActiveProcessorMask;
+        Groups.push_back(G);
+      }
+    };
+
+    if (!IterateProcInfo(RelationGroup, HandleGroup))
+      return std::vector<ProcessorGroup>();
+
+    auto HandleProc = [&](SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *ProcInfo) {
+      PROCESSOR_RELATIONSHIP &El = ProcInfo->Processor;
+      assert(El.GroupCount == 1);
+      unsigned NumHyperThreads = 1;
+      // If the flag is set, each core supports more than one hyper-thread.
+      if (El.Flags & LTP_PC_SMT)
+        NumHyperThreads = std::bitset<64>(El.GroupMask[0].Mask).count();
+      unsigned I = El.GroupMask[0].Group;
+      Groups[I].ThreadsPerCore = NumHyperThreads;
+    };
+
+    if (!IterateProcInfo(RelationProcessorCore, HandleProc))
+      return std::vector<ProcessorGroup>();
+
+    // If there's an affinity mask set on one of the CPUs, then assume the user
+    // wants to constrain the current process to only a single CPU.
+    for (auto &G : Groups) {
+      if (G.UsableThreads != G.AllThreads) {
+        ProcessorGroup NewG{G};
+        Groups.clear();
+        Groups.push_back(NewG);
+        break;
+      }
+    }
+
+    return std::vector<ProcessorGroup>(Groups.begin(), Groups.end());
+  };
+  static auto Groups = computeGroups();
+  return ArrayRef<ProcessorGroup>(Groups);
+}
+
+template <typename R, typename UnaryPredicate>
+static unsigned aggregate(R &&Range, UnaryPredicate P) {
+  unsigned I{};
+  for (const auto &It : Range)
+    I += P(It);
+  return I;
+}
+
+// for sys::getHostNumPhysicalCores
+int computeHostNumPhysicalCores() {
+  static unsigned Cores =
+      aggregate(getProcessorGroups(), [](const ProcessorGroup &G) {
+        return G.UsableThreads / G.ThreadsPerCore;
+      });
+  return Cores;
+}
+
+int computeHostNumHardwareThreads() {
+  static unsigned Threads =
+      aggregate(getProcessorGroups(),
+                [](const ProcessorGroup &G) { return G.UsableThreads; });
+  return Threads;
+}
+
+// Assign the current thread to a more appropriate CPU socket or CPU group
+void llvm::ThreadPoolStrategy::apply_thread_strategy(
+    unsigned ThreadPoolNum) const {
+  ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
+
+  assert(ThreadPoolNum < compute_thread_count() &&
+         "The thread index is not within thread strategy's range!");
+
+  // In this mode, the ThreadNumber represents the core number, not the
+  // hyper-thread number. Assumes all NUMA groups have the same amount of
+  // hyper-threads.
+  if (!UseHyperThreads)
+    ThreadPoolNum *= Groups[0].ThreadsPerCore;
+
+  unsigned ThreadRangeStart = 0;
+  for (unsigned I = 0; I < Groups.size(); ++I) {
+    const ProcessorGroup &G = Groups[I];
+    if (ThreadPoolNum >= ThreadRangeStart &&
+        ThreadPoolNum < ThreadRangeStart + G.UsableThreads) {
+
+      GROUP_AFFINITY Affinity{};
+      Affinity.Group = G.ID;
+      Affinity.Mask = G.Affinity;
+      SetThreadGroupAffinity(GetCurrentThread(), &Affinity, nullptr);
+    }
+    ThreadRangeStart += G.UsableThreads;
+  }
+}
+
+llvm::BitVector llvm::get_thread_affinity_mask() {
+  GROUP_AFFINITY Affinity{};
+  GetThreadGroupAffinity(GetCurrentThread(), &Affinity);
+
+  static unsigned All =
+      aggregate(getProcessorGroups(),
+                [](const ProcessorGroup &G) { return G.AllThreads; });
+
+  unsigned StartOffset =
+      aggregate(getProcessorGroups(), [&](const ProcessorGroup &G) {
+        return G.ID < Affinity.Group ? G.AllThreads : 0;
+      });
+
+  llvm::BitVector V;
+  V.resize(All);
+  for (unsigned I = 0; I < sizeof(KAFFINITY) * 8; ++I) {
+    if ((Affinity.Mask >> I) & 1)
+      V.set(StartOffset + I);
+  }
+  return V;
+}
+
+unsigned llvm::get_cpus() { return getProcessorGroups().size(); }

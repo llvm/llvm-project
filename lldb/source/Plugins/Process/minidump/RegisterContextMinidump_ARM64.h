@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextMinidump_ARM64_h_
-#define liblldb_RegisterContextMinidump_ARM64_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_ARM64_H
 
 #include "MinidumpTypes.h"
 
@@ -79,4 +79,4 @@ protected:
 
 } // end namespace minidump
 } // end namespace lldb_private
-#endif // liblldb_RegisterContextMinidump_ARM64_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_REGISTERCONTEXTMINIDUMP_ARM64_H

@@ -176,13 +176,24 @@ def ParallelOp : Loop_Op<"parallel",
                        Variadic<Index>:$upperBound,
                        Variadic<Index>:$step);
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "ValueRange lowerBounds, ValueRange upperBounds, "
+              "ValueRange steps">,
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "ValueRange lowerBounds, ValueRange upperBounds, "
+              "ValueRange steps, ArrayRef<Type> resultTypes">
+  ];
 
   let extraClassDeclaration = [{
+    Block *getBody() { return &region().front(); }
     iterator_range<Block::args_iterator> getInductionVars() {
-      Block &block = body().front();
-      return {block.args_begin(), block.args_end()};
+      return {getBody()->args_begin(), getBody()->args_end()};
     }
+    unsigned getNumLoops() { return step().size(); }
   }];
 }
 
@@ -214,8 +225,8 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
     Example:
 
     ```mlir
-      %zero = constant 0.0 : f32
-      loop.reduce(%zero) {
+      %operand = constant 1.0 : f32
+      loop.reduce(%operand) {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
@@ -223,6 +234,12 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
     ```
 
   }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "Value operand">
+  ];
 
   let arguments = (ins AnyType:$operand);
   let regions = (region SizedRegion<1>:$reductionOperator);
@@ -242,6 +259,7 @@ def ReduceReturnOp :
   }];
 
   let arguments = (ins AnyType:$result);
+  let assemblyFormat = "$result attr-dict `:` type($result)";
 }
 
 def TerminatorOp : Loop_Op<"terminator", [Terminator]> {

@@ -79,25 +79,25 @@ private:
   // Check for a getelementptr and deduce base and offsets from it, on success
   // returning the base directly and the offsets indirectly using the Offsets
   // argument
-  Value *checkGEP(Value *&Offsets, Type *Ty, Value *Ptr, IRBuilder<> Builder);
+  Value *checkGEP(Value *&Offsets, Type *Ty, Value *Ptr, IRBuilder<> &Builder);
   // Compute the scale of this gather/scatter instruction
   int computeScale(unsigned GEPElemSize, unsigned MemoryElemSize);
 
   bool lowerGather(IntrinsicInst *I);
   // Create a gather from a base + vector of offsets
   Value *tryCreateMaskedGatherOffset(IntrinsicInst *I, Value *Ptr,
-                                     Instruction *&Root, IRBuilder<> Builder);
+                                     Instruction *&Root, IRBuilder<> &Builder);
   // Create a gather from a vector of pointers
   Value *tryCreateMaskedGatherBase(IntrinsicInst *I, Value *Ptr,
-                                   IRBuilder<> Builder);
+                                   IRBuilder<> &Builder);
 
   bool lowerScatter(IntrinsicInst *I);
   // Create a scatter to a base + vector of offsets
   Value *tryCreateMaskedScatterOffset(IntrinsicInst *I, Value *Ptr,
-                                      IRBuilder<> Builder);
+                                      IRBuilder<> &Builder);
   // Create a scatter to a vector of pointers
   Value *tryCreateMaskedScatterBase(IntrinsicInst *I, Value *Ptr,
-                                    IRBuilder<> Builder);
+                                    IRBuilder<> &Builder);
 };
 
 } // end anonymous namespace
@@ -126,7 +126,7 @@ bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
 }
 
 Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
-                                          IRBuilder<> Builder) {
+                                          IRBuilder<> &Builder) {
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP) {
     LLVM_DEBUG(
@@ -243,7 +243,7 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
-    IntrinsicInst *I, Value *Ptr, IRBuilder<> Builder) {
+    IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Type *Ty = I->getType();
   LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
@@ -263,7 +263,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
-    IntrinsicInst *I, Value *Ptr, Instruction *&Root, IRBuilder<> Builder) {
+    IntrinsicInst *I, Value *Ptr, Instruction *&Root, IRBuilder<> &Builder) {
   using namespace PatternMatch;
 
   Type *OriginalTy = I->getType();
@@ -360,7 +360,7 @@ bool MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
-    IntrinsicInst *I, Value *Ptr, IRBuilder<> Builder) {
+    IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
   Value *Mask = I->getArgOperand(3);
@@ -384,7 +384,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
-    IntrinsicInst *I, Value *Ptr, IRBuilder<> Builder) {
+    IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
   Value *Mask = I->getArgOperand(3);

@@ -159,8 +159,8 @@ public:
 
   void emitTCEntry(const MCSymbol &S) override {
     // Creates a R_PPC64_TOC relocation
-    Streamer.EmitValueToAlignment(8);
-    Streamer.EmitSymbolValue(&S, 8);
+    Streamer.emitValueToAlignment(8);
+    Streamer.emitSymbolValue(&S, 8);
   }
 
   void emitMachine(StringRef CPU) override {
@@ -261,8 +261,8 @@ public:
   void emitTCEntry(const MCSymbol &S) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
-    Streamer.EmitValueToAlignment(PointerSize);
-    Streamer.EmitSymbolValue(&S, PointerSize);
+    Streamer.emitValueToAlignment(PointerSize);
+    Streamer.emitSymbolValue(&S, PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

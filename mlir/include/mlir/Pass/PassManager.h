@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 
+#include <functional>
 #include <vector>
 
 namespace llvm {

@@ -46,10 +46,10 @@ define void @foo1(<4 x float> %val, <4 x float> %test, <4 x double>* %p) nounwin
 ; Also test the general purpose constant folding of int->fp.
 define void @foo2(<4 x float>* noalias %result) nounwind {
 ; CHECK-LABEL: LCPI2_0:
-; CHECK-NEXT: .long 1082130432              ## float 4
-; CHECK-NEXT: .long 1084227584              ## float 5
-; CHECK-NEXT: .long 1086324736              ## float 6
-; CHECK-NEXT: .long 1088421888              ## float 7
+; CHECK-NEXT: .long 0x40800000              ## float 4
+; CHECK-NEXT: .long 0x40a00000              ## float 5
+; CHECK-NEXT: .long 0x40c00000              ## float 6
+; CHECK-NEXT: .long 0x40e00000              ## float 7
 ; CHECK-LABEL: foo2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
@@ -83,10 +83,10 @@ define <4 x float> @foo3(<4 x float> %val, <4 x float> %test) nounwind {
 ; Test the general purpose constant folding of uint->fp.
 define void @foo4(<4 x float>* noalias %result) nounwind {
 ; CHECK-LABEL: LCPI4_0:
-; CHECK-NEXT: .long 1065353216              ## float 1
-; CHECK-NEXT: .long 1123942400              ## float 127
-; CHECK-NEXT: .long 1124073472              ## float 128
-; CHECK-NEXT: .long 1132396544              ## float 255
+; CHECK-NEXT: .long 0x3f800000              ## float 1
+; CHECK-NEXT: .long 0x42fe0000              ## float 127
+; CHECK-NEXT: .long 0x43000000              ## float 128
+; CHECK-NEXT: .long 0x437f0000              ## float 255
 ; CHECK-LABEL: foo4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.27E+2,1.28E+2,2.55E+2]

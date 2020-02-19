@@ -24,7 +24,7 @@
 # NO_SPE: msr S3_0_C9_C10_1, x0
 # CHECK: msr PMBSR_EL1, x0
 # NO_SPE: msr S3_0_C9_C10_3, x0
-# CHECK: msr PMBIDR_EL1, x0
+# CHECK: msr S3_0_C9_C10_7, x0
 # NO_SPE: msr S3_0_C9_C10_7, x0
 # CHECK: msr PMSCR_EL2, x0
 # NO_SPE: msr S3_4_C9_C9_0, x0
@@ -42,7 +42,7 @@
 # NO_SPE: msr S3_0_C9_C9_5, x0
 # CHECK: msr PMSLATFR_EL1, x0
 # NO_SPE: msr S3_0_C9_C9_6, x0
-# CHECK: msr PMSIDR_EL1, x0
+# CHECK: msr S3_0_C9_C9_7, x0
 # NO_SPE: msr S3_0_C9_C9_7, x0
 
 [0x00,0x9a,0x38,0xd5]

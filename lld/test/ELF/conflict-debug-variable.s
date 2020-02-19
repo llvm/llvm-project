@@ -1,7 +1,7 @@
 // REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-dwarfdump %t.o | FileCheck -check-prefix=INPUT %s
-# RUN: not ld.lld %t.o %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # INPUT:     .debug_info contents:
 # INPUT:       DW_TAG_variable
@@ -32,7 +32,7 @@
 # CHECK-NEXT: >>>            {{.*}}:(.bss+0x0)
 
 ## Check that stripping debug sections does not break error reporting.
-# RUN: not ld.lld --strip-debug %t.o %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld --strip-debug %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # Used reduced output from following code and gcc 7.1.0
 # to produce this input file:

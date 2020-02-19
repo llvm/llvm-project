@@ -51,8 +51,12 @@ struct TestFuncSetType : public ModulePass<TestFuncSetType> {
 };
 } // end anonymous namespace
 
-static PassRegistration<TestFuncEraseArg> pass("test-func-erase-arg",
-                                               "Test erasing func args.");
+namespace mlir {
+void registerTestFunc() {
+  PassRegistration<TestFuncEraseArg> pass("test-func-erase-arg",
+                                          "Test erasing func args.");
 
-static PassRegistration<TestFuncSetType> pass2("test-func-set-type",
-                                               "Test FuncOp::setType.");
+  PassRegistration<TestFuncSetType> pass2("test-func-set-type",
+                                          "Test FuncOp::setType.");
+}
+} // namespace mlir

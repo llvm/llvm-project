@@ -43,24 +43,32 @@ namespace {
 class DirectoryWatcherMac : public clang::DirectoryWatcher {
 public:
   DirectoryWatcherMac(
-      FSEventStreamRef EventStream,
+      dispatch_queue_t Queue, FSEventStreamRef EventStream,
       std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)>
           Receiver,
       llvm::StringRef WatchedDirPath)
-      : EventStream(EventStream), Receiver(Receiver),
+      : Queue(Queue), EventStream(EventStream), Receiver(Receiver),
         WatchedDirPath(WatchedDirPath) {}
 
   ~DirectoryWatcherMac() override {
-    stopFSEventStream(EventStream);
-    EventStream = nullptr;
-    // Now it's safe to use Receiver as the only other concurrent use would have
-    // been in EventStream processing.
-    Receiver(DirectoryWatcher::Event(
-                 DirectoryWatcher::Event::EventKind::WatcherGotInvalidated, ""),
-             false);
+    // FSEventStreamStop and Invalidate must be called after Start and
+    // SetDispatchQueue to follow FSEvents API contract. The call to Receiver
+    // also uses Queue to not race with the initial scan.
+    dispatch_sync(Queue, ^{
+      stopFSEventStream(EventStream);
+      EventStream = nullptr;
+      Receiver(
+          DirectoryWatcher::Event(
+              DirectoryWatcher::Event::EventKind::WatcherGotInvalidated, ""),
+          false);
+    });
+
+    // Balance initial creation.
+    dispatch_release(Queue);
   }
 
 private:
+  dispatch_queue_t Queue;
   FSEventStreamRef EventStream;
   std::function<void(llvm::ArrayRef<Event>, bool)> Receiver;
   const std::string WatchedDirPath;
@@ -217,7 +225,7 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
   assert(EventStream && "EventStream expected to be non-null");
 
   std::unique_ptr<DirectoryWatcher> Result =
-      std::make_unique<DirectoryWatcherMac>(EventStream, Receiver, Path);
+      std::make_unique<DirectoryWatcherMac>(Queue, EventStream, Receiver, Path);
 
   // We need to copy the data so the lifetime is ok after a const copy is made
   // for the block.
@@ -230,10 +238,6 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
     // inital scan and handling events ONLY AFTER the scan finishes.
     FSEventStreamSetDispatchQueue(EventStream, Queue);
     FSEventStreamStart(EventStream);
-    // We need to decrement the ref count for Queue as initialize() will return
-    // and FSEvents has incremented it. Since we have to wait for FSEvents to
-    // take ownership it's the easiest to do it here rather than main thread.
-    dispatch_release(Queue);
     Receiver(getAsFileEvents(scanDirectory(CopiedPath)), /*IsInitial=*/true);
   };
 

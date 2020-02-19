@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObjectVariable_h_
-#define liblldb_ValueObjectVariable_h_
+#ifndef LLDB_CORE_VALUEOBJECTVARIABLE_H
+#define LLDB_CORE_VALUEOBJECTVARIABLE_H
 
 #include "lldb/Core/ValueObject.h"
 
@@ -77,6 +77,7 @@ protected:
 
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,
+                      ValueObjectManager &manager,
                       const lldb::VariableSP &var_sp);
   // For ValueObject only
   DISALLOW_COPY_AND_ASSIGN(ValueObjectVariable);
@@ -84,4 +85,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObjectVariable_h_
+#endif // LLDB_CORE_VALUEOBJECTVARIABLE_H

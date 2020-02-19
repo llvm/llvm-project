@@ -25,6 +25,13 @@ class SystemZFeatureList<list<SystemZFeature> x> {
 class SystemZFeatureAdd<list<SystemZFeature> x, list<SystemZFeature> y>
   : SystemZFeatureList<!listconcat(x, y)>;
 
+// This feature is added as a subtarget feature whenever the function is
+// compiled to use soft-float.
+def FeatureSoftFloat : SystemZFeature<
+  "soft-float", "SoftFloat",
+  "Use software emulation for floating point"
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture

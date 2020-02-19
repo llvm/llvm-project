@@ -28,9 +28,9 @@ define internal i32 @foo(i1 %C) {
 ; CHECK-SAME: (i1 [[C:%.*]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i32 52
+; CHECK-NEXT:    ret i32 undef
 ; CHECK:       F:
-; CHECK-NEXT:    ret i32 52
+; CHECK-NEXT:    ret i32 undef
 ;
   br i1 %C, label %T, label %F
 
@@ -44,7 +44,6 @@ F:              ; preds = %0
 define i1 @caller(i1 %C) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i1 [[C:%.*]])
-; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %X = call i32 @foo( i1 %C )             ; <i32> [#uses=1]

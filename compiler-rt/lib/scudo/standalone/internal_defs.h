@@ -29,6 +29,7 @@
 // Attributes & builtins related macros.
 
 #define INTERFACE __attribute__((visibility("default")))
+#define HIDDEN __attribute__((visibility("hidden")))
 #define WEAK __attribute__((weak))
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define ALIAS(X) __attribute__((alias(X)))

@@ -17,13 +17,13 @@ define amdgpu_kernel void @multiple_backedges(i32 %arg, i32* %arg1) {
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP5:%.*]], [[LOOP]] ], [ 0, [[LOOP_END]] ]
 ; OPT-NEXT:    [[TMP5]] = add nsw i32 [[TMP4]], [[TMP]]
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[ARG]], [[TMP5]]
-; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP0]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[LOOP_END]], label [[LOOP]]
 ; OPT:       loop_end:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
 ; OPT-NEXT:    [[EXIT:%.*]] = icmp sgt i32 [[TMP5]], [[TMP2]]
-; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[EXIT]], i64 [[PHI_BROKEN1]])
+; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[EXIT]], i64 [[PHI_BROKEN1]])
 ; OPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP7]])
 ; OPT-NEXT:    br i1 [[TMP3]], label [[LOOP_EXIT:%.*]], label [[LOOP]]
 ; OPT:       loop_exit:

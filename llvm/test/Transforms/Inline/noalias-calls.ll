@@ -22,6 +22,23 @@ entry:
   ret void
 }
 
+define void @hello_cs(i8* nocapture %a, i8* nocapture readonly %c, i8* nocapture %b) #1 {
+entry:
+  %l = alloca i8, i32 512, align 1
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %b, i64 16, i1 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %b, i8* align 16 %c, i64 16, i1 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %c, i64 16, i1 0)
+  call void @hey()
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %l, i8* align 16 %c, i64 16, i1 0)
+  ret void
+}
+
+define void @foo_cs(i8* nocapture %a, i8* nocapture readonly %c, i8* nocapture %b) #2 {
+entry:
+  tail call void @hello_cs(i8* noalias %a, i8* noalias %c, i8* %b)
+  ret void
+}
+
 ; CHECK: define void @foo(i8* nocapture %a, i8* nocapture readonly %c, i8* nocapture %b) #2 {
 ; CHECK: entry:
 ; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %b, i64 16, i1 false) #1, !noalias !0
@@ -29,6 +46,16 @@ entry:
 ; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %c, i64 16, i1 false) #1, !alias.scope !5
 ; CHECK:   call void @hey() #1, !noalias !5
 ; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %{{.*}}, i8* align 16 %c, i64 16, i1 false) #1, !noalias !3
+; CHECK:   ret void
+; CHECK: }
+
+; CHECK: define void @foo_cs(i8* nocapture %a, i8* nocapture readonly %c, i8* nocapture %b) #2 {
+; CHECK: entry:
+; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %b, i64 16, i1 false) #1, !noalias !6
+; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %b, i8* align 16 %c, i64 16, i1 false) #1, !noalias !9
+; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %a, i8* align 16 %c, i64 16, i1 false) #1, !alias.scope !11
+; CHECK:   call void @hey() #1, !noalias !11
+; CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %{{.*}}, i8* align 16 %c, i64 16, i1 false) #1, !noalias !9
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -42,4 +69,11 @@ attributes #2 = { nounwind uwtable }
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !2, !"hello: %a"}
 ; CHECK: !5 = !{!4, !1}
+
+; CHECK: !6 = !{!7}
+; CHECK: !7 = distinct !{!7, !8, !"hello_cs: %c"}
+; CHECK: !8 = distinct !{!8, !"hello_cs"}
+; CHECK: !9 = !{!10}
+; CHECK: !10 = distinct !{!10, !8, !"hello_cs: %a"}
+; CHECK: !11 = !{!10, !7}
 

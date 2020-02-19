@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBAttachInfo_h_
-#define LLDB_SBAttachInfo_h_
+#ifndef LLDB_API_SBATTACHINFO_H
+#define LLDB_API_SBATTACHINFO_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -174,4 +174,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_SBAttachInfo_h_
+#endif // LLDB_API_SBATTACHINFO_H

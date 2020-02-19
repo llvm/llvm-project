@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=nvptx -mcpu=sm_20 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -march=nvptx -mcpu=sm_20 2>&1 | FileCheck %s
 
 ; Check that we fail to select fcos without fast-math enabled
 

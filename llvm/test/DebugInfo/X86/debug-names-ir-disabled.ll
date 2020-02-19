@@ -1,4 +1,4 @@
-; REQUIRES: object-emission
+; REQUIRES: x86
 
 ; Verify that no DWARF v5 names section is emitted when all CUs disable name tables.
 ; RUN: llc -mtriple x86_64-pc-linux -filetype=obj < %s \

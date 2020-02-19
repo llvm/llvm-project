@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -I %S/Inputs/modernize-use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -267,3 +267,14 @@ typedef struct { int a; } R_t, *R_p;
 // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using R_t = struct { int a; };
 // CHECK-FIXES-NEXT: using R_p = R_t*;
+
+typedef enum { ea1, eb1 } EnumT1;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using EnumT1 = enum { ea1, eb1 };
+
+#include "modernize-use-using.h"
+
+typedef enum { ea2, eb2 } EnumT2_CheckTypedefImpactFromAnotherFile;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using EnumT2_CheckTypedefImpactFromAnotherFile = enum { ea2, eb2 };
+

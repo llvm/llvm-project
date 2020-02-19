@@ -71,18 +71,18 @@
 
 #pragma omp declare target
 #ifdef HOST
-#define CORRECT host
-#define SUBSET host, cpu
+#define SUBSET host
+#define CORRECT host, cpu
 #define WRONG host, nohost
 #endif // HOST
 #ifdef CPU
-#define CORRECT cpu
-#define SUBSET host, cpu
+#define SUBSET cpu
+#define CORRECT cpu, any
 #define WRONG cpu, gpu
 #endif // CPU
 #ifdef NOHOST
-#define CORRECT nohost
-#define SUBSET nohost, cpu
+#define SUBSET nohost
+#define CORRECT nohost, cpu
 #define WRONG nohost, host
 #endif // NOHOST
 

@@ -8,7 +8,7 @@ define double @double() {
 ; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@2000000000800001
 ; CHECK-NEXT:         .p2align  3
 ; CHECK-NEXT: __real@2000000000800001:
-; CHECK-NEXT:         .xword   2305843009222082561
+; CHECK-NEXT:         .xword   0x2000000000800001
 ; CHECK:      double:
 ; CHECK:               adrp    x8, __real@2000000000800001
 ; CHECK-NEXT:          ldr     d0, [x8, __real@2000000000800001]
@@ -17,7 +17,7 @@ define double @double() {
 ; MINGW:              .section        .rdata,"dr"
 ; MINGW-NEXT:         .p2align  3
 ; MINGW-NEXT: [[LABEL:\.LC.*]]:
-; MINGW-NEXT:         .xword   2305843009222082561
+; MINGW-NEXT:         .xword  0x2000000000800001
 ; MINGW:      double:
 ; MINGW:               adrp    x8, [[LABEL]]
 ; MINGW-NEXT:          ldr     d0, [x8, [[LABEL]]]

@@ -32,6 +32,11 @@ public:
   /// Constructor for cases when there are no relocations.
   DWARFDataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
     : DataExtractor(Data, IsLittleEndian, AddressSize) {}
+  DWARFDataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian,
+                     uint8_t AddressSize)
+      : DataExtractor(
+            StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
+            IsLittleEndian, AddressSize) {}
 
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.

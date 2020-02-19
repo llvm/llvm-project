@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangUtilityFunction_h_
-#define liblldb_ClangUtilityFunction_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTILITYFUNCTION_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTILITYFUNCTION_H
 
 #include <map>
 #include <string>
@@ -15,7 +15,6 @@
 
 #include "ClangExpressionHelper.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
@@ -107,4 +106,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangUtilityFunction_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTILITYFUNCTION_H

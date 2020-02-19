@@ -198,9 +198,7 @@ void nested(__global int *g, __global int * __private *gg, __local int *l, __loc
   ll = gg;   // expected-error {{assigning to '__local int *__private *' from incompatible type '__global int *__private *__private'}}
   ll = l;    // expected-error {{assigning to '__local int *__private *' from incompatible type '__local int *__private'; take the address with &}}
   ll = gg_f; // expected-error {{assigning to '__local int *__private *' from incompatible type '__global float *__private *__private'}}
-  // FIXME: The below becomes a reinterpret_cast, and therefore does not emit an error
-  // even though the address space mismatches in the nested pointers.
-  ll = (__local int * __private *)gg;
+  ll = (__local int *__private *)gg; //expected-warning{{C-style cast from '__global int *__private *' to '__local int *__private *' changes address space of nested pointers}}
 
   gg_f = g;  // expected-error {{assigning to '__global float *__private *' from incompatible type '__global int *__private'}}
   gg_f = gg; // expected-error {{assigning to '__global float *__private *' from incompatible type '__global int *__private *__private'}}

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugMacro_h_
-#define SymbolFileDWARF_DWARFDebugMacro_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGMACRO_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGMACRO_H
 
 #include <map>
 
@@ -58,4 +58,4 @@ public:
                    lldb_private::DebugMacrosSP &debug_macros_sp);
 };
 
-#endif // SymbolFileDWARF_DWARFDebugMacro_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGMACRO_H

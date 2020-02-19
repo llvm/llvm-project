@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
 // Make sure we accept this
 template<class X>struct A{typedef X Y;};
@@ -15,3 +15,12 @@ template<class X>bool operator==(B<X>*,typename B<X>::Y); // \
 // expected-note{{candidate template ignored: substitution failure [with X = int]}}
 int a(B<int> x) { return operator==(&x,1); } // expected-error{{no matching function for call to 'operator=='}} \
 // expected-note{{in instantiation of function template specialization}}
+
+// Ensure we take parameter list reversal into account in partial oredring.
+namespace CompareOrdering {
+  template<typename T> struct A {};
+  template<typename T> int operator<=>(A<T>, int) = delete;
+  template<typename T> int operator<=>(int, A<T*>);
+  // OK, selects the more-specialized reversed function.
+  bool b = A<int*>() < 0;
+}

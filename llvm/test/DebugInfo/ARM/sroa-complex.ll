@@ -1,5 +1,4 @@
 ; RUN: opt -sroa -S -o - %s | FileCheck %s
-; REQUIRES: object-emission
 target datalayout = "e-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7-apple-unknown-macho"
 

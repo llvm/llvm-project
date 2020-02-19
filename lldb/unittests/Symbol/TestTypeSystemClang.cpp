@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -229,6 +229,42 @@ TEST_F(TestTypeSystemClang, TestDisplayName) {
 TEST_F(TestTypeSystemClang, TestDisplayNameEmpty) {
   TypeSystemClang ast("", llvm::Triple());
   EXPECT_EQ("", ast.getDisplayName());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeInvalid) {
+  EXPECT_FALSE(m_ast->GetEnumerationIntegerType(CompilerType()).IsValid());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeUnexpectedType) {
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  CompilerType t = m_ast->GetEnumerationIntegerType(int_type);
+  EXPECT_FALSE(t.IsValid());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeBasicTypes) {
+  // All possible underlying integer types of enums.
+  const std::vector<lldb::BasicType> types_to_test = {
+      eBasicTypeInt,          eBasicTypeUnsignedInt, eBasicTypeLong,
+      eBasicTypeUnsignedLong, eBasicTypeLongLong,    eBasicTypeUnsignedLongLong,
+  };
+
+  for (bool scoped : {true, false}) {
+    SCOPED_TRACE("scoped: " + std::to_string(scoped));
+    for (lldb::BasicType basic_type : types_to_test) {
+      SCOPED_TRACE(std::to_string(basic_type));
+
+      TypeSystemClang ast("enum_ast", HostInfo::GetTargetTriple());
+      CompilerType basic_compiler_type = ast.GetBasicType(basic_type);
+      EXPECT_TRUE(basic_compiler_type.IsValid());
+
+      CompilerType enum_type =
+          ast.CreateEnumerationType("my_enum", ast.GetTranslationUnitDecl(),
+                                    Declaration(), basic_compiler_type, scoped);
+      CompilerType t = ast.GetEnumerationIntegerType(enum_type);
+      // Check that the type we put in at the start is found again.
+      EXPECT_EQ(basic_compiler_type.GetTypeName(), t.GetTypeName());
+    }
+  }
 }
 
 TEST_F(TestTypeSystemClang, TestIsClangType) {

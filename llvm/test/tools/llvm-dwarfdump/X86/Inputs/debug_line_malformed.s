@@ -83,8 +83,6 @@
 .Lprologue_short_prologue_end:
 .byte   6               # Read as part of the prologue,
                         # then later again as DW_LNS_negate_stmt.
-# FIXME: There should be an additional 0 byte here, but the file name parsing
-#        code does not recognise a missing null terminator.
 # Header end
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x1122334455667788
@@ -382,6 +380,113 @@
 .quad   0x4321432143214321
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_md5_end1:
+
+# V5 invalid directory content description has unsupported form.
+.long   .Linvalid_dir_form_end0-.Linvalid_dir_form_start0   # Length of Unit
+.Linvalid_dir_form_start0:
+.short  5               # DWARF version number
+.byte   8               # Address Size
+.byte   0               # Segment Selector Size
+.long   .Linvalid_dir_form_header_end0 - .Linvalid_dir_form_params0
+.Linvalid_dir_form_params0:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+# Directory table format
+.byte   2               # Two elements per directory entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+.byte   2               # DW_LNCT_directory_index (ignored)
+.byte   0x7f            # Unknown form
+# Directory table entries
+.byte   2               # 2 directories
+.asciz  "/foo"          # Directory name
+.byte   0xff            # Arbitrary data for unknown form
+.asciz  "/bar"          # Directory name
+.byte   0xff            # Arbitrary data for unknown form
+# File table format
+.byte   1               # 1 element per file entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+# File table entries
+.byte   1               # 1 file
+.asciz  "xyz"           # File names
+.Linvalid_dir_form_header_end0:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xaaaabbbbccccdddd
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Linvalid_dir_form_end0:
+
+# Zero opcode base.
+.long   .Lzero_opcode_base_end - .Lzero_opcode_base_start # unit length
+.Lzero_opcode_base_start:
+.short  4               # version
+.long   .Lzero_opcode_base_prologue_end-.Lzero_opcode_base_prologue_start # Length of Prologue
+.Lzero_opcode_base_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   0               # Line Base
+.byte   1               # Line Range
+.byte   0               # Opcode Base
+.asciz "dir1"           # Include table
+.byte   0
+.asciz "file1"
+.byte   1, 2, 3
+.byte   0
+.Lzero_opcode_base_prologue_end:
+.byte   0, 9, 2        # DW_LNE_set_address
+.quad   0xffffeeeeddddcccc
+.byte   0x1            # Special opcode
+.byte   0, 1, 1        # DW_LNE_end_sequence
+.Lzero_opcode_base_end:
+
+# V4 table with unterminated include directory table.
+.long   .Lunterminated_include_end - .Lunterminated_include_start # unit length
+.Lunterminated_include_start:
+.short  4               # version
+.long   .Lunterminated_include_prologue_end-.Lunterminated_include_prologue_start # Length of Prologue
+.Lunterminated_include_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+.asciz  "dir1"          # Include table
+.Lunterminated_include_prologue_end:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xabcdef0123456789
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Lunterminated_include_end:
+
+# V4 table with unterminated file name table.
+.long   .Lunterminated_files_end - .Lunterminated_files_start # unit length
+.Lunterminated_files_start:
+.short  4               # version
+.long   .Lunterminated_files_prologue_end-.Lunterminated_files_prologue_start # Length of Prologue
+.Lunterminated_files_prologue_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+.asciz  "dir1"          # Include table
+.byte   0
+.asciz  "foo.c"         # File table
+.byte   1, 2, 3
+.Lunterminated_files_prologue_end:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xababcdcdefef0909
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Lunterminated_files_end:
 
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)

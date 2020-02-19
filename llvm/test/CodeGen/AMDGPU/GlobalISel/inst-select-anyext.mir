@@ -4,25 +4,6 @@
 
 ---
 
-name: anyext_sgpr_s8_to_sgpr_s32
-legalized:       true
-regBankSelected: true
-body: |
-  bb.0:
-    liveins: $sgpr0
-
-    ; GCN-LABEL: name: anyext_sgpr_s8_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: $sgpr0 = COPY [[COPY]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s8) = G_TRUNC %0
-    %2:sgpr(s32) = G_ANYEXT %1
-    $sgpr0 = COPY %2
-
-...
-
----
-
 name: anyext_sgpr_s16_to_sgpr_s32
 legalized:       true
 regBankSelected: true
@@ -128,25 +109,6 @@ body: |
     %1:sgpr(s1) = G_TRUNC %0
     %2:sgpr(s32) = G_ANYEXT %1
     $sgpr0 = COPY %2
-...
-
----
-
-name: anyext_vgpr_s8_to_vgpr_s32
-legalized:       true
-regBankSelected: true
-body: |
-  bb.0:
-    liveins: $vgpr0
-
-    ; GCN-LABEL: name: anyext_vgpr_s8_to_vgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: $vgpr0 = COPY [[COPY]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s8) = G_TRUNC %0
-    %2:vgpr(s32) = G_ANYEXT %1
-    $vgpr0 = COPY %2
-
 ...
 
 ---

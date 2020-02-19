@@ -62,8 +62,7 @@ define <4 x i32> @out_constant_varx_42(<4 x i32> %x, <4 x i32> %y, <4 x i32> %ma
 ; CHECK-LABEL: out_constant_varx_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, %x
@@ -76,8 +75,7 @@ define <4 x i32> @in_constant_varx_42(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mas
 ; CHECK-LABEL: in_constant_varx_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %n0 = xor <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42> ; %x
   %n1 = and <4 x i32> %n0, %mask
@@ -90,8 +88,7 @@ define <4 x i32> @out_constant_varx_42_invmask(<4 x i32> %x, <4 x i32> %y, <4 x 
 ; CHECK-LABEL: out_constant_varx_42_invmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    bsl v2.16b, v1.16b, v0.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, %x
@@ -105,8 +102,7 @@ define <4 x i32> @in_constant_varx_42_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-LABEL: in_constant_varx_42_invmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    bsl v2.16b, v1.16b, v0.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42> ; %x
@@ -169,9 +165,8 @@ define <4 x i32> @in_constant_mone_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 x
 define <4 x i32> @out_constant_42_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: out_constant_42_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    movi v2.4s, #42
-; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-NEXT:    movi v0.4s, #42
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, <i32 42, i32 42, i32 42, i32 42>
@@ -183,9 +178,8 @@ define <4 x i32> @out_constant_42_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %ma
 define <4 x i32> @in_constant_42_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: in_constant_42_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    movi v2.4s, #42
-; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-NEXT:    movi v0.4s, #42
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %n0 = xor <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %y ; %x
   %n1 = and <4 x i32> %n0, %mask
@@ -197,9 +191,8 @@ define <4 x i32> @in_constant_42_vary(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mas
 define <4 x i32> @out_constant_42_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: out_constant_42_vary_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    movi v2.4s, #42
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v0.4s, #42
+; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, <i32 42, i32 42, i32 42, i32 42>
@@ -212,9 +205,8 @@ define <4 x i32> @out_constant_42_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 x 
 define <4 x i32> @in_constant_42_vary_invmask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; CHECK-LABEL: in_constant_42_vary_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    movi v2.4s, #42
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v0.4s, #42
+; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %y ; %x

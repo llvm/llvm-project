@@ -1471,6 +1471,12 @@ public:
       SingleCallCost = TargetTransformInfo::TCC_Expensive;
       break;
     // FIXME: ctlz, cttz, ...
+    case Intrinsic::bswap:
+      ISDs.push_back(ISD::BSWAP);
+      break;
+    case Intrinsic::bitreverse:
+      ISDs.push_back(ISD::BITREVERSE);
+      break;
     }
 
     const TargetLoweringBase *TLI = getTLI();

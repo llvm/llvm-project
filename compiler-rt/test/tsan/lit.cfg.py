@@ -75,7 +75,7 @@ config.substitutions.append( ("%clangxx_tsan ", build_invocation(clang_tsan_cxxf
 # Define CHECK-%os to check for OS-dependent output.
 config.substitutions.append( ('CHECK-%os', ("CHECK-" + config.host_os)))
 
-config.substitutions.append( ("%deflake ", os.path.join(os.path.dirname(__file__), "deflake.bash") + " "))
+config.substitutions.append( ("%deflake ", os.path.join(os.path.dirname(__file__), "deflake.bash") + " " + config.deflake_threshold))
 
 # Default test suffixes.
 config.suffixes = ['.c', '.cpp', '.m', '.mm']

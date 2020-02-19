@@ -158,7 +158,7 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
 
   /// The start of the unit within its section.
   Unit.setLabelBegin(Asm->createTempSymbol("cu_begin"));
-  Asm->OutStreamer->EmitLabel(Unit.getLabelBegin());
+  Asm->OutStreamer->emitLabel(Unit.getLabelBegin());
 
   // Emit size of content not including length itself. The size has already
   // been computed in CompileUnit::computeOffsets(). Subtract 4 to that size to
@@ -212,7 +212,7 @@ void DwarfStreamer::emitSectionContents(const object::ObjectFile &Obj,
 
     if (auto Sec = getSectionByName(Obj, SecName)) {
       if (Expected<StringRef> E = Sec->getContents())
-        MS->EmitBytes(*E);
+        MS->emitBytes(*E);
       else
         consumeError(E.takeError());
     }
@@ -220,13 +220,13 @@ void DwarfStreamer::emitSectionContents(const object::ObjectFile &Obj,
 }
 
 /// Emit DIE containing warnings.
-void DwarfStreamer::emitPaperTrailWarningsDie(const Triple &Triple, DIE &Die) {
+void DwarfStreamer::emitPaperTrailWarningsDie(DIE &Die) {
   switchToDebugInfoSection(/* Version */ 2);
   auto &Asm = getAsmPrinter();
   Asm.emitInt32(11 + Die.getSize() - 4);
   Asm.emitInt16(2);
   Asm.emitInt32(0);
-  Asm.emitInt8(Triple.isArch64Bit() ? 8 : 4);
+  Asm.emitInt8(MOFI->getTargetTriple().isArch64Bit() ? 8 : 4);
   DebugInfoSectionSize += 11;
   emitDIE(Die);
 }
@@ -237,7 +237,7 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntriesForEmission();
   for (auto Entry : Entries) {
     // Emit the string itself.
-    Asm->OutStreamer->EmitBytes(Entry.getString());
+    Asm->OutStreamer->emitBytes(Entry.getString());
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
@@ -270,7 +270,7 @@ void DwarfStreamer::emitAppleNamespaces(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamespaceSection());
   auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
-  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "namespac", SectionBegin);
 }
 
@@ -278,7 +278,7 @@ void DwarfStreamer::emitAppleNames(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamesSection());
   auto *SectionBegin = Asm->createTempSymbol("names_begin");
-  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "names", SectionBegin);
 }
 
@@ -286,7 +286,7 @@ void DwarfStreamer::emitAppleObjc(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelObjCSection());
   auto *SectionBegin = Asm->createTempSymbol("objc_begin");
-  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "objc", SectionBegin);
 }
 
@@ -294,7 +294,7 @@ void DwarfStreamer::emitAppleTypes(
     AccelTable<AppleAccelTableStaticTypeData> &Table) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelTypesSection());
   auto *SectionBegin = Asm->createTempSymbol("types_begin");
-  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "types", SectionBegin);
 }
 
@@ -303,7 +303,7 @@ void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
   SwiftASTSection->setAlignment(Align(32));
   MS->SwitchSection(SwiftASTSection);
-  MS->EmitBytes(Buffer);
+  MS->emitBytes(Buffer);
 }
 
 /// Emit the debug_range section contents for \p FuncRange by
@@ -333,14 +333,14 @@ void DwarfStreamer::emitRangesEntries(
     if (!(Range.StartAddress + OrigLowPc >= FuncRange.start() &&
           Range.EndAddress + OrigLowPc <= FuncRange.stop()))
       warn("inconsistent range data.", "emitting debug_ranges");
-    MS->EmitIntValue(Range.StartAddress + PcOffset, AddressSize);
-    MS->EmitIntValue(Range.EndAddress + PcOffset, AddressSize);
+    MS->emitIntValue(Range.StartAddress + PcOffset, AddressSize);
+    MS->emitIntValue(Range.EndAddress + PcOffset, AddressSize);
     RangesSectionSize += 2 * AddressSize;
   }
 
   // Add the terminator entry.
-  MS->EmitIntValue(0, AddressSize);
-  MS->EmitIntValue(0, AddressSize);
+  MS->emitIntValue(0, AddressSize);
+  MS->emitIntValue(0, AddressSize);
   RangesSectionSize += 2 * AddressSize;
 }
 
@@ -382,8 +382,8 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
     unsigned TupleSize = AddressSize * 2;
     unsigned Padding = offsetToAlignment(HeaderSize, Align(TupleSize));
 
-    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Arange length
-    Asm->OutStreamer->EmitLabel(BeginLabel);
+    Asm->emitLabelDifference(EndLabel, BeginLabel, 4); // Arange length
+    Asm->OutStreamer->emitLabel(BeginLabel);
     Asm->emitInt16(dwarf::DW_ARANGES_VERSION); // Version number
     Asm->emitInt32(Unit.getStartOffset());     // Corresponding unit's offset
     Asm->emitInt8(AddressSize);                // Address size
@@ -394,16 +394,16 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
     for (auto Range = Ranges.begin(), End = Ranges.end(); Range != End;
          ++Range) {
       uint64_t RangeStart = Range->first;
-      MS->EmitIntValue(RangeStart, AddressSize);
+      MS->emitIntValue(RangeStart, AddressSize);
       while ((Range + 1) != End && Range->second == (Range + 1)->first)
         ++Range;
-      MS->EmitIntValue(Range->second - RangeStart, AddressSize);
+      MS->emitIntValue(Range->second - RangeStart, AddressSize);
     }
 
     // Emit terminator
-    Asm->OutStreamer->EmitIntValue(0, AddressSize);
-    Asm->OutStreamer->EmitIntValue(0, AddressSize);
-    Asm->OutStreamer->EmitLabel(EndLabel);
+    Asm->OutStreamer->emitIntValue(0, AddressSize);
+    Asm->OutStreamer->emitIntValue(0, AddressSize);
+    Asm->OutStreamer->emitLabel(EndLabel);
   }
 
   if (!DoDebugRanges)
@@ -414,16 +414,16 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   int64_t PcOffset = -Unit.getLowPc();
   // Emit coalesced ranges.
   for (auto Range = Ranges.begin(), End = Ranges.end(); Range != End; ++Range) {
-    MS->EmitIntValue(Range->first + PcOffset, AddressSize);
+    MS->emitIntValue(Range->first + PcOffset, AddressSize);
     while (Range + 1 != End && Range->second == (Range + 1)->first)
       ++Range;
-    MS->EmitIntValue(Range->second + PcOffset, AddressSize);
+    MS->emitIntValue(Range->second + PcOffset, AddressSize);
     RangesSectionSize += 2 * AddressSize;
   }
 
   // Add the terminator entry.
-  MS->EmitIntValue(0, AddressSize);
-  MS->EmitIntValue(0, AddressSize);
+  MS->emitIntValue(0, AddressSize);
+  MS->emitIntValue(0, AddressSize);
   RangesSectionSize += 2 * AddressSize;
 }
 
@@ -464,28 +464,28 @@ void DwarfStreamer::emitLocationsForUnit(
       LocSectionSize += 2 * AddressSize;
       // End of list entry.
       if (Low == 0 && High == 0) {
-        Asm->OutStreamer->EmitIntValue(0, AddressSize);
-        Asm->OutStreamer->EmitIntValue(0, AddressSize);
+        Asm->OutStreamer->emitIntValue(0, AddressSize);
+        Asm->OutStreamer->emitIntValue(0, AddressSize);
         break;
       }
       // Base address selection entry.
       if (Low == BaseAddressMarker) {
-        Asm->OutStreamer->EmitIntValue(BaseAddressMarker, AddressSize);
-        Asm->OutStreamer->EmitIntValue(High + Attr.second, AddressSize);
+        Asm->OutStreamer->emitIntValue(BaseAddressMarker, AddressSize);
+        Asm->OutStreamer->emitIntValue(High + Attr.second, AddressSize);
         LocPcOffset = 0;
         continue;
       }
       // Location list entry.
-      Asm->OutStreamer->EmitIntValue(Low + LocPcOffset, AddressSize);
-      Asm->OutStreamer->EmitIntValue(High + LocPcOffset, AddressSize);
+      Asm->OutStreamer->emitIntValue(Low + LocPcOffset, AddressSize);
+      Asm->OutStreamer->emitIntValue(High + LocPcOffset, AddressSize);
       uint64_t Length = Data.getU16(&Offset);
-      Asm->OutStreamer->EmitIntValue(Length, 2);
+      Asm->OutStreamer->emitIntValue(Length, 2);
       // Copy the bytes into to the buffer, process them, emit them.
       Buffer.reserve(Length);
       Buffer.resize(0);
       StringRef Input = InputSec.Data.substr(Offset, Length);
       ProcessExpr(Input, Buffer);
-      Asm->OutStreamer->EmitBytes(
+      Asm->OutStreamer->emitBytes(
           StringRef((const char *)Buffer.data(), Length));
       Offset += Length;
       LocSectionSize += Length + 2;
@@ -505,10 +505,10 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
   // The first 4 bytes is the total length of the information for this
   // compilation unit (not including these 4 bytes for the length).
-  Asm->EmitLabelDifference(LineEndSym, LineStartSym, 4);
-  Asm->OutStreamer->EmitLabel(LineStartSym);
+  Asm->emitLabelDifference(LineEndSym, LineStartSym, 4);
+  Asm->OutStreamer->emitLabel(LineStartSym);
   // Copy Prologue.
-  MS->EmitBytes(PrologueBytes);
+  MS->emitBytes(PrologueBytes);
   LineSectionSize += PrologueBytes.size() + 4;
 
   SmallString<128> EncodingBuffer;
@@ -519,9 +519,9 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
     // address in that case.
     MCDwarfLineAddr::Encode(*MC, Params, std::numeric_limits<int64_t>::max(), 0,
                             EncodingOS);
-    MS->EmitBytes(EncodingOS.str());
+    MS->emitBytes(EncodingOS.str());
     LineSectionSize += EncodingBuffer.size();
-    MS->EmitLabel(LineEndSym);
+    MS->emitLabel(LineEndSym);
     return;
   }
 
@@ -540,10 +540,10 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
     int64_t AddressDelta;
     if (Address == -1ULL) {
-      MS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);
-      MS->EmitULEB128IntValue(PointerSize + 1);
-      MS->EmitIntValue(dwarf::DW_LNE_set_address, 1);
-      MS->EmitIntValue(Row.Address.Address, PointerSize);
+      MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
+      MS->emitULEB128IntValue(PointerSize + 1);
+      MS->emitIntValue(dwarf::DW_LNE_set_address, 1);
+      MS->emitIntValue(Row.Address.Address, PointerSize);
       LineSectionSize += 2 + PointerSize + getULEB128Size(PointerSize + 1);
       AddressDelta = 0;
     } else {
@@ -557,14 +557,14 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
     if (FileNum != Row.File) {
       FileNum = Row.File;
-      MS->EmitIntValue(dwarf::DW_LNS_set_file, 1);
-      MS->EmitULEB128IntValue(FileNum);
+      MS->emitIntValue(dwarf::DW_LNS_set_file, 1);
+      MS->emitULEB128IntValue(FileNum);
       LineSectionSize += 1 + getULEB128Size(FileNum);
     }
     if (Column != Row.Column) {
       Column = Row.Column;
-      MS->EmitIntValue(dwarf::DW_LNS_set_column, 1);
-      MS->EmitULEB128IntValue(Column);
+      MS->emitIntValue(dwarf::DW_LNS_set_column, 1);
+      MS->emitULEB128IntValue(Column);
       LineSectionSize += 1 + getULEB128Size(Column);
     }
 
@@ -573,34 +573,34 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
     if (Isa != Row.Isa) {
       Isa = Row.Isa;
-      MS->EmitIntValue(dwarf::DW_LNS_set_isa, 1);
-      MS->EmitULEB128IntValue(Isa);
+      MS->emitIntValue(dwarf::DW_LNS_set_isa, 1);
+      MS->emitULEB128IntValue(Isa);
       LineSectionSize += 1 + getULEB128Size(Isa);
     }
     if (IsStatement != Row.IsStmt) {
       IsStatement = Row.IsStmt;
-      MS->EmitIntValue(dwarf::DW_LNS_negate_stmt, 1);
+      MS->emitIntValue(dwarf::DW_LNS_negate_stmt, 1);
       LineSectionSize += 1;
     }
     if (Row.BasicBlock) {
-      MS->EmitIntValue(dwarf::DW_LNS_set_basic_block, 1);
+      MS->emitIntValue(dwarf::DW_LNS_set_basic_block, 1);
       LineSectionSize += 1;
     }
 
     if (Row.PrologueEnd) {
-      MS->EmitIntValue(dwarf::DW_LNS_set_prologue_end, 1);
+      MS->emitIntValue(dwarf::DW_LNS_set_prologue_end, 1);
       LineSectionSize += 1;
     }
 
     if (Row.EpilogueBegin) {
-      MS->EmitIntValue(dwarf::DW_LNS_set_epilogue_begin, 1);
+      MS->emitIntValue(dwarf::DW_LNS_set_epilogue_begin, 1);
       LineSectionSize += 1;
     }
 
     int64_t LineDelta = int64_t(Row.Line) - LastLine;
     if (!Row.EndSequence) {
       MCDwarfLineAddr::Encode(*MC, Params, LineDelta, AddressDelta, EncodingOS);
-      MS->EmitBytes(EncodingOS.str());
+      MS->emitBytes(EncodingOS.str());
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
       Address = Row.Address.Address;
@@ -608,18 +608,18 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       RowsSinceLastSequence++;
     } else {
       if (LineDelta) {
-        MS->EmitIntValue(dwarf::DW_LNS_advance_line, 1);
-        MS->EmitSLEB128IntValue(LineDelta);
+        MS->emitIntValue(dwarf::DW_LNS_advance_line, 1);
+        MS->emitSLEB128IntValue(LineDelta);
         LineSectionSize += 1 + getSLEB128Size(LineDelta);
       }
       if (AddressDelta) {
-        MS->EmitIntValue(dwarf::DW_LNS_advance_pc, 1);
-        MS->EmitULEB128IntValue(AddressDelta);
+        MS->emitIntValue(dwarf::DW_LNS_advance_pc, 1);
+        MS->emitULEB128IntValue(AddressDelta);
         LineSectionSize += 1 + getULEB128Size(AddressDelta);
       }
       MCDwarfLineAddr::Encode(*MC, Params, std::numeric_limits<int64_t>::max(),
                               0, EncodingOS);
-      MS->EmitBytes(EncodingOS.str());
+      MS->emitBytes(EncodingOS.str());
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
       Address = -1ULL;
@@ -631,12 +631,12 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
   if (RowsSinceLastSequence) {
     MCDwarfLineAddr::Encode(*MC, Params, std::numeric_limits<int64_t>::max(), 0,
                             EncodingOS);
-    MS->EmitBytes(EncodingOS.str());
+    MS->emitBytes(EncodingOS.str());
     LineSectionSize += EncodingBuffer.size();
     EncodingBuffer.resize(0);
   }
 
-  MS->EmitLabel(LineEndSym);
+  MS->emitLabel(LineEndSym);
 }
 
 /// Copy the debug_line over to the updated binary while unobfuscating the file
@@ -660,15 +660,15 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
     return;
   }
 
-  Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
-  Asm->OutStreamer->EmitLabel(BeginLabel);
+  Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
+  Asm->OutStreamer->emitLabel(BeginLabel);
   Asm->emitInt16(Version);
   LineSectionSize += 6;
 
   MCSymbol *HeaderBeginLabel = MC->createTempSymbol();
   MCSymbol *HeaderEndLabel = MC->createTempSymbol();
-  Asm->EmitLabelDifference(HeaderEndLabel, HeaderBeginLabel, 4);
-  Asm->OutStreamer->EmitLabel(HeaderBeginLabel);
+  Asm->emitLabelDifference(HeaderEndLabel, HeaderBeginLabel, 4);
+  Asm->OutStreamer->emitLabel(HeaderBeginLabel);
   Offset += 4;
   LineSectionSize += 4;
 
@@ -677,7 +677,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
   Offset += (Version >= 4) ? 5 : 4;
   unsigned OpcodeBase = Data.getU8(&Offset);
   Offset += OpcodeBase - 1;
-  Asm->OutStreamer->EmitBytes(Contents.slice(AfterHeaderLengthOffset, Offset));
+  Asm->OutStreamer->emitBytes(Contents.slice(AfterHeaderLengthOffset, Offset));
   LineSectionSize += Offset - AfterHeaderLengthOffset;
 
   // Offset points to the first directory.
@@ -686,7 +686,7 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
       break;
 
     StringRef Translated = Options.Translator(Dir);
-    Asm->OutStreamer->EmitBytes(Translated);
+    Asm->OutStreamer->emitBytes(Translated);
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
   }
@@ -698,26 +698,26 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
       break;
 
     StringRef Translated = Options.Translator(File);
-    Asm->OutStreamer->EmitBytes(Translated);
+    Asm->OutStreamer->emitBytes(Translated);
     Asm->emitInt8(0);
     LineSectionSize += Translated.size() + 1;
 
     uint64_t OffsetBeforeLEBs = Offset;
-    Asm->EmitULEB128(Data.getULEB128(&Offset));
-    Asm->EmitULEB128(Data.getULEB128(&Offset));
-    Asm->EmitULEB128(Data.getULEB128(&Offset));
+    Asm->emitULEB128(Data.getULEB128(&Offset));
+    Asm->emitULEB128(Data.getULEB128(&Offset));
+    Asm->emitULEB128(Data.getULEB128(&Offset));
     LineSectionSize += Offset - OffsetBeforeLEBs;
   }
   Asm->emitInt8(0);
   LineSectionSize += 1;
 
-  Asm->OutStreamer->EmitLabel(HeaderEndLabel);
+  Asm->OutStreamer->emitLabel(HeaderEndLabel);
 
   // Copy the actual line table program over.
-  Asm->OutStreamer->EmitBytes(Contents.slice(Offset, UnitEnd));
+  Asm->OutStreamer->emitBytes(Contents.slice(Offset, UnitEnd));
   LineSectionSize += UnitEnd - Offset;
 
-  Asm->OutStreamer->EmitLabel(EndLabel);
+  Asm->OutStreamer->emitLabel(EndLabel);
   Offset = UnitEnd;
 }
 
@@ -761,8 +761,8 @@ void DwarfStreamer::emitPubSectionForUnit(
 
     if (!HeaderEmitted) {
       // Emit the header.
-      Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Length
-      Asm->OutStreamer->EmitLabel(BeginLabel);
+      Asm->emitLabelDifference(EndLabel, BeginLabel, 4); // Length
+      Asm->OutStreamer->emitLabel(BeginLabel);
       Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION); // Version
       Asm->emitInt32(Unit.getStartOffset());      // Unit offset
       Asm->emitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset()); // Size
@@ -771,7 +771,7 @@ void DwarfStreamer::emitPubSectionForUnit(
     Asm->emitInt32(Name.Die->getOffset());
 
     // Emit the string itself.
-    Asm->OutStreamer->EmitBytes(Name.Name.getString());
+    Asm->OutStreamer->emitBytes(Name.Name.getString());
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
@@ -779,7 +779,7 @@ void DwarfStreamer::emitPubSectionForUnit(
   if (!HeaderEmitted)
     return;
   Asm->emitInt32(0); // End marker.
-  Asm->OutStreamer->EmitLabel(EndLabel);
+  Asm->OutStreamer->emitLabel(EndLabel);
 }
 
 /// Emit .debug_pubnames for \p Unit.
@@ -802,7 +802,7 @@ void DwarfStreamer::emitPubTypesForUnit(const CompileUnit &Unit) {
 void DwarfStreamer::emitCIE(StringRef CIEBytes) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
 
-  MS->EmitBytes(CIEBytes);
+  MS->emitBytes(CIEBytes);
   FrameSectionSize += CIEBytes.size();
 }
 
@@ -813,10 +813,10 @@ void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
                             uint32_t Address, StringRef FDEBytes) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
 
-  MS->EmitIntValue(FDEBytes.size() + 4 + AddrSize, 4);
-  MS->EmitIntValue(CIEOffset, 4);
-  MS->EmitIntValue(Address, AddrSize);
-  MS->EmitBytes(FDEBytes);
+  MS->emitIntValue(FDEBytes.size() + 4 + AddrSize, 4);
+  MS->emitIntValue(CIEOffset, 4);
+  MS->emitIntValue(Address, AddrSize);
+  MS->emitBytes(FDEBytes);
   FrameSectionSize += FDEBytes.size() + 8 + AddrSize;
 }
 

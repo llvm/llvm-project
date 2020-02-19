@@ -19,12 +19,12 @@
 # CHECK-NEXT:  06000000 00000000
 
 # RUN: echo "SECTIONS { .foo : { *(EXCLUDE_FILE (*file1.o) EXCLUDE_FILE (*file2.o) .foo.3) } }" > %t2.script
-# RUN: not ld.lld -script %t2.script %tfile1.o %tfile2.o %tfile3.o -o %t2.o 2>&1 | \
+# RUN: not ld.lld -script %t2.script %tfile1.o %tfile2.o %tfile3.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
 # ERR: section pattern is expected
 
 # RUN: echo "SECTIONS { .foo : { *(EXCLUDE_FILE (*file1.o)) } }" > %t3.script
-# RUN: not ld.lld -script %t3.script %tfile1.o %tfile2.o %tfile3.o -o %t2.o 2>&1 | \
+# RUN: not ld.lld -script %t3.script %tfile1.o %tfile2.o %tfile3.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
 
 .section .foo.1,"a"

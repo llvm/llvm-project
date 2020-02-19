@@ -277,8 +277,8 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
       if (cast<MDNode>(Operand)->getNumOperands() != 2)
         report_fatal_error("invalid llvm.linker.options");
       for (const auto &Option : cast<MDNode>(Operand)->operands()) {
-        Streamer.EmitBytes(cast<MDString>(Option)->getString());
-        Streamer.EmitIntValue(0, 1);
+        Streamer.emitBytes(cast<MDString>(Option)->getString());
+        Streamer.emitIntValue(0, 1);
       }
     }
   }
@@ -290,9 +290,9 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     Streamer.SwitchSection(S);
 
     for (const auto *Operand : DependentLibraries->operands()) {
-      Streamer.EmitBytes(
+      Streamer.emitBytes(
           cast<MDString>(cast<MDNode>(Operand)->getOperand(0))->getString());
-      Streamer.EmitIntValue(0, 1);
+      Streamer.emitIntValue(0, 1);
     }
   }
 
@@ -304,9 +304,9 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   if (!Section.empty()) {
     auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
     Streamer.SwitchSection(S);
-    Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
-    Streamer.EmitIntValue(Version, 4);
-    Streamer.EmitIntValue(Flags, 4);
+    Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+    Streamer.emitIntValue(Version, 4);
+    Streamer.emitIntValue(Flags, 4);
     Streamer.AddBlankLine();
   }
 
@@ -370,20 +370,20 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
   NameData += Sym->getName();
   MCSymbolELF *Label =
       cast<MCSymbolELF>(getContext().getOrCreateSymbol(NameData));
-  Streamer.EmitSymbolAttribute(Label, MCSA_Hidden);
-  Streamer.EmitSymbolAttribute(Label, MCSA_Weak);
+  Streamer.emitSymbolAttribute(Label, MCSA_Hidden);
+  Streamer.emitSymbolAttribute(Label, MCSA_Weak);
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_GROUP;
   MCSection *Sec = getContext().getELFNamedSection(".data", Label->getName(),
                                                    ELF::SHT_PROGBITS, Flags, 0);
   unsigned Size = DL.getPointerSize();
   Streamer.SwitchSection(Sec);
-  Streamer.EmitValueToAlignment(DL.getPointerABIAlignment(0).value());
-  Streamer.EmitSymbolAttribute(Label, MCSA_ELF_TypeObject);
+  Streamer.emitValueToAlignment(DL.getPointerABIAlignment(0).value());
+  Streamer.emitSymbolAttribute(Label, MCSA_ELF_TypeObject);
   const MCExpr *E = MCConstantExpr::create(Size, getContext());
   Streamer.emitELFSize(Label, E);
-  Streamer.EmitLabel(Label);
+  Streamer.emitLabel(Label);
 
-  Streamer.EmitSymbolValue(Sym, Size);
+  Streamer.emitSymbolValue(Sym, Size);
 }
 
 const MCExpr *TargetLoweringObjectFileELF::getTTypeGlobalReference(
@@ -512,8 +512,8 @@ static const Comdat *getELFComdat(const GlobalValue *GV) {
   return C;
 }
 
-static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
-                                              const TargetMachine &TM) {
+static const MCSymbolELF *getLinkedToSymbol(const GlobalObject *GO,
+                                            const TargetMachine &TM) {
   MDNode *MD = GO->getMetadata(LLVMContext::MD_associated);
   if (!MD)
     return nullptr;
@@ -592,18 +592,18 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   // A section can have at most one associated section. Put each global with
   // MD_associated in a unique section.
   unsigned UniqueID = MCContext::GenericSectionID;
-  const MCSymbolELF *AssociatedSymbol = getAssociatedSymbol(GO, TM);
-  if (AssociatedSymbol) {
+  const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
+  if (LinkedToSym) {
     UniqueID = NextUniqueID++;
     Flags |= ELF::SHF_LINK_ORDER;
   }
 
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags,
-      getEntrySizeForKind(Kind), Group, UniqueID, AssociatedSymbol);
+      getEntrySizeForKind(Kind), Group, UniqueID, LinkedToSym);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
-  assert(Section->getAssociatedSymbol() == AssociatedSymbol &&
+  assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
   return Section;
 }
@@ -696,16 +696,16 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
   }
   EmitUniqueSection |= GO->hasComdat();
 
-  const MCSymbolELF *AssociatedSymbol = getAssociatedSymbol(GO, TM);
-  if (AssociatedSymbol) {
+  const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
+  if (LinkedToSym) {
     EmitUniqueSection = true;
     Flags |= ELF::SHF_LINK_ORDER;
   }
 
   MCSectionELF *Section = selectELFSectionForGlobal(
       getContext(), GO, Kind, getMangler(), TM, EmitUniqueSection, Flags,
-      &NextUniqueID, AssociatedSymbol);
-  assert(Section->getAssociatedSymbol() == AssociatedSymbol);
+      &NextUniqueID, LinkedToSym);
+  assert(Section->getLinkedToSymbol() == LinkedToSym);
   return Section;
 }
 
@@ -889,7 +889,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
       SmallVector<std::string, 4> StrOptions;
       for (const auto &Piece : cast<MDNode>(Option)->operands())
         StrOptions.push_back(std::string(cast<MDString>(Piece)->getString()));
-      Streamer.EmitLinkerOptions(StrOptions);
+      Streamer.emitLinkerOptions(StrOptions);
     }
   }
 
@@ -918,10 +918,10 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   MCSectionMachO *S = getContext().getMachOSection(
       Segment, Section, TAA, StubSize, SectionKind::getData());
   Streamer.SwitchSection(S);
-  Streamer.EmitLabel(getContext().
+  Streamer.emitLabel(getContext().
                      getOrCreateSymbol(StringRef("L_OBJC_IMAGE_INFO")));
-  Streamer.EmitIntValue(VersionVal, 4);
-  Streamer.EmitIntValue(ImageInfoFlags, 4);
+  Streamer.emitIntValue(VersionVal, 4);
+  Streamer.emitIntValue(ImageInfoFlags, 4);
   Streamer.AddBlankLine();
 }
 
@@ -1454,7 +1454,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
         // Lead with a space for consistency with our dllexport implementation.
         std::string Directive(" ");
         Directive.append(std::string(cast<MDString>(Piece)->getString()));
-        Streamer.EmitBytes(Directive);
+        Streamer.emitBytes(Directive);
       }
     }
   }
@@ -1472,9 +1472,9 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
       Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
   Streamer.SwitchSection(S);
-  Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
-  Streamer.EmitIntValue(Version, 4);
-  Streamer.EmitIntValue(Flags, 4);
+  Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+  Streamer.emitIntValue(Version, 4);
+  Streamer.emitIntValue(Flags, 4);
   Streamer.AddBlankLine();
 }
 
@@ -1866,9 +1866,6 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   }
 
   if (Kind.isMergeableCString()) {
-    if (!Kind.isMergeable1ByteCString())
-      report_fatal_error("Unhandled multi-byte mergeable string kind.");
-
     unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
         cast<GlobalVariable>(GO));
 

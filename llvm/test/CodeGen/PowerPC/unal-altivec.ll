@@ -29,14 +29,15 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %10, label %for.end, label %vector.body
 
 ; CHECK: @foo
-; CHECK-DAG: li [[C16:[0-9]+]], 16
+; CHECK-DAG: li [[C0:[0-9]+]], 0
 ; CHECK-DAG: lvx [[CNST:[0-9]+]],
 ; CHECK: .LBB0_1:
-; CHECK-DAG: lvx [[LD1:[0-9]+]], 0, [[C0:[0-9]+]]
-; CHECK-DAG: lvx [[LD2:[0-9]+]], [[C0]], [[C16]]
-; CHECK-DAG: lvsl [[MASK1:[0-9]+]], 0, [[C0]]
-; CHECK-DAG: vperm [[VR1:[0-9]+]], [[LD1]], [[LD2]], [[MASK1]]
-; CHECK-DAG: vaddfp {{[0-9]+}}, [[VR1]], [[CNST]]
+; CHECK-DAG: lvsl [[MASK1:[0-9]+]], [[B1:[0-9]+]], [[C0]]
+; CHECK-DAG: add [[B3:[0-9]+]], [[B1]], [[C0]]
+; CHECK-DAG: lvx [[LD1:[0-9]+]], [[B1]], [[C0]]
+; CHECK-DAG: lvx [[LD2:[0-9]+]], [[B3]],
+; CHECK-DAG: vperm [[R1:[0-9]+]], [[LD1]], [[LD2]], [[MASK1]]
+; CHECK-DAG: vaddfp {{[0-9]+}}, [[R1]], [[CNST]]
 ; CHECK: blr
 
 for.end:                                          ; preds = %vector.body

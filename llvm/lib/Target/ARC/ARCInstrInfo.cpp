@@ -292,7 +292,7 @@ void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       unsigned SrcReg, bool isKill,
+                                       Register SrcReg, bool isKill,
                                        int FrameIndex,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
@@ -321,7 +321,7 @@ void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
-                                        unsigned DestReg, int FrameIndex,
+                                        Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   DebugLoc dl = MBB.findDebugLoc(I);

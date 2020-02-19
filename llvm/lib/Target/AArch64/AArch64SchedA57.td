@@ -501,7 +501,7 @@ def : InstRW<[A57Write_5cyc_2V], (instregex "^FRINT[AIMNPXZ](v4f32|v2f64)")>;
 //   Q form - v16i8, v8i16, v4i32, v2i64
 
 // ASIMD bitwise insert, Q-form
-def : InstRW<[A57Write_3cyc_2V], (instregex "^(BIF|BIT|BSL)v16i8")>;
+def : InstRW<[A57Write_3cyc_2V], (instregex "^(BIF|BIT|BSL|BSP)v16i8")>;
 
 // ASIMD duplicate, gen reg, D-form and Q-form
 def : InstRW<[A57Write_8cyc_1L_1V], (instregex "^CPY")>;

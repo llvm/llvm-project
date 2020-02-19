@@ -225,6 +225,24 @@ static void print(OpAsmPrinter &p, IfOp op) {
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
+void ParallelOp::build(Builder *builder, OperationState &result, ValueRange lbs,
+                       ValueRange ubs, ValueRange steps) {
+  result.addOperands(lbs);
+  result.addOperands(ubs);
+  result.addOperands(steps);
+  Region *bodyRegion = result.addRegion();
+  ParallelOp::ensureTerminator(*bodyRegion, *builder, result.location);
+  for (size_t i = 0, e = steps.size(); i < e; ++i)
+    bodyRegion->front().addArgument(builder->getIndexType());
+}
+
+void ParallelOp::build(Builder *builder, OperationState &result, ValueRange lbs,
+                       ValueRange ubs, ValueRange steps,
+                       ArrayRef<Type> resultTypes) {
+  result.addTypes(resultTypes);
+  build(builder, result, lbs, ubs, steps);
+}
+
 static LogicalResult verify(ParallelOp op) {
   // Check that there is at least one value in lowerBound, upperBound and step.
   // It is sufficient to test only step, because it is ensured already that the
@@ -242,7 +260,7 @@ static LogicalResult verify(ParallelOp op) {
 
   // Check that the body defines the same number of block arguments as the
   // number of tuple elements in step.
-  Block *body = &op.body().front();
+  Block *body = op.getBody();
   if (body->getNumArguments() != stepValues.size())
     return op.emitOpError(
         "expects the same number of induction variables as bound and step "
@@ -321,19 +339,37 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParallelOp op) {
-  p << op.getOperationName() << " (";
-  p.printOperands(op.body().front().getArguments());
-  p << ") = (" << op.lowerBound() << ") to (" << op.upperBound() << ") step ("
-    << op.step() << ")";
-  p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
+  p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = ("
+    << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
+    << ")";
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op.getAttrs());
   if (!op.results().empty())
     p << " : " << op.getResultTypes();
 }
 
+ParallelOp mlir::loop::getParallelForInductionVarOwner(Value val) {
+  auto ivArg = val.dyn_cast<BlockArgument>();
+  if (!ivArg)
+    return ParallelOp();
+  assert(ivArg.getOwner() && "unlinked block argument");
+  auto *containingInst = ivArg.getOwner()->getParentOp();
+  return dyn_cast<ParallelOp>(containingInst);
+}
+
 //===----------------------------------------------------------------------===//
 // ReduceOp
 //===----------------------------------------------------------------------===//
+
+void ReduceOp::build(Builder *builder, OperationState &result, Value operand) {
+  auto type = operand.getType();
+  result.addOperands(operand);
+  Region *bodyRegion = result.addRegion();
+
+  Block *b = new Block();
+  b->addArguments(ArrayRef<Type>{type, type});
+  bodyRegion->getBlocks().insert(bodyRegion->end(), b);
+}
 
 static LogicalResult verify(ReduceOp op) {
   // The region of a ReduceOp has two arguments of the same type as its operand.
@@ -396,22 +432,6 @@ static LogicalResult verify(ReduceReturnOp op) {
     return op.emitOpError() << "needs to have type " << reduceType
                             << " (the type of the enclosing ReduceOp)";
   return success();
-}
-
-static ParseResult parseReduceReturnOp(OpAsmParser &parser,
-                                       OperationState &result) {
-  OpAsmParser::OperandType operand;
-  Type resultType;
-  if (parser.parseOperand(operand) || parser.parseColonType(resultType) ||
-      parser.resolveOperand(operand, resultType, result.operands))
-    return failure();
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, ReduceReturnOp op) {
-  p << op.getOperationName() << " " << op.result() << " : "
-    << op.result().getType();
 }
 
 //===----------------------------------------------------------------------===//

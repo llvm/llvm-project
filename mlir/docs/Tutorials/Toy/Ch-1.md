@@ -12,7 +12,7 @@ the model of the
 
 This tutorial assumes you have cloned and built MLIR; if you have not yet done
 so, see
-[Getting started with MLIR](https://github.com/tensorflow/mlir#getting-started-with-mlir).
+[Getting started with MLIR](https://mlir.llvm.org/getting_started/).
 
 ## The Chapters
 

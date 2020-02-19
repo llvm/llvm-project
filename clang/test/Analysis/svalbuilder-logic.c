@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -Wno-pointer-to-int-cast -verify %s
 // expected-no-diagnostics
 
 // Testing core functionality of the SValBuilder.

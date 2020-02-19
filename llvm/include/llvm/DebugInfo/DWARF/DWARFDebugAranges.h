@@ -25,7 +25,8 @@ public:
 
 private:
   void clear();
-  void extract(DataExtractor DebugArangesData);
+  void extract(DataExtractor DebugArangesData,
+               function_ref<void(Error)> RecoverableErrorHandler);
 
   /// Call appendRange multiple times and then call construct.
   void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC);

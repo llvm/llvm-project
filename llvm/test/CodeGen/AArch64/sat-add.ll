@@ -480,9 +480,9 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    mov w9, #42
 ; CHECK-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    dup v0.2d, x9
-; CHECK-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    dup v1.2d, x9
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %c = icmp ult <2 x i64> %x, <i64 -43, i64 -43>
   %s = select <2 x i1> %c, <2 x i64> %x, <2 x i64> <i64 -43, i64 -43>
@@ -653,8 +653,8 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v2.16b, v1.16b
 ; CHECK-NEXT:    cmhi v3.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v2.16b
-; CHECK-NEXT:    add v0.2d, v3.2d, v1.2d
+; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>
   %c = icmp ult <2 x i64> %x, %noty

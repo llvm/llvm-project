@@ -15,7 +15,7 @@
 ; OPT: br label %Flow
 
 ; OPT: Flow:
-; OPT: call i64 @llvm.amdgcn.if.break.i64.i64(
+; OPT: call i64 @llvm.amdgcn.if.break.i64(
 ; OPT: call i1 @llvm.amdgcn.loop.i64(i64
 ; OPT: br i1 %{{[0-9]+}}, label %bb9, label %bb1
 
@@ -84,7 +84,7 @@ bb9:
 ; OPT: Flow:
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
 ; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ undef, %bb1 ]
-; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64(i1 %tmp3, i64 %phi.broken)
 ; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop.i64(i64 %0)
 ; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
@@ -138,7 +138,7 @@ bb9:                                              ; preds = %Flow
 ; OPT: Flow:
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
 ; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ icmp ne (i32 addrspace(3)* inttoptr (i32 4 to i32 addrspace(3)*), i32 addrspace(3)* @lds), %bb1 ]
-; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64(i1 %tmp3, i64 %phi.broken)
 ; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop.i64(i64 %0)
 ; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
@@ -189,7 +189,7 @@ bb9:                                              ; preds = %Flow
 ; OPT: Flow:
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
 ; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
-; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64(i1 %tmp3, i64 %phi.broken)
 ; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop.i64(i64 %0)
 ; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
@@ -239,7 +239,7 @@ bb9:                                              ; preds = %Flow
 ; OPT: Flow:
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
 ; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ false, %bb1 ]
-; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break.i64(i1 %tmp3, i64 %phi.broken)
 ; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop.i64(i64 %0)
 ; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
@@ -294,7 +294,7 @@ bb9:                                              ; preds = %Flow
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
 ; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
 ; OPT-NEXT: %0 = xor i1 %tmp3, true
-; OPT-NEXT: %1 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %0, i64 %phi.broken)
+; OPT-NEXT: %1 = call i64 @llvm.amdgcn.if.break.i64(i1 %0, i64 %phi.broken)
 ; OPT-NEXT: %2 = call i1 @llvm.amdgcn.loop.i64(i64 %1)
 ; OPT-NEXT: br i1 %2, label %bb9, label %bb1
 

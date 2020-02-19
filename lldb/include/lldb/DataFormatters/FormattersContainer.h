@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormattersContainer_h_
-#define lldb_FormattersContainer_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
+#define LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H
 
 #include <functional>
 #include <map>
@@ -266,7 +266,7 @@ protected:
     ConstString key = m_format_map.GetKeyAtIndex(index);
     if (key)
       return lldb::TypeNameSpecifierImplSP(
-          new TypeNameSpecifierImpl(key.AsCString(), false));
+          new TypeNameSpecifierImpl(key.GetStringRef(), false));
     else
       return lldb::TypeNameSpecifierImplSP();
   }
@@ -328,4 +328,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_FormattersContainer_h_
+#endif // LLDB_DATAFORMATTERS_FORMATTERSCONTAINER_H

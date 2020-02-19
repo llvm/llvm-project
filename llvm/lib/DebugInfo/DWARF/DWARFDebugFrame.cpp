@@ -287,7 +287,7 @@ void CFIProgram::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
 
 void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
   OS << format("%08x %08x %08x CIE", (uint32_t)Offset, (uint32_t)Length,
-               DW_CIE_ID)
+               IsEH ? 0 : DW_CIE_ID)
      << "\n";
   OS << format("  Version:               %d\n", Version);
   OS << "  Augmentation:          \"" << Augmentation << "\"\n";

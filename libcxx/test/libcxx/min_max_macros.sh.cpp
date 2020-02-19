@@ -177,6 +177,8 @@ TEST_MACROS();
 #include <shared_mutex>
 TEST_MACROS();
 #endif
+#include <span>
+TEST_MACROS();
 #include <sstream>
 TEST_MACROS();
 #include <stack>

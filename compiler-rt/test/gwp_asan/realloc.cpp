@@ -1,6 +1,6 @@
 // REQUIRES: gwp_asan
 // RUN: %clangxx_gwp_asan %s -o %t -DTEST_MALLOC
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix CHECK-MALLOC
+// RUN: %expect_crash %run %t 2>&1 | FileCheck %s --check-prefix CHECK-MALLOC
 
 // Check both C++98 and C.
 // RUN: %clangxx_gwp_asan -std=c++98 %s -o %t -DTEST_FREE
@@ -23,7 +23,7 @@ int main() {
   free(Ptr + 1);
 
   // CHECK-MALLOC: GWP-ASan detected a memory error
-  // CHECK-MALLOC: Invalid (wild) free at 0x{{[a-f0-9]+}} (1 byte to the right
+  // CHECK-MALLOC: Invalid (Wild) Free at 0x{{[a-f0-9]+}} (1 byte to the right
   // CHECK-MALLOC-SAME: of a 1-byte allocation
 #elif defined(TEST_FREE)
   char *Ptr = (char *) malloc(1);
@@ -36,7 +36,7 @@ int main() {
   *Ptr = 0;
 
   // CHECK-FREE: GWP-ASan detected a memory error
-  // CHECK-FREE: Use after free at 0x{{[a-f0-9]+}} (0 bytes into a 1-byte
+  // CHECK-FREE: Use After Free at 0x{{[a-f0-9]+}} (0 bytes into a 1-byte
   // CHECK-FREE-SAME: allocation
 #endif
 

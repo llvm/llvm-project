@@ -28,6 +28,10 @@ struct TestLivenessPass : public FunctionPass<TestLivenessPass> {
 
 } // end anonymous namespace
 
-static PassRegistration<TestLivenessPass>
-    pass("test-print-liveness",
-         "Print the contents of a constructed liveness information.");
+namespace mlir {
+void registerTestLivenessPass() {
+  PassRegistration<TestLivenessPass>(
+      "test-print-liveness",
+      "Print the contents of a constructed liveness information.");
+}
+} // namespace mlir

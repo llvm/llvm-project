@@ -198,7 +198,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: anyext_s1_to_s16_vgpr
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s16) = G_ANYEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
@@ -214,7 +214,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: anyext_s1_to_s32_vgpr
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
@@ -230,7 +230,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: anyext_s1_to_s64_vgpr
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s64) = G_ANYEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0

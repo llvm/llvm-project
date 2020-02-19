@@ -55,6 +55,10 @@ OPTIONS
  bitcode.  All global variables matching the regular expression will be
  extracted.  May be specified multiple times.
 
+**--keep-const-init**
+
+ Preserve the values of constant globals.
+
 **-help**
 
  Print a summary of command line options.

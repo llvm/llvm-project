@@ -9,91 +9,57 @@
 #ifndef MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVMPASS_H_
 #define MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVMPASS_H_
 
-#include "llvm/ADT/STLExtras.h"
 #include <memory>
-#include <vector>
-
-namespace llvm {
-class Module;
-} // namespace llvm
 
 namespace mlir {
-class DialectConversion;
-class FuncOp;
 class LLVMTypeConverter;
-struct LogicalResult;
-class MLIRContext;
 class ModuleOp;
 template <typename T> class OpPassBase;
-class RewritePattern;
-class Type;
-
-// Owning list of rewriting patterns.
 class OwningRewritePatternList;
 
-/// Type for a callback constructing the owning list of patterns for the
-/// conversion to the LLVMIR dialect.  The callback is expected to append
-/// patterns to the owning list provided as the second argument.
-using LLVMPatternListFiller =
-    std::function<void(LLVMTypeConverter &, OwningRewritePatternList &)>;
-
-/// Type for a callback constructing the type converter for the conversion to
-/// the LLVMIR dialect.  The callback is expected to return an instance of the
-/// converter.
-using LLVMTypeConverterMaker =
-    std::function<std::unique_ptr<LLVMTypeConverter>(MLIRContext *)>;
-
 /// Collect a set of patterns to convert memory-related operations from the
-/// Standard dialect to the LLVM dialect, excluding the memory-related
-/// operations.
+/// Standard dialect to the LLVM dialect, excluding non-memory-related
+/// operations and FuncOp.
 void populateStdToLLVMMemoryConversionPatters(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
 void populateStdToLLVMNonMemoryConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
-/// Collect a set of patterns to convert from the Standard dialect to LLVM.
+/// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
+/// `emitCWrappers` is set, the pattern will also produce functions
+/// that pass memref descriptors by pointer-to-structure in addition to the
+/// default unpacked form.
+void populateStdToLLVMDefaultFuncOpConversionPattern(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool emitCWrappers = false);
+
+/// Collect a set of default patterns to convert from the Standard dialect to
+/// LLVM. If `useAlloca` is set, the patterns for AllocOp and DeallocOp will
+/// generate `llvm.alloca` instead of calls to "malloc".
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         OwningRewritePatternList &patterns);
+                                         OwningRewritePatternList &patterns,
+                                         bool useAlloca = false,
+                                         bool emitCWrappers = false);
+
+/// Collect a set of patterns to convert from the Standard dialect to
+/// LLVM using the bare pointer calling convention for MemRef function
+/// arguments. If `useAlloca` is set, the patterns for AllocOp and DeallocOp
+/// will generate `llvm.alloca` instead of calls to "malloc".
+void populateStdToLLVMBarePtrConversionPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca = false);
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// By default stdlib malloc/free are used for allocating MemRef payloads.
 /// Specifying `useAlloca-true` emits stack allocations instead. In the future
 /// this may become an enum when we have concrete uses for other options.
 std::unique_ptr<OpPassBase<ModuleOp>>
-createLowerToLLVMPass(bool useAlloca = false);
-
-/// Creates a pass to convert operations to the LLVMIR dialect.  The conversion
-/// is defined by a list of patterns and a type converter that will be obtained
-/// during the pass using the provided callbacks.
-/// By default stdlib malloc/free are used for allocating MemRef payloads.
-/// Specifying `useAlloca-true` emits stack allocations instead. In the future
-/// this may become an enum when we have concrete uses for other options.
-std::unique_ptr<OpPassBase<ModuleOp>>
-createLowerToLLVMPass(LLVMPatternListFiller patternListFiller,
-                      LLVMTypeConverterMaker typeConverterMaker,
-                      bool useAlloca = false);
-
-/// Creates a pass to convert operations to the LLVMIR dialect.  The conversion
-/// is defined by a list of patterns obtained during the pass using the provided
-/// callback and an optional type conversion class, an instance is created
-/// during the pass.
-/// By default stdlib malloc/free are used for allocating MemRef payloads.
-/// Specifying `useAlloca-true` emits stack allocations instead. In the future
-/// this may become an enum when we have concrete uses for other options.
-template <typename TypeConverter = LLVMTypeConverter>
-std::unique_ptr<OpPassBase<ModuleOp>>
-createLowerToLLVMPass(LLVMPatternListFiller patternListFiller,
-                      bool useAlloca = false) {
-  return createLowerToLLVMPass(
-      patternListFiller,
-      [](MLIRContext *context) {
-        return std::make_unique<TypeConverter>(context);
-      },
-      useAlloca);
-}
+createLowerToLLVMPass(bool useAlloca = false, bool useBarePtrCallConv = false,
+                      bool emitCWrappers = false);
 
 namespace LLVM {
 /// Make argument-taking successors of each block distinct.  PHI nodes in LLVM

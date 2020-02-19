@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Options_h_
-#define liblldb_Options_h_
+#ifndef LLDB_INTERPRETER_OPTIONS_H
+#define LLDB_INTERPRETER_OPTIONS_H
 
 #include <set>
 #include <vector>
@@ -328,4 +328,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_Options_h_
+#endif // LLDB_INTERPRETER_OPTIONS_H

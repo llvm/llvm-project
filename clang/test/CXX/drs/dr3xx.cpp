@@ -98,7 +98,7 @@ namespace dr305 { // dr305: no
     b->~C();
   }
   void h(B *b) {
-    struct B {}; // expected-note {{declared here}}
+    struct B {}; // expected-note {{type 'B' found by destructor name lookup}}
     b->~B(); // expected-error {{does not match}}
   }
 

@@ -17,13 +17,11 @@
 #include "llvm/Support/Casting.h"
 
 #define FORWARD_SYMBOL_METHOD(MethodName)                                      \
-  auto MethodName() const->decltype(RawSymbol->MethodName()) {                 \
-    return RawSymbol->MethodName();                                            \
-  }
+  decltype(auto) MethodName() const { return RawSymbol->MethodName(); }
 
 #define FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(ConcreteType, PrivateName, \
                                                     PublicName)                \
-  auto PublicName##Id() const->decltype(RawSymbol->PrivateName##Id()) {        \
+  decltype(auto) PublicName##Id() const {                                      \
     return RawSymbol->PrivateName##Id();                                       \
   }                                                                            \
   std::unique_ptr<ConcreteType> PublicName() const {                           \

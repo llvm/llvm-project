@@ -3277,7 +3277,7 @@
 # CHECK: msr      {{SPSel|SPSEL}}, x12
 # CHECK: msr      {{nzcv|NZCV}}, x12
 # CHECK: msr      {{daif|DAIF}}, x12
-# CHECK: msr      {{CurrentEL|CURRENTEL}}, x12
+# CHECK: msr      S3_0_C4_C2_2, x12
 # CHECK: msr      {{SPSR_irq|SPSR_IRQ}}, x12
 # CHECK: msr      {{SPSR_abt|SPSR_ABT}}, x12
 # CHECK: msr      {{SPSR_und|SPSR_UND}}, x12

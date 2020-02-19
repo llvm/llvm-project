@@ -42,7 +42,7 @@ bool InstructionSelector::constrainOperandRegToRegClass(
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   return constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, RC,
-                                  I.getOperand(OpIdx), OpIdx);
+                                  I.getOperand(OpIdx));
 }
 
 bool InstructionSelector::isOperandImmEqual(

@@ -4,17 +4,17 @@
 # RUN: ld.lld -shared %t2.o -o %t.so
 
 ## Check that %t2.o contains undefined symbol undef.
-# RUN: not ld.lld %t1.o %t2.o -o %t 2>&1 | \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck -check-prefix=UNDCHECK %s
 # UNDCHECK: error: undefined symbol: undef
 # UNDCHECK: >>> referenced by {{.*}}2.o:(.text+0x1)
 
 ## Error out if unknown option value was set.
-# RUN: not ld.lld %t1.o %t2.o -o %t --unresolved-symbols=xxx 2>&1 | \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --unresolved-symbols=xxx 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR1 %s
 # ERR1: unknown --unresolved-symbols value: xxx
 ## Check alias.
-# RUN: not ld.lld %t1.o %t2.o -o %t --unresolved-symbols xxx 2>&1 | \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --unresolved-symbols xxx 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR1 %s
 
 ## Ignore all should not produce error for symbols from object except

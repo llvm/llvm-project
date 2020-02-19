@@ -75,7 +75,7 @@ public:
     static_assert(std::is_enum<T>::value,
                   "Cannot call writeEnum with non-Enum type");
 
-    using U = typename std::underlying_type<T>::type;
+    using U = std::underlying_type_t<T>;
     return writeInteger<U>(static_cast<U>(Num));
   }
 

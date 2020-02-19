@@ -393,49 +393,48 @@ private:
 
     // Create stub functions.
     const DataLayout &DL = SrcM.getDataLayout();
-    {
-      typename IndirectStubsMgrT::StubInitsMap StubInits;
-      for (auto &F : SrcM) {
-        // Skip declarations.
-        if (F.isDeclaration())
+
+    typename IndirectStubsMgrT::StubInitsMap StubInits;
+    for (auto &F : SrcM) {
+      // Skip declarations.
+      if (F.isDeclaration())
+        continue;
+
+      // Skip weak functions for which we already have definitions.
+      auto MangledName = mangle(F.getName(), DL);
+      if (F.hasWeakLinkage() || F.hasLinkOnceLinkage()) {
+        if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
           continue;
-
-        // Skip weak functions for which we already have definitions.
-        auto MangledName = mangle(F.getName(), DL);
-        if (F.hasWeakLinkage() || F.hasLinkOnceLinkage()) {
-          if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
-            continue;
-          else if (auto Err = Sym.takeError())
-            return std::move(Err);
-        }
-
-        // Record all functions defined by this module.
-        if (CloneStubsIntoPartitions)
-          LD.getStubsToClone(LMId).insert(&F);
-
-        // Create a callback, associate it with the stub for the function,
-        // and set the compile action to compile the partition containing the
-        // function.
-        auto CompileAction = [this, &LD, LMId, &F]() -> JITTargetAddress {
-          if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
-            return *FnImplAddrOrErr;
-          else {
-            // FIXME: Report error, return to 'abort' or something similar.
-            consumeError(FnImplAddrOrErr.takeError());
-            return 0;
-          }
-        };
-        if (auto CCAddr =
-                CompileCallbackMgr.getCompileCallback(std::move(CompileAction)))
-          StubInits[MangledName] =
-              std::make_pair(*CCAddr, JITSymbolFlags::fromGlobalValue(F));
-        else
-          return CCAddr.takeError();
+        else if (auto Err = Sym.takeError())
+          return Err;
       }
 
-      if (auto Err = LD.StubsMgr->createStubs(StubInits))
-        return Err;
+      // Record all functions defined by this module.
+      if (CloneStubsIntoPartitions)
+        LD.getStubsToClone(LMId).insert(&F);
+
+      // Create a callback, associate it with the stub for the function,
+      // and set the compile action to compile the partition containing the
+      // function.
+      auto CompileAction = [this, &LD, LMId, &F]() -> JITTargetAddress {
+        if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
+          return *FnImplAddrOrErr;
+        else {
+          // FIXME: Report error, return to 'abort' or something similar.
+          consumeError(FnImplAddrOrErr.takeError());
+          return 0;
+        }
+      };
+      if (auto CCAddr =
+              CompileCallbackMgr.getCompileCallback(std::move(CompileAction)))
+        StubInits[MangledName] =
+            std::make_pair(*CCAddr, JITSymbolFlags::fromGlobalValue(F));
+      else
+        return CCAddr.takeError();
     }
+
+    if (auto Err = LD.StubsMgr->createStubs(StubInits))
+      return Err;
 
     // If this module doesn't contain any globals, aliases, or module flags then
     // we can bail out early and avoid the overhead of creating and managing an

@@ -85,8 +85,8 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
                                                    AllocaInst &AI) {
   PointerType *PTy = cast<PointerType>(CI.getType());
 
-  BuilderTy AllocaBuilder(Builder);
-  AllocaBuilder.SetInsertPoint(&AI);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(&AI);
 
   // Get the type really allocated and the type casted to.
   Type *AllocElTy = AI.getAllocatedType();
@@ -131,16 +131,16 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
   } else {
     Amt = ConstantInt::get(AI.getArraySize()->getType(), Scale);
     // Insert before the alloca, not before the cast.
-    Amt = AllocaBuilder.CreateMul(Amt, NumElements);
+    Amt = Builder.CreateMul(Amt, NumElements);
   }
 
   if (uint64_t Offset = (AllocElTySize*ArrayOffset)/CastElTySize) {
     Value *Off = ConstantInt::get(AI.getArraySize()->getType(),
                                   Offset, true);
-    Amt = AllocaBuilder.CreateAdd(Amt, Off);
+    Amt = Builder.CreateAdd(Amt, Off);
   }
 
-  AllocaInst *New = AllocaBuilder.CreateAlloca(CastElTy, Amt);
+  AllocaInst *New = Builder.CreateAlloca(CastElTy, Amt);
   New->setAlignment(MaybeAlign(AI.getAlignment()));
   New->takeName(&AI);
   New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
@@ -151,7 +151,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
   if (!AI.hasOneUse()) {
     // New is the allocation instruction, pointer typed. AI is the original
     // allocation instruction, also pointer typed. Thus, cast to use is BitCast.
-    Value *NewCast = AllocaBuilder.CreateBitCast(New, AI.getType(), "tmpcast");
+    Value *NewCast = Builder.CreateBitCast(New, AI.getType(), "tmpcast");
     replaceInstUsesWith(AI, NewCast);
   }
   return replaceInstUsesWith(CI, New);
@@ -297,7 +297,7 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
     // Don't do this if it would create a PHI node with an illegal type from a
     // legal type.
     if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
-        shouldChangeType(CI.getType(), Src->getType()))
+        shouldChangeType(CI.getSrcTy(), CI.getType()))
       if (Instruction *NV = foldOpIntoPhi(CI, PN))
         return NV;
   }
@@ -1821,9 +1821,7 @@ Instruction *InstCombiner::commonPointerCastTransforms(CastInst &CI) {
       // Changing the cast operand is usually not a good idea but it is safe
       // here because the pointer operand is being replaced with another
       // pointer operand so the opcode doesn't need to change.
-      Worklist.Add(GEP);
-      CI.setOperand(0, GEP->getOperand(0));
-      return &CI;
+      return replaceOperand(CI, 0, GEP->getOperand(0));
     }
   }
 
@@ -2363,7 +2361,7 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
         auto *NewBC =
           cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
         SI->setOperand(0, NewBC);
-        Worklist.Add(SI);
+        Worklist.push(SI);
         assert(hasStoreUsersOnly(*NewBC));
       }
       else if (auto *BCI = dyn_cast<BitCastInst>(V)) {

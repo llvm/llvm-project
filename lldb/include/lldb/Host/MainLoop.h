@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_MainLoop_h_
-#define lldb_Host_MainLoop_h_
+#ifndef LLDB_HOST_MAINLOOP_H
+#define LLDB_HOST_MAINLOOP_H
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoopBase.h"
@@ -108,4 +108,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_Host_MainLoop_h_
+#endif // LLDB_HOST_MAINLOOP_H

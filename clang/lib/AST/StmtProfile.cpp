@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/ODRHash.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/FoldingSet.h"
 using namespace clang;
@@ -517,6 +518,14 @@ void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
+void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}
+
+void OMPClauseProfiler::VisitOMPAcquireClause(const OMPAcquireClause *) {}
+
+void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
+
+void OMPClauseProfiler::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
+
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
@@ -775,6 +784,7 @@ void OMPClauseProfiler::VisitOMPNontemporalClause(
   for (auto *E : C->private_refs())
     Profiler->VisitStmt(E);
 }
+void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 
 void
@@ -1377,7 +1387,7 @@ void StmtProfiler::VisitRequiresExpr(const RequiresExpr *S) {
       ID.AddInteger(concepts::Requirement::RK_Nested);
       auto *NestedReq = cast<concepts::NestedRequirement>(Req);
       ID.AddBoolean(NestedReq->isSubstitutionFailure());
-      if (!NestedReq->isSubstitutionFailure())  
+      if (!NestedReq->isSubstitutionFailure())
         Visit(NestedReq->getConstraintExpr());
     }
   }
@@ -1535,8 +1545,8 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
     return Stmt::BinaryOperatorClass;
 
   case OO_Spaceship:
-    // FIXME: Update this once we support <=> expressions.
-    llvm_unreachable("<=> expressions not supported yet");
+    BinaryOp = BO_Cmp;
+    return Stmt::BinaryOperatorClass;
 
   case OO_AmpAmp:
     BinaryOp = BO_LAnd;

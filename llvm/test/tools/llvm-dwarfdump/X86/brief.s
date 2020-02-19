@@ -150,10 +150,6 @@ Lset3 = Lfunc_end0-Lfunc_begin0         ## DW_AT_high_pc
 	.byte	0                       ## End Of Children Mark
 	.section	__DWARF,__debug_ranges,regular,debug
 Ldebug_range:
-	.section	__DWARF,__debug_macinfo,regular,debug
-Ldebug_macinfo:
-Lcu_macro_begin0:
-	.byte	0                       ## End Of Macro List Mark
 	.section	__DWARF,__apple_names,regular,debug
 Lnames_begin:
 	.long	1212240712              ## Header Magic

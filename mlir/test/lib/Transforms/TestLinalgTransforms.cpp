@@ -47,6 +47,10 @@ void TestLinalgTransforms::runOnFunction() {
   });
 }
 
-static PassRegistration<TestLinalgTransforms>
-    pass("test-linalg-transform-patterns",
-         "Test Linalg transformation patterns by applying them greedily.");
+namespace mlir {
+void registerTestLinalgTransforms() {
+  PassRegistration<TestLinalgTransforms>(
+      "test-linalg-transform-patterns",
+      "Test Linalg transformation patterns by applying them greedily.");
+}
+} // namespace mlir

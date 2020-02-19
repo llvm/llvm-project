@@ -60,7 +60,6 @@ define internal i32 @cb2(i32 %unknown) {
 ; CHECK-LABEL: define {{[^@]+}}@cb2
 ; CHECK-SAME: (i32 returned [[UNKNOWN:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @cb0(i32 0)
 ; CHECK-NEXT:    ret i32 [[UNKNOWN]]
 ;
 entry:
@@ -91,8 +90,6 @@ entry:
 define void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @cb0(i32 0)
-; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @cb3(i32 1)
 ; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb0, i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb0, i32 0, i32 1)
 ; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb2, i32 0, i32 1)
 ; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb3, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb3, i32 0, i32 1)

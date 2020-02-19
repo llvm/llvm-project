@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <algorithm>
 #include <iostream>
 
 #include <clang/AST/Attr.h>
@@ -42,11 +43,26 @@
 #include "extract_interface.h"
 #include "generator.h"
 
-/* Compare the prefix of "s" to "prefix" up to the length of "prefix".
+const char *isl_class::get_prefix = "get_";
+const char *isl_class::set_callback_prefix = "set_";
+
+/* Should "method" be considered to be a static method?
+ * That is, is the first argument something other than
+ * an instance of the class?
  */
-static int prefixcmp(const char *s, const char *prefix)
+bool isl_class::is_static(FunctionDecl *method) const
 {
-	return strncmp(s, prefix, strlen(prefix));
+	ParmVarDecl *param;
+	QualType type;
+
+	if (method->getNumParams() < 1)
+		return true;
+
+	param = method->getParamDecl(0);
+	type = param->getOriginalType();
+	if (!generator::is_isl_type(type))
+		return true;
+	return generator::extract_type(type) != name;
 }
 
 /* Should "method" be considered to be a static method?
@@ -55,12 +71,31 @@ static int prefixcmp(const char *s, const char *prefix)
  */
 bool generator::is_static(const isl_class &clazz, FunctionDecl *method)
 {
-	ParmVarDecl *param = method->getParamDecl(0);
-	QualType type = param->getOriginalType();
+	return clazz.is_static(method);
+}
 
-	if (!is_isl_type(type))
-		return true;
-	return extract_type(type) != clazz.name;
+/* Does "fd" modify an object of "clazz"?
+ * That is, is it an object method that takes the object and
+ * returns (gives) an object of the same type?
+ */
+bool generator::is_mutator(const isl_class &clazz, FunctionDecl *fd)
+{
+	ParmVarDecl *param;
+	QualType type, return_type;
+
+	if (fd->getNumParams() < 1)
+		return false;
+	if (is_static(clazz, fd))
+		return false;
+
+	if (!gives(fd))
+		return false;
+	param = fd->getParamDecl(0);
+	if (!takes(param))
+		return false;
+	type = param->getOriginalType();
+	return_type = fd->getReturnType();
+	return return_type == type;
 }
 
 /* Find the FunctionDecl with name "name",
@@ -79,49 +114,291 @@ FunctionDecl *generator::find_by_name(const string &name, bool required)
 	return NULL;
 }
 
+/* List of conversion functions that are used to automatically convert
+ * the second argument of the conversion function to its function result.
+ */
+const std::set<std::string> generator::automatic_conversion_functions = {
+	"isl_id_read_from_str",
+	"isl_val_int_from_si",
+};
+
+/* Extract information about the automatic conversion function "fd",
+ * storing the results in this->conversions.
+ *
+ * A function used for automatic conversion has exactly two arguments,
+ * an isl_ctx and a non-isl object, and it returns an isl object.
+ * Store a mapping from the isl object return type
+ * to the non-isl object source type.
+ */
+void generator::extract_automatic_conversion(FunctionDecl *fd)
+{
+	QualType return_type = fd->getReturnType();
+	const Type *type = return_type.getTypePtr();
+
+	if (fd->getNumParams() != 2)
+		die("Expecting two arguments");
+	if (!is_isl_ctx(fd->getParamDecl(0)->getOriginalType()))
+		die("Expecting isl_ctx first argument");
+	if (!is_isl_type(return_type))
+		die("Expecting isl object return type");
+	conversions[type] = fd->getParamDecl(1);
+}
+
+/* Extract information about all automatic conversion functions
+ * for the given class, storing the results in this->conversions.
+ *
+ * In particular, look through all exported constructors for the class and
+ * check if any of them is explicitly marked as a conversion function.
+ */
+void generator::extract_class_automatic_conversions(const isl_class &clazz)
+{
+	const function_set &constructors = clazz.constructors;
+	function_set::iterator fi;
+
+	for (fi = constructors.begin(); fi != constructors.end(); ++fi) {
+		FunctionDecl *fd = *fi;
+		string name = fd->getName();
+		if (automatic_conversion_functions.count(name) != 0)
+			extract_automatic_conversion(fd);
+	}
+}
+
+/* Extract information about all automatic conversion functions,
+ * storing the results in this->conversions.
+ */
+void generator::extract_automatic_conversions()
+{
+	map<string, isl_class>::iterator ci;
+
+	for (ci = classes.begin(); ci != classes.end(); ++ci)
+		extract_class_automatic_conversions(ci->second);
+}
+
+/* Add a subclass derived from "decl" called "sub_name" to the set of classes,
+ * keeping track of the _to_str, _copy and _free functions, if any, separately.
+ * "sub_name" is either the name of the class itself or
+ * the name of a type based subclass.
+ * If the class is a proper subclass, then "super_name" is the name
+ * of its immediate superclass.
+ */
+void generator::add_subclass(RecordDecl *decl, const string &super_name,
+	const string &sub_name)
+{
+	string name = decl->getName();
+
+	classes[sub_name].name = name;
+	classes[sub_name].superclass_name = super_name;
+	classes[sub_name].subclass_name = sub_name;
+	classes[sub_name].type = decl;
+	classes[sub_name].fn_to_str = find_by_name(name + "_to_str", false);
+	classes[sub_name].fn_copy = find_by_name(name + "_copy", true);
+	classes[sub_name].fn_free = find_by_name(name + "_free", true);
+}
+
+/* Add a class derived from "decl" to the set of classes,
+ * keeping track of the _to_str, _copy and _free functions, if any, separately.
+ */
+void generator::add_class(RecordDecl *decl)
+{
+	return add_subclass(decl, "", decl->getName());
+}
+
+/* Given a function "fn_type" that returns the subclass type
+ * of a C object, create subclasses for each of the (non-negative)
+ * return values.
+ *
+ * The function "fn_type" is also stored in the superclass,
+ * along with all pairs of type values and subclass names.
+ */
+void generator::add_type_subclasses(FunctionDecl *fn_type)
+{
+	QualType return_type = fn_type->getReturnType();
+	const EnumType *enum_type = return_type->getAs<EnumType>();
+	EnumDecl *decl = enum_type->getDecl();
+	isl_class *c = method2class(fn_type);
+	DeclContext::decl_iterator i;
+
+	c->fn_type = fn_type;
+	for (i = decl->decls_begin(); i != decl->decls_end(); ++i) {
+		EnumConstantDecl *ecd = dyn_cast<EnumConstantDecl>(*i);
+		int val = (int) ecd->getInitVal().getSExtValue();
+		string name = ecd->getNameAsString();
+
+		if (val < 0)
+			continue;
+		c->type_subclasses[val] = name;
+		add_subclass(c->type, c->subclass_name, name);
+	}
+}
+
+/* Add information about the enum values in "decl", set by "fd",
+ * to c->set_enums. "prefix" is the prefix of the generated method names.
+ * In particular, it has the name of the enum type removed.
+ *
+ * In particular, for each non-negative enum value, keep track of
+ * the value, the name and the corresponding method name.
+ */
+static void add_set_enum(isl_class *c, const string &prefix, EnumDecl *decl,
+	FunctionDecl *fd)
+{
+	DeclContext::decl_iterator i;
+
+	for (i = decl->decls_begin(); i != decl->decls_end(); ++i) {
+		EnumConstantDecl *ecd = dyn_cast<EnumConstantDecl>(*i);
+		int val = (int) ecd->getInitVal().getSExtValue();
+		string name = ecd->getNameAsString();
+		string method_name;
+
+		if (val < 0)
+			continue;
+		method_name = prefix + name.substr(4);
+		c->set_enums[fd].push_back(set_enum(val, name, method_name));
+	}
+}
+
+/* Check if "fd" sets an enum value and, if so, add information
+ * about the enum values to c->set_enums.
+ *
+ * A function is considered to set an enum value if:
+ * - the function returns an object of the same type
+ * - the last argument is of type enum
+ * - the name of the function ends with the name of the enum
+ */
+static bool handled_sets_enum(isl_class *c, FunctionDecl *fd)
+{
+	unsigned n;
+	ParmVarDecl *param;
+	const EnumType *enum_type;
+	EnumDecl *decl;
+	string enum_name;
+	string fd_name;
+	string prefix;
+	size_t pos;
+
+	if (!generator::is_mutator(*c, fd))
+		return false;
+	n = fd->getNumParams();
+	if (n < 2)
+		return false;
+	param = fd->getParamDecl(n - 1);
+	enum_type = param->getType()->getAs<EnumType>();
+	if (!enum_type)
+		return false;
+	decl = enum_type->getDecl();
+	enum_name = decl->getName();
+	enum_name = enum_name.substr(4);
+	fd_name = c->method_name(fd);
+	pos = fd_name.find(enum_name);
+	if (pos == std::string::npos)
+		return false;
+	prefix = fd_name.substr(0, pos);
+
+	add_set_enum(c, prefix, decl, fd);
+
+	return true;
+}
+
+/* Return the callback argument of a function setting
+ * a persistent callback.
+ * This callback is in the second argument (position 1).
+ */
+ParmVarDecl *generator::persistent_callback_arg(FunctionDecl *fd)
+{
+	return fd->getParamDecl(1);
+}
+
+/* Does the given function set a persistent callback?
+ * The following heuristics are used to determine this property:
+ * - the function returns an object of the same type
+ * - its name starts with "set_"
+ * - it has exactly three arguments
+ * - the second (position 1) of which is a callback
+ */
+static bool sets_persistent_callback(isl_class *c, FunctionDecl *fd)
+{
+	ParmVarDecl *param;
+
+	if (!generator::is_mutator(*c, fd))
+		return false;
+	if (fd->getNumParams() != 3)
+		return false;
+	param = generator::persistent_callback_arg(fd);
+	if (!generator::is_callback(param->getType()))
+		return false;
+	return prefixcmp(c->method_name(fd).c_str(),
+			 c->set_callback_prefix) == 0;
+}
+
+/* Sorting function that places declaration of functions
+ * with a shorter name first.
+ */
+static bool less_name(const FunctionDecl *a, const FunctionDecl *b)
+{
+	return a->getName().size() < b->getName().size();
+}
+
 /* Collect all functions that belong to a certain type, separating
- * constructors from regular methods and keeping track of the _to_str,
+ * constructors from methods that set persistent callback and
+ * from regular methods, while keeping track of the _to_str,
  * _copy and _free functions, if any, separately.  If there are any overloaded
  * functions, then they are grouped based on their name after removing the
  * argument type suffix.
+ * Check for functions that describe subclasses before considering
+ * any other functions in order to be able to detect those other
+ * functions as belonging to the subclasses.
+ * Sort the names of the functions based on their lengths
+ * to ensure that nested subclasses are handled later.
  */
 generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 	set<FunctionDecl *> exported_functions, set<FunctionDecl *> functions) :
 	SM(SM)
 {
-	map<string, isl_class>::iterator ci;
-
 	set<FunctionDecl *>::iterator in;
+	set<RecordDecl *>::iterator it;
+	vector<FunctionDecl *> type_subclasses;
+	vector<FunctionDecl *>::iterator iv;
+
 	for (in = functions.begin(); in != functions.end(); ++in) {
 		FunctionDecl *decl = *in;
 		functions_by_name[decl->getName()] = decl;
 	}
 
-	set<RecordDecl *>::iterator it;
-	for (it = exported_types.begin(); it != exported_types.end(); ++it) {
-		RecordDecl *decl = *it;
-		string name = decl->getName();
-		classes[name].name = name;
-		classes[name].type = decl;
-		classes[name].fn_to_str = find_by_name(name + "_to_str", false);
-		classes[name].fn_copy = find_by_name(name + "_copy", true);
-		classes[name].fn_free = find_by_name(name + "_free", true);
+	for (it = exported_types.begin(); it != exported_types.end(); ++it)
+		add_class(*it);
+
+	for (in = exported_functions.begin(); in != exported_functions.end();
+	     ++in) {
+		if (is_subclass(*in))
+			type_subclasses.push_back(*in);
+	}
+	std::sort(type_subclasses.begin(), type_subclasses.end(), &less_name);
+	for (iv = type_subclasses.begin(); iv != type_subclasses.end(); ++iv) {
+		add_type_subclasses(*iv);
 	}
 
 	for (in = exported_functions.begin(); in != exported_functions.end();
 	     ++in) {
 		FunctionDecl *method = *in;
-		isl_class *c = method2class(method);
+		isl_class *c;
 
+		if (is_subclass(method))
+			continue;
+
+		c = method2class(method);
 		if (!c)
 			continue;
 		if (is_constructor(method)) {
 			c->constructors.insert(method);
+		} else if (handled_sets_enum(c, method)) {
+		} else if (sets_persistent_callback(c, method)) {
+			c->persistent_callbacks.insert(method);
 		} else {
-			string fullname = c->name_without_type_suffix(method);
+			string fullname = c->name_without_type_suffixes(method);
 			c->methods[fullname].insert(method);
 		}
 	}
+
+	extract_automatic_conversions();
 }
 
 /* Print error message "msg" and abort.
@@ -145,10 +422,20 @@ void generator::die(string msg)
  * appear in the source.  In particular, the first annotation
  * is the one that is closest to the annotated type and the corresponding
  * type is then also the first that will appear in the sequence of types.
+ * This is also the order in which the annotations appear
+ * in the AttrVec returned by Decl::getAttrs() in older versions of clang.
+ * In newer versions of clang, the order is that in which
+ * the attribute appears in the source.
+ * Use the position of the "isl_export" attribute to determine
+ * whether this is an old (with reversed order) or a new version.
+ * The "isl_export" attribute is automatically added
+ * after each "isl_subclass" attribute.  If it appears in the list before
+ * any "isl_subclass" is encountered, then this must be a reversed list.
  */
-std::vector<string> generator::find_superclasses(RecordDecl *decl)
+std::vector<string> generator::find_superclasses(Decl *decl)
 {
 	vector<string> super;
+	bool reversed = false;
 
 	if (!decl->hasAttrs())
 		return super;
@@ -161,13 +448,25 @@ std::vector<string> generator::find_superclasses(RecordDecl *decl)
 		if (!ann)
 			continue;
 		string s = ann->getAnnotation().str();
+		if (s == "isl_export" && super.size() == 0)
+			reversed = true;
 		if (s.substr(0, len) == sub) {
 			s = s.substr(len + 1, s.length() - len  - 2);
-			super.push_back(s);
+			if (reversed)
+				super.push_back(s);
+			else
+				super.insert(super.begin(), s);
 		}
 	}
 
 	return super;
+}
+
+/* Is "decl" marked as describing subclasses?
+ */
+bool generator::is_subclass(FunctionDecl *decl)
+{
+	return find_superclasses(decl).size() > 0;
 }
 
 /* Is decl marked as being part of an overloaded method?
@@ -205,7 +504,7 @@ bool generator::gives(Decl *decl)
 	return has_annotation(decl, "isl_give");
 }
 
-/* Return the class that has a name that matches the initial part
+/* Return the class that has a name that best matches the initial part
  * of the name of function "fd" or NULL if no such class could be found.
  */
 isl_class *generator::method2class(FunctionDecl *fd)
@@ -215,7 +514,9 @@ isl_class *generator::method2class(FunctionDecl *fd)
 	string name = fd->getNameAsString();
 
 	for (ci = classes.begin(); ci != classes.end(); ++ci) {
-		if (name.substr(0, ci->first.length()) == ci->first)
+		size_t len = ci->first.length();
+		if (len > best.length() && name.substr(0, len) == ci->first &&
+		    name[len] == '_')
 			best = ci->first;
 	}
 
@@ -232,7 +533,7 @@ isl_class *generator::method2class(FunctionDecl *fd)
 bool generator::is_isl_ctx(QualType type)
 {
 	if (!type->isPointerType())
-		return 0;
+		return false;
 	type = type->getPointeeType();
 	if (type.getAsString() != "isl_ctx")
 		return false;
@@ -346,9 +647,17 @@ bool generator::is_isl_type(QualType type)
 	return false;
 }
 
-/* Is "type" the type isl_bool?
+/* Is "type" one of the integral types with a negative value
+ * indicating an error condition?
  */
-bool generator::is_isl_bool(QualType type)
+bool generator::is_isl_neg_error(QualType type)
+{
+	return is_isl_bool(type) || is_isl_stat(type) || is_isl_size(type);
+}
+
+/* Is "type" the primitive type with the given name?
+ */
+static bool is_isl_primitive(QualType type, const char *name)
 {
 	string s;
 
@@ -356,22 +665,29 @@ bool generator::is_isl_bool(QualType type)
 		return false;
 
 	s = type.getAsString();
-	return s == "isl_bool";
+	return s == name;
+}
+
+/* Is "type" the type isl_bool?
+ */
+bool generator::is_isl_bool(QualType type)
+{
+	return is_isl_primitive(type, "isl_bool");
 }
 
 /* Is "type" the type isl_stat?
  */
 bool generator::is_isl_stat(QualType type)
 {
-	string s;
-
-	if (type->isPointerType())
-		return false;
-
-	s = type.getAsString();
-	return s == "isl_stat";
+	return is_isl_primitive(type, "isl_stat");
 }
 
+/* Is "type" the type isl_size?
+ */
+bool generator::is_isl_size(QualType type)
+{
+	return is_isl_primitive(type, "isl_size");
+}
 
 /* Is "type" that of a pointer to a function?
  */
@@ -403,6 +719,14 @@ bool generator::is_long(QualType type)
 	return builtin && builtin->getKind() == BuiltinType::Long;
 }
 
+/* Is "type" that of "unsigned int"?
+ */
+static bool is_unsigned_int(QualType type)
+{
+	const BuiltinType *builtin = type->getAs<BuiltinType>();
+	return builtin && builtin->getKind() == BuiltinType::UInt;
+}
+
 /* Return the name of the type that "type" points to.
  * The input "type" is assumed to be a pointer type.
  */
@@ -421,30 +745,90 @@ const FunctionProtoType *generator::extract_prototype(QualType type)
 	return type->getPointeeType()->getAs<FunctionProtoType>();
 }
 
-/* If "method" is overloaded, then return its name with the suffix
- * corresponding to the type of the final argument removed.
- * Otherwise, simply return the name of the function.
+/* Return the function name suffix for the type of "param".
+ *
+ * If the type of "param" is an isl object type,
+ * then the suffix is the name of the type with the "isl" prefix removed,
+ * but keeping the "_".
+ * If the type is an unsigned integer, then the type suffix is "_ui".
  */
-string isl_class::name_without_type_suffix(FunctionDecl *method)
+static std::string type_suffix(ParmVarDecl *param)
+{
+	QualType type;
+
+	type = param->getOriginalType();
+	if (generator::is_isl_type(type))
+		return generator::extract_type(type).substr(3);
+	else if (is_unsigned_int(type))
+		return "_ui";
+	generator::die("Unsupported type suffix");
+}
+
+/* If "suffix" is a suffix of "s", then return "s" with the suffix removed.
+ * Otherwise, simply return "s".
+ */
+static std::string drop_suffix(const std::string &s, const std::string &suffix)
+{
+	size_t len, suffix_len;
+
+	len = s.length();
+	suffix_len = suffix.length();
+
+	if (len >= suffix_len && s.substr(len - suffix_len) == suffix)
+		return s.substr(0, len - suffix_len);
+	else
+		return s;
+}
+
+/* If "method" is overloaded, then return its name with the suffixes
+ * corresponding to the types of the final arguments removed.
+ * Otherwise, simply return the name of the function.
+ * Start from the final argument and keep removing suffixes
+ * matching arguments, independently of whether previously considered
+ * arguments matched.
+ */
+string isl_class::name_without_type_suffixes(FunctionDecl *method)
 {
 	int num_params;
-	ParmVarDecl *param;
-	string name, type;
-	size_t name_len, type_len;
+	string name;
 
 	name = method->getName();
 	if (!generator::is_overload(method))
 		return name;
 
 	num_params = method->getNumParams();
-	param = method->getParamDecl(num_params - 1);
-	type = generator::extract_type(param->getOriginalType());
-	type = type.substr(4);
-	name_len = name.length();
-	type_len = type.length();
+	for (int i = num_params - 1; i >= 0; --i) {
+		ParmVarDecl *param;
+		string type;
 
-	if (name_len > type_len && name.substr(name_len - type_len) == type)
-		name = name.substr(0, name_len - type_len - 1);
+		param = method->getParamDecl(i);
+		type = type_suffix(param);
+
+		name = drop_suffix(name, type);
+	}
 
 	return name;
+}
+
+/* Is function "fd" with the given name a "get" method?
+ *
+ * A "get" method is an instance method
+ * with a name that starts with the get method prefix.
+ */
+bool isl_class::is_get_method_name(FunctionDecl *fd, const string &name) const
+{
+	return !is_static(fd) && prefixcmp(name.c_str(), get_prefix) == 0;
+}
+
+/* Extract the method name corresponding to "fd".
+ *
+ * If "fd" is a "get" method, then drop the "get" method prefix.
+ */
+string isl_class::method_name(FunctionDecl *fd) const
+{
+      string base = base_method_name(fd);
+
+      if (is_get_method_name(fd, base))
+	      return base.substr(strlen(get_prefix));
+      return base;
 }

@@ -234,7 +234,20 @@ def AffineIfOp : Affine_Op<"if", [ImplicitAffineTerminator]> {
   let hasFolder = 1;
 }
 
-def AffineMinOp : Affine_Op<"min"> {
+class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
+    Op<Affine_Dialect, mnemonic, traits> {
+  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
+  let results = (outs Index);
+  let extraClassDeclaration = [{
+    static StringRef getMapAttrName() { return "map"; }
+  }];
+  let verifier = [{ return ::verifyAffineMinMaxOp(*this); }];
+  let printer = [{ return ::printAffineMinMaxOp(p, *this); }];
+  let parser = [{ return ::parseAffineMinMaxOp<$cppClass>(parser, result); }];
+  let hasFolder = 1;
+}
+
+def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
   let summary = "min operation";
   let description = [{
     The "min" operation computes the minimum value result from a multi-result
@@ -244,12 +257,91 @@ def AffineMinOp : Affine_Op<"min"> {
 
        %0 = affine.min (d0) -> (1000, d0 + 512) (%i0) : index
   }];
-  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
-  let results = (outs Index);
-  let extraClassDeclaration = [{
-    static StringRef getMapAttrName() { return "map"; }
+}
+
+def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
+  let summary = "max operation";
+  let description = [{
+    The "max" operation computes the maximum value result from a multi-result
+    affine map.
+
+    Example:
+
+       %0 = affine.max (d0) -> (1000, d0 + 512) (%i0) : index
   }];
-  let hasFolder = 1;
+}
+
+def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
+  let summary = "multi-index parallel band operation";
+  let description = [{
+    The "affine.parallel" operation represents a hyper-rectangular affine
+    parallel band, defining multiple SSA values for its induction variables. It
+    has one region capturing the parallel band body. The induction variables are
+    represented as arguments of this region. These SSA values always have type
+    index, which is the size of the machine word. The strides, represented by
+    steps, are positive constant integers which defaults to "1" if not present.
+    The lower and upper bounds specify a half-open range: the range includes the
+    lower bound but does not include the upper bound. The body region must
+    contain exactly one block that terminates with "affine.terminator".
+
+    The lower and upper bounds of a parallel operation are represented as an
+    application of an affine mapping to a list of SSA values passed to the map.
+    The same restrictions hold for these SSA values as for all bindings of SSA
+    values to dimensions and symbols.
+
+    Note: Calling AffineParallelOp::build will create the required region and
+    block, and insert the required terminator. Parsing will also create the
+    required region, block, and terminator, even when they are missing from the
+    textual representation.
+
+    Example:
+
+    ```mlir
+      affine.parallel (%i, %j) = (0, 0) to (10, 10) step (1, 1) {
+        ...
+      }
+    ```
+  }];
+
+  let arguments = (ins
+     AffineMapAttr:$lowerBoundsMap,
+     AffineMapAttr:$upperBoundsMap,
+     I64ArrayAttr:$steps,
+     Variadic<Index>:$mapOperands);
+  let regions = (region SizedRegion<1>:$region);
+
+  let builders = [
+    OpBuilder<"Builder* builder, OperationState& result,"
+              "ArrayRef<int64_t> ranges">,
+    OpBuilder<"Builder* builder, OperationState& result, AffineMap lbMap,"
+              "ValueRange lbArgs, AffineMap ubMap, ValueRange ubArgs">,
+    OpBuilder<"Builder* builder, OperationState& result, AffineMap lbMap,"
+              "ValueRange lbArgs, AffineMap ubMap, ValueRange ubArgs,"
+              "ArrayRef<int64_t> steps">
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get the number of dimensions.
+    unsigned getNumDims();
+
+    operand_range getLowerBoundsOperands();
+    operand_range getUpperBoundsOperands();
+
+    AffineValueMap getLowerBoundsValueMap();
+    AffineValueMap getUpperBoundsValueMap();
+    AffineValueMap getRangesValueMap();
+
+    /// Get ranges as constants, may fail in dynamic case.
+    Optional<SmallVector<int64_t, 8>> getConstantRanges();
+    
+    Block *getBody();
+    OpBuilder getBodyBuilder();
+    void setSteps(ArrayRef<int64_t> newSteps);
+
+    static StringRef getLowerBoundsMapAttrName() { return "lowerBoundsMap"; }
+    static StringRef getUpperBoundsMapAttrName() { return "upperBoundsMap"; }
+    static StringRef getStepsAttrName() { return "steps"; }
+  }];
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch"> {

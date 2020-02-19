@@ -61,7 +61,7 @@ Register constrainOperandRegClass(const MachineFunction &MF,
                                   const RegisterBankInfo &RBI,
                                   MachineInstr &InsertPt,
                                   const TargetRegisterClass &RegClass,
-                                  const MachineOperand &RegMO, unsigned OpIdx);
+                                  const MachineOperand &RegMO);
 
 /// Try to constrain Reg so that it is usable by argument OpIdx of the
 /// provided MCInstrDesc \p II. If this fails, create a new virtual
@@ -93,6 +93,11 @@ bool constrainSelectedInstRegOperands(MachineInstr &I,
                                       const TargetInstrInfo &TII,
                                       const TargetRegisterInfo &TRI,
                                       const RegisterBankInfo &RBI);
+
+/// Check if DstReg can be replaced with SrcReg depending on the register
+/// constraints.
+bool canReplaceReg(Register DstReg, Register SrcReg, MachineRegisterInfo &MRI);
+
 /// Check whether an instruction \p MI is dead: it only defines dead virtual
 /// registers, and doesn't have other side effects.
 bool isTriviallyDead(const MachineInstr &MI, const MachineRegisterInfo &MRI);
@@ -143,6 +148,13 @@ MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
 /// Reg is not a generic virtual register.
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
+
+/// Find the source register for \p Reg, folding away any trivial copies. It
+/// will be an output register of the instruction that getDefIgnoringCopies
+/// returns. May return an invalid register if \p Reg is not a generic virtual
+/// register.
+Register getSrcRegIgnoringCopies(Register Reg,
+                                 const MachineRegisterInfo &MRI);
 
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);

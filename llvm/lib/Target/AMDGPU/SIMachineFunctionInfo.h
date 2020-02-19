@@ -236,23 +236,29 @@ template <> struct MappingTraits<SIArgumentInfo> {
 struct SIMode {
   bool IEEE = true;
   bool DX10Clamp = true;
-  bool FP32Denormals = true;
-  bool FP64FP16Denormals = true;
+  bool FP32InputDenormals = true;
+  bool FP32OutputDenormals = true;
+  bool FP64FP16InputDenormals = true;
+  bool FP64FP16OutputDenormals = true;
 
   SIMode() = default;
 
   SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
     IEEE = Mode.IEEE;
     DX10Clamp = Mode.DX10Clamp;
-    FP32Denormals = Mode.FP32Denormals;
-    FP64FP16Denormals = Mode.FP64FP16Denormals;
+    FP32InputDenormals = Mode.FP32InputDenormals;
+    FP32OutputDenormals = Mode.FP32OutputDenormals;
+    FP64FP16InputDenormals = Mode.FP64FP16InputDenormals;
+    FP64FP16OutputDenormals = Mode.FP64FP16OutputDenormals;
   }
 
   bool operator ==(const SIMode Other) const {
     return IEEE == Other.IEEE &&
            DX10Clamp == Other.DX10Clamp &&
-           FP32Denormals == Other.FP32Denormals &&
-           FP64FP16Denormals == Other.FP64FP16Denormals;
+           FP32InputDenormals == Other.FP32InputDenormals &&
+           FP32OutputDenormals == Other.FP32OutputDenormals &&
+           FP64FP16InputDenormals == Other.FP64FP16InputDenormals &&
+           FP64FP16OutputDenormals == Other.FP64FP16OutputDenormals;
   }
 };
 
@@ -260,8 +266,10 @@ template <> struct MappingTraits<SIMode> {
   static void mapping(IO &YamlIO, SIMode &Mode) {
     YamlIO.mapOptional("ieee", Mode.IEEE, true);
     YamlIO.mapOptional("dx10-clamp", Mode.DX10Clamp, true);
-    YamlIO.mapOptional("fp32-denormals", Mode.FP32Denormals, true);
-    YamlIO.mapOptional("fp64-fp16-denormals", Mode.FP64FP16Denormals, true);
+    YamlIO.mapOptional("fp32-input-denormals", Mode.FP32InputDenormals, true);
+    YamlIO.mapOptional("fp32-output-denormals", Mode.FP32OutputDenormals, true);
+    YamlIO.mapOptional("fp64-fp16-input-denormals", Mode.FP64FP16InputDenormals, true);
+    YamlIO.mapOptional("fp64-fp16-output-denormals", Mode.FP64FP16OutputDenormals, true);
   }
 };
 

@@ -55,8 +55,7 @@ static void emitDiagnostics(const BoundNodes &Nodes,
     CE->getSourceRange());
 }
 
-static auto hasTypePointingTo(DeclarationMatcher DeclM)
-    -> decltype(hasType(pointerType())) {
+static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
 }
 

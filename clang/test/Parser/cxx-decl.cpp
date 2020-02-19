@@ -249,10 +249,10 @@ void foo() {
 namespace PR17567 {
   struct Foobar { // expected-note 2{{declared here}}
     FooBar(); // expected-error {{missing return type for function 'FooBar'; did you mean the constructor name 'Foobar'?}}
-    ~FooBar(); // expected-error {{expected the class name after '~' to name a destructor}}
+    ~FooBar(); // expected-error {{undeclared identifier 'FooBar' in destructor name}}
   };
   FooBar::FooBar() {} // expected-error {{undeclared}} expected-error {{missing return type}}
-  FooBar::~FooBar() {} // expected-error {{undeclared}} expected-error {{expected the class name}}
+  FooBar::~FooBar() {} // expected-error 2{{undeclared}}
 }
 
 namespace DuplicateFriend {

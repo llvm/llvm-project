@@ -888,5 +888,20 @@ void test_nontemporal() {
 #pragma omp simd lastprivate(x) nontemporal(x)
   for (i = 0; i < 16; ++i)
     ;
+#pragma omp simd order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp simd'}} expected-error {{expected '(' after 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp simd order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp simd order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp simd order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp simd'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp simd order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp simd'}}
+  for (int i = 0; i < 10; ++i)
+    ;
 }
 

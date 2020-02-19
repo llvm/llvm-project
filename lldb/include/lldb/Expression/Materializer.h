@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Materializer_h
-#define liblldb_Materializer_h
+#ifndef LLDB_EXPRESSION_MATERIALIZER_H
+#define LLDB_EXPRESSION_MATERIALIZER_H
 
 #include <memory>
 #include <vector>
@@ -132,4 +132,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Materializer_h
+#endif // LLDB_EXPRESSION_MATERIALIZER_H

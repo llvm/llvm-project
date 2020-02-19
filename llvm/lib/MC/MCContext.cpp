@@ -272,7 +272,7 @@ void MCContext::setSymbolValue(MCStreamer &Streamer,
                               StringRef Sym,
                               uint64_t Val) {
   auto Symbol = getOrCreateSymbol(Sym);
-  Streamer.EmitAssignment(Symbol, MCConstantExpr::create(Val, *this));
+  Streamer.emitAssignment(Symbol, MCConstantExpr::create(Val, *this));
 }
 
 void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {
@@ -316,12 +316,14 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   if (const MCSymbol *Group = Section->getGroup())
     GroupName = Group->getName();
 
+  // This function is only used by .debug*, which should not have the
+  // SHF_LINK_ORDER flag.
   unsigned UniqueID = Section->getUniqueID();
   ELFUniquingMap.erase(
-      ELFSectionKey{Section->getSectionName(), GroupName, UniqueID});
-  auto I = ELFUniquingMap.insert(std::make_pair(
-                                     ELFSectionKey{Name, GroupName, UniqueID},
-                                     Section))
+      ELFSectionKey{Section->getSectionName(), GroupName, "", UniqueID});
+  auto I = ELFUniquingMap
+               .insert(std::make_pair(
+                   ELFSectionKey{Name, GroupName, "", UniqueID}, Section))
                .first;
   StringRef CachedName = I->first.SectionName;
   const_cast<MCSectionELF *>(Section)->setSectionName(CachedName);
@@ -332,7 +334,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               unsigned EntrySize,
                                               const MCSymbolELF *Group,
                                               unsigned UniqueID,
-                                              const MCSymbolELF *Associated) {
+                                              const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *R;
   MCSymbol *&Sym = Symbols[Section];
   // A section symbol can not redefine regular symbols. There may be multiple
@@ -352,7 +354,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   R->setType(ELF::STT_SECTION);
 
   auto *Ret = new (ELFAllocator.Allocate()) MCSectionELF(
-      Section, Type, Flags, K, EntrySize, Group, UniqueID, R, Associated);
+      Section, Type, Flags, K, EntrySize, Group, UniqueID, R, LinkedToSym);
 
   auto *F = new MCDataFragment();
   Ret->getFragmentList().insert(Ret->begin(), F);
@@ -386,26 +388,28 @@ MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const Twine &Group, unsigned UniqueID,
-                                       const MCSymbolELF *Associated) {
+                                       const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, UniqueID,
-                       Associated);
+                       LinkedToSym);
 }
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const MCSymbolELF *GroupSym,
                                        unsigned UniqueID,
-                                       const MCSymbolELF *Associated) {
+                                       const MCSymbolELF *LinkedToSym) {
   StringRef Group = "";
   if (GroupSym)
     Group = GroupSym->getName();
   // Do the lookup, if we have a hit, return it.
-  auto IterBool = ELFUniquingMap.insert(
-      std::make_pair(ELFSectionKey{Section.str(), Group, UniqueID}, nullptr));
+  auto IterBool = ELFUniquingMap.insert(std::make_pair(
+      ELFSectionKey{Section.str(), Group,
+                    LinkedToSym ? LinkedToSym->getName() : "", UniqueID},
+      nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second)
     return Entry.second;
@@ -420,16 +424,17 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   else
     Kind = SectionKind::getReadOnly();
 
-  MCSectionELF *Result = createELFSectionImpl(
-      CachedName, Type, Flags, Kind, EntrySize, GroupSym, UniqueID, Associated);
+  MCSectionELF *Result =
+      createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
+                           UniqueID, LinkedToSym);
   Entry.second = Result;
   return Result;
 }
 
 MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group) {
   return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
-                              SectionKind::getReadOnly(), 4, Group, ~0,
-                              nullptr);
+                              SectionKind::getReadOnly(), 4, Group,
+                              MCSection::NonUniqueID, nullptr);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

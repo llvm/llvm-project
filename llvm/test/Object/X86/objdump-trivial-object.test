@@ -1,7 +1,7 @@
 # RUN: llvm-objdump -d %p/../Inputs/trivial-object-test.coff-i386 \
 # RUN:              | FileCheck %s -check-prefix COFF-i386
 
-# COFF-i386: file format COFF-i386
+# COFF-i386: file format coff-i386
 # COFF-i386: Disassembly of section .text:
 # COFF-i386:        0:  83 ec 0c                      subl    $12, %esp
 # COFF-i386:        3:  c7 44 24 08 00 00 00 00       movl    $0, 8(%esp)
@@ -15,7 +15,7 @@
 # RUN: llvm-objdump -d %p/../Inputs/trivial-object-test.coff-x86-64 \
 # RUN:              | FileCheck %s -check-prefix COFF-x86-64
 
-# COFF-x86-64: file format COFF-x86-64
+# COFF-x86-64: file format coff-x86-64
 # COFF-x86-64: Disassembly of section .text:
 # COFF-x86-64:        0: 48 83 ec 28                  subq    $40, %rsp
 # COFF-x86-64:        4: c7 44 24 24 00 00 00 00      movl    $0, 36(%rsp)
@@ -29,7 +29,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
 # RUN: llvm-objdump -d %t.elf-i386 | FileCheck %s -check-prefix ELF-i386
 
-# ELF-i386: file format ELF32-i386
+# ELF-i386: file format elf32-i386
 # ELF-i386: Disassembly of section .text:
 # ELF-i386:        0: 83 ec 0c                        subl    $12, %esp
 # ELF-i386:        3: c7 44 24 08 00 00 00 00         movl    $0, 8(%esp)
@@ -55,7 +55,7 @@ Sections:
 # RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
 # RUN: llvm-objdump -d %t.elf-x86-64 | FileCheck %s -check-prefix ELF-x86-64
 
-# ELF-x86-64: file format ELF64-x86-64
+# ELF-x86-64: file format elf64-x86-64
 # ELF-x86-64: Disassembly of section .text:
 # ELF-x86-64:        0: 48 83 ec 08                   subq    $8, %rsp
 # ELF-x86-64:        4: c7 44 24 04 00 00 00 00       movl    $0, 4(%rsp)

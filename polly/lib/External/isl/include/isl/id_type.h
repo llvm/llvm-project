@@ -7,10 +7,13 @@
 extern "C" {
 #endif
 
-struct isl_id;
+struct __isl_export isl_id;
 typedef struct isl_id isl_id;
 
-ISL_DECLARE_LIST_TYPE(id)
+ISL_DECLARE_EXPORTED_LIST_TYPE(id)
+
+struct __isl_export isl_multi_id;
+typedef struct isl_multi_id isl_multi_id;
 
 #if defined(__cplusplus)
 }

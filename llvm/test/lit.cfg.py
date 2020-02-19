@@ -160,7 +160,7 @@ tools.extend([
 
 # The following tools are optional
 tools.extend([
-    ToolSubst('llvm-go', unresolved='ignore'),
+    ToolSubst('go', unresolved='ignore'),
     ToolSubst('llvm-mt', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch3', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch4', unresolved='ignore'),
@@ -245,10 +245,6 @@ if have_cxx_shared_library():
 
 if config.libcxx_used:
     config.available_features.add('libcxx-used')
-
-# Direct object generation
-if not 'hexagon' in config.target_triple:
-    config.available_features.add('object-emission')
 
 # LLVM can be configured with an empty default triple
 # Some tests are "generic" and require a valid default triple

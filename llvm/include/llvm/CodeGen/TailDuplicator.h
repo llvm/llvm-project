@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <utility>
 #include <vector>
@@ -42,7 +43,7 @@ class TailDuplicator {
   const MachineModuleInfo *MMI;
   MachineRegisterInfo *MRI;
   MachineFunction *MF;
-  const MachineBlockFrequencyInfo *MBFI;
+  MBFIWrapper *MBFI;
   ProfileSummaryInfo *PSI;
   bool PreRegAlloc;
   bool LayoutMode;
@@ -69,7 +70,7 @@ public:
   ///     default implies using the command line value TailDupSize.
   void initMF(MachineFunction &MF, bool PreRegAlloc,
               const MachineBranchProbabilityInfo *MBPI,
-              const MachineBlockFrequencyInfo *MBFI,
+              MBFIWrapper *MBFI,
               ProfileSummaryInfo *PSI,
               bool LayoutMode, unsigned TailDupSize = 0);
 
@@ -86,11 +87,13 @@ public:
   /// of predecessors that received a copy of \p MBB.
   /// If \p RemovalCallback is non-null. It will be called before MBB is
   /// deleted.
+  /// If \p CandidatePtr is not null, duplicate into these blocks only.
   bool tailDuplicateAndUpdate(
       bool IsSimple, MachineBasicBlock *MBB,
       MachineBasicBlock *ForcedLayoutPred,
       SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds = nullptr,
-      function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr);
+      function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr,
+      SmallVectorImpl<MachineBasicBlock *> *CandidatePtr = nullptr);
 
 private:
   using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
@@ -118,7 +121,8 @@ private:
                      MachineBasicBlock *TailBB,
                      MachineBasicBlock *ForcedLayoutPred,
                      SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-                     SmallVectorImpl<MachineInstr *> &Copies);
+                     SmallVectorImpl<MachineInstr *> &Copies,
+                     SmallVectorImpl<MachineBasicBlock *> *CandidatePtr);
   void appendCopies(MachineBasicBlock *MBB,
                  SmallVectorImpl<std::pair<unsigned,RegSubRegPair>> &CopyInfos,
                  SmallVectorImpl<MachineInstr *> &Copies);

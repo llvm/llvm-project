@@ -21,7 +21,6 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -426,15 +425,17 @@ void DWARFUnit::extractDIEsToVector(
   // should always terminate at or before the start of the next compilation
   // unit header).
   if (DIEOffset > NextCUOffset)
-    WithColor::warning() << format("DWARF compile unit extends beyond its "
-                                   "bounds cu 0x%8.8" PRIx64 " "
-                                   "at 0x%8.8" PRIx64 "\n",
-                                   getOffset(), DIEOffset);
+    Context.getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF compile unit extends beyond its "
+                          "bounds cu 0x%8.8" PRIx64 " "
+                          "at 0x%8.8" PRIx64 "\n",
+                          getOffset(), DIEOffset));
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   if (Error e = tryExtractDIEsIfNeeded(CUDieOnly))
-    WithColor::error() << toString(std::move(e));
+    Context.getRecoverableErrorHandler()(std::move(e));
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
@@ -596,9 +597,10 @@ bool DWARFUnit::parseDWO() {
             RangesDA, RangeSectionBase, Header.getFormat()))
       DWO->RngListTable = TableOrError.get();
     else
-      WithColor::error() << "parsing a range list table: "
-                         << toString(TableOrError.takeError())
-                         << '\n';
+      Context.getRecoverableErrorHandler()(createStringError(
+          errc::invalid_argument, "parsing a range list table: %s",
+          toString(TableOrError.takeError()).c_str()));
+
     if (DWO->RngListTable)
       DWO->RangeSectionBase = DWO->RngListTable->getHeaderSize();
   } else {

@@ -8,13 +8,13 @@
 
 #include "BlockPointer.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -56,7 +56,7 @@ public:
       return;
     }
 
-    lldb::ClangASTImporterSP clang_ast_importer;
+    std::shared_ptr<ClangASTImporter> clang_ast_importer;
     auto *state = target_sp->GetPersistentExpressionStateForLanguage(
         lldb::eLanguageTypeC_plus_plus);
     if (state) {

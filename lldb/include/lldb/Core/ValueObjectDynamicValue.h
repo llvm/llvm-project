@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObjectDynamicValue_h_
-#define liblldb_ValueObjectDynamicValue_h_
+#ifndef LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H
+#define LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/SharingPtr.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -133,4 +132,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObjectDynamicValue_h_
+#endif // LLDB_CORE_VALUEOBJECTDYNAMICVALUE_H

@@ -124,6 +124,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         Mapped |= 128;
       if (ResId && PromotedFloats.find(ResId) != PromotedFloats.end())
         Mapped |= 256;
+      if (ResId && SoftPromotedHalfs.find(ResId) != SoftPromotedHalfs.end())
+        Mapped |= 512;
 
       if (Node.getNodeId() != Processed) {
         // Since we allow ReplacedValues to map deleted nodes, it may map nodes
@@ -168,6 +170,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
           dbgs() << " WidenedVectors";
         if (Mapped & 256)
           dbgs() << " PromotedFloats";
+        if (Mapped & 512)
+          dbgs() << " SoftPromoteHalfs";
         dbgs() << "\n";
         llvm_unreachable(nullptr);
       }
@@ -276,6 +280,10 @@ bool DAGTypeLegalizer::run() {
         PromoteFloatResult(N, i);
         Changed = true;
         goto NodeDone;
+      case TargetLowering::TypeSoftPromoteHalf:
+        SoftPromoteHalfResult(N, i);
+        Changed = true;
+        goto NodeDone;
       }
     }
 
@@ -330,6 +338,10 @@ ScanOperands:
         break;
       case TargetLowering::TypePromoteFloat:
         NeedsReanalyzing = PromoteFloatOperand(N, i);
+        Changed = true;
+        break;
+      case TargetLowering::TypeSoftPromoteHalf:
+        NeedsReanalyzing = SoftPromoteHalfOperand(N, i);
         Changed = true;
         break;
       }
@@ -719,6 +731,16 @@ void DAGTypeLegalizer::SetPromotedFloat(SDValue Op, SDValue Result) {
   OpIdEntry = getTableId(Result);
 }
 
+void DAGTypeLegalizer::SetSoftPromotedHalf(SDValue Op, SDValue Result) {
+  assert(Result.getValueType() == MVT::i16 &&
+         "Invalid type for soft-promoted half");
+  AnalyzeNewValue(Result);
+
+  auto &OpIdEntry = SoftPromotedHalfs[getTableId(Op)];
+  assert((OpIdEntry == 0) && "Node is already promoted!");
+  OpIdEntry = getTableId(Result);
+}
+
 void DAGTypeLegalizer::SetScalarizedVector(SDValue Op, SDValue Result) {
   // Note that in some cases vector operation operands may be greater than
   // the vector element type. For example BUILD_VECTOR of type <1 x i1> with
@@ -889,17 +911,6 @@ bool DAGTypeLegalizer::CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult) {
   if (Results.empty())
     // The target didn't want to custom lower it after all.
     return false;
-
-  // When called from DAGTypeLegalizer::ExpandIntegerResult, we might need to
-  // provide the same kind of custom splitting behavior.
-  if (Results.size() == N->getNumValues() + 1 && LegalizeResult) {
-    // We've legalized a return type by splitting it. If there is a chain,
-    // replace that too.
-    SetExpandedInteger(SDValue(N, 0), Results[0], Results[1]);
-    if (N->getNumValues() > 1)
-      ReplaceValueWith(SDValue(N, 1), Results[2]);
-    return true;
-  }
 
   // Make everything that once used N's values now use those in Results instead.
   assert(Results.size() == N->getNumValues() &&

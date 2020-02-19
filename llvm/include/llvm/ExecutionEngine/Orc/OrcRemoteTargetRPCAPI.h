@@ -108,8 +108,7 @@ public:
 template <typename ChannelT>
 class SerializationTraits<
     ChannelT, remote::DirectBufferWriter, remote::DirectBufferWriter,
-    typename std::enable_if<
-        std::is_base_of<RawByteChannel, ChannelT>::value>::type> {
+    std::enable_if_t<std::is_base_of<RawByteChannel, ChannelT>::value>> {
 public:
   static Error serialize(ChannelT &C, const remote::DirectBufferWriter &DBW) {
     if (auto EC = serializeSeq(C, DBW.getDst()))

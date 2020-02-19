@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterCheckpoint_h_
-#define liblldb_RegisterCheckpoint_h_
+#ifndef LLDB_TARGET_REGISTERCHECKPOINT_H
+#define LLDB_TARGET_REGISTERCHECKPOINT_H
 
 #include "lldb/Target/StackID.h"
 #include "lldb/Utility/UserID.h"
@@ -50,4 +50,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_RegisterCheckpoint_h_
+#endif // LLDB_TARGET_REGISTERCHECKPOINT_H

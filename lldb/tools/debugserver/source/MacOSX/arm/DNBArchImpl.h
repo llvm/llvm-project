@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DebugNubArchMachARM_h__
-#define __DebugNubArchMachARM_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_ARM_DNBARCHIMPL_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_ARM_DNBARCHIMPL_H
 
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
 
@@ -273,4 +273,4 @@ protected:
 };
 
 #endif // #if defined (__arm__)
-#endif // #ifndef __DebugNubArchMachARM_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_ARM_DNBARCHIMPL_H

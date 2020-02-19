@@ -6,7 +6,7 @@
 ## --section-headers --private-headers --reloc --syms (-afhprt). Test for them
 ## in the following order which provides GNU objdump compatability.
 
-# CHECK:       file format ELF64-x86-64
+# CHECK:       file format elf64-x86-64
 # CHECK-EMPTY:
 # CHECK-NEXT:  architecture: x86_64
 # CHECK-NEXT:  start address: 0x0000000000000000
@@ -25,7 +25,7 @@
 # RUN: llvm-ar rcs %t.a %t %t2
 # RUN: llvm-objdump --all-headers %t.a | FileCheck %s --check-prefix=ARCHIVE
 
-# ARCHIVE: {{.*}}.a({{.*}}):   file format ELF64-x86-64
+# ARCHIVE: {{.*}}.a({{.*}}):   file format elf64-x86-64
 # ARCHIVE: rw-r--r--
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000
@@ -34,7 +34,7 @@
 # ARCHIVE: Sections:
 # ARCHIVE: SYMBOL TABLE:
 # ARCHIVE: RELOCATION RECORDS FOR [.text]:
-# ARCHIVE: {{.*}}.a({{.*}}2):   file format ELF64-x86-64
+# ARCHIVE: {{.*}}.a({{.*}}2):   file format elf64-x86-64
 # ARCHIVE: rw-r--r--
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000

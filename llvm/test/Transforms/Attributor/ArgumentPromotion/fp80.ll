@@ -15,11 +15,6 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @run() {
 ; CHECK-LABEL: define {{[^@]+}}@run()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast %struct.Foo* @a to i32*
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_CAST]], align 1
-; CHECK-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @CaptureAStruct(i32 [[TMP0]], i64 [[TMP1]])
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -51,23 +46,6 @@ define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval %a) {
 }
 
 define internal i64 @CaptureAStruct(%struct.Foo* byval %a) {
-; CHECK-LABEL: define {{[^@]+}}@CaptureAStruct
-; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]]
-; CHECK-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]]
-; CHECK-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]]
-; CHECK-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
-; CHECK-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
-; CHECK-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0
-; CHECK-NEXT:    br label [[LOOP]]
-;
 entry:
   %a_ptr = alloca %struct.Foo*
   br label %loop

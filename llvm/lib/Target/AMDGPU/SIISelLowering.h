@@ -257,15 +257,18 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 
-  EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-                          unsigned SrcAlign, bool IsMemset,
-                          bool ZeroMemset,
-                          bool MemcpyStrSrc,
+  EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool isMemOpUniform(const SDNode *N) const;
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
 
+  static bool isNonGlobalAddrSpace(unsigned AS) {
+    return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS ||
+           AS == AMDGPUAS::PRIVATE_ADDRESS;
+  }
+
+  // FIXME: Missing constant_32bit
   static bool isFlatGlobalAddrSpace(unsigned AS) {
     return AS == AMDGPUAS::GLOBAL_ADDRESS ||
            AS == AMDGPUAS::FLAT_ADDRESS ||

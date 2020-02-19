@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormatClasses_h_
-#define lldb_FormatClasses_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATCLASSES_H
+#define LLDB_DATAFORMATTERS_FORMATCLASSES_H
 
 #include <functional>
 #include <memory>
@@ -126,7 +126,7 @@ public:
 
   TypeNameSpecifierImpl(CompilerType type) : m_is_regex(false), m_type() {
     if (type.IsValid()) {
-      m_type.m_type_name.assign(type.GetConstTypeName().GetCString());
+      m_type.m_type_name.assign(type.GetTypeName().GetCString());
       m_type.m_compiler_type = type;
     }
   }
@@ -160,4 +160,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_FormatClasses_h_
+#endif // LLDB_DATAFORMATTERS_FORMATCLASSES_H

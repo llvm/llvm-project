@@ -841,7 +841,7 @@ def : InstRW<[M5WriteNEONY],  (instrs FSQRTv2f64)>;
 
 // ASIMD miscellaneous instructions.
 def : InstRW<[M5WriteNALU2],  (instregex "^RBITv")>;
-def : InstRW<[M5WriteNALU2],  (instregex "^(BIF|BIT|BSL)v")>;
+def : InstRW<[M5WriteNALU2],  (instregex "^(BIF|BIT|BSL|BSP)v")>;
 def : InstRW<[M5WriteNALU2],  (instregex "^CL[STZ]v")>;
 def : InstRW<[M5WriteNEONB],  (instregex "^DUPv.+gpr")>;
 def : InstRW<[M5WriteNSHF2],  (instregex "^CPY")>;

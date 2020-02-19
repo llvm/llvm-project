@@ -38,12 +38,20 @@ namespace scudo {
 // Memory used by this allocator is never unmapped but can be partially
 // reclaimed if the platform allows for it.
 
-template <class SizeClassMapT, uptr RegionSizeLog> class SizeClassAllocator32 {
+template <class SizeClassMapT, uptr RegionSizeLog,
+          s32 MinReleaseToOsIntervalMs = INT32_MIN,
+          s32 MaxReleaseToOsIntervalMs = INT32_MAX>
+class SizeClassAllocator32 {
 public:
   typedef SizeClassMapT SizeClassMap;
+  // The bytemap can only track UINT8_MAX - 1 classes.
+  static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
   static_assert((1UL << RegionSizeLog) >= SizeClassMap::MaxSize, "");
-  typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog> ThisT;
+  typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog,
+                               MinReleaseToOsIntervalMs,
+                               MaxReleaseToOsIntervalMs>
+      ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
   static const bool SupportsMemoryTagging = false;
@@ -76,7 +84,7 @@ public:
       Sci->CanRelease = (I != SizeClassMap::BatchClassId) &&
                         (getSizeByClassId(I) >= (PageSize / 32));
     }
-    ReleaseToOsIntervalMs = ReleaseToOsInterval;
+    setReleaseToOsIntervalMs(ReleaseToOsInterval);
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -87,8 +95,7 @@ public:
     while (NumberOfStashedRegions > 0)
       unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
             RegionSize);
-    // TODO(kostyak): unmap the TransferBatch regions as well.
-    for (uptr I = 0; I < NumRegions; I++)
+    for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
       if (PossibleRegions[I])
         unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
     PossibleRegions.unmapTestOnly();
@@ -147,8 +154,9 @@ public:
 
   template <typename F> void iterateOverBlocks(F Callback) {
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
-      if (PossibleRegions[I]) {
-        const uptr BlockSize = getSizeByClassId(PossibleRegions[I]);
+      if (PossibleRegions[I] &&
+          (PossibleRegions[I] - 1U) != SizeClassMap::BatchClassId) {
+        const uptr BlockSize = getSizeByClassId(PossibleRegions[I] - 1U);
         const uptr From = I * RegionSize;
         const uptr To = From + (RegionSize / BlockSize) * BlockSize;
         for (uptr Block = From; Block < To; Block += BlockSize)
@@ -174,6 +182,15 @@ public:
       getStats(Str, I, 0);
   }
 
+  void setReleaseToOsIntervalMs(s32 Interval) {
+    if (Interval >= MaxReleaseToOsIntervalMs) {
+      Interval = MaxReleaseToOsIntervalMs;
+    } else if (Interval <= MinReleaseToOsIntervalMs) {
+      Interval = MinReleaseToOsIntervalMs;
+    }
+    atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+  }
+
   uptr releaseToOS() {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
@@ -191,11 +208,7 @@ private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumRegions = SCUDO_MMAP_RANGE_SIZE >> RegionSizeLog;
-#if SCUDO_WORDSIZE == 32U
   typedef FlatByteMap<NumRegions> ByteMap;
-#else
-  typedef TwoLevelByteMap<(NumRegions >> 12), 1UL << 12> ByteMap;
-#endif
 
   struct SizeClassStats {
     uptr PoppedBlocks;
@@ -262,14 +275,12 @@ private:
     if (!Region)
       Region = allocateRegionSlow();
     if (LIKELY(Region)) {
-      if (ClassId) {
-        const uptr RegionIndex = computeRegionId(Region);
-        if (RegionIndex < MinRegionIndex)
-          MinRegionIndex = RegionIndex;
-        if (RegionIndex > MaxRegionIndex)
-          MaxRegionIndex = RegionIndex;
-        PossibleRegions.set(RegionIndex, static_cast<u8>(ClassId));
-      }
+      const uptr RegionIndex = computeRegionId(Region);
+      if (RegionIndex < MinRegionIndex)
+        MinRegionIndex = RegionIndex;
+      if (RegionIndex > MaxRegionIndex)
+        MaxRegionIndex = RegionIndex;
+      PossibleRegions.set(RegionIndex, static_cast<u8>(ClassId + 1U));
     }
     return Region;
   }
@@ -354,10 +365,14 @@ private:
     const uptr InUse = Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks;
     const uptr AvailableChunks = Sci->AllocatedUser / getSizeByClassId(ClassId);
     Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu avail: %6zu rss: %6zuK\n",
+                "inuse: %6zu avail: %6zu rss: %6zuK releases: %6zu\n",
                 ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
                 Sci->Stats.PoppedBlocks, Sci->Stats.PushedBlocks, InUse,
-                AvailableChunks, Rss >> 10);
+                AvailableChunks, Rss >> 10, Sci->ReleaseInfo.RangesReleased);
+  }
+
+  s32 getReleaseToOsIntervalMs() {
+    return atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
@@ -378,7 +393,7 @@ private:
     }
 
     if (!Force) {
-      const s32 IntervalMs = ReleaseToOsIntervalMs;
+      const s32 IntervalMs = getReleaseToOsIntervalMs();
       if (IntervalMs < 0)
         return 0;
       if (Sci->ReleaseInfo.LastReleaseAtNs +
@@ -393,10 +408,11 @@ private:
     // regions. But it will have to do for now.
     uptr TotalReleasedBytes = 0;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
-      if (PossibleRegions[I] == ClassId) {
-        ReleaseRecorder Recorder(I * RegionSize);
-        releaseFreeMemoryToOS(Sci->FreeList, I * RegionSize,
-                              RegionSize / PageSize, BlockSize, &Recorder);
+      if (PossibleRegions[I] - 1U == ClassId) {
+        const uptr Region = I * RegionSize;
+        ReleaseRecorder Recorder(Region);
+        releaseFreeMemoryToOS(Sci->FreeList, Region, RegionSize / PageSize,
+                              BlockSize, &Recorder);
         if (Recorder.getReleasedRangesCount() > 0) {
           Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
           Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
@@ -411,12 +427,13 @@ private:
 
   SizeClassInfo SizeClassInfoArray[NumClasses];
 
+  // Track the regions in use, 0 is unused, otherwise store ClassId + 1.
   ByteMap PossibleRegions;
   // Keep track of the lowest & highest regions allocated to avoid looping
   // through the whole NumRegions.
   uptr MinRegionIndex;
   uptr MaxRegionIndex;
-  s32 ReleaseToOsIntervalMs;
+  atomic_s32 ReleaseToOsIntervalMs;
   // Unless several threads request regions simultaneously from different size
   // classes, the stash rarely contains more than 1 entry.
   static constexpr uptr MaxStashedRegions = 4;

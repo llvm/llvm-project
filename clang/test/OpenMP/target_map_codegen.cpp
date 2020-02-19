@@ -5165,7 +5165,7 @@ typedef struct {
   int *ptrBase1;
 } Base;
 
-typedef struct : public Base {
+typedef struct StructWithPtrTag : public Base {
   int *ptr;
   int *ptr2;
   int val;

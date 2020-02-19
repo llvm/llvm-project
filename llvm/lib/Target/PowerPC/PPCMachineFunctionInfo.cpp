@@ -10,10 +10,17 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+static cl::opt<bool> PPCDisableNonVolatileCR(
+    "ppc-disable-non-volatile-cr",
+    cl::desc("Disable the use of non-volatile CR register fields"),
+    cl::init(false), cl::Hidden);
 
 void PPCFunctionInfo::anchor() {}
+PPCFunctionInfo::PPCFunctionInfo(MachineFunction &MF)
+    : DisableNonVolatileCR(PPCDisableNonVolatileCR), MF(MF) {}
 
 MCSymbol *PPCFunctionInfo::getPICOffsetSymbol() const {
   const DataLayout &DL = MF.getDataLayout();

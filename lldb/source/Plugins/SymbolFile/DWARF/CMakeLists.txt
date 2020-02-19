@@ -37,8 +37,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   NameToDIE.cpp
   SymbolFileDWARF.cpp
   SymbolFileDWARFDwo.cpp
-  SymbolFileDWARFDwoDwp.cpp
-  SymbolFileDWARFDwp.cpp
   SymbolFileDWARFDebugMap.cpp
   UniqueDWARFASTType.cpp
 
@@ -53,6 +51,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
     lldbPluginObjCLanguage
     lldbPluginCPlusPlusLanguage
     lldbPluginExpressionParserClang
+    lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
     clangBasic

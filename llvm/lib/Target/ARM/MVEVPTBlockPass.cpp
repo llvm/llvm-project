@@ -22,9 +22,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <new>
@@ -37,21 +37,16 @@ namespace {
   class MVEVPTBlock : public MachineFunctionPass {
   public:
     static char ID;
+    const Thumb2InstrInfo *TII;
+    const TargetRegisterInfo *TRI;
 
     MVEVPTBlock() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<ReachingDefAnalysis>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
-
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+          MachineFunctionProperties::Property::NoVRegs);
     }
 
     StringRef getPassName() const override {
@@ -60,9 +55,6 @@ namespace {
 
   private:
     bool InsertVPTBlocks(MachineBasicBlock &MBB);
-
-    const Thumb2InstrInfo *TII = nullptr;
-    ReachingDefAnalysis *RDA = nullptr;
   };
 
   char MVEVPTBlock::ID = 0;
@@ -71,32 +63,41 @@ namespace {
 
 INITIALIZE_PASS(MVEVPTBlock, DEBUG_TYPE, "ARM MVE VPT block pass", false, false)
 
-static MachineInstr *findVCMPToFoldIntoVPST(MachineInstr *MI,
-                                            ReachingDefAnalysis *RDA,
+static MachineInstr *findVCMPToFoldIntoVPST(MachineBasicBlock::iterator MI,
+                                            const TargetRegisterInfo *TRI,
                                             unsigned &NewOpcode) {
-  // First, search backwards to the instruction that defines VPR
-  auto *Def = RDA->getReachingMIDef(MI, ARM::VPR);
-  if (!Def)
+  // Search backwards to the instruction that defines VPR. This may or not
+  // be a VCMP, we check that after this loop. If we find another instruction
+  // that reads cpsr, we return nullptr.
+  MachineBasicBlock::iterator CmpMI = MI;
+  while (CmpMI != MI->getParent()->begin()) {
+    --CmpMI;
+    if (CmpMI->modifiesRegister(ARM::VPR, TRI))
+      break;
+    if (CmpMI->readsRegister(ARM::VPR, TRI))
+      break;
+  }
+
+  if (CmpMI == MI)
+    return nullptr;
+  NewOpcode = VCMPOpcodeToVPT(CmpMI->getOpcode());
+  if (NewOpcode == 0)
     return nullptr;
 
-  // Now check that Def is a VCMP
-  if (!(NewOpcode = VCMPOpcodeToVPT(Def->getOpcode())))
+  // Search forward from CmpMI to MI, checking if either register was def'd
+  if (registerDefinedBetween(CmpMI->getOperand(1).getReg(), std::next(CmpMI),
+                             MI, TRI))
     return nullptr;
-
-  // Check that Def's operands are not defined between the VCMP and MI, i.e.
-  // check that they have the same reaching def.
-  if (!RDA->hasSameReachingDef(Def, MI, Def->getOperand(1).getReg()) ||
-      !RDA->hasSameReachingDef(Def, MI, Def->getOperand(2).getReg()))
+  if (registerDefinedBetween(CmpMI->getOperand(2).getReg(), std::next(CmpMI),
+                             MI, TRI))
     return nullptr;
-
-  return Def;
+  return &*CmpMI;
 }
 
 bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MBIter = Block.instr_begin();
   MachineBasicBlock::instr_iterator EndIter = Block.instr_end();
-  SmallSet<MachineInstr *, 4> RemovedVCMPs;
 
   while (MBIter != EndIter) {
     MachineInstr *MI = &*MBIter;
@@ -142,7 +143,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
     // a VPST directly
     MachineInstrBuilder MIBuilder;
     unsigned NewOpcode;
-    MachineInstr *VCMP = findVCMPToFoldIntoVPST(MI, RDA, NewOpcode);
+    MachineInstr *VCMP = findVCMPToFoldIntoVPST(MI, TRI, NewOpcode);
     if (VCMP) {
       LLVM_DEBUG(dbgs() << "  folding VCMP into VPST: "; VCMP->dump());
       MIBuilder = BuildMI(Block, MI, dl, TII->get(NewOpcode));
@@ -150,11 +151,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       MIBuilder.add(VCMP->getOperand(1));
       MIBuilder.add(VCMP->getOperand(2));
       MIBuilder.add(VCMP->getOperand(3));
-      // We delay removing the actual VCMP instruction by saving it to a list
-      // and deleting all instructions in this list in one go after we have
-      // created the VPT blocks. We do this in order not to invalidate the
-      // ReachingDefAnalysis that is queried by 'findVCMPToFoldIntoVPST'.
-      RemovedVCMPs.insert(VCMP);
+      VCMP->eraseFromParent();
     } else {
       MIBuilder = BuildMI(Block, MI, dl, TII->get(ARM::MVE_VPST));
       MIBuilder.addImm(BlockMask);
@@ -165,17 +162,10 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 
     Modified = true;
   }
-
-  for (auto *I : RemovedVCMPs)
-    I->eraseFromParent();
-
   return Modified;
 }
 
 bool MVEVPTBlock::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
   const ARMSubtarget &STI =
       static_cast<const ARMSubtarget &>(Fn.getSubtarget());
 
@@ -183,7 +173,7 @@ bool MVEVPTBlock::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
-  RDA = &getAnalysis<ReachingDefAnalysis>();
+  TRI = STI.getRegisterInfo();
 
   LLVM_DEBUG(dbgs() << "********** ARM MVE VPT BLOCKS **********\n"
                     << "********** Function: " << Fn.getName() << '\n');

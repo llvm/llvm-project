@@ -50,11 +50,11 @@
 
 # CHECK-SCRIPT: 0000000000004000 *ABS* 00000000 symbol
 
-# RUN: not ld.lld -z max-page-size=0x1001 -o %t1 --script %t.script %t 2>&1 \
+# RUN: not ld.lld -z max-page-size=0x1001 -o /dev/null --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR1 %s
 # ERR1: max-page-size: value isn't a power of 2
 
-# RUN: not ld.lld -z max-page-size=-0x1000 -o %t1 --script %t.script %t 2>&1 \
+# RUN: not ld.lld -z max-page-size=-0x1000 -o /dev/null --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR2 %s
 # ERR2: invalid max-page-size: -0x1000
 

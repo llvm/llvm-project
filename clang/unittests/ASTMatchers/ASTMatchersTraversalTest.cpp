@@ -1626,71 +1626,57 @@ void foo()
 
   auto Matcher = varDecl(hasInitializer(floatLiteral()));
 
-  EXPECT_TRUE(
-      notMatches(VarDeclCode, traverse(ast_type_traits::TK_AsIs, Matcher)));
-  EXPECT_TRUE(
-      matches(VarDeclCode,
-              traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
-                       Matcher)));
+  EXPECT_TRUE(notMatches(VarDeclCode, traverse(TK_AsIs, Matcher)));
+  EXPECT_TRUE(matches(VarDeclCode,
+                      traverse(TK_IgnoreImplicitCastsAndParentheses, Matcher)));
 
   auto ParentMatcher = floatLiteral(hasParent(varDecl(hasName("i"))));
 
-  EXPECT_TRUE(notMatches(VarDeclCode,
-                         traverse(ast_type_traits::TK_AsIs, ParentMatcher)));
+  EXPECT_TRUE(notMatches(VarDeclCode, traverse(TK_AsIs, ParentMatcher)));
   EXPECT_TRUE(matches(VarDeclCode,
-                      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                               ParentMatcher)));
-
-  EXPECT_TRUE(
-      matches(VarDeclCode, decl(traverse(ast_type_traits::TK_AsIs,
-                                         anyOf(cxxRecordDecl(), varDecl())))));
-
-  EXPECT_TRUE(matches(VarDeclCode,
-                      floatLiteral(traverse(ast_type_traits::TK_AsIs,
-                                            hasParent(implicitCastExpr())))));
+                      traverse(TK_IgnoreUnlessSpelledInSource, ParentMatcher)));
 
   EXPECT_TRUE(matches(
-      VarDeclCode,
-      floatLiteral(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                            hasParent(varDecl())))));
+      VarDeclCode, decl(traverse(TK_AsIs, anyOf(cxxRecordDecl(), varDecl())))));
 
   EXPECT_TRUE(
       matches(VarDeclCode,
-              varDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                               unless(parmVarDecl())))));
-
-  EXPECT_TRUE(notMatches(
-      VarDeclCode,
-      varDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                       has(implicitCastExpr())))));
-
-  EXPECT_TRUE(matches(VarDeclCode, varDecl(traverse(ast_type_traits::TK_AsIs,
-                                                    has(implicitCastExpr())))));
-
-  EXPECT_TRUE(matches(
-      VarDeclCode,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-        // The has() below strips away the ImplicitCastExpr before the
-        // traverse(AsIs) gets to process it.
-        varDecl(has(traverse(ast_type_traits::TK_AsIs, floatLiteral()))))));
-
-  EXPECT_TRUE(matches(
-      VarDeclCode,
-      functionDecl(traverse(ast_type_traits::TK_AsIs, hasName("foo")))));
-
-  EXPECT_TRUE(matches(
-      VarDeclCode,
-      functionDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                            hasName("foo")))));
+              floatLiteral(traverse(TK_AsIs, hasParent(implicitCastExpr())))));
 
   EXPECT_TRUE(
-      matches(VarDeclCode, functionDecl(traverse(ast_type_traits::TK_AsIs,
-                                                 hasAnyName("foo", "bar")))));
+      matches(VarDeclCode, floatLiteral(traverse(TK_IgnoreUnlessSpelledInSource,
+                                                 hasParent(varDecl())))));
+
+  EXPECT_TRUE(
+      matches(VarDeclCode, varDecl(traverse(TK_IgnoreUnlessSpelledInSource,
+                                            unless(parmVarDecl())))));
+
+  EXPECT_TRUE(
+      notMatches(VarDeclCode, varDecl(traverse(TK_IgnoreUnlessSpelledInSource,
+                                               has(implicitCastExpr())))));
+
+  EXPECT_TRUE(matches(VarDeclCode,
+                      varDecl(traverse(TK_AsIs, has(implicitCastExpr())))));
+
+  EXPECT_TRUE(matches(
+      VarDeclCode, traverse(TK_IgnoreUnlessSpelledInSource,
+                            // The has() below strips away the ImplicitCastExpr
+                            // before the traverse(AsIs) gets to process it.
+                            varDecl(has(traverse(TK_AsIs, floatLiteral()))))));
+
+  EXPECT_TRUE(
+      matches(VarDeclCode, functionDecl(traverse(TK_AsIs, hasName("foo")))));
 
   EXPECT_TRUE(matches(
       VarDeclCode,
-      functionDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                            hasAnyName("foo", "bar")))));
+      functionDecl(traverse(TK_IgnoreUnlessSpelledInSource, hasName("foo")))));
+
+  EXPECT_TRUE(matches(
+      VarDeclCode, functionDecl(traverse(TK_AsIs, hasAnyName("foo", "bar")))));
+
+  EXPECT_TRUE(
+      matches(VarDeclCode, functionDecl(traverse(TK_IgnoreUnlessSpelledInSource,
+                                                 hasAnyName("foo", "bar")))));
 
   const char *Code = R"cpp(
 void foo(int a)
@@ -1703,32 +1689,28 @@ void bar()
 }
 )cpp";
   EXPECT_TRUE(
-      matches(Code,
-              callExpr(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                                hasArgument(0, floatLiteral())))));
+      matches(Code, callExpr(traverse(TK_IgnoreUnlessSpelledInSource,
+                                      hasArgument(0, floatLiteral())))));
 
   EXPECT_TRUE(
-      matches(Code,
-              callExpr(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                                hasAnyArgument(floatLiteral())))));
+      matches(Code, callExpr(traverse(TK_IgnoreUnlessSpelledInSource,
+                                      hasAnyArgument(floatLiteral())))));
+
+  EXPECT_TRUE(
+      matches(VarDeclCode, varDecl(traverse(TK_IgnoreUnlessSpelledInSource,
+                                            hasType(builtinType())))));
 
   EXPECT_TRUE(
       matches(VarDeclCode,
-              varDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                               hasType(builtinType())))));
+              functionDecl(hasName("foo"),
+                           traverse(TK_AsIs, hasDescendant(floatLiteral())))));
 
-  EXPECT_TRUE(matches(
-      VarDeclCode,
-      functionDecl(hasName("foo"), traverse(ast_type_traits::TK_AsIs,
-                                            hasDescendant(floatLiteral())))));
-
-  EXPECT_TRUE(notMatches(Code, traverse(ast_type_traits::TK_AsIs,
-                                        floatLiteral(hasParent(callExpr(callee(
-                                            functionDecl(hasName("foo")))))))));
-  EXPECT_TRUE(
-      matches(Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                             floatLiteral(hasParent(callExpr(
-                                 callee(functionDecl(hasName("foo")))))))));
+  EXPECT_TRUE(notMatches(
+      Code, traverse(TK_AsIs, floatLiteral(hasParent(callExpr(
+                                  callee(functionDecl(hasName("foo")))))))));
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     floatLiteral(hasParent(callExpr(callee(
+                                         functionDecl(hasName("foo")))))))));
 
   Code = R"cpp(
 void foo()
@@ -1736,23 +1718,22 @@ void foo()
   int i = (3);
 }
 )cpp";
-  EXPECT_TRUE(
-      matches(Code,
-              traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                       varDecl(hasInitializer(integerLiteral(equals(3)))))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     varDecl(hasInitializer(integerLiteral(equals(3)))))));
   EXPECT_TRUE(matches(
       Code,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                integerLiteral(equals(3), hasParent(varDecl(hasName("i")))))));
 
   Code = R"cpp(
 const char *SomeString{"str"};
 )cpp";
-  EXPECT_TRUE(matches(Code, traverse(ast_type_traits::TK_AsIs,
-                                     stringLiteral(hasParent(implicitCastExpr(
-                                         hasParent(initListExpr())))))));
   EXPECT_TRUE(
-      matches(Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      matches(Code, traverse(TK_AsIs, stringLiteral(hasParent(implicitCastExpr(
+                                          hasParent(initListExpr())))))));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              stringLiteral(hasParent(initListExpr())))));
 }
 
@@ -1774,9 +1755,8 @@ int foo()
 }
 )cpp";
   EXPECT_TRUE(matcherTemplateWithBinding(
-      Code,
-      traverse(ast_type_traits::TK_AsIs,
-               returnStmt(has(implicitCastExpr(has(floatLiteral())))))));
+      Code, traverse(TK_AsIs,
+                     returnStmt(has(implicitCastExpr(has(floatLiteral())))))));
 }
 
 TEST(Traversal, traverseMatcherNesting) {
@@ -1793,12 +1773,11 @@ void foo()
 }
 )cpp";
 
-  EXPECT_TRUE(matches(
-      Code,
-      traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
-               callExpr(has(callExpr(traverse(
-                   ast_type_traits::TK_AsIs,
-                   callExpr(has(implicitCastExpr(has(floatLiteral())))))))))));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreImplicitCastsAndParentheses,
+                             callExpr(has(callExpr(traverse(
+                                 TK_AsIs, callExpr(has(implicitCastExpr(
+                                              has(floatLiteral())))))))))));
 }
 
 TEST(Traversal, traverseMatcherThroughImplicit) {
@@ -1813,8 +1792,8 @@ void constructImplicit() {
 }
   )cpp";
 
-  auto Matcher = traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
-                          implicitCastExpr());
+  auto Matcher =
+      traverse(TK_IgnoreImplicitCastsAndParentheses, implicitCastExpr());
 
   // Verfiy that it does not segfault
   EXPECT_FALSE(matches(Code, Matcher));
@@ -1839,10 +1818,10 @@ void foo()
   // would cause the overall matcher to be incorrectly false.
 
   EXPECT_TRUE(matches(
-      Code, functionDecl(anyOf(
-                hasDescendant(Matcher),
-                traverse(ast_type_traits::TK_IgnoreImplicitCastsAndParentheses,
-                         functionDecl(hasDescendant(Matcher)))))));
+      Code,
+      functionDecl(anyOf(hasDescendant(Matcher),
+                         traverse(TK_IgnoreImplicitCastsAndParentheses,
+                                  functionDecl(hasDescendant(Matcher)))))));
 }
 
 TEST(Traversal, traverseUnlessSpelledInSource) {
@@ -1931,32 +1910,32 @@ void func14() {
 )cpp";
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func1"))),
                                 hasReturnValue(integerLiteral(equals(42)))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      integerLiteral(equals(42),
                                     hasParent(returnStmt(forFunction(
                                         functionDecl(hasName("func1")))))))));
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                returnStmt(forFunction(functionDecl(hasName("func2"))),
                           hasReturnValue(cxxTemporaryObjectExpr(
                               hasArgument(0, integerLiteral(equals(42)))))))));
   EXPECT_TRUE(matches(
       Code,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                integerLiteral(
                    equals(42),
                    hasParent(cxxTemporaryObjectExpr(hasParent(returnStmt(
                        forFunction(functionDecl(hasName("func2")))))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func3"))),
                                 hasReturnValue(
                                     cxxFunctionalCastExpr(hasSourceExpression(
@@ -1964,76 +1943,76 @@ void func14() {
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                integerLiteral(
                    equals(42),
                    hasParent(cxxFunctionalCastExpr(hasParent(returnStmt(
                        forFunction(functionDecl(hasName("func3")))))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func4"))),
                                 hasReturnValue(cxxTemporaryObjectExpr())))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func5"))),
                                 hasReturnValue(cxxTemporaryObjectExpr())))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func6"))),
                                 hasReturnValue(cxxTemporaryObjectExpr())))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func7"))),
                                 hasReturnValue(cxxTemporaryObjectExpr())))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func8"))),
                                 hasReturnValue(cxxFunctionalCastExpr(
                                     hasSourceExpression(initListExpr())))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func9"))),
                                 hasReturnValue(cxxFunctionalCastExpr(
                                     hasSourceExpression(initListExpr())))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func10"))),
                                 hasReturnValue(
                                     declRefExpr(to(varDecl(hasName("a")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      declRefExpr(to(varDecl(hasName("a"))),
                                  hasParent(returnStmt(forFunction(
                                      functionDecl(hasName("func10")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func11"))),
                                 hasReturnValue(
                                     declRefExpr(to(varDecl(hasName("b")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      declRefExpr(to(varDecl(hasName("b"))),
                                  hasParent(returnStmt(forFunction(
                                      functionDecl(hasName("func11")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      returnStmt(forFunction(functionDecl(hasName("func12"))),
                                 hasReturnValue(
                                     declRefExpr(to(varDecl(hasName("c")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      declRefExpr(to(varDecl(hasName("c"))),
                                  hasParent(returnStmt(forFunction(
                                      functionDecl(hasName("func12")))))))));
@@ -2041,7 +2020,7 @@ void func14() {
   EXPECT_TRUE(matches(
       Code,
       traverse(
-          ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+          TK_IgnoreUnlessSpelledInSource,
           lambdaExpr(forFunction(functionDecl(hasName("func13"))),
                      has(compoundStmt(hasDescendant(varDecl(hasName("e"))))),
                      has(declRefExpr(to(varDecl(hasName("a"))))),
@@ -2050,27 +2029,27 @@ void func14() {
                      has(parmVarDecl(hasName("d")))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      declRefExpr(to(varDecl(hasName("a"))),
                                  hasParent(lambdaExpr(forFunction(
                                      functionDecl(hasName("func13")))))))));
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      traverse(TK_IgnoreUnlessSpelledInSource,
                varDecl(hasName("b"),
                        hasInitializer(declRefExpr(to(varDecl(hasName("c"))))),
                        hasParent(lambdaExpr(
                            forFunction(functionDecl(hasName("func13")))))))));
 
   EXPECT_TRUE(matches(
-      Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      lambdaExpr(
                          forFunction(functionDecl(hasName("func14"))),
                          has(templateTypeParmDecl(hasName("TemplateType")))))));
 
   EXPECT_TRUE(
-      matches(Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              functionDecl(hasName("func14"),
                                           hasDescendant(floatLiteral())))));
 }

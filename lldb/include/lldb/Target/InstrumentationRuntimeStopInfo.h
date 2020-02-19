@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_InstrumentationRuntimeStopInfo_h_
-#define liblldb_InstrumentationRuntimeStopInfo_h_
+#ifndef LLDB_TARGET_INSTRUMENTATIONRUNTIMESTOPINFO_H
+#define LLDB_TARGET_INSTRUMENTATIONRUNTIMESTOPINFO_H
 
 #include <string>
 
@@ -39,4 +39,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_InstrumentationRuntimeStopInfo_h_
+#endif // LLDB_TARGET_INSTRUMENTATIONRUNTIMESTOPINFO_H

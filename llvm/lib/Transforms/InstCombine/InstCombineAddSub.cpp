@@ -1380,8 +1380,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // (add (and A, B) (or A, B)) --> (add A, B)
   if (match(&I, m_c_BinOp(m_Or(m_Value(A), m_Value(B)),
                           m_c_And(m_Deferred(A), m_Deferred(B))))) {
-    I.setOperand(0, A);
-    I.setOperand(1, B);
+    // Replacing operands in-place to preserve nuw/nsw flags.
+    replaceOperand(I, 0, A);
+    replaceOperand(I, 1, B);
     return &I;
   }
 

@@ -8,11 +8,11 @@
 
 #include "NSString.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"

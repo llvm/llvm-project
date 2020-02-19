@@ -22,6 +22,7 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Sema/Initialization.h"
@@ -270,6 +271,7 @@ private:
       nullptr};
   /// Vector of previously encountered target directives
   SmallVector<SourceLocation, 2> TargetLocations;
+  SourceLocation AtomicLocation;
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -554,7 +556,7 @@ public:
 
   /// Checks if the defined 'requires' directive has specified type of clause.
   template <typename ClauseType>
-  bool hasRequiresDeclWithClause() {
+  bool hasRequiresDeclWithClause() const {
     return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
       return llvm::any_of(D->clauselists(), [](const OMPClause *C) {
         return isa<ClauseType>(C);
@@ -587,6 +589,18 @@ public:
   /// Add location of previously encountered target to internal vector
   void addTargetDirLocation(SourceLocation LocStart) {
     TargetLocations.push_back(LocStart);
+  }
+
+  /// Add location for the first encountered atomicc directive.
+  void addAtomicDirectiveLoc(SourceLocation Loc) {
+    if (AtomicLocation.isInvalid())
+      AtomicLocation = Loc;
+  }
+
+  /// Returns the location of the first encountered atomic directive in the
+  /// module.
+  SourceLocation getAtomicDirectiveLoc() const {
+    return AtomicLocation;
   }
 
   // Return previously encountered target region locations.
@@ -2829,18 +2843,26 @@ OMPRequiresDecl *Sema::CheckOMPRequiresDecl(SourceLocation Loc,
   /// current compilation unit.
   ArrayRef<SourceLocation> TargetLocations =
       DSAStack->getEncounteredTargetLocs();
-  if (!TargetLocations.empty()) {
+  SourceLocation AtomicLoc = DSAStack->getAtomicDirectiveLoc();
+  if (!TargetLocations.empty() || !AtomicLoc.isInvalid()) {
     for (const OMPClause *CNew : ClauseList) {
       // Check if any of the requires clauses affect target regions.
       if (isa<OMPUnifiedSharedMemoryClause>(CNew) ||
           isa<OMPUnifiedAddressClause>(CNew) ||
           isa<OMPReverseOffloadClause>(CNew) ||
           isa<OMPDynamicAllocatorsClause>(CNew)) {
-        Diag(Loc, diag::err_omp_target_before_requires)
-            << getOpenMPClauseName(CNew->getClauseKind());
+        Diag(Loc, diag::err_omp_directive_before_requires)
+            << "target" << getOpenMPClauseName(CNew->getClauseKind());
         for (SourceLocation TargetLoc : TargetLocations) {
-          Diag(TargetLoc, diag::note_omp_requires_encountered_target);
+          Diag(TargetLoc, diag::note_omp_requires_encountered_directive)
+              << "target";
         }
+      } else if (!AtomicLoc.isInvalid() &&
+                 isa<OMPAtomicDefaultMemOrderClause>(CNew)) {
+        Diag(Loc, diag::err_omp_directive_before_requires)
+            << "atomic" << getOpenMPClauseName(CNew->getClauseKind());
+        Diag(AtomicLoc, diag::note_omp_requires_encountered_directive)
+            << "atomic";
       }
     }
   }
@@ -3871,6 +3893,36 @@ void Sema::tryCaptureOpenMPLambdas(ValueDecl *V) {
   }
 }
 
+static bool checkOrderedOrderSpecified(Sema &S,
+                                       const ArrayRef<OMPClause *> Clauses) {
+  const OMPOrderedClause *Ordered = nullptr;
+  const OMPOrderClause *Order = nullptr;
+
+  for (const OMPClause *Clause : Clauses) {
+    if (Clause->getClauseKind() == OMPC_ordered)
+      Ordered = cast<OMPOrderedClause>(Clause);
+    else if (Clause->getClauseKind() == OMPC_order) {
+      Order = cast<OMPOrderClause>(Clause);
+      if (Order->getKind() != OMPC_ORDER_concurrent)
+        Order = nullptr;
+    }
+    if (Ordered && Order)
+      break;
+  }
+
+  if (Ordered && Order) {
+    S.Diag(Order->getKindKwLoc(),
+           diag::err_omp_simple_clause_incompatible_with_ordered)
+        << getOpenMPClauseName(OMPC_order)
+        << getOpenMPSimpleClauseTypeName(OMPC_order, OMPC_ORDER_concurrent)
+        << SourceRange(Order->getBeginLoc(), Order->getEndLoc());
+    S.Diag(Ordered->getBeginLoc(), diag::note_omp_ordered_param)
+        << 0 << SourceRange(Ordered->getBeginLoc(), Ordered->getEndLoc());
+    return true;
+  }
+  return false;
+}
+
 StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
                                       ArrayRef<OMPClause *> Clauses) {
   bool ErrorFound = false;
@@ -3941,10 +3993,18 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
     Diag(SC->getFirstScheduleModifier() == OMPC_SCHEDULE_MODIFIER_nonmonotonic
              ? SC->getFirstScheduleModifierLoc()
              : SC->getSecondScheduleModifierLoc(),
-         diag::err_omp_schedule_nonmonotonic_ordered)
+         diag::err_omp_simple_clause_incompatible_with_ordered)
+        << getOpenMPClauseName(OMPC_schedule)
+        << getOpenMPSimpleClauseTypeName(OMPC_schedule,
+                                         OMPC_SCHEDULE_MODIFIER_nonmonotonic)
         << SourceRange(OC->getBeginLoc(), OC->getEndLoc());
     ErrorFound = true;
   }
+  // OpenMP 5.0, 2.9.2 Worksharing-Loop Construct, Restrictions.
+  // If an order(concurrent) clause is present, an ordered clause may not appear
+  // on the same directive.
+  if (checkOrderedOrderSpecified(*this, Clauses))
+    ErrorFound = true;
   if (!LCs.empty() && OC && OC->getNumForLoops()) {
     for (const OMPLinearClause *C : LCs) {
       Diag(C->getBeginLoc(), diag::err_omp_linear_ordered)
@@ -4099,7 +4159,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
               ParentRegion == OMPD_distribute_parallel_for ||
               ParentRegion == OMPD_teams_distribute_parallel_for ||
               ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
-            (CancelRegion == OMPD_taskgroup && ParentRegion == OMPD_task) ||
+            (CancelRegion == OMPD_taskgroup &&
+             (ParentRegion == OMPD_task ||
+              (SemaRef.getLangOpts().OpenMP >= 50 &&
+               (ParentRegion == OMPD_taskloop ||
+                ParentRegion == OMPD_master_taskloop ||
+                ParentRegion == OMPD_parallel_master_taskloop)))) ||
             (CancelRegion == OMPD_sections &&
              (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
               ParentRegion == OMPD_parallel_sections)));
@@ -4948,6 +5013,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_update:
       case OMPC_capture:
       case OMPC_seq_cst:
+      case OMPC_acq_rel:
+      case OMPC_acquire:
+      case OMPC_release:
+      case OMPC_relaxed:
       case OMPC_depend:
       case OMPC_threads:
       case OMPC_simd:
@@ -4959,6 +5028,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_use_device_ptr:
       case OMPC_is_device_ptr:
       case OMPC_nontemporal:
+      case OMPC_order:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -4979,7 +5049,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
           DSAChecker.Visit(CC);
       }
     }
-    for (auto &P : DSAChecker.getVarsWithInheritedDSA())
+    for (const auto &P : DSAChecker.getVarsWithInheritedDSA())
       VarsWithInheritedDSA[P.getFirst()] = P.getSecond();
   }
   for (const auto &P : VarsWithInheritedDSA) {
@@ -5299,7 +5369,8 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
 
 Optional<std::pair<FunctionDecl *, Expr *>>
 Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
-                                        Expr *VariantRef, SourceRange SR) {
+                                        Expr *VariantRef, OMPTraitInfo &TI,
+                                        SourceRange SR) {
   if (!DG || DG.get().isNull())
     return None;
 
@@ -5352,11 +5423,40 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     return None;
   }
 
+  auto ShouldDelayChecks = [](Expr *&E, bool) {
+    return E && (E->isTypeDependent() || E->isValueDependent() ||
+                 E->containsUnexpandedParameterPack() ||
+                 E->isInstantiationDependent());
+  };
   // Do not check templates, wait until instantiation.
-  if (VariantRef->isTypeDependent() || VariantRef->isValueDependent() ||
-      VariantRef->containsUnexpandedParameterPack() ||
-      VariantRef->isInstantiationDependent() || FD->isDependentContext())
+  if (FD->isDependentContext() || ShouldDelayChecks(VariantRef, false) ||
+      TI.anyScoreOrCondition(ShouldDelayChecks))
     return std::make_pair(FD, VariantRef);
+
+  // Deal with non-constant score and user condition expressions.
+  auto HandleNonConstantScoresAndConditions = [this](Expr *&E,
+                                                     bool IsScore) -> bool {
+    llvm::APSInt Result;
+    if (!E || E->isIntegerConstantExpr(Result, Context))
+      return false;
+
+    if (IsScore) {
+      // We warn on non-constant scores and pretend they were not present.
+      Diag(E->getExprLoc(), diag::warn_omp_declare_variant_score_not_constant)
+          << E;
+      E = nullptr;
+    } else {
+      // We could replace a non-constant user condition with "false" but we
+      // will soon need to handle these anyway for the dynamic version of
+      // OpenMP context selectors.
+      Diag(E->getExprLoc(),
+           diag::err_omp_declare_variant_user_condition_not_constant)
+          << E;
+    }
+    return true;
+  };
+  if (TI.anyScoreOrCondition(HandleNonConstantScoresAndConditions))
+    return None;
 
   // Convert VariantRef expression to the type of the original function to
   // resolve possible conflicts.
@@ -5530,75 +5630,13 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   return std::make_pair(FD, cast<Expr>(DRE));
 }
 
-void Sema::ActOnOpenMPDeclareVariantDirective(
-    FunctionDecl *FD, Expr *VariantRef, SourceRange SR,
-    ArrayRef<OMPCtxSelectorData> Data) {
-  if (Data.empty())
-    return;
-  SmallVector<Expr *, 4> CtxScores;
-  SmallVector<unsigned, 4> CtxSets;
-  SmallVector<unsigned, 4> Ctxs;
-  SmallVector<StringRef, 4> ImplVendors, DeviceKinds;
-  bool IsError = false;
-  for (const OMPCtxSelectorData &D : Data) {
-    OpenMPContextSelectorSetKind CtxSet = D.CtxSet;
-    OpenMPContextSelectorKind Ctx = D.Ctx;
-    if (CtxSet == OMP_CTX_SET_unknown || Ctx == OMP_CTX_unknown)
-      return;
-    Expr *Score = nullptr;
-    if (D.Score.isUsable()) {
-      Score = D.Score.get();
-      if (!Score->isTypeDependent() && !Score->isValueDependent() &&
-          !Score->isInstantiationDependent() &&
-          !Score->containsUnexpandedParameterPack()) {
-        Score =
-            PerformOpenMPImplicitIntegerConversion(Score->getExprLoc(), Score)
-                .get();
-        if (Score)
-          Score = VerifyIntegerConstantExpression(Score).get();
-      }
-    } else {
-      // OpenMP 5.0, 2.3.3 Matching and Scoring Context Selectors.
-      // The kind, arch, and isa selectors are given the values 2^l, 2^(l+1) and
-      // 2^(l+2), respectively, where l is the number of traits in the construct
-      // set.
-      // TODO: implement correct logic for isa and arch traits.
-      // TODO: take the construct context set into account when it is
-      // implemented.
-      int L = 0; // Currently set the number of traits in construct set to 0,
-                 // since the construct trait set in not supported yet.
-      if (CtxSet == OMP_CTX_SET_device && Ctx == OMP_CTX_kind)
-        Score = ActOnIntegerConstant(SourceLocation(), std::pow(2, L)).get();
-      else
-        Score = ActOnIntegerConstant(SourceLocation(), 0).get();
-    }
-    switch (Ctx) {
-    case OMP_CTX_vendor:
-      assert(CtxSet == OMP_CTX_SET_implementation &&
-             "Expected implementation context selector set.");
-      ImplVendors.append(D.Names.begin(), D.Names.end());
-      break;
-    case OMP_CTX_kind:
-      assert(CtxSet == OMP_CTX_SET_device &&
-             "Expected device context selector set.");
-      DeviceKinds.append(D.Names.begin(), D.Names.end());
-      break;
-    case OMP_CTX_unknown:
-      llvm_unreachable("Unknown context selector kind.");
-    }
-    IsError = IsError || !Score;
-    CtxSets.push_back(CtxSet);
-    Ctxs.push_back(Ctx);
-    CtxScores.push_back(Score);
-  }
-  if (!IsError) {
-    auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
-        Context, VariantRef, CtxScores.begin(), CtxScores.size(),
-        CtxSets.begin(), CtxSets.size(), Ctxs.begin(), Ctxs.size(),
-        ImplVendors.begin(), ImplVendors.size(), DeviceKinds.begin(),
-        DeviceKinds.size(), SR);
-    FD->addAttr(NewAttr);
-  }
+void Sema::ActOnOpenMPDeclareVariantDirective(FunctionDecl *FD,
+                                              Expr *VariantRef,
+                                              OMPTraitInfo &TI,
+                                              SourceRange SR) {
+  auto *NewAttr =
+      OMPDeclareVariantAttr::CreateImplicit(Context, VariantRef, TI, SR);
+  FD->addAttr(NewAttr);
 }
 
 void Sema::markOpenMPDeclareVariantFuncsReferenced(SourceLocation Loc,
@@ -8522,7 +8560,39 @@ StmtResult Sema::ActOnOpenMPTaskgroupDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc) {
-  assert(Clauses.size() <= 1 && "Extra clauses in flush directive");
+  OMPFlushClause *FC = nullptr;
+  OMPClause *OrderClause = nullptr;
+  for (OMPClause *C : Clauses) {
+    if (C->getClauseKind() == OMPC_flush)
+      FC = cast<OMPFlushClause>(C);
+    else
+      OrderClause = C;
+  }
+  OpenMPClauseKind MemOrderKind = OMPC_unknown;
+  SourceLocation MemOrderLoc;
+  for (const OMPClause *C : Clauses) {
+    if (C->getClauseKind() == OMPC_acq_rel ||
+        C->getClauseKind() == OMPC_acquire ||
+        C->getClauseKind() == OMPC_release) {
+      if (MemOrderKind != OMPC_unknown) {
+        Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
+            << getOpenMPDirectiveName(OMPD_flush) << 1
+            << SourceRange(C->getBeginLoc(), C->getEndLoc());
+        Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
+            << getOpenMPClauseName(MemOrderKind);
+      } else {
+        MemOrderKind = C->getClauseKind();
+        MemOrderLoc = C->getBeginLoc();
+      }
+    }
+  }
+  if (FC && OrderClause) {
+    Diag(FC->getLParenLoc(), diag::err_omp_flush_order_clause_and_list)
+        << getOpenMPClauseName(OrderClause->getClauseKind());
+    Diag(OrderClause->getBeginLoc(), diag::note_omp_flush_order_clause_here)
+        << getOpenMPClauseName(OrderClause->getClauseKind());
+    return StmtError();
+  }
   return OMPFlushDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 
@@ -8588,7 +8658,7 @@ StmtResult Sema::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
       SourceLocation ErrLoc = TC ? TC->getBeginLoc() : StartLoc;
       Diag(ErrLoc, diag::err_omp_ordered_directive_with_param)
           << (TC != nullptr);
-      Diag(Param->getBeginLoc(), diag::note_omp_ordered_param);
+      Diag(Param->getBeginLoc(), diag::note_omp_ordered_param) << 1;
       ErrorFound = true;
     }
   }
@@ -8850,6 +8920,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
                                             Stmt *AStmt,
                                             SourceLocation StartLoc,
                                             SourceLocation EndLoc) {
+  // Register location of the first atomic directive.
+  DSAStack->addAtomicDirectiveLoc(StartLoc);
   if (!AStmt)
     return StmtError();
 
@@ -8861,6 +8933,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
   // longjmp() and throw() must not violate the entry/exit criteria.
   OpenMPClauseKind AtomicKind = OMPC_unknown;
   SourceLocation AtomicKindLoc;
+  OpenMPClauseKind MemOrderKind = OMPC_unknown;
+  SourceLocation MemOrderLoc;
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_read || C->getClauseKind() == OMPC_write ||
         C->getClauseKind() == OMPC_update ||
@@ -8868,13 +8942,51 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       if (AtomicKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_atomic_several_clauses)
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
-        Diag(AtomicKindLoc, diag::note_omp_atomic_previous_clause)
+        Diag(AtomicKindLoc, diag::note_omp_previous_mem_order_clause)
             << getOpenMPClauseName(AtomicKind);
       } else {
         AtomicKind = C->getClauseKind();
         AtomicKindLoc = C->getBeginLoc();
       }
     }
+    if (C->getClauseKind() == OMPC_seq_cst ||
+        C->getClauseKind() == OMPC_acq_rel ||
+        C->getClauseKind() == OMPC_acquire ||
+        C->getClauseKind() == OMPC_release ||
+        C->getClauseKind() == OMPC_relaxed) {
+      if (MemOrderKind != OMPC_unknown) {
+        Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
+            << getOpenMPDirectiveName(OMPD_atomic) << 0
+            << SourceRange(C->getBeginLoc(), C->getEndLoc());
+        Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
+            << getOpenMPClauseName(MemOrderKind);
+      } else {
+        MemOrderKind = C->getClauseKind();
+        MemOrderLoc = C->getBeginLoc();
+      }
+    }
+  }
+  // OpenMP 5.0, 2.17.7 atomic Construct, Restrictions
+  // If atomic-clause is read then memory-order-clause must not be acq_rel or
+  // release.
+  // If atomic-clause is write then memory-order-clause must not be acq_rel or
+  // acquire.
+  // If atomic-clause is update or not present then memory-order-clause must not
+  // be acq_rel or acquire.
+  if ((AtomicKind == OMPC_read &&
+       (MemOrderKind == OMPC_acq_rel || MemOrderKind == OMPC_release)) ||
+      ((AtomicKind == OMPC_write || AtomicKind == OMPC_update ||
+        AtomicKind == OMPC_unknown) &&
+       (MemOrderKind == OMPC_acq_rel || MemOrderKind == OMPC_acquire))) {
+    SourceLocation Loc = AtomicKindLoc;
+    if (AtomicKind == OMPC_unknown)
+      Loc = StartLoc;
+    Diag(Loc, diag::err_omp_atomic_incompatible_mem_order_clause)
+        << getOpenMPClauseName(AtomicKind)
+        << (AtomicKind == OMPC_unknown ? 1 : 0)
+        << getOpenMPClauseName(MemOrderKind);
+    Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
+        << getOpenMPClauseName(MemOrderKind);
   }
 
   Stmt *Body = CS->getCapturedStmt();
@@ -9711,7 +9823,8 @@ StmtResult Sema::ActOnOpenMPTaskLoopDirective(
 
   setFunctionHasBranchProtectedScope();
   return OMPTaskLoopDirective::Create(Context, StartLoc, EndLoc,
-                                      NestedLoopCount, Clauses, AStmt, B);
+                                      NestedLoopCount, Clauses, AStmt, B,
+                                      DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPTaskLoopSimdDirective(
@@ -9796,7 +9909,8 @@ StmtResult Sema::ActOnOpenMPMasterTaskLoopDirective(
 
   setFunctionHasBranchProtectedScope();
   return OMPMasterTaskLoopDirective::Create(Context, StartLoc, EndLoc,
-                                            NestedLoopCount, Clauses, AStmt, B);
+                                            NestedLoopCount, Clauses, AStmt, B,
+                                            DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPMasterTaskLoopSimdDirective(
@@ -9900,7 +10014,8 @@ StmtResult Sema::ActOnOpenMPParallelMasterTaskLoopDirective(
 
   setFunctionHasBranchProtectedScope();
   return OMPParallelMasterTaskLoopDirective::Create(
-      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
+      DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPParallelMasterTaskLoopSimdDirective(
@@ -10333,7 +10448,6 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeSimdDirective(
     // longjmp() and throw() must not violate the entry/exit criteria.
     CS->getCapturedDecl()->setNothrow();
   }
-
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' with number of loops, it will
@@ -10801,6 +10915,10 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -10822,6 +10940,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -11512,6 +11631,10 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_threads:
   case OMPC_simd:
@@ -11533,6 +11656,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -11885,9 +12009,8 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   OMPClause *Res = nullptr;
   switch (Kind) {
   case OMPC_default:
-    Res =
-        ActOnOpenMPDefaultClause(static_cast<OpenMPDefaultClauseKind>(Argument),
-                                 ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    Res = ActOnOpenMPDefaultClause(static_cast<DefaultKind>(Argument),
+                                   ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_proc_bind:
     Res = ActOnOpenMPProcBindClause(static_cast<ProcBindKind>(Argument),
@@ -11897,6 +12020,10 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
     Res = ActOnOpenMPAtomicDefaultMemOrderClause(
         static_cast<OpenMPAtomicDefaultMemOrderClauseKind>(Argument),
         ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_order:
+    Res = ActOnOpenMPOrderClause(static_cast<OpenMPOrderClauseKind>(Argument),
+                                 ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_if:
   case OMPC_final:
@@ -11929,6 +12056,10 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -11982,31 +12113,23 @@ getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
   return std::string(Out.str());
 }
 
-OMPClause *Sema::ActOnOpenMPDefaultClause(OpenMPDefaultClauseKind Kind,
+OMPClause *Sema::ActOnOpenMPDefaultClause(DefaultKind Kind,
                                           SourceLocation KindKwLoc,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
-  if (Kind == OMPC_DEFAULT_unknown) {
-    static_assert(OMPC_DEFAULT_unknown > 0,
-                  "OMPC_DEFAULT_unknown not greater than 0");
+  if (Kind == OMP_DEFAULT_unknown) {
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_default, /*First=*/0,
-                                   /*Last=*/OMPC_DEFAULT_unknown)
+                                   /*Last=*/unsigned(OMP_DEFAULT_unknown))
         << getOpenMPClauseName(OMPC_default);
     return nullptr;
   }
-  switch (Kind) {
-  case OMPC_DEFAULT_none:
+  if (Kind == OMP_DEFAULT_none)
     DSAStack->setDefaultDSANone(KindKwLoc);
-    break;
-  case OMPC_DEFAULT_shared:
+  else if (Kind == OMP_DEFAULT_shared)
     DSAStack->setDefaultDSAShared(KindKwLoc);
-    break;
-  case OMPC_DEFAULT_unknown:
-    llvm_unreachable("Clause kind is not allowed.");
-    break;
-  }
+
   return new (Context)
       OMPDefaultClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }
@@ -12041,6 +12164,24 @@ OMPClause *Sema::ActOnOpenMPAtomicDefaultMemOrderClause(
   }
   return new (Context) OMPAtomicDefaultMemOrderClause(Kind, KindKwLoc, StartLoc,
                                                       LParenLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPOrderClause(OpenMPOrderClauseKind Kind,
+                                        SourceLocation KindKwLoc,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+  if (Kind == OMPC_ORDER_unknown) {
+    static_assert(OMPC_ORDER_unknown > 0,
+                  "OMPC_ORDER_unknown not greater than 0");
+    Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_order, /*First=*/0,
+                                   /*Last=*/OMPC_ORDER_unknown)
+        << getOpenMPClauseName(OMPC_order);
+    return nullptr;
+  }
+  return new (Context)
+      OMPOrderClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
@@ -12111,6 +12252,10 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_depend:
   case OMPC_device:
   case OMPC_threads:
@@ -12137,6 +12282,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12283,6 +12429,18 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_seq_cst:
     Res = ActOnOpenMPSeqCstClause(StartLoc, EndLoc);
     break;
+  case OMPC_acq_rel:
+    Res = ActOnOpenMPAcqRelClause(StartLoc, EndLoc);
+    break;
+  case OMPC_acquire:
+    Res = ActOnOpenMPAcquireClause(StartLoc, EndLoc);
+    break;
+  case OMPC_release:
+    Res = ActOnOpenMPReleaseClause(StartLoc, EndLoc);
+    break;
+  case OMPC_relaxed:
+    Res = ActOnOpenMPRelaxedClause(StartLoc, EndLoc);
+    break;
   case OMPC_threads:
     Res = ActOnOpenMPThreadsClause(StartLoc, EndLoc);
     break;
@@ -12349,6 +12507,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12393,6 +12552,26 @@ OMPClause *Sema::ActOnOpenMPCaptureClause(SourceLocation StartLoc,
 OMPClause *Sema::ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                          SourceLocation EndLoc) {
   return new (Context) OMPSeqCstClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPAcqRelClause(SourceLocation StartLoc,
+                                         SourceLocation EndLoc) {
+  return new (Context) OMPAcqRelClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPAcquireClause(SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  return new (Context) OMPAcquireClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPReleaseClause(SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  return new (Context) OMPReleaseClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  return new (Context) OMPRelaxedClause(StartLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPThreadsClause(SourceLocation StartLoc,
@@ -12551,6 +12730,10 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
+  case OMPC_acq_rel:
+  case OMPC_acquire:
+  case OMPC_release:
+  case OMPC_relaxed:
   case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
@@ -12572,6 +12755,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
   case OMPC_match:
+  case OMPC_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;

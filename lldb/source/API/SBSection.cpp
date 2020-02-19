@@ -44,7 +44,7 @@ const SBSection &SBSection::operator=(const SBSection &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBSection::~SBSection() {}
+SBSection::~SBSection() = default;
 
 bool SBSection::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, IsValid);

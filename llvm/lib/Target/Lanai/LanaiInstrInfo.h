@@ -54,14 +54,14 @@ public:
   void
   storeRegToStackSlot(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator Position,
-                      unsigned SourceRegister, bool IsKill, int FrameIndex,
+                      Register SourceRegister, bool IsKill, int FrameIndex,
                       const TargetRegisterClass *RegisterClass,
                       const TargetRegisterInfo *RegisterInfo) const override;
 
   void
   loadRegFromStackSlot(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator Position,
-                       unsigned DestinationRegister, int FrameIndex,
+                       Register DestinationRegister, int FrameIndex,
                        const TargetRegisterClass *RegisterClass,
                        const TargetRegisterInfo *RegisterInfo) const override;
 
@@ -70,7 +70,7 @@ public:
   bool
   getMemOperandsWithOffset(const MachineInstr &LdSt,
                            SmallVectorImpl<const MachineOperand *> &BaseOps,
-                           int64_t &Offset,
+                           int64_t &Offset, bool &OffsetIsScalable,
                            const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,

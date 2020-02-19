@@ -108,14 +108,14 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
     const llvm::fltSemantics *FPType) const {
   // Denormals should always be enabled for f16 and f64.
   if (!FPType || FPType != &llvm::APFloat::IEEEsingle())
-    return llvm::DenormalMode::IEEE;
+    return llvm::DenormalMode::getIEEE();
 
   if (DeviceOffloadKind == Action::OFK_Cuda) {
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
         DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
                            options::OPT_fno_cuda_flush_denormals_to_zero,
                            false))
-      return llvm::DenormalMode::PreserveSign;
+      return llvm::DenormalMode::getPreserveSign();
   }
 
   const StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
@@ -134,7 +134,8 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
              !DefaultDenormsAreZeroForTarget;
   // Outputs are flushed to zero, preserving sign
-  return DAZ ? llvm::DenormalMode::PreserveSign : llvm::DenormalMode::IEEE;
+  return DAZ ? llvm::DenormalMode::getPreserveSign() :
+               llvm::DenormalMode::getIEEE();
 }
 
 void AMDGPUToolChain::addClangTargetOptions(

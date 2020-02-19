@@ -96,7 +96,7 @@ static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
     cl::values(clEnumValN(CB_Never, "never",
                           "Do not use compact branches if possible."),
                clEnumValN(CB_Optimal, "optimal",
-                          "Use compact branches where appropiate (default)."),
+                          "Use compact branches where appropriate (default)."),
                clEnumValN(CB_Always, "always",
                           "Always use compact branches if possible.")));
 

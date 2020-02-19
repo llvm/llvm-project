@@ -6,6 +6,7 @@ unittest("AnalysisTests") {
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/Transforms/Utils",
   ]
   sources = [
     "AliasAnalysisTest.cpp",
@@ -26,7 +27,6 @@ unittest("AnalysisTests") {
     "LoopInfoTest.cpp",
     "MemoryBuiltinsTest.cpp",
     "MemorySSATest.cpp",
-    "OrderedBasicBlockTest.cpp",
     "OrderedInstructionsTest.cpp",
     "PhiValuesTest.cpp",
     "ProfileSummaryInfoTest.cpp",

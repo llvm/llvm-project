@@ -39,20 +39,21 @@ public:
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:
-  explicit ThreadPoolExecutor(unsigned ThreadCount = hardware_concurrency()) {
+  explicit ThreadPoolExecutor(ThreadPoolStrategy S = hardware_concurrency()) {
+    unsigned ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
     Threads.reserve(ThreadCount);
     Threads.resize(1);
     std::lock_guard<std::mutex> Lock(Mutex);
-    Threads[0] = std::thread([&, ThreadCount] {
-      for (unsigned i = 1; i < ThreadCount; ++i) {
-        Threads.emplace_back([=] { work(); });
+    Threads[0] = std::thread([this, ThreadCount, S] {
+      for (unsigned I = 1; I < ThreadCount; ++I) {
+        Threads.emplace_back([=] { work(S, I); });
         if (Stop)
           break;
       }
       ThreadsCreated.set_value();
-      work();
+      work(S, 0);
     });
   }
 
@@ -90,7 +91,8 @@ public:
   }
 
 private:
-  void work() {
+  void work(ThreadPoolStrategy S, unsigned ThreadID) {
+    S.apply_thread_strategy(ThreadID);
     while (true) {
       std::unique_lock<std::mutex> Lock(Mutex);
       Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });

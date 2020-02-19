@@ -118,3 +118,9 @@ RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
 RUN: rm -rf %t/OUT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input
 RUN: rm %t/IN/very_long_input
+
+# Test that it fails explicitly when an empty corpus is provided.
+RUN: rm -rf %t/IN && mkdir %t/IN
+RUN: not %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN 2>&1 | FileCheck %s --check-prefix=EMPTY_CORPUS
+
+EMPTY_CORPUS: ERROR: can't collect data flow without corpus provided

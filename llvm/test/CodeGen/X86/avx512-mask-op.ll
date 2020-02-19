@@ -4335,6 +4335,26 @@ entry:
   ret <8 x i64> %8
 }
 
+define void @store_v128i1_constant(<128 x i1>* %R) {
+; CHECK-LABEL: store_v128i1_constant:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    movabsq $-4611686310485172227, %rax ## imm = 0xBFFFFFBBFFFFDFFD
+; CHECK-NEXT:    movq %rax, 8(%rdi)
+; CHECK-NEXT:    movabsq $-2305843576149381123, %rax ## imm = 0xDFFFFF7BFFFFEFFD
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+;
+; X86-LABEL: store_v128i1_constant:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [4294963197,3758096251,4294959101,3221225403]
+; X86-NEXT:    vmovaps %xmm0, (%eax)
+; X86-NEXT:    retl
+entry:
+  store <128 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <128 x i1>* %R
+  ret void
+}
+
 define void @store_v64i1_constant(<64 x i1>* %R) {
 ; CHECK-LABEL: store_v64i1_constant:
 ; CHECK:       ## %bb.0: ## %entry
@@ -4439,12 +4459,12 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
-; KNL-NEXT:    je LBB73_1
+; KNL-NEXT:    je LBB74_1
 ; KNL-NEXT:  ## %bb.2: ## %exit
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB73_1: ## %bar
+; KNL-NEXT:  LBB74_1: ## %bar
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    callq _foo
 ; KNL-NEXT:    popq %rax
@@ -4461,12 +4481,12 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; SKX-NEXT:    vptestnmd %ymm3, %ymm3, %k2
 ; SKX-NEXT:    korb %k2, %k1, %k1
 ; SKX-NEXT:    ktestb %k1, %k0
-; SKX-NEXT:    je LBB73_1
+; SKX-NEXT:    je LBB74_1
 ; SKX-NEXT:  ## %bb.2: ## %exit
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB73_1: ## %bar
+; SKX-NEXT:  LBB74_1: ## %bar
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _foo
 ; SKX-NEXT:    popq %rax
@@ -4489,12 +4509,12 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
-; AVX512BW-NEXT:    je LBB73_1
+; AVX512BW-NEXT:    je LBB74_1
 ; AVX512BW-NEXT:  ## %bb.2: ## %exit
 ; AVX512BW-NEXT:    popq %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB73_1: ## %bar
+; AVX512BW-NEXT:  LBB74_1: ## %bar
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    callq _foo
 ; AVX512BW-NEXT:    popq %rax
@@ -4515,12 +4535,12 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX512DQ-NEXT:    korb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    korb %k3, %k2, %k1
 ; AVX512DQ-NEXT:    ktestb %k1, %k0
-; AVX512DQ-NEXT:    je LBB73_1
+; AVX512DQ-NEXT:    je LBB74_1
 ; AVX512DQ-NEXT:  ## %bb.2: ## %exit
 ; AVX512DQ-NEXT:    popq %rax
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB73_1: ## %bar
+; AVX512DQ-NEXT:  LBB74_1: ## %bar
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    callq _foo
 ; AVX512DQ-NEXT:    popq %rax
@@ -4537,12 +4557,12 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; X86-NEXT:    vptestnmd %ymm3, %ymm3, %k2
 ; X86-NEXT:    korb %k2, %k1, %k1
 ; X86-NEXT:    ktestb %k1, %k0
-; X86-NEXT:    je LBB73_1
+; X86-NEXT:    je LBB74_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB73_1: ## %bar
+; X86-NEXT:  LBB74_1: ## %bar
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $12, %esp
@@ -4580,12 +4600,12 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
-; KNL-NEXT:    je LBB74_1
+; KNL-NEXT:    je LBB75_1
 ; KNL-NEXT:  ## %bb.2: ## %exit
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB74_1: ## %bar
+; KNL-NEXT:  LBB75_1: ## %bar
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    callq _foo
 ; KNL-NEXT:    popq %rax
@@ -4602,12 +4622,12 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; SKX-NEXT:    vptestnmq %zmm3, %zmm3, %k2
 ; SKX-NEXT:    korb %k2, %k1, %k1
 ; SKX-NEXT:    ktestb %k1, %k0
-; SKX-NEXT:    je LBB74_1
+; SKX-NEXT:    je LBB75_1
 ; SKX-NEXT:  ## %bb.2: ## %exit
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB74_1: ## %bar
+; SKX-NEXT:  LBB75_1: ## %bar
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _foo
 ; SKX-NEXT:    popq %rax
@@ -4626,12 +4646,12 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
-; AVX512BW-NEXT:    je LBB74_1
+; AVX512BW-NEXT:    je LBB75_1
 ; AVX512BW-NEXT:  ## %bb.2: ## %exit
 ; AVX512BW-NEXT:    popq %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB74_1: ## %bar
+; AVX512BW-NEXT:  LBB75_1: ## %bar
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    callq _foo
 ; AVX512BW-NEXT:    popq %rax
@@ -4648,12 +4668,12 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; AVX512DQ-NEXT:    vptestnmq %zmm3, %zmm3, %k2
 ; AVX512DQ-NEXT:    korb %k2, %k1, %k1
 ; AVX512DQ-NEXT:    ktestb %k1, %k0
-; AVX512DQ-NEXT:    je LBB74_1
+; AVX512DQ-NEXT:    je LBB75_1
 ; AVX512DQ-NEXT:  ## %bb.2: ## %exit
 ; AVX512DQ-NEXT:    popq %rax
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB74_1: ## %bar
+; AVX512DQ-NEXT:  LBB75_1: ## %bar
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    callq _foo
 ; AVX512DQ-NEXT:    popq %rax
@@ -4670,12 +4690,12 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; X86-NEXT:    vptestnmq %zmm3, %zmm3, %k2
 ; X86-NEXT:    korb %k2, %k1, %k1
 ; X86-NEXT:    ktestb %k1, %k0
-; X86-NEXT:    je LBB74_1
+; X86-NEXT:    je LBB75_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB74_1: ## %bar
+; X86-NEXT:  LBB75_1: ## %bar
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $12, %esp
@@ -4712,12 +4732,12 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kortestw %k0, %k0
-; KNL-NEXT:    je LBB75_1
+; KNL-NEXT:    je LBB76_1
 ; KNL-NEXT:  ## %bb.2: ## %exit
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB75_1: ## %bar
+; KNL-NEXT:  LBB76_1: ## %bar
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    callq _foo
 ; KNL-NEXT:    popq %rax
@@ -4734,12 +4754,12 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ; SKX-NEXT:    vptestnmd %zmm3, %zmm3, %k2
 ; SKX-NEXT:    korw %k2, %k1, %k1
 ; SKX-NEXT:    ktestw %k1, %k0
-; SKX-NEXT:    je LBB75_1
+; SKX-NEXT:    je LBB76_1
 ; SKX-NEXT:  ## %bb.2: ## %exit
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB75_1: ## %bar
+; SKX-NEXT:  LBB76_1: ## %bar
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _foo
 ; SKX-NEXT:    popq %rax
@@ -4757,12 +4777,12 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ; AVX512BW-NEXT:    korw %k2, %k1, %k1
 ; AVX512BW-NEXT:    kandw %k1, %k0, %k0
 ; AVX512BW-NEXT:    kortestw %k0, %k0
-; AVX512BW-NEXT:    je LBB75_1
+; AVX512BW-NEXT:    je LBB76_1
 ; AVX512BW-NEXT:  ## %bb.2: ## %exit
 ; AVX512BW-NEXT:    popq %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB75_1: ## %bar
+; AVX512BW-NEXT:  LBB76_1: ## %bar
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    callq _foo
 ; AVX512BW-NEXT:    popq %rax
@@ -4779,12 +4799,12 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ; AVX512DQ-NEXT:    vptestnmd %zmm3, %zmm3, %k2
 ; AVX512DQ-NEXT:    korw %k2, %k1, %k1
 ; AVX512DQ-NEXT:    ktestw %k1, %k0
-; AVX512DQ-NEXT:    je LBB75_1
+; AVX512DQ-NEXT:    je LBB76_1
 ; AVX512DQ-NEXT:  ## %bb.2: ## %exit
 ; AVX512DQ-NEXT:    popq %rax
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB75_1: ## %bar
+; AVX512DQ-NEXT:  LBB76_1: ## %bar
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    callq _foo
 ; AVX512DQ-NEXT:    popq %rax
@@ -4801,12 +4821,12 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ; X86-NEXT:    vptestnmd %zmm3, %zmm3, %k2
 ; X86-NEXT:    korw %k2, %k1, %k1
 ; X86-NEXT:    ktestw %k1, %k0
-; X86-NEXT:    je LBB75_1
+; X86-NEXT:    je LBB76_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB75_1: ## %bar
+; X86-NEXT:  LBB76_1: ## %bar
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $12, %esp
@@ -4862,12 +4882,12 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    shll $16, %ecx
 ; KNL-NEXT:    orl %eax, %ecx
-; KNL-NEXT:    je LBB76_1
+; KNL-NEXT:    je LBB77_1
 ; KNL-NEXT:  ## %bb.2: ## %exit
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB76_1: ## %bar
+; KNL-NEXT:  LBB77_1: ## %bar
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    callq _foo
 ; KNL-NEXT:    popq %rax
@@ -4884,12 +4904,12 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ; SKX-NEXT:    vptestnmw %zmm3, %zmm3, %k2
 ; SKX-NEXT:    kord %k2, %k1, %k1
 ; SKX-NEXT:    ktestd %k1, %k0
-; SKX-NEXT:    je LBB76_1
+; SKX-NEXT:    je LBB77_1
 ; SKX-NEXT:  ## %bb.2: ## %exit
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB76_1: ## %bar
+; SKX-NEXT:  LBB77_1: ## %bar
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _foo
 ; SKX-NEXT:    popq %rax
@@ -4906,12 +4926,12 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ; AVX512BW-NEXT:    vptestnmw %zmm3, %zmm3, %k2
 ; AVX512BW-NEXT:    kord %k2, %k1, %k1
 ; AVX512BW-NEXT:    ktestd %k1, %k0
-; AVX512BW-NEXT:    je LBB76_1
+; AVX512BW-NEXT:    je LBB77_1
 ; AVX512BW-NEXT:  ## %bb.2: ## %exit
 ; AVX512BW-NEXT:    popq %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB76_1: ## %bar
+; AVX512BW-NEXT:  LBB77_1: ## %bar
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    callq _foo
 ; AVX512BW-NEXT:    popq %rax
@@ -4948,12 +4968,12 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ; AVX512DQ-NEXT:    kmovw %k0, %ecx
 ; AVX512DQ-NEXT:    shll $16, %ecx
 ; AVX512DQ-NEXT:    orl %eax, %ecx
-; AVX512DQ-NEXT:    je LBB76_1
+; AVX512DQ-NEXT:    je LBB77_1
 ; AVX512DQ-NEXT:  ## %bb.2: ## %exit
 ; AVX512DQ-NEXT:    popq %rax
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB76_1: ## %bar
+; AVX512DQ-NEXT:  LBB77_1: ## %bar
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    callq _foo
 ; AVX512DQ-NEXT:    popq %rax
@@ -4970,12 +4990,12 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ; X86-NEXT:    vptestnmw %zmm3, %zmm3, %k2
 ; X86-NEXT:    kord %k2, %k1, %k1
 ; X86-NEXT:    ktestd %k1, %k0
-; X86-NEXT:    je LBB76_1
+; X86-NEXT:    je LBB77_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB76_1: ## %bar
+; X86-NEXT:  LBB77_1: ## %bar
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $12, %esp
@@ -5055,12 +5075,12 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; KNL-NEXT:    orl %eax, %edx
 ; KNL-NEXT:    shlq $32, %rdx
 ; KNL-NEXT:    orq %rcx, %rdx
-; KNL-NEXT:    je LBB77_1
+; KNL-NEXT:    je LBB78_1
 ; KNL-NEXT:  ## %bb.2: ## %exit
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB77_1: ## %bar
+; KNL-NEXT:  LBB78_1: ## %bar
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    callq _foo
 ; KNL-NEXT:    popq %rax
@@ -5077,12 +5097,12 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; SKX-NEXT:    vptestnmb %zmm3, %zmm3, %k2
 ; SKX-NEXT:    korq %k2, %k1, %k1
 ; SKX-NEXT:    ktestq %k1, %k0
-; SKX-NEXT:    je LBB77_1
+; SKX-NEXT:    je LBB78_1
 ; SKX-NEXT:  ## %bb.2: ## %exit
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB77_1: ## %bar
+; SKX-NEXT:  LBB78_1: ## %bar
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _foo
 ; SKX-NEXT:    popq %rax
@@ -5099,12 +5119,12 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; AVX512BW-NEXT:    vptestnmb %zmm3, %zmm3, %k2
 ; AVX512BW-NEXT:    korq %k2, %k1, %k1
 ; AVX512BW-NEXT:    ktestq %k1, %k0
-; AVX512BW-NEXT:    je LBB77_1
+; AVX512BW-NEXT:    je LBB78_1
 ; AVX512BW-NEXT:  ## %bb.2: ## %exit
 ; AVX512BW-NEXT:    popq %rax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB77_1: ## %bar
+; AVX512BW-NEXT:  LBB78_1: ## %bar
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    callq _foo
 ; AVX512BW-NEXT:    popq %rax
@@ -5165,12 +5185,12 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; AVX512DQ-NEXT:    orl %eax, %edx
 ; AVX512DQ-NEXT:    shlq $32, %rdx
 ; AVX512DQ-NEXT:    orq %rcx, %rdx
-; AVX512DQ-NEXT:    je LBB77_1
+; AVX512DQ-NEXT:    je LBB78_1
 ; AVX512DQ-NEXT:  ## %bb.2: ## %exit
 ; AVX512DQ-NEXT:    popq %rax
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB77_1: ## %bar
+; AVX512DQ-NEXT:  LBB78_1: ## %bar
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    callq _foo
 ; AVX512DQ-NEXT:    popq %rax
@@ -5189,12 +5209,12 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; X86-NEXT:    kandq %k1, %k0, %k0
 ; X86-NEXT:    kshiftrq $32, %k0, %k1
 ; X86-NEXT:    kortestd %k1, %k0
-; X86-NEXT:    je LBB77_1
+; X86-NEXT:    je LBB78_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB77_1: ## %bar
+; X86-NEXT:  LBB78_1: ## %bar
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $12, %esp

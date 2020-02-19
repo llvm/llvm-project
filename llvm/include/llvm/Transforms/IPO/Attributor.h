@@ -101,13 +101,16 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
 
@@ -537,25 +540,16 @@ public:
 struct AnalysisGetter {
   template <typename Analysis>
   typename Analysis::Result *getAnalysis(const Function &F) {
-    if (!MAM || !F.getParent())
+    if (!FAM || !F.getParent())
       return nullptr;
-    auto &FAM = MAM->getResult<FunctionAnalysisManagerModuleProxy>(
-                       const_cast<Module &>(*F.getParent()))
-                    .getManager();
-    return &FAM.getResult<Analysis>(const_cast<Function &>(F));
+    return &FAM->getResult<Analysis>(const_cast<Function &>(F));
   }
 
-  template <typename Analysis>
-  typename Analysis::Result *getAnalysis(const Module &M) {
-    if (!MAM)
-      return nullptr;
-    return &MAM->getResult<Analysis>(const_cast<Module &>(M));
-  }
-  AnalysisGetter(ModuleAnalysisManager &MAM) : MAM(&MAM) {}
+  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
   AnalysisGetter() {}
 
 private:
-  ModuleAnalysisManager *MAM = nullptr;
+  FunctionAnalysisManager *FAM = nullptr;
 };
 
 /// Data structure to hold cached (LLVM-IR) information.
@@ -571,20 +565,10 @@ private:
 /// reusable, it is advised to inherit from the InformationCache and cast the
 /// instance down in the abstract attributes.
 struct InformationCache {
-  InformationCache(const Module &M, AnalysisGetter &AG)
-      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG) {
-
-    CallGraph *CG = AG.getAnalysis<CallGraphAnalysis>(M);
-    if (!CG)
-      return;
-
-    DenseMap<const Function *, unsigned> SccSize;
-    for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
-      for (CallGraphNode *Node : *I)
-        SccSize[Node->getFunction()] = I->size();
-    }
-    SccSizeOpt = std::move(SccSize);
-  }
+  InformationCache(const Module &M, AnalysisGetter &AG,
+                   SetVector<Function *> *CGSCC)
+      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG),
+        CGSCC(CGSCC) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -624,11 +608,11 @@ struct InformationCache {
     return AG.getAnalysis<AP>(F);
   }
 
-  /// Return SCC size on call graph for function \p F.
+  /// Return SCC size on call graph for function \p F or 0 if unknown.
   unsigned getSccSize(const Function &F) {
-    if (!SccSizeOpt.hasValue())
-      return 0;
-    return (SccSizeOpt.getValue())[&F];
+    if (CGSCC && CGSCC->count(const_cast<Function *>(&F)))
+      return CGSCC->size();
+    return 0;
   }
 
   /// Return datalayout used in the module.
@@ -657,8 +641,8 @@ private:
   /// Getters for analysis.
   AnalysisGetter &AG;
 
-  /// Cache result for scc size in the call graph
-  Optional<DenseMap<const Function *, unsigned>> SccSizeOpt;
+  /// The underlying CGSCC, or null if not available.
+  SetVector<Function *> *CGSCC;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
@@ -695,15 +679,18 @@ private:
 struct Attributor {
   /// Constructor
   ///
+  /// \param Functions The set of functions we are deriving attributes for.
   /// \param InfoCache Cache to hold various information accessible for
   ///                  the abstract attributes.
+  /// \param CGUpdater Helper to update an underlying call graph.
   /// \param DepRecomputeInterval Number of iterations until the dependences
   ///                             between abstract attributes are recomputed.
   /// \param Whitelist If not null, a set limiting the attribute opportunities.
-  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval,
+  Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
+             CallGraphUpdater &CGUpdater, unsigned DepRecomputeInterval,
              DenseSet<const char *> *Whitelist = nullptr)
-      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval),
-        Whitelist(Whitelist) {}
+      : Functions(Functions), InfoCache(InfoCache), CGUpdater(CGUpdater),
+        DepRecomputeInterval(DepRecomputeInterval), Whitelist(Whitelist) {}
 
   ~Attributor() {
     DeleteContainerPointers(AllAbstractAttributes);
@@ -717,7 +704,7 @@ struct Attributor {
   /// as the Attributor is not destroyed (it owns the attributes now).
   ///
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
-  ChangeStatus run(Module &M);
+  ChangeStatus run();
 
   /// Lookup an abstract attribute of type \p AAType at position \p IRP. While
   /// no abstract attribute is found equivalent positions are checked, see
@@ -865,14 +852,41 @@ struct Attributor {
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
-  bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA);
+  bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p I is assumed dead.
+  ///
+  /// If \p LivenessAA is not provided it is queried.
+  bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *LivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p U is assumed dead.
+  ///
+  /// If \p FnLivenessAA is not provided it is queried.
+  bool isAssumedDead(const Use &U, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p IRP is assumed dead.
+  ///
+  /// If \p FnLivenessAA is not provided it is queried.
+  bool isAssumedDead(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
+                     bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Check \p Pred on all (transitive) uses of \p V.
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
   /// associated value and return true if \p Pred holds every time.
   bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
-                       const AbstractAttribute &QueryingAA, const Value &V);
+                       const AbstractAttribute &QueryingAA, const Value &V,
+                       DepClassTy LivenessDepClass = DepClassTy::OPTIONAL);
 
   /// Helper struct used in the communication between an abstract attribute (AA)
   /// that wants to change the signature of a function and the Attributor which
@@ -980,9 +994,11 @@ struct Attributor {
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
+  /// If true is returned, \p AllCallSitesKnown is set if all possible call
+  /// sites of the function have been visited.
   bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
                             const AbstractAttribute &QueryingAA,
-                            bool RequireAllCallSites);
+                            bool RequireAllCallSites, bool &AllCallSitesKnown);
 
   /// Check \p Pred on all values potentially returned by \p F.
   ///
@@ -1008,7 +1024,8 @@ struct Attributor {
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(const function_ref<bool(Instruction &)> &Pred,
                                const AbstractAttribute &QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes);
+                               const ArrayRef<unsigned> &Opcodes,
+                               bool CheckBBLivenessOnly = false);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
@@ -1040,9 +1057,12 @@ private:
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
+  /// If true is returned, \p AllCallSitesKnown is set if all possible call
+  /// sites of the function have been visited.
   bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
                             const Function &Fn, bool RequireAllCallSites,
-                            const AbstractAttribute *QueryingAA);
+                            const AbstractAttribute *QueryingAA,
+                            bool &AllCallSitesKnown);
 
   /// The private version of getAAFor that allows to omit a querying abstract
   /// attribute. See also the public getAAFor method.
@@ -1062,9 +1082,10 @@ private:
 
     // For now we ignore naked and optnone functions.
     bool Invalidate = Whitelist && !Whitelist->count(&AAType::ID);
-    if (const Function *Fn = IRP.getAnchorScope())
-      Invalidate |= Fn->hasFnAttribute(Attribute::Naked) ||
-                    Fn->hasFnAttribute(Attribute::OptimizeNone);
+    const Function *FnScope = IRP.getAnchorScope();
+    if (FnScope)
+      Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
+                    FnScope->hasFnAttribute(Attribute::OptimizeNone);
 
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
@@ -1075,6 +1096,15 @@ private:
     }
 
     AA.initialize(*this);
+
+    // We can initialize (=look at) code outside the current function set but
+    // not call update because that would again spawn new abstract attributes in
+    // potentially unconnected code regions (=SCCs).
+    if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
+    }
+
     AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
@@ -1112,7 +1142,8 @@ private:
   /// Apply all requested function signature rewrites
   /// (\see registerFunctionSignatureRewrite) and return Changed if the module
   /// was altered.
-  ChangeStatus rewriteFunctionSignatures();
+  ChangeStatus
+  rewriteFunctionSignatures(SmallPtrSetImpl<Function *> &ModifiedFns);
 
   /// The set of all abstract attributes.
   ///{
@@ -1149,8 +1180,18 @@ private:
   DenseMap<Function *, SmallVector<ArgumentReplacementInfo *, 8>>
       ArgumentReplacementMap;
 
+  /// The set of functions we are deriving attributes for.
+  SetVector<Function *> &Functions;
+
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
+
+  /// Helper to update an underlying call graph.
+  CallGraphUpdater &CGUpdater;
+
+  /// Set of functions for which we modified the content such that it might
+  /// impact the call graph.
+  SmallPtrSet<Function *, 8> CGModifiedFunctions;
 
   /// Set if the attribute currently updated did query a non-fix attribute.
   bool QueriedNonFixAA;
@@ -1829,8 +1870,13 @@ raw_ostream &operator<<(raw_ostream &OS, const IntegerRangeState &State);
 struct AttributorPass : public PassInfoMixin<AttributorPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
 
 Pass *createAttributorLegacyPass();
+Pass *createAttributorCGSCCLegacyPass();
 
 /// ----------------------------------------------------------------------------
 ///                       Abstract Attribute Classes
@@ -2091,8 +2137,15 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
   AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
 
+protected:
+  /// The query functions are protected such that other attributes need to go
+  /// through the Attributor interfaces: `Attributor::isAssumedDead(...)`
+
   /// Returns true if the underlying value is assumed dead.
   virtual bool isAssumedDead() const = 0;
+
+  /// Returns true if the underlying value is known dead.
+  virtual bool isKnownDead() const = 0;
 
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
@@ -2120,6 +2173,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
     return false;
   }
 
+public:
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const override { return *this; }
 
@@ -2128,6 +2182,8 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 
   /// Unique ID (due to the unique address)
   static const char ID;
+
+  friend struct Attributor;
 };
 
 /// State for dereferenceable attribute
@@ -2301,7 +2357,7 @@ struct AADereferenceable
 };
 
 using AAAlignmentStateType =
-    IncIntegerState<uint32_t, /* maximal alignment */ 1U << 29, 0>;
+    IncIntegerState<uint32_t, Value::MaximumAlignment, 0>;
 /// An abstract interface for all align attributes.
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
@@ -2452,7 +2508,8 @@ struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
   static const char ID;
 };
 
-/// An abstract interface for all memory related attributes.
+/// An abstract interface for memory access kind related attributes
+/// (readnone/readonly/writeonly).
 struct AAMemoryBehavior
     : public IRAttribute<
           Attribute::ReadNone,
@@ -2468,6 +2525,7 @@ struct AAMemoryBehavior
 
     BEST_STATE = NO_ACCESSES,
   };
+  static_assert(BEST_STATE == getBestState(), "Unexpected BEST_STATE value");
 
   /// Return true if we know that the underlying value is not read or accessed
   /// in its respective scope.
@@ -2496,6 +2554,163 @@ struct AAMemoryBehavior
   /// Create an abstract attribute view for the position \p IRP.
   static AAMemoryBehavior &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all memory location attributes
+/// (readnone/argmemonly/inaccessiblememonly/inaccessibleorargmemonly).
+struct AAMemoryLocation
+    : public IRAttribute<
+          Attribute::ReadNone,
+          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
+  using MemoryLocationsKind = StateType::base_t;
+
+  AAMemoryLocation(const IRPosition &IRP) : IRAttribute(IRP) {}
+
+  /// Encoding of different locations that could be accessed by a memory
+  /// access.
+  enum {
+    ALL_LOCATIONS = 0,
+    NO_LOCAL_MEM = 1 << 0,
+    NO_CONST_MEM = 1 << 1,
+    NO_GLOBAL_INTERNAL_MEM = 1 << 2,
+    NO_GLOBAL_EXTERNAL_MEM = 1 << 3,
+    NO_GLOBAL_MEM = NO_GLOBAL_INTERNAL_MEM | NO_GLOBAL_EXTERNAL_MEM,
+    NO_ARGUMENT_MEM = 1 << 4,
+    NO_INACCESSIBLE_MEM = 1 << 5,
+    NO_MALLOCED_MEM = 1 << 6,
+    NO_UNKOWN_MEM = 1 << 7,
+    NO_LOCATIONS = NO_LOCAL_MEM | NO_CONST_MEM | NO_GLOBAL_INTERNAL_MEM |
+                   NO_GLOBAL_EXTERNAL_MEM | NO_ARGUMENT_MEM |
+                   NO_INACCESSIBLE_MEM | NO_MALLOCED_MEM | NO_UNKOWN_MEM,
+
+    // Helper bit to track if we gave up or not.
+    VALID_STATE = NO_LOCATIONS + 1,
+
+    BEST_STATE = NO_LOCATIONS | VALID_STATE,
+  };
+  static_assert(BEST_STATE == getBestState(), "Unexpected BEST_STATE value");
+
+  /// Return true if we know that the associated functions has no observable
+  /// accesses.
+  bool isKnownReadNone() const { return isKnown(NO_LOCATIONS); }
+
+  /// Return true if we assume that the associated functions has no observable
+  /// accesses.
+  bool isAssumedReadNone() const {
+    return isAssumed(NO_LOCATIONS) | isAssumedStackOnly();
+  }
+
+  /// Return true if we know that the associated functions has at most
+  /// local/stack accesses.
+  bool isKnowStackOnly() const {
+    return isKnown(inverseLocation(NO_LOCAL_MEM, true, true));
+  }
+
+  /// Return true if we assume that the associated functions has at most
+  /// local/stack accesses.
+  bool isAssumedStackOnly() const {
+    return isAssumed(inverseLocation(NO_LOCAL_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// inaccesible memory only (see Attribute::InaccessibleMemOnly).
+  bool isKnownInaccessibleMemOnly() const {
+    return isKnown(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// inaccesible memory only (see Attribute::InaccessibleMemOnly).
+  bool isAssumedInaccessibleMemOnly() const {
+    return isAssumed(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// argument pointees (see Attribute::ArgMemOnly).
+  bool isKnownArgMemOnly() const {
+    return isKnown(inverseLocation(NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// argument pointees (see Attribute::ArgMemOnly).
+  bool isAssumedArgMemOnly() const {
+    return isAssumed(inverseLocation(NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// inaccesible memory or argument pointees (see
+  /// Attribute::InaccessibleOrArgMemOnly).
+  bool isKnownInaccessibleOrArgMemOnly() const {
+    return isKnown(
+        inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// inaccesible memory or argument pointees (see
+  /// Attribute::InaccessibleOrArgMemOnly).
+  bool isAssumedInaccessibleOrArgMemOnly() const {
+    return isAssumed(
+        inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if the underlying value may access memory through arguement
+  /// pointers of the associated function, if any.
+  bool mayAccessArgMem() const { return !isAssumed(NO_ARGUMENT_MEM); }
+
+  /// Return true if only the memory locations specififed by \p MLK are assumed
+  /// to be accessed by the associated function.
+  bool isAssumedSpecifiedMemOnly(MemoryLocationsKind MLK) const {
+    return isAssumed(MLK);
+  }
+
+  /// Return the locations that are assumed to be not accessed by the associated
+  /// function, if any.
+  MemoryLocationsKind getAssumedNotAccessedLocation() const {
+    return getAssumed();
+  }
+
+  /// Return the inverse of location \p Loc, thus for NO_XXX the return
+  /// describes ONLY_XXX. The flags \p AndLocalMem and \p AndConstMem determine
+  /// if local (=stack) and constant memory are allowed as well. Most of the
+  /// time we do want them to be included, e.g., argmemonly allows accesses via
+  /// argument pointers or local or constant memory accesses.
+  static MemoryLocationsKind
+  inverseLocation(MemoryLocationsKind Loc, bool AndLocalMem, bool AndConstMem) {
+    return NO_LOCATIONS & ~(Loc | (AndLocalMem ? NO_LOCAL_MEM : 0) |
+                            (AndConstMem ? NO_CONST_MEM : 0));
+  };
+
+  /// Return the locations encoded by \p MLK as a readable string.
+  static std::string getMemoryLocationsAsStr(MemoryLocationsKind MLK);
+
+  /// Simple enum to distinguish read/write/read-write accesses.
+  enum AccessKind {
+    NONE = 0,
+    READ = 1 << 0,
+    WRITE = 1 << 1,
+    READ_WRITE = READ | WRITE,
+  };
+
+  /// Check \p Pred on all accesses to the memory kinds specified by \p MLK.
+  ///
+  /// This method will evaluate \p Pred on all accesses (access instruction +
+  /// underlying accessed memory pointer) and it will return true if \p Pred
+  /// holds every time.
+  virtual bool checkForAllAccessesToMemoryKind(
+      const function_ref<bool(const Instruction *, const Value *, AccessKind,
+                              MemoryLocationsKind)> &Pred,
+      MemoryLocationsKind MLK) const = 0;
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAMemoryLocation &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
+
+  /// See AbstractState::getAsStr().
+  const std::string getAsStr() const override {
+    return getMemoryLocationsAsStr(getAssumedNotAccessedLocation());
+  }
 
   /// Unique ID (due to the unique address)
   static const char ID;

@@ -98,8 +98,8 @@ define <2 x i1> @test5_zero() {
 
 define i32 @test6(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[E:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[F:%.*]] = and i32 [[E]], [[B:%.*]]
+; CHECK-NEXT:    [[A_LOBIT_NEG:%.*]] = ashr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[F:%.*]] = and i32 [[A_LOBIT_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[F]]
 ;
   %c = icmp sle i32 %a, -1
@@ -1775,8 +1775,8 @@ define i1 @icmp_and_shl_neg_eq_0(i32 %A, i32 %B) {
 
 define i1 @icmp_add_and_shr_ne_0(i32 %X) {
 ; CHECK-LABEL: @icmp_add_and_shr_ne_0(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 224
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %shr = lshr i32 %X, 4
@@ -1788,8 +1788,8 @@ define i1 @icmp_add_and_shr_ne_0(i32 %X) {
 
 define <2 x i1> @icmp_add_and_shr_ne_0_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @icmp_add_and_shr_ne_0_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 240, i32 240>
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <2 x i32> [[AND]], <i32 224, i32 224>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 240, i32 240>
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 224, i32 224>
 ; CHECK-NEXT:    ret <2 x i1> [[TOBOOL]]
 ;
   %shr = lshr <2 x i32> %X, <i32 4, i32 4>
@@ -1802,10 +1802,10 @@ define <2 x i1> @icmp_add_and_shr_ne_0_vec(<2 x i32> %X) {
 ; Variation of the above with an extra use of the shift
 define i1 @icmp_and_shr_multiuse(i32 %X) {
 ; CHECK-LABEL: @icmp_and_shr_multiuse(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 496
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 224
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND2]], 432
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[TMP2]], 432
 ; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
 ; CHECK-NEXT:    ret i1 [[AND3]]
 ;
@@ -1821,10 +1821,10 @@ define i1 @icmp_and_shr_multiuse(i32 %X) {
 ; Variation of the above with an ashr
 define i1 @icmp_and_ashr_multiuse(i32 %X) {
 ; CHECK-LABEL: @icmp_and_ashr_multiuse(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 240
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 496
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 224
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND2]], 432
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[TMP2]], 432
 ; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
 ; CHECK-NEXT:    ret i1 [[AND3]]
 ;
@@ -1860,6 +1860,90 @@ define i1 @icmp_ashr_and_overshift(i8 %X) {
   %and = and i8 %shr, 15
   %tobool = icmp ne i8 %and, 0
   ret i1 %tobool
+}
+
+define i1 @icmp_and_ashr_neg_and_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_and_legal(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, 1
+  ret i1 %cmp
+}
+
+; Negative test.
+define i1 @icmp_and_ashr_mixed_and_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_mixed_and_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[AND]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, 31
+  %cmp = icmp ugt i8 %and, 8
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_slt_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_slt_legal(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, -4
+  ret i1 %cmp
+}
+
+; Negative test.
+define i1 @icmp_and_ashr_neg_cmp_slt_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_slt_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], -68
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, -68
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_eq_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_legal(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp eq i8 %and, -4
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_eq_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_shiftout(
+; CHECK-NEXT:    ret i1 false
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp eq i8 %and, -68
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_ne_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_ne_shiftout(
+; CHECK-NEXT:    ret i1 true
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp ne i8 %and, -68
+  ret i1 %cmp
 }
 
 ; PR16244

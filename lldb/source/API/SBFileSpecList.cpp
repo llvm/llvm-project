@@ -32,7 +32,7 @@ SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBFileSpecList::~SBFileSpecList() {}
+SBFileSpecList::~SBFileSpecList() = default;
 
 const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBFileSpecList &,

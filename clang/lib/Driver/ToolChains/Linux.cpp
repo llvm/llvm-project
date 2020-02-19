@@ -988,3 +988,22 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
+
+llvm::DenormalMode Linux::getDefaultDenormalModeForType(
+  const llvm::opt::ArgList &DriverArgs,
+  Action::OffloadKind DeviceOffloadKind,
+  const llvm::fltSemantics *FPType) const {
+  switch (getTriple().getArch()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64: {
+    std::string Unused;
+    // DAZ and FTZ are turned on in crtfastmath.o
+    if (!DriverArgs.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
+        isFastMathRuntimeAvailable(DriverArgs, Unused))
+      return llvm::DenormalMode::getPreserveSign();
+    return llvm::DenormalMode::getIEEE();
+  }
+  default:
+    return llvm::DenormalMode::getIEEE();
+  }
+}

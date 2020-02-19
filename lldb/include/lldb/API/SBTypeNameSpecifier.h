@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBTypeNameSpecifier_h_
-#define LLDB_SBTypeNameSpecifier_h_
+#ifndef LLDB_API_SBTYPENAMESPECIFIER_H
+#define LLDB_API_SBTYPENAMESPECIFIER_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -62,4 +62,4 @@ protected:
 
 } // namespace lldb
 
-#endif // LLDB_SBTypeNameSpecifier_h_
+#endif // LLDB_API_SBTYPENAMESPECIFIER_H

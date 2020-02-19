@@ -20,6 +20,7 @@
 #include "ClangUserExpression.h"
 
 #include "ASTResultSynthesizer.h"
+#include "ClangASTMetadata.h"
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
@@ -27,6 +28,7 @@
 #include "ClangPersistentVariables.h"
 #include "CppModuleConfiguration.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
@@ -37,8 +39,6 @@
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -659,7 +659,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       const char *error_cstr = static_init_error.AsCString();
       if (error_cstr && error_cstr[0])
         diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                  "couldn't run static initializers: %s\n",
+                                  "%s\n",
                                   error_cstr);
       else
         diagnostic_manager.PutString(eDiagnosticSeverityError,
@@ -896,7 +896,7 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     Materializer::PersistentVariableDelegate &delegate,
     bool keep_result_in_memory,
     ValueObject *ctx_obj) {
-  lldb::ClangASTImporterSP ast_importer;
+  std::shared_ptr<ClangASTImporter> ast_importer;
   auto *state = exe_ctx.GetTargetSP()->GetPersistentExpressionStateForLanguage(
       lldb::eLanguageTypeC);
   if (state) {

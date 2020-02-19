@@ -154,8 +154,10 @@ static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
   }
 }
 
-Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTemplates(
-    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
+Expected<std::vector<CodeTemplate>>
+ParallelSnippetGenerator::generateCodeTemplates(
+    InstructionTemplate Variant, const BitVector &ForbiddenRegisters) const {
+  const Instruction &Instr = Variant.getInstr();
   CodeTemplate CT;
   CT.ScratchSpacePointerInReg =
       Instr.hasMemoryOperands()
@@ -163,16 +165,15 @@ Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTempla
                 State.getTargetMachine().getTargetTriple())
           : 0;
   const AliasingConfigurations SelfAliasing(Instr, Instr);
-  InstructionTemplate IT(&Instr);
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";
-    CT.Instructions.push_back(std::move(IT));
+    CT.Instructions.push_back(std::move(Variant));
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return getSingleton(std::move(CT));
   }
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "instruction is serial, repeating a random one.";
-    CT.Instructions.push_back(std::move(IT));
+    CT.Instructions.push_back(std::move(Variant));
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return getSingleton(std::move(CT));
   }
@@ -180,7 +181,7 @@ Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTempla
   if (!TiedVariables.empty()) {
     CT.Info = "instruction has tied variables, using static renaming.";
     CT.Instructions = generateSnippetUsingStaticRenaming(
-        State, IT, TiedVariables, ForbiddenRegisters);
+        State, Variant, TiedVariables, ForbiddenRegisters);
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return getSingleton(std::move(CT));
   }
@@ -194,7 +195,7 @@ Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTempla
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
-      IT.getValueFor(Op) = MCOperand::createReg(RandomReg);
+      Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);
     }
   }
   // And pick random use values that are not reserved and don't alias with defs.
@@ -206,12 +207,12 @@ Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTempla
       remove(PossibleRegisters, DefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
-      IT.getValueFor(Op) = MCOperand::createReg(RandomReg);
+      Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);
     }
   }
   CT.Info =
       "instruction has no tied variables picking Uses different from defs";
-  CT.Instructions.push_back(std::move(IT));
+  CT.Instructions.push_back(std::move(Variant));
   instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
   return getSingleton(std::move(CT));
 }

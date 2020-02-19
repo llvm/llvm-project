@@ -33,7 +33,7 @@ define dso_local void @foo(i32 %N) {
 ; CHECK-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 ; CHECK-NEXT:    store float 3.000000e+00, float* [[P]], align 4
 ; CHECK-NEXT:    store i32 7, i32* [[N_ADDR]], align 4
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 4617315517961601024)
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 undef)
 ; CHECK-NEXT:    ret void
 ;
 entry:

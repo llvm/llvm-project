@@ -131,6 +131,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
 class MCConstantExpr : public MCExpr {
   int64_t Value;
   bool PrintInHex = false;
+  unsigned SizeInBytes = 0;
 
   explicit MCConstantExpr(int64_t Value)
       : MCExpr(MCExpr::Constant, SMLoc()), Value(Value) {}
@@ -139,18 +140,24 @@ class MCConstantExpr : public MCExpr {
       : MCExpr(MCExpr::Constant, SMLoc()), Value(Value),
         PrintInHex(PrintInHex) {}
 
+  MCConstantExpr(int64_t Value, bool PrintInHex, unsigned SizeInBytes)
+      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value), PrintInHex(PrintInHex),
+        SizeInBytes(SizeInBytes) {}
+
 public:
   /// \name Construction
   /// @{
 
   static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
-                                      bool PrintInHex = false);
+                                      bool PrintInHex = false,
+                                      unsigned SizeInBytes = 0);
 
   /// @}
   /// \name Accessors
   /// @{
 
   int64_t getValue() const { return Value; }
+  unsigned getSizeInBytes() const { return SizeInBytes; }
 
   bool useHexFormat() const { return PrintInHex; }
 
@@ -175,6 +182,7 @@ public:
     VK_GOT,
     VK_GOTOFF,
     VK_GOTREL,
+    VK_PCREL,
     VK_GOTPCREL,
     VK_GOTTPOFF,
     VK_INDNTPOFF,
@@ -279,7 +287,6 @@ public:
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
-    VK_Hexagon_PCREL,
     VK_Hexagon_LO16,
     VK_Hexagon_HI16,
     VK_Hexagon_GPREL,

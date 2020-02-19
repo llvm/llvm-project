@@ -1,3 +1,5 @@
+; We do not support the call site info for the target now, so we use the experimental option (-debug-entry-values).
+
 ; RUN: llc -debug-entry-values -filetype=asm -o - %s | FileCheck %s
 
 ; Verify that the entry value covers both of the DW_OP_regx pieces. Previously

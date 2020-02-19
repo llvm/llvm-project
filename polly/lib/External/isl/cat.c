@@ -10,6 +10,7 @@ struct isl_arg_choice cat_format[] = {
 	{"polylib",	ISL_FORMAT_POLYLIB},
 	{"ext-polylib",	ISL_FORMAT_EXT_POLYLIB},
 	{"latex",	ISL_FORMAT_LATEX},
+	{"C",		ISL_FORMAT_C},
 	{0}
 };
 

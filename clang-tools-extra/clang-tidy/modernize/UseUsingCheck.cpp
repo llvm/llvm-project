@@ -25,18 +25,17 @@ void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
     return;
   Finder->addMatcher(typedefDecl(unless(isInstantiated())).bind("typedef"),
                      this);
-  // This matcher used to find structs defined in source code within typedefs.
+  // This matcher used to find tag declarations in source code within typedefs.
   // They appear in the AST just *prior* to the typedefs.
-  Finder->addMatcher(cxxRecordDecl(unless(isImplicit())).bind("struct"), this);
+  Finder->addMatcher(tagDecl(unless(isImplicit())).bind("tagdecl"), this);
 }
 
 void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   // Match CXXRecordDecl only to store the range of the last non-implicit full
   // declaration, to later check whether it's within the typdef itself.
-  const auto *MatchedCxxRecordDecl =
-      Result.Nodes.getNodeAs<CXXRecordDecl>("struct");
-  if (MatchedCxxRecordDecl) {
-    LastCxxDeclRange = MatchedCxxRecordDecl->getSourceRange();
+  const auto *MatchedTagDecl = Result.Nodes.getNodeAs<TagDecl>("tagdecl");
+  if (MatchedTagDecl) {
+    LastTagDeclRange = MatchedTagDecl->getSourceRange();
     return;
   }
 
@@ -70,9 +69,13 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   // consecutive TypedefDecl nodes whose SourceRanges overlap. Each range starts
   // at the "typedef" and then continues *across* previous definitions through
   // the end of the current TypedefDecl definition.
+  // But also we need to check that the ranges belong to the same file because
+  // different files may contain overlapping ranges.
   std::string Using = "using ";
   if (ReplaceRange.getBegin().isMacroID() ||
-      ReplaceRange.getBegin() >= LastReplacementEnd) {
+      (Result.SourceManager->getFileID(ReplaceRange.getBegin()) !=
+       Result.SourceManager->getFileID(LastReplacementEnd)) ||
+      (ReplaceRange.getBegin() >= LastReplacementEnd)) {
     // This is the first (and possibly the only) TypedefDecl in a typedef. Save
     // Type and Name in case we find subsequent TypedefDecl's in this typedef.
     FirstTypedefType = Type;
@@ -95,11 +98,12 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
 
-  // If typedef contains a full struct/class declaration, extract its full text.
-  if (LastCxxDeclRange.isValid() && ReplaceRange.fullyContains(LastCxxDeclRange)) {
+  // If typedef contains a full tag declaration, extract its full text.
+  if (LastTagDeclRange.isValid() &&
+      ReplaceRange.fullyContains(LastTagDeclRange)) {
     bool Invalid;
     Type = std::string(
-        Lexer::getSourceText(CharSourceRange::getTokenRange(LastCxxDeclRange),
+        Lexer::getSourceText(CharSourceRange::getTokenRange(LastTagDeclRange),
                              *Result.SourceManager, getLangOpts(), &Invalid));
     if (Invalid)
       return;

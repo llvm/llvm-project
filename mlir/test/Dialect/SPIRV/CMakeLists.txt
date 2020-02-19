@@ -6,7 +6,7 @@ add_llvm_library(MLIRSPIRVTestPasses
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
   )
 
-target_link_libraries(MLIRSPIRVTestPasses
+target_link_libraries(MLIRSPIRVTestPasses PRIVATE
   MLIRIR
   MLIRPass
   MLIRSPIRV

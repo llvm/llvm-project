@@ -1,6 +1,7 @@
 ; Tests that CoroEarly pass correctly lowers coro.resume, coro.destroy
 ; and other intrinsics managed by this pass.
 ; RUN: opt < %s -S -coro-early | FileCheck %s
+; RUN: opt < %s -S -passes=coro-early | FileCheck %s
 
 ; CHECK: %NoopCoro.Frame = type { void (%NoopCoro.Frame*)*, void (%NoopCoro.Frame*)* }
 ; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { void (%NoopCoro.Frame*)* @NoopCoro.ResumeDestroy, void (%NoopCoro.Frame*)* @NoopCoro.ResumeDestroy }

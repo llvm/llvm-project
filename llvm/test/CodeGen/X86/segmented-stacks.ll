@@ -22,9 +22,9 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-dragonfly -filetype=obj -o /dev/null
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-mingw32 -filetype=obj -o /dev/null
 
-; RUN: not llc < %s -mcpu=generic -mtriple=x86_64-solaris 2> %t.log
+; RUN: not --crash llc < %s -mcpu=generic -mtriple=x86_64-solaris 2> %t.log
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X64-Solaris
-; RUN: not llc < %s -mcpu=generic -mtriple=i686-freebsd 2> %t.log
+; RUN: not --crash llc < %s -mcpu=generic -mtriple=i686-freebsd 2> %t.log
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X32-FreeBSD
 
 ; X64-Solaris: Segmented stacks not supported on this platform

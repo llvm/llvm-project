@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDIE_h_
-#define SymbolFileDWARF_DWARFDIE_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
 
 #include "DWARFBaseDIE.h"
 #include "llvm/ADT/SmallSet.h"
@@ -70,8 +70,6 @@ public:
   // DeclContext related functions
   std::vector<DWARFDIE> GetDeclContextDIEs() const;
 
-  void GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const;
-
   /// Return this DIE's decl context as it is needed to look up types
   /// in Clang's -gmodules debug info format.
   void GetDeclContext(
@@ -90,14 +88,6 @@ public:
                             int &decl_line, int &decl_column, int &call_file,
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
-
-  // CompilerDecl related functions
-
-  lldb_private::CompilerDecl GetDecl() const;
-
-  lldb_private::CompilerDeclContext GetDeclContext() const;
-
-  lldb_private::CompilerDeclContext GetContainingDeclContext() const;
 };
 
-#endif // SymbolFileDWARF_DWARFDIE_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

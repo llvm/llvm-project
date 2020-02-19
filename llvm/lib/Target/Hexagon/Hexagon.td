@@ -62,7 +62,7 @@ def FeatureCompound: SubtargetFeature<"compound", "UseCompound", "true",
       "Use compound instructions">;
 def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
       "Support for instruction packets">;
-def FeatureHasPreV65: SubtargetFeature<"prev65", "HasPreV65", "true",
+def FeaturePreV65: SubtargetFeature<"prev65", "HasPreV65", "true",
       "Support features deprecated in v65">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
@@ -113,7 +113,7 @@ def UseZReg            : Predicate<"HST->useZRegOps()">,
                          AssemblerPredicate<"ExtensionZReg">;
 def UseCompound        : Predicate<"HST->useCompound()">;
 def HasPreV65          : Predicate<"HST->hasPreV65()">,
-                         AssemblerPredicate<"FeatureHasPreV65">;
+                         AssemblerPredicate<"FeaturePreV65">;
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
                          AssemblerPredicate<"FeatureMemNoShuf">;
 def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
@@ -364,23 +364,23 @@ class Proc<string Name, SchedMachineModel Model,
 
 def : Proc<"generic", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv5",  HexagonModelV5,
            [ArchV5,
-            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV5, ArchV55,
-            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv60", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv62", HexagonModelV62,
            [ArchV5, ArchV55, ArchV60, ArchV62,
-            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv65", HexagonModelV65,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,

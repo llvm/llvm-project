@@ -35,6 +35,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(InstrumentationRuntimeTSan)
+
 lldb::InstrumentationRuntimeSP
 InstrumentationRuntimeTSan::CreateInstance(const lldb::ProcessSP &process_sp) {
   return InstrumentationRuntimeSP(new InstrumentationRuntimeTSan(process_sp));
@@ -571,7 +573,7 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
     return;
 
   VariableList var_list;
-  module->FindGlobalVariables(sym_name, nullptr, 1U, var_list);
+  module->FindGlobalVariables(sym_name, CompilerDeclContext(), 1U, var_list);
   if (var_list.GetSize() < 1)
     return;
 

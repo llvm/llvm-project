@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Type.h"
+#include "mlir/ADT/TypeSwitch.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -36,9 +37,16 @@ Optional<StringRef> TypeConstraint::getBuilderCall() const {
   if (isVariadic())
     baseType = baseType->getValueAsDef("baseType");
 
-  if (!baseType->isSubClassOf("BuildableType"))
-    return None;
-  return baseType->getValueAsString("builderCall");
+  // Check to see if this type constraint has a builder call.
+  const llvm::RecordVal *builderCall = baseType->getValue("builderCall");
+  if (!builderCall || !builderCall->getValue())
+    return llvm::None;
+  return TypeSwitch<llvm::Init *, Optional<StringRef>>(builderCall->getValue())
+      .Case<llvm::StringInit, llvm::CodeInit>([&](auto *init) {
+        StringRef value = init->getValue();
+        return value.empty() ? Optional<StringRef>() : value;
+      })
+      .Default([](auto *) { return llvm::None; });
 }
 
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}

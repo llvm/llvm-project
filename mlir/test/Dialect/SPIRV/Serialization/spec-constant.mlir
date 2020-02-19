@@ -13,7 +13,7 @@ spv.module "Logical" "GLSL450" {
   spv.specConstant @sc_float spec_id(5) = 1. : f32
 
   // CHECK-LABEL: @use
-  func @use() -> (i32) {
+  spv.func @use() -> (i32) "None" {
     // We materialize a `spv._reference_of` op at every use of a
     // specialization constant in the deserializer. So two ops here.
     // CHECK: %[[USE1:.*]] = spv._reference_of @sc_int : i32

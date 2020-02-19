@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
 
@@ -100,13 +101,22 @@ static gpu::LaunchFuncOp inlineBeneficiaryOps(gpu::GPUFuncOp kernelFunc,
 
 // Outline the `gpu.launch` operation body into a kernel function. Replace
 // `gpu.terminator` operations by `gpu.return` in the generated function.
-static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp) {
+static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp,
+                                        llvm::SetVector<Value> &operands) {
   Location loc = launchOp.getLoc();
   // Create a builder with no insertion point, insertion will happen separately
   // due to symbol table manipulation.
   OpBuilder builder(launchOp.getContext());
 
-  SmallVector<Type, 4> kernelOperandTypes(launchOp.getKernelOperandTypes());
+  // Identify uses from values defined outside of the scope of the launch
+  // operation.
+  getUsedValuesDefinedAbove(launchOp.body(), operands);
+
+  SmallVector<Type, 4> kernelOperandTypes;
+  kernelOperandTypes.reserve(operands.size());
+  for (Value operand : operands) {
+    kernelOperandTypes.push_back(operand.getType());
+  }
   FunctionType type =
       FunctionType::get(kernelOperandTypes, {}, launchOp.getContext());
   std::string kernelFuncName =
@@ -116,6 +126,11 @@ static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp) {
                        builder.getUnitAttr());
   outlinedFunc.body().takeBody(launchOp.body());
   injectGpuIndexOperations(loc, outlinedFunc.body());
+  Block &entryBlock = outlinedFunc.body().front();
+  for (Value operand : operands) {
+    BlockArgument newArg = entryBlock.addArgument(operand.getType());
+    replaceAllUsesInRegionWith(operand, newArg, outlinedFunc.body());
+  }
   outlinedFunc.walk([](gpu::TerminatorOp op) {
     OpBuilder replacer(op);
     replacer.create<gpu::ReturnOp>(op.getLoc());
@@ -129,11 +144,12 @@ static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp) {
 // `kernelFunc`. The kernel func contains the body of the `gpu.launch` with
 // constant region arguments inlined.
 static void convertToLaunchFuncOp(gpu::LaunchOp &launchOp,
-                                  gpu::GPUFuncOp kernelFunc) {
+                                  gpu::GPUFuncOp kernelFunc,
+                                  ValueRange operands) {
   OpBuilder builder(launchOp);
   auto launchFuncOp = builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(), launchOp.getKernelOperandValues());
+      launchOp.getBlockSizeOperandValues(), operands);
   inlineBeneficiaryOps(kernelFunc, launchFuncOp);
   launchOp.erase();
 }
@@ -158,7 +174,8 @@ public:
       // Insert just after the function.
       Block::iterator insertPt(func.getOperation()->getNextNode());
       func.walk([&](gpu::LaunchOp op) {
-        gpu::GPUFuncOp outlinedFunc = outlineKernelFunc(op);
+        llvm::SetVector<Value> operands;
+        gpu::GPUFuncOp outlinedFunc = outlineKernelFunc(op, operands);
 
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
@@ -167,7 +184,7 @@ public:
         symbolTable.insert(kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
-        convertToLaunchFuncOp(op, outlinedFunc);
+        convertToLaunchFuncOp(op, outlinedFunc, operands.getArrayRef());
         modified = true;
       });
     }

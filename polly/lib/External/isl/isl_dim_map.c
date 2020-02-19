@@ -42,6 +42,14 @@ __isl_give isl_dim_map *isl_dim_map_alloc(isl_ctx *ctx, unsigned len)
 	return dim_map;
 }
 
+/* Free "dim_map" and return NULL.
+ */
+__isl_null isl_dim_map *isl_dim_map_free(__isl_take isl_dim_map *dim_map)
+{
+	free(dim_map);
+	return NULL;
+}
+
 void isl_dim_map_range(__isl_keep isl_dim_map *dim_map,
 	unsigned dst_pos, int dst_stride, unsigned src_pos, int src_stride,
 	unsigned n, int sign)
@@ -60,27 +68,30 @@ void isl_dim_map_range(__isl_keep isl_dim_map *dim_map,
 }
 
 void isl_dim_map_dim_range(__isl_keep isl_dim_map *dim_map,
-	__isl_keep isl_space *dim, enum isl_dim_type type,
+	__isl_keep isl_space *space, enum isl_dim_type type,
 	unsigned first, unsigned n, unsigned dst_pos)
 {
 	int i;
 	unsigned src_pos;
 
-	if (!dim_map || !dim)
+	if (!dim_map || !space)
 		return;
 	
-	src_pos = 1 + isl_space_offset(dim, type);
+	src_pos = 1 + isl_space_offset(space, type);
 	for (i = 0; i < n; ++i) {
 		dim_map->m[1 + dst_pos + i].pos = src_pos + first + i;
 		dim_map->m[1 + dst_pos + i].sgn = 1;
 	}
 }
 
-void isl_dim_map_dim(__isl_keep isl_dim_map *dim_map, __isl_keep isl_space *dim,
-	enum isl_dim_type type, unsigned dst_pos)
+void isl_dim_map_dim(__isl_keep isl_dim_map *dim_map,
+	__isl_keep isl_space *space, enum isl_dim_type type, unsigned dst_pos)
 {
-	isl_dim_map_dim_range(dim_map, dim, type,
-			      0, isl_space_dim(dim, type), dst_pos);
+	isl_size dim = isl_space_dim(space, type);
+
+	if (dim < 0)
+		return;
+	isl_dim_map_dim_range(dim_map, space, type, 0, dim, dst_pos);
 }
 
 void isl_dim_map_div(__isl_keep isl_dim_map *dim_map,
@@ -92,7 +103,7 @@ void isl_dim_map_div(__isl_keep isl_dim_map *dim_map,
 	if (!dim_map || !bmap)
 		return;
 	
-	src_pos = 1 + isl_space_dim(bmap->dim, isl_dim_all);
+	src_pos = isl_basic_map_offset(bmap, isl_dim_div);
 	for (i = 0; i < bmap->n_div; ++i) {
 		dim_map->m[1 + dst_pos + i].pos = src_pos + i;
 		dim_map->m[1 + dst_pos + i].sgn = 1;
@@ -161,12 +172,12 @@ __isl_give isl_basic_map *isl_basic_map_add_constraints_dim_map(
 		copy_div_dim_map(dst->div[i1], src->div[i], dim_map);
 	}
 
-	free(dim_map);
+	isl_dim_map_free(dim_map);
 	isl_basic_map_free(src);
 
 	return dst;
 error:
-	free(dim_map);
+	isl_dim_map_free(dim_map);
 	isl_basic_map_free(src);
 	isl_basic_map_free(dst);
 	return NULL;
@@ -216,6 +227,7 @@ __isl_give isl_dim_map *isl_dim_map_from_reordering(
 {
 	int i;
 	isl_ctx *ctx;
+	isl_size dim;
 	isl_space *space;
 	struct isl_dim_map *dim_map;
 
@@ -224,7 +236,10 @@ __isl_give isl_dim_map *isl_dim_map_from_reordering(
 
 	ctx = isl_reordering_get_ctx(exp);
 	space = isl_reordering_peek_space(exp);
-	dim_map = isl_dim_map_alloc(ctx, isl_space_dim(space, isl_dim_all));
+	dim = isl_space_dim(space, isl_dim_all);
+	if (dim < 0)
+		return NULL;
+	dim_map = isl_dim_map_alloc(ctx, dim);
 	if (!dim_map)
 		return NULL;
 

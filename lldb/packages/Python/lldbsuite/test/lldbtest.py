@@ -498,7 +498,7 @@ class Base(unittest2.TestCase):
             mydir = TestBase.compute_mydir(__file__)
         '''
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
-        rel_prefix = test_file[len(os.environ["LLDB_TEST"]) + 1:]
+        rel_prefix = test_file[len(os.environ["LLDB_TEST_SRC"]) + 1:]
         return os.path.dirname(rel_prefix)
 
     def TraceOn(self):
@@ -518,10 +518,10 @@ class Base(unittest2.TestCase):
         # Save old working directory.
         cls.oldcwd = os.getcwd()
 
-        # Change current working directory if ${LLDB_TEST} is defined.
-        # See also dotest.py which sets up ${LLDB_TEST}.
-        if ("LLDB_TEST" in os.environ):
-            full_dir = os.path.join(os.environ["LLDB_TEST"],
+        # Change current working directory if ${LLDB_TEST_SRC} is defined.
+        # See also dotest.py which sets up ${LLDB_TEST_SRC}.
+        if ("LLDB_TEST_SRC" in os.environ):
+            full_dir = os.path.join(os.environ["LLDB_TEST_SRC"],
                                     cls.mydir)
             if traceAlways:
                 print("Change dir to:", full_dir, file=sys.stderr)
@@ -656,7 +656,7 @@ class Base(unittest2.TestCase):
 
     def getSourceDir(self):
         """Return the full path to the current test."""
-        return os.path.join(os.environ["LLDB_TEST"], self.mydir)
+        return os.path.join(os.environ["LLDB_TEST_SRC"], self.mydir)
 
     def getBuildDirBasename(self):
         return self.__class__.__module__ + "." + self.testMethodName
@@ -1089,7 +1089,7 @@ class Base(unittest2.TestCase):
 
         <session-dir>/<arch>-<compiler>-<test-file>.<test-class>.<test-method>
         """
-        dname = os.path.join(os.environ["LLDB_TEST"],
+        dname = os.path.join(os.environ["LLDB_TEST_SRC"],
                              os.environ["LLDB_SESSION_DIRNAME"])
         if not os.path.isdir(dname):
             os.mkdir(dname)
@@ -1399,7 +1399,7 @@ class Base(unittest2.TestCase):
         stdflag = self.getstdFlag()
         stdlibflag = self.getstdlibFlag()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
+        lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {'CXX_SOURCES': sources,
                  'EXE': exe_name,
@@ -1426,7 +1426,7 @@ class Base(unittest2.TestCase):
                                                  os.path.join(
                                                      os.environ["LLDB_SRC"],
                                                      "include")),
-                'LD_EXTRAS': "-L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
+                'LD_EXTRAS': "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir)}
         if self.TraceOn():
             print(
                 "Building LLDB Driver (%s) from sources %s" %
@@ -1439,7 +1439,7 @@ class Base(unittest2.TestCase):
 
         stdflag = self.getstdFlag()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
+        lib_dir = configuration.lldb_libs_dir
         if self.hasDarwinFramework():
             d = {'DYLIB_CXX_SOURCES': sources,
                  'DYLIB_NAME': lib_name,
@@ -1464,7 +1464,7 @@ class Base(unittest2.TestCase):
                                                     os.path.join(
                                                         os.environ["LLDB_SRC"],
                                                         "include")),
-                'LD_EXTRAS': "-shared -L%s/../lib -llldb -Wl,-rpath,%s/../lib" % (lib_dir, lib_dir)}
+                'LD_EXTRAS': "-shared -L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir)}
         if self.TraceOn():
             print(
                 "Building LLDB Library (%s) from sources %s" %
@@ -2261,6 +2261,7 @@ FileCheck output:
             substrs=None,
             trace=False,
             error=False,
+            ordered=True,
             matching=True,
             exe=True,
             inHistory=False):
@@ -2272,6 +2273,10 @@ FileCheck output:
         message.  We expect the output from running the command to start with
         'startstr', matches the substrings contained in 'substrs', and regexp
         matches the patterns contained in 'patterns'.
+
+        When matching is true and ordered is true, which are both the default,
+        the strings in the substrs array have to appear in the command output
+        in the order in which they appear in the array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2341,8 +2346,11 @@ FileCheck output:
         # Look for sub strings, if specified.
         keepgoing = matched if matching else not matched
         if substrs and keepgoing:
+            start = 0
             for substr in substrs:
-                matched = output.find(substr) != -1
+                index = output[start:].find(substr)
+                start = start + index if ordered and matching else 0
+                matched = index != -1
                 with recording(self, trace) as sbuf:
                     print("%s sub string: %s" % (heading, substr), file=sbuf)
                     print("Matched" if matched else "Not matched", file=sbuf)
@@ -2389,7 +2397,7 @@ FileCheck output:
         eval_result = frame.EvaluateExpression(expr)
 
         if error_msg:
-            self.assertFalse(eval_result.IsValid())
+            self.assertFalse(eval_result.IsValid(), "Unexpected success with result: '" + str(eval_result) + "'")
             self.assertEqual(error_msg, eval_result.GetError().GetCString())
             return
 
@@ -2398,7 +2406,7 @@ FileCheck output:
                 "Unexpected failure with msg: " + eval_result.GetError().GetCString())
 
         if result_type:
-            self.assertEqual(result_type, eval_result.GetTypeName())
+            self.assertEqual(result_type, eval_result.GetDisplayTypeName())
 
         if result_value:
             self.assertEqual(result_value, eval_result.GetValue())

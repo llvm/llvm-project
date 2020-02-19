@@ -563,8 +563,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       Y = Op0;
     }
     if (Log2) {
-      Log2->setArgOperand(0, X);
-      Log2->copyFastMathFlags(&I);
+      Value *Log2 = Builder.CreateUnaryIntrinsic(Intrinsic::log2, X, &I);
       Value *LogXTimesY = Builder.CreateFMulFMF(Log2, Y, &I);
       return BinaryOperator::CreateFSubFMF(LogXTimesY, Y, &I);
     }
@@ -621,11 +620,11 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
          I != E; ++I) {
       if (*I == SI) {
         *I = SI->getOperand(NonNullOperand);
-        Worklist.Add(&*BBI);
+        Worklist.push(&*BBI);
       } else if (*I == SelectCond) {
         *I = NonNullOperand == 1 ? ConstantInt::getTrue(CondTy)
                                  : ConstantInt::getFalse(CondTy);
-        Worklist.Add(&*BBI);
+        Worklist.push(&*BBI);
       }
     }
 
@@ -1417,11 +1416,8 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   {
     const APInt *Y;
     // X % -Y -> X % Y
-    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue()) {
-      Worklist.AddValue(I.getOperand(1));
-      I.setOperand(1, ConstantInt::get(I.getType(), -*Y));
-      return &I;
-    }
+    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue())
+      return replaceOperand(I, 1, ConstantInt::get(I.getType(), -*Y));
   }
 
   // -X srem Y --> -(X srem Y)
@@ -1468,11 +1464,8 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
       }
 
       Constant *NewRHSV = ConstantVector::get(Elts);
-      if (NewRHSV != C) {  // Don't loop on -MININT
-        Worklist.AddValue(I.getOperand(1));
-        I.setOperand(1, NewRHSV);
-        return &I;
-      }
+      if (NewRHSV != C)  // Don't loop on -MININT
+        return replaceOperand(I, 1, NewRHSV);
     }
   }
 

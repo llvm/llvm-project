@@ -30,6 +30,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorLexer.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -39,7 +40,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -1035,15 +1035,19 @@ struct PragmaDebugHandler : public PragmaHandler {
     IdentifierInfo *II = Tok.getIdentifierInfo();
 
     if (II->isStr("assert")) {
-      llvm_unreachable("This is an assertion!");
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        llvm_unreachable("This is an assertion!");
     } else if (II->isStr("crash")) {
-      LLVM_BUILTIN_TRAP;
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        LLVM_BUILTIN_TRAP;
     } else if (II->isStr("parser_crash")) {
-      Token Crasher;
-      Crasher.startToken();
-      Crasher.setKind(tok::annot_pragma_parser_crash);
-      Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
-      PP.EnterToken(Crasher, /*IsReinject*/false);
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash) {
+        Token Crasher;
+        Crasher.startToken();
+        Crasher.setKind(tok::annot_pragma_parser_crash);
+        Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
+        PP.EnterToken(Crasher, /*IsReinject*/ false);
+      }
     } else if (II->isStr("dump")) {
       Token Identifier;
       PP.LexUnexpandedToken(Identifier);
@@ -1075,9 +1079,11 @@ struct PragmaDebugHandler : public PragmaHandler {
             << II->getName();
       }
     } else if (II->isStr("llvm_fatal_error")) {
-      llvm::report_fatal_error("#pragma clang __debug llvm_fatal_error");
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        llvm::report_fatal_error("#pragma clang __debug llvm_fatal_error");
     } else if (II->isStr("llvm_unreachable")) {
-      llvm_unreachable("#pragma clang __debug llvm_unreachable");
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        llvm_unreachable("#pragma clang __debug llvm_unreachable");
     } else if (II->isStr("macro")) {
       Token MacroName;
       PP.LexUnexpandedToken(MacroName);
@@ -1104,11 +1110,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       }
       M->dump();
     } else if (II->isStr("overflow_stack")) {
-      DebugOverflowStack();
-    } else if (II->isStr("handle_crash")) {
-      llvm::CrashRecoveryContext *CRC =llvm::CrashRecoveryContext::GetCurrent();
-      if (CRC)
-        CRC->HandleCrash();
+      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        DebugOverflowStack();
     } else if (II->isStr("captured")) {
       HandleCaptured(PP);
     } else {

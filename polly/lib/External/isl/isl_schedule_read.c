@@ -478,10 +478,12 @@ static __isl_give isl_schedule_band *set_coincident(
 	__isl_take isl_schedule_band *band, __isl_take isl_val_list *coincident)
 {
 	int i;
-	int n, m;
+	isl_size n, m;
 
 	n = isl_schedule_band_n_member(band);
 	m = isl_val_list_n_val(coincident);
+	if (n < 0 || m < 0)
+		band = isl_schedule_band_free(band);
 
 	for (i = 0; i < n && i < m; ++i) {
 		isl_val *v;

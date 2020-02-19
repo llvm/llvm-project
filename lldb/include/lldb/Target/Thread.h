@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Thread_h_
-#define liblldb_Thread_h_
+#ifndef LLDB_TARGET_THREAD_H
+#define LLDB_TARGET_THREAD_H
 
 #include <memory>
 #include <mutex>
@@ -215,6 +215,12 @@ public:
   virtual void DidStop();
 
   virtual void RefreshStateAfterStop() = 0;
+
+  void SelectMostRelevantFrame();
+
+  std::string GetStopDescription();
+
+  std::string GetStopDescriptionRaw();
 
   void WillStop();
 
@@ -1277,4 +1283,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Thread_h_
+#endif // LLDB_TARGET_THREAD_H

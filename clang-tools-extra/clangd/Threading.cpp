@@ -1,5 +1,6 @@
 #include "Threading.h"
 #include "Trace.h"
+#include "clang/Basic/Stack.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
@@ -86,16 +87,16 @@ void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
     }
   });
 
-  std::thread(
-      [](std::string Name, decltype(Action) Action, decltype(CleanupTask)) {
-        llvm::set_thread_name(Name);
-        Action();
-        // Make sure function stored by Action is destroyed before CleanupTask
-        // is run.
-        Action = nullptr;
-      },
-      Name.str(), std::move(Action), std::move(CleanupTask))
-      .detach();
+  auto Task = [Name = Name.str(), Action = std::move(Action),
+               Cleanup = std::move(CleanupTask)]() mutable {
+    llvm::set_thread_name(Name);
+    Action();
+    // Make sure function stored by ThreadFunc is destroyed before Cleanup runs.
+    Action = nullptr;
+  };
+
+  // Ensure our worker threads have big enough stacks to run clang.
+  llvm::llvm_execute_on_thread_async(std::move(Task), clang::DesiredStackSize);
 }
 
 Deadline timeoutSeconds(llvm::Optional<double> Seconds) {

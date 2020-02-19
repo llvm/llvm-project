@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangModulesDeclVendor_h
-#define liblldb_ClangModulesDeclVendor_h
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Platform.h"
 
@@ -113,4 +112,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangModulesDeclVendor_h
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H

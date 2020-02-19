@@ -18,6 +18,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
 #include <thread>
@@ -484,14 +485,9 @@ int main(int argc, const char **argv) {
 
   DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
                                     SkipExcludedPPRanges);
-#if LLVM_ENABLE_THREADS
-  unsigned NumWorkers =
-      NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
-#else
-  unsigned NumWorkers = 1;
-#endif
+  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < NumWorkers; ++I)
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
   std::vector<SingleCommandCompilationDatabase> Inputs;
@@ -499,7 +495,6 @@ int main(int argc, const char **argv) {
        AdjustingCompilations->getAllCompileCommands())
     Inputs.emplace_back(Cmd);
 
-  std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
   std::mutex Lock;
@@ -507,11 +502,11 @@ int main(int argc, const char **argv) {
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << NumWorkers << " workers\n";
+                 << " files using " << Pool.getThreadCount() << " workers\n";
   }
-  for (unsigned I = 0; I < NumWorkers; ++I) {
-    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
-                   &DependencyOS, &Errs]() {
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
+    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
+                &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
         const SingleCommandCompilationDatabase *Input;
@@ -543,16 +538,9 @@ int main(int argc, const char **argv) {
             HadErrors = true;
         }
       }
-    };
-#if LLVM_ENABLE_THREADS
-    WorkerThreads.emplace_back(std::move(Worker));
-#else
-    // Run the worker without spawning a thread when threads are disabled.
-    Worker();
-#endif
+    });
   }
-  for (auto &W : WorkerThreads)
-    W.join();
+  Pool.wait();
 
   if (Format == ScanningOutputFormat::Full)
     FD.printFullOutput(llvm::outs());

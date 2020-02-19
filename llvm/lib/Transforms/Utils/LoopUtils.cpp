@@ -824,7 +824,7 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
-Value *llvm::createMinMaxOp(IRBuilder<> &Builder,
+Value *llvm::createMinMaxOp(IRBuilderBase &Builder,
                             RecurrenceDescriptor::MinMaxRecurrenceKind RK,
                             Value *Left, Value *Right) {
   CmpInst::Predicate P = CmpInst::ICMP_NE;
@@ -853,7 +853,7 @@ Value *llvm::createMinMaxOp(IRBuilder<> &Builder,
 
   // We only match FP sequences that are 'fast', so we can unconditionally
   // set it on any generated instructions.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  IRBuilderBase::FastMathFlagGuard FMFG(Builder);
   FastMathFlags FMF;
   FMF.setFast();
   Builder.setFastMathFlags(FMF);
@@ -871,7 +871,7 @@ Value *llvm::createMinMaxOp(IRBuilder<> &Builder,
 
 // Helper to generate an ordered reduction.
 Value *
-llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
+llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
                           unsigned Op,
                           RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
                           ArrayRef<Value *> RedOps) {
@@ -902,7 +902,7 @@ llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
 
 // Helper to generate a log2 shuffle reduction.
 Value *
-llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
                           RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
                           ArrayRef<Value *> RedOps) {
   unsigned VF = Src->getType()->getVectorNumElements();
@@ -937,6 +937,11 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
     }
     if (!RedOps.empty())
       propagateIRFlags(TmpVec, RedOps);
+
+    // We may compute the reassociated scalar ops in a way that does not
+    // preserve nsw/nuw etc. Conservatively, drop those flags.
+    if (auto *ReductionInst = dyn_cast<Instruction>(TmpVec))
+      ReductionInst->dropPoisonGeneratingFlags();
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
@@ -945,7 +950,7 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
 /// Create a simple vector reduction specified by an opcode and some
 /// flags (if generating min/max reductions).
 Value *llvm::createSimpleTargetReduction(
-    IRBuilder<> &Builder, const TargetTransformInfo *TTI, unsigned Opcode,
+    IRBuilderBase &Builder, const TargetTransformInfo *TTI, unsigned Opcode,
     Value *Src, TargetTransformInfo::ReductionFlags Flags,
     ArrayRef<Value *> RedOps) {
   assert(isa<VectorType>(Src->getType()) && "Type must be a vector");
@@ -1016,7 +1021,7 @@ Value *llvm::createSimpleTargetReduction(
 }
 
 /// Create a vector reduction using a given recurrence descriptor.
-Value *llvm::createTargetReduction(IRBuilder<> &B,
+Value *llvm::createTargetReduction(IRBuilderBase &B,
                                    const TargetTransformInfo *TTI,
                                    RecurrenceDescriptor &Desc, Value *Src,
                                    bool NoNaN) {
@@ -1028,7 +1033,7 @@ Value *llvm::createTargetReduction(IRBuilder<> &B,
 
   // All ops in the reduction inherit fast-math-flags from the recurrence
   // descriptor.
-  IRBuilder<>::FastMathFlagGuard FMFGuard(B);
+  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
   B.setFastMathFlags(Desc.getFastMathFlags());
 
   switch (RecKind) {
@@ -1444,4 +1449,50 @@ void llvm::setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
                             OrigLoopInvocationWeight);
   setLoopEstimatedTripCount(RemainderLoop, RemainderAverageTripCount,
                             OrigLoopInvocationWeight);
+}
+
+/// Utility that implements appending of loops onto a worklist.
+/// Loops are added in preorder (analogous for reverse postorder for trees),
+/// and the worklist is processed LIFO.
+template <typename RangeT>
+void llvm::appendReversedLoopsToWorklist(
+    RangeT &&Loops, SmallPriorityWorklist<Loop *, 4> &Worklist) {
+  // We use an internal worklist to build up the preorder traversal without
+  // recursion.
+  SmallVector<Loop *, 4> PreOrderLoops, PreOrderWorklist;
+
+  // We walk the initial sequence of loops in reverse because we generally want
+  // to visit defs before uses and the worklist is LIFO.
+  for (Loop *RootL : Loops) {
+    assert(PreOrderLoops.empty() && "Must start with an empty preorder walk.");
+    assert(PreOrderWorklist.empty() &&
+           "Must start with an empty preorder walk worklist.");
+    PreOrderWorklist.push_back(RootL);
+    do {
+      Loop *L = PreOrderWorklist.pop_back_val();
+      PreOrderWorklist.append(L->begin(), L->end());
+      PreOrderLoops.push_back(L);
+    } while (!PreOrderWorklist.empty());
+
+    Worklist.insert(std::move(PreOrderLoops));
+    PreOrderLoops.clear();
+  }
+}
+
+template <typename RangeT>
+void llvm::appendLoopsToWorklist(RangeT &&Loops,
+                                 SmallPriorityWorklist<Loop *, 4> &Worklist) {
+  appendReversedLoopsToWorklist(reverse(Loops), Worklist);
+}
+
+template void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+    ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
+
+template void
+llvm::appendLoopsToWorklist<Loop &>(Loop &L,
+                                    SmallPriorityWorklist<Loop *, 4> &Worklist);
+
+void llvm::appendLoopsToWorklist(LoopInfo &LI,
+                                 SmallPriorityWorklist<Loop *, 4> &Worklist) {
+  appendReversedLoopsToWorklist(LI, Worklist);
 }

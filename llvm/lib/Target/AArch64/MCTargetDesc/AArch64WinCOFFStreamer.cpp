@@ -68,7 +68,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinUnwindCode(unsigned UnwindCode,
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
     return;
-  MCSymbol *Label = S.EmitCFILabel();
+  MCSymbol *Label = S.emitCFILabel();
   auto Inst = WinEH::Instruction(UnwindCode, Label, Reg, Offset);
   if (InEpilogCFI)
     CurFrame->EpilogMap[CurrentEpilog].push_back(Inst);
@@ -158,7 +158,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIPrologEnd() {
   if (!CurFrame)
     return;
 
-  MCSymbol *Label = S.EmitCFILabel();
+  MCSymbol *Label = S.emitCFILabel();
   CurFrame->PrologEnd = Label;
   WinEH::Instruction Inst = WinEH::Instruction(Win64EH::UOP_End, Label, -1, 0);
   auto it = CurFrame->Instructions.begin();
@@ -172,7 +172,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogStart() {
     return;
 
   InEpilogCFI = true;
-  CurrentEpilog = S.EmitCFILabel();
+  CurrentEpilog = S.emitCFILabel();
 }
 
 void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
@@ -182,7 +182,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
     return;
 
   InEpilogCFI = false;
-  MCSymbol *Label = S.EmitCFILabel();
+  MCSymbol *Label = S.emitCFILabel();
   WinEH::Instruction Inst = WinEH::Instruction(Win64EH::UOP_End, Label, -1, 0);
   CurFrame->EpilogMap[CurrentEpilog].push_back(Inst);
   CurrentEpilog = nullptr;

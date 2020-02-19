@@ -102,6 +102,10 @@ bool isAutoPointerConst(QualType QType) {
 
 } // namespace
 
+void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AddConstToQualified", AddConstToQualified);
+}
+
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return; // Auto deduction not used in 'C or C++03 and earlier', so don't
@@ -142,6 +146,8 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
                           hasAnyTemplateArgument(IsBoundToType))))),
           "auto"),
       this);
+  if (!AddConstToQualified)
+    return;
   Finder->addMatcher(ExplicitSingleVarDecl(
                          hasType(pointerType(pointee(autoType()))), "auto_ptr"),
                      this);
@@ -177,11 +183,9 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     bool IsLocalVolatile = Var->getType().isLocalVolatileQualified();
     bool IsLocalRestrict = Var->getType().isLocalRestrictQualified();
 
-    if (CheckQualifier(IsLocalConst, Qualifier::Const))
-      return;
-    if (CheckQualifier(IsLocalVolatile, Qualifier::Volatile))
-      return;
-    if (CheckQualifier(IsLocalRestrict, Qualifier::Restrict))
+    if (CheckQualifier(IsLocalConst, Qualifier::Const) ||
+        CheckQualifier(IsLocalVolatile, Qualifier::Volatile) ||
+        CheckQualifier(IsLocalRestrict, Qualifier::Restrict))
       return;
 
     // Check for bridging the gap between the asterisk and name.
@@ -214,8 +218,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
         << (IsLocalRestrict ? "__restrict " : "") << Var->getName() << ReplStr;
 
     for (SourceRange &Range : RemoveQualifiersRange) {
-      Diag << FixItHint::CreateRemoval(
-          CharSourceRange::getCharRange(Range.getBegin(), Range.getEnd()));
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(Range));
     }
 
     Diag << FixItHint::CreateReplacement(FixItRange, ReplStr);
@@ -247,22 +250,17 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
         return;
     }
 
-    CharSourceRange FixItRange;
     if (llvm::Optional<SourceRange> TypeSpec =
             getTypeSpecifierLocation(Var, Result)) {
-      FixItRange = CharSourceRange::getCharRange(*TypeSpec);
-      if (FixItRange.isInvalid())
+      if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
+          TypeSpec->getEnd().isMacroID())
         return;
-    } else
-      return;
-
-    DiagnosticBuilder Diag =
-        diag(FixItRange.getBegin(),
-             "'auto *%0%1%2' can be declared as 'const auto *%0%1%2'")
-        << (Var->getType().isLocalConstQualified() ? "const " : "")
-        << (Var->getType().isLocalVolatileQualified() ? "volatile " : "")
-        << Var->getName();
-    Diag << FixItHint::CreateReplacement(FixItRange, "const auto *");
+      SourceLocation InsertPos = TypeSpec->getBegin();
+      diag(InsertPos, "'auto *%0%1%2' can be declared as 'const auto *%0%1%2'")
+          << (Var->getType().isLocalConstQualified() ? "const " : "")
+          << (Var->getType().isLocalVolatileQualified() ? "volatile " : "")
+          << Var->getName() << FixItHint::CreateInsertion(InsertPos, "const ");
+    }
     return;
   }
   if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("auto_ref")) {
@@ -272,20 +270,15 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       // Const isnt wrapped in the auto type, so must be declared explicitly.
       return;
 
-    CharSourceRange FixItRange;
     if (llvm::Optional<SourceRange> TypeSpec =
             getTypeSpecifierLocation(Var, Result)) {
-      FixItRange = CharSourceRange::getCharRange(*TypeSpec);
-      if (FixItRange.isInvalid())
+      if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
+          TypeSpec->getEnd().isMacroID())
         return;
-    } else
-      return;
-
-    DiagnosticBuilder Diag =
-        diag(FixItRange.getBegin(),
-             "'auto &%0' can be declared as 'const auto &%0'")
-        << Var->getName();
-    Diag << FixItHint::CreateReplacement(FixItRange, "const auto &");
+      SourceLocation InsertPos = TypeSpec->getBegin();
+      diag(InsertPos, "'auto &%0' can be declared as 'const auto &%0'")
+          << Var->getName() << FixItHint::CreateInsertion(InsertPos, "const ");
+    }
     return;
   }
 }

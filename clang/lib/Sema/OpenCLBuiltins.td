@@ -60,10 +60,17 @@ def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32
 def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
 def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
+def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 
 // Multiple extensions
-def FuncExtKhrMipmapAndWrite3d           : FunctionExtension<"cl_khr_mipmap_image cl_khr_3d_image_writes">;
+def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
+
+// Arm extensions.
+def ArmIntegerDotProductInt8                   : FunctionExtension<"cl_arm_integer_dot_product_int8">;
+def ArmIntegerDotProductAccumulateInt8         : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int8">;
+def ArmIntegerDotProductAccumulateInt16        : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int16">;
+def ArmIntegerDotProductAccumulateSaturateInt8 : FunctionExtension<"cl_arm_integer_dot_product_accumulate_saturate_int8">;
 
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _Name, bit _IsAbstract=0> {
@@ -120,7 +127,7 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL pointer types (e.g. int*, float*, ...).
 class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
-                                      Type<_Ty.Name, _Ty.QTName> {
+    Type<_Ty.Name, _Ty.QTName> {
   let AddrSpace = _AS.Name;
   // Inherited fields
   let VecWidth = _Ty.VecWidth;
@@ -154,7 +161,7 @@ class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL image types (e.g. image2d).
 class ImageType<Type _Ty, string _AccessQualifier> :
-          Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
+    Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
   let VecWidth = 0;
   let AccessQualifier = _AccessQualifier;
   // Inherited fields
@@ -165,8 +172,7 @@ class ImageType<Type _Ty, string _AccessQualifier> :
 }
 
 // List of Types.
-class TypeList<string _Name, list<Type> _Type> {
-  string Name = _Name;
+class TypeList<list<Type> _Type> {
   list<Type> List = _Type;
 }
 
@@ -195,7 +201,7 @@ class TypeList<string _Name, list<Type> _Type> {
 //      A declaration f(GenT, SGenT) results in the combinations
 //        f(half, half), f(half2, half), f(int, int), f(int2, int) .
 class GenericType<string _Ty, TypeList _TypeList, IntList _VectorList> :
-                                            Type<_Ty, QualType<"null", 1>> {
+    Type<_Ty, QualType<"null", 1>> {
   // Possible element types of the generic type.
   TypeList TypeList = _TypeList;
   // Possible vector sizes of the types in the TypeList.
@@ -260,7 +266,7 @@ def Size      : Type<"size_t",    QualType<"getSizeType()">>;
 def PtrDiff   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
 def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
 def UIntPtr   : Type<"uintPtr_t", QualType<"getUIntPtrType()">>;
-def Void      : Type<"void_t",    QualType<"VoidTy">>;
+def Void      : Type<"void",      QualType<"VoidTy">>;
 
 // OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
 // Built-in vector data types are created by TableGen's OpenCLBuiltinEmitter.
@@ -268,21 +274,21 @@ def Void      : Type<"void_t",    QualType<"VoidTy">>;
 // OpenCL v1.0/1.2/2.0 s6.1.3: Other Built-in Data Types.
 // The image definitions are "abstract".  They should not be used without
 // specifying an access qualifier (RO/WO/RW).
-def Image1d               : Type<"Image1d", QualType<"OCLImage1d", 1>>;
-def Image2d               : Type<"Image2d", QualType<"OCLImage2d", 1>>;
-def Image3d               : Type<"Image3d", QualType<"OCLImage3d", 1>>;
-def Image1dArray          : Type<"Image1dArray", QualType<"OCLImage1dArray", 1>>;
-def Image1dBuffer         : Type<"Image1dBuffer", QualType<"OCLImage1dBuffer", 1>>;
-def Image2dArray          : Type<"Image2dArray", QualType<"OCLImage2dArray", 1>>;
-def Image2dDepth          : Type<"Image2dDepth", QualType<"OCLImage2dDepth", 1>>;
-def Image2dArrayDepth     : Type<"Image2dArrayDepth", QualType<"OCLImage2dArrayDepth", 1>>;
-def Image2dMsaa           : Type<"Image2dMsaa", QualType<"OCLImage2dMSAA", 1>>;
-def Image2dArrayMsaa      : Type<"Image2dArrayMsaa", QualType<"OCLImage2dArrayMSAA", 1>>;
-def Image2dMsaaDepth      : Type<"Image2dMsaaDepth", QualType<"OCLImage2dMSAADepth", 1>>;
-def Image2dArrayMsaaDepth : Type<"Image2dArrayMsaaDepth", QualType<"OCLImage2dArrayMSAADepth", 1>>;
+def Image1d               : Type<"image1d_t", QualType<"OCLImage1d", 1>>;
+def Image2d               : Type<"image2d_t", QualType<"OCLImage2d", 1>>;
+def Image3d               : Type<"image3d_t", QualType<"OCLImage3d", 1>>;
+def Image1dArray          : Type<"image1d_array_t", QualType<"OCLImage1dArray", 1>>;
+def Image1dBuffer         : Type<"image1d_buffer_t", QualType<"OCLImage1dBuffer", 1>>;
+def Image2dArray          : Type<"image2d_array_t", QualType<"OCLImage2dArray", 1>>;
+def Image2dDepth          : Type<"image2d_depth_t", QualType<"OCLImage2dDepth", 1>>;
+def Image2dArrayDepth     : Type<"image2d_array_depth_t", QualType<"OCLImage2dArrayDepth", 1>>;
+def Image2dMsaa           : Type<"image2d_msaa_t", QualType<"OCLImage2dMSAA", 1>>;
+def Image2dArrayMsaa      : Type<"image2d_array_msaa_t", QualType<"OCLImage2dArrayMSAA", 1>>;
+def Image2dMsaaDepth      : Type<"image2d_msaa_depth_t", QualType<"OCLImage2dMSAADepth", 1>>;
+def Image2dArrayMsaaDepth : Type<"image2d_array_msaa_depth_t", QualType<"OCLImage2dArrayMSAADepth", 1>>;
 
-def Sampler           : Type<"Sampler", QualType<"OCLSamplerTy">>;
-def Event             : Type<"Event", QualType<"OCLEventTy">>;
+def Sampler               : Type<"sampler_t", QualType<"OCLSamplerTy">>;
+def Event                 : Type<"event_t", QualType<"OCLEventTy">>;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL gentype variants
@@ -305,20 +311,20 @@ def Vec16       : IntList<"Vec16", [16]>;
 def Vec1234     : IntList<"Vec1234", [1, 2, 3, 4]>;
 
 // Type lists.
-def TLAll         : TypeList<"TLAll", [Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
-def TLAllUnsigned : TypeList<"TLAllUnsigned", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
-def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
-def TLSignedInts   : TypeList<"TLSignedInts", [Char, Short, Int, Long]>;
-def TLUnsignedInts : TypeList<"TLUnsignedInts", [UChar, UShort, UInt, ULong]>;
+def TLAll           : TypeList<[Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
+def TLAllUnsigned   : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
+def TLFloat         : TypeList<[Float, Double, Half]>;
+def TLSignedInts    : TypeList<[Char, Short, Int, Long]>;
+def TLUnsignedInts  : TypeList<[UChar, UShort, UInt, ULong]>;
 
-def TLIntLongFloats : TypeList<"TLIntLongFloats", [Int, UInt, Long, ULong, Float, Double, Half]>;
+def TLIntLongFloats : TypeList<[Int, UInt, Long, ULong, Float, Double, Half]>;
 
 // All unsigned integer types twice, to facilitate unsigned return types for e.g.
 // uchar abs(char) and
 // uchar abs(uchar).
-def TLAllUIntsTwice : TypeList<"TLAllUIntsTwice", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
+def TLAllUIntsTwice : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
 
-def TLAllInts : TypeList<"TLAllInts", [Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
+def TLAllInts       : TypeList<[Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
 
 // GenType definitions for multiple base types (e.g. all floating point types,
 // or all integer types).
@@ -348,8 +354,7 @@ foreach Type = [Char, UChar, Short, UShort,
   foreach VecSizes = [VecAndScalar, VecNoScalar] in {
     def "GenType" # Type # VecSizes :
               GenericType<"GenType" # Type # VecSizes,
-                          TypeList<"GL" # Type.Name, [Type]>,
-                          VecSizes>;
+                          TypeList<[Type]>, VecSizes>;
   }
 }
 
@@ -357,8 +362,7 @@ foreach Type = [Char, UChar, Short, UShort,
 foreach Type = [Float, Double, Half] in {
   def "GenType" # Type # Vec1234 :
               GenericType<"GenType" # Type # Vec1234,
-                          TypeList<"GL" # Type.Name, [Type]>,
-                          Vec1234>;
+                          TypeList<[Type]>, Vec1234>;
 }
 
 
@@ -374,7 +378,11 @@ foreach RType = [Float, Double, Half, Char, UChar, Short,
                  UShort, Int, UInt, Long, ULong] in {
   foreach IType = [Float, Double, Half, Char, UChar, Short,
                    UShort, Int, UInt, Long, ULong] in {
-    foreach sat = ["", "_sat"] in {
+    // Conversions to integer type have a sat and non-sat variant.
+    foreach sat = !cond(!eq(RType.Name, "float") : [""],
+                        !eq(RType.Name, "double") : [""],
+                        !eq(RType.Name, "half") : [""],
+                        1 : ["", "_sat"]) in {
       foreach rnd = ["", "_rte", "_rtn", "_rtp", "_rtz"] in {
         def : Builtin<"convert_" # RType.Name # sat # rnd, [RType, IType],
                       Attr.Const>;
@@ -1274,6 +1282,16 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
+  // Added to section 6.13.14.5
+  foreach aQual = ["RO", "WO", "RW"] in {
+    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
+      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
+    }
+  }
+}
+
+// Write functions are enabled using a separate extension.
+let Extension = FuncExtKhrMipmapImageWrites in {
   // Added to section 6.13.14.4.
   foreach aQual = ["WO"] in {
     foreach imgTy = [Image2d] in {
@@ -1298,7 +1316,7 @@ let Extension = FuncExtKhrMipmapImage in {
       def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<UInt, 4>]>;
     }
     def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Int, Float]>;
-    let Extension = FuncExtKhrMipmapAndWrite3d in {
+    let Extension = FuncExtKhrMipmapWritesAndWrite3d in {
       foreach imgTy = [Image3d] in {
         def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Float, 4>]>;
         def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int, VectorType<Int, 4>]>;
@@ -1306,14 +1324,7 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
-  // Added to section 6.13.14.5
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
-      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
-    }
-  }
 }
-
 
 //--------------------------------------------------------------------
 // OpenCL Extension v2.0 s18.3 - Creating OpenCL Memory Objects from OpenGL MSAA Textures
@@ -1347,5 +1358,32 @@ let Extension = FuncExtKhrGlMsaaSharing in {
       def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
     }
     def : Builtin<"get_image_array_size", [Size, ImageType<Image2dArrayMsaaDepth, aQual>], Attr.Const>;
+  }
+}
+
+//--------------------------------------------------------------------
+// Arm extensions.
+let Extension = ArmIntegerDotProductInt8 in {
+  foreach name = ["arm_dot"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateInt8 in {
+  foreach name = ["arm_dot_acc"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateInt16 in {
+  foreach name = ["arm_dot_acc"] in {
+    def : Builtin<name, [UInt, VectorType<UShort, 2>, VectorType<UShort, 2>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Short, 2>, VectorType<Short, 2>, Int]>;
+  }
+}
+let Extension = ArmIntegerDotProductAccumulateSaturateInt8 in {
+  foreach name = ["arm_dot_acc_sat"] in {
+    def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
+    def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
   }
 }

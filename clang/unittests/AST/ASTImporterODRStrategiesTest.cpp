@@ -64,6 +64,14 @@ struct Enum {
   Language getLang() { return Lang_CXX; }
 };
 
+struct EnumClass {
+  using DeclTy = EnumDecl;
+  static constexpr auto *Definition = "enum class X { a, b };";
+  static constexpr auto *ConflictingDefinition = "enum class X { a, b, c };";
+  BindableMatcher<Decl> getPattern() { return enumDecl(hasName("X")); }
+  Language getLang() { return Lang_CXX11; }
+};
+
 struct EnumConstant {
   using DeclTy = EnumConstantDecl;
   static constexpr auto *Definition = "enum E { X = 0 };";
@@ -397,6 +405,9 @@ ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
     Enum, Liberal, ,
     ImportConflictingDefAfterDef)
 ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+    EnumClass, Liberal, ,
+    ImportConflictingDefAfterDef)
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
     EnumConstant, Liberal, ,
     ImportConflictingDefAfterDef)
 ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
@@ -433,6 +444,9 @@ ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
     DontImportConflictingDefAfterDef)
 ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
     Enum, Conservative, ,
+    DontImportConflictingDefAfterDef)
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+    EnumClass, Conservative, ,
     DontImportConflictingDefAfterDef)
 ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
     EnumConstant, Conservative, ,
@@ -596,6 +610,9 @@ INSTANTIATE_TEST_CASE_P(
     ODRViolationTests, EnumConservative,
     DefaultTestValuesForRunOptions, );
 INSTANTIATE_TEST_CASE_P(
+    ODRViolationTests, EnumClassConservative,
+    DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_CASE_P(
     ODRViolationTests, EnumConstantConservative,
     DefaultTestValuesForRunOptions, );
 INSTANTIATE_TEST_CASE_P(
@@ -639,6 +656,9 @@ INSTANTIATE_TEST_CASE_P(
     DefaultTestValuesForRunOptions, );
 INSTANTIATE_TEST_CASE_P(
     ODRViolationTests, EnumLiberal,
+    DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_CASE_P(
+    ODRViolationTests, EnumClassLiberal,
     DefaultTestValuesForRunOptions, );
 INSTANTIATE_TEST_CASE_P(
     ODRViolationTests, EnumConstantLiberal,

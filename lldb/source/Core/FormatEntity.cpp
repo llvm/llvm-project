@@ -46,7 +46,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "lldb/Utility/SharingPtr.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -166,6 +165,7 @@ static FormatEntity::Entry::Definition g_thread_child_entries[] = {
     ENTRY("queue", ThreadQueue),
     ENTRY("name", ThreadName),
     ENTRY("stop-reason", ThreadStopReason),
+    ENTRY("stop-reason-raw", ThreadStopReasonRaw),
     ENTRY("return-value", ThreadReturnValue),
     ENTRY("completed-expression", ThreadCompletedExpression),
 };
@@ -328,6 +328,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(ThreadName);
     ENUM_TO_CSTR(ThreadQueue);
     ENUM_TO_CSTR(ThreadStopReason);
+    ENUM_TO_CSTR(ThreadStopReasonRaw);
     ENUM_TO_CSTR(ThreadReturnValue);
     ENUM_TO_CSTR(ThreadCompletedExpression);
     ENUM_TO_CSTR(ScriptThread);
@@ -1273,15 +1274,23 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::ThreadStopReason:
     if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
-      if (thread) {
-        StopInfoSP stop_info_sp = thread->GetStopInfo();
-        if (stop_info_sp && stop_info_sp->IsValid()) {
-          const char *cstr = stop_info_sp->GetDescription();
-          if (cstr && cstr[0]) {
-            s.PutCString(cstr);
-            return true;
-          }
+      if (Thread *thread = exe_ctx->GetThreadPtr()) {
+        std::string stop_description = thread->GetStopDescription();
+        if (!stop_description.empty()) {
+          s.PutCString(stop_description);
+          return true;
+        }
+      }
+    }
+    return false;
+
+  case Entry::Type::ThreadStopReasonRaw:
+    if (exe_ctx) {
+      if (Thread *thread = exe_ctx->GetThreadPtr()) {
+        std::string stop_description = thread->GetStopDescriptionRaw();
+        if (!stop_description.empty()) {
+          s.PutCString(stop_description);
+          return true;
         }
       }
     }
@@ -2338,10 +2347,10 @@ bool FormatEntity::FormatFileSpec(const FileSpec &file_spec, Stream &s,
     file_spec.Dump(s.AsRawOstream());
     return true;
   } else if (variable_name.equals(".basename")) {
-    s.PutCString(file_spec.GetFilename().AsCString(""));
+    s.PutCString(file_spec.GetFilename().GetStringRef());
     return true;
   } else if (variable_name.equals(".dirname")) {
-    s.PutCString(file_spec.GetFilename().AsCString(""));
+    s.PutCString(file_spec.GetFilename().GetStringRef());
     return true;
   }
   return false;

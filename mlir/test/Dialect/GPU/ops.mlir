@@ -15,45 +15,11 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:func @args(%{{.*}}: index, %{{.*}}: index, %{{.*}}: f32, %{{.*}}: memref<?xf32, 1>) {
   func @args(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
-    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : f32, memref<?xf32, 1>
+    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
-               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
-               args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
-      // CHECK: gpu.terminator
-      gpu.terminator
-    }
-    return
-  }
-
-  // It is possible to use values passed into the region as arguments.
-  // CHECK-LABEL: func @passing_values
-  func @passing_values(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
-    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : f32, memref<?xf32, 1>
-    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
-               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
-               args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
-      // CHECK: "use"(%{{.*}})
-      "use"(%kernel_arg0): (f32) -> ()
-      // CHECK: gpu.terminator
-      gpu.terminator
-    }
-    return
-  }
-
-  // It is possible to use values defined in nested regions as long as they don't
-  // cross kernel launch region boundaries.
-  // CHECK-LABEL: func @nested_isolation
-  func @nested_isolation(%sz : index) {
-    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
-               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
-      "region"() ({
-        // CHECK: %{{.*}} = "produce"()
-        %val = "produce"() : () -> (index)
-        "region"() ({
-          // CHECK: "use"(%{{.*}})
-          "use"(%val) : (index) -> ()
-        }) : () -> ()
-      }) : () -> ()
+               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
+      "use"(%float) : (f32) -> ()
+      "use"(%data) : (memref<?xf32,1>) -> ()
       // CHECK: gpu.terminator
       gpu.terminator
     }

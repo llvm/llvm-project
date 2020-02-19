@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/ConstString.h"
 
 using namespace lldb_private;
@@ -22,7 +23,7 @@ uint32_t ClangDeclVendor::FindDecls(ConstString name, bool append,
   std::vector<CompilerDecl> compiler_decls;
   uint32_t ret = FindDecls(name, /*append*/ false, max_matches, compiler_decls);
   for (CompilerDecl compiler_decl : compiler_decls) {
-    clang::Decl *d = static_cast<clang::Decl *>(compiler_decl.GetOpaqueDecl());
+    clang::Decl *d = ClangUtil::GetDecl(compiler_decl);
     clang::NamedDecl *nd = llvm::cast<clang::NamedDecl>(d);
     decls.push_back(nd);
   }

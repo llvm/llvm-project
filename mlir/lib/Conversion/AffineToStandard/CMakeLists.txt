@@ -17,7 +17,10 @@ target_link_libraries(
   MLIRAffineToStandard
 
   MLIRAffineOps
+  MLIRLoopOps
+  MLIRPass
   MLIRStandardOps
+  MLIRTransforms
   MLIRIR
   LLVMCore
   LLVMSupport

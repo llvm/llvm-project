@@ -513,7 +513,7 @@ FileManager::getStatValue(StringRef Path, llvm::vfs::Status &Status,
                                   StatCache.get(), *FS);
 }
 
-std::error_code 
+std::error_code
 FileManager::getNoncachedStatValue(StringRef Path,
                                    llvm::vfs::Status &Result) {
   SmallString<128> FilePath(Path);

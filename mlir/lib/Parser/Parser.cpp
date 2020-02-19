@@ -285,14 +285,14 @@ public:
   Attribute parseDecOrHexAttr(Type type, bool isNegative);
 
   /// Parse an opaque elements attribute.
-  Attribute parseOpaqueElementsAttr();
+  Attribute parseOpaqueElementsAttr(Type attrType);
 
   /// Parse a dense elements attribute.
-  Attribute parseDenseElementsAttr();
-  ShapedType parseElementsLiteralType();
+  Attribute parseDenseElementsAttr(Type attrType);
+  ShapedType parseElementsLiteralType(Type type);
 
   /// Parse a sparse elements attribute.
-  Attribute parseSparseElementsAttr();
+  Attribute parseSparseElementsAttr(Type attrType);
 
   //===--------------------------------------------------------------------===//
   // Location Parsing
@@ -343,7 +343,8 @@ public:
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
   ParseResult
   parseAffineMapOfSSAIds(AffineMap &map,
-                         function_ref<ParseResult(bool)> parseElement);
+                         function_ref<ParseResult(bool)> parseElement,
+                         OpAsmParser::Delimiter delimiter);
 
 private:
   /// The Parser is subclassed and reinstantiated.  Do not add additional
@@ -969,13 +970,16 @@ Type Parser::parseComplexType() {
   if (parseToken(Token::less, "expected '<' in complex type"))
     return nullptr;
 
-  auto typeLocation = getEncodedSourceLocation(getToken().getLoc());
+  llvm::SMLoc elementTypeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType ||
       parseToken(Token::greater, "expected '>' in complex type"))
     return nullptr;
+  if (!elementType.isa<FloatType>() && !elementType.isa<IntegerType>())
+    return emitError(elementTypeLoc, "invalid element type for complex"),
+           nullptr;
 
-  return ComplexType::getChecked(elementType, typeLocation);
+  return ComplexType::get(elementType);
 }
 
 /// Parse an extended type.
@@ -1096,69 +1100,79 @@ Type Parser::parseMemRefType() {
   if (!elementType)
     return nullptr;
 
+  // Check that memref is formed from allowed types.
+  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
+      !elementType.isa<ComplexType>())
+    return emitError(typeLoc, "invalid memref element type"), nullptr;
+
   // Parse semi-affine-map-composition.
   SmallVector<AffineMap, 2> affineMapComposition;
-  unsigned memorySpace = 0;
-  bool parsedMemorySpace = false;
+  Optional<unsigned> memorySpace;
+  unsigned numDims = dimensions.size();
 
   auto parseElt = [&]() -> ParseResult {
+    // Check for the memory space.
     if (getToken().is(Token::integer)) {
-      // Parse memory space.
-      if (parsedMemorySpace)
+      if (memorySpace)
         return emitError("multiple memory spaces specified in memref type");
-      auto v = getToken().getUnsignedIntegerValue();
-      if (!v.hasValue())
+      memorySpace = getToken().getUnsignedIntegerValue();
+      if (!memorySpace.hasValue())
         return emitError("invalid memory space in memref type");
-      memorySpace = v.getValue();
       consumeToken(Token::integer);
-      parsedMemorySpace = true;
-    } else {
-      if (isUnranked)
-        return emitError("cannot have affine map for unranked memref type");
-      if (parsedMemorySpace)
-        return emitError("expected memory space to be last in memref type");
-      if (getToken().is(Token::kw_offset)) {
-        int64_t offset;
-        SmallVector<int64_t, 4> strides;
-        if (failed(parseStridedLayout(offset, strides)))
-          return failure();
-        // Construct strided affine map.
-        auto map = makeStridedLinearLayoutMap(strides, offset,
-                                              elementType.getContext());
-        affineMapComposition.push_back(map);
-      } else {
-        // Parse affine map.
-        auto affineMap = parseAttribute();
-        if (!affineMap)
-          return failure();
-        // Verify that the parsed attribute is an affine map.
-        if (auto affineMapAttr = affineMap.dyn_cast<AffineMapAttr>())
-          affineMapComposition.push_back(affineMapAttr.getValue());
-        else
-          return emitError("expected affine map in memref type");
-      }
+      return success();
     }
+    if (isUnranked)
+      return emitError("cannot have affine map for unranked memref type");
+    if (memorySpace)
+      return emitError("expected memory space to be last in memref type");
+
+    AffineMap map;
+    llvm::SMLoc mapLoc = getToken().getLoc();
+    if (getToken().is(Token::kw_offset)) {
+      int64_t offset;
+      SmallVector<int64_t, 4> strides;
+      if (failed(parseStridedLayout(offset, strides)))
+        return failure();
+      // Construct strided affine map.
+      map = makeStridedLinearLayoutMap(strides, offset, state.context);
+    } else {
+      // Parse an affine map attribute.
+      auto affineMap = parseAttribute();
+      if (!affineMap)
+        return failure();
+      auto affineMapAttr = affineMap.dyn_cast<AffineMapAttr>();
+      if (!affineMapAttr)
+        return emitError("expected affine map in memref type");
+      map = affineMapAttr.getValue();
+    }
+
+    if (map.getNumDims() != numDims) {
+      size_t i = affineMapComposition.size();
+      return emitError(mapLoc, "memref affine map dimension mismatch between ")
+             << (i == 0 ? Twine("memref rank") : "affine map " + Twine(i))
+             << " and affine map" << i + 1 << ": " << numDims
+             << " != " << map.getNumDims();
+    }
+    numDims = map.getNumResults();
+    affineMapComposition.push_back(map);
     return success();
   };
 
   // Parse a list of mappings and address space if present.
-  if (consumeIf(Token::comma)) {
+  if (!consumeIf(Token::greater)) {
     // Parse comma separated list of affine maps, followed by memory space.
-    if (parseCommaSeparatedListUntil(Token::greater, parseElt,
+    if (parseToken(Token::comma, "expected ',' or '>' in memref type") ||
+        parseCommaSeparatedListUntil(Token::greater, parseElt,
                                      /*allowEmptyList=*/false)) {
       return nullptr;
     }
-  } else {
-    if (parseToken(Token::greater, "expected ',' or '>' in memref type"))
-      return nullptr;
   }
 
   if (isUnranked)
-    return UnrankedMemRefType::getChecked(elementType, memorySpace,
-                                          getEncodedSourceLocation(typeLoc));
+    return UnrankedMemRefType::get(elementType, memorySpace.getValueOr(0));
 
-  return MemRefType::getChecked(dimensions, elementType, affineMapComposition,
-                                memorySpace, getEncodedSourceLocation(typeLoc));
+  return MemRefType::get(dimensions, elementType, affineMapComposition,
+                         memorySpace.getValueOr(0));
 }
 
 /// Parse any type except the function type.
@@ -1197,9 +1211,14 @@ Type Parser::parseNonFunctionType() {
     auto width = getToken().getIntTypeBitwidth();
     if (!width.hasValue())
       return (emitError("invalid integer width"), nullptr);
-    auto loc = getEncodedSourceLocation(getToken().getLoc());
+    if (width.getValue() > IntegerType::kMaxWidth) {
+      emitError(getToken().getLoc(), "integer bitwidth is limited to ")
+          << IntegerType::kMaxWidth << " bits";
+      return nullptr;
+    }
+
     consumeToken(Token::inttype);
-    return IntegerType::getChecked(width.getValue(), builder.getContext(), loc);
+    return IntegerType::get(width.getValue(), builder.getContext());
   }
 
   // float-type
@@ -1260,14 +1279,16 @@ Type Parser::parseTensorType() {
   }
 
   // Parse the element type.
-  auto typeLocation = getEncodedSourceLocation(getToken().getLoc());
+  auto elementTypeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in tensor type"))
     return nullptr;
+  if (!TensorType::isValidElementType(elementType))
+    return emitError(elementTypeLoc, "invalid tensor element type"), nullptr;
 
   if (isUnranked)
-    return UnrankedTensorType::getChecked(elementType, typeLocation);
-  return RankedTensorType::getChecked(dimensions, elementType, typeLocation);
+    return UnrankedTensorType::get(elementType);
+  return RankedTensorType::get(dimensions, elementType);
 }
 
 /// Parse a tuple type.
@@ -1312,15 +1333,21 @@ VectorType Parser::parseVectorType() {
     return nullptr;
   if (dimensions.empty())
     return (emitError("expected dimension size in vector type"), nullptr);
+  if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
+    return emitError(getToken().getLoc(),
+                     "vector types must have positive constant sizes"),
+           nullptr;
 
   // Parse the element type.
   auto typeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
+  if (!VectorType::isValidElementType(elementType))
+    return emitError(typeLoc, "vector elements must be int or float type"),
+           nullptr;
 
-  return VectorType::getChecked(dimensions, elementType,
-                                getEncodedSourceLocation(typeLoc));
+  return VectorType::get(dimensions, elementType);
 }
 
 /// Parse a dimension list of a tensor or memref type.  This populates the
@@ -1505,7 +1532,7 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse a dense elements attribute.
   case Token::kw_dense:
-    return parseDenseElementsAttr();
+    return parseDenseElementsAttr(type);
 
   // Parse a dictionary attribute.
   case Token::l_brace: {
@@ -1543,11 +1570,11 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an opaque elements attribute.
   case Token::kw_opaque:
-    return parseOpaqueElementsAttr();
+    return parseOpaqueElementsAttr(type);
 
   // Parse a sparse elements attribute.
   case Token::kw_sparse:
-    return parseSparseElementsAttr();
+    return parseSparseElementsAttr(type);
 
   // Parse a string attribute.
   case Token::string: {
@@ -1707,22 +1734,19 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
 }
 
 /// Construct a float attribute bitwise equivalent to the integer literal.
-static FloatAttr buildHexadecimalFloatLiteral(Parser *p, FloatType type,
-                                              uint64_t value) {
+static Optional<APFloat> buildHexadecimalFloatLiteral(Parser *p, FloatType type,
+                                                      uint64_t value) {
   // FIXME: bfloat is currently stored as a double internally because it doesn't
   // have valid APFloat semantics.
-  if (type.isF64() || type.isBF16()) {
-    APFloat apFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
-    return p->builder.getFloatAttr(type, apFloat);
-  }
+  if (type.isF64() || type.isBF16())
+    return APFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
 
   APInt apInt(type.getWidth(), value);
   if (apInt != value) {
     p->emitError("hexadecimal float constant out of range for type");
-    return nullptr;
+    return llvm::None;
   }
-  APFloat apFloat(type.getFloatSemantics(), apInt);
-  return p->builder.getFloatAttr(type, apFloat);
+  return APFloat(type.getFloatSemantics(), apInt);
 }
 
 /// Parse a decimal or a hexadecimal literal, which can be either an integer
@@ -1760,7 +1784,9 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     }
 
     // Construct a float attribute bitwise equivalent to the integer literal.
-    return buildHexadecimalFloatLiteral(this, floatType, *val);
+    Optional<APFloat> apVal =
+        buildHexadecimalFloatLiteral(this, floatType, *val);
+    return apVal ? FloatAttr::get(floatType, *apVal) : Attribute();
   }
 
   if (!type.isIntOrIndex())
@@ -1783,7 +1809,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
 }
 
 /// Parse an opaque elements attribute.
-Attribute Parser::parseOpaqueElementsAttr() {
+Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   consumeToken(Token::kw_opaque);
   if (parseToken(Token::less, "expected '<' after 'opaque'"))
     return nullptr;
@@ -1816,11 +1842,10 @@ Attribute Parser::parseOpaqueElementsAttr() {
     return (emitError("opaque string only contains hex digits"), nullptr);
 
   consumeToken(Token::string);
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
 
@@ -1970,7 +1995,7 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
 DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
                                                     ShapedType type,
                                                     FloatType eltTy) {
-  std::vector<Attribute> floatValues;
+  std::vector<APFloat> floatValues;
   floatValues.reserve(storage.size());
   for (const auto &signAndToken : storage) {
     bool isNegative = signAndToken.first;
@@ -1988,10 +2013,10 @@ DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
         p.emitError("hexadecimal float constant out of range for attribute");
         return nullptr;
       }
-      FloatAttr attr = buildHexadecimalFloatLiteral(&p, eltTy, *val);
-      if (!attr)
+      Optional<APFloat> apVal = buildHexadecimalFloatLiteral(&p, eltTy, *val);
+      if (!apVal)
         return nullptr;
-      floatValues.push_back(attr);
+      floatValues.push_back(*apVal);
       continue;
     }
 
@@ -2007,7 +2032,14 @@ DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
       p.emitError("floating point value too large for attribute");
       return nullptr;
     }
-    floatValues.push_back(FloatAttr::get(eltTy, isNegative ? -*val : *val));
+    // Treat BF16 as double because it is not supported in LLVM's APFloat.
+    APFloat apVal(isNegative ? -*val : *val);
+    if (!eltTy.isBF16() && !eltTy.isF64()) {
+      bool unused;
+      apVal.convert(eltTy.getFloatSemantics(), APFloat::rmNearestTiesToEven,
+                    &unused);
+    }
+    floatValues.push_back(apVal);
   }
 
   return DenseElementsAttr::get(type, floatValues);
@@ -2086,7 +2118,7 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
 }
 
 /// Parse a dense elements attribute.
-Attribute Parser::parseDenseElementsAttr() {
+Attribute Parser::parseDenseElementsAttr(Type attrType) {
   consumeToken(Token::kw_dense);
   if (parseToken(Token::less, "expected '<' after 'dense'"))
     return nullptr;
@@ -2096,12 +2128,11 @@ Attribute Parser::parseDenseElementsAttr() {
   if (literalParser.parse())
     return nullptr;
 
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
   auto typeLoc = getToken().getLoc();
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
   return literalParser.getAttr(typeLoc, type);
@@ -2112,10 +2143,14 @@ Attribute Parser::parseDenseElementsAttr() {
 ///   elements-literal-type ::= vector-type | ranked-tensor-type
 ///
 /// This method also checks the type has static shape.
-ShapedType Parser::parseElementsLiteralType() {
-  auto type = parseType();
-  if (!type)
-    return nullptr;
+ShapedType Parser::parseElementsLiteralType(Type type) {
+  // If the user didn't provide a type, parse the colon type for the literal.
+  if (!type) {
+    if (parseToken(Token::colon, "expected ':'"))
+      return nullptr;
+    if (!(type = parseType()))
+      return nullptr;
+  }
 
   if (!type.isa<RankedTensorType>() && !type.isa<VectorType>()) {
     emitError("elements literal must be a ranked tensor or vector type");
@@ -2130,7 +2165,7 @@ ShapedType Parser::parseElementsLiteralType() {
 }
 
 /// Parse a sparse elements attribute.
-Attribute Parser::parseSparseElementsAttr() {
+Attribute Parser::parseSparseElementsAttr(Type attrType) {
   consumeToken(Token::kw_sparse);
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
@@ -2150,11 +2185,10 @@ Attribute Parser::parseSparseElementsAttr() {
   if (valuesParser.parse())
     return nullptr;
 
-  if (parseToken(Token::greater, "expected '>'") ||
-      parseToken(Token::colon, "expected ':'"))
+  if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
-  auto type = parseElementsLiteralType();
+  auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
 
@@ -2430,7 +2464,8 @@ public:
   AffineMap parseAffineMapRange(unsigned numDims, unsigned numSymbols);
   ParseResult parseAffineMapOrIntegerSetInline(AffineMap &map, IntegerSet &set);
   IntegerSet parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols);
-  ParseResult parseAffineMapOfSSAIds(AffineMap &map);
+  ParseResult parseAffineMapOfSSAIds(AffineMap &map,
+                                     OpAsmParser::Delimiter delimiter);
   void getDimsAndSymbolSSAIds(SmallVectorImpl<StringRef> &dimAndSymbolSSAIds,
                               unsigned &numDims);
 
@@ -2916,9 +2951,24 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
 }
 
 /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
-ParseResult AffineParser::parseAffineMapOfSSAIds(AffineMap &map) {
-  if (parseToken(Token::l_square, "expected '['"))
-    return failure();
+ParseResult
+AffineParser::parseAffineMapOfSSAIds(AffineMap &map,
+                                     OpAsmParser::Delimiter delimiter) {
+  Token::Kind rightToken;
+  switch (delimiter) {
+  case OpAsmParser::Delimiter::Square:
+    if (parseToken(Token::l_square, "expected '['"))
+      return failure();
+    rightToken = Token::r_square;
+    break;
+  case OpAsmParser::Delimiter::Paren:
+    if (parseToken(Token::l_paren, "expected '('"))
+      return failure();
+    rightToken = Token::r_paren;
+    break;
+  default:
+    return emitError("unexpected delimiter");
+  }
 
   SmallVector<AffineExpr, 4> exprs;
   auto parseElt = [&]() -> ParseResult {
@@ -2930,7 +2980,7 @@ ParseResult AffineParser::parseAffineMapOfSSAIds(AffineMap &map) {
   // Parse a multi-dimensional affine expression (a comma-separated list of
   // 1-d affine expressions); the list cannot be empty. Grammar:
   // multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)
-  if (parseCommaSeparatedListUntil(Token::r_square, parseElt,
+  if (parseCommaSeparatedListUntil(rightToken, parseElt,
                                    /*allowEmptyList=*/true))
     return failure();
   // Parsed a valid affine map.
@@ -3080,9 +3130,10 @@ ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {
 /// parse SSA value uses encountered while parsing affine expressions.
 ParseResult
 Parser::parseAffineMapOfSSAIds(AffineMap &map,
-                               function_ref<ParseResult(bool)> parseElement) {
+                               function_ref<ParseResult(bool)> parseElement,
+                               OpAsmParser::Delimiter delimiter) {
   return AffineParser(state, /*allowParsingSSAIds=*/true, parseElement)
-      .parseAffineMapOfSSAIds(map);
+      .parseAffineMapOfSSAIds(map, delimiter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3573,8 +3624,9 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ///  operation         ::= op-result-list?
 ///                        (generic-operation | custom-operation)
 ///                        trailing-location?
-///  generic-operation ::= string-literal '(' ssa-use-list? ')' attribute-dict?
-///                        `:` function-type
+///  generic-operation ::= string-literal `(` ssa-use-list? `)`
+///                        successor-list? (`(` region-list `)`)?
+///                        attribute-dict? `:` function-type
 ///  custom-operation  ::= bare-id custom-operation-format
 ///  op-result-list    ::= op-result (`,` op-result)* `=`
 ///  op-result         ::= ssa-id (`:` integer-literal)
@@ -4180,10 +4232,10 @@ public:
   }
 
   /// Parse an AffineMap of SSA ids.
-  ParseResult
-  parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands,
-                         Attribute &mapAttr, StringRef attrName,
-                         SmallVectorImpl<NamedAttribute> &attrs) override {
+  ParseResult parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands,
+                                     Attribute &mapAttr, StringRef attrName,
+                                     SmallVectorImpl<NamedAttribute> &attrs,
+                                     Delimiter delimiter) override {
     SmallVector<OperandType, 2> dimOperands;
     SmallVector<OperandType, 1> symOperands;
 
@@ -4199,7 +4251,7 @@ public:
     };
 
     AffineMap map;
-    if (parser.parseAffineMapOfSSAIds(map, parseElement))
+    if (parser.parseAffineMapOfSSAIds(map, parseElement, delimiter))
       return failure();
     // Add AffineMap attribute.
     if (map) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Platform_h_
-#define liblldb_Platform_h_
+#ifndef LLDB_TARGET_PLATFORM_H
+#define LLDB_TARGET_PLATFORM_H
 
 #include <functional>
 #include <map>
@@ -1046,4 +1046,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Platform_h_
+#endif // LLDB_TARGET_PLATFORM_H

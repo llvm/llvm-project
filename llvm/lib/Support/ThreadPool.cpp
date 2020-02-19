@@ -20,16 +20,15 @@ using namespace llvm;
 
 #if LLVM_ENABLE_THREADS
 
-// Default to hardware_concurrency
-ThreadPool::ThreadPool() : ThreadPool(hardware_concurrency()) {}
-
-ThreadPool::ThreadPool(unsigned ThreadCount)
-    : ActiveThreads(0), EnableFlag(true) {
+ThreadPool::ThreadPool(ThreadPoolStrategy S)
+    : ActiveThreads(0), EnableFlag(true),
+      ThreadCount(S.compute_thread_count()) {
   // Create ThreadCount threads that will loop forever, wait on QueueCondition
   // for tasks to be queued or the Pool to be destroyed.
   Threads.reserve(ThreadCount);
   for (unsigned ThreadID = 0; ThreadID < ThreadCount; ++ThreadID) {
-    Threads.emplace_back([&] {
+    Threads.emplace_back([S, ThreadID, this] {
+      S.apply_thread_strategy(ThreadID);
       while (true) {
         PackagedTaskTy Task;
         {
@@ -108,12 +107,10 @@ ThreadPool::~ThreadPool() {
 
 #else // LLVM_ENABLE_THREADS Disabled
 
-ThreadPool::ThreadPool() : ThreadPool(0) {}
-
 // No threads are launched, issue a warning if ThreadCount is not 0
-ThreadPool::ThreadPool(unsigned ThreadCount)
-    : ActiveThreads(0) {
-  if (ThreadCount) {
+ThreadPool::ThreadPool(ThreadPoolStrategy S)
+    : ActiveThreads(0), ThreadCount(S.compute_thread_count()) {
+  if (ThreadCount != 1) {
     errs() << "Warning: request a ThreadPool with " << ThreadCount
            << " threads, but LLVM_ENABLE_THREADS has been turned off\n";
   }
@@ -138,8 +135,6 @@ std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
   return Future;
 }
 
-ThreadPool::~ThreadPool() {
-  wait();
-}
+ThreadPool::~ThreadPool() { wait(); }
 
 #endif

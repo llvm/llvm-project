@@ -37,6 +37,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const uint32_t *getNoPreservedMask() const override;
 
+  bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+                            int &FrameIdx) const override;
+
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

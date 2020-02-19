@@ -57,8 +57,11 @@ unsigned long GetPid();
 size_t GetPeakRSSMb();
 
 int ExecuteCommand(const Command &Cmd);
+bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput);
 
+// Fuchsia does not have popen/pclose.
 FILE *OpenProcessPipe(const char *Command, const char *Mode);
+int CloseProcessPipe(FILE *F);
 
 const void *SearchMemory(const void *haystack, size_t haystacklen,
                          const void *needle, size_t needlelen);

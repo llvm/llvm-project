@@ -23,16 +23,29 @@ void IndexToObject::AddObjectForIndexImpl(unsigned idx, void *object) {
   m_mapping[idx] = object;
 }
 
+template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>() {
+  return Deserialize<uint8_t *>();
+}
+
+template <> void *Deserializer::Deserialize<void *>() {
+  return const_cast<void *>(Deserialize<const void *>());
+}
+
+template <> const void *Deserializer::Deserialize<const void *>() {
+  return nullptr;
+}
+
 template <> char *Deserializer::Deserialize<char *>() {
   return const_cast<char *>(Deserialize<const char *>());
 }
 
 template <> const char *Deserializer::Deserialize<const char *>() {
-  auto pos = m_buffer.find('\0');
-  if (pos == llvm::StringRef::npos)
+  const size_t size = Deserialize<size_t>();
+  if (size == std::numeric_limits<size_t>::max())
     return nullptr;
+  assert(HasData(size + 1));
   const char *str = m_buffer.data();
-  m_buffer = m_buffer.drop_front(pos + 1);
+  m_buffer = m_buffer.drop_front(size + 1);
 #ifdef LLDB_REPRO_INSTR_TRACE
   llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << " -> \""
                << str << "\"\n";
@@ -41,7 +54,7 @@ template <> const char *Deserializer::Deserialize<const char *>() {
 }
 
 template <> const char **Deserializer::Deserialize<const char **>() {
-  size_t size = Deserialize<size_t>();
+  const size_t size = Deserialize<size_t>();
   if (size == 0)
     return nullptr;
   const char **r =

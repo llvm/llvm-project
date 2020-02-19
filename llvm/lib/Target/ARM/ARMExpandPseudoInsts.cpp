@@ -1207,7 +1207,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
 
       // Update call site info and delete the pseudo instruction TCRETURN.
-      MBB.getParent()->moveCallSiteInfo(&MI, &*NewMI);
+      if (MI.isCandidateForCallSiteEntry())
+        MI.getMF()->moveCallSiteInfo(&MI, &*NewMI);
       MBB.erase(MBBI);
 
       MBBI = NewMI;
@@ -1410,8 +1411,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       const bool Thumb = Opcode == ARM::tTPsoft;
 
       MachineInstrBuilder MIB;
+      MachineFunction *MF = MBB.getParent();
       if (STI->genLongCalls()) {
-        MachineFunction *MF = MBB.getParent();
         MachineConstantPool *MCP = MF->getConstantPool();
         unsigned PCLabelID = AFI->createPICLabelUId();
         MachineConstantPoolValue *CPV =
@@ -1440,7 +1441,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       MIB.cloneMemRefs(MI);
       TransferImpOps(MI, MIB, MIB);
-      MI.getMF()->moveCallSiteInfo(&MI, &*MIB);
+      // Update the call site info.
+      if (MI.isCandidateForCallSiteEntry())
+        MF->moveCallSiteInfo(&MI, &*MIB);
       MI.eraseFromParent();
       return true;
     }
@@ -1949,24 +1952,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       }
       MIB.cloneMemRefs(MI);
       for (unsigned i = 1; i < MI.getNumOperands(); ++i) MIB.add(MI.getOperand(i));
-      MI.eraseFromParent();
-      return true;
-    }
-    case ARM::LOADDUAL:
-    case ARM::STOREDUAL: {
-      Register PairReg = MI.getOperand(0).getReg();
-
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                  TII->get(Opcode == ARM::LOADDUAL ? ARM::LDRD : ARM::STRD))
-              .addReg(TRI->getSubReg(PairReg, ARM::gsub_0),
-                      Opcode == ARM::LOADDUAL ? RegState::Define : 0)
-              .addReg(TRI->getSubReg(PairReg, ARM::gsub_1),
-                      Opcode == ARM::LOADDUAL ? RegState::Define : 0);
-      for (unsigned i = 1; i < MI.getNumOperands(); i++)
-        MIB.add(MI.getOperand(i));
-      MIB.add(predOps(ARMCC::AL));
-      MIB.cloneMemRefs(MI);
       MI.eraseFromParent();
       return true;
     }

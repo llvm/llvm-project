@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-darwin | FileCheck %s
 
 ; CHECK-LABEL: LCPI0_0:
-; CHECK-NEXT: .long 4286578688
+; CHECK-NEXT: .long 0xff800000
 ; CHECK-LABEL: LCPI0_1:
-; CHECK-NEXT: .long 2139095040
+; CHECK-NEXT: .long 0x7f800000
 
 define x86_fp80 @foo(x86_fp80 %a) {
 ; CHECK-LABEL: foo:

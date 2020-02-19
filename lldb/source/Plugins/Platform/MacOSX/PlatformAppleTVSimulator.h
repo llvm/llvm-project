@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformAppleTVSimulator_h_
-#define liblldb_PlatformAppleTVSimulator_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLETVSIMULATOR_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLETVSIMULATOR_H
 
 #include "PlatformDarwin.h"
 
@@ -83,4 +83,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformAppleTVSimulator);
 };
 
-#endif // liblldb_PlatformAppleTVSimulator_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLETVSIMULATOR_H

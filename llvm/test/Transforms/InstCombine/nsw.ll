@@ -99,13 +99,11 @@ define i8 @nopreserve4(i8 %A, i8 %B) {
   ret i8 %add
 }
 
-; TODO: computeKnownBits() should look through a shufflevector.
-
 define <3 x i32> @shl_nuw_nsw_shuffle_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_shuffle_splat_vec(
 ; CHECK-NEXT:    [[T2:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> undef, <3 x i32> <i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[T3:%.*]] = shl nsw <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t2 = zext <2 x i8> %x to <2 x i32>

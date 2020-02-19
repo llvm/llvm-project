@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ExpressionParser_h_
-#define liblldb_ExpressionParser_h_
+#ifndef LLDB_EXPRESSION_EXPRESSIONPARSER_H
+#define LLDB_EXPRESSION_EXPRESSIONPARSER_H
 
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Status.h"
@@ -133,4 +133,4 @@ protected:
 };
 }
 
-#endif // liblldb_ExpressionParser_h_
+#endif // LLDB_EXPRESSION_EXPRESSIONPARSER_H

@@ -180,9 +180,9 @@ void shrink_int() {
   Agg<bool> b2 = {1};  // OK
   Agg<bool> b3 = {-1};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
 
-  // Conversions from pointers to booleans aren't narrowing conversions.
+  // Conversions from pointers to booleans are narrowing conversions.
   Agg<bool>* ptr = &b1;
-  Agg<bool> b = {ptr};  // OK
+  Agg<bool> b = {ptr};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
 
   Agg<short> ce1 = { Convert<int>(100000) }; // expected-error {{constant expression evaluates to 100000 which cannot be narrowed to type 'short'}} expected-note {{silence}} expected-warning {{changes value from 100000 to -31072}}
   Agg<char> ce2 = { ConvertVar<short>() }; // expected-error {{non-constant-expression cannot be narrowed from type 'short' to 'char'}} expected-note {{silence}}
@@ -240,3 +240,13 @@ void test_narrowed(Value<sizeof(int)> vi, Value<sizeof(double)> vd) {
   int &ir = check_narrowed<double>(vd);
   float &fr = check_narrowed<int>(vi);
 }
+
+// * from a pointer type or a pointer-to-member type to bool.
+void P1957R2(void *a, int *b, Agg<int> *c, int Agg<int>::*d) {
+  Agg<bool> ta = {a}; // expected-error {{cannot be narrowed}} expected-note {{}}
+  Agg<bool> tb = {b}; // expected-error {{cannot be narrowed}} expected-note {{}}
+  Agg<bool> tc = {c}; // expected-error {{cannot be narrowed}} expected-note {{}}
+  Agg<bool> td = {d}; // expected-error {{cannot be narrowed}} expected-note {{}}
+}
+template<bool> struct BoolParam {};
+BoolParam<&P1957R2> bp; // expected-error {{not allowed in a converted constant expression}}

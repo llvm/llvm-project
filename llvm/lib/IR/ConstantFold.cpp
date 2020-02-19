@@ -47,6 +47,11 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
   if (CV->isAllOnesValue()) return Constant::getAllOnesValue(DstTy);
   if (CV->isNullValue()) return Constant::getNullValue(DstTy);
 
+  // Do not iterate on scalable vector. The num of elements is unknown at
+  // compile-time.
+  if (DstTy->isScalable())
+    return nullptr;
+
   // If this cast changes element count then we can't handle it here:
   // doing so requires endianness information.  This should be handled by
   // Analysis/ConstantFolding.cpp
@@ -863,12 +868,12 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
                                                      Constant *V2,
                                                      Constant *Mask) {
-  unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
+  ElementCount MaskEltCount = Mask->getType()->getVectorElementCount();
   Type *EltTy = V1->getType()->getVectorElementType();
 
   // Undefined shuffle mask -> undefined value.
   if (isa<UndefValue>(Mask))
-    return UndefValue::get(VectorType::get(EltTy, MaskNumElts));
+    return UndefValue::get(VectorType::get(EltTy, MaskEltCount));
 
   // Don't break the bitcode reader hack.
   if (isa<ConstantExpr>(Mask)) return nullptr;
@@ -879,6 +884,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
   if (ValTy->isScalable())
     return nullptr;
 
+  unsigned MaskNumElts = MaskEltCount.Min;
   unsigned SrcNumElts = V1->getType()->getVectorNumElements();
 
   // Loop over the shuffle mask, evaluating each element.

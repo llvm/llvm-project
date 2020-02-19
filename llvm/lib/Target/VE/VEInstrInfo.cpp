@@ -12,6 +12,7 @@
 
 #include "VEInstrInfo.h"
 #include "VE.h"
+#include "VEMachineFunctionInfo.h"
 #include "VESubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -97,11 +98,10 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   Target = LastInst->getOperand(3).getMBB();
 }
 
-bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
-                                   MachineBasicBlock *&TBB,
-                                   MachineBasicBlock *&FBB,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   bool AllowModify) const {
+bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                                MachineBasicBlock *&FBB,
+                                SmallVectorImpl<MachineOperand> &Cond,
+                                bool AllowModify) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return false;
@@ -180,11 +180,10 @@ bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                      MachineBasicBlock *TBB,
-                                      MachineBasicBlock *FBB,
-                                      ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                   MachineBasicBlock *TBB,
+                                   MachineBasicBlock *FBB,
+                                   ArrayRef<MachineOperand> Cond,
+                                   const DebugLoc &DL, int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "VE branch conditions should have three component!");
@@ -296,6 +295,133 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            << " to " << printReg(DestReg, TRI) << "\n";
     llvm_unreachable("Impossible reg-to-reg copy");
   }
+}
+
+/// isLoadFromStackSlot - If the specified machine instruction is a direct
+/// load from a stack slot, return the virtual or physical register number of
+/// the destination along with the FrameIndex of the loaded stack slot.  If
+/// not, return 0.  This predicate must return 0 if the instruction has
+/// any side effects other than loading from the stack slot.
+unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                          int &FrameIndex) const {
+  if (MI.getOpcode() == VE::LDSri || MI.getOpcode() == VE::LDLri ||
+      MI.getOpcode() == VE::LDUri) {
+    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+  }
+  return 0;
+}
+
+/// isStoreToStackSlot - If the specified machine instruction is a direct
+/// store to a stack slot, return the virtual or physical register number of
+/// the source reg along with the FrameIndex of the loaded stack slot.  If
+/// not, return 0.  This predicate must return 0 if the instruction has
+/// any side effects other than storing to the stack slot.
+unsigned VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                         int &FrameIndex) const {
+  if (MI.getOpcode() == VE::STSri || MI.getOpcode() == VE::STLri ||
+      MI.getOpcode() == VE::STUri) {
+    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+        MI.getOperand(1).getImm() == 0) {
+      FrameIndex = MI.getOperand(0).getIndex();
+      return MI.getOperand(2).getReg();
+    }
+  }
+  return 0;
+}
+
+void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I,
+                                      Register SrcReg, bool isKill, int FI,
+                                      const TargetRegisterClass *RC,
+                                      const TargetRegisterInfo *TRI) const {
+  DebugLoc DL;
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
+
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
+      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+
+  // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
+  if (RC == &VE::I64RegClass) {
+    BuildMI(MBB, I, DL, get(VE::STSri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
+  } else if (RC == &VE::I32RegClass) {
+    BuildMI(MBB, I, DL, get(VE::STLri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
+  } else if (RC == &VE::F32RegClass) {
+    BuildMI(MBB, I, DL, get(VE::STUri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
+  } else
+    report_fatal_error("Can't store this register to stack slot");
+}
+
+void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       Register DestReg, int FI,
+                                       const TargetRegisterClass *RC,
+                                       const TargetRegisterInfo *TRI) const {
+  DebugLoc DL;
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
+
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
+      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+
+  if (RC == &VE::I64RegClass) {
+    BuildMI(MBB, I, DL, get(VE::LDSri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (RC == &VE::I32RegClass) {
+    BuildMI(MBB, I, DL, get(VE::LDLri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (RC == &VE::F32RegClass) {
+    BuildMI(MBB, I, DL, get(VE::LDUri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else
+    report_fatal_error("Can't load this register from stack slot");
+}
+
+Register VEInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
+  VEMachineFunctionInfo *VEFI = MF->getInfo<VEMachineFunctionInfo>();
+  Register GlobalBaseReg = VEFI->getGlobalBaseReg();
+  if (GlobalBaseReg != 0)
+    return GlobalBaseReg;
+
+  // We use %s15 (%got) as a global base register
+  GlobalBaseReg = VE::SX15;
+
+  // Insert a pseudo instruction to set the GlobalBaseReg into the first
+  // MBB of the function
+  MachineBasicBlock &FirstMBB = MF->front();
+  MachineBasicBlock::iterator MBBI = FirstMBB.begin();
+  DebugLoc dl;
+  BuildMI(FirstMBB, MBBI, dl, get(VE::GETGOT), GlobalBaseReg);
+  VEFI->setGlobalBaseReg(GlobalBaseReg);
+  return GlobalBaseReg;
 }
 
 bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {

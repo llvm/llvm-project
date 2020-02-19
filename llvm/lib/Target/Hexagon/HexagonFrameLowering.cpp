@@ -261,20 +261,20 @@ static unsigned getMax32BitSubRegister(unsigned Reg,
 }
 
 /// Returns the callee saved register with the largest id in the vector.
-static unsigned getMaxCalleeSavedReg(const std::vector<CalleeSavedInfo> &CSI,
+static unsigned getMaxCalleeSavedReg(ArrayRef<CalleeSavedInfo> CSI,
                                      const TargetRegisterInfo &TRI) {
-    static_assert(Hexagon::R1 > 0,
-                  "Assume physical registers are encoded as positive integers");
-    if (CSI.empty())
-      return 0;
+  static_assert(Hexagon::R1 > 0,
+                "Assume physical registers are encoded as positive integers");
+  if (CSI.empty())
+    return 0;
 
-    unsigned Max = getMax32BitSubRegister(CSI[0].getReg(), TRI);
-    for (unsigned I = 1, E = CSI.size(); I < E; ++I) {
-      unsigned Reg = getMax32BitSubRegister(CSI[I].getReg(), TRI);
-      if (Reg > Max)
-        Max = Reg;
-    }
-    return Max;
+  unsigned Max = getMax32BitSubRegister(CSI[0].getReg(), TRI);
+  for (unsigned I = 1, E = CSI.size(); I < E; ++I) {
+    unsigned Reg = getMax32BitSubRegister(CSI[I].getReg(), TRI);
+    if (Reg > Max)
+      Max = Reg;
+  }
+  return Max;
 }
 
 /// Checks if the basic block contains any instruction that needs a stack

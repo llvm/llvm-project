@@ -146,5 +146,8 @@ void TestMatchers::runOnFunction() {
     test2(f);
 }
 
-static PassRegistration<TestMatchers> pass("test-matchers",
-                                           "Test C++ pattern matchers.");
+namespace mlir {
+void registerTestMatchers() {
+  PassRegistration<TestMatchers>("test-matchers", "Test C++ pattern matchers.");
+}
+} // namespace mlir

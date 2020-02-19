@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_FileSystem_h
-#define liblldb_Host_FileSystem_h
+#ifndef LLDB_HOST_FILESYSTEM_H
+#define LLDB_HOST_FILESYSTEM_H
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/DataBufferLLVM.h"

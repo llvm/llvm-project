@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef StructuredDataDarwinLog_h
-#define StructuredDataDarwinLog_h
+#ifndef LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H
+#define LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H
 
 #include "lldb/Target/StructuredDataPlugin.h"
 
@@ -115,4 +115,4 @@ private:
 };
 }
 
-#endif /* StructuredDataPluginDarwinLog_hpp */
+#endif // LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H

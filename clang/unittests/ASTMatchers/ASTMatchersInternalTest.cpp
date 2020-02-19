@@ -36,12 +36,11 @@ TEST(HasNameDeathTest, DiesOnEmptyPattern) {
 
 TEST(ConstructVariadic, MismatchedTypes_Regression) {
   EXPECT_TRUE(
-      matches("const int a = 0;",
-              internal::DynTypedMatcher::constructVariadic(
-                  internal::DynTypedMatcher::VO_AnyOf,
-                  ast_type_traits::ASTNodeKind::getFromNodeKind<QualType>(),
-                  {isConstQualified(), arrayType()})
-                  .convertTo<QualType>()));
+      matches("const int a = 0;", internal::DynTypedMatcher::constructVariadic(
+                                      internal::DynTypedMatcher::VO_AnyOf,
+                                      ASTNodeKind::getFromNodeKind<QualType>(),
+                                      {isConstQualified(), arrayType()})
+                                      .convertTo<QualType>()));
 }
 
 // For testing AST_MATCHER_P().
@@ -69,7 +68,7 @@ AST_POLYMORPHIC_MATCHER_P(polymorphicHas,
                           internal::Matcher<Decl>, AMatcher) {
   return Finder->matchesChildOf(
       Node, AMatcher, Builder,
-      ast_type_traits::TraversalKind::TK_IgnoreImplicitCastsAndParentheses,
+      TraversalKind::TK_IgnoreImplicitCastsAndParentheses,
       ASTMatchFinder::BK_First);
 }
 

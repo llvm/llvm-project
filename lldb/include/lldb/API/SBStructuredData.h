@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SBStructuredData_h
-#define SBStructuredData_h
+#ifndef LLDB_API_SBSTRUCTUREDDATA_H
+#define LLDB_API_SBSTRUCTUREDDATA_H
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
@@ -101,4 +101,4 @@ protected:
 };
 } // namespace lldb
 
-#endif /* SBStructuredData_h */
+#endif // LLDB_API_SBSTRUCTUREDDATA_H

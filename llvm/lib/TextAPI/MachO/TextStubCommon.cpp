@@ -62,12 +62,18 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
   case PlatformKind::macOS:
     OS << "macosx";
     break;
+  case PlatformKind::iOSSimulator:
+    LLVM_FALLTHROUGH;
   case PlatformKind::iOS:
     OS << "ios";
     break;
+  case PlatformKind::watchOSSimulator:
+    LLVM_FALLTHROUGH;
   case PlatformKind::watchOS:
     OS << "watchos";
     break;
+  case PlatformKind::tvOSSimulator:
+    LLVM_FALLTHROUGH;
   case PlatformKind::tvOS:
     OS << "tvos";
     break;

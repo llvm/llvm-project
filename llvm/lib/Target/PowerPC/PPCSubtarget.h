@@ -292,8 +292,15 @@ public:
     return Align(16);
   }
 
-  // PPC32 SVR4ABI has no red zone and PPC64 SVR4ABI has a 288-byte red zone.
-  unsigned getRedZoneSize() const { return isPPC64() ? 288 : 0; }
+  unsigned  getRedZoneSize() const {
+    if (isPPC64())
+      // 288 bytes = 18*8 (FPRs) + 18*8 (GPRs, GPR13 reserved)
+      return 288;
+
+    // AIX PPC32: 220 bytes = 18*8 (FPRs) + 19*4 (GPRs);
+    // PPC32 SVR4ABI has no redzone.
+    return isAIXABI() ? 220 : 0;
+  }
 
   bool hasHTM() const { return HasHTM; }
   bool hasFloat128() const { return HasFloat128; }

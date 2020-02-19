@@ -25,8 +25,10 @@ entry:
 ; CHECK:      Function Attrs: nofree noreturn nosync nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
+; CHECK-NEXT:   {{.*}}@printf{{.*}}
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
 ; CHECK-NEXT:   unreachable
+  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0)) nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
   ret void

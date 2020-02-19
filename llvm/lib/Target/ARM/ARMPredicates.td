@@ -35,6 +35,9 @@ def HasMVEInt        : Predicate<"Subtarget->hasMVEIntegerOps()">,
 def HasMVEFloat      : Predicate<"Subtarget->hasMVEFloatOps()">,
                                  AssemblerPredicate<"HasMVEFloatOps",
                                                     "mve.fp">;
+def HasCDE           : Predicate<"Subtarget->hasCDEOps()">,
+                                 AssemblerPredicate<"HasCDEOps",
+                                                    "cde">;
 def HasFPRegs        : Predicate<"Subtarget->hasFPRegs()">,
                                  AssemblerPredicate<"FeatureFPRegs",
                                                     "fp registers">;

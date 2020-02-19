@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjectFileMachO_h_
-#define liblldb_ObjectFileMachO_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_MACH_O_OBJECTFILEMACHO_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_MACH_O_OBJECTFILEMACHO_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/FileSpecList.h"
@@ -193,7 +193,7 @@ protected:
 
   size_t ParseSymtab();
 
-  typedef lldb_private::RangeArray<uint32_t, uint32_t, 8> EncryptedFileRanges;
+  typedef lldb_private::RangeVector<uint32_t, uint32_t, 8> EncryptedFileRanges;
   EncryptedFileRanges GetEncryptedFileRanges();
 
   struct SegmentParsingContext;
@@ -230,4 +230,4 @@ protected:
   bool m_allow_assembly_emulation_unwind_plans;
 };
 
-#endif // liblldb_ObjectFileMachO_h_
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MACH_O_OBJECTFILEMACHO_H

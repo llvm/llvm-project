@@ -21,6 +21,8 @@ extern llvm::cl::opt<bool> EnablePGSO;
 extern llvm::cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
 extern llvm::cl::opt<bool> PGSOIRPassOrTestOnly;
 extern llvm::cl::opt<bool> PGSOColdCodeOnly;
+extern llvm::cl::opt<bool> PGSOColdCodeOnlyForInstrPGO;
+extern llvm::cl::opt<bool> PGSOColdCodeOnlyForSamplePGO;
 extern llvm::cl::opt<bool> ForcePGSO;
 extern llvm::cl::opt<int> PgsoCutoffInstrProf;
 extern llvm::cl::opt<int> PgsoCutoffSampleProf;
@@ -54,6 +56,8 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
                                 QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
+      (PSI->hasInstrumentationProfile() && PGSOColdCodeOnlyForInstrPGO) ||
+      (PSI->hasSampleProfile() && PGSOColdCodeOnlyForSamplePGO) ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
     return AdapterT::isFunctionColdInCallGraph(F, PSI, *BFI);
@@ -63,10 +67,9 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
       F, PSI, *BFI);
 }
 
-template<typename AdapterT, typename BlockT, typename BFIT>
-bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
+template<typename AdapterT, typename BlockTOrBlockFreq, typename BFIT>
+bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq, ProfileSummaryInfo *PSI,
                                BFIT *BFI, PGSOQueryType QueryType) {
-  assert(BB);
   if (!PSI || !BFI || !PSI->hasProfileSummary())
     return false;
   if (ForcePGSO)
@@ -79,13 +82,15 @@ bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
                                 QueryType == PGSOQueryType::Test))
     return false;
   if (PGSOColdCodeOnly ||
+      (PSI->hasInstrumentationProfile() && PGSOColdCodeOnlyForInstrPGO) ||
+      (PSI->hasSampleProfile() && PGSOColdCodeOnlyForSamplePGO) ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
-    return AdapterT::isColdBlock(BB, PSI, BFI);
+    return AdapterT::isColdBlock(BBOrBlockFreq, PSI, BFI);
   }
   return !AdapterT::isHotBlockNthPercentile(
       PSI->hasSampleProfile() ? PgsoCutoffSampleProf : PgsoCutoffInstrProf,
-      BB, PSI, BFI);
+      BBOrBlockFreq, PSI, BFI);
 }
 
 /// Returns true if function \p F is suggested to be size-optimized based on the

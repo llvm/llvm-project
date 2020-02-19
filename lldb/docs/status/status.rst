@@ -1,6 +1,19 @@
 Status
 ======
 
+FreeBSD
+-------
+
+LLDB on FreeBSD lags behind the Linux implementation but is improving rapidly.
+For more details, see the Features by OS section below.
+
+Linux
+-----
+
+LLDB is improving on Linux. Linux is nearing feature completeness with Darwin
+to debug x86_64, i386, ARM, AArch64, IBM POWER (ppc64), IBM Z (s390x), and
+MIPS64 programs. For more details, see the Features by OS section below.
+
 macOS
 -----
 
@@ -15,20 +28,10 @@ used from Python on the command line. This allows debug sessions to be
 scripted. It also allows powerful debugging actions to be created and attached
 to a variety of debugging workflows.
 
-Linux
------
+NetBSD
+------
 
-LLDB is improving on Linux. While the debugserver has not been ported (to
-enable remote debugging) Linux is nearing feature completeness with Darwin to
-debug x86_64 programs, and is partially working with i386 programs. ARM
-architectures on Linux are untested. For more details, see the Features by OS
-section below.
-
-FreeBSD
--------
-
-LLDB on FreeBSD lags behind the Linux implementation but is improving rapidly.
-For more details, see the Features by OS section below.
+LLDB is improving on NetBSD and reaching feature completeness with Linux.
 
 Windows
 -------
@@ -40,26 +43,26 @@ section below.
 
 Features Matrix
 ---------------
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Feature                        | FreeBSD    | Linux                   | macOS      | Windows              |
-+================================+============+=========================+============+======================+
-| Backtracing                    | OK         | OK                      | OK         | OK                   |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Breakpoints                    | OK         | OK                      | OK         | OK                   |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| C++11:                         | OK         | OK                      | OK         | Unknown              |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Commandline lldb tool          | OK         | OK                      | OK         | OK                   |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Core file debugging            | OK (ELF)   | OK (ELF)                | OK (MachO) | OK (Minidump)        |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Debugserver (remote debugging) | Not ported | Not ported              | OK         | Not ported           |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Disassembly                    | OK         | OK                      | OK         | OK                   |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Expression evaluation          | Unknown    | Works with some bugs    | OK         | Works with some bugs |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| JIT debugging                  | Unknown    | Symbolic debugging only | Untested   | No                   |
-+--------------------------------+------------+-------------------------+------------+----------------------+
-| Objective-C 2.0:               | Unknown    | Not applicable          | OK         | Not applicable       |
-+--------------------------------+------------+-------------------------+------------+----------------------+
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Feature               | FreeBSD    | Linux                   | macOS             | NetBSD             | Windows              |
++=======================+============+=========================+===================+====================+======================+
+| Backtracing           | YES        | YES                     | YES               | YES                | YES                  |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Breakpoints           | YES        | YES                     | YES               | YES                | YES                  |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| C++11:                | YES        | YES                     | YES               | YES                | Unknown              |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Commandline tool      | YES        | YES                     | YES               | YES                | YES                  |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Core file debugging   | YES (ELF)  | YES (ELF)               | YES (MachO)       | YES (ELF)          | YES (Minidump)       |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Remote debugging      | NO         | YES (lldb-server)       | YES (debugserver) | YES (lldb-server)  | NO                   |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Disassembly           | YES        | YES                     | YES               | YES                | YES                  |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Expression evaluation | Unknown    | YES (known issues)      | YES               | YES (known issues) | YES (known issues)   |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| JIT debugging         | Unknown    | Symbolic debugging only | Untested          | Work In Progress   | NO                   |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+
+| Objective-C 2.0:      | Unknown    | N/A                     | YES               | Unknown            | N/A                  |
++-----------------------+------------+-------------------------+-------------------+--------------------+----------------------+

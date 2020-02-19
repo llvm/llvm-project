@@ -2,7 +2,7 @@
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @var1 : !spv.ptr<!spv.array<4xf32>, Input>
-  func @fmain() -> i32 {
+  spv.func @fmain() -> i32 "None" {
     %0 = spv.constant 16 : i32
     %1 = spv._address_of @var1 : !spv.ptr<!spv.array<4xf32>, Input>
     // CHECK: {{%.*}} = spv.FunctionCall @f_0({{%.*}}) : (i32) -> i32
@@ -13,17 +13,17 @@ spv.module "Logical" "GLSL450" {
     %4 = spv.FunctionCall @f_2(%1) : (!spv.ptr<!spv.array<4xf32>, Input>) -> !spv.ptr<!spv.array<4xf32>, Input>
     spv.ReturnValue %3 : i32
   }
-  func @f_0(%arg0 : i32) -> i32 {
+  spv.func @f_0(%arg0 : i32) -> i32 "None" {
     spv.ReturnValue %arg0 : i32
   }
-  func @f_1(%arg0 : i32, %arg1 : !spv.ptr<!spv.array<4xf32>, Input>) -> () {
+  spv.func @f_1(%arg0 : i32, %arg1 : !spv.ptr<!spv.array<4xf32>, Input>) -> () "None" {
     spv.Return
   }
-  func @f_2(%arg0 : !spv.ptr<!spv.array<4xf32>, Input>) -> !spv.ptr<!spv.array<4xf32>, Input> {
+  spv.func @f_2(%arg0 : !spv.ptr<!spv.array<4xf32>, Input>) -> !spv.ptr<!spv.array<4xf32>, Input> "None" {
     spv.ReturnValue %arg0 : !spv.ptr<!spv.array<4xf32>, Input>
   }
 
-  func @f_loop_with_function_call(%count : i32) -> () {
+  spv.func @f_loop_with_function_call(%count : i32) -> () "None" {
     %zero = spv.constant 0: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
     spv.loop {
@@ -43,7 +43,7 @@ spv.module "Logical" "GLSL450" {
     }
     spv.Return
   }
-  func @f_inc(%arg0 : !spv.ptr<i32, Function>) -> () {
+  spv.func @f_inc(%arg0 : !spv.ptr<i32, Function>) -> () "None" {
       %one = spv.constant 1 : i32
       %0 = spv.Load "Function" %arg0 : i32
       %1 = spv.IAdd %0, %one : i32

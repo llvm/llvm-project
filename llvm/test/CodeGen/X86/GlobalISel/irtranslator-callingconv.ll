@@ -577,16 +577,14 @@ define void @test_abi_exts_call(i8* %addr) {
   ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
-  ; X32:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-  ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[COPY2]](s32)
+  ; X32:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
   ; X32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s8)
   ; X32:   G_STORE [[SEXT]](s32), [[GEP1]](p0) :: (store 4 into stack, align 1)
   ; X32:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
   ; X32:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[COPY3:%[0-9]+]]:_(p0) = COPY $esp
-  ; X32:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-  ; X32:   [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY3]], [[COPY4]](s32)
+  ; X32:   [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY3]], [[C]](s32)
   ; X32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
   ; X32:   G_STORE [[ZEXT]](s32), [[GEP2]](p0) :: (store 4 into stack, align 1)
   ; X32:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp

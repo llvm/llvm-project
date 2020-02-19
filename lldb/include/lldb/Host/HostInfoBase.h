@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostInfoBase_h_
-#define lldb_Host_HostInfoBase_h_
+#ifndef LLDB_HOST_HOSTINFOBASE_H
+#define LLDB_HOST_HOSTINFOBASE_H
 
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"

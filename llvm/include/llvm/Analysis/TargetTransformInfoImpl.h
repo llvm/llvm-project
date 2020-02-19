@@ -867,6 +867,9 @@ public:
     if (isa<ExtractValueInst>(U))
       return TTI::TCC_Free; // Model all ExtractValue nodes as free.
 
+    if (isa<FreezeInst>(U))
+      return TTI::TCC_Free; // Model all Freeze nodes as free.
+
     // Static alloca doesn't generate target instructions.
     if (auto *A = dyn_cast<AllocaInst>(U))
       if (A->isStaticAlloca())

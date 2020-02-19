@@ -157,7 +157,18 @@ void SCUDO_PREFIX(malloc_postinit)() {
 
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, UNUSED int value) {
   if (param == M_DECAY_TIME) {
-    // TODO(kostyak): set release_to_os_interval_ms accordingly.
+    if (SCUDO_ANDROID) {
+      if (value == 0) {
+        // Will set the release values to their minimum values.
+        value = INT32_MIN;
+      } else {
+        // Will set the release values to their maximum values.
+        value = INT32_MAX;
+      }
+    }
+
+    SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,
+                              static_cast<scudo::sptr>(value));
     return 1;
   } else if (param == M_PURGE) {
     SCUDO_ALLOCATOR.releaseToOS();
@@ -180,8 +191,23 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
-  fputs("<malloc version=\"scudo-1\">", stream);
-  fputs("</malloc>", stream);
+  const scudo::uptr max_size =
+      decltype(SCUDO_ALLOCATOR)::PrimaryT::SizeClassMap::MaxSize;
+  auto *sizes = static_cast<scudo::uptr *>(
+      SCUDO_PREFIX(calloc)(max_size, sizeof(scudo::uptr)));
+  auto callback = [](uintptr_t, size_t size, void *arg) {
+    auto *sizes = reinterpret_cast<scudo::uptr *>(arg);
+    if (size < max_size)
+      sizes[size]++;
+  };
+  SCUDO_ALLOCATOR.iterateOverChunks(0, -1ul, callback, sizes);
+
+  fputs("<malloc version=\"scudo-1\">\n", stream);
+  for (scudo::uptr i = 0; i != max_size; ++i)
+    if (sizes[i])
+      fprintf(stream, "<alloc size=\"%lu\" count=\"%lu\"/>\n", i, sizes[i]);
+  fputs("</malloc>\n", stream);
+  SCUDO_PREFIX(free)(sizes);
   return 0;
 }
 

@@ -1,5 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -o /dev/null 2>&1 | FileCheck %s
 
+target datalayout = "n32"
+
 ; CHECK-LABEL: @switch_unreachable_default
 
 define amdgpu_kernel void @switch_unreachable_default(i32 addrspace(1)* %out, i8 addrspace(1)* %in0, i8 addrspace(1)* %in1) #0 {
@@ -38,7 +40,7 @@ sw.epilog:
 ; CHECK: load i8
 ; CHECK-NOT: {{ br }}
 ; CHECK: [[ICMP:%[a-zA-Z0-9._]+]] = icmp eq
-; CHECK: [[IF:%[a-zA-Z0-9._]+]]   = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[ICMP]], i64 [[PHI]])
+; CHECK: [[IF:%[a-zA-Z0-9._]+]]   = call i64 @llvm.amdgcn.if.break.i64(i1 [[ICMP]], i64 [[PHI]])
 ; CHECK: [[LOOP:%[a-zA-Z0-9._]+]] = call i1 @llvm.amdgcn.loop.i64(i64 [[IF]])
 ; CHECK: br i1 [[LOOP]]
 

@@ -947,9 +947,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
-    NumThreads =
-        std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
-                              unsigned(SourceFiles.size())));
+    NumThreads = SourceFiles.size();
 
   if (!ViewOpts.hasOutputDirectory() || NumThreads == 1) {
     for (const std::string &SourceFile : SourceFiles)
@@ -957,7 +955,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool(NumThreads);
+    ThreadPool Pool(heavyweight_hardware_concurrency(NumThreads));
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);

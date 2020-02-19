@@ -1,0 +1,25 @@
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           6
+        Body:            238080808000210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         4C00
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         0111
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         5100
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         636CFF
+...

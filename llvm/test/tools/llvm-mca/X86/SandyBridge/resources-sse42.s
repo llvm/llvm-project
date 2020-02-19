@@ -51,9 +51,9 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        crc32q	%rax, %rcx
 # CHECK-NEXT:  2      8     1.00    *                   crc32q	(%rax), %rcx
 # CHECK-NEXT:  1      4     2.67                        pcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      4     2.33    *                   pcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      10    2.33    *                   pcmpestri	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      11    2.67                        pcmpestrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      11    2.33    *                   pcmpestrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      17    2.33    *                   pcmpestrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  3      11    3.00                        pcmpistri	$1, %xmm0, %xmm2
 # CHECK-NEXT:  4      17    3.00    *                   pcmpistri	$1, (%rax), %xmm2
 # CHECK-NEXT:  3      11    3.00                        pcmpistrm	$1, %xmm0, %xmm2

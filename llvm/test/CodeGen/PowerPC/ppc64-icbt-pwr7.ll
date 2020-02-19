@@ -1,6 +1,6 @@
 ; Test the ICBT instruction is not emitted on POWER7
 ; Based on the ppc64-prefetch.ll test
-; RUN: not llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s 2>&1 | FileCheck %s
  
 declare void @llvm.prefetch(i8*, i32, i32, i32)
 

@@ -10,8 +10,8 @@ define <2 x i64> @test_mm_epi64(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512CD-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512CD-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512CD-NEXT:    kmovw %k0, %eax
-; AVX512CD-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512CD-NEXT:    vpinsrb $0, %eax, %xmm0, %xmm0
+; AVX512CD-NEXT:    movzbl %al, %ecx
+; AVX512CD-NEXT:    vmovd %ecx, %xmm0
 ; AVX512CD-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
@@ -157,11 +157,11 @@ define <8 x i32> @test_mm256_epi32(<16 x i16> %a, <16 x i16> %b) {
 ; AVX512CD-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512CD-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512CD-NEXT:    kmovw %k0, %eax
-; AVX512CD-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512CD-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX512CD-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; AVX512CD-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
-; AVX512CD-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX512CD-NEXT:    kmovw %k0, %ecx
+; AVX512CD-NEXT:    vmovd %eax, %xmm0
+; AVX512CD-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX512CD-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX512CD-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512CD-NEXT:    retq
 ;

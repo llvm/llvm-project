@@ -20,6 +20,34 @@ enum Fixups {
   /// fixup_ve_lo32 - 32-bit fixup corresponding to foo@lo
   fixup_ve_lo32,
 
+  /// fixup_ve_pc_hi32 - 32-bit fixup corresponding to foo@pc_hi
+  fixup_ve_pc_hi32,
+
+  /// fixup_ve_pc_lo32 - 32-bit fixup corresponding to foo@pc_lo
+  fixup_ve_pc_lo32,
+
+  /// fixup_ve_got_hi32 - 32-bit fixup corresponding to foo@got_hi
+  fixup_ve_got_hi32,
+
+  /// fixup_ve_got_lo32 - 32-bit fixup corresponding to foo@got_lo
+  fixup_ve_got_lo32,
+
+  /// fixup_ve_gotoff_hi32 - 32-bit fixup corresponding to foo@gotoff_hi
+  fixup_ve_gotoff_hi32,
+
+  /// fixup_ve_gotoff_lo32 - 32-bit fixup corresponding to foo@gotoff_lo
+  fixup_ve_gotoff_lo32,
+
+  /// fixup_ve_plt_hi32/lo32
+  fixup_ve_plt_hi32,
+  fixup_ve_plt_lo32,
+
+  /// fixups for Thread Local Storage
+  fixup_ve_tls_gd_hi32,
+  fixup_ve_tls_gd_lo32,
+  fixup_ve_tpoff_hi32,
+  fixup_ve_tpoff_lo32,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

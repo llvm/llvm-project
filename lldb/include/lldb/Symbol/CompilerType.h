@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompilerType_h_
-#define liblldb_CompilerType_h_
+#ifndef LLDB_SYMBOL_COMPILERTYPE_H
+#define LLDB_SYMBOL_COMPILERTYPE_H
 
 #include <functional>
 #include <string>
@@ -148,10 +148,6 @@ public:
   // Accessors
 
   TypeSystem *GetTypeSystem() const { return m_type_system; }
-
-  ConstString GetConstQualifiedTypeName() const;
-
-  ConstString GetConstTypeName() const;
 
   ConstString GetTypeName() const;
 
@@ -389,4 +385,4 @@ struct CompilerType::IntegralTemplateArgument {
 
 } // namespace lldb_private
 
-#endif // liblldb_CompilerType_h_
+#endif // LLDB_SYMBOL_COMPILERTYPE_H

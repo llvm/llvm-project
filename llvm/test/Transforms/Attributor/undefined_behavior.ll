@@ -44,7 +44,6 @@ e:
 
 define void @load_null_pointer_is_defined() "null-pointer-is-valid"="true" {
 ; ATTRIBUTOR-LABEL: @load_null_pointer_is_defined(
-; ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* null
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %a = load i32, i32* null
@@ -57,14 +56,14 @@ define internal i32* @ret_null() {
 
 ; FIXME: null is propagated but the instruction
 ; is not changed to unreachable.
-define void @load_null_propagated() {
+define i32 @load_null_propagated() {
 ; ATTRIBUTOR-LABEL: @load_null_propagated(
 ; ATTRIBUTOR-NEXT:    [[A:%.*]] = load i32, i32* null
-; ATTRIBUTOR-NEXT:    ret void
+; ATTRIBUTOR-NEXT:    ret i32 [[A]]
 ;
   %ptr = call i32* @ret_null()
   %a = load i32, i32* %ptr
-  ret void
+  ret i32 %a
 }
 
 ; -- Store tests --
@@ -223,7 +222,6 @@ define i1 @ret_undef() {
 
 define void @cond_br_on_undef_interproc() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc(
-; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef()
 ; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    unreachable
@@ -249,7 +247,6 @@ e:
 ; More complicated interproc deduction of undef
 define void @cond_br_on_undef_interproc2() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef_interproc2(
-; ATTRIBUTOR-NEXT:    %cond = call i1 @ret_undef2()
 ; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    unreachable
@@ -265,15 +262,13 @@ e:
 
 ; Branch on undef that depends on propagation of
 ; undef of a previous instruction.
-; FIXME: Currently it doesn't propagate the undef.
 define i32 @cond_br_on_undef3() {
 ; ATTRIBUTOR-LABEL: @cond_br_on_undef3(
-; ATTRIBUTOR-NEXT:    %cond = icmp ne i32 1, undef
-; ATTRIBUTOR-NEXT:    br i1 %cond, label %t, label %e
+; ATTRIBUTOR-NEXT:    br label %t
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    ret i32 1
 ; ATTRIBUTOR:       e:
-; ATTRIBUTOR-NEXT:    ret i32 2
+; ATTRIBUTOR-NEXT:    unreachable
 
   %cond = icmp ne i32 1, undef
   br i1 %cond, label %t, label %e

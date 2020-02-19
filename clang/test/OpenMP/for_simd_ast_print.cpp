@@ -97,11 +97,11 @@ template<class T> struct S {
 // CHECK: T val;
 // CHECK: T lin = 0;
 #ifdef OMP5
-    #pragma omp for simd private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) allocate(res) if(res) nontemporal(res, val, lin)
+    #pragma omp for simd private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) allocate(res) if(res) nontemporal(res, val, lin) order(concurrent)
 #else
     #pragma omp for simd private(val)  safelen(7) linear(lin : -5) lastprivate(res) simdlen(5) allocate(res)
 #endif
-// OMP50-NEXT: #pragma omp for simd private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) allocate(res) if(res) nontemporal(res,val,lin)
+// OMP50-NEXT: #pragma omp for simd private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) allocate(res) if(res) nontemporal(res,val,lin) order(concurrent)
 // OMP45-NEXT: #pragma omp for simd private(val) safelen(7) linear(lin: -5) lastprivate(res) simdlen(5) allocate(res)
     for (T i = 7; i < m_a; ++i) {
       val = v[i-7] + m_a;

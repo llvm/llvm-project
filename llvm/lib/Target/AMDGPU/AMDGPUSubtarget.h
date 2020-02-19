@@ -343,6 +343,7 @@ protected:
   bool HasDPP;
   bool HasDPP8;
   bool HasR128A16;
+  bool HasGFX10A16;
   bool HasNSAEncoding;
   bool HasDLInsts;
   bool HasDot1Insts;
@@ -505,6 +506,10 @@ public:
   // shift instructions (e.g. v_lshrrev_b32, and no v_lshr_b32).
   bool hasOnlyRevVALUShifts() const {
     return getGeneration() >= VOLCANIC_ISLANDS;
+  }
+
+  bool hasFractBug() const {
+    return getGeneration() == SOUTHERN_ISLANDS;
   }
 
   bool hasBFE() const {
@@ -987,6 +992,10 @@ public:
 
   bool hasR128A16() const {
     return HasR128A16;
+  }
+
+  bool hasGFX10A16() const {
+    return HasGFX10A16;
   }
 
   bool hasOffset3fBug() const {

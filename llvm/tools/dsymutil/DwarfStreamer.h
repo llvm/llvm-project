@@ -73,7 +73,7 @@ public:
                    unsigned DwarfVersion) override;
 
   /// Emit DIE containing warnings.
-  void emitPaperTrailWarningsDie(const Triple &Triple, DIE &Die) override;
+  void emitPaperTrailWarningsDie(DIE &Die) override;
 
   /// Emit contents of section SecName From Obj.
   void emitSectionContents(const object::ObjectFile &Obj,

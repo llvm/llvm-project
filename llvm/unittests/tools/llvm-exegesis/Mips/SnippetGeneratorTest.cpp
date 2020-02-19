@@ -40,7 +40,7 @@ protected:
     randomGenerator().seed(0); // Initialize seed.
     const Instruction &Instr = State.getIC().getInstr(Opcode);
     auto CodeTemplateOrError = Generator.generateCodeTemplates(
-        Instr, State.getRATC().emptyRegisters());
+        &Instr, State.getRATC().emptyRegisters());
     EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
     return std::move(CodeTemplateOrError.get());
   }
@@ -91,7 +91,8 @@ TEST_F(SerialSnippetGeneratorTest,
   const Instruction &Instr = State.getIC().getInstr(Mips::XOR);
   auto AllRegisters = State.getRATC().emptyRegisters();
   AllRegisters.flip();
-  auto Error = Generator.generateCodeTemplates(Instr, AllRegisters).takeError();
+  auto Error =
+      Generator.generateCodeTemplates(&Instr, AllRegisters).takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }

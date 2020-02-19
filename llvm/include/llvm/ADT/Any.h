@@ -59,26 +59,26 @@ public:
   // When T is Any or T is not copy-constructible we need to explicitly disable
   // the forwarding constructor so that the copy constructor gets selected
   // instead.
-  template <
-      typename T,
-      typename std::enable_if<
-          llvm::conjunction<
-              llvm::negation<std::is_same<typename std::decay<T>::type, Any>>,
-              // We also disable this overload when an `Any` object can be
-              // converted to the parameter type because in that case, this
-              // constructor may combine with that conversion during overload
-              // resolution for determining copy constructibility, and then
-              // when we try to determine copy constructibility below we may
-              // infinitely recurse. This is being evaluated by the standards
-              // committee as a potential DR in `std::any` as well, but we're
-              // going ahead and adopting it to work-around usage of `Any` with
-              // types that need to be implicitly convertible from an `Any`.
-              llvm::negation<std::is_convertible<Any, typename std::decay<T>::type>>,
-              std::is_copy_constructible<typename std::decay<T>::type>>::value,
-          int>::type = 0>
+  template <typename T,
+            std::enable_if_t<
+                llvm::conjunction<
+                    llvm::negation<std::is_same<std::decay_t<T>, Any>>,
+                    // We also disable this overload when an `Any` object can be
+                    // converted to the parameter type because in that case,
+                    // this constructor may combine with that conversion during
+                    // overload resolution for determining copy
+                    // constructibility, and then when we try to determine copy
+                    // constructibility below we may infinitely recurse. This is
+                    // being evaluated by the standards committee as a potential
+                    // DR in `std::any` as well, but we're going ahead and
+                    // adopting it to work-around usage of `Any` with types that
+                    // need to be implicitly convertible from an `Any`.
+                    llvm::negation<std::is_convertible<Any, std::decay_t<T>>>,
+                    std::is_copy_constructible<std::decay_t<T>>>::value,
+                int> = 0>
   Any(T &&Value) {
-    using U = typename std::decay<T>::type;
-    Storage = std::make_unique<StorageImpl<U>>(std::forward<T>(Value));
+    Storage =
+        std::make_unique<StorageImpl<std::decay_t<T>>>(std::forward<T>(Value));
   }
 
   Any(Any &&Other) : Storage(std::move(Other.Storage)) {}
@@ -114,32 +114,27 @@ template <typename T> const char Any::TypeId<T>::Id = 0;
 template <typename T> bool any_isa(const Any &Value) {
   if (!Value.Storage)
     return false;
-  using U =
-      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-  return Value.Storage->id() == &Any::TypeId<U>::Id;
+  return Value.Storage->id() ==
+         &Any::TypeId<std::remove_cv_t<std::remove_reference_t<T>>>::Id;
 }
 
 template <class T> T any_cast(const Any &Value) {
-  using U =
-      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-  return static_cast<T>(*any_cast<U>(&Value));
+  return static_cast<T>(
+      *any_cast<std::remove_cv_t<std::remove_reference_t<T>>>(&Value));
 }
 
 template <class T> T any_cast(Any &Value) {
-  using U =
-      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-  return static_cast<T>(*any_cast<U>(&Value));
+  return static_cast<T>(
+      *any_cast<std::remove_cv_t<std::remove_reference_t<T>>>(&Value));
 }
 
 template <class T> T any_cast(Any &&Value) {
-  using U =
-      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-  return static_cast<T>(std::move(*any_cast<U>(&Value)));
+  return static_cast<T>(std::move(
+      *any_cast<std::remove_cv_t<std::remove_reference_t<T>>>(&Value)));
 }
 
 template <class T> const T *any_cast(const Any *Value) {
-  using U =
-      typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+  using U = std::remove_cv_t<std::remove_reference_t<T>>;
   assert(Value && any_isa<T>(*Value) && "Bad any cast!");
   if (!Value || !any_isa<U>(*Value))
     return nullptr;
@@ -147,7 +142,7 @@ template <class T> const T *any_cast(const Any *Value) {
 }
 
 template <class T> T *any_cast(Any *Value) {
-  using U = typename std::decay<T>::type;
+  using U = std::decay_t<T>;
   assert(Value && any_isa<U>(*Value) && "Bad any cast!");
   if (!Value || !any_isa<U>(*Value))
     return nullptr;

@@ -42,8 +42,7 @@ std::string truncateQuotedNameBack(StringRef Label, StringRef Name,
     return Ret;
 
 template <typename T> std::string formatUnknownEnum(T Value) {
-  return formatv("unknown ({0})",
-                 static_cast<typename std::underlying_type<T>::type>(Value))
+  return formatv("unknown ({0})", static_cast<std::underlying_type_t<T>>(Value))
       .str();
 }
 

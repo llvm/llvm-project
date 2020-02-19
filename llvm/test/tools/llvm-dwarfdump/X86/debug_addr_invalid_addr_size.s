@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: unsupported address size 3
+# ERR: unsupported address size 3 (4 and 8 are supported)
 # ERR-NOT: {{.}}
 
 # invalid addr size

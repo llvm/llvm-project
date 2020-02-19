@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LineTable_h_
-#define liblldb_LineTable_h_
+#ifndef LLDB_SYMBOL_LINETABLE_H
+#define LLDB_SYMBOL_LINETABLE_H
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/Section.h"
@@ -183,7 +183,7 @@ public:
   ///     The number of line table entries in this line table.
   uint32_t GetSize() const;
 
-  typedef lldb_private::RangeArray<lldb::addr_t, lldb::addr_t, 32>
+  typedef lldb_private::RangeVector<lldb::addr_t, lldb::addr_t, 32>
       FileAddressRanges;
 
   /// Gets all contiguous file address ranges for the entire line table.
@@ -342,4 +342,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_LineTable_h_
+#endif // LLDB_SYMBOL_LINETABLE_H

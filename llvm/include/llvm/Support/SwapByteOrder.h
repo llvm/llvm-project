@@ -143,10 +143,9 @@ inline double getSwappedBytes(double C) {
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_enum<T>::value, T>::type
-getSwappedBytes(T C) {
+inline std::enable_if_t<std::is_enum<T>::value, T> getSwappedBytes(T C) {
   return static_cast<T>(
-      getSwappedBytes(static_cast<typename std::underlying_type<T>::type>(C)));
+      getSwappedBytes(static_cast<std::underlying_type_t<T>>(C)));
 }
 
 template<typename T>

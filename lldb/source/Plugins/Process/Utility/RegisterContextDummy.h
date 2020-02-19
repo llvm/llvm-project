@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterContextDummy_h_
-#define lldb_RegisterContextDummy_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDUMMY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDUMMY_H
 
 #include <vector>
 
@@ -61,4 +61,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_RegisterContextDummy_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDUMMY_H

@@ -6,7 +6,7 @@
 // RUN: ld.lld %t2.o %t.a --shared --exclude-libs ALL -o %t.so
 // RUN: llvm-readobj --symbols %t.so | FileCheck %s
 // RUN: llvm-readobj --dyn-syms %t.so | FileCheck -check-prefix CHECK-DYN %s
-// RUN: not ld.lld %t2.o %t.a --shared -o %t.so 2>&1 | FileCheck -check-prefix=CHECK-ERR %s
+// RUN: not ld.lld %t2.o %t.a --shared -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-ERR %s
 
 // Test that we do not give an error message for undefined versions when the
 // symbol is not exported to the dynamic symbol table.

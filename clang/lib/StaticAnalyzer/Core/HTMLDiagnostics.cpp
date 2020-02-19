@@ -607,10 +607,17 @@ window.addEventListener("keydown", function (event) {
 )<<<";
 }
 
+static bool shouldDisplayPopUpRange(const SourceRange &Range) {
+  return !(Range.getBegin().isMacroID() || Range.getEnd().isMacroID());
+}
+
 static void
 HandlePopUpPieceStartTag(Rewriter &R,
                          const std::vector<SourceRange> &PopUpRanges) {
   for (const auto &Range : PopUpRanges) {
+    if (!shouldDisplayPopUpRange(Range))
+      continue;
+
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "",
                          "<table class='variable_popup'><tbody>",
                          /*IsTokenRange=*/true);
@@ -626,6 +633,8 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
   llvm::raw_svector_ostream Out(Buf);
 
   SourceRange Range(Piece.getLocation().asRange());
+  if (!shouldDisplayPopUpRange(Range))
+    return;
 
   // Write out the path indices with a right arrow and the message as a row.
   Out << "<tr><td valign='top'><div class='PathIndex PathIndexPopUp'>"
@@ -870,7 +879,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
          << (num - 1)
          << "\" title=\"Previous event ("
          << (num - 1)
-         << ")\">&#x2190;</a></div></td>";
+         << ")\">&#x2190;</a></div>";
     }
 
     os << "</td><td>";

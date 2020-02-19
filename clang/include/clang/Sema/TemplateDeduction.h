@@ -67,6 +67,13 @@ public:
   TemplateDeductionInfo(const TemplateDeductionInfo &) = delete;
   TemplateDeductionInfo &operator=(const TemplateDeductionInfo &) = delete;
 
+  enum ForBaseTag { ForBase };
+  /// Create temporary template deduction info for speculatively deducing
+  /// against a base class of an argument's type.
+  TemplateDeductionInfo(ForBaseTag, const TemplateDeductionInfo &Info)
+      : Deduced(Info.Deduced), Loc(Info.Loc), DeducedDepth(Info.DeducedDepth),
+        ExplicitArgs(Info.ExplicitArgs) {}
+
   /// Returns the location at which template argument is
   /// occurring.
   SourceLocation getLocation() const {

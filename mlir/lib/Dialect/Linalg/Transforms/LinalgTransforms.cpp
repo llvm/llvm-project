@@ -14,9 +14,8 @@
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
-#include "mlir/EDSC/Helpers.h"
-#include "mlir/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -191,8 +190,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
 
 SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
                                                       Operation *op) {
-  using edsc::intrinsics::std_load;
-  using edsc::intrinsics::std_store;
   using vector_contract = edsc::intrinsics::ValueBuilder<vector::ContractionOp>;
   using vector_broadcast = edsc::intrinsics::ValueBuilder<vector::BroadcastOp>;
   using vector_type_cast = edsc::intrinsics::ValueBuilder<vector::TypeCastOp>;

@@ -158,7 +158,7 @@ private:
   bool maybeParseSectionType(StringRef &TypeName);
   bool parseMergeSize(int64_t &Size);
   bool parseGroup(StringRef &GroupName);
-  bool parseMetadataSym(MCSymbolELF *&Associated);
+  bool parseLinkedToSym(MCSymbolELF *&LinkedToSym);
   bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
@@ -184,7 +184,7 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-      getStreamer().EmitSymbolAttribute(Sym, Attr);
+      getStreamer().emitSymbolAttribute(Sym, Attr);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -443,17 +443,18 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName) {
   return false;
 }
 
-bool ELFAsmParser::parseMetadataSym(MCSymbolELF *&Associated) {
+bool ELFAsmParser::parseLinkedToSym(MCSymbolELF *&LinkedToSym) {
   MCAsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
-    return TokError("expected metadata symbol");
+    return TokError("expected linked-to symbol");
   Lex();
   StringRef Name;
+  SMLoc StartLoc = L.getLoc();
   if (getParser().parseIdentifier(Name))
-    return TokError("invalid metadata symbol");
-  Associated = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
-  if (!Associated || !Associated->isInSection())
-    return TokError("symbol is not in a section: " + Name);
+    return TokError("invalid linked-to symbol");
+  LinkedToSym = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
+  if (!LinkedToSym || !LinkedToSym->isInSection())
+    return Error(StartLoc, "linked-to symbol is not in a section: " + Name);
   return false;
 }
 
@@ -495,7 +496,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   unsigned Flags = 0;
   const MCExpr *Subsection = nullptr;
   bool UseLastGroup = false;
-  MCSymbolELF *Associated = nullptr;
+  MCSymbolELF *LinkedToSym = nullptr;
   int64_t UniqueID = ~0;
 
   // Set the defaults first.
@@ -568,7 +569,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
       if (parseGroup(GroupName))
         return true;
     if (Flags & ELF::SHF_LINK_ORDER)
-      if (parseMetadataSym(Associated))
+      if (parseLinkedToSym(LinkedToSym))
         return true;
     if (maybeParseUniqueID(UniqueID))
       return true;
@@ -633,9 +634,8 @@ EndStmt:
       }
   }
 
-  MCSection *ELFSection =
-      getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
-                                 UniqueID, Associated);
+  MCSection *ELFSection = getContext().getELFSection(
+      SectionName, Type, Flags, Size, GroupName, UniqueID, LinkedToSym);
   getStreamer().SwitchSection(ELFSection, Subsection);
 
   if (getContext().getGenDwarfForAssembly()) {
@@ -646,7 +646,7 @@ EndStmt:
 
       if (!ELFSection->getBeginSymbol()) {
         MCSymbol *SectionStartSymbol = getContext().createTempSymbol();
-        getStreamer().EmitLabel(SectionStartSymbol);
+        getStreamer().emitLabel(SectionStartSymbol);
         ELFSection->setBeginSymbol(SectionStartSymbol);
       }
     }
@@ -729,7 +729,7 @@ bool ELFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
     return TokError("unexpected token in '.type' directive");
   Lex();
 
-  getStreamer().EmitSymbolAttribute(Sym, Attr);
+  getStreamer().emitSymbolAttribute(Sym, Attr);
 
   return false;
 }
@@ -748,7 +748,7 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
     return TokError("unexpected token in '.ident' directive");
   Lex();
 
-  getStreamer().EmitIdent(Data);
+  getStreamer().emitIdent(Data);
   return false;
 }
 
@@ -797,12 +797,12 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
 
   getStreamer().PushSection();
   getStreamer().SwitchSection(Note);
-  getStreamer().EmitIntValue(Data.size()+1, 4); // namesz.
-  getStreamer().EmitIntValue(0, 4);             // descsz = 0 (no description).
-  getStreamer().EmitIntValue(1, 4);             // type = NT_VERSION.
-  getStreamer().EmitBytes(Data);                // name.
-  getStreamer().EmitIntValue(0, 1);             // terminate the string.
-  getStreamer().EmitValueToAlignment(4);        // ensure 4 byte alignment.
+  getStreamer().emitIntValue(Data.size()+1, 4); // namesz.
+  getStreamer().emitIntValue(0, 4);             // descsz = 0 (no description).
+  getStreamer().emitIntValue(1, 4);             // type = NT_VERSION.
+  getStreamer().emitBytes(Data);                // name.
+  getStreamer().emitIntValue(0, 1);             // terminate the string.
+  getStreamer().emitValueToAlignment(4);        // ensure 4 byte alignment.
   getStreamer().PopSection();
   return false;
 }
@@ -829,7 +829,7 @@ bool ELFAsmParser::ParseDirectiveWeakref(StringRef, SMLoc) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-  getStreamer().EmitWeakReference(Alias, Sym);
+  getStreamer().emitWeakReference(Alias, Sym);
   return false;
 }
 

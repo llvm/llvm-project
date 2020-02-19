@@ -26,6 +26,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(AddCompilerRT)
 endif()
 
+if (COMPILER_RT_STANDALONE_BUILD)
+  # When compiler-rt is being built standalone, possibly as a cross-compilation
+  # target, the target may or may not want position independent code. This
+  # option provides an avenue through which the flag may be controlled when an
+  # LLVM configuration is not being utilized.
+  option(COMPILER_RT_BUILTINS_ENABLE_PIC
+    "Turns on or off -fPIC for the builtin library source"
+    ON)
+endif()
+
 include(builtin-config-ix)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
@@ -576,7 +586,9 @@ else ()
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.
   if(COMPILER_RT_STANDALONE_BUILD)
-    append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC BUILTIN_CFLAGS)
+    if(COMPILER_RT_BUILTINS_ENABLE_PIC)
+      append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC BUILTIN_CFLAGS)
+    endif()
     append_list_if(COMPILER_RT_HAS_FNO_BUILTIN_FLAG -fno-builtin BUILTIN_CFLAGS)
     if(NOT ANDROID)
       append_list_if(COMPILER_RT_HAS_VISIBILITY_HIDDEN_FLAG -fvisibility=hidden BUILTIN_CFLAGS)

@@ -73,9 +73,9 @@ body:             |
     ; CHECK:   renamable $q6 = MVE_VLDRBU32 killed renamable $r4, 0, 1, internal renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $r4 = t2ADDrr renamable $r11, renamable $r10, 14, $noreg, $noreg
-    ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q7, implicit-def $d14, implicit-def $s28, implicit-def $s29, implicit-def $d15, implicit-def $s30, implicit-def $s31, implicit $q1, implicit $q5, implicit killed $r4 {
-    ; CHECK:   MVE_VPTv4u32 8, renamable $q1, renamable $q5, 2, implicit-def $vpr
-    ; CHECK:   renamable $q7 = MVE_VLDRBU32 killed renamable $r4, 0, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $q7, implicit-def $d14, implicit-def $s28, implicit-def $s29, implicit-def $d15, implicit-def $s30, implicit-def $s31, implicit killed $vpr, implicit killed $r4 {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $q7 = MVE_VLDRBU32 killed renamable $r4, 0, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: t2LoopEnd renamable $lr, %bb.0, implicit-def dead $cpsr
     ; CHECK: t2B %bb.0, 14, $noreg

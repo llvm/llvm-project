@@ -50,6 +50,8 @@ def COS_cm : COS_Common<0x8E>;
 
 def : RsqPat<RECIPSQRT_IEEE_cm, f32>;
 
+def : SqrtPat<RECIPSQRT_IEEE_cm, RECIP_IEEE_cm>;
+
 def : POW_Common <LOG_IEEE_cm, EXP_IEEE_cm, MUL>;
 
 defm DIV_cm : DIV_Common<RECIP_IEEE_cm>;
@@ -69,8 +71,6 @@ def CF_END_CM : CF_CLAUSE_EG<32, (ins), "CF_END"> {
   }
 
 
-
-def : R600Pat<(fsqrt f32:$src), (MUL R600_Reg32:$src, (RECIPSQRT_CLAMPED_cm $src))>;
 
 class RAT_STORE_DWORD <RegisterClass rc, ValueType vt, bits<4> mask> :
   CF_MEM_RAT_CACHELESS <0x14, 0, mask,

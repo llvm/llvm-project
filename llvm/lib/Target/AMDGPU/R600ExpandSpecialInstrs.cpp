@@ -219,13 +219,13 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
           }
         }
         if (IsReduction) {
-          unsigned SubRegIndex = AMDGPURegisterInfo::getSubRegFromChannel(Chan);
+          unsigned SubRegIndex = R600RegisterInfo::getSubRegFromChannel(Chan);
           Src0 = TRI.getSubReg(Src0, SubRegIndex);
           Src1 = TRI.getSubReg(Src1, SubRegIndex);
         } else if (IsCube) {
           static const int CubeSrcSwz[] = {2, 2, 0, 1};
-          unsigned SubRegIndex0 = AMDGPURegisterInfo::getSubRegFromChannel(CubeSrcSwz[Chan]);
-          unsigned SubRegIndex1 = AMDGPURegisterInfo::getSubRegFromChannel(CubeSrcSwz[3 - Chan]);
+          unsigned SubRegIndex0 = R600RegisterInfo::getSubRegFromChannel(CubeSrcSwz[Chan]);
+          unsigned SubRegIndex1 = R600RegisterInfo::getSubRegFromChannel(CubeSrcSwz[3 - Chan]);
           Src1 = TRI.getSubReg(Src0, SubRegIndex1);
           Src0 = TRI.getSubReg(Src0, SubRegIndex0);
         }
@@ -234,7 +234,7 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         bool Mask = false;
         bool NotLast = true;
         if (IsCube) {
-          unsigned SubRegIndex = AMDGPURegisterInfo::getSubRegFromChannel(Chan);
+          unsigned SubRegIndex = R600RegisterInfo::getSubRegFromChannel(Chan);
           DstReg = TRI.getSubReg(DstReg, SubRegIndex);
         } else {
           // Mask the write if the original instruction does not write to

@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
 #ifdef OMP5
-#pragma omp taskloop simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a, e) nontemporal(argc, c, d)
+#pragma omp taskloop simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a, e) nontemporal(argc, c, d) order(concurrent)
 #else
 #pragma omp taskloop simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a, e)
 #endif // OMP5
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < 10; ++j)
       foo();
   // CHECK-NEXT: #pragma omp parallel
-  // OMP50-NEXT: #pragma omp taskloop simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a,e) nontemporal(argc,c,d)
+  // OMP50-NEXT: #pragma omp taskloop simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a,e) nontemporal(argc,c,d) order(concurrent)
   // OMP45-NEXT: #pragma omp taskloop simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(argc) mergeable priority(argc) simdlen(16) grainsize(argc) reduction(max: a,e)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)

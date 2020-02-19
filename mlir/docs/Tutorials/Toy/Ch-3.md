@@ -22,7 +22,7 @@ rule-based pattern-match and rewrite using table-driven
 use of DRR requires that the operations be defined using ODS, as described in
 [Chapter 2](Ch-2.md).
 
-# Optimize Transpose using C++ style pattern-match and rewrite
+## Optimize Transpose using C++ style pattern-match and rewrite
 
 Let's start with a simple pattern and try to eliminate a sequence of two
 transpose that cancel out: `transpose(transpose(X)) -> X`. Here is the
@@ -163,7 +163,7 @@ Perfect! No `transpose` operation is left - the code is optimal.
 In the next section, we use DRR for pattern match optimizations associated with
 the Reshape op.
 
-# Optimize Reshapes using DRR
+## Optimize Reshapes using DRR
 
 Declarative, rule-based pattern-match and rewrite (DRR) is an operation
 DAG-based declarative rewriter that provides a table-based syntax for

@@ -1,4 +1,6 @@
-; REQUIRES: object-emission
+; xfail this test on hexagon because at O2, instructions are bundled in packets
+; and DW_OP_lit13 is correctly omitted.
+; XFAIL: hexagon
 
 ; RUN: %llc_dwarf -O2  -dwarf-version 2 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23
 ; RUN: %llc_dwarf -O2  -dwarf-version 3 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23

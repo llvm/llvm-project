@@ -31,7 +31,7 @@
 # CHECK-NEXT: ]
 
 # RUN: echo "bar = und; VERSION { V { global: foo; bar; local: *; }; }" > %t.script
-# RUN: not ld.lld -T %t.script -shared --no-undefined-version %t.o -o %t.so \
+# RUN: not ld.lld -T %t.script -shared --no-undefined-version %t.o -o /dev/null \
 # RUN:   2>&1 | FileCheck --check-prefix=ERR %s
 # ERR: symbol not found: und
 

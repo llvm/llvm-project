@@ -652,6 +652,12 @@ struct DidChangeTextDocumentParams {
   /// either they will be provided for this version or some subsequent one.
   /// This is a clangd extension.
   llvm::Optional<bool> wantDiagnostics;
+
+  /// Force a complete rebuild of the file, ignoring all cached state. Slow!
+  /// This is useful to defeat clangd's assumption that missing headers will
+  /// stay missing.
+  /// This is a clangd extension.
+  bool forceRebuild = false;
 };
 bool fromJSON(const llvm::json::Value &, DidChangeTextDocumentParams &);
 
@@ -1088,6 +1094,15 @@ struct CompletionItem {
   /// Indicates if this item is deprecated.
   bool deprecated = false;
 
+  /// This is Clangd extension.
+  /// The score that Clangd calculates to rank completion items. This score can
+  /// be used to adjust the ranking on the client side.
+  /// NOTE: This excludes fuzzy matching score which is typically calculated on
+  /// the client side.
+  float score = 0.f;
+
+  // TODO: Add custom commitCharacters for some of the completion items. For
+  // example, it makes sense to use () only for the functions.
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //

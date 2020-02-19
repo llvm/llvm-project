@@ -1,6 +1,5 @@
-; Test that alloca merging in the inliner places dbg.declare calls immediately
-; after the merged alloca. Not at the end of the entry BB, and definitely not
-; before the alloca.
+; Test that alloca merging in the inliner places dbg.declare calls after the
+; merged alloca, but does not otherwise reorder them.
 ;
 ; clang -g -S -emit-llvm -Xclang -disable-llvm-optzns
 ;
@@ -20,13 +19,20 @@
 ;}
 ;
 ; RUN: opt -always-inline -S < %s | FileCheck %s
+
+; FIXME: Why does the dbg.declare for "aaa" occur later in @h than the
+; dbg.declare for "bbb"? I'd expect the opposite, given @f is inlined earlier.
 ;
 ; CHECK:      define void @h()
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %[[AI:.*]] = alloca [100 x i8]
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [100 x i8]* %[[AI]],
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [100 x i8]* %[[AI]],
+; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [100 x i8]* %[[AI]], metadata [[BBB:![0-9]+]]
+; CHECK-NEXT:   bitcast
+; CHECK-NEXT:   llvm.lifetime.start
+; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [100 x i8]* %[[AI]], metadata [[AAA:![0-9]+]]
 
+; CHECK: [[AAA]] = !DILocalVariable(name: "aaa"
+; CHECK: [[BBB]] = !DILocalVariable(name: "bbb"
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: .debug_addr table at offset 0x0 has unsupported segment selector size 1
+# ERR: address table at offset 0x0 has unsupported segment selector size 1
 # ERR-NOT: {{.}}
 
 # non-zero segment_selector_size

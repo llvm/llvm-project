@@ -82,6 +82,9 @@ foreach i = {1-31} in
         SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
                          "true", "Reserve X"#i>;
 
+def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
+                                          "true", "Enable save/restore.">;
+
 //===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//

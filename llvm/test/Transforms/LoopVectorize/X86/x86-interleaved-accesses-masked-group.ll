@@ -484,7 +484,7 @@ for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 [[INDEX]], i32 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = or <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = shl nuw nsw i32 [[INDEX]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP0]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i32> [[INDUCTION]], [[BROADCAST_SPLAT2]]
@@ -766,7 +766,7 @@ for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 [[INDEX]], i32 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = or <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = shl nuw nsw i32 [[INDEX]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP0]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i32> {{.*}}, {{.*}}

@@ -316,8 +316,9 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       dumpRanges(Obj, OS, RangesOrError.get(), U->getAddressByteSize(),
                  sizeof(BaseIndent) + Indent + 4, DumpOpts);
     else
-      WithColor::error() << "decoding address ranges: "
-                         << toString(RangesOrError.takeError()) << '\n';
+      DumpOpts.RecoverableErrorHandler(createStringError(
+          errc::invalid_argument, "decoding address ranges: %s",
+          toString(RangesOrError.takeError()).c_str()));
   }
 
   OS << ")\n";

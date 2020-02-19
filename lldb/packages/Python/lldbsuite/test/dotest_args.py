@@ -172,6 +172,11 @@ def create_parser():
         dest='clang_module_cache_dir',
         metavar='The clang module cache directory used by Clang',
         help='The clang module cache directory used in the Make files by Clang while building tests. Defaults to <test build directory>/module-cache-clang.')
+    group.add_argument(
+        '--lldb-libs-dir',
+        dest='lldb_libs_dir',
+        metavar='path',
+        help='The path to LLDB library directory (containing liblldb)')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')

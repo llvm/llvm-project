@@ -8,8 +8,7 @@ func @main() {
   %sx = dim %dst, 0 : memref<?xf32>
   call @mcuMemHostRegisterMemRef1dFloat(%dst) : (memref<?xf32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
-             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one)
-             args(%kernel_dst = %dst) : memref<?xf32> {
+             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one) {
     %val = index_cast %tx : index to i32
     %xor = "gpu.all_reduce"(%val) ({
     ^bb(%lhs : i32, %rhs : i32):
@@ -17,7 +16,7 @@ func @main() {
       "gpu.yield"(%xor) : (i32) -> ()
     }) : (i32) -> (i32)
     %res = sitofp %xor : i32 to f32
-    store %res, %kernel_dst[%tx] : memref<?xf32>
+    store %res, %dst[%tx] : memref<?xf32>
     gpu.terminator
   }
   %U = memref_cast %dst : memref<?xf32> to memref<*xf32>

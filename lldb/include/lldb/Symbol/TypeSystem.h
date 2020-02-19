@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeSystem_h_
-#define liblldb_TypeSystem_h_
+#ifndef LLDB_SYMBOL_TYPESYSTEM_H
+#define LLDB_SYMBOL_TYPESYSTEM_H
 
 #include <functional>
 #include <map>
@@ -198,6 +198,8 @@ public:
   // Accessors
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -509,4 +511,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeSystem_h_
+#endif // LLDB_SYMBOL_TYPESYSTEM_H

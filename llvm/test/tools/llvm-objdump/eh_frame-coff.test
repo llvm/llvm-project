@@ -2,7 +2,7 @@
 
 # CHECK: .eh_frame contents:
 
-# CHECK: 00000000 0000001c ffffffff CIE
+# CHECK: 00000000 0000001c 00000000 CIE
 # CHECK:   Version:               1
 # CHECK:   Augmentation:          "zPLR"
 # CHECK:   Code alignment factor: 1

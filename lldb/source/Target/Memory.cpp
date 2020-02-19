@@ -116,7 +116,7 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
       const InvalidRanges::Entry *entry = m_invalid_ranges.GetEntryAtIndex(idx);
       if (entry->GetRangeBase() == base_addr &&
           entry->GetByteSize() == byte_size)
-        return m_invalid_ranges.RemoveEntrtAtIndex(idx);
+        return m_invalid_ranges.RemoveEntryAtIndex(idx);
     }
   }
   return false;

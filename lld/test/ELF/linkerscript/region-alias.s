@@ -28,20 +28,20 @@
 
 ## Redefinition of region.
 # RUN: echo "REGION_ALIAS (\"ROM\", ROM);" > %t.script.inc
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR1
 # ERR1: {{.*}}script.inc:1: redefinition of memory region 'ROM'
 
 ## Redefinition of alias.
 # RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", ROM);" > %t.script.inc
 # RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", ROM);" >> %t.script.inc
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR2
 # ERR2: {{.*}}script.inc:2: redefinition of memory region 'ALIAS_TEXT'
 
 ## Attemp to create an alias for undefined region.
 # RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", FOO);" > %t.script.inc
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR3
 # ERR3: {{.*}}script.inc:1: memory region 'FOO' is not defined
 

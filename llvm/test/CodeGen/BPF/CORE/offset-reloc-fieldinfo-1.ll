@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK64 %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK32 %s
 ; Source code:
 ;   struct s {
 ;     int a;
@@ -74,8 +74,10 @@ entry:
 ; CHECK:             r{{[0-9]+}} = 4
 ; CHECK:             r{{[0-9]+}} = 4
 ; CHECK:             r{{[0-9]+}} <<= 51
-; CHECK:             r{{[0-9]+}} s>>= 60
-; CHECK:             r{{[0-9]+}} >>= 60
+; CHECK64:           r{{[0-9]+}} s>>= 60
+; CHECK64:           r{{[0-9]+}} >>= 60
+; CHECK32:           r{{[0-9]+}} >>= 60
+; CHECK32:           r{{[0-9]+}} s>>= 60
 ; CHECK:             r{{[0-9]+}} = 1
 
 ; CHECK:             .byte   115                     # string offset=1

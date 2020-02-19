@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
@@ -180,10 +181,68 @@ public:
   }
 };
 
+// Various sets of ARM instruction mnemonics which are used by the asm parser
+class ARMMnemonicSets {
+  StringSet<> CDE;
+  StringSet<> CDEWithVPTSuffix;
+public:
+  ARMMnemonicSets(const MCSubtargetInfo &STI);
+
+  /// Returns true iff a given mnemonic is a CDE instruction
+  bool isCDEInstr(StringRef Mnemonic) {
+    // Quick check before searching the set
+    if (!Mnemonic.startswith("cx") && !Mnemonic.startswith("vcx"))
+      return false;
+    return CDE.count(Mnemonic);
+  }
+
+  /// Returns true iff a given mnemonic is a VPT-predicable CDE instruction
+  /// (possibly with a predication suffix "e" or "t")
+  bool isVPTPredicableCDEInstr(StringRef Mnemonic) {
+    if (!Mnemonic.startswith("vcx"))
+      return false;
+    return CDEWithVPTSuffix.count(Mnemonic);
+  }
+
+  /// Returns true iff a given mnemonic is an IT-predicable CDE instruction
+  /// (possibly with a condition suffix)
+  bool isITPredicableCDEInstr(StringRef Mnemonic) {
+    if (!Mnemonic.startswith("cx"))
+      return false;
+    return Mnemonic.startswith("cx1a") || Mnemonic.startswith("cx1da") ||
+           Mnemonic.startswith("cx2a") || Mnemonic.startswith("cx2da") ||
+           Mnemonic.startswith("cx3a") || Mnemonic.startswith("cx3da");
+  }
+
+  /// Return true iff a given mnemonic is an integer CDE instruction with
+  /// dual-register destination
+  bool isCDEDualRegInstr(StringRef Mnemonic) {
+    if (!Mnemonic.startswith("cx"))
+      return false;
+    return Mnemonic == "cx1d" || Mnemonic == "cx1da" ||
+           Mnemonic == "cx2d" || Mnemonic == "cx2da" ||
+           Mnemonic == "cx3d" || Mnemonic == "cx3da";
+  }
+};
+
+ARMMnemonicSets::ARMMnemonicSets(const MCSubtargetInfo &STI) {
+  for (StringRef Mnemonic: { "cx1", "cx1a", "cx1d", "cx1da",
+                             "cx2", "cx2a", "cx2d", "cx2da",
+                             "cx3", "cx3a", "cx3d", "cx3da", })
+    CDE.insert(Mnemonic);
+  for (StringRef Mnemonic :
+       {"vcx1", "vcx1a", "vcx2", "vcx2a", "vcx3", "vcx3a"}) {
+    CDE.insert(Mnemonic);
+    CDEWithVPTSuffix.insert(Mnemonic);
+    CDEWithVPTSuffix.insert(std::string(Mnemonic) + "t");
+    CDEWithVPTSuffix.insert(std::string(Mnemonic) + "e");
+  }
+}
 
 class ARMAsmParser : public MCTargetAsmParser {
   const MCRegisterInfo *MRI;
   UnwindContext UC;
+  ARMMnemonicSets MS;
 
   ARMTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
@@ -245,12 +304,12 @@ class ARMAsmParser : public MCTargetAsmParser {
     ITInst.setOpcode(ARM::t2IT);
     ITInst.addOperand(MCOperand::createImm(ITState.Cond));
     ITInst.addOperand(MCOperand::createImm(ITState.Mask));
-    Out.EmitInstruction(ITInst, getSTI());
+    Out.emitInstruction(ITInst, getSTI());
 
     // Emit the conditonal instructions
     assert(PendingConditionalInsts.size() <= 4);
     for (const MCInst &Inst : PendingConditionalInsts) {
-      Out.EmitInstruction(Inst, getSTI());
+      Out.emitInstruction(Inst, getSTI());
     }
     PendingConditionalInsts.clear();
 
@@ -444,6 +503,8 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   void tryConvertingToTwoOperandForm(StringRef Mnemonic, bool CarrySetting,
                                      OperandVector &Operands);
+  bool CDEConvertDualRegOperand(StringRef Mnemonic, OperandVector &Operands);
+
   bool isThumb() const {
     // FIXME: Can tablegen auto-generate this?
     return getSTI().getFeatureBits()[ARM::ModeThumb];
@@ -500,6 +561,9 @@ class ARMAsmParser : public MCTargetAsmParser {
   }
   bool hasMVEFloat() const {
     return getSTI().getFeatureBits()[ARM::HasMVEFloatOps];
+  }
+  bool hasCDE() const {
+    return getSTI().getFeatureBits()[ARM::HasCDEOps];
   }
   bool has8MSecExt() const {
     return getSTI().getFeatureBits()[ARM::Feature8MSecExt];
@@ -605,7 +669,7 @@ public:
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII), UC(Parser) {
+    : MCTargetAsmParser(Options, STI, MII), UC(Parser), MS(STI) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -628,6 +692,8 @@ public:
 
   // Implementation of the MCTargetAsmParser interface:
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -3885,6 +3951,14 @@ bool ARMAsmParser::ParseRegister(unsigned &RegNo,
   return (RegNo == (unsigned)-1);
 }
 
+OperandMatchResultTy ARMAsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
+  if (ParseRegister(RegNo, StartLoc, EndLoc))
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
+}
+
 /// Try to parse a register name.  The token must be an Identifier when called,
 /// and if it is a register name the token is eaten and the register number is
 /// returned.  Otherwise return -1.
@@ -6381,6 +6455,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
       Mnemonic == "cset" || Mnemonic == "csetm" ||
       Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
+      (hasCDE() && MS.isCDEInstr(Mnemonic) &&
+       !MS.isITPredicableCDEInstr(Mnemonic)) ||
       (hasMVE() &&
        (Mnemonic.startswith("vst2") || Mnemonic.startswith("vld2") ||
         Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4") ||
@@ -6770,6 +6846,69 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
       ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(), Op2.getEndLoc()));
 }
 
+// Dual-register instruction have the following syntax:
+// <mnemonic> <predicate>? <coproc>, <Rdest>, <Rdest+1>, <Rsrc>, ..., #imm
+// This function tries to remove <Rdest+1> and replace <Rdest> with a pair
+// operand. If the conversion fails an error is diagnosed, and the function
+// returns true.
+bool ARMAsmParser::CDEConvertDualRegOperand(StringRef Mnemonic,
+                                            OperandVector &Operands) {
+  assert(MS.isCDEDualRegInstr(Mnemonic));
+  bool isPredicable =
+      Mnemonic == "cx1da" || Mnemonic == "cx2da" || Mnemonic == "cx3da";
+  size_t NumPredOps = isPredicable ? 1 : 0;
+
+  if (Operands.size() <= 3 + NumPredOps)
+    return false;
+
+  StringRef Op2Diag(
+      "operand must be an even-numbered register in the range [r0, r10]");
+
+  const MCParsedAsmOperand &Op2 = *Operands[2 + NumPredOps];
+  if (!Op2.isReg())
+    return Error(Op2.getStartLoc(), Op2Diag);
+
+  unsigned RNext;
+  unsigned RPair;
+  switch (Op2.getReg()) {
+  default:
+    return Error(Op2.getStartLoc(), Op2Diag);
+  case ARM::R0:
+    RNext = ARM::R1;
+    RPair = ARM::R0_R1;
+    break;
+  case ARM::R2:
+    RNext = ARM::R3;
+    RPair = ARM::R2_R3;
+    break;
+  case ARM::R4:
+    RNext = ARM::R5;
+    RPair = ARM::R4_R5;
+    break;
+  case ARM::R6:
+    RNext = ARM::R7;
+    RPair = ARM::R6_R7;
+    break;
+  case ARM::R8:
+    RNext = ARM::R9;
+    RPair = ARM::R8_R9;
+    break;
+  case ARM::R10:
+    RNext = ARM::R11;
+    RPair = ARM::R10_R11;
+    break;
+  }
+
+  const MCParsedAsmOperand &Op3 = *Operands[3 + NumPredOps];
+  if (!Op3.isReg() || Op3.getReg() != RNext)
+    return Error(Op3.getStartLoc(), "operand must be a consecutive register");
+
+  Operands.erase(Operands.begin() + 3 + NumPredOps);
+  Operands[2 + NumPredOps] =
+      ARMOperand::CreateReg(RPair, Op2.getStartLoc(), Op2.getEndLoc());
+  return false;
+}
+
 /// Parse an arm instruction mnemonic followed by its operands.
 bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
@@ -6786,7 +6925,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // First check for the ARM-specific .req directive.
   if (Parser.getTok().is(AsmToken::Identifier) &&
-      Parser.getTok().getIdentifier() == ".req") {
+      Parser.getTok().getIdentifier().lower() == ".req") {
     parseDirectiveReq(Name, NameLoc);
     // We always return 'error' for this, as we're done with this
     // statement and don't need to match the 'instruction."
@@ -6968,6 +7107,21 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     return true;
 
   tryConvertingToTwoOperandForm(Mnemonic, CarrySetting, Operands);
+
+  if (hasCDE() && MS.isCDEInstr(Mnemonic)) {
+    // Dual-register instructions use even-odd register pairs as their
+    // destination operand, in assembly such pair is spelled as two
+    // consecutive registers, without any special syntax. ConvertDualRegOperand
+    // tries to convert such operand into register pair, e.g. r2, r3 -> r2_r3.
+    // It returns true, if an error message has been emitted. If the function
+    // returns false, the function either succeeded or an error (e.g. missing
+    // operand) will be diagnosed elsewhere.
+    if (MS.isCDEDualRegInstr(Mnemonic)) {
+      bool GotError = CDEConvertDualRegOperand(Mnemonic, Operands);
+      if (GotError)
+        return GotError;
+    }
+  }
 
   // Some instructions, mostly Thumb, have forms for the same mnemonic that
   // do and don't have a cc_out optional-def operand. With some spot-checks
@@ -7947,6 +8101,142 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
+  case ARM::UMAAL:
+  case ARM::UMLAL:
+  case ARM::UMULL:
+  case ARM::t2UMAAL:
+  case ARM::t2UMLAL:
+  case ARM::t2UMULL:
+  case ARM::SMLAL:
+  case ARM::SMLALBB:
+  case ARM::SMLALBT:
+  case ARM::SMLALD:
+  case ARM::SMLALDX:
+  case ARM::SMLALTB:
+  case ARM::SMLALTT:
+  case ARM::SMLSLD:
+  case ARM::SMLSLDX:
+  case ARM::SMULL:
+  case ARM::t2SMLAL:
+  case ARM::t2SMLALBB:
+  case ARM::t2SMLALBT:
+  case ARM::t2SMLALD:
+  case ARM::t2SMLALDX:
+  case ARM::t2SMLALTB:
+  case ARM::t2SMLALTT:
+  case ARM::t2SMLSLD:
+  case ARM::t2SMLSLDX:
+  case ARM::t2SMULL: {
+    unsigned RdHi = Inst.getOperand(0).getReg();
+    unsigned RdLo = Inst.getOperand(1).getReg();
+    if(RdHi == RdLo) {
+      return Error(Loc,
+                   "unpredictable instruction, RdHi and RdLo must be different");
+    }
+    break;
+  }
+
+  case ARM::CDE_CX1:
+  case ARM::CDE_CX1A:
+  case ARM::CDE_CX1D:
+  case ARM::CDE_CX1DA:
+  case ARM::CDE_CX2:
+  case ARM::CDE_CX2A:
+  case ARM::CDE_CX2D:
+  case ARM::CDE_CX2DA:
+  case ARM::CDE_CX3:
+  case ARM::CDE_CX3A:
+  case ARM::CDE_CX3D:
+  case ARM::CDE_CX3DA:
+  case ARM::CDE_VCX1_vec:
+  case ARM::CDE_VCX1_fpsp:
+  case ARM::CDE_VCX1_fpdp:
+  case ARM::CDE_VCX1A_vec:
+  case ARM::CDE_VCX1A_fpsp:
+  case ARM::CDE_VCX1A_fpdp:
+  case ARM::CDE_VCX2_vec:
+  case ARM::CDE_VCX2_fpsp:
+  case ARM::CDE_VCX2_fpdp:
+  case ARM::CDE_VCX2A_vec:
+  case ARM::CDE_VCX2A_fpsp:
+  case ARM::CDE_VCX2A_fpdp:
+  case ARM::CDE_VCX3_vec:
+  case ARM::CDE_VCX3_fpsp:
+  case ARM::CDE_VCX3_fpdp:
+  case ARM::CDE_VCX3A_vec:
+  case ARM::CDE_VCX3A_fpsp:
+  case ARM::CDE_VCX3A_fpdp: {
+    assert(Inst.getOperand(1).isImm() &&
+           "CDE operand 1 must be a coprocessor ID");
+    int64_t Coproc = Inst.getOperand(1).getImm();
+    if (Coproc < 8 && !ARM::isCDECoproc(Coproc, *STI))
+      return Error(Operands[1]->getStartLoc(),
+                   "coprocessor must be configured as CDE");
+    else if (Coproc >= 8)
+      return Error(Operands[1]->getStartLoc(),
+                   "coprocessor must be in the range [p0, p7]");
+    break;
+  }
+
+  case ARM::t2CDP:
+  case ARM::t2CDP2:
+  case ARM::t2LDC2L_OFFSET:
+  case ARM::t2LDC2L_OPTION:
+  case ARM::t2LDC2L_POST:
+  case ARM::t2LDC2L_PRE:
+  case ARM::t2LDC2_OFFSET:
+  case ARM::t2LDC2_OPTION:
+  case ARM::t2LDC2_POST:
+  case ARM::t2LDC2_PRE:
+  case ARM::t2LDCL_OFFSET:
+  case ARM::t2LDCL_OPTION:
+  case ARM::t2LDCL_POST:
+  case ARM::t2LDCL_PRE:
+  case ARM::t2LDC_OFFSET:
+  case ARM::t2LDC_OPTION:
+  case ARM::t2LDC_POST:
+  case ARM::t2LDC_PRE:
+  case ARM::t2MCR:
+  case ARM::t2MCR2:
+  case ARM::t2MCRR:
+  case ARM::t2MCRR2:
+  case ARM::t2MRC:
+  case ARM::t2MRC2:
+  case ARM::t2MRRC:
+  case ARM::t2MRRC2:
+  case ARM::t2STC2L_OFFSET:
+  case ARM::t2STC2L_OPTION:
+  case ARM::t2STC2L_POST:
+  case ARM::t2STC2L_PRE:
+  case ARM::t2STC2_OFFSET:
+  case ARM::t2STC2_OPTION:
+  case ARM::t2STC2_POST:
+  case ARM::t2STC2_PRE:
+  case ARM::t2STCL_OFFSET:
+  case ARM::t2STCL_OPTION:
+  case ARM::t2STCL_POST:
+  case ARM::t2STCL_PRE:
+  case ARM::t2STC_OFFSET:
+  case ARM::t2STC_OPTION:
+  case ARM::t2STC_POST:
+  case ARM::t2STC_PRE: {
+    unsigned Opcode = Inst.getOpcode();
+    // Inst.getOperand indexes operands in the (oops ...) and (iops ...) dags,
+    // CopInd is the index of the coprocessor operand.
+    size_t CopInd = 0;
+    if (Opcode == ARM::t2MRRC || Opcode == ARM::t2MRRC2)
+      CopInd = 2;
+    else if (Opcode == ARM::t2MRC || Opcode == ARM::t2MRC2)
+      CopInd = 1;
+    assert(Inst.getOperand(CopInd).isImm() &&
+           "Operand must be a coprocessor ID");
+    int64_t Coproc = Inst.getOperand(CopInd).getImm();
+    // Operands[2] is the coprocessor operand at syntactic level
+    if (ARM::isCDECoproc(Coproc, *STI))
+      return Error(Operands[2]->getStartLoc(),
+                   "coprocessor must be configured as GCP");
+    break;
+  }
   }
 
   return false;
@@ -8279,7 +8569,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       // Reading PC provides the start of the current instruction + 8 and
       // the transform to adr is biased by that.
       MCSymbol *Dot = getContext().createTempSymbol();
-      Out.EmitLabel(Dot);
+      Out.emitLabel(Dot);
       const MCExpr *OpExpr = Inst.getOperand(2).getExpr();
       const MCExpr *InstPC = MCSymbolRefExpr::create(Dot,
                                                      MCSymbolRefExpr::VK_None,
@@ -10477,7 +10767,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       if (isITBlockFull() || isITBlockTerminator(Inst))
         flushPendingInstructions(Out);
     } else {
-      Out.EmitInstruction(Inst, getSTI());
+      Out.emitInstruction(Inst, getSTI());
     }
     return false;
   case Match_NearMisses:
@@ -10502,7 +10792,7 @@ bool ARMAsmParser::ParseDirective(AsmToken DirectiveID) {
   bool IsMachO = Format == MCObjectFileInfo::IsMachO;
   bool IsCOFF = Format == MCObjectFileInfo::IsCOFF;
 
-  StringRef IDVal = DirectiveID.getIdentifier();
+  std::string IDVal = DirectiveID.getIdentifier().lower();
   if (IDVal == ".word")
     parseLiteralValues(4, DirectiveID.getLoc());
   else if (IDVal == ".short" || IDVal == ".hword")
@@ -10588,7 +10878,7 @@ bool ARMAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
     const MCExpr *Value;
     if (getParser().parseExpression(Value))
       return true;
-    getParser().getStreamer().EmitValue(Value, Size, L);
+    getParser().getStreamer().emitValue(Value, Size, L);
     return false;
   };
   return (parseMany(parseOne));
@@ -10604,7 +10894,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
   return false;
 }
 
@@ -10617,7 +10907,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
 
   if (isThumb())
     SwitchMode();
-  getParser().getStreamer().EmitAssemblerFlag(MCAF_Code32);
+  getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   return false;
 }
 
@@ -10629,7 +10919,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().EmitThumbFunc(Symbol);
+    getParser().getStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -10649,7 +10939,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().EmitThumbFunc(Func);
+      getParser().getStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseToken(AsmToken::EndOfStatement,
                      "unexpected token in '.thumb_func' directive"))
@@ -10713,14 +11003,14 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
 
     if (!isThumb())
       SwitchMode();
-    getParser().getStreamer().EmitAssemblerFlag(MCAF_Code16);
+    getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
   } else {
     if (!hasARM())
       return Error(L, "target does not support ARM mode");
 
     if (isThumb())
       SwitchMode();
-    getParser().getStreamer().EmitAssemblerFlag(MCAF_Code32);
+    getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   }
 
   return false;
@@ -10773,7 +11063,7 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
       SwitchMode();
     } else {
       // Mode switch forced, because the new arch doesn't support the old mode.
-      getParser().getStreamer().EmitAssemblerFlag(isThumb() ? MCAF_Code16
+      getParser().getStreamer().emitAssemblerFlag(isThumb() ? MCAF_Code16
                                                             : MCAF_Code32);
       // Warn about the implcit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
@@ -11270,9 +11560,9 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
 
   assert(Section && "must have section to emit alignment");
   if (Section->UseCodeAlign())
-    getStreamer().EmitCodeAlignment(2);
+    getStreamer().emitCodeAlignment(2);
   else
-    getStreamer().EmitValueToAlignment(2);
+    getStreamer().emitValueToAlignment(2);
 
   return false;
 }
@@ -11472,9 +11762,9 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->UseCodeAlign())
-      getStreamer().EmitCodeAlignment(4, 0);
+      getStreamer().emitCodeAlignment(4, 0);
     else
-      getStreamer().EmitValueToAlignment(4, 0, 1, 0);
+      getStreamer().emitValueToAlignment(4, 0, 1, 0);
     return false;
   }
   return true;
@@ -11726,7 +12016,7 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
   // when we start to table-generate them, and we can use the ARM
   // flags below, that were generated by table-gen.
   static const struct {
-    const unsigned Kind;
+    const uint64_t Kind;
     const FeatureBitset ArchCheck;
     const FeatureBitset Features;
   } Extensions[] = {
@@ -11775,7 +12065,7 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
     EnableFeature = false;
     Name = Name.substr(2);
   }
-  unsigned FeatureKind = ARM::parseArchExt(Name);
+  uint64_t FeatureKind = ARM::parseArchExt(Name);
   if (FeatureKind == ARM::AEK_INVALID)
     return Error(ExtLoc, "unknown architectural extension: " + Name);
 
@@ -11925,6 +12215,7 @@ bool ARMAsmParser::isMnemonicVPTPredicable(StringRef Mnemonic,
          Mnemonic.startswith("vpnot") || Mnemonic.startswith("vbic") ||
          Mnemonic.startswith("vrmlsldavh") || Mnemonic.startswith("vmlsldav") ||
          Mnemonic.startswith("vcvt") ||
+         MS.isVPTPredicableCDEInstr(Mnemonic) ||
          (Mnemonic.startswith("vmov") &&
           !(ExtraToken == ".f16" || ExtraToken == ".32" ||
             ExtraToken == ".16" || ExtraToken == ".8"));

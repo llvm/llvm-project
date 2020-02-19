@@ -11,15 +11,15 @@
 #include "ClangASTSource.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
+#include "ClangUtil.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/Materializer.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -65,8 +65,8 @@ const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
     Materializer::PersistentVariableDelegate *result_delegate,
-    const lldb::TargetSP &target, const lldb::ClangASTImporterSP &importer,
-    ValueObject *ctx_obj)
+    const lldb::TargetSP &target,
+    const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj)
     : ClangASTSource(target, importer), m_found_entities(), m_struct_members(),
       m_keep_result_in_memory(keep_result_in_memory),
       m_result_delegate(result_delegate), m_ctx_obj(ctx_obj), m_parser_vars(),
@@ -181,12 +181,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(&source.getASTContext() == m_ast_context);
 
-  if (m_ast_importer_sp) {
-    return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
-  } else {
-    lldbassert(0 && "No mechanism for deporting a type!");
-    return TypeFromUser();
-  }
+  return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
 }
 
 bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
@@ -231,7 +226,6 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
         var->GetParserVars(GetParserID());
 
     parser_vars->m_named_decl = decl;
-    parser_vars->m_parser_type = parser_type;
 
     var->EnableJITVars(GetParserID());
 
@@ -305,7 +299,6 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
       var->GetParserVars(GetParserID());
 
   parser_vars->m_named_decl = decl;
-  parser_vars->m_parser_type = parser_type;
 
   return true;
 }
@@ -600,7 +593,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
 
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
     Target &target, ModuleSP &module, ConstString name,
-    CompilerDeclContext *namespace_decl) {
+    const CompilerDeclContext &namespace_decl) {
   VariableList vars;
 
   if (module && namespace_decl)
@@ -684,9 +677,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     ClangASTImporter::NamespaceMapSP namespace_map =
-        m_ast_importer_sp
-            ? m_ast_importer_sp->GetNamespaceMap(namespace_context)
-            : ClangASTImporter::NamespaceMapSP();
+        m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
     if (!namespace_map)
       return;
@@ -1082,7 +1073,7 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
 bool ClangExpressionDeclMap::LookupLocalVariable(
     NameSearchContext &context, ConstString name, unsigned current_id,
-    SymbolContext &sym_ctx, CompilerDeclContext &namespace_decl) {
+    SymbolContext &sym_ctx, const CompilerDeclContext &namespace_decl) {
   if (sym_ctx.block == nullptr)
     return false;
 
@@ -1222,11 +1213,9 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   return sc_func_list;
 }
 
-void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
-                                            lldb::ModuleSP module_sp,
-                                            ConstString name,
-                                            CompilerDeclContext &namespace_decl,
-                                            unsigned current_id) {
+void ClangExpressionDeclMap::LookupFunction(
+    NameSearchContext &context, lldb::ModuleSP module_sp, ConstString name,
+    const CompilerDeclContext &namespace_decl, unsigned current_id) {
   if (!m_parser_vars)
     return;
 
@@ -1246,7 +1235,7 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
   if (namespace_decl && module_sp) {
     const bool include_symbols = false;
 
-    module_sp->FindFunctions(name, &namespace_decl, eFunctionNameTypeBase,
+    module_sp->FindFunctions(name, namespace_decl, eFunctionNameTypeBase,
                              include_symbols, include_inlines, sc_list);
   } else if (target && !namespace_decl) {
     const bool include_symbols = true;
@@ -1348,7 +1337,7 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
 
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
-    CompilerDeclContext &namespace_decl, unsigned int current_id) {
+    const CompilerDeclContext &namespace_decl, unsigned int current_id) {
   assert(m_ast_context);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -1433,7 +1422,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (target) {
     ValueObjectSP valobj;
     VariableSP var;
-    var = FindGlobalVariable(*target, module_sp, name, &namespace_decl);
+    var = FindGlobalVariable(*target, module_sp, name, namespace_decl);
 
     if (var) {
       valobj = ValueObjectVariable::Create(target, var);
@@ -1611,7 +1600,6 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = pt;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value = var_location;
@@ -1650,7 +1638,6 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   ClangExpressionVariable::ParserVars *parser_vars =
       llvm::cast<ClangExpressionVariable>(pvar_sp.get())
           ->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
@@ -1704,7 +1691,6 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   parser_vars->m_lldb_value.GetScalar() = symbol_load_addr;
   parser_vars->m_lldb_value.SetValueType(Value::eValueTypeLoadAddress);
 
-  parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_sym = &symbol;
@@ -1744,7 +1730,6 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = parser_clang_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();

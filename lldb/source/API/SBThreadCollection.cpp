@@ -38,7 +38,7 @@ operator=(const SBThreadCollection &rhs) {
 SBThreadCollection::SBThreadCollection(const ThreadCollectionSP &threads)
     : m_opaque_sp(threads) {}
 
-SBThreadCollection::~SBThreadCollection() {}
+SBThreadCollection::~SBThreadCollection() = default;
 
 void SBThreadCollection::SetOpaque(const lldb::ThreadCollectionSP &threads) {
   m_opaque_sp = threads;

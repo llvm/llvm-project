@@ -30,7 +30,6 @@ func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
     // CHECK-11: gpu.launch
     // CHECK-11-SAME: blocks
     // CHECK-11-SAME: threads
-    // CHECK-11-SAME: args
 
       // Remapping of the loop induction variables.
       // CHECK-11:        %[[i:.*]] = addi %{{.*}}, %{{.*}} : index
@@ -57,7 +56,6 @@ func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
         // CHECK-22: gpu.launch
         // CHECK-22-SAME: blocks
         // CHECK-22-SAME: threads
-        // CHECK-22-SAME: args
 
           // Remapping of the loop induction variables in the last mapped loop.
           // CHECK-22:        %[[i:.*]] = addi %{{.*}}, %{{.*}} : index

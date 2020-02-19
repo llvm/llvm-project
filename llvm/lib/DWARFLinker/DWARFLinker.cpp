@@ -1017,7 +1017,8 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   } else if (AttrSpec.Attr == dwarf::DW_AT_call_return_pc) {
     // Relocate a return PC address within a call site entry.
     if (Die.getTag() == dwarf::DW_TAG_call_site)
-      Addr += Info.PCOffset;
+      Addr = (Info.OrigCallReturnPc ? Info.OrigCallReturnPc : Addr) +
+             Info.PCOffset;
   }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
@@ -1280,6 +1281,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(
     // inlining function.
     AttrInfo.OrigLowPc = dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc),
                                           std::numeric_limits<uint64_t>::max());
+    AttrInfo.OrigCallReturnPc =
+        dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_return_pc), 0);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
@@ -1545,9 +1548,10 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
   if (needToTranslateStrings())
     return TheDwarfEmitter->translateLineTable(LineExtractor, StmtOffset);
 
-  Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
-                              &Unit.getOrigUnit(), DWARFContext::dumpWarning);
-  DWARFContext::dumpWarning(std::move(Err));
+  if (Error Err =
+          LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
+                          &Unit.getOrigUnit(), OrigDwarf.getWarningHandler()))
+    OrigDwarf.getWarningHandler()(std::move(Err));
 
   // This vector is the output line table.
   std::vector<DWARFDebugLine::Row> NewRows;
@@ -2165,7 +2169,7 @@ bool DWARFLinker::emitPaperTrailWarnings(const DwarfLinkerObjFile &OF,
     Size += getULEB128Size(Abbrev.getNumber());
   }
   CUDie->setSize(Size);
-  TheDwarfEmitter->emitPaperTrailWarningsDie(TheTriple, *CUDie);
+  TheDwarfEmitter->emitPaperTrailWarningsDie(*CUDie);
 
   return true;
 }
@@ -2443,7 +2447,7 @@ bool DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(2);
+    ThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();

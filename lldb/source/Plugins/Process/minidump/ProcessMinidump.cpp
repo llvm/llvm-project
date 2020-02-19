@@ -41,6 +41,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
 
+LLDB_PLUGIN_DEFINE(ProcessMinidump)
+
 namespace {
 
 /// A minimal ObjectFile implementation providing a dummy object file for the

@@ -86,7 +86,7 @@ __isl_give isl_schedule_band *isl_schedule_band_replace_ast_build_option(
 	__isl_take isl_schedule_band *band, __isl_take isl_set *drop,
 	__isl_take isl_set *add);
 
-int isl_schedule_band_n_member(__isl_keep isl_schedule_band *band);
+isl_size isl_schedule_band_n_member(__isl_keep isl_schedule_band *band);
 isl_bool isl_schedule_band_member_get_coincident(
 	__isl_keep isl_schedule_band *band, int pos);
 __isl_give isl_schedule_band *isl_schedule_band_member_set_coincident(

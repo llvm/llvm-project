@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LanguageRuntime_h_
-#define liblldb_LanguageRuntime_h_
+#ifndef LLDB_TARGET_LANGUAGERUNTIME_H
+#define LLDB_TARGET_LANGUAGERUNTIME_H
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
@@ -20,8 +20,6 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
-
-#include "clang/Basic/TargetOptions.h"
 
 namespace lldb_private {
 
@@ -53,7 +51,7 @@ protected:
   LanguageRuntime *m_language_runtime;
   lldb::SearchFilterSP m_filter_sp;
 
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
   void UpdateModuleListIfNeeded();
 };
@@ -162,13 +160,6 @@ public:
 
   virtual void ModulesDidLoad(const ModuleList &module_list) {}
 
-  // Called by the Clang expression evaluation engine to allow runtimes to
-  // alter the set of target options provided to the compiler. If the options
-  // prototype is modified, runtimes must return true, false otherwise.
-  virtual bool GetOverrideExprOptions(clang::TargetOptions &prototype) {
-    return false;
-  }
-
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is
   // assembled and run.
@@ -198,4 +189,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_LanguageRuntime_h_
+#endif // LLDB_TARGET_LANGUAGERUNTIME_H

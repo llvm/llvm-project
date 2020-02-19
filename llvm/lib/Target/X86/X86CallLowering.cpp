@@ -108,17 +108,15 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
                            MachinePointerInfo &MPO) override {
     LLT p0 = LLT::pointer(0, DL.getPointerSizeInBits(0));
     LLT SType = LLT::scalar(DL.getPointerSizeInBits(0));
-    Register SPReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildCopy(SPReg, STI.getRegisterInfo()->getStackRegister());
+    auto SPReg =
+        MIRBuilder.buildCopy(p0, STI.getRegisterInfo()->getStackRegister());
 
-    Register OffsetReg = MRI.createGenericVirtualRegister(SType);
-    MIRBuilder.buildConstant(OffsetReg, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(SType, Offset);
 
-    Register AddrReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildPtrAdd(AddrReg, SPReg, OffsetReg);
+    auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-    return AddrReg;
+    return AddrReg.getReg(0);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -240,10 +238,9 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
-    Register AddrReg = MRI.createGenericVirtualRegister(
-        LLT::pointer(0, DL.getPointerSizeInBits(0)));
-    MIRBuilder.buildFrameIndex(AddrReg, FI);
-    return AddrReg;
+    return MIRBuilder
+        .buildFrameIndex(LLT::pointer(0, DL.getPointerSizeInBits(0)), FI)
+        .getReg(0);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,

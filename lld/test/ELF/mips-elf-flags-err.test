@@ -3,12 +3,12 @@
 # Check warning and errors in case of input
 # files with incompatible ELF header flags.
 
-# RUN: yaml2obj -docnum 1 %s -o %t-n64.o
-# RUN: yaml2obj -docnum 2 %s -o %t-o64.o
-# RUN: yaml2obj -docnum 3 %s -o %t-n32.o
-# RUN: yaml2obj -docnum 4 %s -o %t-o32.o
-# RUN: yaml2obj -docnum 5 %s -o %t-eabi64.o
-# RUN: yaml2obj -docnum 6 %s -o %t-eabi32.o
+# RUN: yaml2obj --docnum=1 %s -o %t-n64.o
+# RUN: yaml2obj --docnum=2 %s -o %t-o64.o
+# RUN: yaml2obj --docnum=3 %s -o %t-n32.o
+# RUN: yaml2obj --docnum=4 %s -o %t-o32.o
+# RUN: yaml2obj --docnum=5 %s -o %t-eabi64.o
+# RUN: yaml2obj --docnum=6 %s -o %t-eabi32.o
 
 # RUN: not ld.lld %t-n64.o %t-eabi64.o -shared -o /dev/null 2>&1 \
 # RUN:   | FileCheck -check-prefixes=MM64,N64EABI64 %s

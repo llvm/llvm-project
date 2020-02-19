@@ -248,64 +248,264 @@ func @bar() {
 
 ### Calling Convention for `memref`
 
-For function _arguments_ of `memref` type, ranked or unranked, the type of the
-argument is a _pointer_ to the memref descriptor type defined above. The caller
-of such function is required to store the descriptor in memory and guarantee
-that the storage remains live until the callee returns. The caller can than pass
-the pointer to that memory as function argument. The callee loads from the
-pointers it was passed as arguments in the entry block of the function, making
-the descriptor passed in as argument available for use similarly to
-ocally-defined descriptors.
+Function _arguments_ of `memref` type, ranked or unranked, are _expanded_ into a
+list of arguments of non-aggregate types that the memref descriptor defined
+above comprises. That is, the outer struct type and the inner array types are
+replaced with individual arguments.
 
 This convention is implemented in the conversion of `std.func` and `std.call` to
-the LLVM dialect. Conversions from other dialects should take it into account.
-The motivation for this convention is to simplify the ABI for interfacing with
-other LLVM modules, in particular those generated from C sources, while avoiding
-platform-specific aspects until MLIR has a proper ABI modeling.
+the LLVM dialect, with the former unpacking the descriptor into a set of
+individual values and the latter packing those values back into a descriptor so
+as to make it transparently usable by other operations. Conversions from other
+dialects should take this convention into account.
 
-Example:
+This specific convention is motivated by the necessity to specify alignment and
+aliasing attributes on the raw pointers underpinning the memref.
+
+Examples:
 
 ```mlir
-
-func @foo(memref<?xf32>) -> () {
-  %c0 = constant 0 : index
-  load %arg0[%c0] : memref<?xf32>
+func @foo(%arg0: memref<?xf32>) -> () {
+  "use"(%arg0) : (memref<?xf32>) -> ()
   return
 }
 
-func @bar(%arg0: index) {
-  %0 = alloc(%arg0) : memref<?xf32>
-  call @foo(%0) : (memref<?xf32>)-> ()
+// Gets converted to the following.
+
+llvm.func @foo(%arg0: !llvm<"float*">,   // Allocated pointer.
+               %arg1: !llvm<"float*">,   // Aligned pointer.
+               %arg2: !llvm.i64,         // Offset.
+               %arg3: !llvm.i64,         // Size in dim 0.
+               %arg4: !llvm.i64) {       // Stride in dim 0.
+  // Populate memref descriptor structure.
+  %0 = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %3 = llvm.insertvalue %arg2, %2[2] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %5 = llvm.insertvalue %arg4, %4[4, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+
+  // Descriptor is now usable as a single value.
+  "use"(%5) : (!llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">) -> ()
+  llvm.return
+}
+```
+
+```mlir
+func @bar() {
+  %0 = "get"() : () -> (memref<?xf32>)
+  call @foo(%0) : (memref<?xf32>) -> ()
   return
 }
 
-// Gets converted to the following IR.
-// Accepts a pointer to the memref descriptor.
-llvm.func @foo(!llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">) {
-  // Loads the descriptor so that it can be used similarly to locally
-  // created descriptors.
-  %0 = llvm.load %arg0 : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">
+// Gets converted to the following.
+
+llvm.func @bar() {
+  %0 = "get"() : () -> !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+
+  // Unpack the memref descriptor.
+  %1 = llvm.extractvalue %0[0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %2 = llvm.extractvalue %0[1] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %3 = llvm.extractvalue %0[2] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %4 = llvm.extractvalue %0[3, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+  %5 = llvm.extractvalue %0[4, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+
+  // Pass individual values to the callee.
+  llvm.call @foo(%1, %2, %3, %4, %5) : (!llvm<"float*">, !llvm<"float*">, !llvm.i64, !llvm.i64, !llvm.i64) -> ()
+  llvm.return
 }
 
-llvm.func @bar(%arg0: !llvm.i64) {
-  // ... Allocation ...
-  // Definition of the descriptor.
-  %7 = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
-  // ... Filling in the descriptor ...
-  %14 = // The final value of the allocated descriptor.
-  // Allocate the memory for the descriptor and store it.
-  %15 = llvm.mlir.constant(1 : index) : !llvm.i64
-  %16 = llvm.alloca %15 x !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
-      : (!llvm.i64) -> !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">
-  llvm.store %14, %16 : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">
-  // Pass the pointer to the function.
-  llvm.call @foo(%16) : (!llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">) -> ()
+```
+
+For **unranked** memrefs, the list of function arguments always contains two
+elements, same as the unranked memref descriptor: an integer rank, and a
+type-erased (`!llvm<"i8*">`) pointer to the ranked memref descriptor. Note that
+while the _calling convention_ does not require stack allocation, _casting_ to
+unranked memref does since one cannot take an address of an SSA value containing
+the ranked memref. The caller is in charge of ensuring the thread safety and
+eventually removing unnecessary stack allocations in cast operations.
+
+Example
+
+```mlir
+llvm.func @foo(%arg0: memref<*xf32>) -> () {
+  "use"(%arg0) : (memref<*xf32>) -> ()
+  return
+}
+
+// Gets converted to the following.
+
+llvm.func @foo(%arg0: !llvm.i64       // Rank.
+               %arg1: !llvm<"i8*">) { // Type-erased pointer to descriptor.
+  // Pack the unranked memref descriptor.
+  %0 = llvm.mlir.undef : !llvm<"{ i64, i8* }">
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm<"{ i64, i8* }">
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm<"{ i64, i8* }">
+
+  "use"(%2) : (!llvm<"{ i64, i8* }">) -> ()
+  llvm.return
+}
+```
+
+```mlir
+llvm.func @bar() {
+  %0 = "get"() : () -> (memref<*xf32>)
+  call @foo(%0): (memref<*xf32>) -> ()
+  return
+}
+
+// Gets converted to the following.
+
+llvm.func @bar() {
+  %0 = "get"() : () -> (!llvm<"{ i64, i8* }">)
+
+  // Unpack the memref descriptor.
+  %1 = llvm.extractvalue %0[0] : !llvm<"{ i64, i8* }">
+  %2 = llvm.extractvalue %0[1] : !llvm<"{ i64, i8* }">
+
+  // Pass individual values to the callee.
+  llvm.call @foo(%1, %2) : (!llvm.i64, !llvm<"i8*">)
   llvm.return
 }
 ```
 
 *This convention may or may not apply if the conversion of MemRef types is
 overridden by the user.*
+
+### C-compatible wrapper emission
+
+In practical cases, it may be desirable to have externally-facing functions
+with a single attribute corresponding to a MemRef argument. When interfacing
+with LLVM IR produced from C, the code needs to respect the corresponding
+calling convention. The conversion to the LLVM dialect provides an option to
+generate wrapper functions that take memref descriptors as pointers-to-struct
+compatible with data types produced by Clang when compiling C sources.
+
+More specifically, a memref argument is converted into a pointer-to-struct
+argument of type `{T*, T*, i64, i64[N], i64[N]}*` in the wrapper function, where
+`T` is the converted element type and `N` is the memref rank. This type is
+compatible with that produced by Clang for the following C++ structure template
+instantiations or their equivalents in C.
+
+```cpp
+template<typename T, size_t N>
+struct MemRefDescriptor {
+  T *allocated;
+  T *aligned;
+  intptr_t offset;
+  intptr_t sizes[N];
+  intptr_t stides[N];
+};
+```
+
+If enabled, the option will do the following. For _external_ functions declared
+in the MLIR module.
+
+1. Declare a new function `_mlir_ciface_<original name>` where memref arguments
+   are converted to pointer-to-struct and the remaining arguments are converted
+   as usual.
+1. Add a body to the original function (making it non-external) that
+   1. allocates a memref descriptor,
+   1. populates it, and
+   1. passes the pointer to it into the newly declared interface function
+   1. collects the result of the call and returns it to the caller.
+
+For (non-external) functions defined in the MLIR module.
+
+1. Define a new function `_mlir_ciface_<original name>` where memref arguments
+   are converted to pointer-to-struct and the remaining arguments are converted
+   as usual.
+1. Populate the body of the newly defined function with IR that
+   1. loads descriptors from pointers;
+   1. unpacks descriptor into individual non-aggregate values;
+   1. passes these values into the original function;
+   1. collects the result of the call and returns it to the caller.
+
+Examples:
+
+```mlir
+
+func @qux(%arg0: memref<?x?xf32>)
+
+// Gets converted into the following.
+
+// Function with unpacked arguments.
+llvm.func @qux(%arg0: !llvm<"float*">, %arg1: !llvm<"float*">, %arg2: !llvm.i64,
+               %arg3: !llvm.i64, %arg4: !llvm.i64, %arg5: !llvm.i64,
+               %arg6: !llvm.i64) {
+  // Populate memref descriptor (as per calling convention).
+  %0 = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %3 = llvm.insertvalue %arg2, %2[2] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %5 = llvm.insertvalue %arg5, %4[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %6 = llvm.insertvalue %arg4, %5[3, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %7 = llvm.insertvalue %arg6, %6[4, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+
+  // Store the descriptor in a stack-allocated space.
+  %8 = llvm.mlir.constant(1 : index) : !llvm.i64
+  %9 = llvm.alloca %8 x !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+                 : (!llvm.i64) -> !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">
+  llvm.store %7, %9 : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">
+
+  // Call the interface function.
+  llvm.call @_mlir_ciface_qux(%9) : (!llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">) -> ()
+
+  // The stored descriptor will be freed on return.
+  llvm.return
+}
+
+// Interface function.
+llvm.func @_mlir_ciface_qux(!llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">)
+```
+
+```mlir
+func @foo(%arg0: memref<?x?xf32>) {
+  return
+}
+
+// Gets converted into the following.
+
+// Function with unpacked arguments.
+llvm.func @foo(%arg0: !llvm<"float*">, %arg1: !llvm<"float*">, %arg2: !llvm.i64,
+               %arg3: !llvm.i64, %arg4: !llvm.i64, %arg5: !llvm.i64,
+               %arg6: !llvm.i64) {
+  llvm.return
+}
+
+// Interface function callable from C.
+llvm.func @_mlir_ciface_foo(%arg0: !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">) {
+  // Load the descriptor.
+  %0 = llvm.load %arg0 : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">
+
+  // Unpack the descriptor as per calling convention.
+  %1 = llvm.extractvalue %0[0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %2 = llvm.extractvalue %0[1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %3 = llvm.extractvalue %0[2] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %4 = llvm.extractvalue %0[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %5 = llvm.extractvalue %0[3, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %6 = llvm.extractvalue %0[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %7 = llvm.extractvalue %0[4, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  llvm.call @foo(%1, %2, %3, %4, %5, %6, %7)
+    : (!llvm<"float*">, !llvm<"float*">, !llvm.i64, !llvm.i64, !llvm.i64,
+       !llvm.i64, !llvm.i64) -> ()
+  llvm.return
+}
+```
+
+Rationale: Introducing auxiliary functions for C-compatible interfaces is
+preferred to modifying the calling convention since it will minimize the effect
+of C compatibility on intra-module calls or calls between MLIR-generated
+functions. In particular, when calling external functions from an MLIR module in
+a (parallel) loop, the fact of storing a memref descriptor on stack can lead to
+stack exhaustion and/or concurrent access to the same address. Auxiliary
+interface function serves as an allocation scope in this case. Furthermore, when
+targeting accelerators with separate memory spaces such as GPUs, stack-allocated
+descriptors passed by pointer would have to be transferred to the device memory,
+which introduces significant overhead. In such situations, auxiliary interface
+functions are executed on host and only pass the values through device function
+invocation mechanism.
 
 ## Repeated Successor Removal
 

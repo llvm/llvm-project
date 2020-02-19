@@ -9,6 +9,10 @@ llvm.func @intrinsics(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x
   "llvm.intr.fmuladd"(%arg0, %arg1, %arg0) : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.float
   // CHECK: call <8 x float> @llvm.fmuladd.v8f32
   "llvm.intr.fmuladd"(%arg2, %arg2, %arg2) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  // CHECK: call float @llvm.fma.f32
+  "llvm.intr.fma"(%arg0, %arg1, %arg0) : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.fma.v8f32
+  "llvm.intr.fma"(%arg2, %arg2, %arg2) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
   // CHECK: call void @llvm.prefetch.p0i8(i8* %3, i32 0, i32 3, i32 1)
   "llvm.intr.prefetch"(%arg3, %c0, %c3, %c1) : (!llvm<"i8*">, !llvm.i32, !llvm.i32, !llvm.i32) -> ()
   llvm.return
@@ -95,24 +99,57 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
   llvm.return
 }
 
+// CHECK-LABEL: @vector_reductions
+llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %arg2: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.experimental.vector.reduce.add.v8i32
+  "llvm.intr.experimental.vector.reduce.add"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.and.v8i32
+  "llvm.intr.experimental.vector.reduce.and"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call float @llvm.experimental.vector.reduce.fmax.v8f32
+  "llvm.intr.experimental.vector.reduce.fmax"(%arg1) : (!llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call float @llvm.experimental.vector.reduce.fmin.v8f32
+  "llvm.intr.experimental.vector.reduce.fmin"(%arg1) : (!llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call i32 @llvm.experimental.vector.reduce.mul.v8i32
+  "llvm.intr.experimental.vector.reduce.mul"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.or.v8i32
+  "llvm.intr.experimental.vector.reduce.or"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.smax.v8i32
+  "llvm.intr.experimental.vector.reduce.smax"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.smin.v8i32
+  "llvm.intr.experimental.vector.reduce.smin"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.umax.v8i32
+  "llvm.intr.experimental.vector.reduce.umax"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call i32 @llvm.experimental.vector.reduce.umin.v8i32
+  "llvm.intr.experimental.vector.reduce.umin"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  // CHECK: call float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call i32 @llvm.experimental.vector.reduce.xor.v8i32
+  "llvm.intr.experimental.vector.reduce.xor"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
-// CHECK: declare float @llvm.fmuladd.f32(float, float, float)
-// CHECK: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
-// CHECK: declare void @llvm.prefetch.p0i8(i8* nocapture readonly, i32 immarg, i32 immarg, i32)
-// CHECK: declare float @llvm.exp.f32(float)
-// CHECK: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.log.f32(float)
-// CHECK: declare <8 x float> @llvm.log.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.log10.f32(float)
-// CHECK: declare <8 x float> @llvm.log10.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.log2.f32(float)
-// CHECK: declare <8 x float> @llvm.log2.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.fabs.f32(float)
-// CHECK: declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.sqrt.f32(float)
-// CHECK: declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.ceil.f32(float)
-// CHECK: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.cos.f32(float)
-// CHECK: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
-// CHECK: declare float @llvm.copysign.f32(float, float)
+// CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
+// CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
+// CHECK-DAG: declare float @llvm.fmuladd.f32(float, float, float)
+// CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
+// CHECK-DAG: declare void @llvm.prefetch.p0i8(i8* nocapture readonly, i32 immarg, i32 immarg, i32)
+// CHECK-DAG: declare float @llvm.exp.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.log.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.log.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.log10.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.log10.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.log2.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.log2.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.fabs.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.sqrt.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.ceil.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.cos.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.copysign.f32(float, float)

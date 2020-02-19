@@ -2,7 +2,7 @@
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=0 -S | FileCheck %s --check-prefix=ZERO
 ; RUN: opt < %s -instcombine --instcombine-max-iterations=1 -S | FileCheck %s --check-prefix=ONE
 ; RUN: opt < %s -instcombine -S | FileCheck %s --check-prefix=FIXPOINT
-; RUN: not opt < %s -instcombine -S --instcombine-infinite-loop-threshold=3 2>&1 | FileCheck %s --check-prefix=LOOP
+; RUN: not --crash opt < %s -instcombine -S --instcombine-infinite-loop-threshold=3 2>&1 | FileCheck %s --check-prefix=LOOP
 
 ; Based on xor-of-icmps-with-extra-uses.ll. This requires multiple iterations of
 ; InstCombine to reach a fixpoint.

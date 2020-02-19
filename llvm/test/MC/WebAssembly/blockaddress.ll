@@ -1,6 +1,6 @@
 ; TODO(sbc): Make this test pass by adding support for unnamed tempoaries
 ; in wasm relocations.
-; RUN: not llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not --crash llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

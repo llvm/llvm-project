@@ -296,7 +296,7 @@ public:
     return StringOffsetSection;
   }
 
-  void setAddrOffsetSection(const DWARFSection *AOS, uint32_t Base) {
+  void setAddrOffsetSection(const DWARFSection *AOS, uint64_t Base) {
     AddrOffsetSection = AOS;
     AddrOffsetSectionBase = Base;
   }
@@ -369,26 +369,6 @@ public:
       return dwarf::isUnitType(Tag);
     }
     return false;
-  }
-
-  /// Return the number of bytes for the header of a unit of
-  /// UnitType type.
-  ///
-  /// This function must be called with a valid unit type which in
-  /// DWARF5 is defined as one of the following six types.
-  static uint32_t getDWARF5HeaderSize(uint8_t UnitType) {
-    switch (UnitType) {
-    case dwarf::DW_UT_compile:
-    case dwarf::DW_UT_partial:
-      return 12;
-    case dwarf::DW_UT_skeleton:
-    case dwarf::DW_UT_split_compile:
-      return 20;
-    case dwarf::DW_UT_type:
-    case dwarf::DW_UT_split_type:
-      return 24;
-    }
-    llvm_unreachable("Invalid UnitType.");
   }
 
   llvm::Optional<object::SectionedAddress> getBaseAddress();

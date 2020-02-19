@@ -43,7 +43,7 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0000000000000000
 DynamicSymbols:
-  - NameIndex: 0x1234
+  - StName: 0x1234
 ProgramHeaders:
   - Type:  PT_LOAD
     Sections:

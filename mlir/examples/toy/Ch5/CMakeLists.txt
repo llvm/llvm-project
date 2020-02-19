@@ -27,15 +27,10 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 target_link_libraries(toyc-ch5
   PRIVATE
-    MLIRAffineOps
+    MLIRAllDialects
     MLIRAnalysis
     MLIRIR
     MLIRParser
     MLIRPass
-    MLIRStandardOps
     MLIRTransforms)
 
-whole_archive_link(toyc-ch5
-  MLIRAffineOps
-  MLIRStandardOps
-  )

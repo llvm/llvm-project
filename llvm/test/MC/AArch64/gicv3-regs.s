@@ -1,4 +1,4 @@
- // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding %s | FileCheck %s
 
         mrs x8, icc_iar1_el1
         mrs x26, icc_iar0_el1
@@ -19,7 +19,6 @@
         mrs x22, icc_igrpen0_el1
         mrs x5, icc_igrpen1_el1
         mrs x7, icc_igrpen1_el3
-        mrs x22, icc_seien_el1
         mrs x4, icc_ap0r0_el1
         mrs x11, icc_ap0r1_el1
         mrs x27, icc_ap0r2_el1
@@ -39,7 +38,6 @@
         mrs x10, ich_hcr_el2
         mrs x27, ich_misr_el2
         mrs x6, ich_vmcr_el2
-        mrs x19, ich_vseir_el2
         mrs x3, ich_lr0_el2
         mrs x1, ich_lr1_el2
         mrs x22, ich_lr2_el2
@@ -75,7 +73,6 @@
 // CHECK: mrs      x22, {{icc_igrpen0_el1|ICC_IGRPEN0_EL1}}       // encoding: [0xd6,0xcc,0x38,0xd5]
 // CHECK: mrs      x5, {{icc_igrpen1_el1|ICC_IGRPEN1_EL1}}        // encoding: [0xe5,0xcc,0x38,0xd5]
 // CHECK: mrs      x7, {{icc_igrpen1_el3|ICC_IGRPEN1_EL3}}        // encoding: [0xe7,0xcc,0x3e,0xd5]
-// CHECK: mrs      x22, {{icc_seien_el1|ICC_SEIEN_EL1}}         // encoding: [0x16,0xcd,0x38,0xd5]
 // CHECK: mrs      x4, {{icc_ap0r0_el1|ICC_AP0R0_EL1}}          // encoding: [0x84,0xc8,0x38,0xd5]
 // CHECK: mrs      x11, {{icc_ap0r1_el1|ICC_AP0R1_EL1}}         // encoding: [0xab,0xc8,0x38,0xd5]
 // CHECK: mrs      x27, {{icc_ap0r2_el1|ICC_AP0R2_EL1}}         // encoding: [0xdb,0xc8,0x38,0xd5]
@@ -95,7 +92,6 @@
 // CHECK: mrs      x10, {{ich_hcr_el2|ICH_HCR_EL2}}           // encoding: [0x0a,0xcb,0x3c,0xd5]
 // CHECK: mrs      x27, {{ich_misr_el2|ICH_MISR_EL2}}          // encoding: [0x5b,0xcb,0x3c,0xd5]
 // CHECK: mrs      x6, {{ich_vmcr_el2|ICH_VMCR_EL2}}           // encoding: [0xe6,0xcb,0x3c,0xd5]
-// CHECK: mrs      x19, {{ich_vseir_el2|ICH_VSEIR_EL2}}         // encoding: [0x93,0xc9,0x3c,0xd5]
 // CHECK: mrs      x3, {{ich_lr0_el2|ICH_LR0_EL2}}            // encoding: [0x03,0xcc,0x3c,0xd5]
 // CHECK: mrs      x1, {{ich_lr1_el2|ICH_LR1_EL2}}            // encoding: [0x21,0xcc,0x3c,0xd5]
 // CHECK: mrs      x22, {{ich_lr2_el2|ICH_LR2_EL2}}           // encoding: [0x56,0xcc,0x3c,0xd5]
@@ -130,7 +126,6 @@
         msr icc_igrpen0_el1, x22
         msr icc_igrpen1_el1, x11
         msr icc_igrpen1_el3, x8
-        msr icc_seien_el1, x4
         msr icc_ap0r0_el1, x27
         msr icc_ap0r1_el1, x5
         msr icc_ap0r2_el1, x20
@@ -148,9 +143,7 @@
         msr ich_ap1r2_el2, x14
         msr ich_ap1r3_el2, x13
         msr ich_hcr_el2, x1
-        msr ich_misr_el2, x10
         msr ich_vmcr_el2, x24
-        msr ich_vseir_el2, x29
         msr ich_lr0_el2, x26
         msr ich_lr1_el2, x9
         msr ich_lr2_el2, x18
@@ -184,7 +177,6 @@
 // CHECK: msr      {{icc_igrpen0_el1|ICC_IGRPEN0_EL1}}, x22       // encoding: [0xd6,0xcc,0x18,0xd5]
 // CHECK: msr      {{icc_igrpen1_el1|ICC_IGRPEN1_EL1}}, x11       // encoding: [0xeb,0xcc,0x18,0xd5]
 // CHECK: msr      {{icc_igrpen1_el3|ICC_IGRPEN1_EL3}}, x8        // encoding: [0xe8,0xcc,0x1e,0xd5]
-// CHECK: msr      {{icc_seien_el1|ICC_SEIEN_EL1}}, x4          // encoding: [0x04,0xcd,0x18,0xd5]
 // CHECK: msr      {{icc_ap0r0_el1|ICC_AP0R0_EL1}}, x27         // encoding: [0x9b,0xc8,0x18,0xd5]
 // CHECK: msr      {{icc_ap0r1_el1|ICC_AP0R1_EL1}}, x5          // encoding: [0xa5,0xc8,0x18,0xd5]
 // CHECK: msr      {{icc_ap0r2_el1|ICC_AP0R2_EL1}}, x20         // encoding: [0xd4,0xc8,0x18,0xd5]
@@ -202,9 +194,7 @@
 // CHECK: msr      {{ich_ap1r2_el2|ICH_AP1R2_EL2}}, x14         // encoding: [0x4e,0xc9,0x1c,0xd5]
 // CHECK: msr      {{ich_ap1r3_el2|ICH_AP1R3_EL2}}, x13         // encoding: [0x6d,0xc9,0x1c,0xd5]
 // CHECK: msr      {{ich_hcr_el2|ICH_HCR_EL2}}, x1            // encoding: [0x01,0xcb,0x1c,0xd5]
-// CHECK: msr      {{ich_misr_el2|ICH_MISR_EL2}}, x10          // encoding: [0x4a,0xcb,0x1c,0xd5]
 // CHECK: msr      {{ich_vmcr_el2|ICH_VMCR_EL2}}, x24          // encoding: [0xf8,0xcb,0x1c,0xd5]
-// CHECK: msr      {{ich_vseir_el2|ICH_VSEIR_EL2}}, x29         // encoding: [0x9d,0xc9,0x1c,0xd5]
 // CHECK: msr      {{ich_lr0_el2|ICH_LR0_EL2}}, x26           // encoding: [0x1a,0xcc,0x1c,0xd5]
 // CHECK: msr      {{ich_lr1_el2|ICH_LR1_EL2}}, x9            // encoding: [0x29,0xcc,0x1c,0xd5]
 // CHECK: msr      {{ich_lr2_el2|ICH_LR2_EL2}}, x18           // encoding: [0x52,0xcc,0x1c,0xd5]

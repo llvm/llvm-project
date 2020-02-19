@@ -57,7 +57,7 @@ template <class NodeTy, bool IsPostDom> struct ChildrenGetterTy {
 template <class NodeTy, bool IsPostDom> class IDFCalculatorBase {
 public:
   using OrderedNodeTy =
-      typename std::conditional<IsPostDom, Inverse<NodeTy *>, NodeTy *>::type;
+      std::conditional_t<IsPostDom, Inverse<NodeTy *>, NodeTy *>;
   using ChildrenGetterTy =
       IDFCalculatorDetail::ChildrenGetterTy<NodeTy, IsPostDom>;
 

@@ -85,6 +85,8 @@ AARCH64_ARCH_EXT_NAME("tme",          AArch64::AEK_TME,         "+tme",   "-tme"
 #ifndef AARCH64_CPU_NAME
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)
 #endif
+AARCH64_CPU_NAME("cortex-a34", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a35", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a53", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, true,

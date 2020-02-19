@@ -14,4 +14,5 @@ add_dependencies(MLIRSPIRVSerialization
 target_link_libraries(MLIRSPIRVSerialization
   MLIRIR
   MLIRSPIRV
-  MLIRSupport)
+  MLIRSupport
+  MLIRTranslation)

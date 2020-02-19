@@ -23,7 +23,6 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -38,10 +37,14 @@
 #include "lldb/Utility/StreamString.h"
 #include "clang/AST/Type.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
 char AppleObjCRuntime::ID = 0;
 
@@ -535,8 +538,8 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     if (error.Fail()) return ThreadSP();
 
     lldb::offset_t data_offset = 0;
-    auto dict_entry_key = data.GetPointer(&data_offset);
-    auto dict_entry_value = data.GetPointer(&data_offset);
+    auto dict_entry_key = data.GetAddress(&data_offset);
+    auto dict_entry_value = data.GetAddress(&data_offset);
 
     auto key_nsstring = objc_object_from_address(dict_entry_key, "key");
     StreamString key_summary;

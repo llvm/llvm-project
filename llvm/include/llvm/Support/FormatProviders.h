@@ -124,7 +124,7 @@ protected:
 
 template <typename T>
 struct format_provider<
-    T, typename std::enable_if<detail::use_integral_formatter<T>::value>::type>
+    T, std::enable_if_t<detail::use_integral_formatter<T>::value>>
     : public detail::HelperFunctions {
 private:
 public:
@@ -173,7 +173,7 @@ public:
 /// cases indicates the minimum number of nibbles to print.
 template <typename T>
 struct format_provider<
-    T, typename std::enable_if<detail::use_pointer_formatter<T>::value>::type>
+    T, std::enable_if_t<detail::use_pointer_formatter<T>::value>>
     : public detail::HelperFunctions {
 private:
 public:
@@ -198,7 +198,7 @@ public:
 
 template <typename T>
 struct format_provider<
-    T, typename std::enable_if<detail::use_string_formatter<T>::value>::type> {
+    T, std::enable_if_t<detail::use_string_formatter<T>::value>> {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     size_t N = StringRef::npos;
     if (!Style.empty() && Style.getAsInteger(10, N)) {
@@ -230,8 +230,8 @@ template <> struct format_provider<Twine> {
 /// character.  Otherwise, it is treated as an integer options string.
 ///
 template <typename T>
-struct format_provider<
-    T, typename std::enable_if<detail::use_char_formatter<T>::value>::type> {
+struct format_provider<T,
+                       std::enable_if_t<detail::use_char_formatter<T>::value>> {
   static void format(const char &V, llvm::raw_ostream &Stream,
                      StringRef Style) {
     if (Style.empty())
@@ -296,8 +296,8 @@ template <> struct format_provider<bool> {
 /// else.
 
 template <typename T>
-struct format_provider<
-    T, typename std::enable_if<detail::use_double_formatter<T>::value>::type>
+struct format_provider<T,
+                       std::enable_if_t<detail::use_double_formatter<T>::value>>
     : public detail::HelperFunctions {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     FloatStyle S;

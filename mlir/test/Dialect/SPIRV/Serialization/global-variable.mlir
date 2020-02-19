@@ -25,7 +25,7 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   spv.globalVariable @globalInvocationID built_in("GlobalInvocationId") : !spv.ptr<vector<3xi32>, Input>
-  func @foo() {
+  spv.func @foo() "None" {
     // CHECK: %[[ADDR:.*]] = spv._address_of @globalInvocationID : !spv.ptr<vector<3xi32>, Input>
     %0 = spv._address_of @globalInvocationID : !spv.ptr<vector<3xi32>, Input>
     %1 = spv.constant 0: i32

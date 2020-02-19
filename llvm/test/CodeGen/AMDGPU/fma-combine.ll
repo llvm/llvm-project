@@ -10,6 +10,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare double @llvm.fabs.f64(double) #0
 declare double @llvm.fma.f64(double, double, double) #0
 declare float @llvm.fma.f32(float, float, float) #0
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
 
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
 ; FUNC-LABEL: {{^}}combine_to_fma_f64_0:
@@ -628,12 +629,12 @@ define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
 }
 
 ; Make sure negative constant cancels out fneg
-; GCN-LABEL: {{^}}fma_neg_2.0_neg_a_b_f32:
-; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
-; GCN-NOT: [[A]]
-; GCN-NOT: [[B]]
-; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], 2.0, [[B]]
+; SI-LABEL: {{^}}fma_neg_2.0_neg_a_b_f32:
+; SI: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; SI: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; SI-NOT: [[A]]
+; SI-NOT: [[B]]
+; SI: v_fma_f32 v{{[0-9]+}}, [[A]], 2.0, [[B]]
 define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -650,12 +651,12 @@ define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
   ret void
 }
 
-; GCN-LABEL: {{^}}fma_2.0_neg_a_b_f32:
-; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
-; GCN-NOT: [[A]]
-; GCN-NOT: [[B]]
-; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], -2.0, [[B]]
+; SI-LABEL: {{^}}fma_2.0_neg_a_b_f32:
+; SI: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; SI: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; SI-NOT: [[A]]
+; SI-NOT: [[B]]
+; SI: v_fma_f32 v{{[0-9]+}}, [[A]], -2.0, [[B]]
 define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -672,6 +673,30 @@ define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float a
   ret void
 }
 
+; SI-LABEL: {{^}}fma_neg_b_c_v4f32:
+; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+; SI: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
+define amdgpu_kernel void @fma_neg_b_c_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) #2 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.0 = getelementptr <4 x float>, <4 x float> addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr <4 x float>, <4 x float> addrspace(1)* %gep.0, i32 1
+  %gep.2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %gep.1, i32 2
+  %gep.out = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i32 %tid
+
+  %tmp0 = load <4 x float>, <4 x float> addrspace(1)* %gep.0
+  %tmp1 = load <4 x float>, <4 x float> addrspace(1)* %gep.1
+  %tmp2 = load <4 x float>, <4 x float> addrspace(1)* %gep.2
+
+  %fneg0 = fneg fast <4 x float> %tmp0
+  %fneg1 = fneg fast <4 x float> %tmp1
+  %fma0 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %tmp2, <4 x float> %fneg0, <4 x float> %fneg1)
+
+  store <4 x float> %fma0, <4 x float> addrspace(1)* %gep.out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
-
+attributes #2 = { nounwind "no-signed-zeros-fp-math"="true" }

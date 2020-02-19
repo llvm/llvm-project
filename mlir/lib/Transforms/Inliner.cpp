@@ -86,15 +86,14 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
   while (!worklist.empty()) {
     for (Operation &op : *worklist.pop_back_val()) {
       if (auto call = dyn_cast<CallOpInterface>(op)) {
-        CallInterfaceCallable callable = call.getCallableForCallee();
-
         // TODO(riverriddle) Support inlining nested call references.
+        CallInterfaceCallable callable = call.getCallableForCallee();
         if (SymbolRefAttr symRef = callable.dyn_cast<SymbolRefAttr>()) {
           if (!symRef.isa<FlatSymbolRefAttr>())
             continue;
         }
 
-        CallGraphNode *node = cg.resolveCallable(callable, &op);
+        CallGraphNode *node = cg.resolveCallable(call);
         if (!node->isExternal())
           calls.emplace_back(call, node);
         continue;

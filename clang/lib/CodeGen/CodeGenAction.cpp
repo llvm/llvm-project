@@ -32,8 +32,8 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
@@ -86,15 +86,15 @@ namespace clang {
                                    const CodeGenOptions CodeGenOpts) {
     handleAllErrors(
         std::move(E),
-      [&](const RemarkSetupFileError &E) {
+      [&](const LLVMRemarkSetupFileError &E) {
           Diags.Report(diag::err_cannot_open_file)
               << CodeGenOpts.OptRecordFile << E.message();
         },
-      [&](const RemarkSetupPatternError &E) {
+      [&](const LLVMRemarkSetupPatternError &E) {
           Diags.Report(diag::err_drv_optimization_remark_pattern)
               << E.message() << CodeGenOpts.OptRecordPasses;
         },
-      [&](const RemarkSetupFormatError &E) {
+      [&](const LLVMRemarkSetupFormatError &E) {
           Diags.Report(diag::err_drv_optimization_remark_format)
               << CodeGenOpts.OptRecordFormat;
         });
@@ -309,7 +309,7 @@ namespace clang {
         CodeGenOpts, this));
 
       Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-          setupOptimizationRemarks(
+          setupLLVMOptimizationRemarks(
               Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
               CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
               CodeGenOpts.DiagnosticsHotnessThreshold);
@@ -1150,7 +1150,7 @@ void CodeGenAction::ExecuteAction() {
         std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
 
     Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-        setupOptimizationRemarks(
+        setupLLVMOptimizationRemarks(
             Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
             CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
             CodeGenOpts.DiagnosticsHotnessThreshold);

@@ -873,7 +873,7 @@ SBBreakpointList::SBBreakpointList(SBTarget &target)
   LLDB_RECORD_CONSTRUCTOR(SBBreakpointList, (lldb::SBTarget &), target);
 }
 
-SBBreakpointList::~SBBreakpointList() {}
+SBBreakpointList::~SBBreakpointList() = default;
 
 size_t SBBreakpointList::GetSize() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(size_t, SBBreakpointList, GetSize);

@@ -1,4 +1,4 @@
-; RUN: not opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel  < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not --crash opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel  < %s 2>&1 >/dev/null | FileCheck %s
 ;
 ; CHECK: JScop file has no key name 'statements'.
 ;

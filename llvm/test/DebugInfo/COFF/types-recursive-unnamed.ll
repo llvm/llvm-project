@@ -1,4 +1,4 @@
-; RUN: not llc < %s -filetype=obj 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -filetype=obj 2>&1 | FileCheck %s
 ;
 ; Verify the compiler produces an error message when trying to emit circular
 ; references to unnamed structs which are not supported in CodeView debug

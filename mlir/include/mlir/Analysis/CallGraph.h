@@ -23,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 
 namespace mlir {
+class CallOpInterface;
 struct CallInterfaceCallable;
 class Operation;
 class Region;
@@ -188,11 +189,8 @@ public:
   }
 
   /// Resolve the callable for given callee to a node in the callgraph, or the
-  /// external node if a valid node was not resolved. 'from' provides an anchor
-  /// for symbol table lookups, and is only required if the callable is a symbol
-  /// reference.
-  CallGraphNode *resolveCallable(CallInterfaceCallable callable,
-                                 Operation *from = nullptr) const;
+  /// external node if a valid node was not resolved.
+  CallGraphNode *resolveCallable(CallOpInterface call) const;
 
   /// An iterator over the nodes of the graph.
   using iterator = NodeIterator;

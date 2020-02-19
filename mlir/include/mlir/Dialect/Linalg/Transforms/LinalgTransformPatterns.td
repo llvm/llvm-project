@@ -79,6 +79,10 @@ class LinalgOpToLoops<string OpType> : NativeCodeCall<
   "if (failed(linalgOpToLoops<" # OpType # ">($_builder, op))) " #
   "  return matchFailure();">;
 
+class LinalgOpToParallelLoops<string OpType> : NativeCodeCall<
+  "if (failed(linalgOpToParallelLoops<" # OpType # ">($_builder, op))) " #
+  "  return matchFailure();">;
+
 class LinalgOpToAffineLoops<string OpType> : NativeCodeCall<
   "if (failed(linalgOpToAffineLoops<" # OpType # ">($_builder, op))) " #
   "  return matchFailure();">;

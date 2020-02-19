@@ -48,6 +48,29 @@ Instruction *promoteCall(CallSite CS, Function *Callee,
 Instruction *promoteCallWithIfThenElse(CallSite CS, Function *Callee,
                                        MDNode *BranchWeights = nullptr);
 
+/// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
+/// success.
+///
+/// Look for a pattern like:
+///
+///  %o = alloca %class.Impl
+///  %1 = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
+///  store i32 (...)** bitcast (i8** getelementptr inbounds
+///      ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2)
+///      to i32 (...)**), i32 (...)*** %1
+///  %2 = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
+///  %3 = bitcast %class.Interface* %2 to void (%class.Interface*)***
+///  %vtable.i = load void (%class.Interface*)**, void (%class.Interface*)*** %3
+///  %4 = load void (%class.Interface*)*, void (%class.Interface*)** %vtable.i
+///  call void %4(%class.Interface* nonnull %2)
+///
+/// @_ZTV4Impl = linkonce_odr dso_local unnamed_addr constant { [3 x i8*] }
+///     { [3 x i8*]
+///     [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI4Impl to i8*),
+///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
+///
+bool tryPromoteCall(CallSite &CS);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H

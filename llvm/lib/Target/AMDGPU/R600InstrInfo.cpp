@@ -77,7 +77,7 @@ void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (VectorComponents > 0) {
     for (unsigned I = 0; I < VectorComponents; I++) {
-      unsigned SubRegIndex = AMDGPURegisterInfo::getSubRegFromChannel(I);
+      unsigned SubRegIndex = R600RegisterInfo::getSubRegFromChannel(I);
       buildDefaultInstruction(MBB, MI, R600::MOV,
                               RI.getSubReg(DestReg, SubRegIndex),
                               RI.getSubReg(SrcReg, SubRegIndex))

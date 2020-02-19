@@ -159,6 +159,10 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             const SVal &Val);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
                                     const IteratorPosition &Pos);
+ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
+                                       const MemRegion *Cont, const Stmt* S,
+                                       const LocationContext *LCtx,
+                                       unsigned blockCount);
 ProgramStateRef advancePosition(ProgramStateRef State,
                                 const SVal &Iter,
                                 OverloadedOperatorKind Op,

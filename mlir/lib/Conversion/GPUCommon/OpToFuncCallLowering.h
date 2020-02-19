@@ -26,12 +26,12 @@ namespace mlir {
 /// will be transformed into
 ///   llvm.call @__nv_expf(%arg_f32) : (!llvm.float) -> !llvm.float
 template <typename SourceOp>
-struct OpToFuncCallLowering : public LLVMOpLowering {
+struct OpToFuncCallLowering : public ConvertToLLVMPattern {
 public:
   explicit OpToFuncCallLowering(LLVMTypeConverter &lowering_, StringRef f32Func,
                                 StringRef f64Func)
-      : LLVMOpLowering(SourceOp::getOperationName(),
-                       lowering_.getDialect()->getContext(), lowering_),
+      : ConvertToLLVMPattern(SourceOp::getOperationName(),
+                             lowering_.getDialect()->getContext(), lowering_),
         f32Func(f32Func), f64Func(f64Func) {}
 
   PatternMatchResult
@@ -44,7 +44,7 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    LLVMType resultType = lowering.convertType(op->getResult(0).getType())
+    LLVMType resultType = typeConverter.convertType(op->getResult(0).getType())
                               .template cast<LLVM::LLVMType>();
     LLVMType funcType = getFunctionType(resultType, operands);
     StringRef funcName = getFunctionName(resultType);
@@ -94,6 +94,24 @@ private:
   const std::string f32Func;
   const std::string f64Func;
 };
+
+namespace gpu {
+/// Returns a predicate to be used with addDynamicallyLegalOp. The predicate
+/// returns false for calls to the provided intrinsics and true otherwise.
+inline std::function<bool(Operation *)>
+filterIllegalLLVMIntrinsics(ArrayRef<StringRef> intrinsics, MLIRContext *ctx) {
+  SmallVector<StringRef, 4> illegalIds(intrinsics.begin(), intrinsics.end());
+  return [illegalIds](Operation *op) -> bool {
+    LLVM::CallOp callOp = dyn_cast<LLVM::CallOp>(op);
+    if (!callOp || !callOp.callee())
+      return true;
+    StringRef callee = callOp.callee().getValue();
+    return !llvm::any_of(illegalIds, [callee](StringRef intrinsic) {
+      return callee.equals(intrinsic);
+    });
+  };
+}
+} // namespace gpu
 
 } // namespace mlir
 

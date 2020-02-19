@@ -6,25 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_lldb_forward_h_
-#define LLDB_lldb_forward_h_
+#ifndef LLDB_LLDB_FORWARD_H
+#define LLDB_LLDB_FORWARD_H
 
 #if defined(__cplusplus)
 
-#include "lldb/Utility/SharingPtr.h"
+#include <memory>
 
 // lldb forward declarations
 namespace lldb_private {
 
 class ABI;
+class ASTResultSynthesizer;
+class ASTStructExtractor;
 class Address;
 class AddressRange;
 class AddressResolver;
 class ArchSpec;
-class ArmUnwindInfo;
+class Architecture;
 class Args;
-class ASTResultSynthesizer;
-class ASTStructExtractor;
+class ArmUnwindInfo;
 class Baton;
 class Block;
 class Breakpoint;
@@ -44,16 +45,8 @@ class BreakpointSiteList;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class CXXSyntheticChildren;
 class CallFrameInfo;
-class TypeSystemClang;
-class ClangASTImporter;
-class ClangASTMetadata;
-class ClangASTSource;
-class ClangExpressionDeclMap;
-class ClangExpressionParser;
-class ClangExpressionVariable;
-class ClangModulesDeclVendor;
-class ClangPersistentVariables;
 class CommandInterpreter;
 class CommandInterpreterRunOptions;
 class CommandObject;
@@ -61,15 +54,13 @@ class CommandObjectMultiword;
 class CommandReturnObject;
 class Communication;
 class CompactUnwindInfo;
-struct CompilerContext;
+class CompileUnit;
 class CompilerDecl;
 class CompilerDeclContext;
 class CompilerType;
-class CompileUnit;
 class Connection;
 class ConnectionFileDescriptor;
 class ConstString;
-class CXXSyntheticChildren;
 class DWARFCallFrameInfo;
 class DWARFDataExtractor;
 class DWARFExpression;
@@ -85,7 +76,6 @@ class DynamicCheckerFunctions;
 class DynamicLoader;
 class Editline;
 class EmulateInstruction;
-class Status;
 class EvaluateExpressionOptions;
 class Event;
 class EventData;
@@ -94,26 +84,26 @@ class ExecutionContext;
 class ExecutionContextRef;
 class ExecutionContextScope;
 class Expression;
+class ExpressionTypeSystemHelper;
 class ExpressionVariable;
 class ExpressionVariableList;
-class ExpressionTypeSystemHelper;
 class File;
 class FileSpec;
 class FileSpecList;
 class Flags;
-class TypeCategoryImpl;
 class FormatManager;
 class FormattersMatchCandidate;
 class FuncUnwinders;
 class Function;
+class FunctionCaller;
 class FunctionInfo;
+class IOHandler;
+class IOObject;
+class IRExecutionUnit;
 class InlineFunctionInfo;
 class Instruction;
 class InstructionList;
 class InstrumentationRuntime;
-class IOHandler;
-class IOObject;
-class IRExecutionUnit;
 class JITLoader;
 class JITLoaderList;
 class Language;
@@ -131,15 +121,13 @@ class Module;
 class ModuleList;
 class ModuleSpec;
 class ModuleSpecList;
-struct NameSearchContext;
 class ObjectContainer;
-class OptionGroup;
-class OptionGroupOptions;
-class OptionGroupPlatform;
 class ObjectFile;
 class ObjectFileJITDelegate;
 class OperatingSystem;
-class Options;
+class OptionGroup;
+class OptionGroupOptions;
+class OptionGroupPlatform;
 class OptionValue;
 class OptionValueArch;
 class OptionValueArgs;
@@ -151,8 +139,8 @@ class OptionValueEnumeration;
 class OptionValueFileSpec;
 class OptionValueFileSpecList;
 class OptionValueFormat;
-class OptionValueLanguage;
 class OptionValueFormatEntity;
+class OptionValueLanguage;
 class OptionValuePathMappings;
 class OptionValueProperties;
 class OptionValueRegex;
@@ -160,31 +148,33 @@ class OptionValueSInt64;
 class OptionValueString;
 class OptionValueUInt64;
 class OptionValueUUID;
+class Options;
 class PathMappingList;
-class FunctionCaller;
 class PersistentExpressionState;
 class Platform;
 class Process;
 class ProcessAttachInfo;
-class ProcessModID;
 class ProcessInfo;
 class ProcessInstanceInfo;
 class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
 class ProcessLaunchInfo;
+class ProcessModID;
 class Property;
-struct PropertyDefinition;
+class Queue;
+class QueueImpl;
+class QueueItem;
+class REPL;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
 class RegisterValue;
 class RegularExpression;
-class REPL;
 class RichManglingContext;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
-struct ScriptSummaryFormat;
+class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
 class SectionList;
@@ -198,21 +188,17 @@ class StackFrameList;
 class StackFrameRecognizer;
 class StackFrameRecognizerManager;
 class StackID;
+class Status;
 class StopInfo;
 class Stoppoint;
 class StoppointCallbackContext;
 class StoppointLocation;
 class Stream;
-template <unsigned N> class StreamBuffer;
 class StreamFile;
 class StreamString;
 class StringList;
-struct StringSummaryFormat;
 class StructuredDataImpl;
 class StructuredDataPlugin;
-class SystemRuntime;
-class TypeSummaryImpl;
-class TypeSummaryOptions;
 class Symbol;
 class SymbolContext;
 class SymbolContextList;
@@ -224,12 +210,7 @@ class SymbolVendor;
 class Symtab;
 class SyntheticChildren;
 class SyntheticChildrenFrontEnd;
-class TypeFilterImpl;
-class TypeSystem;
-class ScriptedSyntheticChildren;
-class Queue;
-class QueueItem;
-class QueueImpl;
+class SystemRuntime;
 class Target;
 class TargetList;
 class TargetProperties;
@@ -249,17 +230,22 @@ class ThreadSpec;
 class TraceOptions;
 class Type;
 class TypeAndOrName;
+class TypeCategoryImpl;
 class TypeCategoryMap;
-class TypeImpl;
-class TypeList;
-class TypeMap;
-class TypeListImpl;
-class TypeMemberImpl;
-class TypeMemberFunctionImpl;
 class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
+class TypeFilterImpl;
 class TypeFormatImpl;
+class TypeImpl;
+class TypeList;
+class TypeListImpl;
+class TypeMap;
+class TypeMemberFunctionImpl;
+class TypeMemberImpl;
 class TypeNameSpecifierImpl;
+class TypeSummaryImpl;
+class TypeSummaryOptions;
+class TypeSystem;
 class UUID;
 class UnixSignals;
 class Unwind;
@@ -283,7 +269,13 @@ class VariableList;
 class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
+struct CompilerContext;
 struct LineEntry;
+struct NameSearchContext;
+struct PropertyDefinition;
+struct ScriptSummaryFormat;
+struct StringSummaryFormat;
+template <unsigned N> class StreamBuffer;
 
 } // namespace lldb_private
 
@@ -299,17 +291,12 @@ typedef std::shared_ptr<lldb_private::BreakpointSite> BreakpointSiteSP;
 typedef std::weak_ptr<lldb_private::BreakpointSite> BreakpointSiteWP;
 typedef std::shared_ptr<lldb_private::BreakpointLocation> BreakpointLocationSP;
 typedef std::weak_ptr<lldb_private::BreakpointLocation> BreakpointLocationWP;
-typedef std::shared_ptr<lldb_private::BreakpointPrecondition> BreakpointPreconditionSP;
+typedef std::shared_ptr<lldb_private::BreakpointPrecondition>
+    BreakpointPreconditionSP;
 typedef std::shared_ptr<lldb_private::BreakpointResolver> BreakpointResolverSP;
 typedef std::shared_ptr<lldb_private::Broadcaster> BroadcasterSP;
 typedef std::shared_ptr<lldb_private::BroadcasterManager> BroadcasterManagerSP;
 typedef std::weak_ptr<lldb_private::BroadcasterManager> BroadcasterManagerWP;
-typedef std::unique_ptr<lldb_private::TypeSystemClang> TypeSystemClangUP;
-typedef std::shared_ptr<lldb_private::ClangASTImporter> ClangASTImporterSP;
-typedef std::unique_ptr<lldb_private::ClangModulesDeclVendor>
-    ClangModulesDeclVendorUP;
-typedef std::unique_ptr<lldb_private::ClangPersistentVariables>
-    ClangPersistentVariablesUP;
 typedef std::shared_ptr<lldb_private::UserExpression> UserExpressionSP;
 typedef std::shared_ptr<lldb_private::CommandObject> CommandObjectSP;
 typedef std::shared_ptr<lldb_private::Communication> CommunicationSP;
@@ -467,7 +454,7 @@ typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;
 typedef std::shared_ptr<lldb_private::UnwindPlan> UnwindPlanSP;
 typedef std::shared_ptr<lldb_private::UtilityFunction> UtilityFunctionSP;
-typedef lldb_private::SharingPtr<lldb_private::ValueObject> ValueObjectSP;
+typedef std::shared_ptr<lldb_private::ValueObject> ValueObjectSP;
 typedef std::shared_ptr<lldb_private::Value> ValueSP;
 typedef std::shared_ptr<lldb_private::ValueList> ValueListSP;
 typedef std::shared_ptr<lldb_private::Variable> VariableSP;
@@ -477,13 +464,5 @@ typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
 
 } // namespace lldb
 
-// llvm forward declarations
-namespace llvm {
-
-struct ItaniumPartialDemangler;
-class StringRef;
-
-} // namespace llvm
-
 #endif // #if defined(__cplusplus)
-#endif // LLDB_lldb_forward_h_
+#endif // LLDB_LLDB_FORWARD_H

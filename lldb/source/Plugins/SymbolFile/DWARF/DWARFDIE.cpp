@@ -32,7 +32,7 @@ class ElaboratingDIEIterator
   // Container sizes are optimized for the case of following DW_AT_specification
   // and DW_AT_abstract_origin just once.
   llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<lldb::user_id_t, 3> m_seen;
+  llvm::SmallSet<DWARFDebugInfoEntry *, 3> m_seen;
 
   void Next() {
     assert(!m_worklist.empty() && "Incrementing end iterator?");
@@ -44,7 +44,7 @@ class ElaboratingDIEIterator
     // And add back any items that elaborate it.
     for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
-        if (m_seen.insert(die.GetID()).second)
+        if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
     }
   }
@@ -372,15 +372,6 @@ std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
   return result;
 }
 
-void DWARFDIE::GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const {
-  if (IsValid()) {
-    dwarf_decl_ctx.SetLanguage(GetLanguage());
-    m_die->GetDWARFDeclContext(GetCU(), dwarf_decl_ctx);
-  } else {
-    dwarf_decl_ctx.Clear();
-  }
-}
-
 void DWARFDIE::GetDeclContext(
     llvm::SmallVectorImpl<lldb_private::CompilerContext> &context) const {
   const dw_tag_t tag = Tag();
@@ -456,28 +447,4 @@ bool DWARFDIE::GetDIENamesAndRanges(
         call_file, call_line, call_column, frame_base);
   } else
     return false;
-}
-
-CompilerDecl DWARFDIE::GetDecl() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclForUIDFromDWARF(*this);
-  else
-    return CompilerDecl();
-}
-
-CompilerDeclContext DWARFDIE::GetDeclContext() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclContextForUIDFromDWARF(*this);
-  else
-    return CompilerDeclContext();
-}
-
-CompilerDeclContext DWARFDIE::GetContainingDeclContext() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclContextContainingUIDFromDWARF(*this);
-  else
-    return CompilerDeclContext();
 }

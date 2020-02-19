@@ -39,7 +39,7 @@ template("unix_toolchain") {
 
     tool("alink") {
       if (current_os == "mac") {
-        command = "libtool -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
+        command = "libtool -D -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
       } else {
         # Remove the output file first so that ar doesn't try to modify the
         # existing file.

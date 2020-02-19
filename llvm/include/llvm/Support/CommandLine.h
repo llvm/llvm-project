@@ -488,14 +488,13 @@ struct callback_traits : public callback_traits<decltype(&F::operator())> {};
 template <typename R, typename C, typename... Args>
 struct callback_traits<R (C::*)(Args...) const> {
   using result_type = R;
-  using arg_type = typename std::tuple_element<0, std::tuple<Args...>>::type;
+  using arg_type = std::tuple_element_t<0, std::tuple<Args...>>;
   static_assert(sizeof...(Args) == 1, "callback function must have one and only one parameter");
   static_assert(std::is_same<result_type, void>::value,
                 "callback return type must be void");
-  static_assert(
-      std::is_lvalue_reference<arg_type>::value &&
-          std::is_const<typename std::remove_reference<arg_type>::type>::value,
-      "callback arg_type must be a const lvalue reference");
+  static_assert(std::is_lvalue_reference<arg_type>::value &&
+                    std::is_const<std::remove_reference_t<arg_type>>::value,
+                "callback arg_type must be a const lvalue reference");
 };
 } // namespace detail
 
@@ -1453,16 +1452,16 @@ class opt : public Option,
     }
   }
 
-  template <class T, class = typename std::enable_if<
-            std::is_assignable<T&, T>::value>::type>
+  template <class T,
+            class = std::enable_if_t<std::is_assignable<T &, T>::value>>
   void setDefaultImpl() {
     const OptionValue<DataType> &V = this->getDefault();
     if (V.hasValue())
       this->setValue(V.getValue());
   }
 
-  template <class T, class = typename std::enable_if<
-            !std::is_assignable<T&, T>::value>::type>
+  template <class T,
+            class = std::enable_if_t<!std::is_assignable<T &, T>::value>>
   void setDefaultImpl(...) {}
 
   void setDefault() override { setDefaultImpl<DataType>(); }

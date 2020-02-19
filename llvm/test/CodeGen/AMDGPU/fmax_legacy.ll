@@ -6,7 +6,7 @@
 
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; FUNC-LABEL: {{^}}test_fmax_legacy_uge_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
@@ -21,7 +21,7 @@ declare i32 @llvm.r600.read.tidig.x() #1
 
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -49,7 +49,7 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, fl
 
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -76,7 +76,7 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(float addrspace(1)*
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -102,7 +102,7 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, fl
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, fl
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -153,7 +153,7 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, fl
 ; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
 
@@ -186,7 +186,7 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* 
 
 ; GCN-NOT: v_max
 define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <3 x float>, <3 x float> addrspace(1)* %gep.0, i32 1
 
@@ -209,7 +209,7 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* 
 
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 

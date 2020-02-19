@@ -904,6 +904,12 @@ Strip (or keep only, if negative) a given number of path components when emittin
 
 Turn on runtime checks for various forms of undefined or suspicious behavior. See user manual for available checks
 
+.. option:: -fno-semantic-interposition, -fsemantic-interposition
+
+Enable semantic interposition. Semantic interposition allows for the
+interposition of a symbol by another at runtime, thus preventing a range of
+inter-procedural optimisation.
+
 .. option:: -moutline, -mno-outline
 
 Enable function outlining (AArch64 only)
@@ -1910,6 +1916,10 @@ Use a strong heuristic to apply stack protectors to functions
 .. option:: -fstack-size-section, -fno-stack-size-section
 
 Emit section containing metadata on function stack sizes
+
+.. option:: -fstack-clash-protection, -fno-stack-clash-protection
+
+Instrument stack allocation to prevent stack clash attacks (x86, non-Windows only).
 
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 

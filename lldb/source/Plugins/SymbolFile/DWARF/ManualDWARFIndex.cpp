@@ -89,7 +89,7 @@ void ManualDWARFIndex::Index() {
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
   assert(
-      !unit.GetSymbolFileDWARF().GetBaseCompileUnit() &&
+      !unit.IsDWOUnit() &&
       "DWARFUnit associated with .dwo or .dwp should not be indexed directly");
 
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
@@ -100,7 +100,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
         unit.GetOffset());
   }
 
-  const LanguageType cu_language = unit.GetLanguageType();
+  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
   IndexUnitImpl(unit, cu_language, set);
 
@@ -406,7 +406,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
         dies.push_back(die);
     }
   }
@@ -417,7 +417,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIE(die_ref);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
         dies.push_back(die);
     }
     offsets.clear();

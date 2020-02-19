@@ -533,6 +533,16 @@ int ExecuteCommand(const Command &Cmd) {
   return Info.return_code;
 }
 
+bool ExecuteCommand(const Command &BaseCmd, std::string *CmdOutput) {
+  auto LogFilePath = TempPath("SimPopenOut", ".txt");
+  Command Cmd(BaseCmd);
+  Cmd.setOutputFile(LogFilePath);
+  int Ret = ExecuteCommand(Cmd);
+  *CmdOutput = FileToString(LogFilePath);
+  RemoveFile(LogFilePath);
+  return Ret == 0;
+}
+
 const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
                          size_t PattLen) {
   return memmem(Data, DataLen, Patt, PattLen);

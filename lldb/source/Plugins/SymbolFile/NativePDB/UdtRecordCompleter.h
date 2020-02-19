@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
-#define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 
-#include "lldb/Symbol/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -79,4 +79,4 @@ private:
 } // namespace npdb
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H

@@ -969,18 +969,50 @@ public:
   /// stack arguments from being clobbered.
   SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemcpy(SDValue Chain, const SDLoc &dl,
+                                              SDValue Dst, SDValue Src,
+                                              SDValue Size, unsigned Align,
+                                              bool isVol, bool AlwaysInline,
+                                              bool isTailCall,
+                                              MachinePointerInfo DstPtrInfo,
+                                              MachinePointerInfo SrcPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemcpy(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                     AlwaysInline, isTailCall, DstPtrInfo, SrcPtrInfo);
+  }
+
   SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, unsigned Align, bool isVol, bool AlwaysInline,
-                    bool isTailCall, MachinePointerInfo DstPtrInfo,
+                    SDValue Size, Align Alignment, bool isVol,
+                    bool AlwaysInline, bool isTailCall,
+                    MachinePointerInfo DstPtrInfo,
                     MachinePointerInfo SrcPtrInfo);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemmove(SDValue Chain, const SDLoc &dl,
+                                               SDValue Dst, SDValue Src,
+                                               SDValue Size, unsigned Align,
+                                               bool isVol, bool isTailCall,
+                                               MachinePointerInfo DstPtrInfo,
+                                               MachinePointerInfo SrcPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemmove(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                      isTailCall, DstPtrInfo, SrcPtrInfo);
+  }
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                     SDValue Size, unsigned Align, bool isVol, bool isTailCall,
+                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemset(SDValue Chain, const SDLoc &dl,
+                                              SDValue Dst, SDValue Src,
+                                              SDValue Size, unsigned Align,
+                                              bool isVol, bool isTailCall,
+                                              MachinePointerInfo DstPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemset(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                     isTailCall, DstPtrInfo);
+  }
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, unsigned Align, bool isVol, bool isTailCall,
+                    SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                     MachinePointerInfo DstPtrInfo);
 
   SDValue getAtomicMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
@@ -1638,6 +1670,23 @@ public:
   /// If V is a splat vector, return its scalar source operand by extracting
   /// that element from the source vector.
   SDValue getSplatValue(SDValue V);
+
+  /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
+  /// that is less than the element bit-width of the shift node, return it.
+  const APInt *getValidShiftAmountConstant(SDValue V,
+                                           const APInt &DemandedElts) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the minimum value.
+  const APInt *
+  getValidMinimumShiftAmountConstant(SDValue V,
+                                     const APInt &DemandedElts) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the maximum value.
+  const APInt *
+  getValidMaximumShiftAmountConstant(SDValue V,
+                                     const APInt &DemandedElts) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
   /// over the elements of a vector starting from the EXTRACT_VECTOR_ELT node /p

@@ -58,10 +58,9 @@ template <typename T> T jitTargetAddressToPointer(JITTargetAddress Addr) {
 /// Casts the given address to a callable function pointer. This operation
 /// will perform pointer signing for platforms that require it (e.g. arm64e).
 template <typename T> T jitTargetAddressToFunction(JITTargetAddress Addr) {
-  static_assert(
-      std::is_pointer<T>::value &&
-          std::is_function<typename std::remove_pointer<T>::type>::value,
-      "T must be a function pointer type");
+  static_assert(std::is_pointer<T>::value &&
+                    std::is_function<std::remove_pointer_t<T>>::value,
+                "T must be a function pointer type");
   return jitTargetAddressToPointer<T>(Addr);
 }
 

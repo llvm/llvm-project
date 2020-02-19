@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBBreakpoint_h_
-#define LLDB_SBBreakpoint_h_
+#ifndef LLDB_API_SBBREAKPOINT_H
+#define LLDB_API_SBBREAKPOINT_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -181,4 +181,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBBreakpoint_h_
+#endif // LLDB_API_SBBREAKPOINT_H

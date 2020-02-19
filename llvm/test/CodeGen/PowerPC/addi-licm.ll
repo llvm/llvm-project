@@ -17,9 +17,10 @@ entry:
 ; CHECK-LABEL: @foo
 ; CHECK: addi [[REG1:[0-9]+]], 1,
 ; CHECK: addi [[REG2:[0-9]+]], 1,
+; CHECK: li [[REG3:[0-9]+]], 0
 ; CHECK: %for.body.i
-; CHECK-DAG: lfs {{[0-9]+}}, 0([[REG1]])
-; CHECK-DAG: lfs {{[0-9]+}}, 0([[REG2]])
+; CHECK-DAG: lfsx {{[0-9]+}}, [[REG1]], [[REG3]]
+; CHECK-DAG: lfsx {{[0-9]+}}, [[REG2]], [[REG3]]
 ; CHECK: blr
 
 ; PIP-LABEL: @foo

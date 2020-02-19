@@ -426,8 +426,14 @@ public:
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
 
-  /// Auxiliary triple for CUDA compilation.
+  /// Auxiliary triple for CUDA/HIP compilation.
   std::string AuxTriple;
+
+  /// Auxiliary target CPU for CUDA/HIP compilation.
+  Optional<std::string> AuxTargetCPU;
+
+  /// Auxiliary target features for CUDA/HIP compilation.
+  Optional<std::vector<std::string>> AuxTargetFeatures;
 
   /// Filename to write statistics to.
   std::string StatsFile;

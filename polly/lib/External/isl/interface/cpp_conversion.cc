@@ -6,17 +6,46 @@
  * Written by Sven Verdoolaege.
  */
 
+#include <stdio.h>
+#include <map>
+#include <string>
+
 #include "cpp.h"
 #include "cpp_conversion.h"
 
-/* Print a function called "function" for converting objects of
- * type "name" from the "from" bindings to the "to" bindings.
+/* If "clazz" describes a subclass of a C type, then print code
+ * for converting an object of the class derived from the C type
+ * to the subclass.  Do this by first converting this class
+ * to the immediate superclass of the subclass and then converting
+ * from this superclass to the subclass.
  */
-static void convert(const char *name, const char *from, const char *to,
-	const char *function)
+void cpp_conversion_generator::cast(const isl_class &clazz, const char *to)
 {
-	printf("%s%s %s(%s%s obj) {\n", to, name, function, from, name);
-	printf("\t""return %s""manage(obj.copy());\n", to);
+	string name = cpp_generator::type2cpp(clazz);
+
+	if (!clazz.is_type_subclass())
+		return;
+
+	cast(classes[clazz.superclass_name], to);
+	printf(".as<%s%s>()", to, name.c_str());
+}
+
+/* Print a function called "function" for converting objects of
+ * "clazz" from the "from" bindings to the "to" bindings.
+ * If "clazz" describes a subclass of a C type, then the result
+ * of the conversion between bindings is derived from the C type and
+ * needs to be converted back to the subclass.
+ */
+void cpp_conversion_generator::convert(const isl_class &clazz,
+	const char *from, const char *to, const char *function)
+{
+	string name = cpp_generator::type2cpp(clazz);
+
+	printf("%s%s %s(%s%s obj) {\n",
+		to, name.c_str(), function, from, name.c_str());
+	printf("\t""return %s""manage(obj.copy())", to);
+	cast(clazz, to);
+	printf(";\n");
 	printf("}\n");
 	printf("\n");
 }
@@ -36,12 +65,10 @@ static void convert(const char *name, const char *from, const char *to,
  *		return manage(obj.copy());
  *	}
  */
-static void print(const isl_class &clazz)
+void cpp_conversion_generator::print(const isl_class &clazz)
 {
-	string name = cpp_generator::type2cpp(clazz.name);
-
-	convert(name.c_str(), "", "checked::", "check");
-	convert(name.c_str(), "checked::", "", "uncheck");
+	convert(clazz, "", "checked::", "check");
+	convert(clazz, "checked::", "", "uncheck");
 }
 
 /* Generate conversion functions for converting objects between

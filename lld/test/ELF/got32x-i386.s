@@ -41,6 +41,6 @@
 # CHECK-NEXT:   401121: 8b 80 {{.*}} movl -4100(%eax), %eax
 # CHECK-NEXT:   401127: 8b 83 {{.*}} movl -4100(%ebx), %eax
 
-# RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1 -pie 2>&1 | \
+# RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o /dev/null -pie 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
 # ERR-COUNT-2: error: symbol 'foo' cannot be preempted; recompile with -fPIE

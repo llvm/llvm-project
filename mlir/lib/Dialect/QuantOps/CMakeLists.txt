@@ -1,5 +1,4 @@
 add_llvm_library(MLIRQuantOps
-  IR/DialectRegistration.cpp
   IR/QuantOps.cpp
   IR/QuantTypes.cpp
   IR/TypeDetail.h
@@ -19,3 +18,11 @@ add_dependencies(MLIRQuantOps
                  MLIRQuantOpsIncGen
                  MLIRSupport
                  MLIRStandardOps)
+
+target_link_libraries(MLIRQuantOps
+  MLIRIR
+  MLIRPass
+  MLIRSupport
+  MLIRStandardOps
+  MLIRTransformUtils
+  )

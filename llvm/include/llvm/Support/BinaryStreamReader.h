@@ -90,7 +90,7 @@ public:
   template <typename T> Error readEnum(T &Dest) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call readEnum with non-enum value!");
-    typename std::underlying_type<T>::type N;
+    std::underlying_type_t<T> N;
     if (auto EC = readInteger(N))
       return EC;
     Dest = static_cast<T>(N);

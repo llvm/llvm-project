@@ -2,28 +2,11 @@
 
 ; We do not pipeline sigma yet, but the non-pipelined version
 ; with good scheduling is pretty fast. The compiler generates
-; 19 packets, and the assembly version is 16.
+; 18 packets, and the assembly version is 16.
 
 ; CHECK:  loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
+; CHECK-COUNT-17: }
 ; CHECK: }{{[ \t]*}}:endloop
 
 @g0 = external constant [10 x i16], align 128

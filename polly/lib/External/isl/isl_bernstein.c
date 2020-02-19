@@ -38,92 +38,105 @@ struct bernstein_data {
 	isl_pw_qpolynomial_fold *pwf_tight;
 };
 
-static int vertex_is_integral(__isl_keep isl_basic_set *vertex)
+static isl_bool vertex_is_integral(__isl_keep isl_basic_set *vertex)
 {
-	unsigned nvar;
-	unsigned nparam;
+	isl_size nvar;
+	isl_size nparam;
 	int i;
 
 	nvar = isl_basic_set_dim(vertex, isl_dim_set);
 	nparam = isl_basic_set_dim(vertex, isl_dim_param);
+	if (nvar < 0 || nparam < 0)
+		return isl_bool_error;
 	for (i = 0; i < nvar; ++i) {
 		int r = nvar - 1 - i;
 		if (!isl_int_is_one(vertex->eq[r][1 + nparam + i]) &&
 		    !isl_int_is_negone(vertex->eq[r][1 + nparam + i]))
-			return 0;
+			return isl_bool_false;
 	}
 
-	return 1;
+	return isl_bool_true;
 }
 
 static __isl_give isl_qpolynomial *vertex_coordinate(
-	__isl_keep isl_basic_set *vertex, int i, __isl_take isl_space *dim)
+	__isl_keep isl_basic_set *vertex, int i, __isl_take isl_space *space)
 {
-	unsigned nvar;
-	unsigned nparam;
+	isl_size nvar;
+	isl_size nparam;
+	isl_size total;
 	int r;
 	isl_int denom;
 	isl_qpolynomial *v;
 
+	isl_int_init(denom);
+
 	nvar = isl_basic_set_dim(vertex, isl_dim_set);
 	nparam = isl_basic_set_dim(vertex, isl_dim_param);
+	total = isl_basic_set_dim(vertex, isl_dim_all);
+	if (nvar < 0 || nparam < 0 || total < 0)
+		goto error;
 	r = nvar - 1 - i;
 
-	isl_int_init(denom);
 	isl_int_set(denom, vertex->eq[r][1 + nparam + i]);
 	isl_assert(vertex->ctx, !isl_int_is_zero(denom), goto error);
 
 	if (isl_int_is_pos(denom))
-		isl_seq_neg(vertex->eq[r], vertex->eq[r],
-				1 + isl_basic_set_total_dim(vertex));
+		isl_seq_neg(vertex->eq[r], vertex->eq[r], 1 + total);
 	else
 		isl_int_neg(denom, denom);
 
-	v = isl_qpolynomial_from_affine(dim, vertex->eq[r], denom);
+	v = isl_qpolynomial_from_affine(space, vertex->eq[r], denom);
 	isl_int_clear(denom);
 
 	return v;
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	isl_int_clear(denom);
 	return NULL;
 }
 
 /* Check whether the bound associated to the selection "k" is tight,
- * which is the case if we select exactly one vertex and if that vertex
+ * which is the case if we select exactly one vertex (i.e., one of the
+ * exponents in "k" is exactly "d") and if that vertex
  * is integral for all values of the parameters.
  */
-static int is_tight(int *k, int n, int d, isl_cell *cell)
+static isl_bool is_tight(int *k, int n, int d, isl_cell *cell)
 {
 	int i;
 
 	for (i = 0; i < n; ++i) {
 		int v;
-		if (k[i] != d) {
-			if (k[i])
-				return 0;
+		if (!k[i])
 			continue;
-		}
+		if (k[i] != d)
+			return isl_bool_false;
 		v = cell->ids[n - 1 - i];
 		return vertex_is_integral(cell->vertices->v[v].vertex);
 	}
 
-	return 0;
+	return isl_bool_false;
 }
 
-static void add_fold(__isl_take isl_qpolynomial *b, __isl_keep isl_set *dom,
+static isl_stat add_fold(__isl_take isl_qpolynomial *b, __isl_keep isl_set *dom,
 	int *k, int n, int d, struct bernstein_data *data)
 {
 	isl_qpolynomial_fold *fold;
+	isl_bool tight;
 
 	fold = isl_qpolynomial_fold_alloc(data->type, b);
 
-	if (data->check_tight && is_tight(k, n, d, data->cell))
+	tight = isl_bool_false;
+	if (data->check_tight)
+		tight = is_tight(k, n, d, data->cell);
+	if (tight < 0)
+		return isl_stat_error;
+	if (tight)
 		data->fold_tight = isl_qpolynomial_fold_fold_on_domain(dom,
 							data->fold_tight, fold);
 	else
 		data->fold = isl_qpolynomial_fold_fold_on_domain(dom,
 							data->fold, fold);
+	return isl_stat_ok;
 }
 
 /* Extract the coefficients of the Bernstein base polynomials and store
@@ -136,25 +149,25 @@ static void add_fold(__isl_take isl_qpolynomial *b, __isl_keep isl_set *dom,
  * c[i] contains the coefficient of the selected powers of the first i+1 vars.
  * multinom[i] contains the partial multinomial coefficient.
  */
-static void extract_coefficients(isl_qpolynomial *poly,
+static isl_stat extract_coefficients(isl_qpolynomial *poly,
 	__isl_keep isl_set *dom, struct bernstein_data *data)
 {
 	int i;
 	int d;
-	int n;
+	isl_size n;
 	isl_ctx *ctx;
 	isl_qpolynomial **c = NULL;
 	int *k = NULL;
 	int *left = NULL;
 	isl_vec *multinom = NULL;
 
-	if (!poly)
-		return;
+	n = isl_qpolynomial_dim(poly, isl_dim_in);
+	if (n < 0)
+		return isl_stat_error;
 
 	ctx = isl_qpolynomial_get_ctx(poly);
-	n = isl_qpolynomial_dim(poly, isl_dim_in);
 	d = isl_qpolynomial_degree(poly);
-	isl_assert(ctx, n >= 2, return);
+	isl_assert(ctx, n >= 2, return isl_stat_error);
 
 	c = isl_calloc_array(ctx, isl_qpolynomial *, n);
 	k = isl_alloc_array(ctx, int, n);
@@ -188,7 +201,8 @@ static void extract_coefficients(isl_qpolynomial *poly,
 					multinom->el[i]);
 				b = isl_qpolynomial_mul(b, f);
 				k[n - 1] = left[n - 2];
-				add_fold(b, dom, k, n, d, data);
+				if (add_fold(b, dom, k, n, d, data) < 0)
+					goto error;
 				--i;
 				continue;
 			}
@@ -218,7 +232,7 @@ static void extract_coefficients(isl_qpolynomial *poly,
 	free(left);
 	free(k);
 	free(c);
-	return;
+	return isl_stat_ok;
 error:
 	isl_vec_free(multinom);
 	free(left);
@@ -227,7 +241,7 @@ error:
 		for (i = 0; i < n; ++i)
 			isl_qpolynomial_free(c[i]);
 	free(c);
-	return;
+	return isl_stat_error;
 }
 
 /* Perform bernstein expansion on the parametric vertices that are active
@@ -247,9 +261,10 @@ static isl_stat bernstein_coefficients_cell(__isl_take isl_cell *cell,
 {
 	int i, j;
 	struct bernstein_data *data = (struct bernstein_data *)user;
-	isl_space *dim_param;
-	isl_space *dim_dst;
+	isl_space *space_param;
+	isl_space *space_dst;
 	isl_qpolynomial *poly = data->poly;
+	isl_size n_in;
 	unsigned nvar;
 	int n_vertices;
 	isl_qpolynomial **subs;
@@ -257,10 +272,11 @@ static isl_stat bernstein_coefficients_cell(__isl_take isl_cell *cell,
 	isl_set *dom;
 	isl_ctx *ctx;
 
-	if (!poly)
+	n_in = isl_qpolynomial_dim(poly, isl_dim_in);
+	if (n_in < 0)
 		goto error;
 
-	nvar = isl_qpolynomial_dim(poly, isl_dim_in) - 1;
+	nvar = n_in - 1;
 	n_vertices = cell->n_vertices;
 
 	ctx = isl_qpolynomial_get_ctx(poly);
@@ -272,22 +288,23 @@ static isl_stat bernstein_coefficients_cell(__isl_take isl_cell *cell,
 	if (!subs)
 		goto error;
 
-	dim_param = isl_basic_set_get_space(cell->dom);
-	dim_dst = isl_qpolynomial_get_domain_space(poly);
-	dim_dst = isl_space_add_dims(dim_dst, isl_dim_set, n_vertices);
+	space_param = isl_basic_set_get_space(cell->dom);
+	space_dst = isl_qpolynomial_get_domain_space(poly);
+	space_dst = isl_space_add_dims(space_dst, isl_dim_set, n_vertices);
 
 	for (i = 0; i < 1 + nvar; ++i)
-		subs[i] = isl_qpolynomial_zero_on_domain(isl_space_copy(dim_dst));
+		subs[i] =
+		    isl_qpolynomial_zero_on_domain(isl_space_copy(space_dst));
 
 	for (i = 0; i < n_vertices; ++i) {
 		isl_qpolynomial *c;
-		c = isl_qpolynomial_var_on_domain(isl_space_copy(dim_dst), isl_dim_set,
-					1 + nvar + i);
+		c = isl_qpolynomial_var_on_domain(isl_space_copy(space_dst),
+					isl_dim_set, 1 + nvar + i);
 		for (j = 0; j < nvar; ++j) {
 			int k = cell->ids[i];
 			isl_qpolynomial *v;
 			v = vertex_coordinate(cell->vertices->v[k].vertex, j,
-						isl_space_copy(dim_param));
+						isl_space_copy(space_param));
 			v = isl_qpolynomial_add_dims(v, isl_dim_in,
 							1 + nvar + n_vertices);
 			v = isl_qpolynomial_mul(v, isl_qpolynomial_copy(c));
@@ -295,7 +312,7 @@ static isl_stat bernstein_coefficients_cell(__isl_take isl_cell *cell,
 		}
 		subs[0] = isl_qpolynomial_add(subs[0], c);
 	}
-	isl_space_free(dim_dst);
+	isl_space_free(space_dst);
 
 	poly = isl_qpolynomial_copy(poly);
 
@@ -305,9 +322,13 @@ static isl_stat bernstein_coefficients_cell(__isl_take isl_cell *cell,
 
 	data->cell = cell;
 	dom = isl_set_from_basic_set(isl_basic_set_copy(cell->dom));
-	data->fold = isl_qpolynomial_fold_empty(data->type, isl_space_copy(dim_param));
-	data->fold_tight = isl_qpolynomial_fold_empty(data->type, dim_param);
-	extract_coefficients(poly, dom, data);
+	data->fold = isl_qpolynomial_fold_empty(data->type,
+						isl_space_copy(space_param));
+	data->fold_tight = isl_qpolynomial_fold_empty(data->type, space_param);
+	if (extract_coefficients(poly, dom, data) < 0) {
+		data->fold = isl_qpolynomial_fold_free(data->fold);
+		data->fold_tight = isl_qpolynomial_fold_free(data->fold_tight);
+	}
 
 	pwf = isl_pw_qpolynomial_fold_alloc(data->type, isl_set_copy(dom),
 					    data->fold);
@@ -334,15 +355,18 @@ error:
  */
 static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_base(
 	__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, struct bernstein_data *data, int *tight)
+	__isl_take isl_qpolynomial *poly, struct bernstein_data *data,
+	isl_bool *tight)
 {
-	unsigned nvar;
-	isl_space *dim;
+	isl_size nvar;
+	isl_space *space;
 	isl_pw_qpolynomial_fold *pwf;
 	isl_vertices *vertices;
-	int covers;
+	isl_bool covers;
 
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
+	if (nvar < 0)
+		bset = isl_basic_set_free(bset);
 	if (nvar == 0) {
 		isl_set *dom;
 		isl_qpolynomial_fold *fold;
@@ -350,7 +374,7 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_base(
 		fold = isl_qpolynomial_fold_alloc(data->type, poly);
 		dom = isl_set_from_basic_set(bset);
 		if (tight)
-			*tight = 1;
+			*tight = isl_bool_true;
 		pwf = isl_pw_qpolynomial_fold_alloc(data->type, dom, fold);
 		return isl_pw_qpolynomial_fold_project_domain_on_params(pwf);
 	}
@@ -362,16 +386,17 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_base(
 		dom = isl_set_from_basic_set(bset);
 		pwf = isl_pw_qpolynomial_fold_alloc(data->type, dom, fold);
 		if (tight)
-			*tight = 1;
+			*tight = isl_bool_true;
 		return isl_pw_qpolynomial_fold_project_domain_on_params(pwf);
 	}
 
-	dim = isl_basic_set_get_space(bset);
-	dim = isl_space_params(dim);
-	dim = isl_space_from_domain(dim);
-	dim = isl_space_add_dims(dim, isl_dim_set, 1);
-	data->pwf = isl_pw_qpolynomial_fold_zero(isl_space_copy(dim), data->type);
-	data->pwf_tight = isl_pw_qpolynomial_fold_zero(dim, data->type);
+	space = isl_basic_set_get_space(bset);
+	space = isl_space_params(space);
+	space = isl_space_from_domain(space);
+	space = isl_space_add_dims(space, isl_dim_set, 1);
+	data->pwf = isl_pw_qpolynomial_fold_zero(isl_space_copy(space),
+						data->type);
+	data->pwf_tight = isl_pw_qpolynomial_fold_zero(space, data->type);
 	data->poly = isl_qpolynomial_homogenize(isl_qpolynomial_copy(poly));
 	vertices = isl_basic_set_compute_vertices(bset);
 	if (isl_vertices_foreach_disjoint_cell(vertices,
@@ -409,18 +434,17 @@ error:
  */
 static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_recursive(
 	__isl_take isl_pw_qpolynomial *pwqp,
-	int n_group, int *len, struct bernstein_data *data, int *tight)
+	int n_group, int *len, struct bernstein_data *data, isl_bool *tight)
 {
 	int i;
-	unsigned nparam;
-	unsigned nvar;
+	isl_size nparam;
+	isl_size nvar;
 	isl_pw_qpolynomial_fold *pwf;
-
-	if (!pwqp)
-		return NULL;
 
 	nparam = isl_pw_qpolynomial_dim(pwqp, isl_dim_param);
 	nvar = isl_pw_qpolynomial_dim(pwqp, isl_dim_in);
+	if (nparam < 0 || nvar < 0)
+		goto error;
 
 	pwqp = isl_pw_qpolynomial_move_dims(pwqp, isl_dim_param, nparam,
 					isl_dim_in, 0, nvar - len[n_group - 1]);
@@ -428,6 +452,8 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_recursive(
 
 	for (i = n_group - 2; i >= 0; --i) {
 		nparam = isl_pw_qpolynomial_fold_dim(pwf, isl_dim_param);
+		if (nparam < 0)
+			return isl_pw_qpolynomial_fold_free(pwf);
 		pwf = isl_pw_qpolynomial_fold_move_dims(pwf, isl_dim_in, 0,
 				isl_dim_param, nparam - len[i], len[i]);
 		if (tight && !*tight)
@@ -436,11 +462,15 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_recursive(
 	}
 
 	return pwf;
+error:
+	isl_pw_qpolynomial_free(pwqp);
+	return NULL;
 }
 
 static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_factors(
 	__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, struct bernstein_data *data, int *tight)
+	__isl_take isl_qpolynomial *poly, struct bernstein_data *data,
+	isl_bool *tight)
 {
 	isl_factorizer *f;
 	isl_set *set;
@@ -473,19 +503,19 @@ error:
 
 static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_full_recursive(
 	__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, struct bernstein_data *data, int *tight)
+	__isl_take isl_qpolynomial *poly, struct bernstein_data *data,
+	isl_bool *tight)
 {
 	int i;
 	int *len;
-	unsigned nvar;
+	isl_size nvar;
 	isl_pw_qpolynomial_fold *pwf;
 	isl_set *set;
 	isl_pw_qpolynomial *pwqp;
 
-	if (!bset || !poly)
-		goto error;
-
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
+	if (nvar < 0 || !poly)
+		goto error;
 	
 	len = isl_alloc_array(bset->ctx, int, nvar);
 	if (nvar && !len)
@@ -525,17 +555,16 @@ isl_stat isl_qpolynomial_bound_on_domain_bernstein(
 {
 	struct bernstein_data data;
 	isl_pw_qpolynomial_fold *pwf;
-	unsigned nvar;
-	int tight = 0;
-	int *tp = bound->check_tight ? &tight : NULL;
+	isl_size nvar;
+	isl_bool tight = isl_bool_false;
+	isl_bool *tp = bound->check_tight ? &tight : NULL;
 
-	if (!bset || !poly)
+	nvar = isl_basic_set_dim(bset, isl_dim_set);
+	if (nvar < 0 || !poly)
 		goto error;
 
 	data.type = bound->type;
 	data.check_tight = bound->check_tight;
-
-	nvar = isl_basic_set_dim(bset, isl_dim_set);
 
 	if (bset->ctx->opt->bernstein_recurse & ISL_BERNSTEIN_FACTORS)
 		pwf = bernstein_coefficients_factors(bset, poly, &data, tp);

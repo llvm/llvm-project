@@ -23,13 +23,10 @@ class FuncOp;
 template <typename T> class OpPassBase;
 
 /// Creates a pass to check memref accesses in a Function.
-std::unique_ptr<OpPassBase<FuncOp>> createMemRefBoundCheckPass();
+std::unique_ptr<OpPassBase<FuncOp>> createTestMemRefBoundCheckPass();
 
 /// Creates a pass to check memref access dependences in a Function.
 std::unique_ptr<OpPassBase<FuncOp>> createTestMemRefDependenceCheckPass();
-
-/// Creates a pass to test parallelism detection; emits note for parallel loops.
-std::unique_ptr<OpPassBase<FuncOp>> createParallelismDetectionTestPass();
 
 } // end namespace mlir
 

@@ -64,9 +64,9 @@ isl::basic_map makeTupleSwapBasicMap(isl::space FromSpace1,
   isl::space MapSpace = FromSpace.map_from_domain_and_range(ToSpace);
 
   isl::basic_map Result = isl::basic_map::universe(MapSpace);
-  for (auto i = Dims1 - Dims1; i < Dims1; i += 1)
+  for (unsigned i = 0u; i < Dims1; i += 1)
     Result = Result.equate(isl::dim::in, i, isl::dim::out, Dims2 + i);
-  for (auto i = Dims2 - Dims2; i < Dims2; i += 1) {
+  for (unsigned i = 0u; i < Dims2; i += 1) {
     Result = Result.equate(isl::dim::in, Dims1 + i, isl::dim::out, i);
   }
 

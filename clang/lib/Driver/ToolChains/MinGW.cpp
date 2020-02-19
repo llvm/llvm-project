@@ -300,7 +300,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostartfiles)) {
       // Add crtfastmath.o if available and fast math is enabled.
-      TC.AddFastMathRuntimeIfAvailable(Args, CmdArgs);
+      TC.addFastMathRuntimeIfAvailable(Args, CmdArgs);
 
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtend.o")));
     }

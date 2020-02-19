@@ -50,6 +50,16 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+; Make sure we don't try to outline the entire function, especially when the
+; entry block is cold.
+; CHECK: define void @cold_entry_block() [[COLD_ATTR:#[0-9]+]]
+; CHECK-NOT: cold_entry_block.cold.1
+define void @cold_entry_block() {
+entry:
+  call void @sink()
+  ret void
+}
+
 ; Do not split `noinline` functions.
 ; CHECK-LABEL: @noinline_func
 ; CHECK-NOT: noinline_func.cold.1
@@ -181,6 +191,8 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   ret void
 }
+
+; CHECK: attributes [[COLD_ATTR]] = { {{.*}}cold
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

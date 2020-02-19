@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
+#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -30,6 +31,8 @@ private:
   /// FrameIndex used for transferring values between 64-bit FPRs and a pair
   /// of 32-bit GPRs via the stack.
   int MoveF64FrameIndex = -1;
+  /// Size of any opaque stack adjustment due to save/restore libcalls.
+  unsigned LibCallStackSize = 0;
 
 public:
   RISCVMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
@@ -44,6 +47,16 @@ public:
     if (MoveF64FrameIndex == -1)
       MoveF64FrameIndex = MF.getFrameInfo().CreateStackObject(8, 8, false);
     return MoveF64FrameIndex;
+  }
+
+  unsigned getLibCallStackSize() const { return LibCallStackSize; }
+  void setLibCallStackSize(unsigned Size) { LibCallStackSize = Size; }
+
+  bool useSaveRestoreLibCalls() const {
+    // We cannot use fixed locations for the callee saved spill slots if the
+    // function uses a varargs save area.
+    return MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
+           VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall();
   }
 };
 

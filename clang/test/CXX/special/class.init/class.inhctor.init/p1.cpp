@@ -102,7 +102,14 @@ namespace constexpr_init_order {
   };
 
   struct B : A { B(); using A::A; int b = 2; };
-  extern const B b;
+
+  // Construct a situation where a value can be observed to change during
+  // constant evaluation in C++11: value-initialization of Wrap2 performs
+  // zero-initialization and then calls the constructor.
+  struct Wrap1 : B { constexpr Wrap1(); };
+  struct Wrap2 : Wrap1 {};
+
+  extern const Wrap2 b;
 
   struct Param {
     constexpr Param(int c) : n(4 * b.a + b.b + c) {}
@@ -111,7 +118,9 @@ namespace constexpr_init_order {
 
   constexpr A::A(Param p) : a(p.n) {}
 
-  constexpr B b(1);
+  constexpr Wrap1::Wrap1() : B(1) {}
+
+  constexpr Wrap2 b = {};
   constexpr B c(1);
   static_assert(b.a == 1, "p should be initialized before B() is executed");
   static_assert(c.a == 7, "b not initialized properly");

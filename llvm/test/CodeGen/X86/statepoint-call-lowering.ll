@@ -141,7 +141,6 @@ define i1 @test_i1_return_patchable() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    nopl (%rax)
 ; CHECK-NEXT:  .Ltmp7:
 ; CHECK-NEXT:    popq %rcx

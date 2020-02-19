@@ -14,7 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
-#include "AMDGPURegisterInfo.h"
+#define GET_REGINFO_HEADER
+#include "AMDGPUGenRegisterInfo.inc"
+
 #include "SIDefines.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -25,22 +27,20 @@ class LiveIntervals;
 class MachineRegisterInfo;
 class SIMachineFunctionInfo;
 
-class SIRegisterInfo final : public AMDGPURegisterInfo {
+class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
 private:
   const GCNSubtarget &ST;
-  unsigned SGPRSetID;
-  unsigned VGPRSetID;
-  unsigned AGPRSetID;
-  BitVector SGPRPressureSets;
-  BitVector VGPRPressureSets;
-  BitVector AGPRPressureSets;
   bool SpillSGPRToVGPR;
   bool isWave32;
 
-  void classifyPressureSet(unsigned PSetID, unsigned Reg,
-                           BitVector &PressureSets) const;
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
+
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
+
+  /// \returns the sub reg enum value for the given \p Channel
+  /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
+  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
@@ -199,10 +199,6 @@ public:
                               const TargetRegisterClass *RC,
                               const MachineFunction &MF) const;
 
-  unsigned getSGPRPressureSet() const { return SGPRSetID; };
-  unsigned getVGPRPressureSet() const { return VGPRSetID; };
-  unsigned getAGPRPressureSet() const { return AGPRSetID; };
-
   const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
                                                unsigned Reg) const;
   bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
@@ -214,19 +210,6 @@ public:
   virtual bool
   isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
-  }
-
-  bool isSGPRPressureSet(unsigned SetID) const {
-    return SGPRPressureSets.test(SetID) && !VGPRPressureSets.test(SetID) &&
-           !AGPRPressureSets.test(SetID);
-  }
-  bool isVGPRPressureSet(unsigned SetID) const {
-    return VGPRPressureSets.test(SetID) && !SGPRPressureSets.test(SetID) &&
-           !AGPRPressureSets.test(SetID);
-  }
-  bool isAGPRPressureSet(unsigned SetID) const {
-    return AGPRPressureSets.test(SetID) && !SGPRPressureSets.test(SetID) &&
-           !VGPRPressureSets.test(SetID);
   }
 
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
@@ -290,6 +273,21 @@ public:
   const uint32_t *getAllAllocatableSRegMask() const;
 
   int16_t calcSubRegIdx(const TargetRegisterClass *RC, unsigned SubOffset) const;
+
+  // \returns number of 32 bit registers covered by a \p LM
+  static unsigned getNumCoveredRegs(LaneBitmask LM) {
+    return LM.getNumLanes();
+  }
+
+  // \returns a DWORD offset of a \p SubReg
+  unsigned getChannelFromSubReg(unsigned SubReg) const {
+    return SubReg ? alignTo(getSubRegIdxOffset(SubReg), 32) / 32 : 0;
+  }
+
+  // \returns a DWORD size of a \p SubReg
+  unsigned getNumChannelsFromSubReg(unsigned SubReg) const {
+    return getNumCoveredRegs(getSubRegIndexLaneMask(SubReg));
+  }
 
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,

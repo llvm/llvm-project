@@ -1,6 +1,6 @@
 ## This is a test to test how SHT_RELR sections are dumped.
 
-# RUN: yaml2obj -docnum 1 %s \
+# RUN: yaml2obj --docnum=1 %s \
 # RUN:   | llvm-readobj --relocations --raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM1 %s
 # RAW-LLVM1:      Section (1) .relr.dyn {
@@ -11,7 +11,7 @@
 # RAW-LLVM1-NEXT:   0xA700550400009
 # RAW-LLVM1-NEXT: }
 
-# RUN: yaml2obj -docnum 1 %s \
+# RUN: yaml2obj --docnum=1 %s \
 # RUN:   | llvm-readobj --relocations - \
 # RUN:   | FileCheck --check-prefix=LLVM1 %s
 # LLVM1:      Section (1) .relr.dyn {
@@ -38,7 +38,7 @@
 # LLVM1-NEXT:   0x20390 R_X86_64_RELATIVE - 0x0
 # LLVM1-NEXT: }
 
-# RUN: yaml2obj -docnum 1 %s \
+# RUN: yaml2obj --docnum=1 %s \
 # RUN:   | llvm-readelf -relocations -raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-GNU1 %s
 # RAW-GNU1:      Relocation section '.relr.dyn' at offset 0x40 contains 5 entries:
@@ -48,7 +48,7 @@
 # RAW-GNU1-NEXT: 00000000000f0501
 # RAW-GNU1-NEXT: 000a700550400009
 
-# RUN: yaml2obj -docnum 1 %s \
+# RUN: yaml2obj --docnum=1 %s \
 # RUN:   | llvm-readelf -relocations - \
 # RUN:   | FileCheck --check-prefix=GNU1 %s
 # GNU1:      Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
@@ -88,7 +88,7 @@ Sections:
     Entries: [ 0x0000000000010D60, 0x0000000000000103, 0x0000000000020000,
                0x00000000000F0501, 0x000A700550400009 ]
 
-# RUN: yaml2obj -docnum 2 %s \
+# RUN: yaml2obj --docnum=2 %s \
 # RUN:   | llvm-readobj --relocations --raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM2 %s
 # RAW-LLVM2:      Section (1) .relr.dyn {
@@ -99,7 +99,7 @@ Sections:
 # RAW-LLVM2-NEXT:   0x50400009
 # RAW-LLVM2-NEXT: }
 
-# RUN: yaml2obj -docnum 2 %s \
+# RUN: yaml2obj --docnum=2 %s \
 # RUN:   | llvm-readobj --relocations - \
 # RUN:   | FileCheck --check-prefix=LLVM2 %s
 # LLVM2:      Section (1) .relr.dyn {
@@ -119,7 +119,7 @@ Sections:
 # LLVM2-NEXT:   0x200F4 R_386_RELATIVE - 0x0
 # LLVM2-NEXT: }
 
-# RUN: yaml2obj -docnum 2 %s \
+# RUN: yaml2obj --docnum=2 %s \
 # RUN:   | llvm-readelf -relocations -raw-relr - \
 # RUN:   | FileCheck --check-prefix=RAW-GNU2 %s
 # RAW-GNU2:      Relocation section '.relr.dyn' at offset 0x34 contains 5 entries:
@@ -129,7 +129,7 @@ Sections:
 # RAW-GNU2-NEXT: 000f0501
 # RAW-GNU2-NEXT: 50400009
 
-# RUN: yaml2obj -docnum 2 %s \
+# RUN: yaml2obj --docnum=2 %s \
 # RUN:   | llvm-readelf -relocations - \
 # RUN:   | FileCheck --check-prefix=GNU2 %s
 # GNU2:      Relocation section '.relr.dyn' at offset 0x34 contains 14 entries:

@@ -1818,7 +1818,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
         // If this is a base class, try to perform template argument
         // deduction from it.
         if (NextT != RecordT) {
-          TemplateDeductionInfo BaseInfo(Info.getLocation());
+          TemplateDeductionInfo BaseInfo(TemplateDeductionInfo::ForBase, Info);
           Sema::TemplateDeductionResult BaseResult =
               DeduceTemplateArguments(S, TemplateParams, SpecParam,
                                       QualType(NextT, 0), BaseInfo, Deduced);
@@ -2488,7 +2488,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion: {
       NestedNameSpecifierLocBuilder Builder;
-      TemplateName Template = Arg.getAsTemplate();
+      TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
       if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
         Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
       else if (QualifiedTemplateName *QTN =
@@ -2514,27 +2514,10 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
 }
 
 TemplateArgumentLoc
-Sema::getIdentityTemplateArgumentLoc(Decl *TemplateParm,
+Sema::getIdentityTemplateArgumentLoc(NamedDecl *TemplateParm,
                                      SourceLocation Location) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParm))
-    return getTrivialTemplateArgumentLoc(
-        TemplateArgument(
-            Context.getTemplateTypeParmType(TTP->getDepth(), TTP->getIndex(),
-                                            TTP->isParameterPack(), TTP)),
-        QualType(), Location.isValid() ? Location : TTP->getLocation());
-  else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParm))
-    return getTrivialTemplateArgumentLoc(TemplateArgument(TemplateName(TTP)),
-                                         QualType(),
-                                         Location.isValid() ? Location :
-                                         TTP->getLocation());
-  auto *NTTP = cast<NonTypeTemplateParmDecl>(TemplateParm);
-  CXXScopeSpec SS;
-  DeclarationNameInfo Info(NTTP->getDeclName(),
-                           Location.isValid() ? Location : NTTP->getLocation());
-  Expr *E = BuildDeclarationNameExpr(SS, Info, NTTP).get();
-  return getTrivialTemplateArgumentLoc(TemplateArgument(E), NTTP->getType(),
-                                       Location.isValid() ? Location :
-                                       NTTP->getLocation());
+  return getTrivialTemplateArgumentLoc(
+      Context.getInjectedTemplateArg(TemplateParm), QualType(), Location);
 }
 
 /// Convert the given deduced template argument and add it to the set of
@@ -2764,8 +2747,8 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
 
 /// Complete template argument deduction for a partial specialization.
 template <typename T>
-static typename std::enable_if<IsPartialSpecialization<T>::value,
-                               Sema::TemplateDeductionResult>::type
+static std::enable_if_t<IsPartialSpecialization<T>::value,
+                        Sema::TemplateDeductionResult>
 FinishTemplateArgumentDeduction(
     Sema &S, T *Partial, bool IsPartialOrdering,
     const TemplateArgumentList &TemplateArgs,
@@ -3456,13 +3439,16 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.decl]), those constraints are checked for satisfaction
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
-  if (CheckInstantiatedFunctionTemplateConstraints(Info.getLocation(),
-          Specialization, Builder, Info.AssociatedConstraintsSatisfaction))
-    return TDK_MiscellaneousDeductionFailure;
+  if (!PartialOverloading ||
+      (Builder.size() == FunctionTemplate->getTemplateParameters()->size())) {
+    if (CheckInstantiatedFunctionTemplateConstraints(Info.getLocation(),
+            Specialization, Builder, Info.AssociatedConstraintsSatisfaction))
+      return TDK_MiscellaneousDeductionFailure;
 
-  if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-    Info.reset(TemplateArgumentList::CreateCopy(Context, Builder));
-    return TDK_ConstraintsNotSatisfied;
+    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+      Info.reset(TemplateArgumentList::CreateCopy(Context, Builder));
+      return TDK_ConstraintsNotSatisfied;
+    }
   }
 
   if (OriginalCallArgs) {
@@ -4864,7 +4850,10 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
                                      FunctionTemplateDecl *FT1,
                                      FunctionTemplateDecl *FT2,
                                      TemplatePartialOrderingContext TPOC,
-                                     unsigned NumCallArguments1) {
+                                     unsigned NumCallArguments1,
+                                     bool Reversed) {
+  assert(!Reversed || TPOC == TPOC_Call);
+
   FunctionDecl *FD1 = FT1->getTemplatedDecl();
   FunctionDecl *FD2 = FT2->getTemplatedDecl();
   const FunctionProtoType *Proto1 = FD1->getType()->getAs<FunctionProtoType>();
@@ -4913,6 +4902,12 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
     } else if (!Method1 && Method2 && !Method2->isStatic()) {
       // Compare 'this' from Method2 against first parameter from Method1.
       AddImplicitObjectParameterType(S.Context, Method2, Args2);
+    } else if (Method1 && Method2 && Reversed) {
+      // Compare 'this' from Method1 against second parameter from Method2
+      // and 'this' from Method2 against second parameter from Method1.
+      AddImplicitObjectParameterType(S.Context, Method1, Args1);
+      AddImplicitObjectParameterType(S.Context, Method2, Args2);
+      ++NumComparedArguments;
     }
 
     Args1.insert(Args1.end(), Proto1->param_type_begin(),
@@ -4927,6 +4922,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
       Args1.resize(NumComparedArguments);
     if (Args2.size() > NumComparedArguments)
       Args2.resize(NumComparedArguments);
+    if (Reversed)
+      std::reverse(Args2.begin(), Args2.end());
     if (DeduceTemplateArguments(S, TemplateParams, Args2.data(), Args2.size(),
                                 Args1.data(), Args1.size(), Info, Deduced,
                                 TDF_None, /*PartialOrdering=*/true))
@@ -5045,6 +5042,10 @@ static bool isVariadicFunctionTemplate(FunctionTemplateDecl *FunTmpl) {
 /// \param NumCallArguments2 The number of arguments in the call to FT2, used
 /// only when \c TPOC is \c TPOC_Call.
 ///
+/// \param Reversed If \c true, exactly one of FT1 and FT2 is an overload
+/// candidate with a reversed parameter order. In this case, the corresponding
+/// P/A pairs between FT1 and FT2 are reversed.
+///
 /// \returns the more specialized function template. If neither
 /// template is more specialized, returns NULL.
 FunctionTemplateDecl *
@@ -5053,7 +5054,8 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
                                  SourceLocation Loc,
                                  TemplatePartialOrderingContext TPOC,
                                  unsigned NumCallArguments1,
-                                 unsigned NumCallArguments2) {
+                                 unsigned NumCallArguments2,
+                                 bool Reversed) {
 
   auto JudgeByConstraints = [&] () -> FunctionTemplateDecl * {
     llvm::SmallVector<const Expr *, 3> AC1, AC2;
@@ -5070,9 +5072,9 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
   };
 
   bool Better1 = isAtLeastAsSpecializedAs(*this, Loc, FT1, FT2, TPOC,
-                                          NumCallArguments1);
+                                          NumCallArguments1, Reversed);
   bool Better2 = isAtLeastAsSpecializedAs(*this, Loc, FT2, FT1, TPOC,
-                                          NumCallArguments2);
+                                          NumCallArguments2, Reversed);
 
   if (Better1 != Better2) // We have a clear winner
     return Better1 ? FT1 : FT2;

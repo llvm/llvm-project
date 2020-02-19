@@ -764,7 +764,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
         SymbolIndexMap[MCSec->getQualNameSymbol()] = Csect.SymbolTableIndex;
         // 1 main and 1 auxiliary symbol table entry for the csect.
         SymbolTableIndex += 2;
-        
+
         for (auto &Sym : Csect.Syms) {
           Sym.SymbolTableIndex = SymbolTableIndex;
           SymbolIndexMap[Sym.MCSym] = Sym.SymbolTableIndex;

@@ -24,9 +24,19 @@ cl::opt<bool> PGSOLargeWorkingSetSizeOnly(
              "if the working set size is large (except for cold code.)"));
 
 cl::opt<bool> PGSOColdCodeOnly(
-    "pgso-cold-code-only", cl::Hidden, cl::init(true),
+    "pgso-cold-code-only", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code."));
+
+cl::opt<bool> PGSOColdCodeOnlyForInstrPGO(
+    "pgso-cold-code-only-for-instr-pgo", cl::Hidden, cl::init(false),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code under instrumentation PGO."));
+
+cl::opt<bool> PGSOColdCodeOnlyForSamplePGO(
+    "pgso-cold-code-only-for-sample-pgo", cl::Hidden, cl::init(true),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code under sample PGO."));
 
 cl::opt<bool> PGSOIRPassOrTestOnly(
     "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(false),
@@ -38,7 +48,7 @@ cl::opt<bool> ForcePGSO(
     cl::desc("Force the (profiled-guided) size optimizations. "));
 
 cl::opt<int> PgsoCutoffInstrProf(
-    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(250000), cl::ZeroOrMore,
+    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(950000), cl::ZeroOrMore,
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for instrumentation profile."));
 
@@ -84,6 +94,7 @@ bool llvm::shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
 bool llvm::shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
                                  PGSOQueryType QueryType) {
+  assert(BB);
   return shouldOptimizeForSizeImpl<BasicBlockBFIAdapter>(BB, PSI, BFI,
                                                          QueryType);
 }

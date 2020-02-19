@@ -89,3 +89,85 @@ body:             |
     $vgpr0 = COPY %5
 
 ...
+
+---
+name:            atomic_cmpxchg_s64_local
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+
+    ; GFX6-LABEL: name: atomic_cmpxchg_s64_local
+    ; GFX6: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX6: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX6: $m0 = S_MOV_B32 -1
+    ; GFX6: [[DS_CMPST_RTN_B64_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX6: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_]]
+    ; GFX7-LABEL: name: atomic_cmpxchg_s64_local
+    ; GFX7: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX7: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX7: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX7: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX7: $m0 = S_MOV_B32 -1
+    ; GFX7: [[DS_CMPST_RTN_B64_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX7: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_]]
+    ; GFX9-LABEL: name: atomic_cmpxchg_s64_local
+    ; GFX9: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX9: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX9: [[DS_CMPST_RTN_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64_gfx9 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_gfx9_]]
+    %0:vgpr(p3) = COPY $vgpr0
+    %1:vgpr(s64) = COPY $vgpr1_vgpr2
+    %2:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(s64) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst 8, addrspace 3)
+    $vgpr0_vgpr1 = COPY %3
+
+...
+
+---
+name:            atomic_cmpxchg_s64_local_gep4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+
+    ; GFX6-LABEL: name: atomic_cmpxchg_s64_local_gep4
+    ; GFX6: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX6: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX6: $m0 = S_MOV_B32 -1
+    ; GFX6: [[DS_CMPST_RTN_B64_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX6: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_]]
+    ; GFX7-LABEL: name: atomic_cmpxchg_s64_local_gep4
+    ; GFX7: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX7: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX7: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX7: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX7: $m0 = S_MOV_B32 -1
+    ; GFX7: [[DS_CMPST_RTN_B64_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX7: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_]]
+    ; GFX9-LABEL: name: atomic_cmpxchg_s64_local_gep4
+    ; GFX9: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; GFX9: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX9: [[DS_CMPST_RTN_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_CMPST_RTN_B64_gfx9 [[COPY]], [[COPY1]], [[COPY2]], 0, 0, implicit $exec :: (load store seq_cst 8, addrspace 3)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[DS_CMPST_RTN_B64_gfx9_]]
+    %0:vgpr(p3) = COPY $vgpr0
+    %1:vgpr(s64) = COPY $vgpr1_vgpr2
+    %2:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(s32) = G_CONSTANT i32 4
+    %4:vgpr(p3) = G_PTR_ADD %0, %3
+    %5:vgpr(s64) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst 8, addrspace 3)
+    $vgpr0_vgpr1 = COPY %5
+
+...

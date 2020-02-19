@@ -29,9 +29,9 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
@@ -334,9 +334,9 @@ int main(int argc, char **argv) {
   Context.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, &HasError);
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
-      setupOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
-                               RemarksFormat, RemarksWithHotness,
-                               RemarksHotnessThreshold);
+      setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
+                                   RemarksFormat, RemarksWithHotness,
+                                   RemarksHotnessThreshold);
   if (Error E = RemarksFileOrErr.takeError()) {
     WithColor::error(errs(), argv[0]) << toString(std::move(E)) << '\n';
     return 1;

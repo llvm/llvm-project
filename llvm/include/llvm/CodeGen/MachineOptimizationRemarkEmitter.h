@@ -159,7 +159,7 @@ public:
   /// that non-trivial false positives can be quickly detected by the user.
   bool allowExtraAnalysis(StringRef PassName) const {
     return (
-        MF.getFunction().getContext().getRemarkStreamer() ||
+        MF.getFunction().getContext().getLLVMRemarkStreamer() ||
         MF.getFunction().getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(
             PassName));
   }
@@ -172,7 +172,7 @@ public:
     // remarks enabled. We can't currently check whether remarks are requested
     // for the calling pass since that requires actually building the remark.
 
-    if (MF.getFunction().getContext().getRemarkStreamer() ||
+    if (MF.getFunction().getContext().getLLVMRemarkStreamer() ||
         MF.getFunction()
             .getContext()
             .getDiagHandlerPtr()

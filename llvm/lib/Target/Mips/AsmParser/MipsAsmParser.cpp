@@ -179,6 +179,8 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   /// Parse a register as used in CFI directives
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   bool parseParenSuffix(StringRef Name, OperandVector &Operands);
 
@@ -2126,10 +2128,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           MCSymbolRefExpr::create(JalSym, MCSymbolRefExpr::VK_None,
                                   getContext(), IDLoc);
 
-      TOut.getStreamer().EmitRelocDirective(*TmpExpr,
-          inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
+      TOut.getStreamer().emitRelocDirective(
+          *TmpExpr, inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
           RelocJalrExpr, IDLoc, *STI);
-      TOut.getStreamer().EmitLabel(TmpLabel);
+      TOut.getStreamer().emitLabel(TmpLabel);
     }
 
     Inst = JalrInst;
@@ -2311,7 +2313,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       tryExpandInstruction(Inst, IDLoc, Out, STI);
   switch (ExpandResult) {
   case MER_NotAMacro:
-    Out.EmitInstruction(Inst, *STI);
+    Out.emitInstruction(Inst, *STI);
     break;
   case MER_Success:
     break;
@@ -2638,7 +2640,7 @@ bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
     const MCOperand SecondRegOp = Inst.getOperand(1);
     JalrInst.addOperand(SecondRegOp);
   }
-  Out.EmitInstruction(JalrInst, *STI);
+  Out.emitInstruction(JalrInst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
@@ -3386,8 +3388,8 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(ImmOp32, 4);
+  getStreamer().emitLabel(Sym, IDLoc);
+  getStreamer().emitIntValue(ImmOp32, 4);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
@@ -3438,9 +3440,9 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitValueToAlignment(8);
-  getStreamer().EmitIntValue(ImmOp64, 8);
+  getStreamer().emitLabel(Sym, IDLoc);
+  getStreamer().emitValueToAlignment(8);
+  getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   unsigned TmpReg = getATReg(IDLoc);
@@ -3521,9 +3523,9 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
   getStreamer().SwitchSection(ReadOnlySection);
-  getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitValueToAlignment(8);
-  getStreamer().EmitIntValue(ImmOp64, 8);
+  getStreamer().emitLabel(Sym, IDLoc);
+  getStreamer().emitValueToAlignment(8);
+  getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
@@ -3569,7 +3571,7 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
       Inst.addOperand(MCOperand::createImm(Offset.getImm()));
     }
   }
-  Out.EmitInstruction(Inst, *STI);
+  Out.emitInstruction(Inst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
@@ -3856,7 +3858,7 @@ bool MipsAsmParser::expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc,
   }
 
   Inst.setOpcode(NewOpcode);
-  Out.EmitInstruction(Inst, *STI);
+  Out.emitInstruction(Inst, *STI);
   return false;
 }
 
@@ -4258,7 +4260,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   if (!Signed) {
     if (!UseTraps)
-      TOut.getStreamer().EmitLabel(BrTarget);
+      TOut.getStreamer().emitLabel(BrTarget);
 
     TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
     return false;
@@ -4269,7 +4271,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return true;
 
   if (!UseTraps)
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
 
   TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, -1, IDLoc, STI);
 
@@ -4297,7 +4299,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     TOut.emitII(Mips::BREAK, 0x6, 0, IDLoc, STI);
   }
 
-  TOut.getStreamer().EmitLabel(BrTargetEnd);
+  TOut.getStreamer().emitLabel(BrTargetEnd);
   TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
   return false;
 }
@@ -5099,7 +5101,7 @@ bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
   }
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
@@ -5136,7 +5138,7 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
-    TOut.getStreamer().EmitLabel(BrTarget);
+    TOut.getStreamer().emitLabel(BrTarget);
   }
 
   return false;
@@ -6202,6 +6204,12 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
 bool MipsAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
+  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+}
+
+OperandMatchResultTy MipsAsmParser::tryParseRegister(unsigned &RegNo,
+                                                     SMLoc &StartLoc,
+                                                     SMLoc &EndLoc) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
   OperandMatchResultTy ResTy = parseAnyRegister(Operands);
   if (ResTy == MatchOperand_Success) {
@@ -6219,11 +6227,12 @@ bool MipsAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
       RegNo = isGP64bit() ? Operand.getGPR64Reg() : Operand.getGPR32Reg();
     }
 
-    return (RegNo == (unsigned)-1);
+    return (RegNo == (unsigned)-1) ? MatchOperand_NoMatch
+                                   : MatchOperand_Success;
   }
 
   assert(Operands.size() == 0);
-  return (RegNo == (unsigned)-1);
+  return (RegNo == (unsigned)-1) ? MatchOperand_NoMatch : MatchOperand_Success;
 }
 
 bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
@@ -7761,7 +7770,7 @@ bool MipsAsmParser::parseDirectiveGpWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitGPRel32Value(Value);
+  getParser().getStreamer().emitGPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7779,7 +7788,7 @@ bool MipsAsmParser::parseDirectiveGpDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitGPRel64Value(Value);
+  getParser().getStreamer().emitGPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7797,7 +7806,7 @@ bool MipsAsmParser::parseDirectiveDtpRelWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitDTPRel32Value(Value);
+  getParser().getStreamer().emitDTPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7815,7 +7824,7 @@ bool MipsAsmParser::parseDirectiveDtpRelDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitDTPRel64Value(Value);
+  getParser().getStreamer().emitDTPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7833,7 +7842,7 @@ bool MipsAsmParser::parseDirectiveTpRelWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitTPRel32Value(Value);
+  getParser().getStreamer().emitTPRel32Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),
@@ -7851,7 +7860,7 @@ bool MipsAsmParser::parseDirectiveTpRelDWord() {
   // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().EmitTPRel64Value(Value);
+  getParser().getStreamer().emitTPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return Error(getLexer().getLoc(),

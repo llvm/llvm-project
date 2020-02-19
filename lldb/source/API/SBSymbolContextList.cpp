@@ -28,7 +28,7 @@ SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs)
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBSymbolContextList::~SBSymbolContextList() {}
+SBSymbolContextList::~SBSymbolContextList() = default;
 
 const SBSymbolContextList &SBSymbolContextList::
 operator=(const SBSymbolContextList &rhs) {

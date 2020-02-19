@@ -73,20 +73,20 @@ TARGET_BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f64, "LLid", "nc", "nontrappi
 TARGET_BUILTIN(__builtin_wasm_swizzle_v8x16, "V16cV16cV16c", "nc", "unimplemented-simd128")
 
 TARGET_BUILTIN(__builtin_wasm_extract_lane_s_i8x16, "iV16cIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i8x16, "iV16cIi", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i8x16, "iV16cIi", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_extract_lane_s_i16x8, "iV8sIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i16x8, "iV8sIi", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_u_i16x8, "iV8sIi", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_extract_lane_i32x4, "iV4iIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_i64x2, "LLiV2LLiIi", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_i64x2, "LLiV2LLiIi", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_extract_lane_f32x4, "fV4fIi", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_extract_lane_f64x2, "dV2dIi", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_f64x2, "dV2dIi", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_replace_lane_i8x16, "V16cV16cIii", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_replace_lane_i16x8, "V8sV8sIii", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_replace_lane_i32x4, "V4iV4iIii", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_i64x2, "V2LLiV2LLiIiLLi", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_replace_lane_i64x2, "V2LLiV2LLiIiLLi", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_replace_lane_f32x4, "V4fV4fIif", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_replace_lane_f64x2, "V2dV2dIid", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_replace_lane_f64x2, "V2dV2dIid", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_add_saturate_s_i8x16, "V16cV16cV16c", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_add_saturate_u_i8x16, "V16cV16cV16c", "nc", "simd128")
@@ -98,8 +98,8 @@ TARGET_BUILTIN(__builtin_wasm_sub_saturate_u_i8x16, "V16cV16cV16c", "nc", "simd1
 TARGET_BUILTIN(__builtin_wasm_sub_saturate_s_i16x8, "V8sV8sV8s", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_sub_saturate_u_i16x8, "V8sV8sV8s", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_avgr_u_i8x16, "V16cV16cV16c", "nc", "unimplemented-simd128")
-TARGET_BUILTIN(__builtin_wasm_avgr_u_i16x8, "V8sV8sV8s", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_avgr_u_i8x16, "V16cV16cV16c", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_avgr_u_i16x8, "V8sV8sV8s", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_bitselect, "V4iV4iV4iV4i", "nc", "simd128")
 
@@ -113,20 +113,20 @@ TARGET_BUILTIN(__builtin_wasm_all_true_i32x4, "iV4i", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_all_true_i64x2, "iV2LLi", "nc", "unimplemented-simd128")
 
 TARGET_BUILTIN(__builtin_wasm_abs_f32x4, "V4fV4f", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_min_f32x4, "V4fV4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_max_f32x4, "V4fV4fV4f", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_min_f64x2, "V2dV2dV2d", "nc", "unimplemented-simd128")
-TARGET_BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_min_f64x2, "V2dV2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_dot_s_i32x4_i16x8, "V4iV8sV8s", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_sqrt_f32x4, "V4fV4f", "nc", "unimplemented-simd128")
-TARGET_BUILTIN(__builtin_wasm_sqrt_f64x2, "V2dV2d", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_sqrt_f32x4, "V4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_sqrt_f64x2, "V2dV2d", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_qfma_f32x4, "V4fV4fV4fV4f", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_qfms_f32x4, "V4fV4fV4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_qfma_f32x4, "V4fV4fV4fV4f", "nc", "unimplemented-simd128")
+TARGET_BUILTIN(__builtin_wasm_qfms_f32x4, "V4fV4fV4fV4f", "nc", "unimplemented-simd128")
 TARGET_BUILTIN(__builtin_wasm_qfma_f64x2, "V2dV2dV2dV2d", "nc", "unimplemented-simd128")
 TARGET_BUILTIN(__builtin_wasm_qfms_f64x2, "V2dV2dV2dV2d", "nc", "unimplemented-simd128")
 

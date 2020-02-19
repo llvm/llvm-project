@@ -8,11 +8,11 @@
 
 
 // RUN: llvm-objdump --section-headers %t-MachO/DependsOnModule.pcm %t-ELF/DependsOnModule.pcm %t-COFF/DependsOnModule.pcm | FileCheck %s
-// CHECK: file format Mach-O 64-bit x86-64
+// CHECK: file format mach-o 64-bit x86-64
 // CHECK: __clangast   {{[0-9a-f]+}} {{[0-9a-f]+}} DATA
-// CHECK: file format ELF64-x86-64
+// CHECK: file format elf64-x86-64
 // CHECK: __clangast   {{[0-9a-f]+}} {{[0-9a-f]+}} DATA
-// CHECK: file format COFF-x86-64
+// CHECK: file format coff-x86-64
 // CHECK: clangast   {{[0-9a-f]+}} {{[0-9a-f]+}}
 
 // RUN: not llvm-objdump --section-headers %t-raw/DependsOnModule.pcm

@@ -32,14 +32,14 @@ const char *ARMArch[] = {
 };
 
 bool testARMCPU(StringRef CPUName, StringRef ExpectedArch,
-                StringRef ExpectedFPU, unsigned ExpectedFlags,
+                StringRef ExpectedFPU, uint64_t ExpectedFlags,
                 StringRef CPUAttr) {
   ARM::ArchKind AK = ARM::parseCPUArch(CPUName);
   bool pass = ARM::getArchName(AK).equals(ExpectedArch);
   unsigned FPUKind = ARM::getDefaultFPU(CPUName, AK);
   pass &= ARM::getFPUName(FPUKind).equals(ExpectedFPU);
 
-  unsigned ExtKind = ARM::getDefaultExtensions(CPUName, AK);
+  uint64_t ExtKind = ARM::getDefaultExtensions(CPUName, AK);
   if (ExtKind > 1 && (ExtKind & ARM::AEK_NONE))
     pass &= ((ExtKind ^ ARM::AEK_NONE) == ExpectedFlags);
   else
@@ -565,7 +565,7 @@ TEST(TargetParserTest, ARMFPURestriction) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
-  std::map<unsigned, std::vector<StringRef>> Extensions;
+  std::map<uint64_t, std::vector<StringRef>> Extensions;
 
   for (auto &Ext : ARM::ARCHExtNames) {
     if (Ext.Feature && Ext.NegFeature)
@@ -635,6 +635,27 @@ TEST(TargetParserTest, ARMArchExtFeature) {
     EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));
     EXPECT_EQ(StringRef(ArchExt[i][3]), ARM::getArchExtFeature(ArchExt[i][1]));
   }
+}
+
+static bool
+testArchExtDependency(const char *ArchExt,
+                      const std::initializer_list<const char *> &Expected) {
+  std::vector<StringRef> Features;
+
+  if (!ARM::appendArchExtFeatures("", ARM::ArchKind::ARMV8_1MMainline, ArchExt,
+                                  Features))
+    return false;
+
+  return llvm::all_of(Expected, [&](StringRef Ext) {
+    return llvm::is_contained(Features, Ext);
+  });
+}
+
+TEST(TargetParserTest, ARMArchExtDependencies) {
+  EXPECT_TRUE(testArchExtDependency("mve", {"+mve", "+dsp"}));
+  EXPECT_TRUE(testArchExtDependency("mve.fp", {"+mve.fp", "+mve", "+dsp"}));
+  EXPECT_TRUE(testArchExtDependency("nodsp", {"-dsp", "-mve", "-mve.fp"}));
+  EXPECT_TRUE(testArchExtDependency("nomve", {"-mve", "-mve.fp"}));
 }
 
 TEST(TargetParserTest, ARMparseHWDiv) {
@@ -759,6 +780,10 @@ TEST(TargetParserTest, testAArch64CPU) {
       "generic", "invalid", "none",
       AArch64::AEK_NONE, ""));
 
+  EXPECT_TRUE(testAArch64CPU(
+      "cortex-a34", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+      AArch64::AEK_SIMD, "8-A"));
   EXPECT_TRUE(testAArch64CPU(
       "cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
@@ -936,7 +961,7 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 35;
+static constexpr unsigned NumAArch64CPUArchs = 36;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -981,6 +1006,8 @@ bool testAArch64Extension(StringRef CPUName, AArch64::ArchKind AK,
 }
 
 TEST(TargetParserTest, testAArch64Extension) {
+  EXPECT_FALSE(testAArch64Extension("cortex-a34",
+                                    AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cortex-a35",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cortex-a53",

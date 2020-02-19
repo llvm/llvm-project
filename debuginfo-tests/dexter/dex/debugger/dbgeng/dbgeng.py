@@ -32,13 +32,13 @@ class DbgEng(DebuggerBase):
     def _custom_init(self):
         try:
           res = setup.setup_everything(self.context.options.executable)
-          self.client, self.hProcess = res
+          self.client = res
           self.running = True
         except Exception as e:
           raise Exception('Failed to start debuggee: {}'.format(e))
 
     def _custom_exit(self):
-        setup.cleanup(self.client, self.hProcess)
+        setup.cleanup(self.client)
 
     def _load_interface(self):
         arch = platform.architecture()[0]

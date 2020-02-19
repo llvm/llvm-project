@@ -55,7 +55,7 @@ private:
   /// The first instruction in each basic block is 0.
   int CurInstr;
 
-  /// Maps instructions to their instruction Ids, relative to the begining of
+  /// Maps instructions to their instruction Ids, relative to the beginning of
   /// their basic blocks.
   DenseMap<MachineInstr *, int> InstIds;
 

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: not ld.lld %t.o -o %t.exe 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: {{.*}}.o: invalid symbol name offset
 
 ## YAML below contains symbol with name offset in st_name
@@ -12,4 +12,4 @@ FileHeader:
   Type:        ET_REL
   Machine:     EM_X86_64
 Symbols:
-  - NameIndex: 255
+  - StName: 255

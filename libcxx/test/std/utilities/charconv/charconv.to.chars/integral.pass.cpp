@@ -10,6 +10,8 @@
 // UNSUPPORTED: !libc++ && c++11
 // UNSUPPORTED: !libc++ && c++14
 
+// to_chars requires functions in the dylib that were introduced in Mac OS 10.15.
+//
 // XFAIL: with_system_cxx_lib=macosx10.14
 // XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
@@ -24,6 +26,7 @@
 // to_chars_result to_chars(char* first, char* last, Integral value,
 //                          int base = 10)
 
+#include <charconv>
 #include "test_macros.h"
 #include "charconv_test_helpers.h"
 

@@ -15,342 +15,348 @@
 
 #if SANITIZER_FREEBSD
 
+#include <sys/capsicum.h>
+#include <sys/consio.h>
+#include <sys/filio.h>
+#include <sys/ipc.h>
+#include <sys/kbio.h>
+#include <sys/link_elf.h>
+#include <sys/mman.h>
+#include <sys/mount.h>
+#include <sys/mqueue.h>
+#include <sys/msg.h>
+#include <sys/mtio.h>
+#include <sys/ptrace.h>
+#include <sys/resource.h>
+#include <sys/signal.h>
+#include <sys/socket.h>
+#include <sys/sockio.h>
+#include <sys/soundcard.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/time.h>
+#include <sys/timeb.h>
+#include <sys/times.h>
+#include <sys/timespec.h>
+#include <sys/types.h>
+#include <sys/ucontext.h>
+#include <sys/utsname.h>
+//
 #include <arpa/inet.h>
-#include <dirent.h>
-#include <fts.h>
-#include <fstab.h>
-#include <grp.h>
-#include <limits.h>
+#include <net/ethernet.h>
 #include <net/if.h>
+#include <net/ppp_defs.h>
+#include <net/route.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/ip_mroute.h>
+//
+#include <dirent.h>
+#include <dlfcn.h>
+#include <fstab.h>
+#include <fts.h>
+#include <glob.h>
+#include <grp.h>
+#include <ifaddrs.h>
+#include <limits.h>
 #include <poll.h>
 #include <pthread.h>
 #include <pwd.h>
 #include <regex.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stddef.h>
-#include <sys/mman.h>
-#include <sys/capsicum.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/times.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <termios.h>
-#include <time.h>
-
-#include <net/route.h>
-#include <sys/mount.h>
-#include <sys/sockio.h>
-#include <sys/socket.h>
-#include <sys/filio.h>
-#include <sys/signal.h>
-#include <sys/timespec.h>
-#include <sys/timeb.h>
-#include <sys/mqueue.h>
-#include <sys/msg.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include <sys/statvfs.h>
-#include <sys/soundcard.h>
-#include <sys/mtio.h>
-#include <sys/consio.h>
-#include <sys/kbio.h>
-#include <sys/link_elf.h>
-#include <netinet/ip_mroute.h>
-#include <netinet/in.h>
-#include <net/ethernet.h>
-#include <net/ppp_defs.h>
-#include <glob.h>
 #include <stdio.h>
 #include <stringlist.h>
 #include <term.h>
+#include <termios.h>
+#include <time.h>
+#include <utime.h>
 #include <utmpx.h>
-#include <wchar.h>
 #include <vis.h>
+#include <wchar.h>
+#include <wordexp.h>
 
 #define _KERNEL  // to declare 'shminfo' structure
-# include <sys/shm.h>
+#include <sys/shm.h>
 #undef _KERNEL
 
 #undef INLINE  // to avoid clashes with sanitizers' definitions
 
 #undef IOC_DIRMASK
 
-# include <utime.h>
-# include <sys/ptrace.h>
-# include <semaphore.h>
-
-#include <ifaddrs.h>
-#include <sys/ucontext.h>
-#include <wordexp.h>
-
 // Include these after system headers to avoid name clashes and ambiguities.
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_freebsd.h"
 
 namespace __sanitizer {
-  unsigned struct_cap_rights_sz = sizeof(cap_rights_t);
-  unsigned struct_utsname_sz = sizeof(struct utsname);
-  unsigned struct_stat_sz = sizeof(struct stat);
-  unsigned struct_rusage_sz = sizeof(struct rusage);
-  unsigned struct_tm_sz = sizeof(struct tm);
-  unsigned struct_passwd_sz = sizeof(struct passwd);
-  unsigned struct_group_sz = sizeof(struct group);
-  unsigned siginfo_t_sz = sizeof(siginfo_t);
-  unsigned struct_sigaction_sz = sizeof(struct sigaction);
-  unsigned struct_itimerval_sz = sizeof(struct itimerval);
-  unsigned pthread_t_sz = sizeof(pthread_t);
-  unsigned pthread_mutex_t_sz = sizeof(pthread_mutex_t);
-  unsigned pthread_cond_t_sz = sizeof(pthread_cond_t);
-  unsigned pid_t_sz = sizeof(pid_t);
-  unsigned timeval_sz = sizeof(timeval);
-  unsigned uid_t_sz = sizeof(uid_t);
-  unsigned gid_t_sz = sizeof(gid_t);
-  unsigned fpos_t_sz = sizeof(fpos_t);
-  unsigned mbstate_t_sz = sizeof(mbstate_t);
-  unsigned sigset_t_sz = sizeof(sigset_t);
-  unsigned struct_timezone_sz = sizeof(struct timezone);
-  unsigned struct_tms_sz = sizeof(struct tms);
-  unsigned struct_sigevent_sz = sizeof(struct sigevent);
-  unsigned struct_sched_param_sz = sizeof(struct sched_param);
-  unsigned struct_statfs_sz = sizeof(struct statfs);
-  unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
-  unsigned ucontext_t_sz = sizeof(ucontext_t);
-  unsigned struct_rlimit_sz = sizeof(struct rlimit);
-  unsigned struct_timespec_sz = sizeof(struct timespec);
-  unsigned struct_utimbuf_sz = sizeof(struct utimbuf);
-  unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
-  unsigned struct_timeb_sz = sizeof(struct timeb);
-  unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
-  unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
-  unsigned struct_statvfs_sz = sizeof(struct statvfs);
-  unsigned struct_shminfo_sz = sizeof(struct shminfo);
-  unsigned struct_shm_info_sz = sizeof(struct shm_info);
-  unsigned struct_regmatch_sz = sizeof(regmatch_t);
-  unsigned struct_regex_sz = sizeof(regex_t);
-  unsigned struct_fstab_sz = sizeof(struct fstab);
-  unsigned struct_FTS_sz = sizeof(FTS);
-  unsigned struct_FTSENT_sz = sizeof(FTSENT);
-  unsigned struct_StringList_sz = sizeof(StringList);
+void *__sanitizer_get_link_map_by_dlopen_handle(void *handle) {
+  void *p = nullptr;
+  return internal_dlinfo(handle, RTLD_DI_LINKMAP, &p) == 0 ? p : nullptr;
+}
 
-  const uptr sig_ign = (uptr)SIG_IGN;
-  const uptr sig_dfl = (uptr)SIG_DFL;
-  const uptr sig_err = (uptr)SIG_ERR;
-  const uptr sa_siginfo = (uptr)SA_SIGINFO;
+unsigned struct_cap_rights_sz = sizeof(cap_rights_t);
+unsigned struct_utsname_sz = sizeof(struct utsname);
+unsigned struct_stat_sz = sizeof(struct stat);
+unsigned struct_rusage_sz = sizeof(struct rusage);
+unsigned struct_tm_sz = sizeof(struct tm);
+unsigned struct_passwd_sz = sizeof(struct passwd);
+unsigned struct_group_sz = sizeof(struct group);
+unsigned siginfo_t_sz = sizeof(siginfo_t);
+unsigned struct_sigaction_sz = sizeof(struct sigaction);
+unsigned struct_stack_t_sz = sizeof(stack_t);
+unsigned struct_itimerval_sz = sizeof(struct itimerval);
+unsigned pthread_t_sz = sizeof(pthread_t);
+unsigned pthread_mutex_t_sz = sizeof(pthread_mutex_t);
+unsigned pthread_cond_t_sz = sizeof(pthread_cond_t);
+unsigned pid_t_sz = sizeof(pid_t);
+unsigned timeval_sz = sizeof(timeval);
+unsigned uid_t_sz = sizeof(uid_t);
+unsigned gid_t_sz = sizeof(gid_t);
+unsigned fpos_t_sz = sizeof(fpos_t);
+unsigned mbstate_t_sz = sizeof(mbstate_t);
+unsigned sigset_t_sz = sizeof(sigset_t);
+unsigned struct_timezone_sz = sizeof(struct timezone);
+unsigned struct_tms_sz = sizeof(struct tms);
+unsigned struct_sigevent_sz = sizeof(struct sigevent);
+unsigned struct_sched_param_sz = sizeof(struct sched_param);
+unsigned struct_statfs_sz = sizeof(struct statfs);
+unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
+unsigned ucontext_t_sz = sizeof(ucontext_t);
+unsigned struct_rlimit_sz = sizeof(struct rlimit);
+unsigned struct_timespec_sz = sizeof(struct timespec);
+unsigned struct_utimbuf_sz = sizeof(struct utimbuf);
+unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
+unsigned struct_timeb_sz = sizeof(struct timeb);
+unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
+unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
+unsigned struct_statvfs_sz = sizeof(struct statvfs);
+unsigned struct_shminfo_sz = sizeof(struct shminfo);
+unsigned struct_shm_info_sz = sizeof(struct shm_info);
+unsigned struct_regmatch_sz = sizeof(regmatch_t);
+unsigned struct_regex_sz = sizeof(regex_t);
+unsigned struct_fstab_sz = sizeof(struct fstab);
+unsigned struct_FTS_sz = sizeof(FTS);
+unsigned struct_FTSENT_sz = sizeof(FTSENT);
+unsigned struct_StringList_sz = sizeof(StringList);
 
-  int shmctl_ipc_stat = (int)IPC_STAT;
-  int shmctl_ipc_info = (int)IPC_INFO;
-  int shmctl_shm_info = (int)SHM_INFO;
-  int shmctl_shm_stat = (int)SHM_STAT;
-  unsigned struct_utmpx_sz = sizeof(struct utmpx);
+const uptr sig_ign = (uptr)SIG_IGN;
+const uptr sig_dfl = (uptr)SIG_DFL;
+const uptr sig_err = (uptr)SIG_ERR;
+const uptr sa_siginfo = (uptr)SA_SIGINFO;
 
-  int map_fixed = MAP_FIXED;
+int shmctl_ipc_stat = (int)IPC_STAT;
+int shmctl_ipc_info = (int)IPC_INFO;
+int shmctl_shm_info = (int)SHM_INFO;
+int shmctl_shm_stat = (int)SHM_STAT;
+unsigned struct_utmpx_sz = sizeof(struct utmpx);
 
-  int af_inet = (int)AF_INET;
-  int af_inet6 = (int)AF_INET6;
+int map_fixed = MAP_FIXED;
 
-  uptr __sanitizer_in_addr_sz(int af) {
-    if (af == AF_INET)
-      return sizeof(struct in_addr);
-    else if (af == AF_INET6)
-      return sizeof(struct in6_addr);
-    else
-      return 0;
-  }
+int af_inet = (int)AF_INET;
+int af_inet6 = (int)AF_INET6;
 
-  unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
-  int glob_nomatch = GLOB_NOMATCH;
-  int glob_altdirfunc = GLOB_ALTDIRFUNC;
+uptr __sanitizer_in_addr_sz(int af) {
+  if (af == AF_INET)
+    return sizeof(struct in_addr);
+  else if (af == AF_INET6)
+    return sizeof(struct in6_addr);
+  else
+    return 0;
+}
 
-  unsigned path_max = PATH_MAX;
+unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
+int glob_nomatch = GLOB_NOMATCH;
+int glob_altdirfunc = GLOB_ALTDIRFUNC;
 
-  // ioctl arguments
-  unsigned struct_ifreq_sz = sizeof(struct ifreq);
-  unsigned struct_termios_sz = sizeof(struct termios);
-  unsigned struct_winsize_sz = sizeof(struct winsize);
+unsigned path_max = PATH_MAX;
+
+// ioctl arguments
+unsigned struct_ifreq_sz = sizeof(struct ifreq);
+unsigned struct_termios_sz = sizeof(struct termios);
+unsigned struct_winsize_sz = sizeof(struct winsize);
 #if SOUND_VERSION >= 0x040000
-  unsigned struct_copr_buffer_sz = 0;
-  unsigned struct_copr_debug_buf_sz = 0;
-  unsigned struct_copr_msg_sz = 0;
+unsigned struct_copr_buffer_sz = 0;
+unsigned struct_copr_debug_buf_sz = 0;
+unsigned struct_copr_msg_sz = 0;
 #else
-  unsigned struct_copr_buffer_sz = sizeof(struct copr_buffer);
-  unsigned struct_copr_debug_buf_sz = sizeof(struct copr_debug_buf);
-  unsigned struct_copr_msg_sz = sizeof(struct copr_msg);
+unsigned struct_copr_buffer_sz = sizeof(struct copr_buffer);
+unsigned struct_copr_debug_buf_sz = sizeof(struct copr_debug_buf);
+unsigned struct_copr_msg_sz = sizeof(struct copr_msg);
 #endif
-  unsigned struct_midi_info_sz = sizeof(struct midi_info);
-  unsigned struct_mtget_sz = sizeof(struct mtget);
-  unsigned struct_mtop_sz = sizeof(struct mtop);
-  unsigned struct_sbi_instrument_sz = sizeof(struct sbi_instrument);
-  unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
-  unsigned struct_synth_info_sz = sizeof(struct synth_info);
-  unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
-  unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
-  unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
-  unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
-  const unsigned long __sanitizer_bufsiz = BUFSIZ;
+unsigned struct_midi_info_sz = sizeof(struct midi_info);
+unsigned struct_mtget_sz = sizeof(struct mtget);
+unsigned struct_mtop_sz = sizeof(struct mtop);
+unsigned struct_sbi_instrument_sz = sizeof(struct sbi_instrument);
+unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
+unsigned struct_synth_info_sz = sizeof(struct synth_info);
+unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
+unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
+unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
+unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
+const unsigned long __sanitizer_bufsiz = BUFSIZ;
 
-  const unsigned IOCTL_NOT_PRESENT = 0;
+const unsigned IOCTL_NOT_PRESENT = 0;
 
-  unsigned IOCTL_FIOASYNC = FIOASYNC;
-  unsigned IOCTL_FIOCLEX = FIOCLEX;
-  unsigned IOCTL_FIOGETOWN = FIOGETOWN;
-  unsigned IOCTL_FIONBIO = FIONBIO;
-  unsigned IOCTL_FIONCLEX = FIONCLEX;
-  unsigned IOCTL_FIOSETOWN = FIOSETOWN;
-  unsigned IOCTL_SIOCADDMULTI = SIOCADDMULTI;
-  unsigned IOCTL_SIOCATMARK = SIOCATMARK;
-  unsigned IOCTL_SIOCDELMULTI = SIOCDELMULTI;
-  unsigned IOCTL_SIOCGIFADDR = SIOCGIFADDR;
-  unsigned IOCTL_SIOCGIFBRDADDR = SIOCGIFBRDADDR;
-  unsigned IOCTL_SIOCGIFCONF = SIOCGIFCONF;
-  unsigned IOCTL_SIOCGIFDSTADDR = SIOCGIFDSTADDR;
-  unsigned IOCTL_SIOCGIFFLAGS = SIOCGIFFLAGS;
-  unsigned IOCTL_SIOCGIFMETRIC = SIOCGIFMETRIC;
-  unsigned IOCTL_SIOCGIFMTU = SIOCGIFMTU;
-  unsigned IOCTL_SIOCGIFNETMASK = SIOCGIFNETMASK;
-  unsigned IOCTL_SIOCGPGRP = SIOCGPGRP;
-  unsigned IOCTL_SIOCSIFADDR = SIOCSIFADDR;
-  unsigned IOCTL_SIOCSIFBRDADDR = SIOCSIFBRDADDR;
-  unsigned IOCTL_SIOCSIFDSTADDR = SIOCSIFDSTADDR;
-  unsigned IOCTL_SIOCSIFFLAGS = SIOCSIFFLAGS;
-  unsigned IOCTL_SIOCSIFMETRIC = SIOCSIFMETRIC;
-  unsigned IOCTL_SIOCSIFMTU = SIOCSIFMTU;
-  unsigned IOCTL_SIOCSIFNETMASK = SIOCSIFNETMASK;
-  unsigned IOCTL_SIOCSPGRP = SIOCSPGRP;
-  unsigned IOCTL_TIOCCONS = TIOCCONS;
-  unsigned IOCTL_TIOCEXCL = TIOCEXCL;
-  unsigned IOCTL_TIOCGETD = TIOCGETD;
-  unsigned IOCTL_TIOCGPGRP = TIOCGPGRP;
-  unsigned IOCTL_TIOCGWINSZ = TIOCGWINSZ;
-  unsigned IOCTL_TIOCMBIC = TIOCMBIC;
-  unsigned IOCTL_TIOCMBIS = TIOCMBIS;
-  unsigned IOCTL_TIOCMGET = TIOCMGET;
-  unsigned IOCTL_TIOCMSET = TIOCMSET;
-  unsigned IOCTL_TIOCNOTTY = TIOCNOTTY;
-  unsigned IOCTL_TIOCNXCL = TIOCNXCL;
-  unsigned IOCTL_TIOCOUTQ = TIOCOUTQ;
-  unsigned IOCTL_TIOCPKT = TIOCPKT;
-  unsigned IOCTL_TIOCSCTTY = TIOCSCTTY;
-  unsigned IOCTL_TIOCSETD = TIOCSETD;
-  unsigned IOCTL_TIOCSPGRP = TIOCSPGRP;
-  unsigned IOCTL_TIOCSTI = TIOCSTI;
-  unsigned IOCTL_TIOCSWINSZ = TIOCSWINSZ;
-  unsigned IOCTL_SIOCGETSGCNT = SIOCGETSGCNT;
-  unsigned IOCTL_SIOCGETVIFCNT = SIOCGETVIFCNT;
-  unsigned IOCTL_MTIOCGET = MTIOCGET;
-  unsigned IOCTL_MTIOCTOP = MTIOCTOP;
-  unsigned IOCTL_SNDCTL_DSP_GETBLKSIZE = SNDCTL_DSP_GETBLKSIZE;
-  unsigned IOCTL_SNDCTL_DSP_GETFMTS = SNDCTL_DSP_GETFMTS;
-  unsigned IOCTL_SNDCTL_DSP_NONBLOCK = SNDCTL_DSP_NONBLOCK;
-  unsigned IOCTL_SNDCTL_DSP_POST = SNDCTL_DSP_POST;
-  unsigned IOCTL_SNDCTL_DSP_RESET = SNDCTL_DSP_RESET;
-  unsigned IOCTL_SNDCTL_DSP_SETFMT = SNDCTL_DSP_SETFMT;
-  unsigned IOCTL_SNDCTL_DSP_SETFRAGMENT = SNDCTL_DSP_SETFRAGMENT;
-  unsigned IOCTL_SNDCTL_DSP_SPEED = SNDCTL_DSP_SPEED;
-  unsigned IOCTL_SNDCTL_DSP_STEREO = SNDCTL_DSP_STEREO;
-  unsigned IOCTL_SNDCTL_DSP_SUBDIVIDE = SNDCTL_DSP_SUBDIVIDE;
-  unsigned IOCTL_SNDCTL_DSP_SYNC = SNDCTL_DSP_SYNC;
-  unsigned IOCTL_SNDCTL_FM_4OP_ENABLE = SNDCTL_FM_4OP_ENABLE;
-  unsigned IOCTL_SNDCTL_FM_LOAD_INSTR = SNDCTL_FM_LOAD_INSTR;
-  unsigned IOCTL_SNDCTL_MIDI_INFO = SNDCTL_MIDI_INFO;
-  unsigned IOCTL_SNDCTL_MIDI_PRETIME = SNDCTL_MIDI_PRETIME;
-  unsigned IOCTL_SNDCTL_SEQ_CTRLRATE = SNDCTL_SEQ_CTRLRATE;
-  unsigned IOCTL_SNDCTL_SEQ_GETINCOUNT = SNDCTL_SEQ_GETINCOUNT;
-  unsigned IOCTL_SNDCTL_SEQ_GETOUTCOUNT = SNDCTL_SEQ_GETOUTCOUNT;
-  unsigned IOCTL_SNDCTL_SEQ_NRMIDIS = SNDCTL_SEQ_NRMIDIS;
-  unsigned IOCTL_SNDCTL_SEQ_NRSYNTHS = SNDCTL_SEQ_NRSYNTHS;
-  unsigned IOCTL_SNDCTL_SEQ_OUTOFBAND = SNDCTL_SEQ_OUTOFBAND;
-  unsigned IOCTL_SNDCTL_SEQ_PANIC = SNDCTL_SEQ_PANIC;
-  unsigned IOCTL_SNDCTL_SEQ_PERCMODE = SNDCTL_SEQ_PERCMODE;
-  unsigned IOCTL_SNDCTL_SEQ_RESET = SNDCTL_SEQ_RESET;
-  unsigned IOCTL_SNDCTL_SEQ_RESETSAMPLES = SNDCTL_SEQ_RESETSAMPLES;
-  unsigned IOCTL_SNDCTL_SEQ_SYNC = SNDCTL_SEQ_SYNC;
-  unsigned IOCTL_SNDCTL_SEQ_TESTMIDI = SNDCTL_SEQ_TESTMIDI;
-  unsigned IOCTL_SNDCTL_SEQ_THRESHOLD = SNDCTL_SEQ_THRESHOLD;
-  unsigned IOCTL_SNDCTL_SYNTH_INFO = SNDCTL_SYNTH_INFO;
-  unsigned IOCTL_SNDCTL_SYNTH_MEMAVL = SNDCTL_SYNTH_MEMAVL;
-  unsigned IOCTL_SNDCTL_TMR_CONTINUE = SNDCTL_TMR_CONTINUE;
-  unsigned IOCTL_SNDCTL_TMR_METRONOME = SNDCTL_TMR_METRONOME;
-  unsigned IOCTL_SNDCTL_TMR_SELECT = SNDCTL_TMR_SELECT;
-  unsigned IOCTL_SNDCTL_TMR_SOURCE = SNDCTL_TMR_SOURCE;
-  unsigned IOCTL_SNDCTL_TMR_START = SNDCTL_TMR_START;
-  unsigned IOCTL_SNDCTL_TMR_STOP = SNDCTL_TMR_STOP;
-  unsigned IOCTL_SNDCTL_TMR_TEMPO = SNDCTL_TMR_TEMPO;
-  unsigned IOCTL_SNDCTL_TMR_TIMEBASE = SNDCTL_TMR_TIMEBASE;
-  unsigned IOCTL_SOUND_MIXER_READ_ALTPCM = SOUND_MIXER_READ_ALTPCM;
-  unsigned IOCTL_SOUND_MIXER_READ_BASS = SOUND_MIXER_READ_BASS;
-  unsigned IOCTL_SOUND_MIXER_READ_CAPS = SOUND_MIXER_READ_CAPS;
-  unsigned IOCTL_SOUND_MIXER_READ_CD = SOUND_MIXER_READ_CD;
-  unsigned IOCTL_SOUND_MIXER_READ_DEVMASK = SOUND_MIXER_READ_DEVMASK;
-  unsigned IOCTL_SOUND_MIXER_READ_ENHANCE = SOUND_MIXER_READ_ENHANCE;
-  unsigned IOCTL_SOUND_MIXER_READ_IGAIN = SOUND_MIXER_READ_IGAIN;
-  unsigned IOCTL_SOUND_MIXER_READ_IMIX = SOUND_MIXER_READ_IMIX;
-  unsigned IOCTL_SOUND_MIXER_READ_LINE = SOUND_MIXER_READ_LINE;
-  unsigned IOCTL_SOUND_MIXER_READ_LINE1 = SOUND_MIXER_READ_LINE1;
-  unsigned IOCTL_SOUND_MIXER_READ_LINE2 = SOUND_MIXER_READ_LINE2;
-  unsigned IOCTL_SOUND_MIXER_READ_LINE3 = SOUND_MIXER_READ_LINE3;
-  unsigned IOCTL_SOUND_MIXER_READ_LOUD = SOUND_MIXER_READ_LOUD;
-  unsigned IOCTL_SOUND_MIXER_READ_MIC = SOUND_MIXER_READ_MIC;
-  unsigned IOCTL_SOUND_MIXER_READ_MUTE = SOUND_MIXER_READ_MUTE;
-  unsigned IOCTL_SOUND_MIXER_READ_OGAIN = SOUND_MIXER_READ_OGAIN;
-  unsigned IOCTL_SOUND_MIXER_READ_PCM = SOUND_MIXER_READ_PCM;
-  unsigned IOCTL_SOUND_MIXER_READ_RECLEV = SOUND_MIXER_READ_RECLEV;
-  unsigned IOCTL_SOUND_MIXER_READ_RECMASK = SOUND_MIXER_READ_RECMASK;
-  unsigned IOCTL_SOUND_MIXER_READ_RECSRC = SOUND_MIXER_READ_RECSRC;
-  unsigned IOCTL_SOUND_MIXER_READ_SPEAKER = SOUND_MIXER_READ_SPEAKER;
-  unsigned IOCTL_SOUND_MIXER_READ_STEREODEVS = SOUND_MIXER_READ_STEREODEVS;
-  unsigned IOCTL_SOUND_MIXER_READ_SYNTH = SOUND_MIXER_READ_SYNTH;
-  unsigned IOCTL_SOUND_MIXER_READ_TREBLE = SOUND_MIXER_READ_TREBLE;
-  unsigned IOCTL_SOUND_MIXER_READ_VOLUME = SOUND_MIXER_READ_VOLUME;
-  unsigned IOCTL_SOUND_MIXER_WRITE_ALTPCM = SOUND_MIXER_WRITE_ALTPCM;
-  unsigned IOCTL_SOUND_MIXER_WRITE_BASS = SOUND_MIXER_WRITE_BASS;
-  unsigned IOCTL_SOUND_MIXER_WRITE_CD = SOUND_MIXER_WRITE_CD;
-  unsigned IOCTL_SOUND_MIXER_WRITE_ENHANCE = SOUND_MIXER_WRITE_ENHANCE;
-  unsigned IOCTL_SOUND_MIXER_WRITE_IGAIN = SOUND_MIXER_WRITE_IGAIN;
-  unsigned IOCTL_SOUND_MIXER_WRITE_IMIX = SOUND_MIXER_WRITE_IMIX;
-  unsigned IOCTL_SOUND_MIXER_WRITE_LINE = SOUND_MIXER_WRITE_LINE;
-  unsigned IOCTL_SOUND_MIXER_WRITE_LINE1 = SOUND_MIXER_WRITE_LINE1;
-  unsigned IOCTL_SOUND_MIXER_WRITE_LINE2 = SOUND_MIXER_WRITE_LINE2;
-  unsigned IOCTL_SOUND_MIXER_WRITE_LINE3 = SOUND_MIXER_WRITE_LINE3;
-  unsigned IOCTL_SOUND_MIXER_WRITE_LOUD = SOUND_MIXER_WRITE_LOUD;
-  unsigned IOCTL_SOUND_MIXER_WRITE_MIC = SOUND_MIXER_WRITE_MIC;
-  unsigned IOCTL_SOUND_MIXER_WRITE_MUTE = SOUND_MIXER_WRITE_MUTE;
-  unsigned IOCTL_SOUND_MIXER_WRITE_OGAIN = SOUND_MIXER_WRITE_OGAIN;
-  unsigned IOCTL_SOUND_MIXER_WRITE_PCM = SOUND_MIXER_WRITE_PCM;
-  unsigned IOCTL_SOUND_MIXER_WRITE_RECLEV = SOUND_MIXER_WRITE_RECLEV;
-  unsigned IOCTL_SOUND_MIXER_WRITE_RECSRC = SOUND_MIXER_WRITE_RECSRC;
-  unsigned IOCTL_SOUND_MIXER_WRITE_SPEAKER = SOUND_MIXER_WRITE_SPEAKER;
-  unsigned IOCTL_SOUND_MIXER_WRITE_SYNTH = SOUND_MIXER_WRITE_SYNTH;
-  unsigned IOCTL_SOUND_MIXER_WRITE_TREBLE = SOUND_MIXER_WRITE_TREBLE;
-  unsigned IOCTL_SOUND_MIXER_WRITE_VOLUME = SOUND_MIXER_WRITE_VOLUME;
-  unsigned IOCTL_VT_ACTIVATE = VT_ACTIVATE;
-  unsigned IOCTL_VT_GETMODE = VT_GETMODE;
-  unsigned IOCTL_VT_OPENQRY = VT_OPENQRY;
-  unsigned IOCTL_VT_RELDISP = VT_RELDISP;
-  unsigned IOCTL_VT_SETMODE = VT_SETMODE;
-  unsigned IOCTL_VT_WAITACTIVE = VT_WAITACTIVE;
-  unsigned IOCTL_GIO_SCRNMAP = GIO_SCRNMAP;
-  unsigned IOCTL_KDDISABIO = KDDISABIO;
-  unsigned IOCTL_KDENABIO = KDENABIO;
-  unsigned IOCTL_KDGETLED = KDGETLED;
-  unsigned IOCTL_KDGETMODE = KDGETMODE;
-  unsigned IOCTL_KDGKBMODE = KDGKBMODE;
-  unsigned IOCTL_KDGKBTYPE = KDGKBTYPE;
-  unsigned IOCTL_KDMKTONE = KDMKTONE;
-  unsigned IOCTL_KDSETLED = KDSETLED;
-  unsigned IOCTL_KDSETMODE = KDSETMODE;
-  unsigned IOCTL_KDSKBMODE = KDSKBMODE;
-  unsigned IOCTL_KIOCSOUND = KIOCSOUND;
-  unsigned IOCTL_PIO_SCRNMAP = PIO_SCRNMAP;
-  unsigned IOCTL_SNDCTL_DSP_GETISPACE = SNDCTL_DSP_GETISPACE;
+unsigned IOCTL_FIOASYNC = FIOASYNC;
+unsigned IOCTL_FIOCLEX = FIOCLEX;
+unsigned IOCTL_FIOGETOWN = FIOGETOWN;
+unsigned IOCTL_FIONBIO = FIONBIO;
+unsigned IOCTL_FIONCLEX = FIONCLEX;
+unsigned IOCTL_FIOSETOWN = FIOSETOWN;
+unsigned IOCTL_SIOCADDMULTI = SIOCADDMULTI;
+unsigned IOCTL_SIOCATMARK = SIOCATMARK;
+unsigned IOCTL_SIOCDELMULTI = SIOCDELMULTI;
+unsigned IOCTL_SIOCGIFADDR = SIOCGIFADDR;
+unsigned IOCTL_SIOCGIFBRDADDR = SIOCGIFBRDADDR;
+unsigned IOCTL_SIOCGIFCONF = SIOCGIFCONF;
+unsigned IOCTL_SIOCGIFDSTADDR = SIOCGIFDSTADDR;
+unsigned IOCTL_SIOCGIFFLAGS = SIOCGIFFLAGS;
+unsigned IOCTL_SIOCGIFMETRIC = SIOCGIFMETRIC;
+unsigned IOCTL_SIOCGIFMTU = SIOCGIFMTU;
+unsigned IOCTL_SIOCGIFNETMASK = SIOCGIFNETMASK;
+unsigned IOCTL_SIOCGPGRP = SIOCGPGRP;
+unsigned IOCTL_SIOCSIFADDR = SIOCSIFADDR;
+unsigned IOCTL_SIOCSIFBRDADDR = SIOCSIFBRDADDR;
+unsigned IOCTL_SIOCSIFDSTADDR = SIOCSIFDSTADDR;
+unsigned IOCTL_SIOCSIFFLAGS = SIOCSIFFLAGS;
+unsigned IOCTL_SIOCSIFMETRIC = SIOCSIFMETRIC;
+unsigned IOCTL_SIOCSIFMTU = SIOCSIFMTU;
+unsigned IOCTL_SIOCSIFNETMASK = SIOCSIFNETMASK;
+unsigned IOCTL_SIOCSPGRP = SIOCSPGRP;
+unsigned IOCTL_TIOCCONS = TIOCCONS;
+unsigned IOCTL_TIOCEXCL = TIOCEXCL;
+unsigned IOCTL_TIOCGETD = TIOCGETD;
+unsigned IOCTL_TIOCGPGRP = TIOCGPGRP;
+unsigned IOCTL_TIOCGWINSZ = TIOCGWINSZ;
+unsigned IOCTL_TIOCMBIC = TIOCMBIC;
+unsigned IOCTL_TIOCMBIS = TIOCMBIS;
+unsigned IOCTL_TIOCMGET = TIOCMGET;
+unsigned IOCTL_TIOCMSET = TIOCMSET;
+unsigned IOCTL_TIOCNOTTY = TIOCNOTTY;
+unsigned IOCTL_TIOCNXCL = TIOCNXCL;
+unsigned IOCTL_TIOCOUTQ = TIOCOUTQ;
+unsigned IOCTL_TIOCPKT = TIOCPKT;
+unsigned IOCTL_TIOCSCTTY = TIOCSCTTY;
+unsigned IOCTL_TIOCSETD = TIOCSETD;
+unsigned IOCTL_TIOCSPGRP = TIOCSPGRP;
+unsigned IOCTL_TIOCSTI = TIOCSTI;
+unsigned IOCTL_TIOCSWINSZ = TIOCSWINSZ;
+unsigned IOCTL_SIOCGETSGCNT = SIOCGETSGCNT;
+unsigned IOCTL_SIOCGETVIFCNT = SIOCGETVIFCNT;
+unsigned IOCTL_MTIOCGET = MTIOCGET;
+unsigned IOCTL_MTIOCTOP = MTIOCTOP;
+unsigned IOCTL_SNDCTL_DSP_GETBLKSIZE = SNDCTL_DSP_GETBLKSIZE;
+unsigned IOCTL_SNDCTL_DSP_GETFMTS = SNDCTL_DSP_GETFMTS;
+unsigned IOCTL_SNDCTL_DSP_NONBLOCK = SNDCTL_DSP_NONBLOCK;
+unsigned IOCTL_SNDCTL_DSP_POST = SNDCTL_DSP_POST;
+unsigned IOCTL_SNDCTL_DSP_RESET = SNDCTL_DSP_RESET;
+unsigned IOCTL_SNDCTL_DSP_SETFMT = SNDCTL_DSP_SETFMT;
+unsigned IOCTL_SNDCTL_DSP_SETFRAGMENT = SNDCTL_DSP_SETFRAGMENT;
+unsigned IOCTL_SNDCTL_DSP_SPEED = SNDCTL_DSP_SPEED;
+unsigned IOCTL_SNDCTL_DSP_STEREO = SNDCTL_DSP_STEREO;
+unsigned IOCTL_SNDCTL_DSP_SUBDIVIDE = SNDCTL_DSP_SUBDIVIDE;
+unsigned IOCTL_SNDCTL_DSP_SYNC = SNDCTL_DSP_SYNC;
+unsigned IOCTL_SNDCTL_FM_4OP_ENABLE = SNDCTL_FM_4OP_ENABLE;
+unsigned IOCTL_SNDCTL_FM_LOAD_INSTR = SNDCTL_FM_LOAD_INSTR;
+unsigned IOCTL_SNDCTL_MIDI_INFO = SNDCTL_MIDI_INFO;
+unsigned IOCTL_SNDCTL_MIDI_PRETIME = SNDCTL_MIDI_PRETIME;
+unsigned IOCTL_SNDCTL_SEQ_CTRLRATE = SNDCTL_SEQ_CTRLRATE;
+unsigned IOCTL_SNDCTL_SEQ_GETINCOUNT = SNDCTL_SEQ_GETINCOUNT;
+unsigned IOCTL_SNDCTL_SEQ_GETOUTCOUNT = SNDCTL_SEQ_GETOUTCOUNT;
+unsigned IOCTL_SNDCTL_SEQ_NRMIDIS = SNDCTL_SEQ_NRMIDIS;
+unsigned IOCTL_SNDCTL_SEQ_NRSYNTHS = SNDCTL_SEQ_NRSYNTHS;
+unsigned IOCTL_SNDCTL_SEQ_OUTOFBAND = SNDCTL_SEQ_OUTOFBAND;
+unsigned IOCTL_SNDCTL_SEQ_PANIC = SNDCTL_SEQ_PANIC;
+unsigned IOCTL_SNDCTL_SEQ_PERCMODE = SNDCTL_SEQ_PERCMODE;
+unsigned IOCTL_SNDCTL_SEQ_RESET = SNDCTL_SEQ_RESET;
+unsigned IOCTL_SNDCTL_SEQ_RESETSAMPLES = SNDCTL_SEQ_RESETSAMPLES;
+unsigned IOCTL_SNDCTL_SEQ_SYNC = SNDCTL_SEQ_SYNC;
+unsigned IOCTL_SNDCTL_SEQ_TESTMIDI = SNDCTL_SEQ_TESTMIDI;
+unsigned IOCTL_SNDCTL_SEQ_THRESHOLD = SNDCTL_SEQ_THRESHOLD;
+unsigned IOCTL_SNDCTL_SYNTH_INFO = SNDCTL_SYNTH_INFO;
+unsigned IOCTL_SNDCTL_SYNTH_MEMAVL = SNDCTL_SYNTH_MEMAVL;
+unsigned IOCTL_SNDCTL_TMR_CONTINUE = SNDCTL_TMR_CONTINUE;
+unsigned IOCTL_SNDCTL_TMR_METRONOME = SNDCTL_TMR_METRONOME;
+unsigned IOCTL_SNDCTL_TMR_SELECT = SNDCTL_TMR_SELECT;
+unsigned IOCTL_SNDCTL_TMR_SOURCE = SNDCTL_TMR_SOURCE;
+unsigned IOCTL_SNDCTL_TMR_START = SNDCTL_TMR_START;
+unsigned IOCTL_SNDCTL_TMR_STOP = SNDCTL_TMR_STOP;
+unsigned IOCTL_SNDCTL_TMR_TEMPO = SNDCTL_TMR_TEMPO;
+unsigned IOCTL_SNDCTL_TMR_TIMEBASE = SNDCTL_TMR_TIMEBASE;
+unsigned IOCTL_SOUND_MIXER_READ_ALTPCM = SOUND_MIXER_READ_ALTPCM;
+unsigned IOCTL_SOUND_MIXER_READ_BASS = SOUND_MIXER_READ_BASS;
+unsigned IOCTL_SOUND_MIXER_READ_CAPS = SOUND_MIXER_READ_CAPS;
+unsigned IOCTL_SOUND_MIXER_READ_CD = SOUND_MIXER_READ_CD;
+unsigned IOCTL_SOUND_MIXER_READ_DEVMASK = SOUND_MIXER_READ_DEVMASK;
+unsigned IOCTL_SOUND_MIXER_READ_ENHANCE = SOUND_MIXER_READ_ENHANCE;
+unsigned IOCTL_SOUND_MIXER_READ_IGAIN = SOUND_MIXER_READ_IGAIN;
+unsigned IOCTL_SOUND_MIXER_READ_IMIX = SOUND_MIXER_READ_IMIX;
+unsigned IOCTL_SOUND_MIXER_READ_LINE = SOUND_MIXER_READ_LINE;
+unsigned IOCTL_SOUND_MIXER_READ_LINE1 = SOUND_MIXER_READ_LINE1;
+unsigned IOCTL_SOUND_MIXER_READ_LINE2 = SOUND_MIXER_READ_LINE2;
+unsigned IOCTL_SOUND_MIXER_READ_LINE3 = SOUND_MIXER_READ_LINE3;
+unsigned IOCTL_SOUND_MIXER_READ_LOUD = SOUND_MIXER_READ_LOUD;
+unsigned IOCTL_SOUND_MIXER_READ_MIC = SOUND_MIXER_READ_MIC;
+unsigned IOCTL_SOUND_MIXER_READ_MUTE = SOUND_MIXER_READ_MUTE;
+unsigned IOCTL_SOUND_MIXER_READ_OGAIN = SOUND_MIXER_READ_OGAIN;
+unsigned IOCTL_SOUND_MIXER_READ_PCM = SOUND_MIXER_READ_PCM;
+unsigned IOCTL_SOUND_MIXER_READ_RECLEV = SOUND_MIXER_READ_RECLEV;
+unsigned IOCTL_SOUND_MIXER_READ_RECMASK = SOUND_MIXER_READ_RECMASK;
+unsigned IOCTL_SOUND_MIXER_READ_RECSRC = SOUND_MIXER_READ_RECSRC;
+unsigned IOCTL_SOUND_MIXER_READ_SPEAKER = SOUND_MIXER_READ_SPEAKER;
+unsigned IOCTL_SOUND_MIXER_READ_STEREODEVS = SOUND_MIXER_READ_STEREODEVS;
+unsigned IOCTL_SOUND_MIXER_READ_SYNTH = SOUND_MIXER_READ_SYNTH;
+unsigned IOCTL_SOUND_MIXER_READ_TREBLE = SOUND_MIXER_READ_TREBLE;
+unsigned IOCTL_SOUND_MIXER_READ_VOLUME = SOUND_MIXER_READ_VOLUME;
+unsigned IOCTL_SOUND_MIXER_WRITE_ALTPCM = SOUND_MIXER_WRITE_ALTPCM;
+unsigned IOCTL_SOUND_MIXER_WRITE_BASS = SOUND_MIXER_WRITE_BASS;
+unsigned IOCTL_SOUND_MIXER_WRITE_CD = SOUND_MIXER_WRITE_CD;
+unsigned IOCTL_SOUND_MIXER_WRITE_ENHANCE = SOUND_MIXER_WRITE_ENHANCE;
+unsigned IOCTL_SOUND_MIXER_WRITE_IGAIN = SOUND_MIXER_WRITE_IGAIN;
+unsigned IOCTL_SOUND_MIXER_WRITE_IMIX = SOUND_MIXER_WRITE_IMIX;
+unsigned IOCTL_SOUND_MIXER_WRITE_LINE = SOUND_MIXER_WRITE_LINE;
+unsigned IOCTL_SOUND_MIXER_WRITE_LINE1 = SOUND_MIXER_WRITE_LINE1;
+unsigned IOCTL_SOUND_MIXER_WRITE_LINE2 = SOUND_MIXER_WRITE_LINE2;
+unsigned IOCTL_SOUND_MIXER_WRITE_LINE3 = SOUND_MIXER_WRITE_LINE3;
+unsigned IOCTL_SOUND_MIXER_WRITE_LOUD = SOUND_MIXER_WRITE_LOUD;
+unsigned IOCTL_SOUND_MIXER_WRITE_MIC = SOUND_MIXER_WRITE_MIC;
+unsigned IOCTL_SOUND_MIXER_WRITE_MUTE = SOUND_MIXER_WRITE_MUTE;
+unsigned IOCTL_SOUND_MIXER_WRITE_OGAIN = SOUND_MIXER_WRITE_OGAIN;
+unsigned IOCTL_SOUND_MIXER_WRITE_PCM = SOUND_MIXER_WRITE_PCM;
+unsigned IOCTL_SOUND_MIXER_WRITE_RECLEV = SOUND_MIXER_WRITE_RECLEV;
+unsigned IOCTL_SOUND_MIXER_WRITE_RECSRC = SOUND_MIXER_WRITE_RECSRC;
+unsigned IOCTL_SOUND_MIXER_WRITE_SPEAKER = SOUND_MIXER_WRITE_SPEAKER;
+unsigned IOCTL_SOUND_MIXER_WRITE_SYNTH = SOUND_MIXER_WRITE_SYNTH;
+unsigned IOCTL_SOUND_MIXER_WRITE_TREBLE = SOUND_MIXER_WRITE_TREBLE;
+unsigned IOCTL_SOUND_MIXER_WRITE_VOLUME = SOUND_MIXER_WRITE_VOLUME;
+unsigned IOCTL_VT_ACTIVATE = VT_ACTIVATE;
+unsigned IOCTL_VT_GETMODE = VT_GETMODE;
+unsigned IOCTL_VT_OPENQRY = VT_OPENQRY;
+unsigned IOCTL_VT_RELDISP = VT_RELDISP;
+unsigned IOCTL_VT_SETMODE = VT_SETMODE;
+unsigned IOCTL_VT_WAITACTIVE = VT_WAITACTIVE;
+unsigned IOCTL_GIO_SCRNMAP = GIO_SCRNMAP;
+unsigned IOCTL_KDDISABIO = KDDISABIO;
+unsigned IOCTL_KDENABIO = KDENABIO;
+unsigned IOCTL_KDGETLED = KDGETLED;
+unsigned IOCTL_KDGETMODE = KDGETMODE;
+unsigned IOCTL_KDGKBMODE = KDGKBMODE;
+unsigned IOCTL_KDGKBTYPE = KDGKBTYPE;
+unsigned IOCTL_KDMKTONE = KDMKTONE;
+unsigned IOCTL_KDSETLED = KDSETLED;
+unsigned IOCTL_KDSETMODE = KDSETMODE;
+unsigned IOCTL_KDSKBMODE = KDSKBMODE;
+unsigned IOCTL_KIOCSOUND = KIOCSOUND;
+unsigned IOCTL_PIO_SCRNMAP = PIO_SCRNMAP;
+unsigned IOCTL_SNDCTL_DSP_GETISPACE = SNDCTL_DSP_GETISPACE;
 
-  const int si_SEGV_MAPERR = SEGV_MAPERR;
-  const int si_SEGV_ACCERR = SEGV_ACCERR;
-  const int unvis_valid = UNVIS_VALID;
-  const int unvis_validpush = UNVIS_VALIDPUSH;
-} // namespace __sanitizer
+const int si_SEGV_MAPERR = SEGV_MAPERR;
+const int si_SEGV_ACCERR = SEGV_ACCERR;
+const int unvis_valid = UNVIS_VALID;
+const int unvis_validpush = UNVIS_VALIDPUSH;
+}  // namespace __sanitizer
 
 using namespace __sanitizer;
 

@@ -31,8 +31,12 @@ define internal void @callee_t0f(i8* nocapture readnone %tp13, i8* nocapture rea
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
 ; CHECK-SAME: (i8* noalias nocapture nofree nonnull readnone [[TP13:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP14:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP15:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP16:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP17:%.*]], ...)
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @sink(i32 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void @sink(i32 0)
   ret void
 }
+
+declare void @sink(i32)

@@ -1405,11 +1405,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   DISubprogram *OldSP = OldFunc.getSubprogram();
   LLVMContext &Ctx = OldFunc.getContext();
 
-  // See llvm.org/PR44560, OpenMP passes an invalid subprogram to CodeExtractor.
-  bool NeedWorkaroundForOpenMPIRBuilderBug =
-      OldSP && OldSP->getRetainedNodes()->isTemporary();
-
-  if (!OldSP || NeedWorkaroundForOpenMPIRBuilderBug) {
+  if (!OldSP) {
     // Erase any debug info the new function contains.
     stripDebugInfo(NewFunc);
     // Make sure the old function doesn't contain any non-local metadata refs.

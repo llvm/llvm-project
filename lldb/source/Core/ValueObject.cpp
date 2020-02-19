@@ -45,7 +45,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Scalar.h"
-#include "lldb/Utility/SharingPtr.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
@@ -105,12 +104,13 @@ ValueObject::ValueObject(ValueObject &parent)
 
 // ValueObject constructor
 ValueObject::ValueObject(ExecutionContextScope *exe_scope,
+                         ValueObjectManager &manager,
                          AddressType child_ptr_or_ref_addr_type)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
       m_parent(nullptr), m_root(nullptr), m_update_point(exe_scope), m_name(),
       m_data(), m_value(), m_error(), m_value_str(), m_old_value_str(),
       m_location_str(), m_summary_str(), m_object_desc_str(),
-      m_manager(), m_children(), m_synthetic_children(),
+      m_manager(&manager), m_children(), m_synthetic_children(),
       m_dynamic_value(nullptr), m_synthetic_value(nullptr),
       m_deref_valobj(nullptr), m_format(eFormatDefault),
       m_last_format(eFormatDefault), m_last_format_mgr_revision(0),
@@ -134,7 +134,6 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
       m_data.SetAddressByteSize(arch.GetAddressByteSize());
     }
   }
-  m_manager = new ValueObjectManager();
   m_manager->ManageObject(this);
 }
 
@@ -1446,7 +1445,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
 
     case eValueObjectRepresentationStyleExpressionPath:
-      GetExpressionPath(strm, false);
+      GetExpressionPath(strm);
       str = strm.GetString();
       break;
     }
@@ -1552,7 +1551,7 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
   case Value::eValueTypeLoadAddress:
   case Value::eValueTypeFileAddress: {
     lldb::offset_t data_offset = 0;
-    address = m_data.GetPointer(&data_offset);
+    address = m_data.GetAddress(&data_offset);
   } break;
   }
 
@@ -1651,13 +1650,13 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 ConstString ValueObject::GetTypeName() {
-  return GetCompilerType().GetConstTypeName();
+  return GetCompilerType().GetTypeName();
 }
 
 ConstString ValueObject::GetDisplayTypeName() { return GetTypeName(); }
 
 ConstString ValueObject::GetQualifiedTypeName() {
-  return GetCompilerType().GetConstQualifiedTypeName();
+  return GetCompilerType().GetTypeName();
 }
 
 LanguageType ValueObject::GetObjectRuntimeLanguage() {
@@ -2037,7 +2036,7 @@ bool ValueObject::IsBaseClass(uint32_t &depth) {
   return true;
 }
 
-void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
+void ValueObject::GetExpressionPath(Stream &s,
                                     GetExpressionPathFormat epformat) {
   // synthetic children do not actually "exist" as part of the hierarchy, and
   // sometimes they are consed up in ways that don't make sense from an
@@ -2086,14 +2085,14 @@ void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
   ValueObject *parent = GetParent();
 
   if (parent)
-    parent->GetExpressionPath(s, qualify_cxx_base_classes, epformat);
+    parent->GetExpressionPath(s, epformat);
 
   // if we are a deref_of_parent just because we are synthetic array members
   // made up to allow ptr[%d] syntax to work in variable printing, then add our
   // name ([%d]) to the expression path
   if (m_is_array_item_for_pointer &&
       epformat == eGetExpressionPathFormatHonorPointers)
-    s.PutCString(m_name.AsCString());
+    s.PutCString(m_name.GetStringRef());
 
   if (!IsBaseClass()) {
     if (!is_deref_of_parent) {
@@ -2846,7 +2845,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     return m_deref_valobj->GetSP();
   } else {
     StreamString strm;
-    GetExpressionPath(strm, true);
+    GetExpressionPath(strm);
 
     if (is_pointer_or_reference_type)
       error.SetErrorStringWithFormat("dereference failed: (%s) %s",
@@ -2872,7 +2871,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
     switch (address_type) {
     case eAddressTypeInvalid: {
       StreamString expr_path_strm;
-      GetExpressionPath(expr_path_strm, true);
+      GetExpressionPath(expr_path_strm);
       error.SetErrorStringWithFormat("'%s' is not in memory",
                                      expr_path_strm.GetData());
     } break;
@@ -2895,7 +2894,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
     }
   } else {
     StreamString expr_path_strm;
-    GetExpressionPath(expr_path_strm, true);
+    GetExpressionPath(expr_path_strm);
     error.SetErrorStringWithFormat("'%s' doesn't have a valid address",
                                    expr_path_strm.GetData());
   }

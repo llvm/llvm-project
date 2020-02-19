@@ -27,7 +27,7 @@ public:
   ~SerialSnippetGenerator() override;
 
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr,
+  generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const override;
 };
 

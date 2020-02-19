@@ -7,5 +7,5 @@ define double @test() {
   ret double %1
 }
 
-; CHECK: .quad -9111018957755033591
+; CHECK: .quad 0x818f2887b9295809
 

@@ -676,6 +676,45 @@ bool HexagonMCInstrInfo::isOuterLoop(MCInst const &MCI) {
   return (Flags & outerLoopMask) != 0;
 }
 
+bool HexagonMCInstrInfo::IsVecRegPair(unsigned VecReg) {
+  return (VecReg >= Hexagon::W0 && VecReg <= Hexagon::W15) ||
+         (VecReg >= Hexagon::WR0 && VecReg <= Hexagon::WR15);
+}
+
+bool HexagonMCInstrInfo::IsReverseVecRegPair(unsigned VecReg) {
+  return (VecReg >= Hexagon::WR0 && VecReg <= Hexagon::WR15);
+}
+
+bool HexagonMCInstrInfo::IsVecRegSingle(unsigned VecReg) {
+  return (VecReg >= Hexagon::V0 && VecReg <= Hexagon::V31);
+}
+
+std::pair<unsigned, unsigned>
+HexagonMCInstrInfo::GetVecRegPairIndices(unsigned VecRegPair) {
+  assert(IsVecRegPair(VecRegPair) &&
+         "VecRegPair must be a vector register pair");
+
+  const bool IsRev = IsReverseVecRegPair(VecRegPair);
+  const unsigned PairIndex =
+      2 * (IsRev ? VecRegPair - Hexagon::WR0 : VecRegPair - Hexagon::W0);
+
+  return IsRev ? std::make_pair(PairIndex, PairIndex + 1)
+               : std::make_pair(PairIndex + 1, PairIndex);
+}
+
+bool HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(unsigned Producer,
+                                                         unsigned Consumer) {
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer)) {
+    const unsigned ProdPairIndex = IsReverseVecRegPair(Producer)
+                                       ? Producer - Hexagon::WR0
+                                       : Producer - Hexagon::W0;
+    const unsigned ConsumerSingleIndex = (Consumer - Hexagon::V0) >> 1;
+
+    return ConsumerSingleIndex == ProdPairIndex;
+  }
+  return false;
+}
+
 bool HexagonMCInstrInfo::isPredicated(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
@@ -971,9 +1010,8 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
                                             unsigned Producer2) {
   // If we're a single vector consumer of a double producer, set subreg bit
   // based on if we're accessing the lower or upper register component
-  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
-    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
-      return (Consumer - Hexagon::V0) & 0x1;
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer))
+    return (Consumer - Hexagon::V0) & 0x1;
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;

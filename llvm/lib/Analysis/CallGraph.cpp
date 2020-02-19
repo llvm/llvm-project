@@ -74,6 +74,12 @@ void CallGraph::addToCallGraph(Function *F) {
   if (!F->hasLocalLinkage() || F->hasAddressTaken())
     ExternalCallingNode->addCalledFunction(nullptr, Node);
 
+  populateCallGraphNode(Node);
+}
+
+void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
+  Function *F = Node->getFunction();
+
   // If this function is not defined in this translation unit, it could call
   // anything.
   if (F->isDeclaration() && !F->isIntrinsic())

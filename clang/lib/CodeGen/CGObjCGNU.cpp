@@ -821,7 +821,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       // Slot_t objc_slot_lookup_super(struct objc_super*, SEL);
       SlotLookupSuperFn.init(&CGM, "objc_slot_lookup_super", SlotTy,
                              PtrToObjCSuperTy, SelectorTy);
-      // If we're in ObjC++ mode, then we want to make 
+      // If we're in ObjC++ mode, then we want to make
       if (usesSEHExceptions) {
           llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
           // void objc_exception_rethrow(void)
@@ -1657,7 +1657,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       b.CreateRetVoid();
       // We can't use the normal LLVM global initialisation array, because we
       // need to specify that this runs early in library initialisation.
-      auto *InitVar = new llvm::GlobalVariable(CGM.getModule(), Init->getType(), 
+      auto *InitVar = new llvm::GlobalVariable(CGM.getModule(), Init->getType(),
           /*isConstant*/true, llvm::GlobalValue::InternalLinkage,
           Init, ".objc_early_init_ptr");
       InitVar->setSection(".CRT$XCLb");

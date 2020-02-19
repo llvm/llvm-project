@@ -540,6 +540,13 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
+  if (!D.SysRoot.empty()) {
+    SmallString<128> P(D.SysRoot);
+    llvm::sys::path::append(P, "include");
+    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
+    return;
+  }
+
   std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
                                               D.PrefixDirs);
   addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");

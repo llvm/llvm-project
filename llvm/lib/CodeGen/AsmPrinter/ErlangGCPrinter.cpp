@@ -72,7 +72,7 @@ void ErlangGCPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
      **/
 
     // Align to address width.
-    AP.EmitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
+    AP.emitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
 
     // Emit PointCount.
     OS.AddComment("safe point count");
@@ -84,7 +84,7 @@ void ErlangGCPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
       // Emit the address of the safe point.
       OS.AddComment("safe point address");
       MCSymbol *Label = PI->Label;
-      AP.EmitLabelPlusOffset(Label /*Hi*/, 0 /*Offset*/, 4 /*Size*/);
+      AP.emitLabelPlusOffset(Label /*Hi*/, 0 /*Offset*/, 4 /*Size*/);
     }
 
     // Stack information never change in safe points! Only print info from the

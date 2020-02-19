@@ -7,7 +7,8 @@
 name: test_fmad_s32_flush
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -42,7 +43,8 @@ body: |
 name: test_fmad_s32_flags_flush
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -77,7 +79,8 @@ body: |
 name: test_fmad_v2s32_flush
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -127,7 +130,8 @@ body: |
 name: test_fmad_v3s32_flush
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -180,7 +184,8 @@ body: |
 name: test_fmad_v4s32_flush
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
+    fp32-input-denormals: false
+    fp32-output-denormals: false
 
 body: |
   bb.0:
@@ -236,7 +241,8 @@ body: |
 name: test_fmad_s32_denorm
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -274,7 +280,8 @@ body: |
 name: test_fmad_s32_flags_denorm
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -312,7 +319,8 @@ body: |
 name: test_fmad_v2s32_denorm
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -368,7 +376,8 @@ body: |
 name: test_fmad_v3s32_denorm
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:
@@ -430,7 +439,8 @@ body: |
 name: test_fmad_v4s32_denorm
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
 
 body: |
   bb.0:

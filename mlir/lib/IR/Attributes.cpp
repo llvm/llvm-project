@@ -68,6 +68,11 @@ ArrayAttr ArrayAttr::get(ArrayRef<Attribute> value, MLIRContext *context) {
 
 ArrayRef<Attribute> ArrayAttr::getValue() const { return getImpl()->value; }
 
+Attribute ArrayAttr::operator[](unsigned idx) const {
+  assert(idx < size() && "index out of bounds");
+  return getValue()[idx];
+}
+
 //===----------------------------------------------------------------------===//
 // BoolAttr
 //===----------------------------------------------------------------------===//
@@ -288,9 +293,10 @@ static LogicalResult verifyIntegerTypeInvariants(Optional<Location> loc,
   return emitOptionalError(loc, "expected integer or index type");
 }
 
-LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                           MLIRContext *ctx, Type type,
-                                           int64_t value) {
+LogicalResult IntegerAttr::verifyConstructionInvariants(Optional<Location> loc,
+                                                        MLIRContext *ctx,
+                                                        Type type,
+                                                        int64_t value) {
   return verifyIntegerTypeInvariants(loc, type);
 }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_posix_LockFilePosix_h_
-#define liblldb_Host_posix_LockFilePosix_h_
+#ifndef LLDB_HOST_POSIX_LOCKFILEPOSIX_H
+#define LLDB_HOST_POSIX_LOCKFILEPOSIX_H
 
 #include "lldb/Host/LockFileBase.h"
 
@@ -32,4 +32,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_Host_posix_LockFilePosix_h_
+#endif // LLDB_HOST_POSIX_LOCKFILEPOSIX_H

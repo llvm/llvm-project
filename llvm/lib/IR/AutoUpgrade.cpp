@@ -3259,8 +3259,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
           Ops[2] = Builder.CreateFNeg(Ops[2]);
 
         Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                                 {CI->getArgOperand(0), CI->getArgOperand(1),
-                                  CI->getArgOperand(2), CI->getArgOperand(4)});
+                                 Ops);
       } else {
         int NumElts = CI->getType()->getVectorNumElements();
 

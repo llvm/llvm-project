@@ -112,7 +112,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 ///
 /// \p GetTrapBB is a callable that returns the trap BB to use on failure.
 template <typename GetTrapBBT>
-static void insertBoundsCheck(Value *Or, BuilderTy IRB, GetTrapBBT GetTrapBB) {
+static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   // check if the comparison is always false
   ConstantInt *C = dyn_cast_or_null<ConstantInt>(Or);
   if (C) {

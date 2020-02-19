@@ -33,8 +33,8 @@ define void @f3(fp128 *%x) {
 ; CHECK: vl [[REG:%v[0-9]+]], 0([[REGISTER]])
 ; CHECK: vst [[REG]], 0(%r2)
 ; CHECK: br %r14
-; CONST: .quad 4611404543484231680
-; CONST: .quad 0
+; CONST: .quad 0x3fff000002000000
+; CONST: .quad 0x0
   store fp128 0xL00000000000000003fff000002000000, fp128 *%x
   ret void
 }

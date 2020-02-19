@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanCallFunctionUsingABI_h_
-#define liblldb_ThreadPlanCallFunctionUsingABI_h_
+#ifndef LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H
+#define LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Thread.h"
@@ -49,4 +49,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanCallFunctionUsingABI_h_
+#endif // LLDB_TARGET_THREADPLANCALLFUNCTIONUSINGABI_H

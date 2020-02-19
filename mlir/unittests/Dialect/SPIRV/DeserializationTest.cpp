@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Serialization.h"
 #include "mlir/IR/Diagnostics.h"
@@ -22,6 +23,9 @@
 #include <memory>
 
 using namespace mlir;
+
+// Load the SPIRV dialect
+static DialectRegistration<spirv::SPIRVDialect> SPIRVRegistration;
 
 using ::testing::StrEq;
 

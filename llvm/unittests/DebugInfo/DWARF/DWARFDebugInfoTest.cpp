@@ -2520,10 +2520,10 @@ TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
   // Emit two compressed sections with broken headers.
   AP->OutStreamer->SwitchSection(
       MC->getELFSection(".zdebug_foo", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->EmitBytes("0");
+  AP->OutStreamer->emitBytes("0");
   AP->OutStreamer->SwitchSection(
       MC->getELFSection(".zdebug_bar", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->EmitBytes("0");
+  AP->OutStreamer->emitBytes("0");
 
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);

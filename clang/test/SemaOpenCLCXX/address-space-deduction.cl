@@ -105,7 +105,7 @@ void t5(float (*(*fYZ))[2]);
 
 __kernel void k() {
   __local float x[2];
-  __local float(*p)[2];
+  float(*p)[2];
   t1(x);
   t2(&x);
   t3(&x);

@@ -83,7 +83,7 @@ cl::opt<std::string> ModuleSummaryDotFile(
 // to know when computing summary for global var, because if global variable
 // references basic block address we can't import it separately from function
 // containing that basic block. For simplicity we currently don't import such
-// global vars at all. When importing function we aren't interested if any 
+// global vars at all. When importing function we aren't interested if any
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,

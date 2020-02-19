@@ -376,6 +376,14 @@ public:
   virtual bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
 
+  /// tryParseRegister - parse one register if possible
+  ///
+  /// Check whether a register specification can be parsed at the current
+  /// location, without failing the entire parse if it can't. Must not consume
+  /// tokens if the parse fails.
+  virtual OperandMatchResultTy
+  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
+
   /// ParseInstruction - Parse one assembly instruction.
   ///
   /// The parser is positioned following the instruction name. The target

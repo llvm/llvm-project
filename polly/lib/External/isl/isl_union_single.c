@@ -10,7 +10,7 @@
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
-#include <isl_hash_private.h>
+#include <isl/hash.h>
 #include <isl_union_macro.h>
 
 /* A union of expressions defined over different domain spaces.
@@ -29,9 +29,9 @@ struct UNION {
 
 /* Return the number of base expressions in "u".
  */
-int FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
+isl_size FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
 {
-	return u ? u->table.n : 0;
+	return u ? u->table.n : isl_size_error;
 }
 
 S(UNION,foreach_data)
@@ -65,7 +65,8 @@ isl_stat FN(FN(UNION,foreach),BASE)(__isl_keep UNION *u,
 
 /* Is the domain space of "entry" equal to the domain of "space"?
  */
-static int FN(UNION,has_same_domain_space)(const void *entry, const void *val)
+static isl_bool FN(UNION,has_same_domain_space)(const void *entry,
+	const void *val)
 {
 	PART *part = (PART *)entry;
 	isl_space *space = (isl_space *) val;
@@ -102,8 +103,8 @@ static struct isl_hash_table_entry *FN(UNION,find_part_entry)(
 	hash = isl_space_get_domain_hash(space);
 	entry = isl_hash_table_find(ctx, &u->table, hash,
 			&FN(UNION,has_same_domain_space), space, reserve);
-	if (!entry)
-		return reserve ? NULL : isl_hash_table_entry_none;
+	if (!entry || entry == isl_hash_table_entry_none)
+		return entry;
 	if (reserve && !entry->data)
 		return entry;
 	part = entry->data;
@@ -175,16 +176,6 @@ static isl_stat FN(UNION,foreach_inplace)(__isl_keep UNION *u,
 		return isl_stat_error;
 	ctx = FN(UNION,get_ctx)(u);
 	return isl_hash_table_foreach(ctx, &u->table, fn, user);
-}
-
-/* Does "u" have a single reference?
- * That is, can we change "u" inplace?
- */
-static isl_bool FN(UNION,has_single_reference)(__isl_keep UNION *u)
-{
-	if (!u)
-		return isl_bool_error;
-	return u->ref == 1;
 }
 
 static isl_stat FN(UNION,free_u_entry)(void **entry, void *user)

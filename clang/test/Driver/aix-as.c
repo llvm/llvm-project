@@ -23,7 +23,6 @@
 // CHECK-AS64: "-u" 
 // CHECK-AS64: "-many"
 
-
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -Xassembler <arg> option. 
 // RUN: %clang -no-canonical-prefixes %s -### -c -o %t.o 2>&1 \
 // RUN:         -Xassembler -w \

@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -456,6 +458,62 @@ Instruction *llvm::promoteCallWithIfThenElse(CallSite CS, Function *Callee,
 
   // Promote 'NewInst' so that it directly calls the desired function.
   return promoteCall(CallSite(NewInst), Callee);
+}
+
+bool llvm::tryPromoteCall(CallSite &CS) {
+  assert(!CS.getCalledFunction());
+  Module *M = CS.getCaller()->getParent();
+  const DataLayout &DL = M->getDataLayout();
+  Value *Callee = CS.getCalledValue();
+
+  LoadInst *VTableEntryLoad = dyn_cast<LoadInst>(Callee);
+  if (!VTableEntryLoad)
+    return false; // Not a vtable entry load.
+  Value *VTableEntryPtr = VTableEntryLoad->getPointerOperand();
+  APInt VTableOffset(DL.getTypeSizeInBits(VTableEntryPtr->getType()), 0);
+  Value *VTableBasePtr = VTableEntryPtr->stripAndAccumulateConstantOffsets(
+      DL, VTableOffset, /* AllowNonInbounds */ true);
+  LoadInst *VTablePtrLoad = dyn_cast<LoadInst>(VTableBasePtr);
+  if (!VTablePtrLoad)
+    return false; // Not a vtable load.
+  Value *Object = VTablePtrLoad->getPointerOperand();
+  APInt ObjectOffset(DL.getTypeSizeInBits(Object->getType()), 0);
+  Value *ObjectBase = Object->stripAndAccumulateConstantOffsets(
+      DL, ObjectOffset, /* AllowNonInbounds */ true);
+  if (!(isa<AllocaInst>(ObjectBase) && ObjectOffset == 0))
+    // Not an Alloca or the offset isn't zero.
+    return false;
+
+  // Look for the vtable pointer store into the object by the ctor.
+  BasicBlock::iterator BBI(VTablePtrLoad);
+  Value *VTablePtr = FindAvailableLoadedValue(
+      VTablePtrLoad, VTablePtrLoad->getParent(), BBI, 0, nullptr, nullptr);
+  if (!VTablePtr)
+    return false; // No vtable found.
+  APInt VTableOffsetGVBase(DL.getTypeSizeInBits(VTablePtr->getType()), 0);
+  Value *VTableGVBase = VTablePtr->stripAndAccumulateConstantOffsets(
+      DL, VTableOffsetGVBase, /* AllowNonInbounds */ true);
+  GlobalVariable *GV = dyn_cast<GlobalVariable>(VTableGVBase);
+  if (!(GV && GV->isConstant() && GV->hasDefinitiveInitializer()))
+    // Not in the form of a global constant variable with an initializer.
+    return false;
+
+  Constant *VTableGVInitializer = GV->getInitializer();
+  APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
+  if (!(VTableGVOffset.getActiveBits() <= 64))
+    return false; // Out of range.
+  Constant *Ptr = getPointerAtOffset(VTableGVInitializer,
+                                     VTableGVOffset.getZExtValue(),
+                                     *M);
+  if (!Ptr)
+    return false; // No constant (function) pointer found.
+  Function *DirectCallee = dyn_cast<Function>(Ptr->stripPointerCasts());
+  if (!DirectCallee)
+    return false; // No function pointer found.
+
+  // Success.
+  promoteCall(CS, DirectCallee);
+  return true;
 }
 
 #undef DEBUG_TYPE

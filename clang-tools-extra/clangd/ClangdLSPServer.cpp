@@ -559,6 +559,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"codeActionProvider", std::move(CodeActionProvider)},
             {"completionProvider",
              llvm::json::Object{
+                 {"allCommitCharacters", " \t()[]{}<>:;,+-/*%^&#?.=\"'|"},
                  {"resolveProvider", false},
                  // We do extra checks for '>' and ':' in completion to only
                  // trigger on '->' and '::'.
@@ -647,7 +648,7 @@ void ClangdLSPServer::onDocumentDidChange(
     return;
   }
 
-  Server->addDocument(File, *Contents, WantDiags);
+  Server->addDocument(File, *Contents, WantDiags, Params.forceRebuild);
 }
 
 void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

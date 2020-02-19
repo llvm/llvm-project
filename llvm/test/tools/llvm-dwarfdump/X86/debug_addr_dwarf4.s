@@ -2,7 +2,6 @@
 # RUN: llvm-dwarfdump --debug-addr %t.o | FileCheck %s
 
 # CHECK: .debug_addr contents
-# CHECK-NEXT:     length = 0x00000000, version = 0x0004, addr_size = 0x04, seg_size = 0x00
 # CHECK-NEXT:     Addrs: [
 # CHECK-NEXT:     0x00000000
 # CHECK-NEXT:     0x00000001

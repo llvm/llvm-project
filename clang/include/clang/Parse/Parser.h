@@ -1701,6 +1701,8 @@ public:
                                   unsigned &NumLineToksConsumed,
                                   bool IsUnevaluated);
 
+  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral = false);
+
 private:
   ExprResult ParseExpressionWithLeadingAt(SourceLocation AtLoc);
 
@@ -1792,8 +1794,6 @@ private:
   ExprResult ParseCompoundLiteralExpression(ParsedType Ty,
                                                   SourceLocation LParenLoc,
                                                   SourceLocation RParenLoc);
-
-  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral = false);
 
   ExprResult ParseGenericSelectionExpression();
 
@@ -2920,11 +2920,39 @@ private:
   DeclGroupPtrTy ParseOMPDeclareSimdClauses(DeclGroupPtrTy Ptr,
                                             CachedTokens &Toks,
                                             SourceLocation Loc);
-  /// Parses OpenMP context selectors and calls \p Callback for each
-  /// successfully parsed context selector.
-  bool
-  parseOpenMPContextSelectors(SourceLocation Loc,
-                              SmallVectorImpl<Sema::OMPCtxSelectorData> &Data);
+
+  /// Parse a property kind into \p TIProperty for the selector set \p Set and
+  /// selector \p Selector.
+  void parseOMPTraitPropertyKind(OMPTraitInfo::OMPTraitProperty &TIProperty,
+                                 llvm::omp::TraitSet Set,
+                                 llvm::omp::TraitSelector Selector,
+                                 llvm::StringMap<SourceLocation> &Seen);
+
+  /// Parse a selector kind into \p TISelector for the selector set \p Set.
+  void parseOMPTraitSelectorKind(OMPTraitInfo::OMPTraitSelector &TISelector,
+                                 llvm::omp::TraitSet Set,
+                                 llvm::StringMap<SourceLocation> &Seen);
+
+  /// Parse a selector set kind into \p TISet.
+  void parseOMPTraitSetKind(OMPTraitInfo::OMPTraitSet &TISet,
+                            llvm::StringMap<SourceLocation> &Seen);
+
+  /// Parses an OpenMP context property.
+  void parseOMPContextProperty(OMPTraitInfo::OMPTraitSelector &TISelector,
+                               llvm::omp::TraitSet Set,
+                               llvm::StringMap<SourceLocation> &Seen);
+
+  /// Parses an OpenMP context selector.
+  void parseOMPContextSelector(OMPTraitInfo::OMPTraitSelector &TISelector,
+                               llvm::omp::TraitSet Set,
+                               llvm::StringMap<SourceLocation> &SeenSelectors);
+
+  /// Parses an OpenMP context selector set.
+  void parseOMPContextSelectorSet(OMPTraitInfo::OMPTraitSet &TISet,
+                                  llvm::StringMap<SourceLocation> &SeenSets);
+
+  /// Parses OpenMP context selectors.
+  bool parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI);
 
   /// Parse clauses for '#pragma omp declare variant'.
   void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,

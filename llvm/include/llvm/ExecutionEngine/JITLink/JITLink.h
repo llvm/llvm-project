@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Allocator.h"
@@ -990,6 +991,11 @@ public:
 
   /// Remove a block.
   void removeBlock(Block &B) {
+    assert(llvm::none_of(B.getSection().symbols(),
+                         [&](const Symbol *Sym) {
+                           return &Sym->getBlock() == &B;
+                         }) &&
+           "Block still has symbols attached");
     B.getSection().removeBlock(B);
     destroyBlock(B);
   }

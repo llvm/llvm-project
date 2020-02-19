@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc --triple=x86_64-pc-linux --filetype=obj -o %t.o %s
-# RUN: not ld.lld -z pac-plt -z force-bti %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld -z pac-plt -z force-bti %t.o -o /dev/null 2>&1 | FileCheck %s
 #
 ## Check that we error if -z pac-plt and -z force-bti are used when target is not
 ## aarch64

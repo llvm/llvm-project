@@ -28,7 +28,7 @@ _LIBCXXABI_HIDDEN void     __setExceptionClass  (      _Unwind_Exception*, uint6
 _LIBCXXABI_HIDDEN bool     __isOurExceptionClass(const _Unwind_Exception*);
 
 struct _LIBCXXABI_HIDDEN __cxa_exception {
-#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
+#if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
     // Now _Unwind_Exception is marked with __attribute__((aligned)),
     // which implies __cxa_exception is also aligned. Insert padding
     // in the beginning of the struct, rather than before unwindHeader.
@@ -62,7 +62,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
+#if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
     // This is a new field to support C++ 0x exception_ptr.
     // For binary compatibility it is placed where the compiler
     // previously adding padded to 64-bit align unwindHeader.
@@ -75,7 +75,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 // The layout of this structure MUST match the layout of __cxa_exception, with
 // primaryException instead of referenceCount.
 struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
-#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
+#if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
     void* reserve; // padding.
     void* primaryException;
 #endif
@@ -100,7 +100,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
+#if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
     void* primaryException;
 #endif
     _Unwind_Exception unwindHeader;
@@ -125,7 +125,7 @@ static_assert(offsetof(__cxa_dependent_exception, propagationCount) +
                       sizeof(_Unwind_Exception) + sizeof(void*) ==
                   sizeof(__cxa_dependent_exception),
               "propagationCount has wrong negative offset");
-#elif defined(__LP64__)
+#elif defined(__LP64__) || defined(_WIN64)
 static_assert(offsetof(__cxa_exception, adjustedPtr) +
                       sizeof(_Unwind_Exception) + sizeof(void*) ==
                   sizeof(__cxa_exception),

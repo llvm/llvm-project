@@ -48,7 +48,7 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-    unsigned SourceRegister, bool IsKill, int FrameIndex,
+    Register SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
     const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;
@@ -68,7 +68,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
 
 void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-    unsigned DestinationRegister, int FrameIndex,
+    Register DestinationRegister, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
     const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;
@@ -797,7 +797,7 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
 
 bool LanaiInstrInfo::getMemOperandsWithOffset(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -812,6 +812,7 @@ bool LanaiInstrInfo::getMemOperandsWithOffset(
   case Lanai::LDBz_RI:
     const MachineOperand *BaseOp;
     unsigned Width;
+    OffsetIsScalable = false;
     if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
       return false;
     BaseOps.push_back(BaseOp);

@@ -98,12 +98,13 @@ bool VforkChecker::isCallWhitelisted(const IdentifierInfo *II,
   if (VforkWhitelist.empty()) {
     // According to manpage.
     const char *ids[] = {
-      "_exit",
       "_Exit",
+      "_exit",
       "execl",
-      "execlp",
       "execle",
+      "execlp",
       "execv",
+      "execve",
       "execvp",
       "execvpe",
       nullptr

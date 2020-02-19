@@ -7,7 +7,6 @@ add_llvm_library(MLIRStandardToLLVM
 add_dependencies(
   MLIRStandardToLLVM
 
-  MLIRLoopToStandard
   MLIRLLVMIR
   MLIRTransforms
   LLVMCore
@@ -16,7 +15,6 @@ add_dependencies(
 target_link_libraries(
   MLIRStandardToLLVM
 
-  MLIRLoopToStandard
   MLIRLLVMIR
   MLIRTransforms
   LLVMCore

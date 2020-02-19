@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RenderScriptRuntime_h_
-#define liblldb_RenderScriptRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H
 
 #include <array>
 #include <map>
@@ -23,6 +23,10 @@
 #include "lldb/lldb-private.h"
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+
+namespace clang {
+class TargetOptions;
+}
 
 namespace lldb_private {
 namespace lldb_renderscript {
@@ -402,6 +406,8 @@ public:
     return false;
   }
 
+  bool GetOverrideExprOptions(clang::TargetOptions &prototype);
+
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
@@ -577,11 +583,9 @@ private:
   // any previous stored allocation which has the same address.
   AllocationDetails *CreateAllocation(lldb::addr_t address);
 
-  bool GetOverrideExprOptions(clang::TargetOptions &prototype) override;
-
   bool GetIRPasses(LLVMUserExpression::IRPasses &passes) override;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_RenderScriptRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_RENDERSCRIPT_RENDERSCRIPTRUNTIME_RENDERSCRIPTRUNTIME_H

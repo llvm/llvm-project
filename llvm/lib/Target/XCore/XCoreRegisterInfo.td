@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-//  Declarations that describe the XCore register file 
+//  Declarations that describe the XCore register file
 //===----------------------------------------------------------------------===//
 
 class XCoreReg<string n> : Register<n> {
@@ -24,17 +24,17 @@ class Ri<bits<4> num, string n> : XCoreReg<n> {
 // CPU registers
 def R0  : Ri< 0, "r0">, DwarfRegNum<[0]>;
 def R1  : Ri< 1, "r1">, DwarfRegNum<[1]>;
-def R2  : Ri< 2, "r2">, DwarfRegNum<[2]>; 
+def R2  : Ri< 2, "r2">, DwarfRegNum<[2]>;
 def R3  : Ri< 3, "r3">, DwarfRegNum<[3]>;
 def R4  : Ri< 4, "r4">, DwarfRegNum<[4]>;
-def R5  : Ri< 5, "r5">, DwarfRegNum<[5]>; 
+def R5  : Ri< 5, "r5">, DwarfRegNum<[5]>;
 def R6  : Ri< 6, "r6">, DwarfRegNum<[6]>;
 def R7  : Ri< 7, "r7">, DwarfRegNum<[7]>;
 def R8  : Ri< 8, "r8">, DwarfRegNum<[8]>;
-def R9  : Ri< 9, "r9">, DwarfRegNum<[9]>; 
+def R9  : Ri< 9, "r9">, DwarfRegNum<[9]>;
 def R10 : Ri<10, "r10">, DwarfRegNum<[10]>;
 def R11 : Ri<11, "r11">, DwarfRegNum<[11]>;
-def CP : Ri<12, "cp">, DwarfRegNum<[12]>; 
+def CP : Ri<12, "cp">, DwarfRegNum<[12]>;
 def DP : Ri<13, "dp">, DwarfRegNum<[13]>;
 def SP : Ri<14, "sp">, DwarfRegNum<[14]>;
 def LR : Ri<15, "lr">, DwarfRegNum<[15]>;

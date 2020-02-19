@@ -693,9 +693,13 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
           // offset, then mark the dependence as loop carried potentially.
           const MachineOperand *BaseOp1, *BaseOp2;
           int64_t Offset1, Offset2;
-          if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1, TRI) &&
-              TII->getMemOperandWithOffset(MI, BaseOp2, Offset2, TRI)) {
+          bool Offset1IsScalable, Offset2IsScalable;
+          if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1,
+                                           Offset1IsScalable, TRI) &&
+              TII->getMemOperandWithOffset(MI, BaseOp2, Offset2,
+                                           Offset2IsScalable, TRI)) {
             if (BaseOp1->isIdenticalTo(*BaseOp2) &&
+                Offset1IsScalable == Offset2IsScalable &&
                 (int)Offset1 < (int)Offset2) {
               assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
                      "What happened to the chain edge?");
@@ -2058,7 +2062,12 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+  bool OffsetIsScalable;
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+    return false;
+
+  // FIXME: This algorithm assumes instructions have fixed-size offsets.
+  if (OffsetIsScalable)
     return false;
 
   if (!BaseOp->isReg())
@@ -2236,10 +2245,16 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
 
   const MachineOperand *BaseOpS, *BaseOpD;
   int64_t OffsetS, OffsetD;
+  bool OffsetSIsScalable, OffsetDIsScalable;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  if (!TII->getMemOperandWithOffset(*SI, BaseOpS, OffsetS, TRI) ||
-      !TII->getMemOperandWithOffset(*DI, BaseOpD, OffsetD, TRI))
+  if (!TII->getMemOperandWithOffset(*SI, BaseOpS, OffsetS, OffsetSIsScalable,
+                                    TRI) ||
+      !TII->getMemOperandWithOffset(*DI, BaseOpD, OffsetD, OffsetDIsScalable,
+                                    TRI))
     return true;
+
+  assert(!OffsetSIsScalable && !OffsetDIsScalable &&
+         "Expected offsets to be byte offsets");
 
   if (!BaseOpS->isIdenticalTo(*BaseOpD))
     return true;

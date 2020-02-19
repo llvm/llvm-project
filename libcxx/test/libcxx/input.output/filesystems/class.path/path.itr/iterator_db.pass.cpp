@@ -11,6 +11,9 @@
 
 // MODULES_DEFINES: _LIBCPP_DEBUG=0
 
+// This test requires debug mode, which the library on macOS doesn't have.
+// UNSUPPORTED: with_system_cxx_lib=macosx
+
 // <filesystem>
 
 // class path

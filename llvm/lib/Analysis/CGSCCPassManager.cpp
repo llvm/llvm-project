@@ -20,6 +20,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassManagerImpl.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -423,9 +424,9 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   return C;
 }
 
-LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
+static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     LazyCallGraph &G, LazyCallGraph::SCC &InitialC, LazyCallGraph::Node &N,
-    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR, bool FunctionPass) {
   using Node = LazyCallGraph::Node;
   using Edge = LazyCallGraph::Edge;
   using SCC = LazyCallGraph::SCC;
@@ -443,6 +444,8 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
   SmallPtrSet<Node *, 16> RetainedEdges;
   SmallSetVector<Node *, 4> PromotedRefTargets;
   SmallSetVector<Node *, 4> DemotedCallTargets;
+  SmallSetVector<Node *, 4> NewCallEdges;
+  SmallSetVector<Node *, 4> NewRefEdges;
 
   // First walk the function and handle all called functions. We do this first
   // because if there is a single call edge, whether there are ref edges is
@@ -453,18 +456,16 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
           Node &CalleeN = *G.lookup(*Callee);
           Edge *E = N->lookup(CalleeN);
-          // FIXME: We should really handle adding new calls. While it will
-          // make downstream usage more complex, there is no fundamental
-          // limitation and it will allow passes within the CGSCC to be a bit
-          // more flexible in what transforms they can do. Until then, we
-          // verify that new calls haven't been introduced.
-          assert(E && "No function transformations should introduce *new* "
-                      "call edges! Any new calls should be modeled as "
-                      "promoted existing ref edges!");
+          assert((E || !FunctionPass) &&
+                 "No function transformations should introduce *new* "
+                 "call edges! Any new calls should be modeled as "
+                 "promoted existing ref edges!");
           bool Inserted = RetainedEdges.insert(&CalleeN).second;
           (void)Inserted;
           assert(Inserted && "We should never visit a function twice.");
-          if (!E->isCall())
+          if (!E)
+            NewCallEdges.insert(&CalleeN);
+          else if (!E->isCall())
             PromotedRefTargets.insert(&CalleeN);
         }
 
@@ -478,18 +479,41 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
   auto VisitRef = [&](Function &Referee) {
     Node &RefereeN = *G.lookup(Referee);
     Edge *E = N->lookup(RefereeN);
-    // FIXME: Similarly to new calls, we also currently preclude
-    // introducing new references. See above for details.
-    assert(E && "No function transformations should introduce *new* ref "
-                "edges! Any new ref edges would require IPO which "
-                "function passes aren't allowed to do!");
+    assert((E || !FunctionPass) &&
+           "No function transformations should introduce *new* ref "
+           "edges! Any new ref edges would require IPO which "
+           "function passes aren't allowed to do!");
     bool Inserted = RetainedEdges.insert(&RefereeN).second;
     (void)Inserted;
     assert(Inserted && "We should never visit a function twice.");
-    if (E->isCall())
+    if (!E)
+      NewRefEdges.insert(&RefereeN);
+    else if (E->isCall())
       DemotedCallTargets.insert(&RefereeN);
   };
   LazyCallGraph::visitReferences(Worklist, Visited, VisitRef);
+
+  // Handle new ref edges.
+  for (Node *RefTarget : NewRefEdges) {
+    SCC &TargetC = *G.lookupSCC(*RefTarget);
+    RefSCC &TargetRC = TargetC.getOuterRefSCC();
+    (void)TargetRC;
+    // TODO: This only allows trivial edges to be added for now.
+    assert((RC == &TargetRC ||
+           RC->isAncestorOf(TargetRC)) && "New ref edge is not trivial!");
+    RC->insertTrivialRefEdge(N, *RefTarget);
+  }
+
+  // Handle new call edges.
+  for (Node *CallTarget : NewCallEdges) {
+    SCC &TargetC = *G.lookupSCC(*CallTarget);
+    RefSCC &TargetRC = TargetC.getOuterRefSCC();
+    (void)TargetRC;
+    // TODO: This only allows trivial edges to be added for now.
+    assert((RC == &TargetRC ||
+           RC->isAncestorOf(TargetRC)) && "New call edge is not trivial!");
+    RC->insertTrivialCallEdge(N, *CallTarget);
+  }
 
   // Include synthetic reference edges to known, defined lib functions.
   for (auto *F : G.getLibFunctions())
@@ -706,4 +730,17 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     UR.UpdatedC = C;
 
   return *C;
+}
+
+LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
+    LazyCallGraph &G, LazyCallGraph::SCC &InitialC, LazyCallGraph::Node &N,
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
+  return updateCGAndAnalysisManagerForPass(G, InitialC, N, AM, UR,
+                                           /* FunctionPass */ true);
+}
+LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForCGSCCPass(
+    LazyCallGraph &G, LazyCallGraph::SCC &InitialC, LazyCallGraph::Node &N,
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
+  return updateCGAndAnalysisManagerForPass(G, InitialC, N, AM, UR,
+                                           /* FunctionPass */ false);
 }

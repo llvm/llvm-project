@@ -25,7 +25,7 @@ SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMember);
 }
 
-SBTypeEnumMember::~SBTypeEnumMember() {}
+SBTypeEnumMember::~SBTypeEnumMember() = default;
 
 SBTypeEnumMember::SBTypeEnumMember(
     const lldb::TypeEnumMemberImplSP &enum_member_sp)
@@ -176,7 +176,7 @@ uint32_t SBTypeEnumMemberList::GetSize() {
   return m_opaque_up->GetSize();
 }
 
-SBTypeEnumMemberList::~SBTypeEnumMemberList() {}
+SBTypeEnumMemberList::~SBTypeEnumMemberList() = default;
 
 bool SBTypeEnumMember::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {

@@ -14,6 +14,7 @@
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/config.h"
@@ -190,6 +191,8 @@ static cl::opt<bool> NoSymbolicOperands(
 static cl::list<std::string>
     ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
               cl::ZeroOrMore, cl::cat(MachOCat));
+
+extern StringSet<> FoundSectionSet;
 
 bool ArchAll = false;
 
@@ -1754,6 +1757,9 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
       else
         consumeError(SecNameOrErr.takeError());
 
+      if (!DumpSection.empty())
+        FoundSectionSet.insert(DumpSection);
+
       DataRefImpl Ref = Section.getRawDataRefImpl();
       StringRef SegName = O->getSectionFinalSegmentName(Ref);
       if ((DumpSegName.empty() || SegName == DumpSegName) &&
@@ -1776,8 +1782,9 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
 
-        outs() << "Contents of (" << SegName << "," << SectName
-               << ") section\n";
+        if (!NoLeadingHeaders)
+          outs() << "Contents of (" << SegName << "," << SectName
+                 << ") section\n";
 
         if (verbose) {
           if ((section_flags & MachO::S_ATTR_PURE_INSTRUCTIONS) ||

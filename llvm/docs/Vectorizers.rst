@@ -116,7 +116,7 @@ Consider the following loop:
     }
   }
 
-The command line ``-Rpass-missed=loop-vectorized`` prints the remark:
+The command line ``-Rpass-missed=loop-vectorize`` prints the remark:
 
 .. code-block:: console
 

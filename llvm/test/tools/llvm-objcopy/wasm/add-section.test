@@ -1,0 +1,83 @@
+## Test --add-section. This test dumps and removes the section first and checks
+## that adding it back doesn't change the result.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --dump-section=producers=%t.sec --remove-section=producers %t %t2
+# RUN: llvm-objcopy --add-section=producers=%t.sec %t2 %t3
+# RUN: obj2yaml %t3 | FileCheck %s
+
+## Check that the producers section has been added back unchanged.
+# CHECK:      Name: producers
+# CHECK-NEXT: Tools:
+# CHECK-NEXT:  - Name:    clang
+# CHECK-NEXT:    Version: 9.0.0
+
+# Check that the section is replaced with new content in one invocation.
+# RUN: echo "123" > %t4
+# RUN: llvm-objcopy --remove-section=foo --add-section=foo=%t4 %t %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefix=REPLACE
+
+# REPLACE: - Type:  CUSTOM
+# REPLACE:   Name:    foo
+# REPLACE:   Payload: 3132330A
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - F32
+      - Index: 1
+        ParamTypes:
+          - I32
+          - I64
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes:
+      - 0
+      - 1
+  - Type: CODE
+    Relocations:
+      - Type: R_WASM_TABLE_INDEX_SLEB
+        Index: 0
+        Offset: 0x00000000
+      - Type: R_WASM_FUNCTION_INDEX_LEB
+        Index: 1
+        Offset: 0x0000000
+    Functions:
+      - Index: 0
+        Locals:
+         - Type: I32
+           Count: 3
+        Body: 010101010B
+      - Index: 1
+        Locals:
+         - Type:  I32
+           Count: 1
+        Body: 010101010B
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+    SymbolTable:
+      - Index:    0
+        Kind:     FUNCTION
+        Name:     func1
+        Flags:    [  ]
+        Function: 0
+      - Index:    1
+        Kind:     FUNCTION
+        Name:     func2
+        Flags:    [  ]
+        Function: 1
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: foo
+    Payload: ABC123

@@ -1529,9 +1529,9 @@ bool Debugger::StartEventHandlerThread() {
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
-    auto thread_name =
+    llvm::StringRef thread_name =
         full_name.GetLength() < llvm::get_max_thread_name_length()
-            ? full_name.AsCString()
+            ? full_name.GetStringRef()
             : "dbg.evt-handler";
 
     // Use larger 8MB stack for this thread

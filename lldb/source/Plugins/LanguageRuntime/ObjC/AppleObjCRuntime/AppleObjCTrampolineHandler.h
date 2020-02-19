@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_AppleObjCTrampolineHandler_h_
-#define lldb_AppleObjCTrampolineHandler_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTRAMPOLINEHANDLER_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTRAMPOLINEHANDLER_H
 
 #include <map>
 #include <mutex>
@@ -160,4 +160,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_AppleObjCTrampolineHandler_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTRAMPOLINEHANDLER_H

@@ -1871,10 +1871,11 @@ class MTC3OP<string asmstr, RegisterOperand RO, RegisterOperand RD,
 class TrapBase<Instruction RealInst>
   : PseudoSE<(outs), (ins), [(trap)], II_TRAP>,
     PseudoInstExpansion<(RealInst 0, 0)> {
-  let isBarrier = 1;
-  let isTerminator = 1;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let hasSideEffects = 1;
+  let isTrap = 1;
   let isCodeGenOnly = 1;
-  let isCTI = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -17,13 +17,13 @@
 #include "SymbolFileDWARFDebugMap.h"
 #include "UniqueDWARFASTType.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -155,7 +155,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   // The type in the Clang module must have the same language as the current CU.
   LanguageSet languages;
-  languages.Insert(die.GetCU()->GetLanguageType());
+  languages.Insert(SymbolFileDWARF::GetLanguage(*die.GetCU()));
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
                                               searched_symbol_files, pcm_types);
@@ -504,7 +504,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                         DWARF_LOG_LOOKUPS));
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const dw_tag_t tag = die.Tag();
-  LanguageType cu_language = die.GetLanguage();
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
   Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
   TypeSP type_sp;
@@ -726,8 +726,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx;
-    die.GetDWARFDeclContext(die_decl_ctx);
+    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
 
     type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
 
@@ -791,8 +790,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
         attrs.name.GetCString(), GetClangDeclContextContainingDIE(die, nullptr),
         attrs.decl, enumerator_clang_type, attrs.is_scoped_enum);
   } else {
-    enumerator_clang_type =
-        m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());
+    enumerator_clang_type = m_ast.GetEnumerationIntegerType(clang_type);
   }
 
   LinkDeclContextToDIE(TypeSystemClang::GetDeclContextForType(clang_type), die);
@@ -1383,7 +1381,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  LanguageType cu_language = die.GetLanguage();
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
                                           DWARF_LOG_LOOKUPS);
 
@@ -1515,8 +1513,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx;
-    die.GetDWARFDeclContext(die_decl_ctx);
+    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
 
     // type_sp = FindDefinitionTypeForDIE (dwarf_cu, die,
     // type_name_const_str);
@@ -1723,9 +1720,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // binaries.
       dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
           clang_type.GetOpaqueQualType();
-      dwarf->GetForwardDeclClangTypeToDie()
-          [ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType()] =
-          die.GetID();
+      dwarf->GetForwardDeclClangTypeToDie().try_emplace(
+          ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
+          *die.GetDIERef());
       m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
     }
   }
@@ -1959,135 +1956,133 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
   ClangASTImporter::LayoutInfo layout_info;
 
-  {
-    if (die.HasChildren()) {
-      LanguageType class_language = eLanguageTypeUnknown;
-      if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
-        class_language = eLanguageTypeObjC;
-        // For objective C we don't start the definition when the class is
-        // created.
-        TypeSystemClang::StartTagDeclarationDefinition(clang_type);
-      }
+  if (die.HasChildren()) {
+    LanguageType class_language = eLanguageTypeUnknown;
+    if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
+      class_language = eLanguageTypeObjC;
+      // For objective C we don't start the definition when the class is
+      // created.
+      TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+    }
 
-      int tag_decl_kind = -1;
-      AccessType default_accessibility = eAccessNone;
-      if (tag == DW_TAG_structure_type) {
-        tag_decl_kind = clang::TTK_Struct;
-        default_accessibility = eAccessPublic;
-      } else if (tag == DW_TAG_union_type) {
-        tag_decl_kind = clang::TTK_Union;
-        default_accessibility = eAccessPublic;
-      } else if (tag == DW_TAG_class_type) {
-        tag_decl_kind = clang::TTK_Class;
-        default_accessibility = eAccessPrivate;
-      }
+    int tag_decl_kind = -1;
+    AccessType default_accessibility = eAccessNone;
+    if (tag == DW_TAG_structure_type) {
+      tag_decl_kind = clang::TTK_Struct;
+      default_accessibility = eAccessPublic;
+    } else if (tag == DW_TAG_union_type) {
+      tag_decl_kind = clang::TTK_Union;
+      default_accessibility = eAccessPublic;
+    } else if (tag == DW_TAG_class_type) {
+      tag_decl_kind = clang::TTK_Class;
+      default_accessibility = eAccessPrivate;
+    }
 
-      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
-      std::vector<int> member_accessibilities;
-      bool is_a_class = false;
-      // Parse members and base classes first
-      std::vector<DWARFDIE> member_function_dies;
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
+    std::vector<int> member_accessibilities;
+    bool is_a_class = false;
+    // Parse members and base classes first
+    std::vector<DWARFDIE> member_function_dies;
 
-      DelayedPropertyList delayed_properties;
-      ParseChildMembers(die, clang_type, class_language, bases,
-                        member_accessibilities, member_function_dies,
-                        delayed_properties, default_accessibility, is_a_class,
-                        layout_info);
+    DelayedPropertyList delayed_properties;
+    ParseChildMembers(die, clang_type, class_language, bases,
+                      member_accessibilities, member_function_dies,
+                      delayed_properties, default_accessibility, is_a_class,
+                      layout_info);
 
-      // Now parse any methods if there were any...
-      for (const DWARFDIE &die : member_function_dies)
-        dwarf->ResolveType(die);
+    // Now parse any methods if there were any...
+    for (const DWARFDIE &die : member_function_dies)
+      dwarf->ResolveType(die);
 
-      if (class_language == eLanguageTypeObjC) {
-        ConstString class_name(clang_type.GetTypeName());
-        if (class_name) {
-          DIEArray method_die_offsets;
-          dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
+    if (class_language == eLanguageTypeObjC) {
+      ConstString class_name(clang_type.GetTypeName());
+      if (class_name) {
+        DIEArray method_die_offsets;
+        dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
 
-          if (!method_die_offsets.empty()) {
-            DWARFDebugInfo *debug_info = dwarf->DebugInfo();
+        if (!method_die_offsets.empty()) {
+          DWARFDebugInfo *debug_info = dwarf->DebugInfo();
 
-            const size_t num_matches = method_die_offsets.size();
-            for (size_t i = 0; i < num_matches; ++i) {
-              const DIERef &die_ref = method_die_offsets[i];
-              DWARFDIE method_die = debug_info->GetDIE(die_ref);
+          const size_t num_matches = method_die_offsets.size();
+          for (size_t i = 0; i < num_matches; ++i) {
+            const DIERef &die_ref = method_die_offsets[i];
+            DWARFDIE method_die = debug_info->GetDIE(die_ref);
 
-              if (method_die)
-                method_die.ResolveType();
-            }
-          }
-
-          for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
-                                             pe = delayed_properties.end();
-               pi != pe; ++pi)
-            pi->Finalize();
-        }
-      }
-
-      // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
-      // need to tell the clang type it is actually a class.
-      if (class_language != eLanguageTypeObjC) {
-        if (is_a_class && tag_decl_kind != clang::TTK_Class)
-          m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
-                               clang::TTK_Class);
-      }
-
-      // Since DW_TAG_structure_type gets used for both classes and
-      // structures, we may need to set any DW_TAG_member fields to have a
-      // "private" access if none was specified. When we parsed the child
-      // members we tracked that actual accessibility value for each
-      // DW_TAG_member in the "member_accessibilities" array. If the value
-      // for the member is zero, then it was set to the
-      // "default_accessibility" which for structs was "public". Below we
-      // correct this by setting any fields to "private" that weren't
-      // correctly set.
-      if (is_a_class && !member_accessibilities.empty()) {
-        // This is a class and all members that didn't have their access
-        // specified are private.
-        m_ast.SetDefaultAccessForRecordFields(
-            m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
-            &member_accessibilities.front(), member_accessibilities.size());
-      }
-
-      if (!bases.empty()) {
-        // Make sure all base classes refer to complete types and not forward
-        // declarations. If we don't do this, clang will crash with an
-        // assertion in the call to clang_type.TransferBaseClasses()
-        for (const auto &base_class : bases) {
-          clang::TypeSourceInfo *type_source_info =
-              base_class->getTypeSourceInfo();
-          if (type_source_info) {
-            CompilerType base_class_type =
-                m_ast.GetType(type_source_info->getType());
-            if (!base_class_type.GetCompleteType()) {
-              auto module = dwarf->GetObjectFile()->GetModule();
-              module->ReportError(":: Class '%s' has a base class '%s' which "
-                                  "does not have a complete definition.",
-                                  die.GetName(),
-                                  base_class_type.GetTypeName().GetCString());
-              if (die.GetCU()->GetProducer() == eProducerClang)
-                module->ReportError(":: Try compiling the source file with "
-                                    "-fstandalone-debug.");
-
-              // We have no choice other than to pretend that the base class
-              // is complete. If we don't do this, clang will crash when we
-              // call setBases() inside of
-              // "clang_type.TransferBaseClasses()" below. Since we
-              // provide layout assistance, all ivars in this class and other
-              // classes will be fine, this is the best we can do short of
-              // crashing.
-              if (TypeSystemClang::StartTagDeclarationDefinition(
-                      base_class_type)) {
-                TypeSystemClang::CompleteTagDeclarationDefinition(
-                    base_class_type);
-              }
-            }
+            if (method_die)
+              method_die.ResolveType();
           }
         }
 
-        m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
-                                  std::move(bases));
+        for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
+                                           pe = delayed_properties.end();
+             pi != pe; ++pi)
+          pi->Finalize();
       }
+    }
+
+    // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
+    // need to tell the clang type it is actually a class.
+    if (class_language != eLanguageTypeObjC) {
+      if (is_a_class && tag_decl_kind != clang::TTK_Class)
+        m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
+                             clang::TTK_Class);
+    }
+
+    // Since DW_TAG_structure_type gets used for both classes and
+    // structures, we may need to set any DW_TAG_member fields to have a
+    // "private" access if none was specified. When we parsed the child
+    // members we tracked that actual accessibility value for each
+    // DW_TAG_member in the "member_accessibilities" array. If the value
+    // for the member is zero, then it was set to the
+    // "default_accessibility" which for structs was "public". Below we
+    // correct this by setting any fields to "private" that weren't
+    // correctly set.
+    if (is_a_class && !member_accessibilities.empty()) {
+      // This is a class and all members that didn't have their access
+      // specified are private.
+      m_ast.SetDefaultAccessForRecordFields(
+          m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
+          &member_accessibilities.front(), member_accessibilities.size());
+    }
+
+    if (!bases.empty()) {
+      // Make sure all base classes refer to complete types and not forward
+      // declarations. If we don't do this, clang will crash with an
+      // assertion in the call to clang_type.TransferBaseClasses()
+      for (const auto &base_class : bases) {
+        clang::TypeSourceInfo *type_source_info =
+            base_class->getTypeSourceInfo();
+        if (type_source_info) {
+          CompilerType base_class_type =
+              m_ast.GetType(type_source_info->getType());
+          if (!base_class_type.GetCompleteType()) {
+            auto module = dwarf->GetObjectFile()->GetModule();
+            module->ReportError(":: Class '%s' has a base class '%s' which "
+                                "does not have a complete definition.",
+                                die.GetName(),
+                                base_class_type.GetTypeName().GetCString());
+            if (die.GetCU()->GetProducer() == eProducerClang)
+              module->ReportError(":: Try compiling the source file with "
+                                  "-fstandalone-debug.");
+
+            // We have no choice other than to pretend that the base class
+            // is complete. If we don't do this, clang will crash when we
+            // call setBases() inside of
+            // "clang_type.TransferBaseClasses()" below. Since we
+            // provide layout assistance, all ivars in this class and other
+            // classes will be fine, this is the best we can do short of
+            // crashing.
+            if (TypeSystemClang::StartTagDeclarationDefinition(
+                    base_class_type)) {
+              TypeSystemClang::CompleteTagDeclarationDefinition(
+                  base_class_type);
+            }
+          }
+        }
+      }
+
+      m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
+                                std::move(bases));
     }
   }
 
@@ -2311,9 +2306,11 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         func_name.SetValue(ConstString(mangled), true);
       else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
                 die.GetParent().Tag() == DW_TAG_partial_unit) &&
-               Language::LanguageIsCPlusPlus(die.GetLanguage()) &&
-               !Language::LanguageIsObjC(die.GetLanguage()) && name &&
-               strcmp(name, "main") != 0) {
+               Language::LanguageIsCPlusPlus(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               !Language::LanguageIsObjC(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               name && strcmp(name, "main") != 0) {
         // If the mangled name is not present in the DWARF, generate the
         // demangled name using the decl context. We skip if the function is
         // "main" as its name is never mangled.
@@ -2323,10 +2320,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         unsigned type_quals = 0;
         std::vector<CompilerType> param_types;
         std::vector<clang::ParmVarDecl *> param_decls;
-        DWARFDeclContext decl_ctx;
         StreamString sstr;
 
-        die.GetDWARFDeclContext(decl_ctx);
+        DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
         sstr << decl_ctx.GetQualifiedName();
 
         clang::DeclContext *containing_decl_ctx =
@@ -3274,7 +3270,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     SymbolFileDWARF *dwarf = die.GetDWARF();
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
     if (imported_uid) {
-      CompilerDecl imported_decl = imported_uid.GetDecl();
+      CompilerDecl imported_decl = SymbolFileDWARF::GetDecl(imported_uid);
       if (imported_decl) {
         clang::DeclContext *decl_context =
             TypeSystemClang::DeclContextGetAsDeclContext(
@@ -3293,7 +3289,8 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
 
     if (imported_uid) {
-      CompilerDeclContext imported_decl_ctx = imported_uid.GetDeclContext();
+      CompilerDeclContext imported_decl_ctx =
+          SymbolFileDWARF::GetDeclContext(imported_uid);
       if (imported_decl_ctx) {
         clang::DeclContext *decl_context =
             TypeSystemClang::DeclContextGetAsDeclContext(
@@ -3641,9 +3638,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   }
 
   DWARFASTParserClang *src_dwarf_ast_parser =
-      (DWARFASTParserClang *)src_die.GetDWARFParser();
+      (DWARFASTParserClang *)SymbolFileDWARF::GetDWARFParser(*src_die.GetCU());
   DWARFASTParserClang *dst_dwarf_ast_parser =
-      (DWARFASTParserClang *)dst_die.GetDWARFParser();
+      (DWARFASTParserClang *)SymbolFileDWARF::GetDWARFParser(*dst_die.GetCU());
 
   // Now do the work of linking the DeclContexts and Types.
   if (fast_path) {

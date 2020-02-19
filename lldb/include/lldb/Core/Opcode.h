@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Opcode_h
-#define lldb_Opcode_h
+#ifndef LLDB_CORE_OPCODE_H
+#define LLDB_CORE_OPCODE_H
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-enumerations.h"
@@ -270,4 +270,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_Opcode_h
+#endif // LLDB_CORE_OPCODE_H

@@ -20,6 +20,7 @@
 namespace llvm {
 class Type;
 class Module;
+class ArrayType;
 class StructType;
 class PointerType;
 class FunctionType;
@@ -47,6 +48,16 @@ enum class RuntimeFunction {
 };
 
 #define OMP_RTL(Enum, ...) constexpr auto Enum = omp::RuntimeFunction::Enum;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+
+/// IDs for the different default kinds.
+enum class DefaultKind {
+#define OMP_DEFAULT_KIND(Enum, Str) Enum,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+};
+
+#define OMP_DEFAULT_KIND(Enum, ...)                                            \
+  constexpr auto Enum = omp::DefaultKind::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 /// IDs for the different proc bind kinds.
@@ -85,6 +96,9 @@ StringRef getOpenMPDirectiveName(Directive D);
 namespace types {
 
 #define OMP_TYPE(VarName, InitValue) extern Type *VarName;
+#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
+  extern ArrayType *VarName##Ty;                                               \
+  extern PointerType *VarName##PtrTy;
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   extern FunctionType *VarName;                                                \
   extern PointerType *VarName##Ptr;

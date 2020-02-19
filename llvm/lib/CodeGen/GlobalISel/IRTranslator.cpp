@@ -604,7 +604,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
       Cond =
           MIB.buildICmp(CmpInst::ICMP_SLE, i1Ty, CmpOpReg, CondRHS).getReg(0);
     } else {
-      const LLT &CmpTy = MRI->getType(CmpOpReg);
+      const LLT CmpTy = MRI->getType(CmpOpReg);
       auto Sub = MIB.buildSub({CmpTy}, CmpOpReg, CondLHS);
       auto Diff = MIB.buildConstant(CmpTy, High - Low);
       Cond = MIB.buildICmp(CmpInst::ICMP_ULE, i1Ty, Sub, Diff).getReg(0);
@@ -1398,7 +1398,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     if (!V) {
       // Currently the optimizer can produce this; insert an undef to
       // help debugging.  Probably the optimizer should not do this.
-      MIRBuilder.buildDirectDbgValue(0, DI.getVariable(), DI.getExpression());
+      MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
       MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
     } else {
@@ -1559,8 +1559,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 bool IRTranslator::translateInlineAsm(const CallInst &CI,
                                       MachineIRBuilder &MIRBuilder) {
   const InlineAsm &IA = cast<InlineAsm>(*CI.getCalledValue());
-  if (!IA.getConstraintString().empty())
-    return false;
+  StringRef ConstraintStr = IA.getConstraintString();
+
+  bool HasOnlyMemoryClobber = false;
+  if (!ConstraintStr.empty()) {
+    // Until we have full inline assembly support, we just try to handle the
+    // very simple case of just "~{memory}" to avoid falling back so often.
+    if (ConstraintStr != "~{memory}")
+      return false;
+    HasOnlyMemoryClobber = true;
+  }
 
   unsigned ExtraInfo = 0;
   if (IA.hasSideEffects())
@@ -1568,9 +1576,15 @@ bool IRTranslator::translateInlineAsm(const CallInst &CI,
   if (IA.getDialect() == InlineAsm::AD_Intel)
     ExtraInfo |= InlineAsm::Extra_AsmDialect;
 
-  MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
-    .addExternalSymbol(IA.getAsmString().c_str())
-    .addImm(ExtraInfo);
+  // HACK: special casing for ~memory.
+  if (HasOnlyMemoryClobber)
+    ExtraInfo |= (InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore);
+
+  auto Inst = MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
+                  .addExternalSymbol(IA.getAsmString().c_str())
+                  .addImm(ExtraInfo);
+  if (const MDNode *SrcLoc = CI.getMetadata("srcloc"))
+    Inst.addMetadata(SrcLoc);
 
   return true;
 }
@@ -1942,7 +1956,7 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT &VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildSExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
@@ -2367,6 +2381,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     WrapperObserver.addObserver(&Verifier);
 #endif // ifndef NDEBUG
     RAIIDelegateInstaller DelInstall(*MF, &WrapperObserver);
+    RAIIMFObserverInstaller ObsInstall(*MF, WrapperObserver);
     for (const BasicBlock *BB : RPOT) {
       MachineBasicBlock &MBB = getMBB(*BB);
       // Set the insertion point of all the following translations to

@@ -57,7 +57,7 @@ void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
 static void getARMHWDivFeatures(const Driver &D, const Arg *A,
                                 const ArgList &Args, StringRef HWDiv,
                                 std::vector<StringRef> &Features) {
-  unsigned HWDivID = llvm::ARM::parseHWDiv(HWDiv);
+  uint64_t HWDivID = llvm::ARM::parseHWDiv(HWDiv);
   if (!llvm::ARM::getHWDivFeatures(HWDivID, Features))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
@@ -91,7 +91,7 @@ static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
   CPU = CPU.split("+").first;
   if (CPU != "generic") {
     llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
-    unsigned Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
+    uint64_t Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
     llvm::ARM::getExtensionFeatures(Extension, Features);
   }
 }
@@ -137,9 +137,8 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
 }
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
-arm::ReadTPMode arm::getReadTPMode(const ToolChain &TC, const ArgList &Args) {
+arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
-    const Driver &D = TC.getDriver();
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::Cp15)
@@ -156,11 +155,14 @@ arm::ReadTPMode arm::getReadTPMode(const ToolChain &TC, const ArgList &Args) {
   return ReadTPMode::Soft;
 }
 
+arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
+  return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
+}
+
 // Select the float ABI as determined by -msoft-float, -mhard-float, and
 // -mfloat-abi=.
-arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
-  const Driver &D = TC.getDriver();
-  const llvm::Triple &Triple = TC.getEffectiveTriple();
+arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
+                                  const ArgList &Args) {
   auto SubArch = getARMSubArchVersionNumber(Triple);
   arm::FloatABI ABI = FloatABI::Invalid;
   if (Arg *A =
@@ -276,18 +278,20 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return ABI;
 }
 
-void arm::getARMTargetFeatures(const ToolChain &TC,
-                               const llvm::Triple &Triple,
-                               const ArgList &Args,
-                               ArgStringList &CmdArgs,
-                               std::vector<StringRef> &Features,
-                               bool ForAS) {
-  const Driver &D = TC.getDriver();
+static bool hasIntegerMVE(const std::vector<StringRef> &F) {
+  auto MVE = llvm::find(llvm::reverse(F), "+mve");
+  auto NoMVE = llvm::find(llvm::reverse(F), "-mve");
+  return MVE != F.rend() &&
+         (NoMVE == F.rend() || std::distance(MVE, NoMVE) > 0);
+}
 
+void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                               const ArgList &Args, ArgStringList &CmdArgs,
+                               std::vector<StringRef> &Features, bool ForAS) {
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
-  arm::FloatABI ABI = arm::getARMFloatABI(TC, Args);
-  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(TC, Args);
+  arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
+  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(D, Args);
   const Arg *WaCPU = nullptr, *WaFPU = nullptr;
   const Arg *WaHDiv = nullptr, *WaArch = nullptr;
 
@@ -459,18 +463,13 @@ fp16_fml_fallthrough:
 
     // Disable all features relating to hardware FP, not already disabled by the
     // above call.
-    Features.insert(Features.end(), {"-neon", "-crypto", "-dotprod", "-fp16fml",
-                                     "-mve", "-mve.fp", "-fpregs"});
+    Features.insert(Features.end(),
+                    {"-dotprod", "-fp16fml", "-mve", "-mve.fp", "-fpregs"});
   } else if (FPUID == llvm::ARM::FK_NONE) {
     // -mfpu=none is *very* similar to -mfloat-abi=soft, only that it should not
     // disable MVE-I.
-    Features.insert(Features.end(),
-                    {"-neon", "-crypto", "-dotprod", "-fp16fml", "-mve.fp"});
-    // Even though we remove MVE-FP, we still need to check if it was originally
-    // present among the requested extensions, because it implies MVE-I, which
-    // should not be disabled by -mfpu-none.
-    if (!llvm::is_contained(Features, "+mve") &&
-        !llvm::is_contained(Features, "+mve.fp"))
+    Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-mve.fp"});
+    if (!hasIntegerMVE(Features))
       Features.emplace_back("-fpregs");
   }
 

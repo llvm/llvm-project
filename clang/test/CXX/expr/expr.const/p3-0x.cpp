@@ -95,7 +95,7 @@ Val<decltype(&noexcept_true), &noexcept_false> add_noexcept;
 using Int = A<1.0>; // expected-error {{conversion from 'double' to 'unsigned char' is not allowed in a converted constant expression}}
 enum B : bool {
   True = &a, // expected-error {{conversion from 'bool (*)(int)' to 'bool' is not allowed in a converted constant expression}}
-  False = nullptr // expected-error {{conversion from 'nullptr_t' to 'bool' is not allowed in a converted constant expression}}
+  False = 0.0, // expected-error {{conversion from 'double' to 'bool' is not allowed in a converted constant expression}}
 };
 void c() {
   // Note, promoted type of switch is 'int'.

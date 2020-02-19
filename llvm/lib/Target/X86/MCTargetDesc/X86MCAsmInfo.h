@@ -49,6 +49,13 @@ public:
   explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
 };
 
+class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
+  void anchor() override;
+
+public:
+  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple);
+};
+
 class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
   void anchor() override;
 

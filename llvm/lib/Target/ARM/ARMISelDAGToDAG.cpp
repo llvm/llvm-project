@@ -145,8 +145,6 @@ public:
 
   // Thumb 2 Addressing Modes:
   bool SelectT2AddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
-  template <unsigned Shift>
-  bool SelectT2AddrModeImm8(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectT2AddrModeImm8(SDValue N, SDValue &Base,
                             SDValue &OffImm);
   bool SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
@@ -267,6 +265,11 @@ private:
   /// different stages (e.g. VLD20 versus VLD21) of each load family.
   void SelectMVE_VLD(SDNode *N, unsigned NumVecs,
                      const uint16_t *const *Opcodes, bool HasWriteback);
+
+  /// SelectMVE_VxDUP - Select MVE incrementing-dup instructions. Opcodes is an
+  /// array of 3 elements for the 8, 16 and 32-bit lane sizes.
+  void SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
+                       bool Wrapping, bool Predicated);
 
   /// SelectVLDDup - Select NEON load-duplicate intrinsics.  NumVecs
   /// should be 1, 2, 3 or 4.  The opcode array specifies the instructions used
@@ -1293,33 +1296,6 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
   // Base only.
   Base = N;
   OffImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
-  return true;
-}
-
-template <unsigned Shift>
-bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N, SDValue &Base,
-                                           SDValue &OffImm) {
-  if (N.getOpcode() == ISD::SUB || CurDAG->isBaseWithConstantOffset(N)) {
-    int RHSC;
-    if (isScaledConstantInRange(N.getOperand(1), 1 << Shift, -255, 256, RHSC)) {
-      Base = N.getOperand(0);
-      if (Base.getOpcode() == ISD::FrameIndex) {
-        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-        Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-      }
-
-      if (N.getOpcode() == ISD::SUB)
-        RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
-      return true;
-    }
-  }
-
-  // Base only.
-  Base = N;
-  OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
   return true;
 }
 
@@ -2738,6 +2714,49 @@ void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
   CurDAG->RemoveDeadNode(N);
 }
 
+void ARMDAGToDAGISel::SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
+                                      bool Wrapping, bool Predicated) {
+  EVT VT = N->getValueType(0);
+  SDLoc Loc(N);
+
+  uint16_t Opcode;
+  switch (VT.getScalarSizeInBits()) {
+  case 8:
+    Opcode = Opcodes[0];
+    break;
+  case 16:
+    Opcode = Opcodes[1];
+    break;
+  case 32:
+    Opcode = Opcodes[2];
+    break;
+  default:
+    llvm_unreachable("bad vector element size in SelectMVE_VxDUP");
+  }
+
+  SmallVector<SDValue, 8> Ops;
+  unsigned OpIdx = 1;
+
+  SDValue Inactive;
+  if (Predicated)
+    Inactive = N->getOperand(OpIdx++);
+
+  Ops.push_back(N->getOperand(OpIdx++));     // base
+  if (Wrapping)
+    Ops.push_back(N->getOperand(OpIdx++));   // limit
+
+  SDValue ImmOp = N->getOperand(OpIdx++);    // step
+  int ImmValue = cast<ConstantSDNode>(ImmOp)->getZExtValue();
+  Ops.push_back(getI32Imm(ImmValue, Loc));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc, N->getOperand(OpIdx), Inactive);
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc, N->getValueType(0));
+
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
 void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
                                    bool isUpdating, unsigned NumVecs,
                                    const uint16_t *DOpcodes,
@@ -3538,26 +3557,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       ARM::t2WhileLoopStart : ARM::t2LoopEnd;
     SDNode *New = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
     ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::LDRD: {
-    if (Subtarget->isThumb2())
-      break; // TableGen handles isel in this case.
-    SDValue Base, RegOffset, ImmOffset;
-    const SDValue &Chain = N->getOperand(0);
-    const SDValue &Addr = N->getOperand(1);
-    SelectAddrMode3(Addr, Base, RegOffset, ImmOffset);
-    SDValue Ops[] = {Base, RegOffset, ImmOffset, Chain};
-    SDNode *New = CurDAG->getMachineNode(ARM::LOADDUAL, dl,
-                                         {MVT::Untyped, MVT::Other}, Ops);
-    SDValue Lo = CurDAG->getTargetExtractSubreg(ARM::gsub_0, dl, MVT::i32,
-                                                SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(ARM::gsub_1, dl, MVT::i32,
-                                                SDValue(New, 0));
-    ReplaceUses(SDValue(N, 0), Lo);
-    ReplaceUses(SDValue(N, 1), Hi);
-    ReplaceUses(SDValue(N, 2), SDValue(New, 1));
     CurDAG->RemoveDeadNode(N);
     return;
   }
@@ -4624,6 +4623,46 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       };
       SelectMVE_VRMLLDAVH(N, IntNo == Intrinsic::arm_mve_vrmlldavha_predicated,
                           OpcodesS, OpcodesU);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vidup:
+    case Intrinsic::arm_mve_vidup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VIDUPu8, ARM::MVE_VIDUPu16, ARM::MVE_VIDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, false,
+                      IntNo == Intrinsic::arm_mve_vidup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vddup:
+    case Intrinsic::arm_mve_vddup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VDDUPu8, ARM::MVE_VDDUPu16, ARM::MVE_VDDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, false,
+                      IntNo == Intrinsic::arm_mve_vddup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_viwdup:
+    case Intrinsic::arm_mve_viwdup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VIWDUPu8, ARM::MVE_VIWDUPu16, ARM::MVE_VIWDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, true,
+                      IntNo == Intrinsic::arm_mve_viwdup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vdwdup:
+    case Intrinsic::arm_mve_vdwdup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VDWDUPu8, ARM::MVE_VDWDUPu16, ARM::MVE_VDWDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, true,
+                      IntNo == Intrinsic::arm_mve_vdwdup_predicated);
       return;
     }
     }

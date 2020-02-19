@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Type_h_
-#define liblldb_Type_h_
+#ifndef LLDB_SYMBOL_TYPE_H
+#define LLDB_SYMBOL_TYPE_H
 
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -219,7 +219,7 @@ protected:
 
   Type *GetEncodingType();
 
-  bool ResolveClangType(ResolveState compiler_type_resolve_state);
+  bool ResolveCompilerType(ResolveState compiler_type_resolve_state);
 };
 
 // the two classes here are used by the public API as a backend to the SBType
@@ -510,4 +510,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Type_h_
+#endif // LLDB_SYMBOL_TYPE_H

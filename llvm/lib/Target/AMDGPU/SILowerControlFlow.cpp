@@ -98,8 +98,6 @@ private:
   void emitLoop(MachineInstr &MI);
   void emitEndCf(MachineInstr &MI);
 
-  Register getSaveExec(MachineInstr* MI);
-
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
                         SmallVectorImpl<MachineOperand> &Src) const;
 
@@ -177,29 +175,11 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
   return true;
 }
 
-Register SILowerControlFlow::getSaveExec(MachineInstr *MI) {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineOperand &SaveExec = MI->getOperand(0);
-  assert(SaveExec.getSubReg() == AMDGPU::NoSubRegister);
-
-  Register SaveExecReg = SaveExec.getReg();
-  unsigned FalseTermOpc =
-      TII->isWave32() ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
-  MachineBasicBlock::iterator I = (MI);
-  MachineBasicBlock::iterator J = std::next(I);
-  if (J != MBB->end() && J->getOpcode() == FalseTermOpc &&
-      J->getOperand(1).isReg() && J->getOperand(1).getReg() == SaveExecReg) {
-    SaveExecReg = J->getOperand(0).getReg();
-    J->eraseFromParent();
-  }
-  return SaveExecReg;
-}
-
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
-  Register SaveExecReg = getSaveExec(&MI);
+  Register SaveExecReg = MI.getOperand(0).getReg();
   MachineOperand& Cond = MI.getOperand(1);
   assert(Cond.getSubReg() == AMDGPU::NoSubRegister);
 
@@ -282,7 +262,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  Register DstReg = getSaveExec(&MI);
+  Register DstReg = MI.getOperand(0).getReg();
 
   bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
@@ -354,7 +334,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  auto Dst = getSaveExec(&MI);
+  auto Dst = MI.getOperand(0).getReg();
 
   // Skip ANDing with exec if the break condition is already masked by exec
   // because it is a V_CMP in the same basic block. (We know the break

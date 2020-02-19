@@ -125,8 +125,12 @@ body: |
     ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[FPEXT1]]
     ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_1]], [[C1]]
     ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
-    ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = G_FLOG %0
     $vgpr0 = COPY %1

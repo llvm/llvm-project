@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBFile_h_
-#define LLDB_SBFile_h_
+#ifndef LLDB_API_SBFILE_H
+#define LLDB_API_SBFILE_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -23,9 +23,12 @@ class LLDB_API SBFile {
 public:
   SBFile();
   SBFile(FileSP file_sp);
+  SBFile(const SBFile &rhs);
   SBFile(FILE *file, bool transfer_ownership);
   SBFile(int fd, const char *mode, bool transfer_ownership);
   ~SBFile();
+
+  SBFile &operator=(const SBFile &rhs);
 
   SBError Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read);
   SBError Write(const uint8_t *buf, size_t num_bytes, size_t *bytes_written);
@@ -44,4 +47,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBFile_h_
+#endif // LLDB_API_SBFILE_H

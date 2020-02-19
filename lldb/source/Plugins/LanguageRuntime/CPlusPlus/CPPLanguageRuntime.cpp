@@ -20,7 +20,6 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"

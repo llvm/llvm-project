@@ -107,14 +107,14 @@ relies on padding and the ability to map a file over the existing memory
 mapping which is generally only available on POSIX systems and isn't suitable
 for other platforms.
 
-On Fuchsia, we rely on the the ability to relocate counters at runtime using a
+On Fuchsia, we rely on the ability to relocate counters at runtime using a
 level of indirection. On every counter access, we add a bias to the counter
 address. This bias is stored in ``__llvm_profile_counter_bias`` symbol that's
 provided by the profile runtime and is initially set to zero, meaning no
-relocation. The runtime can map the profile into memory at abitrary location,
+relocation. The runtime can map the profile into memory at arbitrary locations,
 and set bias to the offset between the original and the new counter location,
 at which point every subsequent counter access will be to the new location,
-which allows updating profile directly akin to the continous mode.
+which allows updating profile directly akin to the continuous mode.
 
 The advantage of this approach is that doesn't require any special OS support.
 The disadvantage is the extra overhead due to additional instructions required

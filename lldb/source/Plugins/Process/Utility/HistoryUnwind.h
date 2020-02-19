@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_HistoryUnwind_h_
-#define liblldb_HistoryUnwind_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYUNWIND_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYUNWIND_H
 
 #include <vector>
 
@@ -39,4 +39,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_HistoryUnwind_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_HISTORYUNWIND_H

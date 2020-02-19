@@ -97,7 +97,7 @@ verbose = 0
 # By default, search from the script directory.
 # We can't use sys.path[0] to determine the script directory
 # because it doesn't work under a debugger
-testdirs = [os.path.dirname(os.path.realpath(__file__))]
+testdirs = [lldbsuite.lldb_test_root]
 
 # Separator string.
 separator = '-' * 70
@@ -117,11 +117,6 @@ lldb_module_cache_dir = None
 # The clang module cache directory used by clang.
 clang_module_cache_dir = None
 
-# The only directory to scan for tests. If multiple test directories are
-# specified, and an exclusive test subdirectory is specified, the latter option
-# takes precedence.
-exclusive_test_subdir = None
-
 # Test results handling globals
 results_filename = None
 results_formatter_name = None
@@ -136,6 +131,10 @@ rerun_all_issues = False
 # same base name.
 all_tests = set()
 
+# LLDB library directory.
+lldb_libs_dir = None
+
+
 def shouldSkipBecauseOfCategories(test_categories):
     if use_categories:
         if len(test_categories) == 0 or len(
@@ -147,37 +146,6 @@ def shouldSkipBecauseOfCategories(test_categories):
             return True
 
     return False
-
-
-def get_absolute_path_to_exclusive_test_subdir():
-    """
-    If an exclusive test subdirectory is specified, return its absolute path.
-    Otherwise return None.
-    """
-    test_directory = os.path.dirname(os.path.realpath(__file__))
-
-    if not exclusive_test_subdir:
-        return
-
-    if len(exclusive_test_subdir) > 0:
-        test_subdir = os.path.join(test_directory, exclusive_test_subdir)
-        if os.path.isdir(test_subdir):
-            return test_subdir
-
-        print('specified test subdirectory {} is not a valid directory\n'
-                .format(test_subdir))
-
-
-def get_absolute_path_to_root_test_dir():
-    """
-    If an exclusive test subdirectory is specified, return its absolute path.
-    Otherwise, return the absolute path of the root test directory.
-    """
-    test_subdir = get_absolute_path_to_exclusive_test_subdir()
-    if test_subdir:
-        return test_subdir
-
-    return os.path.dirname(os.path.realpath(__file__))
 
 
 def get_filecheck_path():

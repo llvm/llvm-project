@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFBaseDIE_h_
-#define SymbolFileDWARF_DWARFBaseDIE_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
@@ -57,10 +57,6 @@ public:
 
   llvm::Optional<DIERef> GetDIERef() const;
 
-  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
-
-  DWARFASTParser *GetDWARFParser() const;
-
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
       m_cu = cu;
@@ -98,8 +94,6 @@ public:
 
   const char *GetName() const;
 
-  lldb::LanguageType GetLanguage() const;
-
   lldb::ModuleSP GetModule() const;
 
   // Getting attribute values from the DIE.
@@ -126,4 +120,4 @@ protected:
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 
-#endif // SymbolFileDWARF_DWARFBaseDIE_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H

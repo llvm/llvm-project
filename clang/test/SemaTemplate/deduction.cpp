@@ -564,3 +564,20 @@ namespace nested_packs {
   }
 #endif
 }
+
+namespace PR44890 {
+  template<typename ...Ts>
+    struct tuple {};
+
+  template<int I, typename ...Ts>
+    int get0(const tuple<Ts...> &t) { return 0; }
+
+  template<typename ...Ts> struct tuple_wrapper : tuple<Ts...> {
+    template<int I> int get() { return get0<0, Ts...>(*this); }
+  };
+
+  int f() {
+    tuple_wrapper<int> w;
+    return w.get<0>();
+  }
+}

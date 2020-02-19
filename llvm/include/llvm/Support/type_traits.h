@@ -28,7 +28,7 @@ namespace llvm {
 /// Also note that enum classes aren't implicitly convertible to integral types,
 /// the value may therefore need to be explicitly converted before being used.
 template <typename T> class is_integral_or_enum {
-  using UnderlyingT = typename std::remove_reference<T>::type;
+  using UnderlyingT = std::remove_reference_t<T>;
 
 public:
   static const bool value =
@@ -45,7 +45,7 @@ struct add_lvalue_reference_if_not_pointer { using type = T &; };
 
 template <typename T>
 struct add_lvalue_reference_if_not_pointer<
-    T, typename std::enable_if<std::is_pointer<T>::value>::type> {
+    T, std::enable_if_t<std::is_pointer<T>::value>> {
   using type = T;
 };
 
@@ -55,9 +55,8 @@ template<typename T, typename Enable = void>
 struct add_const_past_pointer { using type = const T; };
 
 template <typename T>
-struct add_const_past_pointer<
-    T, typename std::enable_if<std::is_pointer<T>::value>::type> {
-  using type = const typename std::remove_pointer<T>::type *;
+struct add_const_past_pointer<T, std::enable_if_t<std::is_pointer<T>::value>> {
+  using type = const std::remove_pointer_t<T> *;
 };
 
 template <typename T, typename Enable = void>
@@ -65,8 +64,8 @@ struct const_pointer_or_const_ref {
   using type = const T &;
 };
 template <typename T>
-struct const_pointer_or_const_ref<
-    T, typename std::enable_if<std::is_pointer<T>::value>::type> {
+struct const_pointer_or_const_ref<T,
+                                  std::enable_if_t<std::is_pointer<T>::value>> {
   using type = typename add_const_past_pointer<T>::type;
 };
 

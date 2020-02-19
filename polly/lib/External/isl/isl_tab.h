@@ -208,7 +208,7 @@ enum isl_lp_result isl_tab_min(struct isl_tab *tab,
 	unsigned flags) WARN_UNUSED;
 
 isl_stat isl_tab_add_ineq(struct isl_tab *tab, isl_int *ineq) WARN_UNUSED;
-int isl_tab_add_eq(struct isl_tab *tab, isl_int *eq) WARN_UNUSED;
+isl_stat isl_tab_add_eq(struct isl_tab *tab, isl_int *eq) WARN_UNUSED;
 int isl_tab_add_valid_eq(struct isl_tab *tab, isl_int *eq) WARN_UNUSED;
 
 int isl_tab_freeze_constraint(struct isl_tab *tab, int con) WARN_UNUSED;
@@ -237,7 +237,7 @@ enum isl_ineq_type {
 enum isl_ineq_type isl_tab_ineq_type(struct isl_tab *tab, isl_int *ineq);
 
 struct isl_tab_undo *isl_tab_snap(struct isl_tab *tab);
-int isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap) WARN_UNUSED;
+isl_stat isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap) WARN_UNUSED;
 isl_bool isl_tab_need_undo(struct isl_tab *tab);
 void isl_tab_clear_undo(struct isl_tab *tab);
 
@@ -333,5 +333,7 @@ int isl_tab_insert_div(struct isl_tab *tab, int pos, __isl_keep isl_vec *div,
 int isl_tab_add_div(struct isl_tab *tab, __isl_keep isl_vec *div);
 
 int isl_tab_shift_var(struct isl_tab *tab, int pos, isl_int shift) WARN_UNUSED;
+
+isl_stat isl_tab_swap_constraints(struct isl_tab *tab, int con1, int con2);
 
 #endif

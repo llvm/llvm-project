@@ -5,7 +5,7 @@ add_lldb_unittest(Arm64InstEmulationTests
     lldbSymbol
     lldbTarget
     lldbPluginUnwindAssemblyInstEmulation
-    lldbPluginDisassemblerLLVM
+    lldbPluginDisassemblerLLVMC
     lldbPluginInstructionARM64
     lldbPluginProcessUtility
   LINK_COMPONENTS

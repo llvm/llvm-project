@@ -16,22 +16,69 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
 Symbols:
-  - Name:      test
-  - NameIndex: 1
-  - NameIndex: 2
-  - Name:      1
-  - Name:      2
+  - Name:   test
+  - StName: 1
+  - StName: 2
+  - Name:   1
+  - Name:   2
 
-## Check we do not allow specifying both Name and NameIndex at once.
-# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: error: Name and NameIndex cannot both be specified for Symbol
+## Check we allow specifying both Name and StName at once.
+## In this case StName has priority, but the symbol Name is still added
+## to the symbol string table.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --symbols --sections --section-data -r --expand-relocs %t2 | FileCheck %s --check-prefix=BOTH
+
+# BOTH:      Name: .strtab
+# BOTH:      SectionData (
+# BOTH-NEXT:   0000: 00666F6F 00 |.foo.|
+# BOTH-NEXT: )
+
+# BOTH:       Relocations [
+# BOTH-NEXT:   Section (1) .rela.data {
+# BOTH-NEXT:     Relocation {
+# BOTH-NEXT:       Offset: 0x0
+# BOTH-NEXT:       Type: R_X86_64_NONE (0)
+# BOTH-NEXT:       Symbol: - (1)
+# BOTH-NEXT:       Addend: 0x0
+# BOTH-NEXT:     }
+# BOTH-NEXT:   }
+# BOTH-NEXT: ]
+
+# BOTH:      Symbols [
+# BOTH-NEXT:   Symbol {
+# BOTH-NEXT:     Name:  (0)
+# BOTH-NEXT:     Value: 0x0
+# BOTH-NEXT:     Size: 0
+# BOTH-NEXT:     Binding: Local (0x0)
+# BOTH-NEXT:     Type: None (0x0)
+# BOTH-NEXT:     Other: 0
+# BOTH-NEXT:     Section: Undefined (0x0)
+# BOTH-NEXT:   }
+# BOTH-NEXT:   Symbol {
+# BOTH-NEXT:     Name:  (0)
+# BOTH-NEXT:     Value: 0x0
+# BOTH-NEXT:     Size: 0
+# BOTH-NEXT:     Binding: Local (0x0)
+# BOTH-NEXT:     Type: None (0x0)
+# BOTH-NEXT:     Other: 0
+# BOTH-NEXT:     Section: Undefined (0x0)
+# BOTH-NEXT:   }
+# BOTH-NEXT: ]
 
 --- !ELF
 FileHeader:
-  Class:     ELFCLASS64
-  Data:      ELFDATA2LSB
-  Type:      ET_REL
-  Machine:   EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.data
+    Type: SHT_RELA
+    Relocations:
+      - Offset: 0x0
+        Type:   R_X86_64_NONE
+        Symbol: foo
 Symbols:
-  - Name:      foo
-    NameIndex: 0
+  - Name:   foo
+    StName: 0

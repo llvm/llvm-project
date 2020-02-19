@@ -246,8 +246,8 @@ return:                                           ; preds = %cond.end, %if.then3
 ;   return *a ? a : rt0(a);
 ; }
 ;
-; BOTH:      Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %a)
+; BOTH:      Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; BOTH-NEXT: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) %a)
 define i32* @rt0(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
@@ -263,8 +263,8 @@ entry:
 ;   return *a ? undef : rt1(a);
 ; }
 ;
-; BOTH: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt1(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %a)
+; BOTH:         Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt1(i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) %a)
 define i32* @rt1(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
@@ -334,8 +334,8 @@ if.end:
 ; BOTH: declare void @unknown_fn(i32* (i32*)*)
 ;
 ; BOTH:       Function Attrs: noinline nounwind uwtable
-; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* readnone returned "no-capture-maybe-returned" %r)
-; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* readnone returned "no-capture-maybe-returned" %r)
+; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* nofree readnone returned "no-capture-maybe-returned" %r)
+; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* nofree readnone returned "no-capture-maybe-returned" %r)
 declare void @unknown_fn(i32* (i32*)*) #0
 
 define i32* @calls_unknown_fn(i32* %r) #0 {

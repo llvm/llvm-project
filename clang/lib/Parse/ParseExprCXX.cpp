@@ -1302,7 +1302,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
       ParseParameterDeclarationClause(D.getContext(), Attr, ParamInfo,
                                       EllipsisLoc);
-      // For a generic lambda, each 'auto' within the parameter declaration 
+      // For a generic lambda, each 'auto' within the parameter declaration
       // clause creates a template type parameter, so increment the depth.
       // If we've parsed any explicit template parameters, then the depth will
       // have already been incremented. So we make sure that at most a single
@@ -3486,6 +3486,7 @@ ExprResult Parser::ParseRequiresExpression() {
           // We need to consume the typename to allow 'requires { typename a; }'
           SourceLocation TypenameKWLoc = ConsumeToken();
           if (TryAnnotateCXXScopeToken()) {
+            TPA.Commit();
             SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
             break;
           }

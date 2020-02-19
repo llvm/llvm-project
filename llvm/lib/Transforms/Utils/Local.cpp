@@ -1568,8 +1568,8 @@ void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
 }
 
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
-                             Instruction *InsertBefore, DIBuilder &Builder,
-                             uint8_t DIExprFlags, int Offset) {
+                             DIBuilder &Builder, uint8_t DIExprFlags,
+                             int Offset) {
   auto DbgAddrs = FindDbgAddrUses(Address);
   for (DbgVariableIntrinsic *DII : DbgAddrs) {
     DebugLoc Loc = DII->getDebugLoc();
@@ -1577,21 +1577,12 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
-    // Insert llvm.dbg.declare immediately before InsertBefore, and remove old
+    // Insert llvm.dbg.declare immediately before DII, and remove old
     // llvm.dbg.declare.
-    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
-    if (DII == InsertBefore)
-      InsertBefore = InsertBefore->getNextNode();
+    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, DII);
     DII->eraseFromParent();
   }
   return !DbgAddrs.empty();
-}
-
-bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                      DIBuilder &Builder, uint8_t DIExprFlags,
-                                      int Offset) {
-  return replaceDbgDeclare(AI, NewAllocaAddress, AI->getNextNode(), Builder,
-                           DIExprFlags, Offset);
 }
 
 static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,

@@ -43,7 +43,7 @@ namespace {
 
 } // end anonymous namespace
 
-static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
+static void emitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
   std::vector<Type *> AsmArgTypes;
   std::vector<Value *> AsmArgs;
 
@@ -339,7 +339,7 @@ static void assureFPCallStub(Function &F, Module *M,
     AsmText += "jr $$18\n";
   else
     AsmText += "jr $$25\n";
-  EmitInlineAsm(Context, BB, AsmText);
+  emitInlineAsm(Context, BB, AsmText);
 
   new UnreachableInst(Context, BB);
 }
@@ -475,7 +475,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   AsmText += swapFPIntParams(PV, M, LE, false);
   AsmText += "jr $$25\n";
   AsmText += LocalName + " = " + Name + "\n";
-  EmitInlineAsm(Context, BB, AsmText);
+  emitInlineAsm(Context, BB, AsmText);
 
   new UnreachableInst(FStub->getContext(), BB);
 }

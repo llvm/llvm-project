@@ -27,7 +27,7 @@ MCXCOFFStreamer::MCXCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
 
-bool MCXCOFFStreamer::EmitSymbolAttribute(MCSymbol *Sym,
+bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolXCOFF>(Sym);
   getAssembler().registerSymbol(*Symbol);
@@ -43,7 +43,7 @@ bool MCXCOFFStreamer::EmitSymbolAttribute(MCSymbol *Sym,
   return true;
 }
 
-void MCXCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
@@ -51,11 +51,11 @@ void MCXCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   Symbol->setCommon(Size, ByteAlignment);
 
   // Emit the alignment and storage for the variable to the section.
-  EmitValueToAlignment(ByteAlignment);
-  EmitZeros(Size);
+  emitValueToAlignment(ByteAlignment);
+  emitZeros(Size);
 }
 
-void MCXCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCXCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, unsigned ByteAlignment,
                                    SMLoc Loc) {
   report_fatal_error("Zero fill not implemented for XCOFF.");
@@ -94,9 +94,9 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
   return S;
 }
 
-void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
+void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                  uint64_t Size,
                                                  MCSymbol *CsectSym,
                                                  unsigned ByteAlignment) {
-  EmitCommonSymbol(CsectSym, Size, ByteAlignment);
+  emitCommonSymbol(CsectSym, Size, ByteAlignment);
 }

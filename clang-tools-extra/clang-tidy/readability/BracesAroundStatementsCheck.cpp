@@ -42,7 +42,7 @@ SourceLocation forwardSkipWhitespaceAndComments(SourceLocation Loc,
       Loc = Loc.getLocWithOffset(1);
 
     tok::TokenKind TokKind = getTokenKind(Loc, SM, Context);
-    if (TokKind == tok::NUM_TOKENS || TokKind != tok::comment)
+    if (TokKind != tok::comment)
       return Loc;
 
     // Fast-forward current token.

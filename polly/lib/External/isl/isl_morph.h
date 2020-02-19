@@ -12,6 +12,7 @@
 #define ISL_MORHP_H
 
 #include <stdio.h>
+#include <isl/id_type.h>
 #include <isl/space.h>
 #include <isl/mat.h>
 #include <isl/set.h>
@@ -48,8 +49,8 @@ __isl_give isl_space *isl_morph_get_dom_space(__isl_keep isl_morph *morph);
 __isl_give isl_space *isl_morph_get_ran_space(__isl_keep isl_morph *morph);
 __isl_give isl_multi_aff *isl_morph_get_var_multi_aff(
 	__isl_keep isl_morph *morph);
-unsigned isl_morph_dom_dim(__isl_keep isl_morph *morph, enum isl_dim_type type);
-unsigned isl_morph_ran_dim(__isl_keep isl_morph *morph, enum isl_dim_type type);
+isl_size isl_morph_dom_dim(__isl_keep isl_morph *morph, enum isl_dim_type type);
+isl_size isl_morph_ran_dim(__isl_keep isl_morph *morph, enum isl_dim_type type);
 
 __isl_give isl_morph *isl_morph_remove_dom_dims(__isl_take isl_morph *morph,
 	enum isl_dim_type type, unsigned first, unsigned n);
@@ -68,8 +69,7 @@ void isl_morph_dump(__isl_take isl_morph *morph);
 __isl_give isl_morph *isl_basic_set_variable_compression(
 	__isl_keep isl_basic_set *bset, enum isl_dim_type type);
 __isl_give isl_morph *isl_basic_set_variable_compression_with_id(
-	__isl_keep isl_basic_set *bset, enum isl_dim_type type,
-	__isl_keep isl_id *id);
+	__isl_keep isl_basic_set *bset, __isl_keep isl_id *id);
 __isl_give isl_morph *isl_basic_set_parameter_compression(
 	__isl_keep isl_basic_set *bset);
 __isl_give isl_morph *isl_basic_set_full_compression(

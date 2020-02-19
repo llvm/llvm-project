@@ -13,14 +13,15 @@
 
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Helpers.h"
+#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
 #include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
+using namespace mlir::edsc;
+using namespace mlir::edsc::intrinsics;
 using namespace mlir::gpu;
 
 /// Returns the textual name of a GPU dimension.
@@ -41,17 +42,17 @@ static StringRef getDimName(unsigned dim) {
 /// single-iteration loops. Maps the innermost loops to thread dimensions, in
 /// reverse order to enable access coalescing in the innermost loop.
 static void insertCopyLoops(OpBuilder &builder, Location loc,
-                            edsc::MemRefView &bounds, Value from, Value to) {
+                            MemRefBoundsCapture &bounds, Value from, Value to) {
   // Create EDSC handles for bounds.
   unsigned rank = bounds.rank();
-  SmallVector<edsc::ValueHandle, 4> lbs, ubs, steps;
+  SmallVector<ValueHandle, 4> lbs, ubs, steps;
 
   // Make sure we have enough loops to use all thread dimensions, these trivial
   // loops should be outermost and therefore inserted first.
   if (rank < GPUDialect::getNumWorkgroupDimensions()) {
     unsigned extraLoops = GPUDialect::getNumWorkgroupDimensions() - rank;
-    edsc::ValueHandle zero = edsc::intrinsics::constant_index(0);
-    edsc::ValueHandle one = edsc::intrinsics::constant_index(1);
+    ValueHandle zero = std_constant_index(0);
+    ValueHandle one = std_constant_index(1);
     lbs.resize(extraLoops, zero);
     ubs.resize(extraLoops, one);
     steps.resize(extraLoops, one);
@@ -63,9 +64,8 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
 
   // Emit constant operations for steps.
   steps.reserve(lbs.size());
-  llvm::transform(
-      bounds.getSteps(), std::back_inserter(steps),
-      [](int64_t step) { return edsc::intrinsics::constant_index(step); });
+  llvm::transform(bounds.getSteps(), std::back_inserter(steps),
+                  [](int64_t step) { return std_constant_index(step); });
 
   // Obtain thread identifiers and block sizes, necessary to map to them.
   auto indexType = builder.getIndexType();
@@ -79,12 +79,11 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
   }
 
   // Produce the loop nest with copies.
-  auto ivs = edsc::makeIndexHandles(lbs.size());
-  auto ivPtrs =
-      edsc::makeHandlePointers(MutableArrayRef<edsc::IndexHandle>(ivs));
-  edsc::LoopNestBuilder(ivPtrs, lbs, ubs, steps)([&]() {
+  SmallVector<ValueHandle, 8> ivs(lbs.size(), ValueHandle(indexType));
+  auto ivPtrs = makeHandlePointers(MutableArrayRef<ValueHandle>(ivs));
+  LoopNestBuilder(ivPtrs, lbs, ubs, steps)([&]() {
     auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
-    edsc::StdIndexedValue fromHandle(from), toHandle(to);
+    StdIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
   });
 
@@ -146,14 +145,14 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
   OpBuilder builder(region.getContext());
   builder.setInsertionPointToStart(&region.front());
 
-  edsc::ScopedContext edscContext(builder, loc);
-  edsc::MemRefView fromView(from);
-  insertCopyLoops(builder, loc, fromView, from, to);
+  ScopedContext edscContext(builder, loc);
+  MemRefBoundsCapture fromBoundsCapture(from);
+  insertCopyLoops(builder, loc, fromBoundsCapture, from, to);
   builder.create<gpu::BarrierOp>(loc);
 
   builder.setInsertionPoint(&region.front().back());
   builder.create<gpu::BarrierOp>(loc);
-  insertCopyLoops(builder, loc, fromView, to, from);
+  insertCopyLoops(builder, loc, fromBoundsCapture, to, from);
 }
 
 /// Promotes a function argument to workgroup memory in the given function. The

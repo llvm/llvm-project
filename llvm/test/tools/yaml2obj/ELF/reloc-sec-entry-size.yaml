@@ -1,9 +1,9 @@
 ## Test how yaml2obj sets values for sh_entsize fields of relocation sections.
 
-# RUN: yaml2obj --docnum=1 %s -o %t64
+# RUN: yaml2obj -D BITS=64 %s -o %t64
 # RUN: llvm-readelf --sections %t64 | FileCheck %s --check-prefix=ELF64
 
-# RUN: yaml2obj --docnum=2 %s -o %t32
+# RUN: yaml2obj -D BITS=32 %s -o %t32
 # RUN: llvm-readelf --sections %t32 | FileCheck %s --check-prefix=ELF32
 
 # ELF64: Name          Type Address          Off    Size   ES
@@ -24,37 +24,12 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
 ## Check default sh_entsize field values.
-  - Name: .rela.default
-    Type: SHT_RELA
-  - Name: .rel.default
-    Type: SHT_REL
-  - Name: .relr.default
-    Type: SHT_RELR
-## Check we can set sh_entsize fields to arbitrary values.
-  - Name:    .rela.custom
-    Type:    SHT_RELA
-    EntSize: 0xFF
-  - Name:    .rel.custom
-    Type:    SHT_REL
-    EntSize: 0xFF
-  - Name:    .relr.custom
-    Type:    SHT_RELR
-    EntSize: 0xFF
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
-Sections:
-## Check default sh_entsizes field values.
   - Name: .rela.default
     Type: SHT_RELA
   - Name: .rel.default

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
 
 #ifndef lldb_NativeRegisterContextNetBSD_x86_64_h
 #define lldb_NativeRegisterContextNetBSD_x86_64_h
@@ -81,14 +81,19 @@ private:
   enum { GPRegSet, FPRegSet, XStateRegSet, DBRegSet };
 
   // Private member variables.
-  struct reg m_gpr_x86_64;
-  struct fpreg m_fpr_x86_64;
-  struct dbreg m_dbr_x86_64;
+  struct reg m_gpr;
+#if defined(__x86_64__)
+  struct fpreg m_fpr;
+#else
+  struct xmmregs m_fpr;
+#endif
+  struct dbreg m_dbr;
 #ifdef HAVE_XSTATE
-  struct xstate m_xstate_x86_64;
+  struct xstate m_xstate;
 #endif
 
   int GetSetForNativeRegNum(int reg_num) const;
+  int GetDR(int num) const;
 
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);

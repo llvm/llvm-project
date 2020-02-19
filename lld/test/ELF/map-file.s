@@ -95,6 +95,6 @@ labs = 0x1AB5
 // CHECk-NEXT:      0                0       6d     1 .strtab
 // CHECk-NEXT:      0                0       6d     1         <internal>:(.strtab)
 
-// RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -Map=/ 2>&1 \
+// RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o /dev/null -Map=/ 2>&1 \
 // RUN:  | FileCheck -check-prefix=FAIL %s
 // FAIL: cannot open map file /

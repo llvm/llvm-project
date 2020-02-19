@@ -1,6 +1,6 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t1.o
-; RUN: not ld.lld -o %t %t1.o 2>&1 | FileCheck %s
+; RUN: not ld.lld -o /dev/null %t1.o 2>&1 | FileCheck %s
 
 ; CHECK: undefined hidden symbol: foobar
 

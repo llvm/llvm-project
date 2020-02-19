@@ -5,8 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REPRODUCER_INSTRUMENTATION_H
-#define LLDB_UTILITY_REPRODUCER_INSTRUMENTATION_H
+#ifndef LLDB_UTILITY_REPRODUCERINSTRUMENTATION_H
+#define LLDB_UTILITY_REPRODUCERINSTRUMENTATION_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -90,101 +90,127 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
       static_cast<Result(*) Signature>(&Class::Method), #Result, #Class,       \
       #Method, #Signature)
 
+#define LLDB_REGISTER_CHAR_PTR_REDIRECT_STATIC(Result, Class, Method)          \
+  {                                                                            \
+    static auto _redirect = [](char *s, size_t l) -> Result {                  \
+      return char_ptr_redirect_static<Result>(Class::Method, s, l);            \
+    };                                                                         \
+    R.Register<Result(char *, size_t)>(                                        \
+        static_cast<Result (*)(char *, size_t)>(&Class::Method), _redirect,    \
+        #Result, #Class, #Method, "(char*, size_t");                           \
+  }
+#define LLDB_REGISTER_CHAR_PTR_REDIRECT(Result, Class, Method)                 \
+  {                                                                            \
+    R.Register(&invoke<Result (Class::*)(char *, size_t)>::method<(            \
+                   &Class::Method)>::doit,                                     \
+               &char_ptr_redirect<Result (Class::*)(char *, size_t)>::method<( \
+                   &Class::Method)>::doit,                                     \
+               #Result, #Class, #Method, "(char*, size_t");                    \
+  }
+#define LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(Result, Class, Method)           \
+  {                                                                            \
+    R.Register(                                                                \
+        &invoke<Result (Class::*)(char *, size_t)                              \
+                    const>::method_const<(&Class::Method)>::doit,              \
+        &char_ptr_redirect<Result (Class::*)(char *, size_t)                   \
+                               const>::method_const<(&Class::Method)>::doit,   \
+        #Result, #Class, #Method, "(char*, size_t");                           \
+  }
+
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(__VA_ARGS__));      \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(__VA_ARGS__));        \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
-                       &lldb_private::repro::construct<Class Signature>::doit, \
-                       __VA_ARGS__);                                           \
-    sb_recorder.RecordResult(this, false);                                     \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     &lldb_private::repro::construct<Class Signature>::doit,   \
+                     __VA_ARGS__);                                             \
+    _recorder.RecordResult(this, false);                                       \
   }
 
 #define LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Class)                                 \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);             \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION);               \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
-                       &lldb_private::repro::construct<Class()>::doit);        \
-    sb_recorder.RecordResult(this, false);                                     \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     &lldb_private::repro::construct<Class()>::doit);          \
+    _recorder.RecordResult(this, false);                                       \
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
-  lldb_private::repro::Recorder sb_recorder(                                   \
-      LLVM_PRETTY_FUNCTION, stringify_args(*this, __VA_ARGS__));               \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(*this, __VA_ARGS__)); \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(                                                        \
-        data.GetSerializer(), data.GetRegistry(),                              \
-        &lldb_private::repro::invoke<Result(Class::*) Signature>::method<(     \
-            &Class::Method)>::doit,                                            \
-        this, __VA_ARGS__);                                                    \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     &lldb_private::repro::invoke<Result(                      \
+                         Class::*) Signature>::method<(&Class::Method)>::doit, \
+                     this, __VA_ARGS__);                                       \
   }
 
 #define LLDB_RECORD_METHOD_CONST(Result, Class, Method, Signature, ...)        \
-  lldb_private::repro::Recorder sb_recorder(                                   \
-      LLVM_PRETTY_FUNCTION, stringify_args(*this, __VA_ARGS__));               \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(*this, __VA_ARGS__)); \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(                                                        \
-        data.GetSerializer(), data.GetRegistry(),                              \
+    _recorder.Record(                                                          \
+        _data.GetSerializer(), _data.GetRegistry(),                            \
         &lldb_private::repro::invoke<Result(                                   \
             Class::*) Signature const>::method_const<(&Class::Method)>::doit,  \
         this, __VA_ARGS__);                                                    \
   }
 
 #define LLDB_RECORD_METHOD_NO_ARGS(Result, Class, Method)                      \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(*this));            \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(*this));              \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
-                       &lldb_private::repro::invoke<Result (                   \
-                           Class::*)()>::method<(&Class::Method)>::doit,       \
-                       this);                                                  \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     &lldb_private::repro::invoke<Result (                     \
+                         Class::*)()>::method<(&Class::Method)>::doit,         \
+                     this);                                                    \
   }
 
 #define LLDB_RECORD_METHOD_CONST_NO_ARGS(Result, Class, Method)                \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(*this));            \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(*this));              \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(                                                        \
-        data.GetSerializer(), data.GetRegistry(),                              \
+    _recorder.Record(                                                          \
+        _data.GetSerializer(), _data.GetRegistry(),                            \
         &lldb_private::repro::invoke<Result (                                  \
             Class::*)() const>::method_const<(&Class::Method)>::doit,          \
         this);                                                                 \
   }
 
 #define LLDB_RECORD_STATIC_METHOD(Result, Class, Method, Signature, ...)       \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(__VA_ARGS__));      \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(__VA_ARGS__));        \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
-                       static_cast<Result(*) Signature>(&Class::Method),       \
-                       __VA_ARGS__);                                           \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     static_cast<Result(*) Signature>(&Class::Method),         \
+                     __VA_ARGS__);                                             \
   }
 
 #define LLDB_RECORD_STATIC_METHOD_NO_ARGS(Result, Class, Method)               \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);             \
-  if (lldb_private::repro::InstrumentationData data =                          \
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION);               \
+  if (lldb_private::repro::InstrumentationData _data =                         \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
-    sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
-                       static_cast<Result (*)()>(&Class::Method));             \
+    _recorder.Record(_data.GetSerializer(), _data.GetRegistry(),               \
+                     static_cast<Result (*)()>(&Class::Method));               \
   }
 
-#define LLDB_RECORD_RESULT(Result) sb_recorder.RecordResult(Result, true);
+#define LLDB_RECORD_RESULT(Result) _recorder.RecordResult(Result, true);
 
 /// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
 /// anything. It's used to track API boundaries when we cannot record for
 /// technical reasons.
 #define LLDB_RECORD_DUMMY(Result, Class, Method, Signature, ...)               \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(__VA_ARGS__));
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
+                                          stringify_args(__VA_ARGS__));
 #define LLDB_RECORD_DUMMY_NO_ARGS(Result, Class, Method)                       \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);
+  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION);
 
 namespace lldb_private {
 namespace repro {
@@ -249,12 +275,11 @@ struct ReferenceTag {};
 struct ValueTag {};
 struct FundamentalPointerTag {};
 struct FundamentalReferenceTag {};
-struct NotImplementedTag {};
 
 /// Return the deserialization tag for the given type T.
 template <class T> struct serializer_tag {
   typedef typename std::conditional<std::is_trivially_copyable<T>::value,
-                                    ValueTag, NotImplementedTag>::type type;
+                                    ValueTag, ReferenceTag>::type type;
 };
 template <class T> struct serializer_tag<T *> {
   typedef
@@ -321,11 +346,6 @@ public:
   }
 
 private:
-  template <typename T> T Read(NotImplementedTag) {
-    m_buffer = m_buffer.drop_front(sizeof(T));
-    return T();
-  }
-
   template <typename T> T Read(ValueTag) {
     assert(HasData(sizeof(T)));
     T t;
@@ -377,7 +397,10 @@ private:
 /// instead of treating it as pointer.
 template <> const char *Deserializer::Deserialize<const char *>();
 template <> const char **Deserializer::Deserialize<const char **>();
+template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>();
+template <> const void *Deserializer::Deserialize<const void *>();
 template <> char *Deserializer::Deserialize<char *>();
+template <> void *Deserializer::Deserialize<void *>();
 
 /// Helpers to auto-synthesize function replay code. It deserializes the replay
 /// function's arguments one by one and finally calls the corresponding
@@ -576,6 +599,10 @@ private:
   /// fundamental types (in which case we serialize its value) and pointer to
   /// objects (in which case we serialize their index).
   template <typename T> void Serialize(T *t) {
+#ifdef LLDB_REPRO_INSTR_TRACE
+    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                 << stringify_args(t) << "\n";
+#endif
     if (std::is_fundamental<T>::value) {
       Serialize(*t);
     } else {
@@ -588,6 +615,10 @@ private:
   /// fundamental types (in which case we serialize its value) and references
   /// to objects (in which case we serialize their index).
   template <typename T> void Serialize(T &t) {
+#ifdef LLDB_REPRO_INSTR_TRACE
+    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                 << stringify_args(t) << "\n";
+#endif
     if (is_trivially_serializable<T>::value) {
       m_stream.write(reinterpret_cast<const char *>(&t), sizeof(T));
     } else {
@@ -596,14 +627,25 @@ private:
     }
   }
 
+  void Serialize(const void *v) {
+    // FIXME: Support void*
+  }
+
   void Serialize(void *v) {
     // FIXME: Support void*
-    llvm_unreachable("void* is currently unsupported.");
   }
 
   void Serialize(const char *t) {
-    m_stream << t;
-    m_stream.write(0x0);
+#ifdef LLDB_REPRO_INSTR_TRACE
+    llvm::errs() << "Serializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                 << stringify_args(t) << "\n";
+#endif
+    const size_t size = t ? strlen(t) : std::numeric_limits<size_t>::max();
+    Serialize(size);
+    if (t) {
+      m_stream << t;
+      m_stream.write(0x0);
+    }
   }
 
   void Serialize(const char **t) {
@@ -620,11 +662,8 @@ private:
     Serialize(size);
 
     // Serialize the content of the array.
-    while (*t) {
-      m_stream << *t;
-      m_stream.write(0x0);
-      ++t;
-    }
+    while (*t)
+      Serialize(*t++);
   }
 
   /// Serialization stream.
@@ -677,6 +716,10 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id);
+#endif
+
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
@@ -687,10 +730,6 @@ public:
       serializer.SerializeAll(0);
       m_result_recorded = true;
     }
-
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id, m_result_recorded);
-#endif
   }
 
   /// Records a single function call.
@@ -703,16 +742,16 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id);
+#endif
+
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
     // Record result.
     serializer.SerializeAll(0);
     m_result_recorded = true;
-
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id, true);
-#endif
   }
 
   /// Record the result of a function call.
@@ -730,9 +769,6 @@ public:
       assert(!m_result_recorded);
       m_serializer->SerializeAll(r);
       m_result_recorded = true;
-#ifdef LLDB_REPRO_INSTR_TRACE
-      llvm::errs() << " -> " << stringify_args(r) << '\n';
-#endif
     }
     return std::forward<Result>(r);
   }
@@ -746,11 +782,9 @@ private:
   bool ShouldCapture() { return m_local_boundary; }
 
 #ifdef LLDB_REPRO_INSTR_TRACE
-  void Log(unsigned id, bool newline) {
+  void Log(unsigned id) {
     llvm::errs() << "Recording " << id << ": " << m_pretty_func << " ("
-                 << m_pretty_args << ")";
-    if (newline)
-      llvm::errs() << '\n';
+                 << m_pretty_args << ")\n";
   }
 #endif
 
@@ -770,7 +804,34 @@ private:
   static bool g_global_boundary;
 };
 
+template <typename Signature> struct char_ptr_redirect;
+template <typename Result, typename Class>
+struct char_ptr_redirect<Result (Class::*)(char *, size_t) const> {
+  template <Result (Class::*m)(char *, size_t) const> struct method_const {
+    static Result doit(Class *c, char *s, size_t l) {
+      char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
+      return (c->*m)(buffer, l);
+    }
+  };
+};
+template <typename Result, typename Class>
+struct char_ptr_redirect<Result (Class::*)(char *, size_t)> {
+  template <Result (Class::*m)(char *, size_t)> struct method {
+    static Result doit(Class *c, char *s, size_t l) {
+      char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
+      return (c->*m)(buffer, l);
+    }
+  };
+};
+
+template <typename Result>
+Result char_ptr_redirect_static(Result (*f)(char *, size_t), char *s,
+                                size_t l) {
+  char *buffer = reinterpret_cast<char *>(calloc(l, sizeof(char)));
+  return f(buffer, l);
+}
+
 } // namespace repro
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REPRODUCER_INSTRUMENTATION_H
+#endif // LLDB_UTILITY_REPRODUCERINSTRUMENTATION_H

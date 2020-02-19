@@ -80,7 +80,7 @@ template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
   }
 
   static ArgKind getKind() {
-    return ArgKind(ast_type_traits::ASTNodeKind::getFromNodeKind<T>());
+    return ArgKind(ASTNodeKind::getFromNodeKind<T>());
   }
 };
 
@@ -211,7 +211,7 @@ public:
   /// set of argument types accepted for argument \p ArgNo to \p ArgKinds.
   // FIXME: We should provide the ability to constrain the output of this
   // function based on the types of other matcher arguments.
-  virtual void getArgKinds(ast_type_traits::ASTNodeKind ThisKind, unsigned ArgNo,
+  virtual void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                            std::vector<ArgKind> &ArgKinds) const = 0;
 
   /// Returns whether this matcher is convertible to the given type.  If it is
@@ -221,20 +221,19 @@ public:
   /// same matcher overload.  Zero specificity indicates that this conversion
   /// would produce a trivial matcher that will either always or never match.
   /// Such matchers are excluded from code completion results.
-  virtual bool isConvertibleTo(
-      ast_type_traits::ASTNodeKind Kind, unsigned *Specificity = nullptr,
-      ast_type_traits::ASTNodeKind *LeastDerivedKind = nullptr) const = 0;
+  virtual bool
+  isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity = nullptr,
+                  ASTNodeKind *LeastDerivedKind = nullptr) const = 0;
 
   /// Returns whether the matcher will, given a matcher of any type T, yield a
   /// matcher of type T.
   virtual bool isPolymorphic() const { return false; }
 };
 
-inline bool isRetKindConvertibleTo(
-    ArrayRef<ast_type_traits::ASTNodeKind> RetKinds,
-    ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-    ast_type_traits::ASTNodeKind *LeastDerivedKind) {
-  for (const ast_type_traits::ASTNodeKind &NodeKind : RetKinds) {
+inline bool isRetKindConvertibleTo(ArrayRef<ASTNodeKind> RetKinds,
+                                   ASTNodeKind Kind, unsigned *Specificity,
+                                   ASTNodeKind *LeastDerivedKind) {
+  for (const ASTNodeKind &NodeKind : RetKinds) {
     if (ArgKind(NodeKind).isConvertibleTo(Kind, Specificity)) {
       if (LeastDerivedKind)
         *LeastDerivedKind = NodeKind;
@@ -264,10 +263,10 @@ public:
   /// \param RetKinds The list of matcher types to which the matcher is
   ///   convertible.
   /// \param ArgKinds The types of the arguments this matcher takes.
-  FixedArgCountMatcherDescriptor(
-      MarshallerType Marshaller, void (*Func)(), StringRef MatcherName,
-      ArrayRef<ast_type_traits::ASTNodeKind> RetKinds,
-      ArrayRef<ArgKind> ArgKinds)
+  FixedArgCountMatcherDescriptor(MarshallerType Marshaller, void (*Func)(),
+                                 StringRef MatcherName,
+                                 ArrayRef<ASTNodeKind> RetKinds,
+                                 ArrayRef<ArgKind> ArgKinds)
       : Marshaller(Marshaller), Func(Func), MatcherName(MatcherName),
         RetKinds(RetKinds.begin(), RetKinds.end()),
         ArgKinds(ArgKinds.begin(), ArgKinds.end()) {}
@@ -281,14 +280,13 @@ public:
   bool isVariadic() const override { return false; }
   unsigned getNumArgs() const override { return ArgKinds.size(); }
 
-  void getArgKinds(ast_type_traits::ASTNodeKind ThisKind, unsigned ArgNo,
+  void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                    std::vector<ArgKind> &Kinds) const override {
     Kinds.push_back(ArgKinds[ArgNo]);
   }
 
-  bool isConvertibleTo(
-      ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-      ast_type_traits::ASTNodeKind *LeastDerivedKind) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
     return isRetKindConvertibleTo(RetKinds, Kind, Specificity,
                                   LeastDerivedKind);
   }
@@ -297,7 +295,7 @@ private:
   const MarshallerType Marshaller;
   void (* const Func)();
   const std::string MatcherName;
-  const std::vector<ast_type_traits::ASTNodeKind> RetKinds;
+  const std::vector<ASTNodeKind> RetKinds;
   const std::vector<ArgKind> ArgKinds;
 };
 
@@ -336,36 +334,35 @@ static VariantMatcher outvalueToVariantMatcher(const T &PolyMatcher,
 }
 
 template <typename T>
-inline void buildReturnTypeVectorFromTypeList(
-    std::vector<ast_type_traits::ASTNodeKind> &RetTypes) {
-  RetTypes.push_back(
-      ast_type_traits::ASTNodeKind::getFromNodeKind<typename T::head>());
+inline void
+buildReturnTypeVectorFromTypeList(std::vector<ASTNodeKind> &RetTypes) {
+  RetTypes.push_back(ASTNodeKind::getFromNodeKind<typename T::head>());
   buildReturnTypeVectorFromTypeList<typename T::tail>(RetTypes);
 }
 
 template <>
 inline void
 buildReturnTypeVectorFromTypeList<ast_matchers::internal::EmptyTypeList>(
-    std::vector<ast_type_traits::ASTNodeKind> &RetTypes) {}
+    std::vector<ASTNodeKind> &RetTypes) {}
 
 template <typename T>
 struct BuildReturnTypeVector {
-  static void build(std::vector<ast_type_traits::ASTNodeKind> &RetTypes) {
+  static void build(std::vector<ASTNodeKind> &RetTypes) {
     buildReturnTypeVectorFromTypeList<typename T::ReturnTypes>(RetTypes);
   }
 };
 
 template <typename T>
 struct BuildReturnTypeVector<ast_matchers::internal::Matcher<T>> {
-  static void build(std::vector<ast_type_traits::ASTNodeKind> &RetTypes) {
-    RetTypes.push_back(ast_type_traits::ASTNodeKind::getFromNodeKind<T>());
+  static void build(std::vector<ASTNodeKind> &RetTypes) {
+    RetTypes.push_back(ASTNodeKind::getFromNodeKind<T>());
   }
 };
 
 template <typename T>
 struct BuildReturnTypeVector<ast_matchers::internal::BindableMatcher<T>> {
-  static void build(std::vector<ast_type_traits::ASTNodeKind> &RetTypes) {
-    RetTypes.push_back(ast_type_traits::ASTNodeKind::getFromNodeKind<T>());
+  static void build(std::vector<ASTNodeKind> &RetTypes) {
+    RetTypes.push_back(ASTNodeKind::getFromNodeKind<T>());
   }
 };
 
@@ -439,14 +436,13 @@ public:
   bool isVariadic() const override { return true; }
   unsigned getNumArgs() const override { return 0; }
 
-  void getArgKinds(ast_type_traits::ASTNodeKind ThisKind, unsigned ArgNo,
+  void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                    std::vector<ArgKind> &Kinds) const override {
     Kinds.push_back(ArgsKind);
   }
 
-  bool isConvertibleTo(
-      ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-      ast_type_traits::ASTNodeKind *LeastDerivedKind) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
     return isRetKindConvertibleTo(RetKinds, Kind, Specificity,
                                   LeastDerivedKind);
   }
@@ -454,7 +450,7 @@ public:
 private:
   const RunFunc Func;
   const std::string MatcherName;
-  std::vector<ast_type_traits::ASTNodeKind> RetKinds;
+  std::vector<ASTNodeKind> RetKinds;
   const ArgKind ArgsKind;
 };
 
@@ -466,12 +462,10 @@ public:
       ast_matchers::internal::VariadicDynCastAllOfMatcher<BaseT, DerivedT> Func,
       StringRef MatcherName)
       : VariadicFuncMatcherDescriptor(Func, MatcherName),
-        DerivedKind(ast_type_traits::ASTNodeKind::getFromNodeKind<DerivedT>()) {
-  }
+        DerivedKind(ASTNodeKind::getFromNodeKind<DerivedT>()) {}
 
-  bool
-  isConvertibleTo(ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-                ast_type_traits::ASTNodeKind *LeastDerivedKind) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
     // If Kind is not a base of DerivedKind, either DerivedKind is a base of
     // Kind (in which case the match will always succeed) or Kind and
     // DerivedKind are unrelated (in which case it will always fail), so set
@@ -489,7 +483,7 @@ public:
   }
 
 private:
-  const ast_type_traits::ASTNodeKind DerivedKind;
+  const ASTNodeKind DerivedKind;
 };
 
 /// Helper macros to check the arguments on all marshaller functions.
@@ -635,7 +629,7 @@ public:
     return Overload0NumArgs;
   }
 
-  void getArgKinds(ast_type_traits::ASTNodeKind ThisKind, unsigned ArgNo,
+  void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                    std::vector<ArgKind> &Kinds) const override {
     for (const auto &O : Overloads) {
       if (O->isConvertibleTo(ThisKind))
@@ -643,9 +637,8 @@ public:
     }
   }
 
-  bool isConvertibleTo(
-      ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-      ast_type_traits::ASTNodeKind *LeastDerivedKind) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
     for (const auto &O : Overloads) {
       if (O->isConvertibleTo(Kind, Specificity, LeastDerivedKind))
         return true;
@@ -697,13 +690,13 @@ public:
   bool isVariadic() const override { return true; }
   unsigned getNumArgs() const override { return 0; }
 
-  void getArgKinds(ast_type_traits::ASTNodeKind ThisKind, unsigned ArgNo,
+  void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                    std::vector<ArgKind> &Kinds) const override {
     Kinds.push_back(ThisKind);
   }
 
-  bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind, unsigned *Specificity,
-                       ast_type_traits::ASTNodeKind *LeastDerivedKind) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
     if (Specificity)
       *Specificity = 1;
     if (LeastDerivedKind)
@@ -727,7 +720,7 @@ private:
 template <typename ReturnType>
 std::unique_ptr<MatcherDescriptor>
 makeMatcherAutoMarshall(ReturnType (*Func)(), StringRef MatcherName) {
-  std::vector<ast_type_traits::ASTNodeKind> RetTypes;
+  std::vector<ASTNodeKind> RetTypes;
   BuildReturnTypeVector<ReturnType>::build(RetTypes);
   return std::make_unique<FixedArgCountMatcherDescriptor>(
       matcherMarshall0<ReturnType>, reinterpret_cast<void (*)()>(Func),
@@ -738,7 +731,7 @@ makeMatcherAutoMarshall(ReturnType (*Func)(), StringRef MatcherName) {
 template <typename ReturnType, typename ArgType1>
 std::unique_ptr<MatcherDescriptor>
 makeMatcherAutoMarshall(ReturnType (*Func)(ArgType1), StringRef MatcherName) {
-  std::vector<ast_type_traits::ASTNodeKind> RetTypes;
+  std::vector<ASTNodeKind> RetTypes;
   BuildReturnTypeVector<ReturnType>::build(RetTypes);
   ArgKind AK = ArgTypeTraits<ArgType1>::getKind();
   return std::make_unique<FixedArgCountMatcherDescriptor>(
@@ -751,7 +744,7 @@ template <typename ReturnType, typename ArgType1, typename ArgType2>
 std::unique_ptr<MatcherDescriptor>
 makeMatcherAutoMarshall(ReturnType (*Func)(ArgType1, ArgType2),
                         StringRef MatcherName) {
-  std::vector<ast_type_traits::ASTNodeKind> RetTypes;
+  std::vector<ASTNodeKind> RetTypes;
   BuildReturnTypeVector<ReturnType>::build(RetTypes);
   ArgKind AKs[] = { ArgTypeTraits<ArgType1>::getKind(),
                     ArgTypeTraits<ArgType2>::getKind() };

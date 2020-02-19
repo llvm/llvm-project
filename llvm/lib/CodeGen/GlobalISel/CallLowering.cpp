@@ -50,7 +50,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
     ++i;
   }
 
-  if (const Function *F = CS.getCalledFunction())
+  // Try looking through a bitcast from one function type to another.
+  // Commonly happens with calls to objc_msgSend().
+  const Value *CalleeV = CS.getCalledValue()->stripPointerCasts();
+  if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);

@@ -11,7 +11,8 @@ define void @fn2(i32* %P) {
 ; CHECK:       for.cond1:
 ; CHECK-NEXT:    br i1 false, label [[IF_END]], label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 undef)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
@@ -33,7 +34,8 @@ define internal i32 @fn1(i32 %p1) {
 ; CHECK-LABEL: define {{[^@]+}}@fn1
 ; CHECK-SAME: (i32 [[P1:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = select i1 undef, i32 undef, i32 undef
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:

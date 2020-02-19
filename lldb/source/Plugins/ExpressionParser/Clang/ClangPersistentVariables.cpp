@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangPersistentVariables.h"
+#include "ClangASTImporter.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -101,7 +101,8 @@ ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
 }
 
-lldb::ClangASTImporterSP ClangPersistentVariables::GetClangASTImporter() {
+std::shared_ptr<ClangASTImporter>
+ClangPersistentVariables::GetClangASTImporter() {
   if (!m_ast_importer_sp) {
     m_ast_importer_sp = std::make_shared<ClangASTImporter>();
   }

@@ -217,4 +217,4 @@ template <> struct format_provider<lldb_private::Status> {
     }                                                                          \
   } while (0);
 
-#endif // #ifndef LLDB_UTILITY_STATUS_H
+#endif // LLDB_UTILITY_STATUS_H

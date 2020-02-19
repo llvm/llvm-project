@@ -1,27 +1,16 @@
 # RUN: llc -mtriple=aarch64 -run-pass=patchable-function %s -o - | FileCheck %s
 
+## The initial .loc covers PATCHABLE_FUNCTION_ENTER.
+## Emitting a new .loc may create a prologue_end prematurely.
 # CHECK:    name: empty
 # CHECK:    bb.0.entry
-# CHECK:      PATCHABLE_FUNCTION_ENTER debug-location !DILocation(line: 1,
-# CHECK-NEXT: RET undef $lr, debug-location !DILocation(line: 1,
-
-## Empty entry MBB, no debug location.
-# CHECK:    name: empty_entry
-# CHECK:    bb.0.entry
 # CHECK:      PATCHABLE_FUNCTION_ENTER{{$}}
-# CHECK:    bb.1.here
+# CHECK-NEXT: RET undef $lr, debug-location !DILocation(line: 1,
 
 --- |
   define void @empty() #0 !dbg !7 {
   entry:
     ret void, !dbg !10
-  }
-
-  define void @empty_entry() #0 !dbg !11 {
-  entry:
-    br label %here
-  here:
-    ret void, !dbg !12
   }
 
   attributes #0 = { "patchable-function-entry"="1" }
@@ -36,8 +25,6 @@
   !8 = !DISubroutineType(types: !9)
   !9 = !{null}
   !10 = !DILocation(line: 1, column: 61, scope: !7)
-  !11 = distinct !DISubprogram(name: "empty_entry", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-  !12 = !DILocation(line: 2, column: 61, scope: !11)
 
 ...
 ---
@@ -48,17 +35,5 @@ body:             |
   bb.0.entry:
     liveins: $lr
     RET undef $lr, debug-location !10
-
-...
----
-name:            empty_entry
-alignment:       4
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $lr
-  bb.1.here:
-    liveins: $lr
-    RET undef $lr, debug-location !12
 
 ...

@@ -17,6 +17,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
+LLDB_PLUGIN_DEFINE(ArchitectureArm)
+
 ConstString ArchitectureArm::GetPluginNameStatic() {
   return ConstString("arm");
 }

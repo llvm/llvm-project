@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLDBTEST_FORMATUTIL_H
-#define LLVM_TOOLS_LLDBTEST_FORMATUTIL_H
+#ifndef LLDB_TOOLS_LLDB_TEST_FORMATUTIL_H
+#define LLDB_TOOLS_LLDB_TEST_FORMATUTIL_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"

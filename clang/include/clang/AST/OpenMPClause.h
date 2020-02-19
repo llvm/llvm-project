@@ -31,6 +31,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -866,7 +867,7 @@ class OMPDefaultClause : public OMPClause {
   SourceLocation LParenLoc;
 
   /// A kind of the 'default' clause.
-  OpenMPDefaultClauseKind Kind = OMPC_DEFAULT_unknown;
+  llvm::omp::DefaultKind Kind = llvm::omp::OMP_DEFAULT_unknown;
 
   /// Start location of the kind in source code.
   SourceLocation KindKwLoc;
@@ -874,7 +875,7 @@ class OMPDefaultClause : public OMPClause {
   /// Set kind of the clauses.
   ///
   /// \param K Argument of clause.
-  void setDefaultKind(OpenMPDefaultClauseKind K) { Kind = K; }
+  void setDefaultKind(llvm::omp::DefaultKind K) { Kind = K; }
 
   /// Set argument location.
   ///
@@ -889,7 +890,7 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPDefaultClause(OpenMPDefaultClauseKind A, SourceLocation ALoc,
+  OMPDefaultClause(llvm::omp::DefaultKind A, SourceLocation ALoc,
                    SourceLocation StartLoc, SourceLocation LParenLoc,
                    SourceLocation EndLoc)
       : OMPClause(OMPC_default, StartLoc, EndLoc), LParenLoc(LParenLoc),
@@ -906,7 +907,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Returns kind of the clause.
-  OpenMPDefaultClauseKind getDefaultKind() const { return Kind; }
+  llvm::omp::DefaultKind getDefaultKind() const { return Kind; }
 
   /// Returns location of clause kind.
   SourceLocation getDefaultKindKwLoc() const { return KindKwLoc; }
@@ -1872,6 +1873,166 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_seq_cst;
+  }
+};
+
+/// This represents 'acq_rel' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush acq_rel
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'acq_rel' clause.
+class OMPAcqRelClause final : public OMPClause {
+public:
+  /// Build 'ack_rel' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPAcqRelClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_acq_rel, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPAcqRelClause()
+      : OMPClause(OMPC_acq_rel, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_acq_rel;
+  }
+};
+
+/// This represents 'acquire' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush acquire
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'acquire' clause.
+class OMPAcquireClause final : public OMPClause {
+public:
+  /// Build 'acquire' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPAcquireClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_acquire, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPAcquireClause()
+      : OMPClause(OMPC_acquire, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_acquire;
+  }
+};
+
+/// This represents 'release' clause in the '#pragma omp atomic|flush'
+/// directives.
+///
+/// \code
+/// #pragma omp flush release
+/// \endcode
+/// In this example directive '#pragma omp flush' has 'release' clause.
+class OMPReleaseClause final : public OMPClause {
+public:
+  /// Build 'release' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPReleaseClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_release, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPReleaseClause()
+      : OMPClause(OMPC_release, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_release;
+  }
+};
+
+/// This represents 'relaxed' clause in the '#pragma omp atomic'
+/// directives.
+///
+/// \code
+/// #pragma omp atomic relaxed
+/// \endcode
+/// In this example directive '#pragma omp atomic' has 'relaxed' clause.
+class OMPRelaxedClause final : public OMPClause {
+public:
+  /// Build 'relaxed' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPRelaxedClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_relaxed, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPRelaxedClause()
+      : OMPClause(OMPC_relaxed, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_relaxed;
   }
 };
 
@@ -6367,12 +6528,91 @@ public:
   }
 };
 
+/// This represents 'order' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp simd order(concurrent)
+/// \endcode
+/// In this example directive '#pragma omp parallel' has simple 'order'
+/// clause with kind 'concurrent'.
+class OMPOrderClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'default' clause.
+  OpenMPOrderClauseKind Kind = OMPC_ORDER_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Argument of clause.
+  void setKind(OpenMPOrderClauseKind K) { Kind = K; }
+
+  /// Set argument location.
+  ///
+  /// \param KLoc Argument location.
+  void setKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
+
+public:
+  /// Build 'order' clause with argument \p A ('concurrent').
+  ///
+  /// \param A Argument of the clause ('concurrent').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPOrderClause(OpenMPOrderClauseKind A, SourceLocation ALoc,
+                 SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPClause(OMPC_order, StartLoc, EndLoc), LParenLoc(LParenLoc), Kind(A),
+        KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPOrderClause()
+      : OMPClause(OMPC_order, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPOrderClauseKind getKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_order;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>
 class OMPClauseVisitorBase {
 public:
-#define PTR(CLASS) typename Ptr<CLASS>::type
+#define PTR(CLASS) Ptr<CLASS>
 #define DISPATCH(CLASS) \
   return static_cast<ImplClass*>(this)->Visit##CLASS(static_cast<PTR(CLASS)>(S))
 
@@ -6395,12 +6635,11 @@ public:
 #undef DISPATCH
 };
 
-template <typename T>
-using const_ptr = typename std::add_pointer<typename std::add_const<T>::type>;
+template <typename T> using const_ptr = std::add_pointer_t<std::add_const_t<T>>;
 
-template<class ImplClass, typename RetTy = void>
-class OMPClauseVisitor :
-      public OMPClauseVisitorBase <ImplClass, std::add_pointer, RetTy> {};
+template <class ImplClass, typename RetTy = void>
+class OMPClauseVisitor
+    : public OMPClauseVisitorBase<ImplClass, std::add_pointer_t, RetTy> {};
 template<class ImplClass, typename RetTy = void>
 class ConstOMPClauseVisitor :
       public OMPClauseVisitorBase <ImplClass, const_ptr, RetTy> {};
@@ -6419,6 +6658,53 @@ public:
 #define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
 #include "clang/Basic/OpenMPKinds.def"
 };
+
+/// Helper data structure representing the traits in a match clause of an
+/// `declare variant` or `metadirective`. The outer level is an ordered
+/// collection of selector sets, each with an associated kind and an ordered
+/// collection of selectors. A selector has a kind, an optional score/condition,
+/// and an ordered collection of properties.
+struct OMPTraitInfo {
+  struct OMPTraitProperty {
+    llvm::omp::TraitProperty Kind = llvm::omp::TraitProperty::invalid;
+  };
+  struct OMPTraitSelector {
+    Expr *ScoreOrCondition = nullptr;
+    llvm::omp::TraitSelector Kind = llvm::omp::TraitSelector::invalid;
+    llvm::SmallVector<OMPTraitProperty, 4> Properties;
+  };
+  struct OMPTraitSet {
+    llvm::omp::TraitSet Kind = llvm::omp::TraitSet::invalid;
+    llvm::SmallVector<OMPTraitSelector, 4> Selectors;
+  };
+
+  /// The outermost level of selector sets.
+  llvm::SmallVector<OMPTraitSet, 4> Sets;
+
+  bool anyScoreOrCondition(
+      const llvm::function_ref<bool(Expr *&, bool /* IsScore */)> &Cond) {
+    return llvm::any_of(Sets, [&Cond](OMPTraitInfo::OMPTraitSet &Set) {
+      return llvm::any_of(
+          Set.Selectors, [&Cond](OMPTraitInfo::OMPTraitSelector &Selector) {
+            return Cond(Selector.ScoreOrCondition,
+                        /* IsScore */ Selector.Kind !=
+                            llvm::omp::TraitSelector::user_condition);
+          });
+    });
+  }
+
+  /// Create a variant match info object from this trait info object. While the
+  /// former is a flat representation the actual main difference is that the
+  /// latter uses clang::Expr to store the score/condition while the former is
+  /// independent of clang. Thus, expressions and conditions are evaluated in
+  /// this method.
+  void getAsVariantMatchInfo(ASTContext &ASTCtx,
+                             llvm::omp::VariantMatchInfo &VMI) const;
+
+  /// Print a human readable representation into \p OS.
+  void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
 
 } // namespace clang
 

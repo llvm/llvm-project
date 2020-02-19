@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueFileSpecList_h_
-#define liblldb_OptionValueFileSpecList_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEFILESPECLIST_H
+#define LLDB_INTERPRETER_OPTIONVALUEFILESPECLIST_H
 
 #include <mutex>
 
@@ -74,4 +74,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueFileSpecList_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEFILESPECLIST_H

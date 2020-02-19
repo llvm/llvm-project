@@ -3,10 +3,10 @@
 ## This test case checks how we built a histogram for a GNU hash section.
 ## We check both 32-bit and 64-bit inputs.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1-32.o
+# RUN: yaml2obj --docnum=1 -D BITS=32 %s -o %t1-32.o
 # RUN: llvm-readelf --elf-hash-histogram %t1-32.o | FileCheck %s --check-prefix=GNU-HASH
 
-# RUN: yaml2obj --docnum=2 %s -o %t1-64.o
+# RUN: yaml2obj --docnum=1 -D BITS=64 %s -o %t1-64.o
 # RUN: llvm-readelf --elf-hash-histogram %t1-64.o | FileCheck %s --check-prefix=GNU-HASH
 
 # GNU-HASH:      Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
@@ -18,7 +18,7 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_386
@@ -51,45 +51,10 @@ ProgramHeaders:
       - Section: .gnu.hash
       - Section: .dynamic
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:  .gnu.hash
-    Type:  SHT_GNU_HASH
-    Flags: [ SHF_ALLOC ]
-    Header:
-      SymNdx: 0x1
-      Shift2: 0x0
-    BloomFilter: [ 0x0 ]
-    HashBuckets: [ 0x00000001, 0x00000004, 0x00000000 ]
-    HashValues:  [ 0x0B887388, 0xECD54542, 0x7C92E3BB, 0x1C5871D9 ]
-  - Name:    .dynamic
-    Type:    SHT_DYNAMIC
-    Flags:   [ SHF_WRITE, SHF_ALLOC ]
-    Entries:
-      - Tag:   DT_GNU_HASH
-        Value: 0x0
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols:
-  - Name: a
-  - Name: b
-  - Name: c
-  - Name: d
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
-
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
 
-# RUN: yaml2obj --docnum=3 %s -o %t2.o
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: llvm-readelf --elf-hash-histogram 2>&1 %t2.o | FileCheck -DFILE=%t2.o %s --check-prefix=BROKEN
 
 # BROKEN:       warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain

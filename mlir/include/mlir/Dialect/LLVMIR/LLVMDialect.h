@@ -137,7 +137,10 @@ public:
     return getStructTy(&elt1.getDialect(), fields);
   }
   static LLVMType getVectorTy(LLVMType elementType, unsigned numElements);
+
+  /// Void type utilities.
   static LLVMType getVoidTy(LLVMDialect *dialect);
+  bool isVoidTy();
 
   // Creation and setting of LLVM's identified struct types
   static LLVMType createStructTy(LLVMDialect *dialect,

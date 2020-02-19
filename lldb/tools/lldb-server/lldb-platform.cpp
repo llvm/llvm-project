@@ -96,7 +96,7 @@ static void display_usage(const char *progname, const char *subcommand) {
 
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
-  FileSpec temp_file_spec(file_spec.GetDirectory().AsCString());
+  FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Status("Failed to create directory %s: %s",

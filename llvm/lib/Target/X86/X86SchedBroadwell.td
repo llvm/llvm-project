@@ -1480,54 +1480,42 @@ def BWWriteResGroup182 : SchedWriteRes<[BWPort0,BWPort1,BWPort23]> {
 def: InstRW<[BWWriteResGroup182], (instregex "DIVR_FI(16|32)m")>;
 
 def BWWriteResGroup183_1 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 22;
+  let Latency = 17;
   let NumMicroOps = 7;
   let ResourceCycles = [1,3,2,1];
 }
-def: InstRW<[BWWriteResGroup183_1], (instrs VGATHERQPDrm)>;
+def: InstRW<[BWWriteResGroup183_1], (instrs VGATHERDPDrm, VPGATHERDQrm,
+                                            VGATHERQPDrm, VPGATHERQQrm)>;
 
 def BWWriteResGroup183_2 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 23;
+  let Latency = 18;
   let NumMicroOps = 9;
   let ResourceCycles = [1,3,4,1];
 }
-def: InstRW<[BWWriteResGroup183_2], (instrs VGATHERQPDYrm)>;
+def: InstRW<[BWWriteResGroup183_2], (instrs VGATHERDPDYrm, VPGATHERDQYrm,
+                                            VGATHERQPDYrm, VPGATHERQQYrm)>;
 
 def BWWriteResGroup183_3 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 24;
+  let Latency = 19;
   let NumMicroOps = 9;
   let ResourceCycles = [1,5,2,1];
 }
-def: InstRW<[BWWriteResGroup183_3], (instrs VGATHERQPSYrm)>;
+def: InstRW<[BWWriteResGroup183_3], (instrs VGATHERQPSrm, VPGATHERQDrm)>;
 
 def BWWriteResGroup183_4 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 25;
-  let NumMicroOps = 7;
-  let ResourceCycles = [1,3,2,1];
+  let Latency = 19;
+  let NumMicroOps = 10;
+  let ResourceCycles = [1,4,4,1];
 }
-def: InstRW<[BWWriteResGroup183_4], (instrs VGATHERDPDrm,
-                                            VGATHERDPSrm)>;
+def: InstRW<[BWWriteResGroup183_4], (instrs VGATHERDPSrm, VPGATHERDDrm,
+                                            VGATHERQPSYrm, VPGATHERQDYrm)>;
 
 def BWWriteResGroup183_5 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 26;
-  let NumMicroOps = 9;
-  let ResourceCycles = [1,5,2,1];
-}
-def: InstRW<[BWWriteResGroup183_5], (instrs VGATHERDPDYrm)>;
-
-def BWWriteResGroup183_6 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 26;
+  let Latency = 21;
   let NumMicroOps = 14;
   let ResourceCycles = [1,4,8,1];
 }
-def: InstRW<[BWWriteResGroup183_6], (instrs VGATHERDPSYrm)>;
-
-def BWWriteResGroup183_7 : SchedWriteRes<[BWPort4, BWPort5, BWPort23, BWPort0156]> {
-  let Latency = 27;
-  let NumMicroOps = 9;
-  let ResourceCycles = [1,5,2,1];
-}
-def: InstRW<[BWWriteResGroup183_7], (instrs VGATHERQPSrm)>;
+def: InstRW<[BWWriteResGroup183_5], (instrs VGATHERDPSYrm, VPGATHERDDYrm)>;
 
 def BWWriteResGroup185 : SchedWriteRes<[BWPort4,BWPort6,BWPort23,BWPort237,BWPort0156]> {
   let Latency = 29;

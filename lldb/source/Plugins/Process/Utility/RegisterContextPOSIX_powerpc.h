@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextPOSIX_powerpc_h_
-#define liblldb_RegisterContextPOSIX_powerpc_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_POWERPC_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_POWERPC_H
 
 #include "RegisterContext_powerpc.h"
 #include "RegisterInfoInterface.h"
@@ -199,4 +199,4 @@ protected:
   virtual bool WriteVMX() = 0;
 };
 
-#endif // liblldb_RegisterContextPOSIX_powerpc_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_POWERPC_H

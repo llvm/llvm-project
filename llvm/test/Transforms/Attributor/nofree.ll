@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 ; Copied from Transforms/FunctoinAttrs/nofree-attributor.ll
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -183,12 +183,20 @@ define void @call_both() #0 {
 declare float @llvm.floor.f32(float)
 
 ; FIXME: missing nofree
-; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; ATTRIBUTOR-NEXT: define void @call_floor(float %a)
 
 define void @call_floor(float %a) #0 {
     tail call float @llvm.floor.f32(float %a)
     ret void
+}
+
+; FIXME: missing nofree
+; ATTRIBUTOR: Function Attrs: noinline nosync nounwind readnone uwtable
+; ATTRIBUTOR-NEXT: define float @call_floor2(float %a)
+define float @call_floor2(float %a) #0 {
+    %c = tail call float @llvm.floor.f32(float %a)
+    ret float %c
 }
 
 ; TEST 11 (positive case)

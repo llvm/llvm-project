@@ -393,6 +393,8 @@ public:
   explicit SystemZTargetLowering(const TargetMachine &TM,
                                  const SystemZSubtarget &STI);
 
+  bool useSoftFloat() const override;
+
   // Override TargetLowering.
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
@@ -437,6 +439,14 @@ public:
                                       bool *Fast) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
+
+  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                            bool MathUsed) const override {
+    // Using overflow ops for overflow checks only should beneficial on
+    // SystemZ.
+    return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+  }
+
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
@@ -470,6 +480,9 @@ public:
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
+
+  Register getRegisterByName(const char *RegName, LLT VT,
+                             const MachineFunction &MF) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.

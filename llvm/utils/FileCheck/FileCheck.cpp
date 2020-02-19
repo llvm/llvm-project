@@ -616,6 +616,8 @@ int main(int argc, char **argv) {
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
+  if (InputFilename == "-")
+    InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {
     errs() << "Could not open input file '" << InputFilename
            << "': " << EC.message() << '\n';
@@ -648,7 +650,7 @@ int main(int argc, char **argv) {
       (ExitCode == 1 && DumpInput == DumpInputFail)) {
     errs() << "\n"
            << "Input file: "
-           << (InputFilename == "-" ? "<stdin>" : InputFilename.getValue())
+           << InputFilename
            << "\n"
            << "Check file: " << CheckFilename << "\n"
            << "\n"

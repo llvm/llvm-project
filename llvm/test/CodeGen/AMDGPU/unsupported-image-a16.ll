@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not --crash llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Make sure this doesn't assert on targets without the r128-16
 ; feature, and instead generates a slection error.

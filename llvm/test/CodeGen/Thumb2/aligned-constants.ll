@@ -13,7 +13,7 @@ target triple = "thumbv7-apple-ios"
 ; CHECK:	.long	2370821947
 ; CHECK:	.long	1080815255
 ; CHECK: LCPI
-; CHECK:	.long	1123477881
+; CHECK:	.long	0x42f6e979
 define void @func(float* nocapture %x, double* nocapture %y) nounwind ssp {
 entry:
   %0 = load float, float* %x, align 4

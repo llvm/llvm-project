@@ -816,6 +816,8 @@ public:
   StringRef getNormalizedGCCRegisterName(StringRef Name,
                                          bool ReturnCanonical = false) const;
 
+  virtual bool isSPRegName(StringRef) const { return false; }
+
   /// Extracts a register from the passed constraint (if it is a
   /// single-register constraint) and the asm label expression related to a
   /// variable in the input or output list of an inline asm statement.

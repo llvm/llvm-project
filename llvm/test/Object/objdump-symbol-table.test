@@ -68,7 +68,7 @@ Symbols:
 # RUN: llvm-objdump -t %p/Inputs/trivial-object-test.macho-i386 \
 # RUN:              | FileCheck %s -check-prefix macho-i386
 
-# macho-i386: trivial-object-test.macho-i386:        file format Mach-O 32-bit i386
+# macho-i386: trivial-object-test.macho-i386:        file format mach-o 32-bit i386
 # macho-i386: SYMBOL TABLE:
 # macho-i386: 00000000 g     F __TEXT,__text  _main
 # macho-i386: 00000000         *UND*          _SomeOtherFunction

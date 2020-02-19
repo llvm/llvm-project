@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_lldb_private_h_
-#define lldb_lldb_private_h_
+#ifndef LLDB_LLDB_PRIVATE_H
+#define LLDB_LLDB_PRIVATE_H
 
 #if defined(__cplusplus)
 
@@ -25,4 +25,4 @@ const char *GetVersion();
 
 #endif // defined(__cplusplus)
 
-#endif // lldb_lldb_private_h_
+#endif // LLDB_LLDB_PRIVATE_H

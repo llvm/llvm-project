@@ -272,7 +272,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   }
 
   // Now copy over the contents of the body.
-  for (auto &op : parallelOp.body().front().without_terminator())
+  for (auto &op : parallelOp.getBody()->without_terminator())
     rewriter.clone(op, mapping);
 
   rewriter.eraseOp(parallelOp);

@@ -17,29 +17,25 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i8 @cttz_i8(i8 %x)  {
 ; X32-LABEL: cttz_i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    bsfl %eax, %eax
+; X32-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    bsfl %eax, %eax
+; X64-NEXT:    bsfl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: cttz_i8:
 ; X32-CLZ:       # %bb.0:
-; X32-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-CLZ-NEXT:    tzcntl %eax, %eax
+; X32-CLZ-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
 ; X32-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: cttz_i8:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    movzbl %dil, %eax
-; X64-CLZ-NEXT:    tzcntl %eax, %eax
+; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp = call i8 @llvm.cttz.i8( i8 %x, i1 true )
@@ -503,17 +499,16 @@ define i8 @cttz_i8_zero_test(i8 %n) {
 ;
 ; X32-CLZ-LABEL: cttz_i8_zero_test:
 ; X32-CLZ:       # %bb.0:
-; X32-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-CLZ-NEXT:    orl $256, %eax # imm = 0x100
+; X32-CLZ-NEXT:    movl $256, %eax # imm = 0x100
+; X32-CLZ-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X32-CLZ-NEXT:    tzcntl %eax, %eax
 ; X32-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: cttz_i8_zero_test:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    movzbl %dil, %eax
-; X64-CLZ-NEXT:    orl $256, %eax # imm = 0x100
-; X64-CLZ-NEXT:    tzcntl %eax, %eax
+; X64-CLZ-NEXT:    orl $256, %edi # imm = 0x100
+; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp1 = call i8 @llvm.cttz.i8(i8 %n, i1 false)

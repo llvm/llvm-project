@@ -9,14 +9,32 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace llvm {
 
+struct SymbolInfoTy {
+	uint64_t  Addr;
+	StringRef Name;
+	uint8_t   Type;
+
+        SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
+            : Addr(Addr), Name(Name), Type(Type){};
+
+        friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
+          return std::tie(P1.Addr, P1.Name, P1.Type) <
+                 std::tie(P2.Addr, P2.Name, P2.Type);
+        }
+};
+
+using SectionSymbolsTy = std::vector<SymbolInfoTy>;
+
+
 template <typename T> class ArrayRef;
-class StringRef;
 class MCContext;
 class MCInst;
 class MCSubtargetInfo;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LineEntry_h_
-#define liblldb_LineEntry_h_
+#ifndef LLDB_SYMBOL_LINEENTRY_H
+#define LLDB_SYMBOL_LINEENTRY_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/FileSpec.h"
@@ -173,4 +173,4 @@ bool operator<(const LineEntry &lhs, const LineEntry &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_LineEntry_h_
+#endif // LLDB_SYMBOL_LINEENTRY_H

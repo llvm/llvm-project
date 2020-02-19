@@ -17,6 +17,7 @@
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": " a",
+# CHECK-NEXT:      "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:      "sortText": "{{.*}}a"
 # CHECK-NEXT:      "textEdit": {
 # CHECK-NEXT:        "newText": "a",
@@ -50,6 +51,7 @@
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": " b",
+# CHECK-NEXT:      "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:      "sortText": "{{.*}}b"
 # CHECK-NEXT:      "textEdit": {
 # CHECK-NEXT:        "newText": "b",

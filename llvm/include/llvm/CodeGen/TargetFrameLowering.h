@@ -213,7 +213,7 @@ public:
   /// storeRegToStackSlot(). Returns false otherwise.
   virtual bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
-                                        const std::vector<CalleeSavedInfo> &CSI,
+                                         ArrayRef<CalleeSavedInfo> CSI,
                                          const TargetRegisterInfo *TRI) const {
     return false;
   }

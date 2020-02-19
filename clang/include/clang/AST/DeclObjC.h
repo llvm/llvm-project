@@ -402,7 +402,7 @@ public:
   }
 
   /// createImplicitParams - Used to lazily create the self and cmd
-  /// implict parameters. This must be called prior to using getSelfDecl()
+  /// implicit parameters. This must be called prior to using getSelfDecl()
   /// or getCmdDecl(). The call is ignored if the implicit parameters
   /// have already been created.
   void createImplicitParams(ASTContext &Context, const ObjCInterfaceDecl *ID);

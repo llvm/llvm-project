@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYSTEMINITIALIZERLLGS_H
-#define LLDB_SYSTEMINITIALIZERLLGS_H
+#ifndef LLDB_TOOLS_LLDB_SERVER_SYSTEMINITIALIZERLLGS_H
+#define LLDB_TOOLS_LLDB_SERVER_SYSTEMINITIALIZERLLGS_H
 
 #include "lldb/Initialization/SystemInitializer.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
@@ -18,4 +18,4 @@ public:
   void Terminate() override;
 };
 
-#endif // LLDB_SYSTEMINITIALIZERLLGS_H
+#endif // LLDB_TOOLS_LLDB_SERVER_SYSTEMINITIALIZERLLGS_H

@@ -64,7 +64,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_HEX_IE_GOT_32;
     case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
       return ELF::R_HEX_LD_GOT_32;
-    case MCSymbolRefExpr::VariantKind::VK_Hexagon_PCREL:
+    case MCSymbolRefExpr::VariantKind::VK_PCREL:
       return ELF::R_HEX_32_PCREL;
     case MCSymbolRefExpr::VariantKind::VK_TPREL:
       return ELF::R_HEX_TPREL_32;

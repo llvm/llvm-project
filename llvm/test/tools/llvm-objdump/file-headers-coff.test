@@ -9,6 +9,6 @@ header: !Header
 sections:
 symbols:
 
-# CHECK: [[FILE]]: file format COFF-i386
+# CHECK: [[FILE]]: file format coff-i386
 # CHECK: architecture: i386
 # CHECK: start address: 0x00000000

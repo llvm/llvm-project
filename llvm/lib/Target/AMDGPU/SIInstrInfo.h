@@ -184,7 +184,7 @@ public:
   bool
   getMemOperandsWithOffset(const MachineInstr &LdSt,
                            SmallVectorImpl<const MachineOperand *> &BaseOps,
-                           int64_t &Offset,
+                           int64_t &Offset, bool &OffsetIsScalable,
                            const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
@@ -220,13 +220,13 @@ public:
                     unsigned SrcReg, int Value)  const;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, unsigned SrcReg,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
@@ -831,7 +831,7 @@ public:
                                    MI.getParent()->getParent()->getRegInfo().
                                      getRegClass(MO.getReg()), SubReg)) >= 32 &&
                "Sub-dword subregs are not supported");
-        return RI.getSubRegIndexLaneMask(SubReg).getNumLanes() * 4;
+        return RI.getNumChannelsFromSubReg(SubReg) * 4;
       }
     }
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;

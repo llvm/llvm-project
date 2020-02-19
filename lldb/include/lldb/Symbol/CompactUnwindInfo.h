@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompactUnwindInfo_h_
-#define liblldb_CompactUnwindInfo_h_
+#ifndef LLDB_SYMBOL_COMPACTUNWINDINFO_H
+#define LLDB_SYMBOL_COMPACTUNWINDINFO_H
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -164,4 +164,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CompactUnwindInfo_h_
+#endif // LLDB_SYMBOL_COMPACTUNWINDINFO_H

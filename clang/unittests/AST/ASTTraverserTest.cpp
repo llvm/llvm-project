@@ -96,7 +96,7 @@ template <typename... NodeType> std::string dumpASTString(NodeType &&... N) {
 }
 
 template <typename... NodeType>
-std::string dumpASTString(ast_type_traits::TraversalKind TK, NodeType &&... N) {
+std::string dumpASTString(TraversalKind TK, NodeType &&... N) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
 
@@ -120,15 +120,13 @@ const FunctionDecl *getFunctionNode(clang::ASTUnit *AST,
 
 template <typename T> struct Verifier {
   static void withDynNode(T Node, const std::string &DumpString) {
-    EXPECT_EQ(dumpASTString(ast_type_traits::DynTypedNode::create(Node)),
-              DumpString);
+    EXPECT_EQ(dumpASTString(DynTypedNode::create(Node)), DumpString);
   }
 };
 
 template <typename T> struct Verifier<T *> {
   static void withDynNode(T *Node, const std::string &DumpString) {
-    EXPECT_EQ(dumpASTString(ast_type_traits::DynTypedNode::create(*Node)),
-              DumpString);
+    EXPECT_EQ(dumpASTString(DynTypedNode::create(*Node)), DumpString);
   }
 };
 
@@ -280,7 +278,7 @@ struct MyStruct {
       AST->getASTContext());
   EXPECT_EQ(BN.size(), 1u);
 
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
                           BN[0].getNodeAs<Decl>("ctor")),
             R"cpp(
 CXXConstructorDecl 'MyStruct'
@@ -289,9 +287,8 @@ CXXConstructorDecl 'MyStruct'
   `-CXXTemporaryObjectExpr
 )cpp");
 
-  EXPECT_EQ(
-      dumpASTString(ast_type_traits::TK_AsIs, BN[0].getNodeAs<Decl>("ctor")),
-      R"cpp(
+  EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("ctor")),
+            R"cpp(
 CXXConstructorDecl 'MyStruct'
 |-ParmVarDecl 'i'
 `-CompoundStmt
@@ -321,7 +318,7 @@ void foo()
                                 AST->getASTContext());
   EXPECT_EQ(BN.size(), 1u);
 
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
                           BN[0].getNodeAs<Decl>("fn")),
             R"cpp(
 FunctionDecl 'foo'
@@ -330,9 +327,8 @@ FunctionDecl 'foo'
     `-DeclRefExpr 'someFun'
 )cpp");
 
-  EXPECT_EQ(
-      dumpASTString(ast_type_traits::TK_AsIs, BN[0].getNodeAs<Decl>("fn")),
-      R"cpp(
+  EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Decl>("fn")),
+            R"cpp(
 FunctionDecl 'foo'
 `-CompoundStmt
   `-ExprWithCleanups
@@ -437,7 +433,7 @@ FunctionDecl 'func1'
               `-IntegerLiteral
 )cpp";
 
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_AsIs, FN), Expected);
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN), Expected);
 
     Expected = R"cpp(
 FunctionDecl 'func1'
@@ -445,9 +441,7 @@ FunctionDecl 'func1'
   `-ReturnStmt
     `-IntegerLiteral
 )cpp";
-    EXPECT_EQ(
-        dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, FN),
-        Expected);
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, FN), Expected);
   }
 
   llvm::StringRef Expected = R"cpp(
@@ -457,9 +451,9 @@ FunctionDecl 'func2'
     `-CXXTemporaryObjectExpr
       `-IntegerLiteral
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func2")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func2")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func3'
@@ -468,9 +462,9 @@ FunctionDecl 'func3'
     `-CXXFunctionalCastExpr
       `-IntegerLiteral
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func3")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func3")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func4'
@@ -478,9 +472,9 @@ FunctionDecl 'func4'
   `-ReturnStmt
     `-CXXTemporaryObjectExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func4")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func4")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func5'
@@ -488,9 +482,9 @@ FunctionDecl 'func5'
   `-ReturnStmt
     `-CXXTemporaryObjectExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func5")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func5")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func6'
@@ -498,9 +492,9 @@ FunctionDecl 'func6'
   `-ReturnStmt
     `-CXXTemporaryObjectExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func6")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func6")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func7'
@@ -508,9 +502,9 @@ FunctionDecl 'func7'
   `-ReturnStmt
     `-CXXTemporaryObjectExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func7")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func7")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func8'
@@ -519,9 +513,9 @@ FunctionDecl 'func8'
     `-CXXFunctionalCastExpr
       `-InitListExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func8")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func8")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func9'
@@ -530,9 +524,9 @@ FunctionDecl 'func9'
     `-CXXFunctionalCastExpr
       `-InitListExpr
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func9")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func9")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func10'
@@ -543,9 +537,9 @@ FunctionDecl 'func10'
   `-ReturnStmt
     `-DeclRefExpr 'a'
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func10")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func10")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func11'
@@ -556,9 +550,9 @@ FunctionDecl 'func11'
   `-ReturnStmt
     `-DeclRefExpr 'b'
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func11")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func11")),
+      Expected);
 
   Expected = R"cpp(
 FunctionDecl 'func12'
@@ -569,9 +563,9 @@ FunctionDecl 'func12'
   `-ReturnStmt
     `-DeclRefExpr 'c'
 )cpp";
-  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
-                          getFunctionNode("func12")),
-            Expected);
+  EXPECT_EQ(
+      dumpASTString(TK_IgnoreUnlessSpelledInSource, getFunctionNode("func12")),
+      Expected);
 }
 
 TEST(Traverse, LambdaUnlessSpelledInSource) {
@@ -629,8 +623,7 @@ LambdaExpr
 | `-IntegerLiteral
 `-CompoundStmt
 )cpp";
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
-              Expected);
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, L), Expected);
 
     Expected = R"cpp(
 LambdaExpr
@@ -653,7 +646,7 @@ LambdaExpr
 |-DeclRefExpr 'f'
 `-CompoundStmt
 )cpp";
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_AsIs, L), Expected);
+    EXPECT_EQ(dumpASTString(TK_AsIs, L), Expected);
   }
 
   {
@@ -666,8 +659,7 @@ LambdaExpr
 |-ParmVarDecl 't'
 `-CompoundStmt
 )cpp";
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
-              Expected);
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, L), Expected);
   }
 
   {
@@ -678,8 +670,7 @@ LambdaExpr
 |-CXXThisExpr
 `-CompoundStmt
 )cpp";
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
-              Expected);
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, L), Expected);
   }
 
   {
@@ -692,8 +683,7 @@ LambdaExpr
 |   `-CXXThisExpr
 `-CompoundStmt
 )cpp";
-    EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource, L),
-              Expected);
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, L), Expected);
   }
 }
 

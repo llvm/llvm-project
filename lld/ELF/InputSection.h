@@ -357,6 +357,10 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
+inline bool isDebugSection(const InputSectionBase &sec) {
+  return sec.name.startswith(".debug") || sec.name.startswith(".zdebug");
+}
+
 // The list of all input sections.
 extern std::vector<InputSectionBase *> inputSections;
 

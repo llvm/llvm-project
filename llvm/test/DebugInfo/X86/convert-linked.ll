@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: [[CU0BT0:0x[0-9a-f]+]]: DW_TAG_base_type
@@ -16,22 +16,17 @@
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_OP_convert ([[CU1BT0]]) "DW_ATE_signed_8", DW_OP_convert ([[CU1BT1]]) "DW_ATE_signed_16"
 
-; ModuleID = 'llvm-link'
-source_filename = "llvm-link"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 define dso_local signext i8 @foo(i8 signext %x) !dbg !9 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !13, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.value(metadata i8 %x, metadata !15, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !17
+  call void @llvm.dbg.value(metadata i8 32, metadata !15, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !17
   ret i8 %x, !dbg !18
 }
 
 define dso_local signext i8 @bar(i8 signext %x) !dbg !19 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !20, metadata !DIExpression()), !dbg !21
-  call void @llvm.dbg.value(metadata i8 %x, metadata !22, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value)), !dbg !24
+  call void @llvm.dbg.value(metadata i8 32, metadata !22, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value)), !dbg !24
   ret i8 %x, !dbg !25
 }
 

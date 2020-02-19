@@ -10,7 +10,7 @@ declare i32 @llvm.arm.space(i32, i32)
 ; Check that the constant island pass moves the float constant pool entry inside
 ; the function.
 
-; CHECK: .long 1067320814 @ float 1.23455596
+; CHECK: .long 0x3f9e05ee @ float 1.23455596
 ; CHECK: {{.*}} %do.end
 
 define i32 @testpadding(i32 %a) {

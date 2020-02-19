@@ -454,40 +454,26 @@ void DWARFFormValue::Dump(Stream &s) const {
 }
 
 const char *DWARFFormValue::AsCString() const {
-  SymbolFileDWARF &symbol_file = m_unit->GetSymbolFileDWARF();
+  DWARFContext &context = m_unit->GetSymbolFileDWARF().GetDWARFContext();
 
-  if (m_form == DW_FORM_string) {
+  if (m_form == DW_FORM_string)
     return m_value.value.cstr;
-  } else if (m_form == DW_FORM_strp) {
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
-        m_value.value.uval);
-  } else if (m_form == DW_FORM_GNU_str_index) {
-    uint32_t index_size = 4;
-    lldb::offset_t offset = m_value.value.uval * index_size;
-    dw_offset_t str_offset =
-        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-            &offset, index_size);
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
-        str_offset);
-  }
+  if (m_form == DW_FORM_strp)
+    return context.getOrLoadStrData().PeekCStr(m_value.value.uval);
 
-  if (m_form == DW_FORM_strx || m_form == DW_FORM_strx1 ||
-      m_form == DW_FORM_strx2 || m_form == DW_FORM_strx3 ||
-      m_form == DW_FORM_strx4) {
+  if (m_form == DW_FORM_GNU_str_index || m_form == DW_FORM_strx ||
+      m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
+      m_form == DW_FORM_strx3 || m_form == DW_FORM_strx4) {
 
-    // The same code as above.
-    uint32_t indexSize = 4;
-    lldb::offset_t offset =
-        m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
-    dw_offset_t strOffset =
-        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-            &offset, indexSize);
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(strOffset);
+    llvm::Optional<uint64_t> offset =
+        m_unit->GetStringOffsetSectionItem(m_value.value.uval);
+    if (!offset)
+      return nullptr;
+    return context.getOrLoadStrData().PeekCStr(*offset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return symbol_file.GetDWARFContext().getOrLoadLineStrData().PeekCStr(
-        m_value.value.uval);
+    return context.getOrLoadLineStrData().PeekCStr(m_value.value.uval);
 
   return nullptr;
 }

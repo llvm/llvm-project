@@ -137,8 +137,15 @@ static void performAllocations(LargeAllocator *L) {
     while (!Ready)
       Cv.wait(Lock);
   }
-  for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate((std::rand() % 16) * PageSize));
+  for (scudo::uptr I = 0; I < 128U; I++) {
+    // Deallocate 75% of the blocks.
+    const bool Deallocate = (rand() & 3) != 0;
+    void *P = L->allocate((std::rand() % 16) * PageSize);
+    if (Deallocate)
+      L->deallocate(P);
+    else
+      V.push_back(P);
+  }
   while (!V.empty()) {
     L->deallocate(V.back());
     V.pop_back();
@@ -147,9 +154,9 @@ static void performAllocations(LargeAllocator *L) {
 
 TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   LargeAllocator *L = new LargeAllocator;
-  L->init(nullptr);
-  std::thread Threads[10];
-  for (scudo::uptr I = 0; I < 10U; I++)
+  L->init(nullptr, /*ReleaseToOsInterval=*/0);
+  std::thread Threads[16];
+  for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(performAllocations, L);
   {
     std::unique_lock<std::mutex> Lock(Mutex);

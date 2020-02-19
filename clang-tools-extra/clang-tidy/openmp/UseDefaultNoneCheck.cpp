@@ -48,7 +48,7 @@ void UseDefaultNoneCheck::check(const MatchFinder::MatchResult &Result) {
          "'default(none)' clause instead")
         << getOpenMPDirectiveName(Directive->getDirectiveKind())
         << getOpenMPSimpleClauseTypeName(Clause->getClauseKind(),
-                                         Clause->getDefaultKind());
+                                         unsigned(Clause->getDefaultKind()));
     diag(Clause->getBeginLoc(), "existing 'default' clause specified here",
          DiagnosticIDs::Note);
     return;

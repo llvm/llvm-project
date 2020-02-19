@@ -17,12 +17,14 @@ add_llvm_library(MLIRTestDialect
 )
 add_dependencies(MLIRTestDialect
   MLIRTestOpsIncGen
-  MLIRIR
-  LLVMSupport
   MLIRTypeInferOpInterfaceIncGen
 )
 target_link_libraries(MLIRTestDialect
   MLIRDialect
   MLIRIR
+  MLIRLinalgTransforms
+  MLIRPass
+  MLIRTransforms
+  MLIRTransformUtils
   LLVMSupport
 )

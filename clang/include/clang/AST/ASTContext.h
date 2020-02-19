@@ -94,6 +94,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
 class ParentMapContext;
+class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
 class FixedPointSemantics;
@@ -130,9 +131,6 @@ class VarTemplateDecl;
 class VTableContextBase;
 struct BlockVarCopyInit;
 
-namespace ast_type_traits {
-class DynTypedNode;
-}
 
 namespace Builtin {
 

@@ -39,8 +39,8 @@
 // CHECK-LABEL: define void @foo() #0
 extern "C" __device__ void foo() {}
 
-// FTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="preserve-sign"
-// NOFTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="ieee"
+// FTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// NOFTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="ieee,ieee"
 
 
 // FIXME: This should be removed

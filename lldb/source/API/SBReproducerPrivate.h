@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBREPRODUCER_PRIVATE_H
-#define LLDB_API_SBREPRODUCER_PRIVATE_H
+#ifndef LLDB_SOURCE_API_SBREPRODUCERPRIVATE_H
+#define LLDB_SOURCE_API_SBREPRODUCERPRIVATE_H
 
 #include "lldb/API/SBReproducer.h"
 

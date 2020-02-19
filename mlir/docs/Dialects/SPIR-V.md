@@ -736,12 +736,51 @@ instructions.
 
 SPIR-V compilation should also take into consideration of the execution
 environment, so we generate SPIR-V modules valid for the target environment.
-This is conveyed by the `spv.target_env` attribute. It is a triple of
+This is conveyed by the `spv.target_env` attribute. It should be of
+`#spv.target_env` attribute kind, which is defined as:
 
-*   `version`: a 32-bit integer indicating the target SPIR-V version.
-*   `extensions`: a string array attribute containing allowed extensions.
-*   `capabilities`: a 32-bit integer array attribute containing allowed
-    capabilities.
+```
+spirv-version    ::= `V_1_0` | `V_1_1` | ...
+spirv-extension  ::= `SPV_KHR_16bit_storage` | `SPV_EXT_physical_storage_buffer` | ...
+spirv-capability ::= `Shader` | `Kernel` | `GroupNonUniform` | ...
+
+spirv-extension-list     ::= `[` (spirv-extension-elements)? `]`
+spirv-extension-elements ::= spirv-extension (`,` spirv-extension)*
+
+spirv-capability-list     ::= `[` (spirv-capability-elements)? `]`
+spirv-capability-elements ::= spirv-capability (`,` spirv-capability)*
+
+spirv-resource-limits ::= dictionary-attribute
+
+spirv-target-env-attribute ::= `#` `spv.target_env` `<`
+                                  spirv-version `,`
+                                  spirv-extensions-list `,`
+                                  spirv-capability-list `,`
+                                  spirv-resource-limits `>`
+```
+
+The attribute has a few fields:
+
+*   The target SPIR-V version.
+*   A list of SPIR-V extensions for the target.
+*   A list of SPIR-V capabilities for the target.
+*   A dictionary of target resource limits (see the
+    [Vulkan spec][VulkanResourceLimits] for explanation):
+    *   `max_compute_workgroup_invocations`
+    *   `max_compute_workgroup_size`
+
+For example,
+
+```
+module attributes {
+spv.target_env = #spv.target_env<
+    V_1_3, [SPV_KHR_8bit_storage], [Shader, GroupNonUniform]
+    {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
+    }>
+} { ... }
+```
 
 Dialect conversion framework will utilize the information in `spv.target_env`
 to properly filter out patterns and ops not available in the target execution
@@ -1219,3 +1258,4 @@ dialect.
 [CustomTypeAttrTutorial]: ../DefiningAttributesAndTypes/
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
 [VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources
+[VulkanResourceLimits]: https://renderdoc.org/vkspec_chunked/chap36.html#limits

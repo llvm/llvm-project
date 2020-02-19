@@ -399,6 +399,25 @@ TEST(FuzzedDataProvider, ConsumeFloatingPoint) {
                                        -13.37, 31.337));
 }
 
+TEST(FuzzedDataProvider, ConsumeData) {
+  FuzzedDataProvider DataProv(Data, sizeof(Data));
+  uint8_t Buffer[10] = {};
+  EXPECT_EQ(sizeof(Buffer), DataProv.ConsumeData(Buffer, sizeof(Buffer)));
+  std::vector<uint8_t> Expected(Data, Data + sizeof(Buffer));
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
+
+  EXPECT_EQ(size_t(2), DataProv.ConsumeData(Buffer, 2));
+  Expected[0] = Data[sizeof(Buffer)];
+  Expected[1] = Data[sizeof(Buffer) + 1];
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
+
+  // Exhaust the buffer.
+  EXPECT_EQ(std::vector<uint8_t>(Data + 12, Data + sizeof(Data)),
+            DataProv.ConsumeRemainingBytes<uint8_t>());
+  EXPECT_EQ(size_t(0), DataProv.ConsumeData(Buffer, sizeof(Buffer)));
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
+}
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

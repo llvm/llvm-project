@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
-#define SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
 
@@ -24,16 +24,12 @@ public:
   static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
   /// \}
 
-  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit &dwarf_cu);
+  SymbolFileDWARFDwo(SymbolFileDWARF &m_base_symbol_file,
+                     lldb::ObjectFileSP objfile, uint32_t id);
 
   ~SymbolFileDWARFDwo() override = default;
 
-  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu) override;
-
-  DWARFCompileUnit *GetCompileUnit();
-
-  DWARFUnit *
-  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
   size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
                                  DIEArray &method_die_offsets) override;
@@ -44,14 +40,9 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
-  DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
-
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
 protected:
-  void LoadSectionData(lldb::SectionType sect_type,
-                       lldb_private::DWARFDataExtractor &data) override;
-
   DIEToTypePtr &GetDIEToType() override;
 
   DIEToVariableSP &GetDIEToVariable() override;
@@ -69,12 +60,13 @@ protected:
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
-  SymbolFileDWARF &GetBaseSymbolFile();
+  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
-  DWARFCompileUnit *ComputeCompileUnit();
+  /// If this file contains exactly one compile unit, this function will return
+  /// it. Otherwise it returns nullptr.
+  DWARFCompileUnit *FindSingleCompileUnit();
 
-  DWARFCompileUnit &m_base_dwarf_cu;
-  DWARFCompileUnit *m_cu = nullptr;
+  SymbolFileDWARF &m_base_symbol_file;
 };
 
-#endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H

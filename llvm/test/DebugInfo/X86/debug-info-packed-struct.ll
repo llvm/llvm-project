@@ -5,7 +5,6 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin"
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
 ; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
-; REQUIRES: object-emission
 
 ;  // ---------------------------------------------------------------------
 ;  // Not packed.

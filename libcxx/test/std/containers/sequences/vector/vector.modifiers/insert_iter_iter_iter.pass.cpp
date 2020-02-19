@@ -21,6 +21,11 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
+namespace adl {
+struct S {};
+void make_move_iterator(S*) {}
+}
+
 int main(int, char**)
 {
     {
@@ -171,6 +176,11 @@ int main(int, char**)
             assert(v[j] == 0);
     }
 #endif
+
+    {
+        std::vector<adl::S> s;
+        s.insert(s.end(), input_iterator<adl::S*>(), input_iterator<adl::S*>());
+    }
 
   return 0;
 }

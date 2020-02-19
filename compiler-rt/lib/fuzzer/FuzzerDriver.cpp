@@ -306,8 +306,7 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
-static std::string GetDedupTokenFromFile(const std::string &Path) {
-  auto S = FileToString(Path);
+static std::string GetDedupTokenFromCmdOutput(const std::string &S) {
   auto Beg = S.find("DEDUP_TOKEN:");
   if (Beg == std::string::npos)
     return "";
@@ -332,10 +331,9 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   assert(Cmd.hasArgument(InputFilePath));
   Cmd.removeArgument(InputFilePath);
 
-  auto LogFilePath = TempPath(".txt");
-  auto TmpFilePath = TempPath(".repro");
+  auto TmpFilePath = TempPath("CleanseCrashInput", ".repro");
   Cmd.addArgument(TmpFilePath);
-  Cmd.setOutputFile(LogFilePath);
+  Cmd.setOutputFile(getDevNull());
   Cmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
@@ -370,7 +368,6 @@ int CleanseCrashInput(const Vector<std::string> &Args,
     }
     if (!Changed) break;
   }
-  RemoveFile(LogFilePath);
   return 0;
 }
 
@@ -393,8 +390,6 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     BaseCmd.addFlag("max_total_time", "600");
   }
 
-  auto LogFilePath = TempPath(".txt");
-  BaseCmd.setOutputFile(LogFilePath);
   BaseCmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
@@ -406,17 +401,17 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     Command Cmd(BaseCmd);
     Cmd.addArgument(CurrentFilePath);
 
-    std::string CommandLine = Cmd.toString();
-    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
-    int ExitCode = ExecuteCommand(Cmd);
-    if (ExitCode == 0) {
+    Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
+    std::string CmdOutput;
+    bool Success = ExecuteCommand(Cmd, &CmdOutput);
+    if (Success) {
       Printf("ERROR: the input %s did not crash\n", CurrentFilePath.c_str());
       exit(1);
     }
     Printf("CRASH_MIN: '%s' (%zd bytes) caused a crash. Will try to minimize "
            "it further\n",
            CurrentFilePath.c_str(), U.size());
-    auto DedupToken1 = GetDedupTokenFromFile(LogFilePath);
+    auto DedupToken1 = GetDedupTokenFromCmdOutput(CmdOutput);
     if (!DedupToken1.empty())
       Printf("CRASH_MIN: DedupToken1: %s\n", DedupToken1.c_str());
 
@@ -426,11 +421,11 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
             : Options.ArtifactPrefix + "minimized-from-" + Hash(U);
     Cmd.addFlag("minimize_crash_internal_step", "1");
     Cmd.addFlag("exact_artifact_path", ArtifactPath);
-    CommandLine = Cmd.toString();
-    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
-    ExitCode = ExecuteCommand(Cmd);
-    CopyFileToErr(LogFilePath);
-    if (ExitCode == 0) {
+    Printf("CRASH_MIN: executing: %s\n", Cmd.toString().c_str());
+    CmdOutput.clear();
+    Success = ExecuteCommand(Cmd, &CmdOutput);
+    Printf("%s", CmdOutput.c_str());
+    if (Success) {
       if (Flags.exact_artifact_path) {
         CurrentFilePath = Flags.exact_artifact_path;
         WriteToFile(U, CurrentFilePath);
@@ -439,7 +434,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
              CurrentFilePath.c_str(), U.size());
       break;
     }
-    auto DedupToken2 = GetDedupTokenFromFile(LogFilePath);
+    auto DedupToken2 = GetDedupTokenFromCmdOutput(CmdOutput);
     if (!DedupToken2.empty())
       Printf("CRASH_MIN: DedupToken2: %s\n", DedupToken2.c_str());
 
@@ -456,7 +451,6 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     CurrentFilePath = ArtifactPath;
     Printf("*********************************\n");
   }
-  RemoveFile(LogFilePath);
   return 0;
 }
 
@@ -491,7 +485,7 @@ void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
   std::sort(OldCorpus.begin(), OldCorpus.end());
   std::sort(NewCorpus.begin(), NewCorpus.end());
 
-  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath(".txt");
+  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath("Merge", ".txt");
   Vector<std::string> NewFiles;
   Set<uint32_t> NewFeatures, NewCov;
   CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,

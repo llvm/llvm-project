@@ -4,7 +4,7 @@
 
 # Sanity check that the link will fail with the undefined error without
 # gc-sections.
-# RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: undefined symbol: undefined
 
 # RUN: ld.lld %t.o --gc-sections -o %t

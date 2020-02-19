@@ -344,11 +344,11 @@ Mangled::GetDisplayDemangledName() const {
 }
 
 bool Mangled::NameMatches(const RegularExpression &regex) const {
-  if (m_mangled && regex.Execute(m_mangled.AsCString()))
+  if (m_mangled && regex.Execute(m_mangled.GetStringRef()))
     return true;
 
   ConstString demangled = GetDemangledName();
-  return demangled && regex.Execute(demangled.AsCString());
+  return demangled && regex.Execute(demangled.GetStringRef());
 }
 
 // Get the demangled name if there is one, else return the mangled name.

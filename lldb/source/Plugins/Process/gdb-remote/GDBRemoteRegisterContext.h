@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_GDBRemoteRegisterContext_h_
-#define lldb_GDBRemoteRegisterContext_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTEREGISTERCONTEXT_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTEREGISTERCONTEXT_H
 
 #include <vector>
 
@@ -130,4 +130,4 @@ private:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // lldb_GDBRemoteRegisterContext_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTEREGISTERCONTEXT_H

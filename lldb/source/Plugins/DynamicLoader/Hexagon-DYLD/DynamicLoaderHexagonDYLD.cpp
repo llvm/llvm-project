@@ -25,6 +25,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(DynamicLoaderHexagonDYLD)
+
 // Aidan 21/05/2014
 //
 // Notes about hexagon dynamic loading:

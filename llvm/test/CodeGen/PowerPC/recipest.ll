@@ -292,7 +292,7 @@ define float @goo3_safe(float %a) nounwind {
   ret float %r
 }
 
-define <4 x float> @hoo3_fmf(<4 x float> %a) nounwind {
+define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK: @hoo3_fmf
 ; CHECK: vrsqrtefp
 ; CHECK-DAG: vcmpeqfp
@@ -309,3 +309,4 @@ define <4 x float> @hoo3_safe(<4 x float> %a) nounwind {
 }
 
 attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
+attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }

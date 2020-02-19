@@ -51,7 +51,7 @@ protected:
     randomGenerator().seed(0); // Initialize seed.
     const Instruction &Instr = State.getIC().getInstr(Opcode);
     auto CodeTemplateOrError = Generator.generateCodeTemplates(
-        Instr, State.getRATC().emptyRegisters());
+        &Instr, State.getRATC().emptyRegisters());
     EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
     return std::move(CodeTemplateOrError.get());
   }
@@ -153,7 +153,8 @@ TEST_F(SerialSnippetGeneratorTest,
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   auto AllRegisters = State.getRATC().emptyRegisters();
   AllRegisters.flip();
-  auto Error = Generator.generateCodeTemplates(Instr, AllRegisters).takeError();
+  auto Error =
+      Generator.generateCodeTemplates(&Instr, AllRegisters).takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }
@@ -207,11 +208,12 @@ TEST_F(SerialSnippetGeneratorTest, VCVTUSI642SDZrrb_Int) {
   // - Op4 Implicit Use Reg(MXSCR)
   const unsigned Opcode = X86::VCVTUSI642SDZrrb_Int;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  auto Configs =
-      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters());
-  ASSERT_FALSE(Configs.takeError());
-  ASSERT_THAT(*Configs, SizeIs(1));
-  const BenchmarkCode &BC = (*Configs)[0];
+  std::vector<BenchmarkCode> Configs;
+  auto Error = Generator.generateConfigurations(
+      &Instr, Configs, State.getRATC().emptyRegisters());
+  ASSERT_FALSE(Error);
+  ASSERT_THAT(Configs, SizeIs(1));
+  const BenchmarkCode &BC = Configs[0];
   ASSERT_THAT(BC.Key.Instructions, SizeIs(1));
   ASSERT_TRUE(BC.Key.Instructions[0].getOperand(3).isImm());
 }
@@ -357,9 +359,9 @@ TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
 TEST_F(ParallelSnippetGeneratorTest, MOV16ms) {
   const unsigned Opcode = X86::MOV16ms;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  auto Err =
-      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters())
-          .takeError();
+  std::vector<BenchmarkCode> Benchmarks;
+  auto Err = Generator.generateConfigurations(&Instr, Benchmarks,
+                                              State.getRATC().emptyRegisters());
   EXPECT_TRUE((bool)Err);
   EXPECT_THAT(toString(std::move(Err)),
               testing::HasSubstr("no available registers"));
@@ -380,7 +382,7 @@ public:
 
 private:
   Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &, const BitVector &) const override {
+  generateCodeTemplates(InstructionTemplate, const BitVector &) const override {
     return make_error<StringError>("not implemented", inconvertibleErrorCode());
   }
 };
@@ -412,9 +414,9 @@ TEST_F(FakeSnippetGeneratorTest, MemoryUse_Movsb) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::MOVSB;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  auto Error =
-      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters())
-          .takeError();
+  std::vector<BenchmarkCode> Benchmarks;
+  auto Error = Generator.generateConfigurations(
+      &Instr, Benchmarks, State.getRATC().emptyRegisters());
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }

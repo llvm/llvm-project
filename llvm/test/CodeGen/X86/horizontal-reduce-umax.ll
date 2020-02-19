@@ -243,15 +243,10 @@ define i16 @test_reduce_v8i16(<8 x i16> %a0) {
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    psrld $16, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movd %xmm1, %eax
 ; X86-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -285,15 +280,10 @@ define i16 @test_reduce_v8i16(<8 x i16> %a0) {
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    psrld $16, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movd %xmm1, %eax
 ; X64-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -840,20 +830,12 @@ define i16 @test_reduce_v16i16(<16 x i16> %a0) {
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    psrld $16, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movd %xmm1, %eax
 ; X86-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -903,20 +885,12 @@ define i16 @test_reduce_v16i16(<16 x i16> %a0) {
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    psrld $16, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movd %xmm1, %eax
 ; X64-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -1678,20 +1652,12 @@ define i16 @test_reduce_v32i16(<32 x i16> %a0) {
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm2
 ; X86-SSE2-NEXT:    pxor %xmm4, %xmm0
 ; X86-SSE2-NEXT:    pmaxsw %xmm2, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm1
 ; X86-SSE2-NEXT:    psrld $16, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm4, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movd %xmm1, %eax
 ; X86-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -1751,20 +1717,12 @@ define i16 @test_reduce_v32i16(<32 x i16> %a0) {
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm2
 ; X64-SSE2-NEXT:    pxor %xmm4, %xmm0
 ; X64-SSE2-NEXT:    pmaxsw %xmm2, %xmm0
-; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm1
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm1
 ; X64-SSE2-NEXT:    psrld $16, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm4, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movd %xmm1, %eax
 ; X64-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -2034,15 +1992,10 @@ define i16 @test_reduce_v16i16_v8i16(<16 x i16> %a0) {
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    psrld $16, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movd %xmm1, %eax
 ; X86-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -2077,15 +2030,10 @@ define i16 @test_reduce_v16i16_v8i16(<16 x i16> %a0) {
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    psrld $16, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movd %xmm1, %eax
 ; X64-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -2154,15 +2102,10 @@ define i16 @test_reduce_v32i16_v8i16(<32 x i16> %a0) {
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X86-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    psrld $16, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movd %xmm1, %eax
 ; X86-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000
@@ -2197,15 +2140,10 @@ define i16 @test_reduce_v32i16_v8i16(<32 x i16> %a0) {
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; X64-SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    psrld $16, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pmaxsw %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movd %xmm1, %eax
 ; X64-SSE2-NEXT:    xorl $32768, %eax ## imm = 0x8000

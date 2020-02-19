@@ -94,10 +94,6 @@ class CallGraph {
   /// callers from the old function to the new.
   void spliceFunction(const Function *From, const Function *To);
 
-  /// Add a function to the call graph, and link the node to all of the
-  /// functions that it calls.
-  void addToCallGraph(Function *F);
-
 public:
   explicit CallGraph(Module &M);
   CallGraph(CallGraph &&Arg);
@@ -158,6 +154,13 @@ public:
   /// Similar to operator[], but this will insert a new CallGraphNode for
   /// \c F if one does not already exist.
   CallGraphNode *getOrInsertFunction(const Function *F);
+
+  /// Populate \p CGN based on the calls inside the associated function.
+  void populateCallGraphNode(CallGraphNode *CGN);
+
+  /// Add a function to the call graph, and link the node to all of the
+  /// functions that it calls.
+  void addToCallGraph(Function *F);
 };
 
 /// A node in the call graph for a module.

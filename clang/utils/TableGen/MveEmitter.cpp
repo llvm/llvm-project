@@ -501,8 +501,17 @@ public:
   }
 
   void setPredecessor(Ptr p) {
-    assert(!Predecessor);
-    Predecessor = p;
+    // If the user has nested one 'seq' node inside another, and this
+    // method is called on the return value of the inner 'seq' (i.e.
+    // the final item inside it), then we can't link _this_ node to p,
+    // because it already has a predecessor. Instead, walk the chain
+    // until we find the first item in the inner seq, and link that to
+    // p, so that nesting seqs has the obvious effect of linking
+    // everything together into one long sequential chain.
+    Result *r = this;
+    while (r->Predecessor)
+      r = r->Predecessor.get();
+    r->Predecessor = p;
   }
 
   // Each Result will be assigned a variable name in the output code, but not
@@ -1178,6 +1187,18 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
         getScalarType("u32"), ST->kind() == ScalarTypeKind::UnsignedInt);
     } else {
       PrintFatalError("unsignedflag's argument should be a scalar type");
+    }
+  } else if (Op->getName() == "bitsize") {
+    if (D->getNumArgs() != 1)
+      PrintFatalError("bitsize should have exactly one argument");
+    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    if (!TypeRec->isSubClassOf("Type"))
+      PrintFatalError("bitsize's argument should be a type");
+    if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
+      return std::make_shared<IntLiteralResult>(getScalarType("u32"),
+                                                ST->sizeInBits());
+    } else {
+      PrintFatalError("bitsize's argument should be a scalar type");
     }
   } else {
     std::vector<Result::Ptr> Args;

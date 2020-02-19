@@ -741,6 +741,7 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     : TheDef(R), Name(std::string(R->getName())),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1) {
+  GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
     Record *Type = TypeList[i];
@@ -817,6 +818,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
       CopyCost(0), Allocatable(true), AllocationPriority(0) {
   Artificial = true;
+  GeneratePressureSet = false;
   for (const auto R : Members) {
     TopoSigs.set(R->getTopoSig());
     Artificial &= R->Artificial;
@@ -839,6 +841,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   Allocatable = Super.Allocatable;
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  GeneratePressureSet |= Super.GeneratePressureSet;
 
   // Copy all allocation orders, filter out foreign registers from the larger
   // super-class.
@@ -852,6 +855,16 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
   return std::binary_search(Members.begin(), Members.end(), Reg,
                             deref<std::less<>>());
+}
+
+unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank& RegBank) const {
+  if (TheDef && !TheDef->isValueUnset("Weight"))
+    return TheDef->getValueAsInt("Weight");
+
+  if (Members.empty() || Artificial)
+    return 0;
+
+  return (*Members.begin())->getWeight(RegBank);
 }
 
 namespace llvm {
@@ -1218,6 +1231,12 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(Record *Def) {
   SubRegIndices.emplace_back(Def, SubRegIndices.size() + 1);
   Idx = &SubRegIndices.back();
   return Idx;
+}
+
+const CodeGenSubRegIndex *
+CodeGenRegBank::findSubRegIdx(const Record* Def) const {
+  auto I = Def2SubRegIdx.find(Def);
+  return (I == Def2SubRegIdx.end()) ? nullptr : I->second;
 }
 
 CodeGenRegister *CodeGenRegBank::getReg(Record *Def) {
@@ -1876,7 +1895,7 @@ void CodeGenRegBank::computeRegUnitSets() {
   // Compute a unique RegUnitSet for each RegClass.
   auto &RegClasses = getRegClasses();
   for (auto &RC : RegClasses) {
-    if (!RC.Allocatable || RC.Artificial)
+    if (!RC.Allocatable || RC.Artificial || !RC.GeneratePressureSet)
       continue;
 
     // Speculatively grow the RegUnitSets to hold the new set.
@@ -1937,7 +1956,7 @@ void CodeGenRegBank::computeRegUnitSets() {
       // Speculatively grow the RegUnitSets to hold the new set.
       RegUnitSets.resize(RegUnitSets.size() + 1);
       RegUnitSets.back().Name =
-        RegUnitSets[Idx].Name + "+" + RegUnitSets[SearchIdx].Name;
+        RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
 
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),

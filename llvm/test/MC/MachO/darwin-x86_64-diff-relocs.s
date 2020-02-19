@@ -147,7 +147,7 @@ L3:
 // CHECK:     Size: 0x5E
 // CHECK:     Offset: 384
 // CHECK:     Alignment: 0
-// CHECK:     RelocationOffset: 0x26C
+// CHECK:     RelocationOffset: 0x270
 // CHECK:     RelocationCount: 12
 // CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x800004)
@@ -174,7 +174,7 @@ L3:
 // CHECK:     Size: 0x8E
 // CHECK:     Offset: 478
 // CHECK:     Alignment: 0
-// CHECK:     RelocationOffset: 0x2CC
+// CHECK:     RelocationOffset: 0x2D0
 // CHECK:     RelocationCount: 16
 // CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x4)

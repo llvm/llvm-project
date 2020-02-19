@@ -25,11 +25,6 @@
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
 static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
-// Pointer to the static allocator so that the C++ wrappers can access it.
-// Technically we could have a completely separated heap for C & C++ but in
-// reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)> *
-    CONCATENATE(SCUDO_ALLOCATOR, Ptr) = &SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
 
@@ -44,22 +39,13 @@ extern "C" void SCUDO_PREFIX(malloc_postinit)();
 static scudo::Allocator<scudo::AndroidSvelteConfig,
                         SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
-// Pointer to the static allocator so that the C++ wrappers can access it.
-// Technically we could have a completely separated heap for C & C++ but in
-// reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::AndroidSvelteConfig, SCUDO_PREFIX(malloc_postinit)> *
-    CONCATENATE(SCUDO_ALLOCATOR, Ptr) = &SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
 
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-// The following is the only function that will end up initializing both
-// allocators, which will result in a slight increase in memory footprint.
-INTERFACE void __scudo_print_stats(void) {
-  Allocator.printStats();
-  SvelteAllocator.printStats();
-}
+// TODO(kostyak): support both allocators.
+INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
 #endif // SCUDO_ANDROID && _BIONIC

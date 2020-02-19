@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_VSCODE_H_
-#define LLDBVSCODE_VSCODE_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
+#define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
 #include <iosfwd>
 #include <map>
@@ -62,6 +62,8 @@ namespace lldb_vscode {
 typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
+
+enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
 
 struct VSCode {
   InputStream input;
@@ -132,6 +134,24 @@ struct VSCode {
   void RunPreRunCommands();
   void RunStopCommands();
   void RunExitCommands();
+
+  /// Create a new SBTarget object from the given request arguments.
+  /// \param[in] arguments
+  ///     Launch configuration arguments.
+  ///
+  /// \param[out] error
+  ///     An SBError object that will contain an error description if
+  ///     function failed to create the target.
+  ///
+  /// \return
+  ///     An SBTarget object.
+  lldb::SBTarget CreateTargetFromArguments(
+      const llvm::json::Object &arguments,
+      lldb::SBError &error);
+
+  /// Set given target object as a current target for lldb-vscode and start
+  /// listeing for its breakpoint events.
+  void SetTarget(const lldb::SBTarget target);
 };
 
 extern VSCode g_vsc;

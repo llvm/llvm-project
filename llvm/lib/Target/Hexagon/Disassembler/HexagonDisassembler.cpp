@@ -498,9 +498,13 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     } else if (HexagonMCInstrInfo::hasNewValue(*MCII, Inst)) {
       unsigned Producer =
           HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg();
-      if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
-        Producer = ((Producer - Hexagon::W0) << 1) + SubregBit + Hexagon::V0;
-      else if (SubregBit)
+
+      if (HexagonMCInstrInfo::IsVecRegPair(Producer)) {
+        const bool Rev = HexagonMCInstrInfo::IsReverseVecRegPair(Producer);
+        const unsigned ProdPairIndex =
+            Rev ? Producer - Hexagon::WR0 : Producer - Hexagon::W0;
+        Producer = (ProdPairIndex << 1) + SubregBit + Hexagon::V0;
+      } else if (SubregBit)
         // Hexagon PRM 10.11 New-value operands
         // Nt[0] is reserved and should always be encoded as zero.
         return MCDisassembler::Fail;
@@ -606,12 +610,16 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t /*Address*/,
                                              const void *Decoder) {
   static const MCPhysReg HvxWRDecoderTable[] = {
-      Hexagon::W0,  Hexagon::W1,  Hexagon::W2,  Hexagon::W3,
-      Hexagon::W4,  Hexagon::W5,  Hexagon::W6,  Hexagon::W7,
-      Hexagon::W8,  Hexagon::W9,  Hexagon::W10, Hexagon::W11,
-      Hexagon::W12, Hexagon::W13, Hexagon::W14, Hexagon::W15};
+      Hexagon::W0,   Hexagon::WR0,  Hexagon::W1,   Hexagon::WR1,  Hexagon::W2,
+      Hexagon::WR2,  Hexagon::W3,   Hexagon::WR3,  Hexagon::W4,   Hexagon::WR4,
+      Hexagon::W5,   Hexagon::WR5,  Hexagon::W6,   Hexagon::WR6,  Hexagon::W7,
+      Hexagon::WR7,  Hexagon::W8,   Hexagon::WR8,  Hexagon::W9,   Hexagon::WR9,
+      Hexagon::W10,  Hexagon::WR10, Hexagon::W11,  Hexagon::WR11, Hexagon::W12,
+      Hexagon::WR12, Hexagon::W13,  Hexagon::WR13, Hexagon::W14,  Hexagon::WR14,
+      Hexagon::W15,  Hexagon::WR15,
+  };
 
-  return (DecodeRegisterClass(Inst, RegNo >> 1, HvxWRDecoderTable));
+  return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
 LLVM_ATTRIBUTE_UNUSED  // Suppress warning temporarily.

@@ -42,12 +42,20 @@ define amdgpu_kernel void @mov_dpp8(i32 addrspace(1)* %out, i32 %in) #0 {
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.writelane(i32 0, i32 1, i32 2)
+define amdgpu_kernel void @writelane(i32 addrspace(1)* %out) #0 {
+  %tmp0 = call i32 @llvm.amdgcn.writelane(i32 0, i32 1, i32 2)
+  store i32 %tmp0, i32 addrspace(1)* %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32) #1
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #1
+declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #1
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

@@ -14,9 +14,10 @@
 #ifndef LLVM_OPENMP_IR_IRBUILDER_H
 #define LLVM_OPENMP_IR_IRBUILDER_H
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Allocator.h"
 
 namespace llvm {
 
@@ -33,6 +34,9 @@ public:
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once!
   void initialize();
+
+  /// Finalize the underlying module, e.g., by outlining regions.
+  void finalize();
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -146,9 +150,8 @@ public:
   /// \param CanceledDirective The kind of directive that is cancled.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy CreateCancel(const LocationDescription &Loc,
-                              Value *IfCondition,
-                              omp::Directive CanceledDirective);
+  InsertPointTy CreateCancel(const LocationDescription &Loc, Value *IfCondition,
+                             omp::Directive CanceledDirective);
 
   /// Generator for '#omp parallel'
   ///
@@ -167,6 +170,21 @@ public:
                  PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB,
                  Value *IfCondition, Value *NumThreads,
                  omp::ProcBindKind ProcBind, bool IsCancellable);
+
+  /// Generator for '#omp flush'
+  ///
+  /// \param Loc The location where the flush directive was encountered
+  void CreateFlush(const LocationDescription &Loc);
+
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  void CreateTaskwait(const LocationDescription &Loc);
+
+  /// Generator for '#omp taskyield'
+  ///
+  /// \param Loc The location where the taskyield directive was encountered.
+  void CreateTaskyield(const LocationDescription &Loc);
 
   ///}
 
@@ -214,6 +232,11 @@ private:
                                 omp::Directive DK, bool ForceSimpleCall,
                                 bool CheckCancelFlag);
 
+  /// Generate a flush runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitFlush(const LocationDescription &Loc);
+
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
   /// target block and the kind of cancellable directive.
@@ -226,6 +249,16 @@ private:
            FinalizationStack.back().IsCancellable &&
            FinalizationStack.back().DK == DK;
   }
+
+  /// Generate a taskwait runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitTaskwaitImpl(const LocationDescription &Loc);
+
+  /// Generate a taskyield runtime call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  void emitTaskyieldImpl(const LocationDescription &Loc);
 
   /// Return the current thread ID.
   ///
@@ -243,6 +276,133 @@ private:
 
   /// Map to remember existing ident_t*.
   DenseMap<std::pair<Constant *, uint64_t>, GlobalVariable *> IdentMap;
+
+  /// Helper that contains information about regions we need to outline
+  /// during finalization.
+  struct OutlineInfo {
+    SmallVector<BasicBlock *, 32> Blocks;
+    using PostOutlineCBTy = std::function<void(Function &)>;
+    PostOutlineCBTy PostOutlineCB;
+  };
+
+  /// Collection of regions that need to be outlined during finalization.
+  SmallVector<OutlineInfo, 16> OutlineInfos;
+
+  /// Add a new region that will be outlined later.
+  void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+
+  /// An ordered map of auto-generated variables to their unique names.
+  /// It stores variables with the following names: 1) ".gomp_critical_user_" +
+  /// <critical_section_name> + ".var" for "omp critical" directives; 2)
+  /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
+  /// variables.
+  StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
+
+public:
+  /// Generator for '#omp master'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  ///
+  /// \returns The insertion position *after* the master.
+  InsertPointTy CreateMaster(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB);
+
+  /// Generator for '#omp master'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region body code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param CriticalName name of the lock used by the critical directive
+  /// \param HintInst Hint Instruction for hint clause associated with critical
+  ///
+  /// \returns The insertion position *after* the master.
+  InsertPointTy CreateCritical(const LocationDescription &Loc,
+                               BodyGenCallbackTy BodyGenCB,
+                               FinalizeCallbackTy FiniCB,
+                               StringRef CriticalName, Value *HintInst);
+
+private:
+  /// Common interface for generating entry calls for OMP Directives.
+  /// if the directive has a region/body, It will set the insertion
+  /// point to the body
+  ///
+  /// \param OMPD Directive to generate entry blocks for
+  /// \param EntryCall Call to the entry OMP Runtime Function
+  /// \param ExitBB block where the region ends.
+  /// \param Conditional indicate if the entry call result will be used
+  ///        to evaluate a conditional of whether a thread will execute
+  ///        body code or not.
+  ///
+  /// \return The insertion position in exit block
+  InsertPointTy emitCommonDirectiveEntry(omp::Directive OMPD, Value *EntryCall,
+                                         BasicBlock *ExitBB,
+                                         bool Conditional = false);
+
+  /// Common interface to finalize the region
+  ///
+  /// \param OMPD Directive to generate exiting code for
+  /// \param FinIP Insertion point for emitting Finalization code and exit call
+  /// \param ExitCall Call to the ending OMP Runtime Function
+  /// \param HasFinalize indicate if the directive will require finalization
+  ///         and has a finalization callback in the stack that
+  ///        should be called.
+  ///
+  /// \return The insertion position in exit block
+  InsertPointTy emitCommonDirectiveExit(omp::Directive OMPD,
+                                        InsertPointTy FinIP,
+                                        Instruction *ExitCall,
+                                        bool HasFinalize = true);
+
+  /// Common Interface to generate OMP inlined regions
+  ///
+  /// \param OMPD Directive to generate inlined region for
+  /// \param EntryCall Call to the entry OMP Runtime Function
+  /// \param ExitCall Call to the ending OMP Runtime Function
+  /// \param BodyGenCB Body code generation callback.
+  /// \param FiniCB Finalization Callback. Will be called when finalizing region
+  /// \param Conditional indicate if the entry call result will be used
+  ///        to evaluate a conditional of whether a thread will execute
+  ///        body code or not.
+  /// \param HasFinalize indicate if the directive will require finalization
+  ///         and has a finalization callback in the stack that
+  /// should        be called.
+  ///
+  /// \return The insertion point after the region
+
+  InsertPointTy
+  EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
+                       Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
+                       FinalizeCallbackTy FiniCB, bool Conditional = false,
+                       bool HasFinalize = true);
+
+  /// Get the platform-specific name separator.
+  /// \param Parts different parts of the final name that needs separation
+  /// \param FirstSeparator First separator used between the initial two
+  ///        parts of the name.
+  /// \param Separator separator used between all of the rest consecutinve
+  ///        parts of the name
+  static std::string getNameWithSeparators(ArrayRef<StringRef> Parts,
+                                           StringRef FirstSeparator,
+                                           StringRef Separator);
+
+  /// Gets (if variable with the given name already exist) or creates
+  /// internal global variable with the specified Name. The created variable has
+  /// linkage CommonLinkage by default and is initialized by null value.
+  /// \param Ty Type of the global variable. If it is exist already the type
+  /// must be the same.
+  /// \param Name Name of the variable.
+  Constant *getOrCreateOMPInternalVariable(Type *Ty, const Twine &Name,
+                                           unsigned AddressSpace = 0);
+
+  /// Returns corresponding lock object for the specified critical region
+  /// name. If the lock object does not exist it is created, otherwise the
+  /// reference to the existing copy is returned.
+  /// \param CriticalName Name of the critical region.
+  ///
+  Value *getOMPCriticalRegionLock(StringRef CriticalName);
 };
 
 } // end namespace llvm

@@ -297,6 +297,11 @@ public:
                    MachineBasicBlock *DomBB,
                    MachineBasicBlock *SuccBB);
 
+  void addNewBlock(MachineBasicBlock *BB,
+                   MachineBasicBlock *DomBB,
+                   MachineBasicBlock *SuccBB,
+                   std::vector<SparseBitVector<>> &LiveInSets);
+
   /// isPHIJoin - Return true if Reg is a phi join register.
   bool isPHIJoin(unsigned Reg) { return PHIJoins.test(Reg); }
 

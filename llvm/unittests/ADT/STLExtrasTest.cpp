@@ -221,9 +221,7 @@ class apply_variadic {
   static StringRef apply_one(StringRef S) { return S.drop_back(); }
 
 public:
-  template <typename... Ts>
-  auto operator()(Ts &&... Items)
-      -> decltype(std::make_tuple(apply_one(Items)...)) {
+  template <typename... Ts> auto operator()(Ts &&... Items) {
     return std::make_tuple(apply_one(Items)...);
   }
 };

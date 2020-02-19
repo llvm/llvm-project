@@ -404,7 +404,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
         ss.PutCString("\n");
       emitNewLine = true;
       ss.PutCString("  ");
-      ss.PutCString(Mangled(failed_lookup).GetDemangledName().AsCString());
+      ss.PutCString(Mangled(failed_lookup).GetDemangledName().GetStringRef());
     }
 
     m_failed_lookups.clear();
@@ -843,7 +843,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     };
 
     if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
+      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
                                   sc_list);

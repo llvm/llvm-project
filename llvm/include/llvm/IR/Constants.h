@@ -460,8 +460,7 @@ public:
   static Constant *get(StructType *T, ArrayRef<Constant*> V);
 
   template <typename... Csts>
-  static typename std::enable_if<are_base_of<Constant, Csts...>::value,
-                                 Constant *>::type
+  static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
   get(StructType *T, Csts *... Vs) {
     SmallVector<Constant *, 8> Values({Vs...});
     return get(T, Values);

@@ -10,11 +10,19 @@ add_llvm_library(MLIRQuantizerSupport
 
   ADDITIONAL_HEADER_DIRS
   )
+
 add_dependencies(MLIRQuantizerSupport
                  MLIRIR
                  MLIRQuantOps
                  MLIRSupport
                  MLIRStandardOps)
+target_link_libraries(MLIRQuantizerSupport
+  MLIRIR
+  MLIRQuantOps
+  MLIRSupport
+  MLIRStandardOps
+  LLVMSupport
+  )
 
 # Configurations.
 add_llvm_library(MLIRQuantizerFxpMathConfig
@@ -22,9 +30,16 @@ add_llvm_library(MLIRQuantizerFxpMathConfig
 
   ADDITIONAL_HEADER_DIRS
   )
+
 add_dependencies(MLIRQuantizerFxpMathConfig
                  MLIRFxpMathOpsIncGen
                  MLIRQuantizerSupport)
+target_link_libraries(MLIRQuantizerFxpMathConfig
+  MLIRIR
+  MLIRFxpMathOps
+  MLIRQuantOps
+  MLIRQuantizerSupport
+  )
 
 # Transforms.
 add_llvm_library(MLIRQuantizerTransforms
@@ -39,6 +54,10 @@ add_dependencies(MLIRQuantizerTransforms
   MLIRQuantizerSupport
   MLIRPass)
 target_link_libraries(MLIRQuantizerTransforms
+  MLIRIR
   MLIRQuantizerFxpMathConfig
   MLIRQuantizerSupport
-  MLIRPass)
+  MLIRQuantOps
+  MLIRPass
+  LLVMSupport
+  )
