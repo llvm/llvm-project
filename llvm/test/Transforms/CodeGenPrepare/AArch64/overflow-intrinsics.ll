@@ -102,9 +102,9 @@ define i64 @uaddo3_math_overflow_used(i64 %a, i64 %b, i64* %res) nounwind ssp {
 ; pattern as well.
 define i64 @uaddo6_xor(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %x = xor i64 %a, -1
@@ -115,13 +115,13 @@ define i64 @uaddo6_xor(i64 %a, i64 %b) {
 
 define i64 @uaddo6_xor_commuted(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor_commuted(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 -1, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
-  %x = xor i64 -1, %a
-  %cmp = icmp ult i64 %x, %b
+  %x = xor i64 %a, -1
+  %cmp = icmp ugt i64 %b, %x
   %Q = select i1 %cmp, i64 %b, i64 42
   ret i64 %Q
 }
