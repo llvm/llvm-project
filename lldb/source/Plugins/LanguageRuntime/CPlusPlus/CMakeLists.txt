@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginCPPRuntime 
+add_lldb_library(lldbPluginCPPRuntime PLUGIN
   CPPLanguageRuntime.cpp
 
   LINK_LIBS
