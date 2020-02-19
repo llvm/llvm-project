@@ -283,8 +283,6 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
   using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);
-  const MipsSubtarget &STI =
-      static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
@@ -307,11 +305,8 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
     // Next, subtract  2^52 * 0x1.0000000000000 i.e. 0x10000000000000.0 from it.
     // Done. Trunc double to float if needed.
 
-    MachineInstrBuilder Bitcast = MIRBuilder.buildInstr(
-        STI.isFP64bit() ? Mips::BuildPairF64_64 : Mips::BuildPairF64, {s64},
-        {Src, MIRBuilder.buildConstant(s32, UINT32_C(0x43300000))});
-    Bitcast.constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                             *STI.getRegBankInfo());
+    auto C_HiMask = MIRBuilder.buildConstant(s32, UINT32_C(0x43300000));
+    auto Bitcast = MIRBuilder.buildMerge(s64, {Src, C_HiMask.getReg(0)});
 
     MachineInstrBuilder TwoP52FP = MIRBuilder.buildFConstant(
         s64, BitsToDouble(UINT64_C(0x4330000000000000)));
