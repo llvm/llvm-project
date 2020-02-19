@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // RUN: rm -rf %t && mkdir -p %t/real/myproj && mkdir -p %t/links
 // RUN: touch %t/real/foo.h && ln -s %t/real/foo.h %t/links/foo.h
 // RUN: touch %t/real/foobar.h && ln -s %t/real/foobar.h %t/links/foobar.h
