@@ -2113,11 +2113,11 @@ bool JumpThreadingPass::MaybeThreadThroughTwoBasicBlocks(BasicBlock *BB,
   if (!PredBB)
     return false;
 
-  // Require that PredBB end with a Branch.  If PredBB ends with an
-  // unconditional branch, we should be merging PredBB and BB instead.  For
+  // Require that PredBB end with a conditional Branch. If PredBB ends with an
+  // unconditional branch, we should be merging PredBB and BB instead. For
   // simplicity, we don't deal with a switch.
   BranchInst *PredBBBranch = dyn_cast<BranchInst>(PredBB->getTerminator());
-  if (!PredBBBranch)
+  if (!PredBBBranch || PredBBBranch->isUnconditional())
     return false;
 
   // If PredBB has exactly one incoming edge, we don't gain anything by copying
