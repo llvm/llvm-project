@@ -1438,6 +1438,10 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::GLDFF1S_UXTW_SCALED:
     return "AArch64ISD::GLDFF1S_UXTW_SCALED";
   case AArch64ISD::GLDFF1S_IMM:       return "AArch64ISD::GLDFF1S_IMM";
+
+  case AArch64ISD::GLDNT1:            return "AArch64ISD::GLDNT1";
+  case AArch64ISD::GLDNT1S:           return "AArch64ISD::GLDNT1S";
+
   case AArch64ISD::SST1:              return "AArch64ISD::SST1";
   case AArch64ISD::SST1_SCALED:       return "AArch64ISD::SST1_SCALED";
   case AArch64ISD::SST1_SXTW:         return "AArch64ISD::SST1_SXTW";
@@ -1445,6 +1449,9 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::SST1_SXTW_SCALED:  return "AArch64ISD::SST1_SXTW_SCALED";
   case AArch64ISD::SST1_UXTW_SCALED:  return "AArch64ISD::SST1_UXTW_SCALED";
   case AArch64ISD::SST1_IMM:          return "AArch64ISD::SST1_IMM";
+
+  case AArch64ISD::SSTNT1:            return "AArch64ISD::SSTNT1";
+
   case AArch64ISD::LDP:               return "AArch64ISD::LDP";
   case AArch64ISD::STP:               return "AArch64ISD::STP";
   case AArch64ISD::STNP:              return "AArch64ISD::STNP";
@@ -10457,6 +10464,7 @@ static SDValue performSVEAndCombine(SDNode *N,
   case AArch64ISD::GLDFF1_UXTW:
   case AArch64ISD::GLDFF1_UXTW_SCALED:
   case AArch64ISD::GLDFF1_IMM:
+  case AArch64ISD::GLDNT1:
     MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
     break;
   default:
@@ -12644,6 +12652,14 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(5);
 
+  // In the case of non-temporal gather loads there's only one SVE instruction
+  // per data-size: "scalar + vector", i.e.
+  //    * stnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
+  // Since we do have intrinsics that allow the arguments to be in a different
+  // order, we may need to swap them to match the spec.
+  if (Opcode == AArch64ISD::SSTNT1 && Offset.getValueType().isVector())
+      std::swap(Base, Offset);
+
   // SST1_IMM requires that the offset is an immediate that is:
   //    * a multiple of #SizeInBytes,
   //    * in the range [0, 31 x #SizeInBytes],
@@ -12729,6 +12745,14 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
+
+  // In the case of non-temporal gather loads there's only one SVE instruction
+  // per data-size: "scalar + vector", i.e.
+  //    * ldnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
+  // Since we do have intrinsics that allow the arguments to be in a different
+  // order, we may need to swap them to match the spec.
+  if (Opcode == AArch64ISD::GLDNT1 && Offset.getValueType().isVector())
+      std::swap(Base, Offset);
 
   // GLD{FF}1_IMM requires that the offset is an immediate that is:
   //    * a multiple of #SizeInBytes,
@@ -12859,6 +12883,9 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   case AArch64ISD::GLDFF1_IMM:
     NewOpc = AArch64ISD::GLDFF1S_IMM;
     break;
+  case AArch64ISD::GLDNT1:
+    NewOpc = AArch64ISD::GLDNT1S;
+    break;
   default:
     return SDValue();
   }
@@ -12972,12 +12999,24 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performNEONPostLDSTCombine(N, DCI, DAG);
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
+    case Intrinsic::aarch64_sve_ldnt1_gather:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
+    case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
     case Intrinsic::aarch64_sve_ldnf1:
       return performLDNF1Combine(N, DAG, AArch64ISD::LDNF1);
     case Intrinsic::aarch64_sve_ldff1:
       return performLDNF1Combine(N, DAG, AArch64ISD::LDFF1);
     case Intrinsic::aarch64_sve_stnt1:
       return performSTNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
+    case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
+    case Intrinsic::aarch64_sve_stnt1_scatter:
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
     case Intrinsic::aarch64_sve_ld1_gather:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1);
     case Intrinsic::aarch64_sve_ld1_gather_index:

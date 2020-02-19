@@ -1761,6 +1761,22 @@ def int_aarch64_sve_ldff1_gather_scalar_offset : AdvSIMD_GatherLoad_VS_Intrinsic
 
 
 //
+// Non-temporal gather loads: scalar base + vector offsets
+//
+
+// 64 bit unscaled offsets
+def int_aarch64_sve_ldnt1_gather : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
+
+// 32 bit unscaled offsets, zero (zxtw) extended to 64 bits
+def int_aarch64_sve_ldnt1_gather_uxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+
+//
+// Non-temporal gather loads: vector base + scalar offset
+//
+
+def int_aarch64_sve_ldnt1_gather_scalar_offset  : AdvSIMD_GatherLoad_VS_Intrinsic;
+
+//
 // Scatter stores: scalar base + vector offsets
 //
 
@@ -1790,6 +1806,22 @@ def int_aarch64_sve_st1_scatter_uxtw_index
 //
 
 def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VS_Intrinsic;
+
+//
+// Non-temporal scatter stores: scalar base + vector offsets
+//
+
+// 64 bit unscaled offsets
+def int_aarch64_sve_stnt1_scatter : AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic;
+
+// 32 bit unscaled offsets, zero (zxtw) extended to 64 bits
+def int_aarch64_sve_stnt1_scatter_uxtw : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
+
+//
+// Non-temporal scatter stores: vector base + scalar offset
+//
+
+def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intrinsic;
 
 //
 // SVE2 - Uniform DSP operations
