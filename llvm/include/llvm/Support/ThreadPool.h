@@ -43,7 +43,7 @@ public:
   /// Construct a pool using the hardware strategy \p S for mapping hardware
   /// execution resources (threads, cores, CPUs)
   /// Defaults to using the maximum execution resources in the system, but
-  /// excluding any resources contained in the affinity mask.
+  /// accounting for the affinity mask.
   ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
 
   /// Blocking destructor: the pool will wait for all the threads to complete.

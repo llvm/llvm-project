@@ -148,8 +148,9 @@ void llvm_execute_on_thread_async(
   class ThreadPoolStrategy {
   public:
     // The default value (0) means all available threads should be used,
-    // excluding affinity mask. If set, this value only represents a suggested
-    // high bound, the runtime might choose a lower value (not higher).
+    // taking the affinity mask into account. If set, this value only represents
+    // a suggested high bound, the runtime might choose a lower value (not
+    // higher).
     unsigned ThreadsRequested = 0;
 
     // If SMT is active, use hyper threads. If false, there will be only one
@@ -172,7 +173,7 @@ void llvm_execute_on_thread_async(
   /// be less efficient. Avoid this strategy if doing lots of I/O. Currently
   /// based on physical cores, if available for the host system, otherwise falls
   /// back to hardware_concurrency(). Returns 1 when LLVM is configured with
-  /// LLVM_ENABLE_THREADS = OFF
+  /// LLVM_ENABLE_THREADS = OFF.
   inline ThreadPoolStrategy
   heavyweight_hardware_concurrency(unsigned ThreadCount = 0) {
     ThreadPoolStrategy S;
@@ -219,7 +220,7 @@ void llvm_execute_on_thread_async(
 
   /// Returns a mask that represents on which hardware thread, core, CPU, NUMA
   /// group, the calling thread can be executed. On Windows, threads cannot
-  /// cross CPU boundaries.
+  /// cross CPU sockets boundaries.
   llvm::BitVector get_thread_affinity_mask();
 
   /// Returns how many physical CPUs or NUMA groups the system has.
