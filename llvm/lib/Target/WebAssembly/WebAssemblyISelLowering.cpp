@@ -411,6 +411,29 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   return DoneMBB;
 }
 
+static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
+                                           DebugLoc DL, MachineBasicBlock *BB,
+                                           const TargetInstrInfo &TII) {
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
+  assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS);
+
+  MachineFunction &MF = *BB->getParent();
+  const MCInstrDesc &MCID = TII.get(WebAssembly::CALL);
+  MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
+
+  for (auto Def : CallResults.defs())
+    MIB.add(Def);
+  for (auto Use : CallParams.uses())
+    MIB.add(Use);
+
+  BB->insert(CallResults.getIterator(), MIB);
+  CallParams.eraseFromParent();
+  CallResults.eraseFromParent();
+
+  return BB;
+}
+
 MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
@@ -443,7 +466,8 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::FP_TO_UINT_I64_F64:
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
-    llvm_unreachable("Unexpected instruction to emit with custom inserter");
+  case WebAssembly::CALL_RESULTS:
+    return LowerCallResults(MI, DL, BB, TII);
   }
 }
 
