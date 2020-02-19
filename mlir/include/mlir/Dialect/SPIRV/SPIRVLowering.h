@@ -27,10 +27,7 @@ namespace mlir {
 /// pointers to structs.
 class SPIRVTypeConverter : public TypeConverter {
 public:
-  using TypeConverter::TypeConverter;
-
-  /// Converts the given standard `type` to SPIR-V correspondence.
-  Type convertType(Type type) override;
+  SPIRVTypeConverter();
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);

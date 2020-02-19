@@ -73,30 +73,19 @@ static LLVMType getPtrToElementType(T containerType,
       .getPointerTo();
 }
 
-// Convert the given type to the LLVM IR Dialect type.  The following
-// conversions are supported:
-//   - an Index type is converted into an LLVM integer type with pointer
-//     bitwidth (analogous to intptr_t in C);
-//   - an Integer type is converted into an LLVM integer type of the same width;
-//   - an F32 type is converted into an LLVM float type
-//   - a Buffer, Range or View is converted into an LLVM structure type
-//     containing the respective dynamic values.
-static Type convertLinalgType(Type t, LLVMTypeConverter &lowering) {
+/// Convert the given range descriptor type to the LLVMIR dialect.
+/// Range descriptor contains the range bounds and the step as 64-bit integers.
+///
+/// struct {
+///   int64_t min;
+///   int64_t max;
+///   int64_t step;
+/// };
+static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
   auto *context = t.getContext();
-  auto int64Ty = lowering.convertType(IntegerType::get(64, context))
+  auto int64Ty = converter.convertType(IntegerType::get(64, context))
                      .cast<LLVM::LLVMType>();
-
-  // Range descriptor contains the range bounds and the step as 64-bit integers.
-  //
-  // struct {
-  //   int64_t min;
-  //   int64_t max;
-  //   int64_t step;
-  // };
-  if (t.isa<RangeType>())
-    return LLVMType::getStructTy(int64Ty, int64Ty, int64Ty);
-
-  return Type();
+  return LLVMType::getStructTy(int64Ty, int64Ty, int64Ty);
 }
 
 namespace {
@@ -146,7 +135,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
     auto rangeDescriptorTy =
-        convertLinalgType(rangeOp.getResult().getType(), typeConverter);
+        convertRangeType(rangeOp.getType().cast<RangeType>(), typeConverter);
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
@@ -418,12 +407,6 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   return fnNameAttr;
 }
 
-Type LinalgTypeConverter::convertType(Type t) {
-  if (auto result = LLVMTypeConverter::convertType(t))
-    return result;
-  return convertLinalgType(t, *this);
-}
-
 namespace {
 
 // LinalgOpConversion<LinalgOp> creates a new call to the
@@ -555,10 +538,14 @@ populateLinalgToStandardConversionPatterns(OwningRewritePatternList &patterns,
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(
-    LinalgTypeConverter &converter, OwningRewritePatternList &patterns,
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     MLIRContext *ctx) {
   patterns.insert<RangeOpConversion, ReshapeOpConversion, SliceOpConversion,
                   TransposeOpConversion, YieldOpConversion>(ctx, converter);
+
+  // Populate the type conversions for the linalg types.
+  converter.addConversion(
+      [&](RangeType type) { return convertRangeType(type, converter); });
 }
 
 namespace {
@@ -572,7 +559,7 @@ void ConvertLinalgToLLVMPass::runOnModule() {
 
   // Convert to the LLVM IR dialect using the converter defined above.
   OwningRewritePatternList patterns;
-  LinalgTypeConverter converter(&getContext());
+  LLVMTypeConverter converter(&getContext());
   populateAffineToStdConversionPatterns(patterns, &getContext());
   populateLoopToStdConversionPatterns(patterns, &getContext());
   populateStdToLLVMConversionPatterns(converter, patterns, /*useAlloca=*/false,

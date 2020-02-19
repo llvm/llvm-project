@@ -376,6 +376,10 @@ struct FunctionTraits<ReturnType (*)(Args...), false> {
   template <size_t i>
   using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
 };
+/// Overload for non-class function type references.
+template <typename ReturnType, typename... Args>
+struct FunctionTraits<ReturnType (&)(Args...), false>
+    : public FunctionTraits<ReturnType (*)(Args...)> {};
 } // end namespace mlir
 
 // Allow tuples to be usable as DenseMap keys.

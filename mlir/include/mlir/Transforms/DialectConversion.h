@@ -91,15 +91,37 @@ public:
     SmallVector<Type, 4> argTypes;
   };
 
-  /// This hook allows for converting a type. This function should return
-  /// failure if no valid conversion exists, success otherwise. If the new set
-  /// of types is empty, the type is removed and any usages of the existing
-  /// value are expected to be removed during conversion.
-  virtual LogicalResult convertType(Type t, SmallVectorImpl<Type> &results);
+  /// Register a conversion function. A conversion function must be convertible
+  /// to any of the following forms(where `T` is a class derived from `Type`:
+  ///   * Optional<Type>(T)
+  ///     - This form represents a 1-1 type conversion. It should return nullptr
+  ///       or `llvm::None` to signify failure. If `llvm::None` is returned, the
+  ///       converter is allowed to try another conversion function to perform
+  ///       the conversion.
+  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
+  ///     - This form represents a 1-N type conversion. It should return
+  ///       `failure` or `llvm::None` to signify a failed conversion. If the new
+  ///       set of types is empty, the type is removed and any usages of the
+  ///       existing value are expected to be removed during conversion. If
+  ///       `llvm::None` is returned, the converter is allowed to try another
+  ///       conversion function to perform the conversion.
+  /// Note: When attempting to convert a type, e.g. via 'convertType', the
+  ///       mostly recently added conversions will be invoked first.
+  template <typename FnT,
+            typename T = typename FunctionTraits<FnT>::template arg_t<0>>
+  void addConversion(FnT &&callback) {
+    registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
+  }
+
+  /// Convert the given type. This function should return failure if no valid
+  /// conversion exists, success otherwise. If the new set of types is empty,
+  /// the type is removed and any usages of the existing value are expected to
+  /// be removed during conversion.
+  LogicalResult convertType(Type t, SmallVectorImpl<Type> &results);
 
   /// This hook simplifies defining 1-1 type conversions. This function returns
   /// the type to convert to on success, and a null type on failure.
-  virtual Type convertType(Type t) { return t; }
+  Type convertType(Type t);
 
   /// Convert the given set of types, filling 'results' as necessary. This
   /// returns failure if the conversion of any of the types fails, success
@@ -138,6 +160,50 @@ public:
                                            Location loc) {
     llvm_unreachable("expected 'materializeConversion' to be overridden");
   }
+
+private:
+  /// The signature of the callback used to convert a type. If the new set of
+  /// types is empty, the type is removed and any usages of the existing value
+  /// are expected to be removed during conversion.
+  using ConversionCallbackFn =
+      std::function<Optional<LogicalResult>(Type, SmallVectorImpl<Type> &)>;
+
+  /// Generate a wrapper for the given callback. This allows for accepting
+  /// different callback forms, that all compose into a single version.
+  /// With callback of form: `Optional<Type>(T)`
+  template <typename T, typename FnT>
+  std::enable_if_t<is_invocable<FnT, T>::value, ConversionCallbackFn>
+  wrapCallback(FnT &&callback) {
+    return wrapCallback<T>([=](T type, SmallVectorImpl<Type> &results) {
+      if (Optional<Type> resultOpt = callback(type)) {
+        bool wasSuccess = static_cast<bool>(resultOpt.getValue());
+        if (wasSuccess)
+          results.push_back(resultOpt.getValue());
+        return Optional<LogicalResult>(success(wasSuccess));
+      }
+      return Optional<LogicalResult>();
+    });
+  }
+  /// With callback of form: `Optional<LogicalResult>(T, SmallVectorImpl<> &)`
+  template <typename T, typename FnT>
+  std::enable_if_t<!is_invocable<FnT, T>::value, ConversionCallbackFn>
+  wrapCallback(FnT &&callback) {
+    return [=](Type type,
+               SmallVectorImpl<Type> &results) -> Optional<LogicalResult> {
+      T derivedType = type.dyn_cast<T>();
+      if (!derivedType)
+        return llvm::None;
+      return callback(derivedType, results);
+    };
+  }
+
+  /// Register a type conversion.
+  void registerConversion(ConversionCallbackFn callback) {
+    conversions.emplace_back(std::move(callback));
+  }
+
+  /// The set of registered conversion functions.
+  SmallVector<ConversionCallbackFn, 4> conversions;
 };
 
 //===----------------------------------------------------------------------===//

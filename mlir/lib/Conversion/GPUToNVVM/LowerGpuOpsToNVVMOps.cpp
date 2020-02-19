@@ -28,25 +28,6 @@ using namespace mlir;
 
 namespace {
 
-/// Derived type converter for GPU to NVVM lowering. The GPU dialect uses memory
-/// space 5 for private memory attributions, but NVVM represents private
-/// memory allocations as local `alloca`s in the default address space. This
-/// converter drops the private memory space to support the use case above.
-class NVVMTypeConverter : public LLVMTypeConverter {
-public:
-  using LLVMTypeConverter::LLVMTypeConverter;
-
-  Type convertType(Type type) override {
-    auto memref = type.dyn_cast<MemRefType>();
-    if (memref &&
-        memref.getMemorySpace() == gpu::GPUDialect::getPrivateAddressSpace()) {
-      type = MemRefType::Builder(memref).setMemorySpace(0);
-    }
-
-    return LLVMTypeConverter::convertType(type);
-  }
-};
-
 /// Converts all_reduce op to LLVM/NVVM ops.
 struct GPUAllReduceOpLowering : public ConvertToLLVMPattern {
   using AccumulatorFactory =
@@ -683,8 +664,19 @@ class LowerGpuOpsToNVVMOpsPass
 public:
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
+
+    /// MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
+    /// space 5 for private memory attributions, but NVVM represents private
+    /// memory allocations as local `alloca`s in the default address space. This
+    /// converter drops the private memory space to support the use case above.
+    LLVMTypeConverter converter(m.getContext());
+    converter.addConversion([&](MemRefType type) -> Optional<Type> {
+      if (type.getMemorySpace() != gpu::GPUDialect::getPrivateAddressSpace())
+        return llvm::None;
+      return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
+    });
+
     OwningRewritePatternList patterns;
-    NVVMTypeConverter converter(m.getContext());
     populateStdToLLVMConversionPatterns(converter, patterns);
     populateGpuToNVVMConversionPatterns(converter, patterns);
     ConversionTarget target(getContext());
