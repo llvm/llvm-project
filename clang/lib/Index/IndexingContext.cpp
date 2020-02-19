@@ -169,6 +169,10 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
   }
   switch (TKind) {
     case TSK_Undeclared:
+      // Instantiation maybe not happen yet when we see a SpecializationDecl,
+      // e.g. when the type doesn't need to be complete, we still treat it as an
+      // instantiation as we'd like to keep the canonicalized result consistent.
+      return isa<ClassTemplateSpecializationDecl>(D);
     case TSK_ExplicitSpecialization:
       return false;
     case TSK_ImplicitInstantiation:
@@ -206,7 +210,12 @@ getDeclContextForTemplateInstationPattern(const Decl *D) {
 static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
   if (const ClassTemplateSpecializationDecl *
       SD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    return SD->getTemplateInstantiationPattern();
+    const auto *Template = SD->getTemplateInstantiationPattern();
+    if (Template)
+      return Template;
+    // Fallback to primary template if no instantiation is available yet (e.g.
+    // the type doesn't need to be complete).
+    return SD->getSpecializedTemplate()->getTemplatedDecl();
   } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     return FD->getTemplateInstantiationPattern();
   } else if (auto *VD = dyn_cast<VarDecl>(D)) {
