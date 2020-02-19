@@ -72,8 +72,9 @@ my %Options = (
   MaxLoop => 0,
   PluginsToLoad => [],
   AnalyzerDiscoveryMethod => undef,
-  OverrideCompiler => 0,      # The flag corresponding to the --override-compiler command line option.
-  ForceAnalyzeDebugCode => 0
+  OverrideCompiler => 0,     # The flag corresponding to the --override-compiler command line option.
+  ForceAnalyzeDebugCode => 0,
+  GenerateIndex => 0         # Skip the analysis, only generate index.html.
 );
 lock_keys(%Options);
 
@@ -946,6 +947,41 @@ ENDTEXT
   return $Num;
 }
 
+sub Finalize {
+  my $BaseDir = shift;
+  my $ExitStatus = shift;
+
+  Diag "Analysis run complete.\n";
+  if (defined $Options{OutputFormat}) {
+    if ($Options{OutputFormat} =~ /plist/ ||
+        $Options{OutputFormat} =~ /sarif/) {
+      Diag "Analysis results (" .
+        ($Options{OutputFormat} =~ /plist/ ? "plist" : "sarif") .
+        " files) deposited in '$Options{OutputDir}'\n";
+    }
+    if ($Options{OutputFormat} =~ /html/) {
+      # Postprocess the HTML directory.
+      my $NumBugs = Postprocess($Options{OutputDir}, $BaseDir,
+                                $Options{AnalyzerStats}, $Options{KeepEmpty});
+
+      if ($Options{ViewResults} and -r "$Options{OutputDir}/index.html") {
+        Diag "Viewing analysis results in '$Options{OutputDir}' using scan-view.\n";
+        my $ScanView = Cwd::realpath("$RealBin/scan-view");
+        if (! -x $ScanView) { $ScanView = "scan-view"; }
+        if (! -x $ScanView) { $ScanView = Cwd::realpath("$RealBin/../../scan-view/bin/scan-view"); }
+        exec $ScanView, "$Options{OutputDir}";
+      }
+
+      if ($Options{ExitStatusFoundBugs}) {
+        exit 1 if ($NumBugs > 0);
+        exit $ExitStatus;
+      }
+    }
+  }
+
+  exit $ExitStatus;
+}
+
 ##----------------------------------------------------------------------------##
 # RunBuildCommand - Run the build command.
 ##----------------------------------------------------------------------------##
@@ -1259,6 +1295,12 @@ OPTIONS:
 
    View analysis results in a web browser when the build completes.
 
+ --generate-index-only <output location>
+
+   Do not perform the analysis, but only regenerate the index.html file
+   from existing report.html files. Useful for making a custom Static Analyzer
+   integration into a build system that isn't otherwise supported by scan-build.
+
 ADVANCED OPTIONS:
 
  -no-failure-reports
@@ -1550,6 +1592,10 @@ sub ProcessArgs {
     }
 
     if ($arg eq "-o") {
+      if (defined($Options{OutputDir})) {
+        DieDiag("Only one of '-o' or '--generate-index-only' can be specified.\n");
+      }
+
       shift @$Args;
 
       if (!@$Args) {
@@ -1561,6 +1607,27 @@ sub ProcessArgs {
       my $OutDir = shift @$Args;
       mkpath($OutDir) unless (-e $OutDir);  # abs_path wants existing dir
       $Options{OutputDir} = abs_path($OutDir);
+
+      next;
+    }
+
+    if ($arg eq "--generate-index-only") {
+      if (defined($Options{OutputDir})) {
+        DieDiag("Only one of '-o' or '--generate-index-only' can be specified.\n");
+      }
+
+      shift @$Args;
+
+      if (!@$Args) {
+        DieDiag("'--generate-index-only' option requires a target directory name.\n");
+      }
+
+      # Construct an absolute path.  Uses the current working directory
+      # as a base if the original path was not absolute.
+      my $OutDir = shift @$Args;
+      mkpath($OutDir) unless (-e $OutDir);  # abs_path wants existing dir
+      $Options{OutputDir} = abs_path($OutDir);
+      $Options{GenerateIndex} = 1;
 
       next;
     }
@@ -1815,17 +1882,30 @@ if (!@ARGV) {
 ProcessArgs(\@ARGV);
 # All arguments are now shifted from @ARGV. The rest is a build command, if any.
 
-if (!@ARGV and !$RequestDisplayHelp) {
-  ErrorDiag("No build command specified.\n\n");
-  $ForceDisplayHelp = 1;
-}
-
 my $ClangNotFoundErrMsg = FindClang();
 
 if ($ForceDisplayHelp || $RequestDisplayHelp) {
   DisplayHelp($ClangNotFoundErrMsg);
   exit $ForceDisplayHelp;
 }
+
+$CmdArgs = HtmlEscape(join(' ', map(ShellEscape($_), @ARGV)));
+
+# Make sure to use "" to handle paths with spaces.
+$ClangVersion = HtmlEscape(`"$Clang" --version`);
+
+if ($Options{GenerateIndex}) {
+  Finalize($Options{OutputDir}, 0);
+}
+
+if (!@ARGV and !$RequestDisplayHelp) {
+  ErrorDiag("No build command specified.\n\n");
+  $ForceDisplayHelp = 1;
+}
+
+# Determine the output directory for the HTML reports.
+my $BaseDir = $Options{OutputDir};
+$Options{OutputDir} = GetHTMLRunDir($Options{OutputDir});
 
 DieDiag($ClangNotFoundErrMsg) if (defined $ClangNotFoundErrMsg);
 
@@ -1845,16 +1925,6 @@ if ($Clang !~ /\+\+(\.exe)?$/) {
     $ClangCXX .= "++";
   }
 }
-
-# Make sure to use "" to handle paths with spaces.
-$ClangVersion = HtmlEscape(`"$Clang" --version`);
-
-# Determine where results go.
-$CmdArgs = HtmlEscape(join(' ', map(ShellEscape($_), @ARGV)));
-
-# Determine the output directory for the HTML reports.
-my $BaseDir = $Options{OutputDir};
-$Options{OutputDir} = GetHTMLRunDir($Options{OutputDir});
 
 # Determine the location of ccc-analyzer.
 my $AbsRealBin = Cwd::realpath($RealBin);
@@ -1931,33 +2001,4 @@ my %EnvVars = (
 my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Options{KeepCC},
 	                        $Cmd, $CmdCXX, \%EnvVars);
 
-if (defined $Options{OutputFormat}) {
-  if ($Options{OutputFormat} =~ /plist/ ||
-      $Options{OutputFormat} =~ /sarif/) {
-    Diag "Analysis run complete.\n";
-    Diag "Analysis results (" .
-      ($Options{OutputFormat} =~ /plist/ ? "plist" : "sarif") .
-      " files) deposited in '$Options{OutputDir}'\n";
-  }
-  if ($Options{OutputFormat} =~ /html/) {
-    # Postprocess the HTML directory.
-    my $NumBugs = Postprocess($Options{OutputDir}, $BaseDir,
-                              $Options{AnalyzerStats}, $Options{KeepEmpty});
-
-    if ($Options{ViewResults} and -r "$Options{OutputDir}/index.html") {
-      Diag "Analysis run complete.\n";
-      Diag "Viewing analysis results in '$Options{OutputDir}' using scan-view.\n";
-      my $ScanView = Cwd::realpath("$RealBin/scan-view");
-      if (! -x $ScanView) { $ScanView = "scan-view"; }
-      if (! -x $ScanView) { $ScanView = Cwd::realpath("$RealBin/../../scan-view/bin/scan-view"); }
-      exec $ScanView, "$Options{OutputDir}";
-    }
-
-    if ($Options{ExitStatusFoundBugs}) {
-      exit 1 if ($NumBugs > 0);
-      exit $ExitStatus;
-    }
-  }
-}
-
-exit $ExitStatus;
+Finalize($BaseDir, $ExitStatus);
