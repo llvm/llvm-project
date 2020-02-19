@@ -201,8 +201,7 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         break;
-      case WebAssembly::CALL_i32:
-      case WebAssembly::CALL_i64:
+      case WebAssembly::CALL:
         Changed |= optimizeCall(MBB, MI, MRI, MDT, LIS, TLI, LibInfo);
         break;
       }

@@ -82,65 +82,15 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
 
 const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case WebAssembly::CALL_VOID:
-  case WebAssembly::CALL_VOID_S:
-  case WebAssembly::CALL_INDIRECT_VOID:
-  case WebAssembly::CALL_INDIRECT_VOID_S:
-  case WebAssembly::RET_CALL:
-  case WebAssembly::RET_CALL_S:
-  case WebAssembly::RET_CALL_INDIRECT:
-  case WebAssembly::RET_CALL_INDIRECT_S:
-    return MI.getOperand(0);
-  case WebAssembly::CALL_i32:
-  case WebAssembly::CALL_i32_S:
-  case WebAssembly::CALL_i64:
-  case WebAssembly::CALL_i64_S:
-  case WebAssembly::CALL_f32:
-  case WebAssembly::CALL_f32_S:
-  case WebAssembly::CALL_f64:
-  case WebAssembly::CALL_f64_S:
-  case WebAssembly::CALL_v16i8:
-  case WebAssembly::CALL_v16i8_S:
-  case WebAssembly::CALL_v8i16:
-  case WebAssembly::CALL_v8i16_S:
-  case WebAssembly::CALL_v4i32:
-  case WebAssembly::CALL_v4i32_S:
-  case WebAssembly::CALL_v2i64:
-  case WebAssembly::CALL_v2i64_S:
-  case WebAssembly::CALL_v4f32:
-  case WebAssembly::CALL_v4f32_S:
-  case WebAssembly::CALL_v2f64:
-  case WebAssembly::CALL_v2f64_S:
-  case WebAssembly::CALL_exnref:
-  case WebAssembly::CALL_exnref_S:
-  case WebAssembly::CALL_INDIRECT_i32:
-  case WebAssembly::CALL_INDIRECT_i32_S:
-  case WebAssembly::CALL_INDIRECT_i64:
-  case WebAssembly::CALL_INDIRECT_i64_S:
-  case WebAssembly::CALL_INDIRECT_f32:
-  case WebAssembly::CALL_INDIRECT_f32_S:
-  case WebAssembly::CALL_INDIRECT_f64:
-  case WebAssembly::CALL_INDIRECT_f64_S:
-  case WebAssembly::CALL_INDIRECT_v16i8:
-  case WebAssembly::CALL_INDIRECT_v16i8_S:
-  case WebAssembly::CALL_INDIRECT_v8i16:
-  case WebAssembly::CALL_INDIRECT_v8i16_S:
-  case WebAssembly::CALL_INDIRECT_v4i32:
-  case WebAssembly::CALL_INDIRECT_v4i32_S:
-  case WebAssembly::CALL_INDIRECT_v2i64:
-  case WebAssembly::CALL_INDIRECT_v2i64_S:
-  case WebAssembly::CALL_INDIRECT_v4f32:
-  case WebAssembly::CALL_INDIRECT_v4f32_S:
-  case WebAssembly::CALL_INDIRECT_v2f64:
-  case WebAssembly::CALL_INDIRECT_v2f64_S:
-  case WebAssembly::CALL_INDIRECT_exnref:
-  case WebAssembly::CALL_INDIRECT_exnref_S:
-    return MI.getOperand(1);
   case WebAssembly::CALL:
   case WebAssembly::CALL_S:
+  case WebAssembly::RET_CALL:
+  case WebAssembly::RET_CALL_S:
     return MI.getOperand(MI.getNumExplicitDefs());
   case WebAssembly::CALL_INDIRECT:
   case WebAssembly::CALL_INDIRECT_S:
+  case WebAssembly::RET_CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT_S:
     return MI.getOperand(MI.getNumOperands() - 1);
   default:
     llvm_unreachable("Not a call instruction");

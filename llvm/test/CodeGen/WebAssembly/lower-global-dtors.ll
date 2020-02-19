@@ -48,7 +48,7 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.0{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: call            $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
 ; CHECK-NEXT: i32.eqz         $push4=, $pop3
 ; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
@@ -64,7 +64,7 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: call            $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
 ; CHECK-NEXT: i32.eqz         $push4=, $pop3
 ; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
@@ -79,7 +79,7 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c0{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: call            $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
 ; CHECK-NEXT: i32.eqz         $push4=, $pop3
 ; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
@@ -94,7 +94,7 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c1{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: call            $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
 ; CHECK-NEXT: i32.eqz         $push4=, $pop3
 ; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
@@ -108,7 +108,7 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
-; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
+; CHECK-NEXT: call            $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
 ; CHECK-NEXT: i32.eqz         $push4=, $pop3
 ; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable

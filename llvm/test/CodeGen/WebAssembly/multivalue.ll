@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+multivalue,+tail-call | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
 ; RUN: llc < %s --filetype=obj -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
 
 ; Test that the multivalue calls, returns, function types, and block
@@ -37,6 +38,7 @@ define %pair @pair_ident(%pair %p) {
 ; CHECK-NEXT: drop{{$}}
 ; CHECK-NEXT: drop{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $drop=, $drop=, pair_const{{$}}
 define void @pair_call() {
   %p = call %pair @pair_const()
   ret void
@@ -46,6 +48,7 @@ define void @pair_call() {
 ; CHECK-NEXT: .functype pair_call_return () -> (i32, i64)
 ; CHECK-NEXT: call pair_const{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $push{{[0-9]+}}=, $push{{[0-9]+}}=, pair_const{{$}}
 define %pair @pair_call_return() {
   %p = call %pair @pair_const()
   ret %pair %p
@@ -56,6 +59,7 @@ define %pair @pair_call_return() {
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
 define %pair @pair_call_indirect(%pair()* %f) {
   %p = call %pair %f()
   ret %pair %p
@@ -65,6 +69,7 @@ define %pair @pair_call_indirect(%pair()* %f) {
 ; CHECK-NEXT: .functype pair_tail_call () -> (i32, i64)
 ; CHECK-NEXT: return_call pair_const{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: return_call pair_const{{$}}
 define %pair @pair_tail_call() {
   %p = musttail call %pair @pair_const()
   ret %pair %p
@@ -75,6 +80,7 @@ define %pair @pair_tail_call() {
 ; CHECK-NEXT: call pair_const{{$}}
 ; CHECK-NEXT: drop{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $push{{[0-9]+}}=, $drop=, pair_const{{$}}
 define i32 @pair_call_return_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -89,6 +95,7 @@ define i32 @pair_call_return_first() {
 ; CHECK-NEXT: drop{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $drop=, $0=, pair_const{{$}}
 define i64 @pair_call_return_second() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 1
@@ -101,6 +108,7 @@ define i64 @pair_call_return_second() {
 ; CHECK-NEXT: drop{{$}}
 ; CHECK-NEXT: call use_i32{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $push{{[0-9]+}}=, $drop=, pair_const{{$}}
 define void @pair_call_use_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -117,6 +125,7 @@ define void @pair_call_use_first() {
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: call use_i64{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $drop=, $0=, pair_const{{$}}
 define void @pair_call_use_second() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 1
@@ -132,6 +141,7 @@ define void @pair_call_use_second() {
 ; CHECK-NEXT: call use_i32{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $push{{[0-9]+}}=, $0=, pair_const{{$}}
 define i64 @pair_call_use_first_return_second() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -150,6 +160,7 @@ define i64 @pair_call_use_first_return_second() {
 ; CHECK-NEXT: call use_i64{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $0=, $1=, pair_const{{$}}
 define i32 @pair_call_use_second_return_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 1
@@ -164,6 +175,7 @@ define i32 @pair_call_use_second_return_first() {
 ; CHECK-NEXT: local.get 1
 ; CHECK-NEXT: call pair_ident{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $push{{[0-9]+}}=, $push{{[0-9]+}}=, pair_ident, $0, $1{{$}}
 define %pair @pair_pass_through(%pair %p) {
   %r = call %pair @pair_ident(%pair %p)
   ret %pair %r
@@ -191,6 +203,7 @@ define %rpair @pair_swap(%pair %p) {
 ; CHECK-NEXT: local.get 1{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $0=, $1=, pair_const{{$}}
 define %rpair @pair_call_swap() {
   %p = call %pair @pair_const()
   %first = extractvalue %pair %p, 0
@@ -210,6 +223,7 @@ define %rpair @pair_call_swap() {
 ; CHECK-NEXT: local.get 1{{$}}
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; REGS: call $0=, $1=, pair_ident, $0, $1{{$}}
 define %rpair @pair_pass_through_swap(%pair %p) {
   %p1 = call %pair @pair_ident(%pair %p)
   %first = extractvalue %pair %p1, 0

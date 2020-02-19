@@ -416,10 +416,22 @@ static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
                                            const TargetInstrInfo &TII) {
   MachineInstr &CallParams = *CallResults.getPrevNode();
   assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
-  assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS);
+  assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
+         CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
 
   bool IsIndirect = CallParams.getOperand(0).isReg();
-  unsigned CallOp = IsIndirect ? WebAssembly::CALL_INDIRECT : WebAssembly::CALL;
+  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+
+  unsigned CallOp;
+  if (IsIndirect && IsRetCall) {
+    CallOp = WebAssembly::RET_CALL_INDIRECT;
+  } else if (IsIndirect) {
+    CallOp = WebAssembly::CALL_INDIRECT;
+  } else if (IsRetCall) {
+    CallOp = WebAssembly::RET_CALL;
+  } else {
+    CallOp = WebAssembly::CALL;
+  }
 
   MachineFunction &MF = *BB->getParent();
   const MCInstrDesc &MCID = TII.get(CallOp);
@@ -484,6 +496,7 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
   case WebAssembly::CALL_RESULTS:
+  case WebAssembly::RET_CALL_RESULTS:
     return LowerCallResults(MI, DL, BB, TII);
   }
 }
@@ -885,21 +898,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   InTys.push_back(MVT::Other);
-  unsigned Opc;
-  // TODO: Remove CALL0 and CALL1 in favor of CALL
-  switch (Ins.size()) {
-  case 0:
-    Opc = WebAssemblyISD::CALL0;
-    break;
-  case 1:
-    Opc = WebAssemblyISD::CALL1;
-    break;
-  default:
-    Opc = WebAssemblyISD::CALL;
-    break;
-  }
   SDVTList InTyList = DAG.getVTList(InTys);
-  SDValue Res = DAG.getNode(Opc, DL, InTyList, Ops);
+  SDValue Res = DAG.getNode(WebAssemblyISD::CALL, DL, InTyList, Ops);
 
   for (size_t I = 0; I < Ins.size(); ++I)
     InVals.push_back(Res.getValue(I));

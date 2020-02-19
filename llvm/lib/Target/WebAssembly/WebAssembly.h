@@ -52,7 +52,6 @@ FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
 FunctionPass *createWebAssemblyPeephole();
-FunctionPass *createWebAssemblyCallIndirectFixup();
 
 // PassRegistry initialization declarations.
 void initializeWebAssemblyAddMissingPrototypesPass(PassRegistry &);
@@ -77,7 +76,6 @@ void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyPeepholePass(PassRegistry &);
-void initializeWebAssemblyCallIndirectFixupPass(PassRegistry &);
 
 namespace WebAssembly {
 enum TargetIndex { TI_LOCAL_START, TI_GLOBAL_START, TI_OPERAND_STACK_START };
