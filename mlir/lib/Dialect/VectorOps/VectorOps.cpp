@@ -1018,7 +1018,7 @@ static LogicalResult verify(OuterProductOp op) {
 static void print(OpAsmPrinter &p, ReshapeOp op) {
   p << op.getOperationName() << " " << op.vector() << ", [" << op.input_shape()
     << "], [" << op.output_shape() << "], " << op.fixed_vector_sizes();
-  SmallVector<StringRef, 2> elidedAttrs = {
+  std::array<StringRef, 2> elidedAttrs = {
       ReshapeOp::getOperandSegmentSizeAttr(),
       ReshapeOp::getFixedVectorSizesAttrName()};
   p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);

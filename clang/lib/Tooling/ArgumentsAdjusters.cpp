@@ -26,7 +26,7 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;
     bool HasSyntaxOnly = false;
-    const std::vector<llvm::StringRef> OutputCommands = {
+    constexpr llvm::StringRef OutputCommands[] = {
         // FIXME: Add other options that generate output.
         "-save-temps",
         "--save-temps",
