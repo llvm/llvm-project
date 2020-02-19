@@ -736,6 +736,8 @@ void IRPosition::verify() {
   }
 }
 
+namespace {
+
 /// Helper function to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
 /// required to be run again).
@@ -6091,6 +6093,8 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
     removeAssumedBits(NO_WRITES);
 }
 
+} // namespace
+
 /// -------------------- Memory Locations Attributes ---------------------------
 /// Includes read-none, argmemonly, inaccessiblememonly,
 /// inaccessiblememorargmemonly
@@ -6122,6 +6126,8 @@ std::string AAMemoryLocation::getMemoryLocationsAsStr(
   S.pop_back();
   return S;
 }
+
+namespace {
 
 struct AAMemoryLocationImpl : public AAMemoryLocation {
 
@@ -7066,6 +7072,8 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
     STATS_DECLTRACK_CSARG_ATTR(value_range)
   }
 };
+
+} // namespace
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------

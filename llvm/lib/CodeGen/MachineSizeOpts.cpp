@@ -24,6 +24,7 @@ extern cl::opt<bool> ForcePGSO;
 extern cl::opt<int> PgsoCutoffInstrProf;
 extern cl::opt<int> PgsoCutoffSampleProf;
 
+namespace {
 namespace machine_size_opts_detail {
 
 /// Like ProfileSummaryInfo::isColdBlock but for MachineBasicBlock.
@@ -91,7 +92,6 @@ bool isFunctionHotInCallGraphNthPercentile(
 }
 } // namespace machine_size_opts_detail
 
-namespace {
 struct MachineBasicBlockBFIAdapter {
   static bool isFunctionColdInCallGraph(const MachineFunction *MF,
                                         ProfileSummaryInfo *PSI,

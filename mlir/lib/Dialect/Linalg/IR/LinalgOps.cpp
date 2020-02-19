@@ -241,7 +241,8 @@ template <typename GenericOpType>
 static LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
 
 template <typename GenericOpType>
-LogicalResult verifyFuncArgsGeneric(GenericOpType op, FunctionType funType) {
+static LogicalResult verifyFuncArgsGeneric(GenericOpType op,
+                                           FunctionType funType) {
   auto res = verifyFuncArgs(op, funType);
   if (failed(res))
     return res;
