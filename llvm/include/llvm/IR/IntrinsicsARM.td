@@ -1164,4 +1164,8 @@ def int_arm_mve_vrintn: Intrinsic<
 def int_arm_mve_vcls: Intrinsic<
   [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
+defm int_arm_mve_vbrsr: MVEMXPredicated<
+  [llvm_anyvector_ty], [],
+  [LLVMMatchType<0>, llvm_i32_ty], LLVMMatchType<0>, llvm_anyvector_ty>;
+
 } // end TargetPrefix
