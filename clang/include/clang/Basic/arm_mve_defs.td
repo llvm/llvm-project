@@ -98,6 +98,9 @@ def extend: CGHelperFn<"SignOrZeroExtend"> {
   let special_params = [IRBuilderIntParam<2, "bool">];
 }
 def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
+def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
+def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;
 def undef: IRFunction<"UndefValue::get">;
 def icmp_eq: IRBuilder<"CreateICmpEQ">;
 def icmp_ne: IRBuilder<"CreateICmpNE">;
@@ -117,6 +120,7 @@ def fcmp_lt: IRBuilder<"CreateFCmpOLT">;
 def fcmp_le: IRBuilder<"CreateFCmpOLE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
+def fneg: IRBuilder<"CreateFNeg">;
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
