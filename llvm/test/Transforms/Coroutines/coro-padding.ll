@@ -1,7 +1,6 @@
 ; Check that we will insert the correct padding if natural alignment of the
 ; spilled data does not match the alignment specified in alloca instruction.
 ; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 %PackedStruct = type <{ i64 }>
 
