@@ -119,6 +119,33 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
           return true;
         return false;
       })
+      // Custom lower scalar memory access, up to 8 bytes, for:
+      // - non-power-of-2 MemSizes
+      // - unaligned 2 or 8 byte MemSizes for MIPS32r5 and older
+      .customIf([=, &ST](const LegalityQuery &Query) {
+        if (!Query.Types[0].isScalar() || Query.Types[1] != p0 ||
+            Query.Types[0] == s1)
+          return false;
+
+        unsigned Size = Query.Types[0].getSizeInBits();
+        unsigned QueryMemSize = Query.MMODescrs[0].SizeInBits;
+        assert(QueryMemSize <= Size && "Scalar can't hold MemSize");
+
+        if (Size > 64 || QueryMemSize > 64)
+          return false;
+
+        if (!isPowerOf2_64(Query.MMODescrs[0].SizeInBits))
+          return true;
+
+        if (!ST.systemSupportsUnalignedAccess() &&
+            isUnalignedMemmoryAccess(QueryMemSize,
+                                     Query.MMODescrs[0].AlignInBits)) {
+          assert(QueryMemSize != 32 && "4 byte load and store are legal");
+          return true;
+        }
+
+        return false;
+      })
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
@@ -135,7 +162,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
                                  {s32, p0, 16, 8}})
       .clampScalar(0, s32, s32);
 
-  getActionDefinitionsBuilder({G_ZEXT, G_SEXT})
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalIf([](const LegalityQuery &Query) { return false; })
       .maxScalar(0, s32);
 
@@ -311,6 +338,87 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
   const LLT s64 = LLT::scalar(64);
 
   switch (MI.getOpcode()) {
+  case G_LOAD:
+  case G_STORE: {
+    unsigned MemSize = (**MI.memoperands_begin()).getSize();
+    Register Val = MI.getOperand(0).getReg();
+    unsigned Size = MRI.getType(Val).getSizeInBits();
+
+    MachineMemOperand *MMOBase = *MI.memoperands_begin();
+
+    assert(MemSize <= 8 && "MemSize is too large");
+    assert(Size <= 64 && "Scalar size is too large");
+
+    // Split MemSize into two, P2HalfMemSize is largest power of two smaller
+    // then MemSize. e.g. 8 = 4 + 4 , 6 = 4 + 2, 3 = 2 + 1.
+    unsigned P2HalfMemSize, RemMemSize;
+    if (isPowerOf2_64(MemSize)) {
+      P2HalfMemSize = RemMemSize = MemSize / 2;
+    } else {
+      P2HalfMemSize = 1 << Log2_32(MemSize);
+      RemMemSize = MemSize - P2HalfMemSize;
+    }
+
+    Register BaseAddr = MI.getOperand(1).getReg();
+    LLT PtrTy = MRI.getType(BaseAddr);
+    MachineFunction &MF = MIRBuilder.getMF();
+
+    auto P2HalfMemOp = MF.getMachineMemOperand(MMOBase, 0, P2HalfMemSize);
+    auto RemMemOp = MF.getMachineMemOperand(MMOBase, P2HalfMemSize, RemMemSize);
+
+    if (MI.getOpcode() == G_STORE) {
+      // Widen Val to s32 or s64 in order to create legal G_LSHR or G_UNMERGE.
+      if (Size < 32)
+        Val = MIRBuilder.buildAnyExt(s32, Val).getReg(0);
+      if (Size > 32 && Size < 64)
+        Val = MIRBuilder.buildAnyExt(s64, Val).getReg(0);
+
+      auto C_P2HalfMemSize = MIRBuilder.buildConstant(s32, P2HalfMemSize);
+      auto Addr = MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, C_P2HalfMemSize);
+
+      if (MI.getOpcode() == G_STORE && MemSize <= 4) {
+        MIRBuilder.buildStore(Val, BaseAddr, *P2HalfMemOp);
+        auto C_P2Half_InBits = MIRBuilder.buildConstant(s32, P2HalfMemSize * 8);
+        auto Shift = MIRBuilder.buildLShr(s32, Val, C_P2Half_InBits);
+        MIRBuilder.buildStore(Shift, Addr, *RemMemOp);
+      } else {
+        auto Unmerge = MIRBuilder.buildUnmerge(s32, Val);
+        MIRBuilder.buildStore(Unmerge.getReg(0), BaseAddr, *P2HalfMemOp);
+        MIRBuilder.buildStore(Unmerge.getReg(1), Addr, *RemMemOp);
+      }
+    }
+
+    if (MI.getOpcode() == G_LOAD) {
+
+      if (MemSize <= 4) {
+        // This is anyextending load, use 4 byte lwr/lwl.
+        auto *Load4MMO = MF.getMachineMemOperand(MMOBase, 0, 4);
+
+        if (Size == 32)
+          MIRBuilder.buildLoad(Val, BaseAddr, *Load4MMO);
+        else {
+          auto Load = MIRBuilder.buildLoad(s32, BaseAddr, *Load4MMO);
+          MIRBuilder.buildTrunc(Val, Load.getReg(0));
+        }
+
+      } else {
+        auto C_P2HalfMemSize = MIRBuilder.buildConstant(s32, P2HalfMemSize);
+        auto Addr = MIRBuilder.buildPtrAdd(PtrTy, BaseAddr, C_P2HalfMemSize);
+
+        auto Load_P2Half = MIRBuilder.buildLoad(s32, BaseAddr, *P2HalfMemOp);
+        auto Load_Rem = MIRBuilder.buildLoad(s32, Addr, *RemMemOp);
+
+        if (Size == 64)
+          MIRBuilder.buildMerge(Val, {Load_P2Half, Load_Rem});
+        else {
+          auto Merge = MIRBuilder.buildMerge(s64, {Load_P2Half, Load_Rem});
+          MIRBuilder.buildTrunc(Val, Merge);
+        }
+      }
+    }
+    MI.eraseFromParent();
+    break;
+  }
   case G_UITOFP: {
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
