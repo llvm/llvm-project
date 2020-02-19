@@ -129,5 +129,6 @@ static_library("Checkers") {
     "ValistChecker.cpp",
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
+    "cert/PutenvWithAutoChecker.cpp",
   ]
 }
