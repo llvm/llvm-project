@@ -27,7 +27,6 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
@@ -39,6 +38,7 @@ class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
 class DataLayout;
+class IRBuilderBase;
 class Loop;
 class LoopInfo;
 class MemoryAccess;
@@ -309,20 +309,20 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
-Value *createMinMaxOp(IRBuilder<> &Builder,
+Value *createMinMaxOp(IRBuilderBase &Builder,
                       RecurrenceDescriptor::MinMaxRecurrenceKind RK,
                       Value *Left, Value *Right);
 
 /// Generates an ordered vector reduction using extracts to reduce the value.
 Value *
-getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src, unsigned Op,
+getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src, unsigned Op,
                     RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
                         RecurrenceDescriptor::MRK_Invalid,
                     ArrayRef<Value *> RedOps = None);
 
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
                            ArrayRef<Value *> RedOps = None);
@@ -333,7 +333,7 @@ Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilder<> &B,
+Value *createSimpleTargetReduction(IRBuilderBase &B,
                                    const TargetTransformInfo *TTI,
                                    unsigned Opcode, Value *Src,
                                    TargetTransformInfo::ReductionFlags Flags =
@@ -344,7 +344,7 @@ Value *createSimpleTargetReduction(IRBuilder<> &B,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
+Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
                              RecurrenceDescriptor &Desc, Value *Src,
                              bool NoNaN = false);
 
