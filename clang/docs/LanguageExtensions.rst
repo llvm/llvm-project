@@ -122,7 +122,7 @@ of ``cxx_rvalue_references``.
 ``__has_cpp_attribute``
 -----------------------
 
-This function-like macro is available in C++2a by default, and is provided as an
+This function-like macro is available in C++20 by default, and is provided as an
 extension in earlier language standards. It takes a single argument that is the
 name of a double-square-bracket-style attribute. The argument can either be a
 single identifier or a scoped identifier. If the attribute is supported, a

@@ -9,15 +9,17 @@
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
 //
 // CXX2A:#define __GNUG__ 4
 // CXX2A:#define __GXX_EXPERIMENTAL_CXX0X__ 1
 // CXX2A:#define __GXX_RTTI 1
 // CXX2A:#define __GXX_WEAK__ 1
-// CXX2A:#define __cplusplus 201707L
+// CXX2A:#define __cplusplus 202002L
 // CXX2A:#define __private_extern__ extern
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++17 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX1Z %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++1z -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX1Z %s
 //
 // CXX1Z:#define __GNUG__ 4
@@ -28,6 +30,7 @@
 // CXX1Z:#define __private_extern__ extern
 //
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++14 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX1Y %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++1y -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX1Y %s
 //
 // CXX1Y:#define __GNUG__ 4
@@ -119,14 +122,16 @@
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
 //
 // GXX2A:#define __GNUG__ 4
 // GXX2A:#define __GXX_WEAK__ 1
-// GXX2A:#define __cplusplus 201707L
+// GXX2A:#define __cplusplus 202002L
 // GXX2A:#define __private_extern__ extern
 //
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++17 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX1Z %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++1z -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX1Z %s
 //
 // GXX1Z:#define __GNUG__ 4
@@ -135,6 +140,7 @@
 // GXX1Z:#define __private_extern__ extern
 //
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++14 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX1Y %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++1y -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX1Y %s
 //
 // GXX1Y:#define __GNUG__ 4

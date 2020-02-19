@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // PR13819 -- __SIZE_TYPE__ is incompatible.
 typedef __SIZE_TYPE__ size_t; // expected-error 0-1 {{extension}}
@@ -449,8 +449,8 @@ namespace dr241 { // dr241: yes
     template <class T> void g(T t); // expected-note {{candidate}}
   }
   void h(A::B b) {
-    f<3>(b); // expected-error 0-1{{C++2a extension}} expected-error {{no matching}}
-    g<3>(b); // expected-error 0-1{{C++2a extension}}
+    f<3>(b); // expected-error 0-1{{C++20 extension}} expected-error {{no matching}}
+    g<3>(b); // expected-error 0-1{{C++20 extension}}
     A::f<3>(b); // expected-error {{no matching}}
     A::g<3>(b);
     C::f<3>(b); // expected-error {{no matching}}

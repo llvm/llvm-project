@@ -162,7 +162,7 @@ def CoawaitExpr : StmtNode<CoroutineSuspendExpr>;
 def DependentCoawaitExpr : StmtNode<Expr>;
 def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 
-// C++2a Concepts expressions
+// C++20 Concepts expressions
 def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
 
