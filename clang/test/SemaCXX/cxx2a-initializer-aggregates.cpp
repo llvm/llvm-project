@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,pedantic,override,reorder -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,pedantic,override,reorder -Wno-c++2a-designator -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic,override,reorder -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,pedantic,override,reorder -Wno-c++20-designator -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
 
 
 namespace class_with_ctor {

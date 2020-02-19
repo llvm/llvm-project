@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++2a-compat-pedantic -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++2a -pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++20-compat-pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -pedantic -verify %s
 
 struct A { // expected-note 0+{{candidate}}
   A() = default; // expected-note 0+{{candidate}}
@@ -7,7 +7,7 @@ struct A { // expected-note 0+{{candidate}}
 };
 A a1 = {1, 2};
 #if __cplusplus <= 201703L
-  // expected-warning@-2 {{aggregate initialization of type 'A' with user-declared constructors is incompatible with C++2a}}
+  // expected-warning@-2 {{aggregate initialization of type 'A' with user-declared constructors is incompatible with C++20}}
 #else
   // expected-error@-4 {{no matching constructor}}
 #endif
@@ -17,7 +17,7 @@ struct B : A { A a; };
 B b1 = {{}, {}}; // ok
 B b2 = {1, 2, 3, 4};
 #if __cplusplus <= 201703L
-  // expected-warning@-2 2{{aggregate initialization of type 'A' with user-declared constructors is incompatible with C++2a}}
+  // expected-warning@-2 2{{aggregate initialization of type 'A' with user-declared constructors is incompatible with C++20}}
 #else
   // expected-error@-4 2{{no viable conversion from 'int' to 'A'}}
 #endif
@@ -43,7 +43,7 @@ struct C {
   explicit(C)(int);
 };
 #if __cplusplus <= 201703L
-// expected-warning@-3 {{this expression will be parsed as explicit(bool) in C++2a}}
+// expected-warning@-3 {{this expression will be parsed as explicit(bool) in C++20}}
 #if defined(__cpp_conditional_explicit)
 #error "the feature test macro __cpp_conditional_explicit isn't correct"
 #endif
@@ -61,7 +61,7 @@ struct C {
 auto l = []() consteval {};
 int consteval();
 #if __cplusplus <= 201703L
-// expected-warning@-3 {{'consteval' is a keyword in C++2a}}
+// expected-warning@-3 {{'consteval' is a keyword in C++20}}
 // expected-error@-4 {{expected body of lambda expression}}
 #else
 // expected-error@-5 {{expected unqualified-id}}
