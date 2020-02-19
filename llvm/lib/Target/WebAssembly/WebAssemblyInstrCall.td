@@ -73,11 +73,18 @@ defm CALL_RESULTS :
 
 let Uses = [SP32, SP64], isCall = 1 in {
 
-// TODO: Add an indirect version of the variadic call, delete CALL_*
+// TODO: delete CALL_*
+let variadicOpsAreDefs = 1 in
 defm CALL :
   I<(outs), (ins function32_op:$callee, variable_ops),
     (outs), (ins function32_op:$callee), [],
     "call\t$callee", "call\t$callee", 0x10>;
+
+let variadicOpsAreDefs = 1 in
+defm CALL_INDIRECT :
+ I<(outs), (ins TypeIndex:$type, i32imm:$flags, variable_ops),
+   (outs), (ins TypeIndex:$type, i32imm:$flags), [],
+   "call_indirect", "call_indirect\t$type", 0x11>;
 
 defm "" : CALL<i32, I32, "i32.">;
 defm "" : CALL<i64, I64, "i64.">;
