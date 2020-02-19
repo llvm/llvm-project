@@ -159,8 +159,16 @@ static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
   }
   assert((AnyBarrier || AllAnalyzable) &&
          "analyzeBranch needs to analyze any block with a fallthrough");
+
+  // Find the layout successor from the original block order.
+  MachineFunction *MF = MBB->getParent();
+  MachineBasicBlock *OriginalSuccessor =
+      unsigned(MBB->getNumber() + 1) < MF->getNumBlockIDs()
+          ? MF->getBlockNumbered(MBB->getNumber() + 1)
+          : nullptr;
+
   if (AllAnalyzable)
-    MBB->updateTerminator();
+    MBB->updateTerminator(OriginalSuccessor);
 }
 
 namespace {
@@ -247,9 +255,12 @@ struct Entry {
 static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
                        const MachineDominatorTree &MDT) {
+  // Remember original layout ordering, so we can update terminators after
+  // reordering to point to the original layout successor.
+  MF.RenumberBlocks();
+
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
-  MF.RenumberBlocks();
   SmallVector<unsigned, 16> NumPredsLeft(MF.getNumBlockIDs(), 0);
   for (MachineBasicBlock &MBB : MF) {
     unsigned N = MBB.pred_size();

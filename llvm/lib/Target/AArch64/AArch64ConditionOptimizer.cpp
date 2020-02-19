@@ -295,8 +295,6 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
       .add(BrMI.getOperand(1));
   BrMI.eraseFromParent();
 
-  MBB->updateTerminator();
-
   ++NumConditionsAdjusted;
 }
 
