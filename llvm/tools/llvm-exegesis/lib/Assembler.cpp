@@ -167,11 +167,11 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
 
-Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStream) {
+void assembleToStream(const ExegesisTarget &ET,
+                      std::unique_ptr<LLVMTargetMachine> TM,
+                      ArrayRef<unsigned> LiveIns,
+                      ArrayRef<RegisterValue> RegisterInitialValues,
+                      const FillFunction &Fill, raw_pwrite_stream &AsmStream) {
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
@@ -234,15 +234,15 @@ Error assembleToStream(const ExegesisTarget &ET,
   for (const char *PassName :
        {"postrapseudos", "machineverifier", "prologepilog"})
     if (addPass(PM, PassName, *TPC))
-      return make_error<Failure>("Unable to add a mandatory pass");
+      report_fatal_error("Unable to add a mandatory pass");
   TPC->setInitialized();
 
   // AsmPrinter is responsible for generating the assembly into AsmBuffer.
-  if (TM->addAsmPrinter(PM, AsmStream, nullptr, CGFT_ObjectFile, MCContext))
-    return make_error<Failure>("Cannot add AsmPrinter passes");
+  if (TM->addAsmPrinter(PM, AsmStream, nullptr, CGFT_ObjectFile,
+                        MCContext))
+    report_fatal_error("Cannot add AsmPrinter passes");
 
   PM.run(*Module); // Run all the passes
-  return Error::success();
 }
 
 object::OwningBinary<object::ObjectFile>

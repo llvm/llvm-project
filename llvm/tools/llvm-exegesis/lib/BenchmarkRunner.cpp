@@ -101,12 +101,10 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
   {
     SmallString<0> Buffer;
     raw_svector_ostream OS(Buffer);
-    if (Error E = assembleToStream(
-            State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-            BC.Key.RegisterInitialValues,
-            Repetitor.Repeat(Instructions, kMinInstructionsForSnippet), OS)) {
-      return std::move(E);
-    }
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.Key.RegisterInitialValues,
+                     Repetitor.Repeat(Instructions, kMinInstructionsForSnippet),
+                     OS);
     const ExecutableFunction EF(State.createTargetMachine(),
                                 getObjectFromBuffer(OS.str()));
     const auto FnBytes = EF.getFunctionBytes();
@@ -131,11 +129,8 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
   } else {
     SmallString<0> Buffer;
     raw_svector_ostream OS(Buffer);
-    if (Error E = assembleToStream(State.getExegesisTarget(),
-                                   State.createTargetMachine(), BC.LiveIns,
-                                   BC.Key.RegisterInitialValues, Filler, OS)) {
-      return std::move(E);
-    }
+    assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                     BC.LiveIns, BC.Key.RegisterInitialValues, Filler, OS);
     ObjectFile = getObjectFromBuffer(OS.str());
   }
 
@@ -170,11 +165,8 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
           sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
     return std::move(E);
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
-  if (Error E = assembleToStream(
-          State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues, FillFunction, OFS)) {
-    return std::move(E);
-  }
+  assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
+                   BC.LiveIns, BC.Key.RegisterInitialValues, FillFunction, OFS);
   return std::string(ResultPath.str());
 }
 
