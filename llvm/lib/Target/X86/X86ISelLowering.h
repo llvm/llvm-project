@@ -77,7 +77,7 @@ namespace llvm {
       NT_CALL,
 
       /// X86 compare and logical compare instructions.
-      CMP, COMI, UCOMI,
+      CMP, FCMP, COMI, UCOMI,
 
       /// X86 bit-test instructions.
       BT,
