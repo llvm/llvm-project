@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(int);
 
