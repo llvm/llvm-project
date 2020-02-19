@@ -1,9 +1,6 @@
 #include <string>
 #include <set>
 
-typedef std::set<int> intset;
-typedef std::set<std::string> stringset;
-
 int g_the_foo = 0;
 
 int thefoo_rw(int arg = 1)
@@ -16,7 +13,7 @@ int thefoo_rw(int arg = 1)
 	return g_the_foo;
 }
 
-void by_ref_and_ptr(intset &ref, intset *ptr)
+void by_ref_and_ptr(std::set<int> &ref, std::set<int> *ptr)
 {
     // Stop here to check by ref and ptr
     return;
@@ -24,7 +21,7 @@ void by_ref_and_ptr(intset &ref, intset *ptr)
 
 int main()
 {
-    intset ii;
+    std::set<int> ii;
     thefoo_rw(1);  // Set break point at this line.
 	
 	ii.insert(0);
@@ -43,7 +40,7 @@ int main()
 	ii.clear();
 	thefoo_rw(1);  // Set break point at this line.
 
-	stringset ss;
+	std::set<std::string> ss;
 	thefoo_rw(1);  // Set break point at this line.
 
 	ss.insert("a");

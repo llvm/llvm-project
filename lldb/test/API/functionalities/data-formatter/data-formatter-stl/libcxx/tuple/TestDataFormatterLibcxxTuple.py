@@ -17,8 +17,7 @@ class TestDataFormatterLibcxxTuple(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// break here')
-        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
-        self.namespace = 'std::__' + ns + '1'
+        self.namespace = 'std'
 
     @add_test_categories(["libc++"])
     def test(self):

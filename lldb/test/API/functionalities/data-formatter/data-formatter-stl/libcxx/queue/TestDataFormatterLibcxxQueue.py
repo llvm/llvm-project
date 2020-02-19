@@ -16,15 +16,14 @@ class TestDataFormatterLibcxxQueue(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
-        self.namespace = 'std::__' + ns + '1'
+        self.namespace = 'std'
 
     def check_variable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
 
         queue = self.namespace + '::queue'
-        self.assertTrue(queue in var.GetTypeName())
+        self.assertTrue(queue in var.GetDisplayTypeName())
         self.assertEqual(var.GetNumChildren(), 5)
         for i in range(5):
             ch = var.GetChildAtIndex(i)

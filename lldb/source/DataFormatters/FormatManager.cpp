@@ -193,7 +193,7 @@ void FormatManager::GetPossibleMatches(
     entries.push_back(
         {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
-    ConstString display_type_name(compiler_type.GetDisplayTypeName());
+    ConstString display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
       entries.push_back({display_type_name, reason, did_strip_ptr,
                          did_strip_ref, did_strip_typedef});
