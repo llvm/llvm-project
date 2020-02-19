@@ -222,8 +222,6 @@ void ThreadClock::release(ClockCache *c, SyncClock *dst) {
   // Clear 'acquired' flag in the remaining elements.
   if (nclk_ < dst->size_)
     CPP_STAT_INC(StatClockReleaseClearTail);
-  for (uptr i = nclk_; i < dst->size_; i++)
-    dst->elem(i).reused = 0;
   dst->release_store_tid_ = kInvalidTid;
   dst->release_store_reused_ = 0;
   // If we've acquired dst, remember this fact,
