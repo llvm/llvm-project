@@ -205,7 +205,6 @@ def VPTPredROperand : AsmOperandClass {
   let Name = "VPTPredR";
   let PredicateMethod = "isVPTPred";
 }
-def undef_tied_input;
 
 // Operand classes for the cluster of MC operands describing a
 // VPT-predicated MVE instruction.
