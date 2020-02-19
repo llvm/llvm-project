@@ -27,16 +27,20 @@ get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 set(LLDB_ENUM_PLUGINS "")
 
-# FIXME: This is a hack to make the DynamicLoaderWasmDYLD happy.
-set(LLDB_DYNAMIC_LOADER_STATIC "")
+# Some plugins depend on other plugins being loaded before. This hacks around
+# that issue by loading them last. Note that there's no order guarantee within
+# this category.
+set(LLDB_ENUM_PLUGINS_LOADED_LAST "")
 
 foreach(p ${LLDB_ALL_PLUGINS})
   # Strip lldbPlugin form the plugin name.
   string(SUBSTRING ${p} 10 -1 pStripped)
   if(${pStripped} MATCHES "^ScriptInterpreter*")
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_SCRIPT_PLUGIN(${pStripped})\n")
+  elseif(${pStripped} MATCHES "^ProcessWindows*")
+    set(LLDB_ENUM_PLUGINS_LOADED_LAST "${LLDB_ENUM_PLUGINS_LOADED_LAST}LLDB_PLUGIN(${pStripped})\n")
   elseif(${pStripped} STREQUAL "DynamicLoaderStatic")
-    set(LLDB_DYNAMIC_LOADER_STATIC "${LLDB_DYNAMIC_LOADER_STATIC}LLDB_PLUGIN(${pStripped})\n")
+    set(LLDB_ENUM_PLUGINS_LOADED_LAST "${LLDB_ENUM_PLUGINS_LOADED_LAST}LLDB_PLUGIN(${pStripped})\n")
   else()
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_PLUGIN(${pStripped})\n")
   endif()
