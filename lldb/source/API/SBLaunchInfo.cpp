@@ -57,7 +57,7 @@ SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBLaunchInfo::~SBLaunchInfo() {}
+SBLaunchInfo::~SBLaunchInfo() = default;
 
 const lldb_private::ProcessLaunchInfo &SBLaunchInfo::ref() const {
   return *m_opaque_sp;

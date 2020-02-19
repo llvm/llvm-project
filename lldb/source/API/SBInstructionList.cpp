@@ -42,7 +42,7 @@ operator=(const SBInstructionList &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBInstructionList::~SBInstructionList() {}
+SBInstructionList::~SBInstructionList() = default;
 
 bool SBInstructionList::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstructionList, IsValid);

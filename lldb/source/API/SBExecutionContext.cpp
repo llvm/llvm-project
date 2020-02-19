@@ -65,7 +65,7 @@ SBExecutionContext::SBExecutionContext(const lldb::SBFrame &frame)
   m_exe_ctx_sp->SetFrameSP(frame.GetFrameSP());
 }
 
-SBExecutionContext::~SBExecutionContext() {}
+SBExecutionContext::~SBExecutionContext() = default;
 
 const SBExecutionContext &SBExecutionContext::
 operator=(const lldb::SBExecutionContext &rhs) {

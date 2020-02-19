@@ -26,7 +26,7 @@ SBStream::SBStream() : m_opaque_up(new StreamString()), m_is_file(false) {
 SBStream::SBStream(SBStream &&rhs)
     : m_opaque_up(std::move(rhs.m_opaque_up)), m_is_file(rhs.m_is_file) {}
 
-SBStream::~SBStream() {}
+SBStream::~SBStream() = default;
 
 bool SBStream::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, IsValid);
