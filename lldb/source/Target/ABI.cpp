@@ -49,13 +49,20 @@ bool RegInfoBasedABI::GetRegisterInfoByName(ConstString name, RegisterInfo &info
     const char *unique_name_cstr = name.GetCString();
     uint32_t i;
     for (i = 0; i < count; ++i) {
-      if (register_info_array[i].name == unique_name_cstr) {
+      const char *reg_name = register_info_array[i].name;
+      assert(ConstString(reg_name).GetCString() == reg_name &&
+             "register_info_array[i].name not from a ConstString?");
+      if (reg_name == unique_name_cstr) {
         info = register_info_array[i];
         return true;
       }
     }
     for (i = 0; i < count; ++i) {
-      if (register_info_array[i].alt_name == unique_name_cstr) {
+      const char *reg_alt_name = register_info_array[i].alt_name;
+      assert((reg_alt_name == nullptr ||
+              ConstString(reg_alt_name).GetCString() == reg_alt_name) &&
+             "register_info_array[i].alt_name not from a ConstString?");
+      if (reg_alt_name == unique_name_cstr) {
         info = register_info_array[i];
         return true;
       }
