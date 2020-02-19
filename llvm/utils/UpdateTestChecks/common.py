@@ -76,7 +76,7 @@ ANALYZE_FUNCTION_RE = re.compile(
     r'\s*\n(?P<body>.*)$',
     flags=(re.X | re.S))
 
-IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
+IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@([\w.]+)\s*\(')
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
 MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
