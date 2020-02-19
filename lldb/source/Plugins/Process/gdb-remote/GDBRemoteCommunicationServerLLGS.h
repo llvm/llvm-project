@@ -199,6 +199,8 @@ protected:
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
 private:
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
+
   void HandleInferiorState_Exited(NativeProcessProtocol *process);
 
   void HandleInferiorState_Stopped(NativeProcessProtocol *process);
