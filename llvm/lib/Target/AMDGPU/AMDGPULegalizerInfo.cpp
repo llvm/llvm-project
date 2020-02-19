@@ -362,7 +362,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-    .customFor({LocalPtr, GlobalPtr, ConstantPtr, Constant32Ptr});
+    .unsupportedFor({PrivatePtr})
+    .custom();
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
