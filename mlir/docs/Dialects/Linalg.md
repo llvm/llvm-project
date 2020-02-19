@@ -2,18 +2,18 @@
 
 [TOC]
 
-# Rationale
+## Rationale
 
 <img width="90" align="left" alt="MLIR Codegen Flow" src="https://user-images.githubusercontent.com/10148468/73613629-c5586580-45c5-11ea-94b7-074aeea94c7b.png">
 
 Linalg is designed to solve the High-level Hierarchical Optimization
 (HHO box) in MLIR and to interoperate nicely within a
-*Mixture Of Expert Compilers* environment (i.e. the *CGSel* box). 
+*Mixture Of Expert Compilers* environment (i.e. the *CGSel* box).
 
 The [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect)
 goes into significantly more design and architectural decision details.
 
-# Set of Key Transformations<a name="key_transformations"></a>
+## Set of Key Transformations<a name="key_transformations"></a>
 
 The following key transformations have been central to driving the design of
 Linalg. They are all implemented in terms of the properties of the
@@ -33,7 +33,7 @@ performed on the Linalg IR and that have influenced its design:
 1. Lower to Library Calls or Special Instructions, Intrinsics or ISA.
 1. Partially Lower to Iterations Over a Finer-Grained Linalg Op.
 
-# High-Level Description of Linalg Ops<a name="linalg_ops"></a>
+## High-Level Description of Linalg Ops<a name="linalg_ops"></a>
 Linalg takes at least some inspiration from all previously [listed prior
 art](#prior_art). The design enables the definition of ***CustomOps*** with
 generic properties that enable [key transformations](#key_transformations),
@@ -42,7 +42,7 @@ library calls and intrinsics.
 
 These ops can have ***either tensor or buffer operands***.
 
-## Payload-Carrying Ops<a name="payload_ops"></a>
+### Payload-Carrying Ops<a name="payload_ops"></a>
 Linalg defines two payload carrying operations that implement the [structured ops](
 https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0eJ9I/edit#slide=id.p
 ) abstraction on tensors and buffers. This is architected as two generic operations
@@ -52,7 +52,7 @@ The properties of these generic ops are the result of applying the
 guiding principles described in the [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect).
 They are listed next, with a brief example and discussion for each.
 
-### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
+#### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
 A `linalg.generic` op fully *derives* the specification of its iteration space
 from its operands.
 The property enforces that a localized IR element (the op) *has* all the information
@@ -63,7 +63,7 @@ to [URUK](http://icps.u-strasbg.fr/~bastoul/research/papers/GVBCPST06-IJPP.pdf).
 Consider the following, partially specified, `linalg.generic` example:
 ```
 #attrs = {args_in: 1, args_out: 1}
-func @example(%A: memref<?xf32, layout1>, 
+func @example(%A: memref<?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   linalg.generic #attrs (%2, %3): memref<?xf32, layout1>,
                                   memref<?xvector<4xf32, layout2>>
@@ -74,7 +74,7 @@ func @example(%A: memref<?xf32, layout1>,
 The property "*Input and Output Operands Define The Iteration Space*" is
 materialized by a lowering into a form that will resemble:
 ```
-func @example(%A: memref<?xf32, layout1>, 
+func @example(%A: memref<?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   %M = "dim" %A, 0: index
   %N = "dim" %B, 0: index
@@ -119,18 +119,18 @@ and [position-dependent
 arrays](https://www.lift-project.org/publications/2019/pizzuti19positiondependentarrays.pdf),
 as well as [TACO](http://tensor-compiler.org/), has shown.
 
-### Property 2: Reversible Mappings Between Control and Data Structures<a name="prop2"></a>
+#### Property 2: Reversible Mappings Between Control and Data Structures<a name="prop2"></a>
 A `linalg.generic` *defines* the mapping between the iteration space (i.e. the
-loops) and the data. 
+loops) and the data.
 
 Consider the following, partially specified, `linalg.generic` example:
 ```
-#indexing_maps = { 
-  (i, j) -> (j, i), 
-  (i, j) -> (j) 
+#indexing_maps = {
+  (i, j) -> (j, i),
+  (i, j) -> (j)
 }
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>, 
+func @example(%A: memref<?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   linalg.generic #attrs (%A, %B): memref<?xf32, layout1>,
                                   memref<?xvector<4xf32, layout2>>
@@ -142,13 +142,13 @@ The property "*Reversible Mappings Between Control and Data Structures*" is
 materialized by a lowering into a form that will resemble:
 ```
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>, 
+func @example(%A: memref<?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   // loop bounds determined from data sizes by “inverting the map”
   %J = "dim" %2, 0: index
   %I = "dim" %2, 1: index
   %J2 = "dim" %3, 0: index
-  // iteration space is consistent with data + mapping inference 
+  // iteration space is consistent with data + mapping inference
   %eq = "eq" %J, %J2: i1
   "assert" %eq: (i1) -> ()
   for %i = 0 to %I {           // loop order is fully defined by indexing maps
@@ -170,7 +170,7 @@ write?
 - Given a subset of data read or written, what subset of the iteration space
 is responsible for this read or write?
 
-Answering these `2` questions is one of the main analyses that Linalg uses to 
+Answering these `2` questions is one of the main analyses that Linalg uses to
 implement transformations such as tiling, tiled producer-consumer fusion, and
 promotion to temporary buffers in fast memory.
 
@@ -179,7 +179,7 @@ This is a pragmatic short-term solution, but in the longer term note that
 this property could be even evaluated dynamically, similarly to
 inspector-executor algorithms.
 
-### Property 3: The Type Of Iterators is Defined Explicitly<a name="prop3"></a>
+#### Property 3: The Type Of Iterators is Defined Explicitly<a name="prop3"></a>
 A `linalg.generic` op fully *declares* the type of its iterators. This
 information is used in transformations.
 
@@ -192,21 +192,21 @@ preserved***.
 
 This can be better captured directly at the loop level thanks to specific
 iterator types, among which:
-*parallel*, *reduction*, *partition*, *permutable/monotonic*, *sequential*, 
+*parallel*, *reduction*, *partition*, *permutable/monotonic*, *sequential*,
 *dependence distance*, ...
 
 These types are traditionally the result of complex dependence analyses and
 have been referred to as "*bands*" in the polyhedral community (e.g. *parallel
 bands*, *permutable bands*, etc, in
 [ISL](https://en.wikipedia.org/wiki/Integer_set_library) schedule tree
-parlance). 
+parlance).
 
 Specifying the information declaratively in a `linalg.generic` allows
 conveying properties that may be hard (or even impossible) to derive from
 lower-level information. These properties can be brought all the way to the
 moment when they are useful for transformations, used and then discarded.
 
-Additionally, these properties may also be viewed as a contract that the 
+Additionally, these properties may also be viewed as a contract that the
 frontend/user guarantees and that the compiler may take advantage of. The
 common example is the use of data-dependent reduction semantics for
 specifying histogram computations. If the frontend has additional knowledge
@@ -216,8 +216,8 @@ parallel semantics and use the special atomic in the computation region.
 At this time, Linalg only has an explicit use for *parallel* and *reduction*
 loops but previous experience shows that the abstraction generalizes.
 
-### Property 4: The Compute Payload is Specified With a Region<a name="prop4"></a>
-A `linalg.generic` op has a compute payload that is fully generic thanks to 
+#### Property 4: The Compute Payload is Specified With a Region<a name="prop4"></a>
+A `linalg.generic` op has a compute payload that is fully generic thanks to
 the use of
 [Regions](https://github.com/llvm/llvm-project/blob/58265ad42a90ae8905be6a447cb42e53529a54a0/mlir/docs/LangRef.md#regions).
 
@@ -230,16 +230,16 @@ At this time there are no additional restrictions to the region
 semantics. This is meant to allow the exploration of various design tradeoffs
 at the intersection of regions and iterator types.
 In particular, the frontend is responsible for the semantics of iterator types
-to correspond to the operations inside the region: the region can capture 
+to correspond to the operations inside the region: the region can capture
 buffers arbitrarily and write into them. If this conflicts with some parallel
 iterator requirement, this is undefined behavior.
 
 Concretely, consider the following, partially specified, `linalg.generic`
 example:
 ```
-#indexing_maps = { 
-  (i, j) -> (i, j), 
-  (i, j) -> (i, j) 
+#indexing_maps = {
+  (i, j) -> (i, j),
+  (i, j) -> (i, j)
 }
 #attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
@@ -276,24 +276,24 @@ proposal](https://llvm.discourse.group/t/introduce-std-inlined-call-op-proposal/
 We expect to be able to reuse the common lower-level infrastructure provided
 it evolves to support both region arguments and captures.
 
-### Property 5: May Map To an External Library Call<a name="prop5"></a>
+#### Property 5: May Map To an External Library Call<a name="prop5"></a>
 A `linalg.generic` op may map to an external library call by specifying a
-`SymbolAttr`. At this level of abstraction, the important glue is the ability 
+`SymbolAttr`. At this level of abstraction, the important glue is the ability
 to perform transformations that preserve the structure necessary to ***call
 the external library after different transformations have been applied***.
 
 This involves considerations related to preservation of op semantics
 and integration at the ABI level. Regardless of whether one wants to use
-external library calls or a custom ISA, the problem for codegen is similar: 
+external library calls or a custom ISA, the problem for codegen is similar:
 preservation of a fixed granularity.
 
 Consider the following, partially specified, `linalg.generic`
 example:
 ```
 #fun_attr = "pointwise_add"
-#indexing_maps = { 
-  (i, j) -> (i, j), 
-  (i, j) -> (i, j) 
+#indexing_maps = {
+  (i, j) -> (i, j),
+  (i, j) -> (i, j)
 }
 #attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
@@ -313,7 +313,7 @@ materialized by a lowering into a form that will resemble:
 func @pointwise_add_sxsxf32_sxsxf32(memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
 
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
-  call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C): 
+  call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C):
     (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   return
 }
@@ -321,20 +321,20 @@ func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
 
 Which, after lowering to LLVM resembles:
 ```
-func @pointwise_add_sxsxf32_sxsxf32(!llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">, 
-                                    !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">, 
+func @pointwise_add_sxsxf32_sxsxf32(!llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
+                                    !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
                                     !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">) -> ()
 
-func @example(%A: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">, 
-              %B: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">, 
+func @example(%A: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
+              %B: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
               %C: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">) {
-  llvm.call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C): 
+  llvm.call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C):
     (!llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">...) -> ()
   return
 }
 ```
 
-#### Convention For External Library Interoperability
+##### Convention For External Library Interoperability
 The `linalg` dialect adopts a convention that is similar to `BLAS` when
 offloading operations to fast library implementations: pass a non-owning
 pointer to input and output data with additional metadata. This convention
@@ -349,7 +349,7 @@ There is an [ongoing
 discussion](https://llvm.discourse.group/t/lowering-optional-attributes-in-linalg-structuredops-to-standard-dialect/333/3)
 on the topic of extending interoperability in the presence of key attributes.
 
-### Property 6: Perfectly Nested Writes To The Whole Output Operands<a name="prop6"></a>
+#### Property 6: Perfectly Nested Writes To The Whole Output Operands<a name="prop6"></a>
 Perfectly nested loops form a particularly important class of structure that
 enables key loop transformations such as tiling and mapping to library calls.
 Unfortunately, this type of structure is easily broken by transformations such
@@ -363,12 +363,12 @@ entire memory region.  This is a structural constraint across regions and
 loops that has proven to be key in simplifying transformations.
 
 One particular point to mention is that converting imperfectly nested code
-into perfectly nested code can often be done with enough loop distribution 
+into perfectly nested code can often be done with enough loop distribution
 and embedding of conditionals down to the innermost loop level.
 
 Previous experience with Tensor Comprehensions gave us the intuition that
 forcing innermost control-flow nesting is a lot like writing data-parallel
-code with arrays of boolean values and predication. 
+code with arrays of boolean values and predication.
 This type of trick has also been used before in polyhedral compilers to
 convert non-affine control into affine compute dependencies.
 
@@ -376,7 +376,7 @@ While it may be possible to automate such rewrites from generic IR,
 `linalg.generic` just forces the semantics for now.
 
 The key implication is that this conversion to deep predication needs to be
-undone once we are done with Linalg transformations. 
+undone once we are done with Linalg transformations.
 After iterators and induction variables are materialized (i.e. after lowering
 out of `linalg.generic` occurred), the overall performance will be greatly
 influenced by the quality of canonicalizations, foldings and *Loop Independent
@@ -384,10 +384,10 @@ Code Motion* (LICM).
 
 In the grander scheme, the reliance on late LICM was deemed a necessary risk.
 
-### Putting it Together<a name="summary"></a>
+#### Putting it Together<a name="summary"></a>
 As it stands, the six properties above define the semantics of a
 `linalg.generic` op. It is an open question whether all of these semantics are
-strictly necessary in practice and whether some should or could be derived 
+strictly necessary in practice and whether some should or could be derived
 automatically while still maintaining the [core guiding
 principles](#guiding_principles).
 
@@ -396,7 +396,7 @@ because of empirical evidence building and working on multiple high-level
 compilers. As we lay those down and engage more with the community, we expect
 multiple rounds of discussions and design changes to the original architecture.
 
-## Data Representation: Views<a name="views"></a>
+### Data Representation: Views<a name="views"></a>
 The current implementation uses the [Strided MemRef (a.k.a View)](
 https://groups.google.com/a/tensorflow.org/forum/#!topic/mlir/MaL8m2nXuio)
 abstraction. The name *View* is used interchangeably in `linalg` to signify
@@ -408,7 +408,7 @@ experience from existing LIFT abstractions for
 and [position-dependent
 arrays](https://www.lift-project.org/publications/2019/pizzuti19positiondependentarrays.pdf).
 
-## Metadata Ops<a name="metadata_ops"></a>
+### Metadata Ops<a name="metadata_ops"></a>
 A set of ops that manipulate metadata but do not move memory. These ops take
 `view` operands + extra attributes and return new `view`s. The returned
 `view`s generally alias the operand `view`. At the moment the existing ops
@@ -435,7 +435,7 @@ In a longer-term future, the abstractions from [Legion data-centric
 programming model](https://legion.stanford.edu/overview/) seem generally
 appealing.
 
-## Named Payload-Carrying Ops<a name="named_ops"></a>
+### Named Payload-Carrying Ops<a name="named_ops"></a>
 Additionally, `linalg` provides a small subset of commonly named operations:
 
     * `linalg.copy`,
@@ -446,12 +446,12 @@ Additionally, `linalg` provides a small subset of commonly named operations:
 
 These named operations adhere to the `linalg.generic` op interface. Work is in
 progress to define declarative mechanisms to automatically generate named ops
-from a description in terms of only the generic op interface. 
+from a description in terms of only the generic op interface.
 
 This is the main reason there are only a small number of ops today: we expect
 them to be auto-generated from Tablegen soon.
 
-# Open Issues and Design Alternatives<a name="open_issues"></a>
+## Open Issues and Design Alternatives<a name="open_issues"></a>
 Multiple open issues and design alternatives are in flight and it is time to
 lay them out for the community to discuss and pick apart:
 1. Should `linalg.generic` support nesting?
@@ -466,6 +466,6 @@ extended, if at all?
 ...
 
 These key questions (and much more) should be really thought of in the general
-context of MLIR in which different levels of IR interoperate seamlessly. In 
-practice, it is not necessary (or beneficial) to try and solve all problems in the 
+context of MLIR in which different levels of IR interoperate seamlessly. In
+practice, it is not necessary (or beneficial) to try and solve all problems in the
 same IR.
