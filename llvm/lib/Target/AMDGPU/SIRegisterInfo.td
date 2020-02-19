@@ -247,6 +247,7 @@ def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 9;
+  let GeneratePressureSet = 0;
 }
 
 // SGPR 64-bit registers
@@ -443,6 +444,7 @@ def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
   let CopyCost = -1;
 }
 
+let GeneratePressureSet = 0 in {
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
@@ -462,6 +464,7 @@ def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1]
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
   let AllocationPriority = 10;
 }
+} // End GeneratePressureSet = 0
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
@@ -469,6 +472,7 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32
   let AllocationPriority = 10;
 }
 
+let GeneratePressureSet = 0 in {
 def SRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add SReg_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;
@@ -696,7 +700,7 @@ def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
   let CopyCost = 65;
   let AllocationPriority = 8;
 }
-
+} // End GeneratePressureSet = 0
 
 // This is not a real register. This is just to have a register to add
 // to VReg_1 that does not alias any real register that would
@@ -705,6 +709,7 @@ def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
   let isArtificial = 1;
 }
 
+let GeneratePressureSet = 0 in {
 // FIXME: Should specify an empty set for this. No register should
 // ever be allocated using VReg_1. This is a hack for SelectionDAG
 // that should always be lowered by SILowerI1Copies. TableGen crashes
@@ -733,6 +738,7 @@ def AV_64 : RegisterClass<"AMDGPU", [i64, f64, v4f16], 32,
                           (add AReg_64, VReg_64)> {
   let isAllocatable = 0;
 }
+} // End GeneratePressureSet = 0
 
 //===----------------------------------------------------------------------===//
 //  Register operands
