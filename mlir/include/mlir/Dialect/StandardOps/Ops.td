@@ -1639,4 +1639,21 @@ def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> 
   }];
 }
 
+def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
+  let summary =
+      "assertion that gives alignment information to the input memref";
+  let description = [{
+    The assume alignment operation takes a memref and a integer of alignment
+    value, and internally annotates the buffer with the given alignment. If
+    the buffer isn't aligned to the given alignment, the behavior is undefined.
+
+    This operation doesn't affect the semantics of a correct program. It's for
+    optimization only, and the optimization is best-effort.
+  }];
+  let arguments = (ins AnyMemRef:$memref, PositiveI32Attr:$alignment);
+  let results = (outs);
+
+  let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
+}
+
 #endif // STANDARD_OPS

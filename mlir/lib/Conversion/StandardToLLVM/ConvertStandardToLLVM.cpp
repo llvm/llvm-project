@@ -2501,6 +2501,45 @@ struct ViewOpLowering : public LLVMLegalizationPattern<ViewOp> {
   }
 };
 
+struct AssumeAlignmentOpLowering
+    : public LLVMLegalizationPattern<AssumeAlignmentOp> {
+  using LLVMLegalizationPattern<AssumeAlignmentOp>::LLVMLegalizationPattern;
+
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    OperandAdaptor<AssumeAlignmentOp> transformed(operands);
+    Value memref = transformed.memref();
+    unsigned alignment = cast<AssumeAlignmentOp>(op).alignment().getZExtValue();
+
+    MemRefDescriptor memRefDescriptor(memref);
+    Value ptr = memRefDescriptor.alignedPtr(rewriter, memref.getLoc());
+
+    // Emit llvm.assume(memref.alignedPtr & (alignment - 1) == 0). Notice that
+    // the asserted memref.alignedPtr isn't used anywhere else, as the real
+    // users like load/store/views always re-extract memref.alignedPtr as they
+    // get lowered.
+    //
+    // This relies on LLVM's CSE optimization (potentially after SROA), since
+    // after CSE all memref.alignedPtr instances get de-duplicated into the same
+    // pointer SSA value.
+    Value zero =
+        createIndexAttrConstant(rewriter, op->getLoc(), getIndexType(), 0);
+    Value mask = createIndexAttrConstant(rewriter, op->getLoc(), getIndexType(),
+                                         alignment - 1);
+    Value ptrValue =
+        rewriter.create<LLVM::PtrToIntOp>(op->getLoc(), getIndexType(), ptr);
+    rewriter.create<LLVM::AssumeOp>(
+        op->getLoc(),
+        rewriter.create<LLVM::ICmpOp>(
+            op->getLoc(), LLVM::ICmpPredicate::eq,
+            rewriter.create<LLVM::AndOp>(op->getLoc(), ptrValue, mask), zero));
+
+    rewriter.eraseOp(op);
+    return matchSuccess();
+  }
+};
+
 } // namespace
 
 static void ensureDistinctSuccessors(Block &bb) {
@@ -2612,6 +2651,7 @@ void mlir::populateStdToLLVMMemoryConversionPatters(
     bool useAlloca) {
   // clang-format off
   patterns.insert<
+      AssumeAlignmentOpLowering,
       DimOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,

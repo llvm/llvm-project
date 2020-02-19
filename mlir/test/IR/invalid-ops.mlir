@@ -1036,3 +1036,21 @@ func @invalid_memref_cast() {
   %2 = memref_cast %1 : memref<*xf32, 0> to memref<*xf32, 0>
   return
 }
+
+// -----
+
+// alignment is not power of 2.
+func @assume_alignment(%0: memref<4x4xf16>) {
+  // expected-error@+1 {{alignment must be power of 2}}
+  std.assume_alignment %0, 12 : memref<4x4xf16>
+  return
+}
+
+// -----
+
+// 0 alignment value.
+func @assume_alignment(%0: memref<4x4xf16>) {
+  // expected-error@+1 {{'std.assume_alignment' op attribute 'alignment' failed to satisfy constraint: positive 32-bit integer attribute}}
+  std.assume_alignment %0, 0 : memref<4x4xf16>
+  return
+}
