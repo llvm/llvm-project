@@ -45,6 +45,7 @@ TEST_F(GISelMITest, MatchBinaryOp) {
   setUp();
   if (!TM)
     return;
+  LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   // Test case for no bind.
@@ -127,6 +128,15 @@ TEST_F(GISelMITest, MatchBinaryOp) {
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   EXPECT_EQ(Src1, Copies[1]);
+
+  // Match lshr, and make sure a different shift amount type works.
+  auto TruncCopy1 = B.buildTrunc(s32, Copies[1]);
+  auto LShr = B.buildLShr(s64, Copies[0], TruncCopy1);
+  match = mi_match(LShr.getReg(0), *MRI,
+                   m_GLShr(m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, Copies[0]);
+  EXPECT_EQ(Src1, TruncCopy1.getReg(0));
 }
 
 TEST_F(GISelMITest, MatchICmp) {
