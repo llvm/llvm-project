@@ -171,6 +171,9 @@ private:
   // Generates getters for the attributes.
   void genAttrGetters();
 
+  // Generates setter for the attributes.
+  void genAttrSetters();
+
   // Generates getters for named operands.
   void genNamedOperandGetters();
 
@@ -300,6 +303,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genNamedResultGetters();
   genNamedRegionGetters();
   genAttrGetters();
+  genAttrSetters();
   genBuilder();
   genParser();
   genPrinter();
@@ -378,6 +382,25 @@ void OpEmitter::genAttrGetters() {
       emitAttrWithStorageType(name, attr);
       emitAttrWithReturnType(name, attr);
     }
+  }
+}
+
+void OpEmitter::genAttrSetters() {
+  // Generate raw named setter type. This is a wrapper class that allows setting
+  // to the attributes via setters instead of having to use the string interface
+  // for better compile time verification.
+  auto emitAttrWithStorageType = [&](StringRef name, Attribute attr) {
+    auto &method = opClass.newMethod("void", (name + "Attr").str(),
+                                     (attr.getStorageType() + " attr").str());
+    auto &body = method.body();
+    body << "  this->setAttr(\"" << name << "\", attr);";
+  };
+
+  for (auto &namedAttr : op.getAttributes()) {
+    const auto &name = namedAttr.name;
+    const auto &attr = namedAttr.attr;
+    if (!attr.isDerivedAttr())
+      emitAttrWithStorageType(name, attr);
   }
 }
 
