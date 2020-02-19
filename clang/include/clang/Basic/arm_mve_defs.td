@@ -129,6 +129,12 @@ def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
   let special_params = [IRBuilderIntParam<1, "unsigned">];
 }
 
+// Helper for making boolean flags in IR
+def i1: IRBuilderBase {
+  let prefix = "llvm::ConstantInt::get(Builder.getInt1Ty(), ";
+  let special_params = [IRBuilderIntParam<0, "bool">];
+}
+
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
 def address;
