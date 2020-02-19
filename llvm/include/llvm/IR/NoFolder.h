@@ -26,14 +26,11 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IRBuilderFolder.h"
 
 namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
-class NoFolder final : public IRBuilderFolder {
-  virtual void anchor();
-
+class NoFolder {
 public:
   explicit NoFolder() = default;
 
@@ -42,76 +39,73 @@ public:
   //===--------------------------------------------------------------------===//
 
   Instruction *CreateAdd(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
+                         bool HasNUW = false, bool HasNSW = false) const {
     BinaryOperator *BO = BinaryOperator::CreateAdd(LHS, RHS);
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
   }
 
-  Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFAdd(LHS, RHS);
   }
 
   Instruction *CreateSub(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
+                         bool HasNUW = false, bool HasNSW = false) const {
     BinaryOperator *BO = BinaryOperator::CreateSub(LHS, RHS);
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
   }
 
-  Instruction *CreateFSub(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateFSub(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFSub(LHS, RHS);
   }
 
   Instruction *CreateMul(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
+                         bool HasNUW = false, bool HasNSW = false) const {
     BinaryOperator *BO = BinaryOperator::CreateMul(LHS, RHS);
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
   }
 
-  Instruction *CreateFMul(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateFMul(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFMul(LHS, RHS);
   }
 
   Instruction *CreateUDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
+                          bool isExact = false) const {
     if (!isExact)
       return BinaryOperator::CreateUDiv(LHS, RHS);
     return BinaryOperator::CreateExactUDiv(LHS, RHS);
   }
 
   Instruction *CreateSDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
+                          bool isExact = false) const {
     if (!isExact)
       return BinaryOperator::CreateSDiv(LHS, RHS);
     return BinaryOperator::CreateExactSDiv(LHS, RHS);
   }
 
-  Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFDiv(LHS, RHS);
   }
 
-  Instruction *CreateURem(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateURem(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateURem(LHS, RHS);
   }
 
-  Instruction *CreateSRem(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateSRem(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateSRem(LHS, RHS);
   }
 
-  Instruction *CreateFRem(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateFRem(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFRem(LHS, RHS);
   }
 
   Instruction *CreateShl(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                         bool HasNSW = false) const override {
+                         bool HasNSW = false) const {
     BinaryOperator *BO = BinaryOperator::CreateShl(LHS, RHS);
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
@@ -119,33 +113,33 @@ public:
   }
 
   Instruction *CreateLShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
+                          bool isExact = false) const {
     if (!isExact)
       return BinaryOperator::CreateLShr(LHS, RHS);
     return BinaryOperator::CreateExactLShr(LHS, RHS);
   }
 
   Instruction *CreateAShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
+                          bool isExact = false) const {
     if (!isExact)
       return BinaryOperator::CreateAShr(LHS, RHS);
     return BinaryOperator::CreateExactAShr(LHS, RHS);
   }
 
-  Instruction *CreateAnd(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateAnd(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateAnd(LHS, RHS);
   }
 
-  Instruction *CreateOr(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateOr(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateOr(LHS, RHS);
   }
 
-  Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {
+  Instruction *CreateXor(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateXor(LHS, RHS);
   }
 
   Instruction *CreateBinOp(Instruction::BinaryOps Opc,
-                           Constant *LHS, Constant *RHS) const override {
+                           Constant *LHS, Constant *RHS) const {
     return BinaryOperator::Create(Opc, LHS, RHS);
   }
 
@@ -154,24 +148,22 @@ public:
   //===--------------------------------------------------------------------===//
 
   Instruction *CreateNeg(Constant *C,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
+                         bool HasNUW = false, bool HasNSW = false) const {
     BinaryOperator *BO = BinaryOperator::CreateNeg(C);
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
   }
 
-  Instruction *CreateFNeg(Constant *C) const override {
+  Instruction *CreateFNeg(Constant *C) const {
     return UnaryOperator::CreateFNeg(C);
   }
 
-  Instruction *CreateNot(Constant *C) const override {
+  Instruction *CreateNot(Constant *C) const {
     return BinaryOperator::CreateNot(C);
   }
 
-  Instruction *CreateUnOp(Instruction::UnaryOps Opc,
-                          Constant *C) const override {
+  Instruction *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const {
     return UnaryOperator::Create(Opc, C);
   }
 
@@ -180,12 +172,11 @@ public:
   //===--------------------------------------------------------------------===//
 
   Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Constant *> IdxList) const override {
+                                ArrayRef<Constant *> IdxList) const {
     return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
   }
 
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                Constant *Idx) const override {
+  Constant *CreateGetElementPtr(Type *Ty, Constant *C, Constant *Idx) const {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
@@ -193,25 +184,25 @@ public:
   }
 
   Instruction *CreateGetElementPtr(Type *Ty, Constant *C,
-                                   ArrayRef<Value *> IdxList) const override {
+                                   ArrayRef<Value *> IdxList) const {
     return GetElementPtrInst::Create(Ty, C, IdxList);
   }
 
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const override {
+  Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
+                                        ArrayRef<Constant *> IdxList) const {
     return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
   }
 
   Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                        Constant *Idx) const override {
+                                        Constant *Idx) const {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
     return ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx);
   }
 
-  Instruction *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const override {
+  Instruction *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
+                                           ArrayRef<Value *> IdxList) const {
     return GetElementPtrInst::CreateInBounds(Ty, C, IdxList);
   }
 
@@ -220,49 +211,49 @@ public:
   //===--------------------------------------------------------------------===//
 
   Instruction *CreateCast(Instruction::CastOps Op, Constant *C,
-                          Type *DestTy) const override {
+                    Type *DestTy) const {
     return CastInst::Create(Op, C, DestTy);
   }
 
-  Instruction *CreatePointerCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreatePointerCast(Constant *C, Type *DestTy) const {
     return CastInst::CreatePointerCast(C, DestTy);
   }
 
   Instruction *CreatePointerBitCastOrAddrSpaceCast(
-      Constant *C, Type *DestTy) const override {
+      Constant *C, Type *DestTy) const {
     return CastInst::CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
   }
 
   Instruction *CreateIntCast(Constant *C, Type *DestTy,
-                             bool isSigned) const override {
+                       bool isSigned) const {
     return CastInst::CreateIntegerCast(C, DestTy, isSigned);
   }
 
-  Instruction *CreateFPCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreateFPCast(Constant *C, Type *DestTy) const {
     return CastInst::CreateFPCast(C, DestTy);
   }
 
-  Instruction *CreateBitCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreateBitCast(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::BitCast, C, DestTy);
   }
 
-  Instruction *CreateIntToPtr(Constant *C, Type *DestTy) const override {
+  Instruction *CreateIntToPtr(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::IntToPtr, C, DestTy);
   }
 
-  Instruction *CreatePtrToInt(Constant *C, Type *DestTy) const override {
+  Instruction *CreatePtrToInt(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::PtrToInt, C, DestTy);
   }
 
-  Instruction *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreateZExtOrBitCast(Constant *C, Type *DestTy) const {
     return CastInst::CreateZExtOrBitCast(C, DestTy);
   }
 
-  Instruction *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreateSExtOrBitCast(Constant *C, Type *DestTy) const {
     return CastInst::CreateSExtOrBitCast(C, DestTy);
   }
 
-  Instruction *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
+  Instruction *CreateTruncOrBitCast(Constant *C, Type *DestTy) const {
     return CastInst::CreateTruncOrBitCast(C, DestTy);
   }
 
@@ -271,12 +262,12 @@ public:
   //===--------------------------------------------------------------------===//
 
   Instruction *CreateICmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
+                          Constant *LHS, Constant *RHS) const {
     return new ICmpInst(P, LHS, RHS);
   }
 
   Instruction *CreateFCmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
+                          Constant *LHS, Constant *RHS) const {
     return new FCmpInst(P, LHS, RHS);
   }
 
@@ -285,32 +276,31 @@ public:
   //===--------------------------------------------------------------------===//
 
   Instruction *CreateSelect(Constant *C,
-                            Constant *True, Constant *False) const override {
+                            Constant *True, Constant *False) const {
     return SelectInst::Create(C, True, False);
   }
 
-  Instruction *CreateExtractElement(Constant *Vec,
-                                    Constant *Idx) const override {
+  Instruction *CreateExtractElement(Constant *Vec, Constant *Idx) const {
     return ExtractElementInst::Create(Vec, Idx);
   }
 
   Instruction *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                   Constant *Idx) const override {
+                                   Constant *Idx) const {
     return InsertElementInst::Create(Vec, NewElt, Idx);
   }
 
   Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
-                                   Constant *Mask) const override {
+                                   Constant *Mask) const {
     return new ShuffleVectorInst(V1, V2, Mask);
   }
 
   Instruction *CreateExtractValue(Constant *Agg,
-                                  ArrayRef<unsigned> IdxList) const override {
+                                  ArrayRef<unsigned> IdxList) const {
     return ExtractValueInst::Create(Agg, IdxList);
   }
 
   Instruction *CreateInsertValue(Constant *Agg, Constant *Val,
-                                 ArrayRef<unsigned> IdxList) const override {
+                                 ArrayRef<unsigned> IdxList) const {
     return InsertValueInst::Create(Agg, Val, IdxList);
   }
 };
