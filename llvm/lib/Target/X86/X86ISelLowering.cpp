@@ -8836,9 +8836,24 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
     if (Cond.getOpcode() != ISD::SETCC)
       Cond = DAG.getNode(ISD::AND, dl, MVT::i8, Cond,
                          DAG.getConstant(1, dl, MVT::i8));
-    return DAG.getSelect(dl, VT, Cond,
-                         DAG.getConstant(1, dl, VT),
-                         DAG.getConstant(0, dl, VT));
+
+    // Perform the select in the scalar domain so we can use cmov.
+    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+      SDValue Select = DAG.getSelect(dl, MVT::i32, Cond,
+                                     DAG.getAllOnesConstant(dl, MVT::i32),
+                                     DAG.getConstant(0, dl, MVT::i32));
+      Select = DAG.getBitcast(MVT::v32i1, Select);
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Select, Select);
+    } else {
+      MVT ImmVT = MVT::getIntegerVT(std::max((unsigned)VT.getSizeInBits(), 8U));
+      SDValue Select = DAG.getSelect(dl, ImmVT, Cond,
+                                     DAG.getAllOnesConstant(dl, ImmVT),
+                                     DAG.getConstant(0, dl, ImmVT));
+      MVT VecVT = VT.getSizeInBits() >= 8 ? VT : MVT::v8i1;
+      Select = DAG.getBitcast(VecVT, Select);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Select,
+                         DAG.getIntPtrConstant(0, dl));
+    }
   }
 
   // insert elements one by one
