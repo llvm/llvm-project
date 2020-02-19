@@ -1279,3 +1279,57 @@ namespace value_dependent_init {
     A a = T();
   }
 }
+
+namespace mutable_subobjects {
+  struct A {
+    int m;
+    mutable int n; // expected-note 2{{here}}
+    constexpr int f() const { return m; }
+    constexpr int g() const { return n; } // expected-note {{mutable}}
+  };
+
+  constexpr A a = {1, 2};
+  static_assert(a.f() == 1); // OK (PR44958)
+  static_assert(a.g() == 2); // expected-error {{constant}} expected-note {{in call}}
+
+  constexpr A b = a; // expected-error {{constant}} expected-note {{read of mutable member 'n'}} expected-note {{in call}}
+
+  auto &ti1 = typeid(a);
+  auto &ti2 = typeid(a.m);
+  auto &ti3 = typeid(a.n);
+
+  constexpr void destroy1() { // expected-error {{constexpr}}
+    a.~A(); // expected-note {{cannot modify an object that is visible outside}}
+  }
+  // FIXME: These should both be rejected once P0593 is implemented.
+  using T = int;
+  constexpr void destroy2() {
+    a.m.~T();
+  }
+  constexpr void destroy3() {
+    a.n.~T();
+  }
+
+  struct X {
+    mutable int n = 0;
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {
+  };
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
+
+  // FIXME: It's unclear whether this should be accepted. The dynamic_cast is
+  // undefined after 'z.y.~Y()`, for example. We essentially assume that all
+  // objects that the evaluator can reach have unbounded lifetimes. (We make
+  // the same assumption when evaluating member function calls.)
+  struct Z {
+    mutable Y y;
+  };
+  constexpr Z z;
+  constexpr const X *pz = &z.y;
+  constexpr const Y *qz = dynamic_cast<const Y*>(pz);
+  auto &zti = typeid(z.y);
+  static_assert(&zti == &typeid(Y));
+}
