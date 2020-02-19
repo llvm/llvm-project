@@ -417,6 +417,21 @@ defm : float_int_conversions<f16, u16, fptoui, uitofp>;
 defm : float_int_conversions<f32, s32, fptosi, sitofp>;
 defm : float_int_conversions<f16, s16, fptosi, sitofp>;
 
+let params = T.Float in {
+  def vrndq: Intrinsic<Vector, (args Vector:$a),
+      (IRIntBase<"trunc", [Vector]> $a)>;
+  def vrndmq: Intrinsic<Vector, (args Vector:$a),
+      (IRIntBase<"floor", [Vector]> $a)>;
+  def vrndpq: Intrinsic<Vector, (args Vector:$a),
+      (IRIntBase<"ceil", [Vector]> $a)>;
+  def vrndaq: Intrinsic<Vector, (args Vector:$a),
+      (IRIntBase<"round", [Vector]> $a)>;
+  def vrndxq: Intrinsic<Vector, (args Vector:$a),
+      (IRIntBase<"rint", [Vector]> $a)>;
+  def vrndnq: Intrinsic<Vector, (args Vector:$a),
+      (IRInt<"vrintn", [Vector]> $a)>;
+}
+
 multiclass compare_with_pred<string condname, dag arguments,
                              dag cmp, string suffix> {
   // Make the predicated and unpredicated versions of a single comparison.
