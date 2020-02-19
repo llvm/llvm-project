@@ -3796,10 +3796,10 @@ struct AAAlignImpl : AAAlign {
     ChangeStatus LoadStoreChanged = ChangeStatus::UNCHANGED;
 
     // Check for users that allow alignment annotations.
-    Value &AnchorVal = getIRPosition().getAnchorValue();
-    for (const Use &U : AnchorVal.uses()) {
+    Value &AssociatedValue = getAssociatedValue();
+    for (const Use &U : AssociatedValue.uses()) {
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-        if (SI->getPointerOperand() == &AnchorVal)
+        if (SI->getPointerOperand() == &AssociatedValue)
           if (SI->getAlignment() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
@@ -3807,7 +3807,7 @@ struct AAAlignImpl : AAAlign {
             LoadStoreChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-        if (LI->getPointerOperand() == &AnchorVal)
+        if (LI->getPointerOperand() == &AssociatedValue)
           if (LI->getAlignment() < getAssumedAlign()) {
             LI->setAlignment(Align(getAssumedAlign()));
             STATS_DECLTRACK(AAAlign, Load,
