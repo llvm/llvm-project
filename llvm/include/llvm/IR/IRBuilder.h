@@ -984,6 +984,10 @@ public:
     SetInsertPoint(TheBB, IP);
   }
 
+  /// Avoid copying the full IRBuilder. Prefer using InsertPointGuard
+  /// or FastMathFlagGuard instead.
+  IRBuilder(const IRBuilder &) = delete;
+
   /// Get the constant folder being used.
   const T &getFolder() { return Folder; }
 
