@@ -32,18 +32,26 @@ class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
                   ret1));
 }
 
-class getVOP3PModPat<VOPProfile P, SDPatternOperator node> {
+class getVOP3PModPat<VOPProfile P, SDPatternOperator node, bit HasExplicitClamp> {
+  dag src0_dag = (P.Src0VT (VOP3PMods P.Src0VT:$src0, i32:$src0_modifiers));
+  dag src1_dag = (P.Src1VT (VOP3PMods P.Src1VT:$src1, i32:$src1_modifiers));
+  dag src2_dag = (P.Src2VT (VOP3PMods P.Src2VT:$src2, i32:$src2_modifiers));
+  dag clamp_dag = (i1 timm:$clamp);
+
   list<dag> ret3 = [(set P.DstVT:$vdst,
-    (DivergentFragOrOp<node, P>.ret (P.Src0VT (VOP3PMods P.Src0VT:$src0, i32:$src0_modifiers)),
-                                    (P.Src1VT (VOP3PMods P.Src1VT:$src1, i32:$src1_modifiers)),
-                                    (P.Src2VT (VOP3PMods P.Src2VT:$src2, i32:$src2_modifiers))))];
+    !if(HasExplicitClamp,
+        (DivergentFragOrOp<node, P>.ret src0_dag, src1_dag, src2_dag, clamp_dag),
+        (DivergentFragOrOp<node, P>.ret src0_dag, src1_dag, src2_dag)))];
 
   list<dag> ret2 = [(set P.DstVT:$vdst,
-    (DivergentFragOrOp<node, P>.ret (P.Src0VT (VOP3PMods P.Src0VT:$src0, i32:$src0_modifiers)),
-                                    (P.Src1VT (VOP3PMods P.Src1VT:$src1, i32:$src1_modifiers))))];
+    !if(HasExplicitClamp,
+        (DivergentFragOrOp<node, P>.ret src0_dag, src1_dag, clamp_dag),
+        (DivergentFragOrOp<node, P>.ret src0_dag, src1_dag)))];
 
   list<dag> ret1 = [(set P.DstVT:$vdst,
-    (DivergentFragOrOp<node, P>.ret (P.Src0VT (VOP3PMods P.Src0VT:$src0, i32:$src0_modifiers))))];
+    !if(HasExplicitClamp,
+        (DivergentFragOrOp<node, P>.ret src0_dag, clamp_dag),
+        (DivergentFragOrOp<node, P>.ret src0_dag)))];
 
   list<dag> ret = !if(!eq(P.NumSrcArgs, 3), ret3,
                   !if(!eq(P.NumSrcArgs, 2), ret2,

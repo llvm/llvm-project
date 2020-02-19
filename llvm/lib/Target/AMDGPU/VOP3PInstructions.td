@@ -10,9 +10,11 @@
 // VOP3P Classes
 //===----------------------------------------------------------------------===//
 
-class VOP3PInst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> :
+class VOP3PInst<string OpName, VOPProfile P,
+                SDPatternOperator node = null_frag,
+                bit HasExplicitClamp = 0> :
   VOP3P_Pseudo<OpName, P,
-    !if(P.HasModifiers, getVOP3PModPat<P, node>.ret, getVOP3Pat<P, node>.ret)
+    !if(P.HasModifiers, getVOP3PModPat<P, node, HasExplicitClamp>.ret, getVOP3Pat<P, node>.ret)
 >;
 
 // Non-packed instructions that use the VOP3P encoding.
@@ -269,41 +271,29 @@ class SDot2Pat<Instruction Inst> : GCNPat <
 let IsDOT = 1 in {
 let SubtargetPredicate = HasDot2Insts in {
 
-def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>>;
-def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>>;
-def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>>;
-def V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
-def V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
+def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
+  VOP3_Profile<VOP_F32_V2F16_V2F16_F32>,
+  AMDGPUfdot2, 1/*ExplicitClamp*/>;
+def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16",
+  VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_sdot2, 1>;
+def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
+  VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2, 1>;
+def V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+def V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
 
 } // End SubtargetPredicate = HasDot2Insts
 
 let SubtargetPredicate = HasDot1Insts in {
 
-def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
-def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
+def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
 
 } // End SubtargetPredicate = HasDot1Insts
 } // End let IsDOT = 1
-
-multiclass DotPats<SDPatternOperator dot_op,
-                   VOP3PInst dot_inst> {
-  let SubtargetPredicate = dot_inst.SubtargetPredicate in
-  def : GCNPat <
-    (dot_op (dot_inst.Pfl.Src0VT (VOP3PMods dot_inst.Pfl.Src0VT:$src0, i32:$src0_modifiers)),
-            (dot_inst.Pfl.Src1VT (VOP3PMods dot_inst.Pfl.Src1VT:$src1, i32:$src1_modifiers)),
-            (dot_inst.Pfl.Src2VT (VOP3PMods dot_inst.Pfl.Src2VT:$src2, i32:$src2_modifiers)), timm:$clamp),
-    (dot_inst $src0_modifiers, VSrc_v2f16:$src0,
-              $src1_modifiers, VSrc_v2f16:$src1,
-              $src2_modifiers, VSrc_f32:$src2, timm:$clamp)>;
-}
-
-defm : DotPats<AMDGPUfdot2, V_DOT2_F32_F16>;
-defm : DotPats<int_amdgcn_sdot2, V_DOT2_I32_I16>;
-defm : DotPats<int_amdgcn_udot2, V_DOT2_U32_U16>;
-defm : DotPats<int_amdgcn_sdot4, V_DOT4_I32_I8>;
-defm : DotPats<int_amdgcn_udot4, V_DOT4_U32_U8>;
-defm : DotPats<int_amdgcn_sdot8, V_DOT8_I32_I4>;
-defm : DotPats<int_amdgcn_udot8, V_DOT8_U32_U4>;
 
 def : UDot2Pat<V_DOT2_U32_U16>;
 def : SDot2Pat<V_DOT2_I32_I16>;
