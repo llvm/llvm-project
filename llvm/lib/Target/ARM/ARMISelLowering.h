@@ -209,6 +209,10 @@ class VectorType;
       // MVE reductions
       VADDVs,
       VADDVu,
+      VADDLVs,
+      VADDLVu,
+      VADDLVAs,
+      VADDLVAu,
 
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top
