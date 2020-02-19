@@ -144,6 +144,10 @@ public:
     if (!ExtraSymbolsToClaim.empty())
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
+
+    if (const auto &InitSym = MR.getInitializerSymbol())
+      InternedResult[InitSym] = JITEvaluatedSymbol();
+
     if (auto Err = MR.notifyResolved(InternedResult)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
@@ -184,8 +188,12 @@ public:
   }
 
 private:
-  using JITLinkSymbolSet = DenseSet<const Symbol *>;
-  using LocalToNamedDependenciesMap = DenseMap<const Symbol *, JITLinkSymbolSet>;
+  struct LocalSymbolNamedDependencies {
+    SymbolNameSet Internal, External;
+  };
+
+  using LocalSymbolNamedDependenciesMap =
+      DenseMap<const Symbol *, LocalSymbolNamedDependencies>;
 
   Error externalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
@@ -216,6 +224,7 @@ private:
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
     auto LocalDeps = computeLocalDeps(G);
 
+    // Compute dependencies for symbols defined in the JITLink graph.
     for (auto *Sym : G.defined_symbols()) {
 
       // Skip local symbols: we do not track dependencies for these.
@@ -239,15 +248,12 @@ private:
           assert(TargetSym.isDefined() &&
                  "local symbols must be defined");
           auto I = LocalDeps.find(&TargetSym);
-          if (I != LocalDeps.end())
-            for (auto &S : I->second) {
-              assert(S->hasName() &&
-                     "LocalDeps should only contain named values");
-              if (S->isExternal())
-                ExternalSymDeps.insert(ES.intern(S->getName()));
-              else if (S != Sym)
-                InternalSymDeps.insert(ES.intern(S->getName()));
-            }
+          if (I != LocalDeps.end()) {
+            for (auto &S : I->second.External)
+              ExternalSymDeps.insert(S);
+            for (auto &S : I->second.Internal)
+              InternalSymDeps.insert(S);
+          }
         }
       }
 
@@ -261,11 +267,33 @@ private:
         InternalNamedSymbolDeps[SymName] = std::move(InternalSymDeps);
     }
 
+    for (auto &P : Layer.Plugins) {
+      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(MR);
+      if (SyntheticLocalDeps.empty())
+        continue;
+
+      for (auto &KV : SyntheticLocalDeps) {
+        auto &Name = KV.first;
+        auto &LocalDepsForName = KV.second;
+        for (auto *Local : LocalDepsForName) {
+          assert(Local->getScope() == Scope::Local &&
+                 "Dependence on non-local symbol");
+          auto LocalNamedDepsItr = LocalDeps.find(Local);
+          if (LocalNamedDepsItr == LocalDeps.end())
+            continue;
+          for (auto &S : LocalNamedDepsItr->second.Internal)
+            InternalNamedSymbolDeps[Name].insert(S);
+          for (auto &S : LocalNamedDepsItr->second.External)
+            ExternalNamedSymbolDeps[Name].insert(S);
+        }
+      }
+    }
+
     return Error::success();
   }
 
-  LocalToNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
-    LocalToNamedDependenciesMap DepMap;
+  LocalSymbolNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
+    DenseMap<jitlink::Symbol *, DenseSet<jitlink::Symbol *>> DepMap;
 
     // For all local symbols:
     // (1) Add their named dependencies.
@@ -319,7 +347,26 @@ private:
       }
     } while (Changed);
 
-    return DepMap;
+    // Intern the results to produce a mapping of jitlink::Symbol* to internal
+    // and external symbol names.
+    auto &ES = Layer.getExecutionSession();
+    LocalSymbolNamedDependenciesMap Result;
+    for (auto &KV : DepMap) {
+      auto *Local = KV.first;
+      assert(Local->getScope() == Scope::Local &&
+             "DepMap keys should all be local symbols");
+      auto &LocalNamedDeps = Result[Local];
+      for (auto *Named : KV.second) {
+        assert(Named->getScope() != Scope::Local &&
+               "DepMap values should all be non-local symbol sets");
+        if (Named->isExternal())
+          LocalNamedDeps.External.insert(ES.intern(Named->getName()));
+        else
+          LocalNamedDeps.Internal.insert(ES.intern(Named->getName()));
+      }
+    }
+
+    return Result;
   }
 
   void registerDependencies(const SymbolDependenceMap &QueryDeps) {

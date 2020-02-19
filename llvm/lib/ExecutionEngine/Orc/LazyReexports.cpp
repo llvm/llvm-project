@@ -51,7 +51,7 @@ LazyCallThroughManager::callThroughToSymbol(JITTargetAddress TrampolineAddr) {
 
   auto LookupResult = ES.lookup(
       makeJITDylibSearchOrder(SourceJD, JITDylibLookupFlags::MatchAllSymbols),
-      SymbolName);
+      SymbolName, SymbolState::Ready);
 
   if (!LookupResult) {
     ES.reportError(LookupResult.takeError());
@@ -123,10 +123,9 @@ LazyReexportsMaterializationUnit::LazyReexportsMaterializationUnit(
     LazyCallThroughManager &LCTManager, IndirectStubsManager &ISManager,
     JITDylib &SourceJD, SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc,
     VModuleKey K)
-    : MaterializationUnit(extractFlags(CallableAliases), std::move(K)),
+    : MaterializationUnit(extractFlags(CallableAliases), nullptr, std::move(K)),
       LCTManager(LCTManager), ISManager(ISManager), SourceJD(SourceJD),
-      CallableAliases(std::move(CallableAliases)),
-      AliaseeTable(SrcJDLoc) {}
+      CallableAliases(std::move(CallableAliases)), AliaseeTable(SrcJDLoc) {}
 
 StringRef LazyReexportsMaterializationUnit::getName() const {
   return "<Lazy Reexports>";

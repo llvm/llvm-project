@@ -396,9 +396,18 @@ static std::unique_ptr<jitlink::JITLinkMemoryManager> createMemoryManager() {
   return std::make_unique<jitlink::InProcessMemoryManager>();
 }
 
-Session::Session(Triple TT)
-    : MainJD(ES.createJITDylib("<main>")), ObjLayer(ES, createMemoryManager()),
-      TT(std::move(TT)) {
+Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
+  Error Err = Error::success();
+  std::unique_ptr<Session> S(new Session(std::move(TT), Err));
+  if (Err)
+    return std::move(Err);
+  return std::move(S);
+}
+
+// FIXME: Move to createJITDylib if/when we start using Platform support in
+// llvm-jitlink.
+Session::Session(Triple TT, Error &Err)
+    : ObjLayer(ES, createMemoryManager()), TT(std::move(TT)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -413,6 +422,15 @@ Session::Session(Triple TT)
   private:
     Session &S;
   };
+
+  ErrorAsOutParameter _(&Err);
+
+  if (auto MainJDOrErr = ES.createJITDylib("main"))
+    MainJD = &*MainJDOrErr;
+  else {
+    Err = MainJDOrErr.takeError();
+    return;
+  }
 
   if (!NoExec && !TT.isOSWindows())
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
@@ -561,7 +579,7 @@ Error loadProcessSymbols(Session &S) {
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
   };
-  S.MainJD.addGenerator(
+  S.MainJD->addGenerator(
       ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           GlobalPrefix, FilterMainEntryPoint)));
 
@@ -590,20 +608,22 @@ Error loadObjects(Session &S) {
   LLVM_DEBUG(dbgs() << "Creating JITDylibs...\n");
   {
     // Create a "main" JITLinkDylib.
-    IdxToJLD[0] = &S.MainJD;
-    S.JDSearchOrder.push_back(&S.MainJD);
-    LLVM_DEBUG(dbgs() << "  0: " << S.MainJD.getName() << "\n");
+    IdxToJLD[0] = S.MainJD;
+    S.JDSearchOrder.push_back(S.MainJD);
+    LLVM_DEBUG(dbgs() << "  0: " << S.MainJD->getName() << "\n");
 
     // Add any extra JITLinkDylibs from the command line.
     std::string JDNamePrefix("lib");
     for (auto JLDItr = JITLinkDylibs.begin(), JLDEnd = JITLinkDylibs.end();
          JLDItr != JLDEnd; ++JLDItr) {
-      auto &JD = S.ES.createJITDylib(JDNamePrefix + *JLDItr);
+      auto JD = S.ES.createJITDylib(JDNamePrefix + *JLDItr);
+      if (!JD)
+        return JD.takeError();
       unsigned JDIdx =
           JITLinkDylibs.getPosition(JLDItr - JITLinkDylibs.begin());
-      IdxToJLD[JDIdx] = &JD;
-      S.JDSearchOrder.push_back(&JD);
-      LLVM_DEBUG(dbgs() << "  " << JDIdx << ": " << JD.getName() << "\n");
+      IdxToJLD[JDIdx] = &*JD;
+      S.JDSearchOrder.push_back(&*JD);
+      LLVM_DEBUG(dbgs() << "  " << JDIdx << ": " << JD->getName() << "\n");
     }
 
     // Set every dylib to link against every other, in command line order.
@@ -790,32 +810,32 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
-  Session S(getFirstFileTriple());
+  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
 
-  ExitOnErr(sanitizeArguments(S));
+  ExitOnErr(sanitizeArguments(*S));
 
   if (!NoProcessSymbols)
-    ExitOnErr(loadProcessSymbols(S));
+    ExitOnErr(loadProcessSymbols(*S));
   ExitOnErr(loadDylibs());
 
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
-    ExitOnErr(loadObjects(S));
+    ExitOnErr(loadObjects(*S));
   }
 
   JITEvaluatedSymbol EntryPoint = 0;
   {
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
-    EntryPoint = ExitOnErr(getMainEntryPoint(S));
+    EntryPoint = ExitOnErr(getMainEntryPoint(*S));
   }
 
   if (ShowAddrs)
-    S.dumpSessionInfo(outs());
+    S->dumpSessionInfo(outs());
 
-  ExitOnErr(runChecks(S));
+  ExitOnErr(runChecks(*S));
 
-  dumpSessionStats(S);
+  dumpSessionStats(*S);
 
   if (NoExec)
     return 0;
