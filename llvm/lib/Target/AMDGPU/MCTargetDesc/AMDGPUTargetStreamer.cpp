@@ -441,9 +441,9 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.PushSection();
   S.SwitchSection(Context.getELFSection(
     ElfNote::SectionName, ELF::SHT_NOTE, ELF::SHF_ALLOC));
-  S.EmitIntValue(NameSZ, 4);                                  // namesz
-  S.EmitValue(DescSZ, 4);                                     // descz
-  S.EmitIntValue(NoteType, 4);                                // type
+  S.emitIntValue(NameSZ, 4);                                  // namesz
+  S.emitValue(DescSZ, 4);                                     // descz
+  S.emitIntValue(NoteType, 4);                                // type
   S.emitBytes(Name);                                          // name
   S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   EmitDesc(S);                                                // desc
@@ -458,8 +458,8 @@ void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(8, getContext()),
            ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
-             OS.EmitIntValue(Major, 4);
-             OS.EmitIntValue(Minor, 4);
+             OS.emitIntValue(Major, 4);
+             OS.emitIntValue(Minor, 4);
            });
 }
 
@@ -478,15 +478,15 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
            ElfNote::NT_AMDGPU_HSA_ISA, [&](MCELFStreamer &OS) {
-             OS.EmitIntValue(VendorNameSize, 2);
-             OS.EmitIntValue(ArchNameSize, 2);
-             OS.EmitIntValue(Major, 4);
-             OS.EmitIntValue(Minor, 4);
-             OS.EmitIntValue(Stepping, 4);
+             OS.emitIntValue(VendorNameSize, 2);
+             OS.emitIntValue(ArchNameSize, 2);
+             OS.emitIntValue(Major, 4);
+             OS.emitIntValue(Minor, 4);
+             OS.emitIntValue(Stepping, 4);
              OS.emitBytes(VendorName);
-             OS.EmitIntValue(0, 1); // NULL terminate VendorName
+             OS.emitIntValue(0, 1); // NULL terminate VendorName
              OS.emitBytes(ArchName);
-             OS.EmitIntValue(0, 1); // NULL terminte ArchName
+             OS.emitIntValue(0, 1); // NULL terminte ArchName
            });
 }
 
@@ -604,7 +604,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
   OS.PushSection();
   OS.emitValueToAlignment(64, Encoded_s_code_end, 4);
   for (unsigned I = 0; I < 48; ++I)
-    OS.EmitIntValue(Encoded_s_code_end, 4);
+    OS.emitIntValue(Encoded_s_code_end, 4);
   OS.PopSection();
   return true;
 }
@@ -645,7 +645,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   // expression being created is:
   //   (start of kernel code) - (start of kernel descriptor)
   // It implies R_AMDGPU_REL64, but ends up being R_AMDGPU_ABS64.
-  Streamer.EmitValue(MCBinaryExpr::createSub(
+  Streamer.emitValue(MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(
           KernelCodeSymbol, MCSymbolRefExpr::VK_AMDGPU_REL64, Context),
       MCSymbolRefExpr::create(

@@ -650,24 +650,24 @@ public:
   virtual void emitValueImpl(const MCExpr *Value, unsigned Size,
                              SMLoc Loc = SMLoc());
 
-  void EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
+  void emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
 
   /// Special case of EmitValue that avoids the client having
   /// to pass in a MCExpr for constant integers.
-  virtual void EmitIntValue(uint64_t Value, unsigned Size);
+  virtual void emitIntValue(uint64_t Value, unsigned Size);
 
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
   /// modes.
-  virtual void EmitIntValueInHex(uint64_t Value, unsigned Size) {
-    EmitIntValue(Value, Size);
+  virtual void emitIntValueInHex(uint64_t Value, unsigned Size) {
+    emitIntValue(Value, Size);
   }
 
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
   /// modes, pads the field with leading zeros to Size width
-  virtual void EmitIntValueInHexWithPadding(uint64_t Value, unsigned Size) {
-    EmitIntValue(Value, Size);
+  virtual void emitIntValueInHexWithPadding(uint64_t Value, unsigned Size) {
+    emitIntValue(Value, Size);
   }
 
   virtual void emitULEB128Value(const MCExpr *Value);

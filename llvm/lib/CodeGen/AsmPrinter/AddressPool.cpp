@@ -70,7 +70,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
             : MCSymbolRefExpr::create(I.first, Asm.OutContext);
 
   for (const MCExpr *Entry : Entries)
-    Asm.OutStreamer->EmitValue(Entry, Asm.getDataLayout().getPointerSize());
+    Asm.OutStreamer->emitValue(Entry, Asm.getDataLayout().getPointerSize());
 
   if (EndLabel)
     Asm.OutStreamer->emitLabel(EndLabel);

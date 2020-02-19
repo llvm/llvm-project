@@ -540,7 +540,7 @@ bool MSP430AsmParser::ParseLiteralValues(unsigned Size, SMLoc L) {
     const MCExpr *Value;
     if (getParser().parseExpression(Value))
       return true;
-    getParser().getStreamer().EmitValue(Value, Size, L);
+    getParser().getStreamer().emitValue(Value, Size, L);
     return false;
   };
   return (parseMany(parseOne));

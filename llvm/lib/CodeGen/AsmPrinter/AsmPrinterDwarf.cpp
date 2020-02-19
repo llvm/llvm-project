@@ -115,7 +115,7 @@ void AsmPrinter::emitEncodingByte(unsigned Val, const char *Desc) const {
       OutStreamer->AddComment(Twine("Encoding = ") + DecodeDWARFEncoding(Val));
   }
 
-  OutStreamer->EmitIntValue(Val, 1);
+  OutStreamer->emitIntValue(Val, 1);
 }
 
 /// GetSizeOfEncodedValue - Return the size of the encoding in bytes.
@@ -144,9 +144,9 @@ void AsmPrinter::emitTTypeReference(const GlobalValue *GV,
 
     const MCExpr *Exp =
         TLOF.getTTypeGlobalReference(GV, Encoding, TM, MMI, *OutStreamer);
-    OutStreamer->EmitValue(Exp, GetSizeOfEncodedValue(Encoding));
+    OutStreamer->emitValue(Exp, GetSizeOfEncodedValue(Encoding));
   } else
-    OutStreamer->EmitIntValue(0, GetSizeOfEncodedValue(Encoding));
+    OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
 }
 
 void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
@@ -198,7 +198,7 @@ void AsmPrinter::emitCallSiteValue(uint64_t Value, unsigned Encoding) const {
   if ((Encoding & 0x7) == dwarf::DW_EH_PE_uleb128)
     emitULEB128(Value);
   else
-    OutStreamer->EmitIntValue(Value, GetSizeOfEncodedValue(Encoding));
+    OutStreamer->emitIntValue(Value, GetSizeOfEncodedValue(Encoding));
 }
 
 //===----------------------------------------------------------------------===//
@@ -270,7 +270,7 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
     }
 
     // Emit an attribute using the defined form.
-    V.EmitValue(this);
+    V.emitValue(this);
   }
 
   // Emit the DIE children if any.

@@ -936,7 +936,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                 MCSymbolRefExpr::create(GOTRef, OutContext),
         OutContext);
     OutStreamer->emitLabel(GOTRef);
-    OutStreamer->EmitValue(OffsExpr, 4);
+    OutStreamer->emitValue(OffsExpr, 4);
     OutStreamer->emitLabel(NextInstr);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR)
                                  .addReg(MI->getOperand(0).getReg()));
@@ -1343,7 +1343,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
                                                                OutContext),
                                   MCSymbolRefExpr::create(PICBase, OutContext),
           OutContext);
-      OutStreamer->EmitValue(OffsExpr, 4);
+      OutStreamer->emitValue(OffsExpr, 4);
       OutStreamer->emitLabel(CurrentFnSym);
       return;
     } else
@@ -1369,7 +1369,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
                                 OutContext);
 
       OutStreamer->emitLabel(PPCFI->getTOCOffsetSymbol());
-      OutStreamer->EmitValue(TOCDeltaExpr, 8);
+      OutStreamer->emitValue(TOCDeltaExpr, 8);
     }
     return AsmPrinter::emitFunctionEntryLabel();
   }
@@ -1384,15 +1384,15 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   MCSymbol *Symbol1 = CurrentFnSymForSize;
   // Generates a R_PPC64_ADDR64 (from FK_DATA_8) relocation for the function
   // entry point.
-  OutStreamer->EmitValue(MCSymbolRefExpr::create(Symbol1, OutContext),
+  OutStreamer->emitValue(MCSymbolRefExpr::create(Symbol1, OutContext),
                          8 /*size*/);
   MCSymbol *Symbol2 = OutContext.getOrCreateSymbol(StringRef(".TOC."));
   // Generates a R_PPC64_TOC relocation for TOC base insertion.
-  OutStreamer->EmitValue(
+  OutStreamer->emitValue(
     MCSymbolRefExpr::create(Symbol2, MCSymbolRefExpr::VK_PPC_TOCBASE, OutContext),
     8/*size*/);
   // Emit a null environment pointer.
-  OutStreamer->EmitIntValue(0, 8 /* size */);
+  OutStreamer->emitIntValue(0, 8 /* size */);
   OutStreamer->SwitchSection(Current.first, Current.second);
 }
 
@@ -1539,8 +1539,8 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
   // the PPC64 ELF ABI (this is a low-priority item because GDB does not
   // currently make use of these fields).
   if (Subtarget->isPPC64()) {
-    OutStreamer->EmitIntValue(0, 4/*size*/);
-    OutStreamer->EmitIntValue(0, 8/*size*/);
+    OutStreamer->emitIntValue(0, 4/*size*/);
+    OutStreamer->emitIntValue(0, 8/*size*/);
   }
 }
 
@@ -1647,16 +1647,16 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       cast<MCSymbolXCOFF>(CurrentFnDescSym)->getContainingCsect());
   OutStreamer->emitLabel(CurrentFnDescSym);
   // Emit function entry point address.
-  OutStreamer->EmitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
+  OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
   // Emit TOC base address.
   const MCSymbol *TOCBaseSym =
       cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
           ->getQualNameSymbol();
-  OutStreamer->EmitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
+  OutStreamer->emitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
                          PointerSize);
   // Emit a null environment pointer.
-  OutStreamer->EmitIntValue(0, PointerSize);
+  OutStreamer->emitIntValue(0, PointerSize);
 
   OutStreamer->SwitchSection(Current.first, Current.second);
 }

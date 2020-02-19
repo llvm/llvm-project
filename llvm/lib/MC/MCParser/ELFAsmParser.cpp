@@ -797,11 +797,11 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
 
   getStreamer().PushSection();
   getStreamer().SwitchSection(Note);
-  getStreamer().EmitIntValue(Data.size()+1, 4); // namesz.
-  getStreamer().EmitIntValue(0, 4);             // descsz = 0 (no description).
-  getStreamer().EmitIntValue(1, 4);             // type = NT_VERSION.
+  getStreamer().emitIntValue(Data.size()+1, 4); // namesz.
+  getStreamer().emitIntValue(0, 4);             // descsz = 0 (no description).
+  getStreamer().emitIntValue(1, 4);             // type = NT_VERSION.
   getStreamer().emitBytes(Data);                // name.
-  getStreamer().EmitIntValue(0, 1);             // terminate the string.
+  getStreamer().emitIntValue(0, 1);             // terminate the string.
   getStreamer().emitValueToAlignment(4);        // ensure 4 byte alignment.
   getStreamer().PopSection();
   return false;

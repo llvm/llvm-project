@@ -484,7 +484,7 @@ void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) const {
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit: {
       DIEInteger ID(getCUIndexForEntry(Entry));
-      ID.EmitValue(Asm, AttrEnc.Form);
+      ID.emitValue(Asm, AttrEnc.Form);
       break;
     }
     case dwarf::DW_IDX_die_offset:

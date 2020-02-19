@@ -2448,7 +2448,7 @@ static void emitRangeList(
       if (!UseDwarf5) {
         Base = NewBase;
         BaseIsSet = true;
-        Asm->OutStreamer->EmitIntValue(-1, Size);
+        Asm->OutStreamer->emitIntValue(-1, Size);
         Asm->OutStreamer->AddComment("  base address");
         Asm->OutStreamer->emitSymbolValue(Base, Size);
       } else if (NewBase != Begin || P.second.size() > 1) {
@@ -2465,8 +2465,8 @@ static void emitRangeList(
     } else if (BaseIsSet && !UseDwarf5) {
       BaseIsSet = false;
       assert(!Base);
-      Asm->OutStreamer->EmitIntValue(-1, Size);
-      Asm->OutStreamer->EmitIntValue(0, Size);
+      Asm->OutStreamer->emitIntValue(-1, Size);
+      Asm->OutStreamer->emitIntValue(0, Size);
     }
 
     for (const auto *RS : P.second) {
@@ -2507,8 +2507,8 @@ static void emitRangeList(
     Asm->emitInt8(EndOfList);
   } else {
     // Terminate the list with two 0 values.
-    Asm->OutStreamer->EmitIntValue(0, Size);
-    Asm->OutStreamer->EmitIntValue(0, Size);
+    Asm->OutStreamer->emitIntValue(0, Size);
+    Asm->OutStreamer->emitIntValue(0, Size);
   }
 }
 
@@ -2734,13 +2734,13 @@ void DwarfDebug::emitDebugARanges() {
         if (Size == 0)
           Size = 1;
 
-        Asm->OutStreamer->EmitIntValue(Size, PtrSize);
+        Asm->OutStreamer->emitIntValue(Size, PtrSize);
       }
     }
 
     Asm->OutStreamer->AddComment("ARange terminator");
-    Asm->OutStreamer->EmitIntValue(0, PtrSize);
-    Asm->OutStreamer->EmitIntValue(0, PtrSize);
+    Asm->OutStreamer->emitIntValue(0, PtrSize);
+    Asm->OutStreamer->emitIntValue(0, PtrSize);
   }
 }
 

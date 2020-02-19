@@ -106,7 +106,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
   EmitCamlGlobal(M, AP, "data_end");
 
   // FIXME: Why does ocaml emit this??
-  AP.OutStreamer->EmitIntValue(0, IntPtrSize);
+  AP.OutStreamer->emitIntValue(0, IntPtrSize);
 
   AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getDataSection());
   EmitCamlGlobal(M, AP, "frametable");
