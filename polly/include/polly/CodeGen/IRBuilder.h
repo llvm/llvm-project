@@ -155,13 +155,5 @@ private:
 // matches for certain names.
 typedef llvm::IRBuilder<llvm::ConstantFolder, IRInserter> PollyIRBuilder;
 
-/// Return an IR builder pointed before the @p BB terminator.
-static inline PollyIRBuilder createPollyIRBuilder(llvm::BasicBlock *BB,
-                                                  ScopAnnotator &LA) {
-  PollyIRBuilder Builder(BB->getContext(), llvm::ConstantFolder(),
-                         polly::IRInserter(LA));
-  Builder.SetInsertPoint(BB->getTerminator());
-  return Builder;
-}
 } // namespace polly
 #endif
