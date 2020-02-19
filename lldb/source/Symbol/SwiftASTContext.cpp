@@ -2733,17 +2733,16 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
 }
 
 void SwiftASTContext::InitializeSearchPathOptions(
-    llvm::ArrayRef<std::string> module_search_paths,
-    llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths) {
-  swift::SearchPathOptions &search_path_opts =
-      GetCompilerInvocation().getSearchPathOptions();
+    llvm::ArrayRef<std::string> extra_module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
+  swift::CompilerInvocation &invocation = GetCompilerInvocation();
 
   assert(!m_initialized_search_path_options);
   m_initialized_search_path_options = true;
 
   bool set_sdk = false;
-  if (!search_path_opts.SDKPath.empty()) {
-    FileSpec provided_sdk_path(search_path_opts.SDKPath);
+  if (!invocation.getSDKPath().empty()) {
+    FileSpec provided_sdk_path(invocation.getSDKPath());
     if (FileSystem::Instance().Exists(provided_sdk_path)) {
       // We don't check whether the SDK supports swift because we figure if
       // someone is passing this to us on the command line (e.g., for the
@@ -2756,7 +2755,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
 
     if (FileSystem::Instance().Exists(platform_sdk) &&
         SDKSupportsSwift(platform_sdk, XcodeSDK::unknown)) {
-      search_path_opts.SDKPath = m_platform_sdk_path.c_str();
+      invocation.setSDKPath(m_platform_sdk_path.c_str());
       set_sdk = true;
     }
   }
@@ -2777,38 +2776,45 @@ void SwiftASTContext::InitializeSearchPathOptions(
     if (sdk.sdk_type != XcodeSDK::Type::unknown) {
       auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
                                  sdk.min_version_minor);
-      search_path_opts.SDKPath = dir.AsCString("");
+      // Note that calling setSDKPath() also recomputes all paths that
+      // depend on the SDK path including the
+      // RuntimeLibraryImportPaths, which are *only* initialized
+      // through this mechanism.
+      invocation.setSDKPath(dir.AsCString(""));
     }
 
-    std::vector<std::string>& lpaths = search_path_opts.LibrarySearchPaths;
+    std::vector<std::string> &lpaths =
+        invocation.getSearchPathOptions().LibrarySearchPaths;
     lpaths.insert(lpaths.begin(), "/usr/lib/swift");
   }
 
   llvm::StringMap<bool> processed;
+  std::vector<std::string> &invocation_import_paths =
+      invocation.getSearchPathOptions().ImportSearchPaths;
   // Add all deserialized paths to the map.
-  for (const auto &path : search_path_opts.ImportSearchPaths)
+  for (const auto &path : invocation_import_paths)
     processed.insert({path, false});
 
   // Add/unique all extra paths.
-  for (const auto &path : module_search_paths) {
-    search_path_opts.ImportSearchPaths.push_back(path);
+  for (const auto &path : extra_module_search_paths) {
     auto it_notseen = processed.insert({path, false});
     if (it_notseen.second)
-      search_path_opts.ImportSearchPaths.push_back(path);
+      invocation_import_paths.push_back(path);
   }
 
   // This preserves the IsSystem bit, but deduplicates entries ignoring it.
   processed.clear();
+  auto &invocation_framework_paths =
+      invocation.getSearchPathOptions().FrameworkSearchPaths;
   // Add all deserialized paths to the map.
-  for (const auto &path : search_path_opts.FrameworkSearchPaths)
+  for (const auto &path : invocation_framework_paths)
     processed.insert({path.Path, path.IsSystem});
 
   // Add/unique all extra paths.
-  for (const auto &path : framework_search_paths) {
+  for (const auto &path : extra_framework_search_paths) {
     auto it_notseen = processed.insert(path);
     if (it_notseen.second)
-      search_path_opts.FrameworkSearchPaths.push_back(
-          {path.first, path.second});
+      invocation_framework_paths.push_back({path.first, path.second});
   }
 }
 
