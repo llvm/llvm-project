@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -2660,3 +2661,5 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
 
   return false;
 }
+
+void TargetFolder::anchor() {}
