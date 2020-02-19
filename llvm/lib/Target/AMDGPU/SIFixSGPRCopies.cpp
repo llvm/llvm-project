@@ -587,6 +587,11 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 }
 
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
+  // Only need to run this in SelectionDAG path.
+  if (MF.getProperties().hasProperty(
+        MachineFunctionProperties::Property::Selected))
+    return false;
+
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
