@@ -70,7 +70,7 @@ def sync_source_lists(write):
         # undefined behavior according to the POSIX extended regex spec.
         posix_re_escape = lambda s: re.sub(r'([.[{()\\*+?|^$])', r'\\\1', s)
         cmd = ['log', '--format=%h', '-1', '--pickaxe-regex',
-               r'-S\<%s\>' % posix_re_escape(touched_line), in_file]
+               r'-S\b%s\b' % posix_re_escape(touched_line), in_file]
         return git_out(cmd).rstrip()
 
     # Collect changes to gn files, grouped by revision.
