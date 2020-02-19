@@ -167,6 +167,7 @@ bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
     // On some subtargets, 64-bit shift is a quarter rate instruction. In the
     // common case, splitting this into a move and a 32-bit shift is faster and
     // the same code size.
