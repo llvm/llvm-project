@@ -705,149 +705,146 @@ void ClangASTSource::FindExternalVisibleDecls(
     }
   }
 
-  do {
-    if (context.m_found.type)
-      break;
+  if (context.m_found.type)
+    return;
 
-    TypeList types;
-    const bool exact_match = true;
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    if (module_sp && namespace_decl)
-      module_sp->FindTypesInNamespace(name, namespace_decl, 1, types);
-    else {
-      m_target->GetImages().FindTypes(module_sp.get(), name, exact_match, 1,
-                                      searched_symbol_files, types);
-    }
+  TypeList types;
+  const bool exact_match = true;
+  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+  if (module_sp && namespace_decl)
+    module_sp->FindTypesInNamespace(name, namespace_decl, 1, types);
+  else {
+    m_target->GetImages().FindTypes(module_sp.get(), name, exact_match, 1,
+                                    searched_symbol_files, types);
+  }
 
-    if (size_t num_types = types.GetSize()) {
-      for (size_t ti = 0; ti < num_types; ++ti) {
-        lldb::TypeSP type_sp = types.GetTypeAtIndex(ti);
+  if (size_t num_types = types.GetSize()) {
+    for (size_t ti = 0; ti < num_types; ++ti) {
+      lldb::TypeSP type_sp = types.GetTypeAtIndex(ti);
 
-        if (log) {
-          const char *name_string = type_sp->GetName().GetCString();
+      if (log) {
+        const char *name_string = type_sp->GetName().GetCString();
 
-          LLDB_LOG(log, "  CAS::FEVD[{0}] Matching type found for \"{1}\": {2}",
-                   current_id, name,
-                   (name_string ? name_string : "<anonymous>"));
-        }
-
-        CompilerType full_type = type_sp->GetFullCompilerType();
-
-        CompilerType copied_clang_type(GuardedCopyType(full_type));
-
-        if (!copied_clang_type) {
-          LLDB_LOG(log, "  CAS::FEVD[{0}] - Couldn't export a type",
-                   current_id);
-
-          continue;
-        }
-
-        context.AddTypeDecl(copied_clang_type);
-
-        context.m_found.type = true;
-        break;
+        LLDB_LOG(log, "  CAS::FEVD[{0}] Matching type found for \"{1}\": {2}",
+                 current_id, name,
+                 (name_string ? name_string : "<anonymous>"));
       }
+
+      CompilerType full_type = type_sp->GetFullCompilerType();
+
+      CompilerType copied_clang_type(GuardedCopyType(full_type));
+
+      if (!copied_clang_type) {
+        LLDB_LOG(log, "  CAS::FEVD[{0}] - Couldn't export a type",
+                 current_id);
+
+        continue;
+      }
+
+      context.AddTypeDecl(copied_clang_type);
+
+      context.m_found.type = true;
+      break;
     }
+  }
 
-    if (!context.m_found.type) {
-      // Try the modules next.
+  if (!context.m_found.type) {
+    // Try the modules next.
 
-      do {
-        if (ClangModulesDeclVendor *modules_decl_vendor =
-                m_target->GetClangModulesDeclVendor()) {
-          bool append = false;
-          uint32_t max_matches = 1;
-          std::vector<clang::NamedDecl *> decls;
-
-          if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
-            break;
-
-          if (log) {
-            LLDB_LOG(log,
-                     "  CAS::FEVD[{0}] Matching entity found for \"{1}\" in "
-                     "the modules",
-                     current_id, name);
-          }
-
-          clang::NamedDecl *const decl_from_modules = decls[0];
-
-          if (llvm::isa<clang::TypeDecl>(decl_from_modules) ||
-              llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
-              llvm::isa<clang::EnumConstantDecl>(decl_from_modules)) {
-            clang::Decl *copied_decl = CopyDecl(decl_from_modules);
-            clang::NamedDecl *copied_named_decl =
-                copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
-
-            if (!copied_named_decl) {
-              LLDB_LOG(
-                  log,
-                  "  CAS::FEVD[{0}] - Couldn't export a type from the modules",
-                  current_id);
-
-              break;
-            }
-
-            context.AddNamedDecl(copied_named_decl);
-
-            context.m_found.type = true;
-          }
-        }
-      } while (false);
-    }
-
-    if (!context.m_found.type) {
-      do {
-        // Couldn't find any types elsewhere.  Try the Objective-C runtime if
-        // one exists.
-
-        lldb::ProcessSP process(m_target->GetProcessSP());
-
-        if (!process)
-          break;
-
-        ObjCLanguageRuntime *language_runtime(
-            ObjCLanguageRuntime::Get(*process));
-
-        if (!language_runtime)
-          break;
-
-        DeclVendor *decl_vendor = language_runtime->GetDeclVendor();
-
-        if (!decl_vendor)
-          break;
-
+    do {
+      if (ClangModulesDeclVendor *modules_decl_vendor =
+              m_target->GetClangModulesDeclVendor()) {
         bool append = false;
         uint32_t max_matches = 1;
         std::vector<clang::NamedDecl *> decls;
 
-        auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
-        if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
+        if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
           break;
 
         if (log) {
-          LLDB_LOG(
-              log,
-              "  CAS::FEVD[{0}] Matching type found for \"{0}\" in the runtime",
-              current_id, name);
-        }
-
-        clang::Decl *copied_decl = CopyDecl(decls[0]);
-        clang::NamedDecl *copied_named_decl =
-            copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
-
-        if (!copied_named_decl) {
           LLDB_LOG(log,
-                   "  CAS::FEVD[{0}] - Couldn't export a type from the runtime",
-                   current_id);
-
-          break;
+                   "  CAS::FEVD[{0}] Matching entity found for \"{1}\" in "
+                   "the modules",
+                   current_id, name);
         }
 
-        context.AddNamedDecl(copied_named_decl);
-      } while (false);
-    }
+        clang::NamedDecl *const decl_from_modules = decls[0];
 
-  } while (false);
+        if (llvm::isa<clang::TypeDecl>(decl_from_modules) ||
+            llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
+            llvm::isa<clang::EnumConstantDecl>(decl_from_modules)) {
+          clang::Decl *copied_decl = CopyDecl(decl_from_modules);
+          clang::NamedDecl *copied_named_decl =
+              copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
+
+          if (!copied_named_decl) {
+            LLDB_LOG(
+                log,
+                "  CAS::FEVD[{0}] - Couldn't export a type from the modules",
+                current_id);
+
+            break;
+          }
+
+          context.AddNamedDecl(copied_named_decl);
+
+          context.m_found.type = true;
+        }
+      }
+    } while (false);
+  }
+
+  if (!context.m_found.type) {
+    do {
+      // Couldn't find any types elsewhere.  Try the Objective-C runtime if
+      // one exists.
+
+      lldb::ProcessSP process(m_target->GetProcessSP());
+
+      if (!process)
+        break;
+
+      ObjCLanguageRuntime *language_runtime(
+          ObjCLanguageRuntime::Get(*process));
+
+      if (!language_runtime)
+        break;
+
+      DeclVendor *decl_vendor = language_runtime->GetDeclVendor();
+
+      if (!decl_vendor)
+        break;
+
+      bool append = false;
+      uint32_t max_matches = 1;
+      std::vector<clang::NamedDecl *> decls;
+
+      auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+      if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
+        break;
+
+      if (log) {
+        LLDB_LOG(
+            log,
+            "  CAS::FEVD[{0}] Matching type found for \"{0}\" in the runtime",
+            current_id, name);
+      }
+
+      clang::Decl *copied_decl = CopyDecl(decls[0]);
+      clang::NamedDecl *copied_named_decl =
+          copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
+
+      if (!copied_named_decl) {
+        LLDB_LOG(log,
+                 "  CAS::FEVD[{0}] - Couldn't export a type from the runtime",
+                 current_id);
+
+        break;
+      }
+
+      context.AddNamedDecl(copied_named_decl);
+    } while (false);
+  }
 }
 
 template <class D> class TaggedASTDecl {
