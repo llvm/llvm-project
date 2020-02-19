@@ -6640,7 +6640,7 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
                                           BasicBlock *ExitingBlock,
                                           ExitCountKind Kind) {
   switch (Kind) {
-  case Exact: 
+  case Exact:
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getMax(ExitingBlock, this);
@@ -6657,7 +6657,7 @@ ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
                                                    ExitCountKind Kind) {
   switch (Kind) {
-  case Exact: 
+  case Exact:
     return getBackedgeTakenInfo(L).getExact(L, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getMax(this);

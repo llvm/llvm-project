@@ -826,10 +826,10 @@ Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
   APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
-  
+
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), C);
-  
+
   return C;
 }
 
@@ -837,10 +837,10 @@ Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
   APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
-  
+
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), C);
-  
+
   return C;
 }
 
@@ -1908,7 +1908,7 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
   return getFoldedCast(Instruction::AddrSpaceCast, C, DstTy, OnlyIfReduced);
 }
 
-Constant *ConstantExpr::get(unsigned Opcode, Constant *C, unsigned Flags, 
+Constant *ConstantExpr::get(unsigned Opcode, Constant *C, unsigned Flags,
                             Type *OnlyIfReducedTy) {
   // Check the operands for consistency first.
   assert(Instruction::isUnaryOp(Opcode) &&
