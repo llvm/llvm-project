@@ -1674,8 +1674,7 @@ m_UnordFMin(const LHS &L, const RHS &R) {
 }
 
 //===----------------------------------------------------------------------===//
-// Matchers for overflow check patterns: e.g. (a + b) u< a, (a ^ -1) <u b
-// Note that S might be matched to other instructions than AddInst.
+// Matchers for overflow check patterns: e.g. (a + b) u< a
 //
 
 template <typename LHS_t, typename RHS_t, typename Sum_t>
@@ -1705,19 +1704,6 @@ struct UAddWithOverflow_match {
     if (Pred == ICmpInst::ICMP_UGT)
       if (AddExpr.match(ICmpRHS) && (ICmpLHS == AddLHS || ICmpLHS == AddRHS))
         return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
-
-    Value *Op1;
-    auto XorExpr = m_OneUse(m_Xor(m_Value(Op1), m_AllOnes()));
-    // (a ^ -1) <u b
-    if (Pred == ICmpInst::ICMP_ULT) {
-      if (XorExpr.match(ICmpLHS))
-        return L.match(Op1) && R.match(ICmpRHS) && S.match(ICmpLHS);
-    }
-    //  b > u (a ^ -1)
-    if (Pred == ICmpInst::ICMP_UGT) {
-      if (XorExpr.match(ICmpRHS))
-        return L.match(Op1) && R.match(ICmpLHS) && S.match(ICmpRHS);
-    }
 
     // Match special-case for increment-by-1.
     if (Pred == ICmpInst::ICMP_EQ) {
