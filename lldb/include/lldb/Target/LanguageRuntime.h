@@ -51,7 +51,7 @@ protected:
   LanguageRuntime *m_language_runtime;
   lldb::SearchFilterSP m_filter_sp;
 
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
   void UpdateModuleListIfNeeded();
 };

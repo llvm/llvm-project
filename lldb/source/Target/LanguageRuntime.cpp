@@ -78,8 +78,7 @@ void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
   }
 }
 
-SearchFilterSP
-ExceptionSearchFilter::DoCopyForBreakpoint(Breakpoint &breakpoint) {
+SearchFilterSP ExceptionSearchFilter::DoCreateCopy() {
   return SearchFilterSP(
       new ExceptionSearchFilter(TargetSP(), m_language, false));
 }
