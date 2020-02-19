@@ -162,49 +162,54 @@ function(add_llvm_symbol_exports target_name export_file)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
 
-if(APPLE)
-  execute_process(
-    COMMAND "${CMAKE_LINKER}" -v
-    ERROR_VARIABLE stderr
-    )
-  set(LLVM_LINKER_DETECTED YES)
-  if("${stderr}" MATCHES "PROJECT:ld64")
-    set(LLVM_LINKER_IS_LD64 YES)
-    message(STATUS "Linker detection: ld64")
-  else()
-    set(LLVM_LINKER_DETECTED NO)
-    message(STATUS "Linker detection: unknown")
-  endif()
-elseif(NOT WIN32)
-  # Detect what linker we have here
-  if( LLVM_USE_LINKER )
-    set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)
-  else()
-    separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
-    set(command ${CMAKE_C_COMPILER} ${flags} -Wl,--version)
-  endif()
-  execute_process(
-    COMMAND ${command}
-    OUTPUT_VARIABLE stdout
-    ERROR_VARIABLE stderr
-    )
-  set(LLVM_LINKER_DETECTED YES)
-  if("${stdout}" MATCHES "GNU gold")
-    set(LLVM_LINKER_IS_GOLD YES)
-    message(STATUS "Linker detection: GNU Gold")
-  elseif("${stdout}" MATCHES "^LLD")
-    set(LLVM_LINKER_IS_LLD YES)
-    message(STATUS "Linker detection: LLD")
-  elseif("${stdout}" MATCHES "GNU ld")
-    set(LLVM_LINKER_IS_GNULD YES)
-    message(STATUS "Linker detection: GNU ld")
-  elseif("${stderr}" MATCHES "Solaris Link Editors" OR
-         "${stdout}" MATCHES "Solaris Link Editors")
-    set(LLVM_LINKER_IS_SOLARISLD YES)
-    message(STATUS "Linker detection: Solaris ld")
-  else()
-    set(LLVM_LINKER_DETECTED NO)
-    message(STATUS "Linker detection: unknown")
+if (NOT DEFINED LLVM_LINKER_DETECTED)
+  if(APPLE)
+    execute_process(
+      COMMAND "${CMAKE_LINKER}" -v
+      ERROR_VARIABLE stderr
+      )
+    if("${stderr}" MATCHES "PROJECT:ld64")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: ld64")
+    else()
+      set(LLVM_LINKER_DETECTED NO CACHE INTERNAL "")
+      message(STATUS "Linker detection: unknown")
+    endif()
+  elseif(NOT WIN32)
+    # Detect what linker we have here
+    if( LLVM_USE_LINKER )
+      set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)
+    else()
+      separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
+      set(command ${CMAKE_C_COMPILER} ${flags} -Wl,--version)
+    endif()
+    execute_process(
+      COMMAND ${command}
+      OUTPUT_VARIABLE stdout
+      ERROR_VARIABLE stderr
+      )
+    if("${stdout}" MATCHES "GNU gold")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_GOLD YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: GNU Gold")
+    elseif("${stdout}" MATCHES "^LLD")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_LLD YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: LLD")
+    elseif("${stdout}" MATCHES "GNU ld")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: GNU ld")
+    elseif("${stderr}" MATCHES "Solaris Link Editors" OR
+           "${stdout}" MATCHES "Solaris Link Editors")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Solaris ld")
+    else()
+      set(LLVM_LINKER_DETECTED NO CACHE INTERNAL "")
+      message(STATUS "Linker detection: unknown")
+    endif()
   endif()
 endif()
 
