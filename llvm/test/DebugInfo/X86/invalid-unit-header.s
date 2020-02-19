@@ -2,7 +2,7 @@
 # RUN:   llvm-dwarfdump -debug-info - | \
 # RUN:   FileCheck %s
 
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -14,7 +14,7 @@
 
 # The CU was considered valid even though there were some required fields
 # missing in the header.
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
         .long .CUend - .CUver   # Length of Unit
 .CUver:
         .short 5                # DWARF version number

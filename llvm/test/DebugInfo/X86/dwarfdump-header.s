@@ -20,7 +20,7 @@ str_LT_5a:
 str_LT_5b:
         .asciz "Directory5b"
 
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 dwo_TU_5:
         .asciz "V5_split_type_unit"
 dwo_producer:
@@ -62,7 +62,7 @@ dwo_LT_5b:
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy for the .dwo sections.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -128,7 +128,7 @@ CU_5_end:
 # CHECK: 0x00000019: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000033)
 # CHECK: 0x00000025: DW_TAG_compile_unit
 
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 # CHECK-LABEL: .debug_info.dwo
 
 # DWARF v5 split CU header.
@@ -157,7 +157,7 @@ CU_split_5_end:
 # there is a separate ELF section header; it's dumped along with the previous
 # unit as if they were in a single section.
 
-        .section .debug_info.dwo,"G",@progbits,5555,comdat
+        .section .debug_info.dwo,"Ge",@progbits,5555,comdat
 # CHECK-NOT: .debug_info.dwo
 
 # DWARF v5 split type unit header.
@@ -359,7 +359,7 @@ lstr_LT_5a:
 lstr_LT_5b:
         .asciz "File5b"
 
-	.section .debug_line.dwo,"",@progbits
+	.section .debug_line.dwo,"e",@progbits
 # CHECK-LABEL: .debug_line.dwo
 
 # DWARF v5 DWO line-table header.

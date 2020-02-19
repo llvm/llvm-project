@@ -33,7 +33,7 @@
 
 # The split CU uses DW_FORM_rnglistx (the only correct option).
 # There is no DW_AT_rnglists_base in split units.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -97,7 +97,7 @@ CU4_5_version:
         .byte 0                # NULL
 CU4_5_end:
 
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 
 # DWARF v5 split CU header.
         .long  CU_split_5_end-CU_split_5_version  # Length of Unit
@@ -148,7 +148,7 @@ Rnglist_Table0_end:
 # uses DW_RLE_base_address and DW_RLE_offset_pair. The ranges have entries
 # in the offset table. We use the empty range list so we can test 
 # DW_FORM_rnglistx with an index other than 0.
-        .section .debug_rnglists.dwo,"",@progbits
+        .section .debug_rnglists.dwo,"e",@progbits
         .long Rnglist_Table0_dwo_end - Rnglist_Table0_dwo   # table length
 Rnglist_Table0_dwo:
         .short 5                                    # version
