@@ -111,7 +111,7 @@ YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data,
   llvm::Expected<DWARFUnitSP> dwarf_unit = DWARFUnit::extract(
       *m_symfile_dwarf, uid,
       *static_cast<lldb_private::DWARFDataExtractor *>(&debug_info),
-      DIERef::DebugInfo, &offset_ptr);
+      DIERef::DebugInfo, &offset_ptr, nullptr);
   if (dwarf_unit)
     m_dwarf_unit = dwarf_unit.get();
 }

@@ -773,10 +773,13 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
 }
 
 llvm::Expected<DWARFUnitHeader>
-DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section,
-                         lldb::offset_t *offset_ptr) {
+DWARFUnitHeader::extract(const DWARFDataExtractor &data,
+                         DIERef::Section section, lldb::offset_t *offset_ptr,
+                         const llvm::DWARFUnitIndex *index) {
   DWARFUnitHeader header;
   header.m_offset = *offset_ptr;
+  if (index)
+    header.m_index_entry = index->getFromOffset(*offset_ptr);
   header.m_length = data.GetDWARFInitialLength(offset_ptr);
   header.m_version = data.GetU16(offset_ptr);
   if (header.m_version == 5) {
@@ -792,6 +795,25 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }
 
+  if (header.m_index_entry) {
+    if (header.m_abbr_offset) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Package unit with a non-zero abbreviation offset");
+    }
+    auto *unit_contrib = header.m_index_entry->getOffset();
+    if (!unit_contrib || unit_contrib->Length != header.m_length + 4) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Inconsistent DWARF package unit index");
+    }
+    auto *abbr_entry = header.m_index_entry->getOffset(llvm::DW_SECT_ABBREV);
+    if (!abbr_entry) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "DWARF package index missing abbreviation column");
+    }
+    header.m_abbr_offset = abbr_entry->Offset;
+  }
   if (header.IsTypeUnit()) {
     header.m_type_hash = data.GetU64(offset_ptr);
     header.m_type_offset = data.GetDWARFOffset(offset_ptr);
@@ -822,11 +844,12 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data, DIERef::Section section
 llvm::Expected<DWARFUnitSP>
 DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
                    const DWARFDataExtractor &debug_info,
-                   DIERef::Section section, lldb::offset_t *offset_ptr) {
+                   DIERef::Section section, lldb::offset_t *offset_ptr,
+                   const llvm::DWARFUnitIndex *index) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
   auto expected_header =
-      DWARFUnitHeader::extract(debug_info, section, offset_ptr);
+      DWARFUnitHeader::extract(debug_info, section, offset_ptr, index);
   if (!expected_header)
     return expected_header.takeError();
 
