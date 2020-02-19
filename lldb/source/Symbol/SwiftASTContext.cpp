@@ -1861,6 +1861,17 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
+/// Detect whether a Swift module was "imported" by DWARFImporter.
+/// All this *really* means is that it couldn't be loaded through any
+/// other mechanism.
+static bool IsDWARFImported(swift::ModuleDecl &module) {
+  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
+                     [](swift::FileUnit *file_unit) {
+                       return (file_unit->getKind() ==
+                               swift::FileUnitKind::DWARFModule);
+                     });
+}
+
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
@@ -2206,7 +2217,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   const bool can_create = true;
-  if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
+  swift::ModuleDecl *stdlib =
+      swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+  if (!stdlib || IsDWARFImported(*stdlib)) {
     logError("couldn't load the Swift stdlib");
     return {};
   }
@@ -8485,6 +8498,16 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
       swift_module = swift_ast_context.GetModule(module, error);
   } else
     swift_module = swift_ast_context.GetModule(module, error);
+
+  if (swift_module && IsDWARFImported(*swift_module)) {
+    // This module was "imported" from DWARF. This basically means the
+    // import as a Swift or Clang module failed. We have not yet
+    // checked that DWARF debug info for this module actually exists
+    // and there is no good mechanism to do so ahead of time.
+    // We do know that we never load the stdlib from DWARF though.
+    if (toplevel.GetStringRef() == swift::STDLIB_NAME)
+      swift_module = nullptr;
+  }
 
   if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
     LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Couldn't import module %s: %s",
