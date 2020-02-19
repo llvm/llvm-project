@@ -66,6 +66,8 @@ using namespace npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+LLDB_PLUGIN_DEFINE(SymbolFileNativePDB)
+
 char SymbolFileNativePDB::ID;
 
 static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
