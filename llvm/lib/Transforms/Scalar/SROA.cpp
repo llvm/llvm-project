@@ -3146,14 +3146,14 @@ private:
     // as local as possible to the PHI. To do that, we re-use the location of
     // the old pointer, which necessarily must be in the right position to
     // dominate the PHI.
-    IRBuilderTy PtrBuilder(IRB);
+    IRBuilderBase::InsertPointGuard Guard(IRB);
     if (isa<PHINode>(OldPtr))
-      PtrBuilder.SetInsertPoint(&*OldPtr->getParent()->getFirstInsertionPt());
+      IRB.SetInsertPoint(&*OldPtr->getParent()->getFirstInsertionPt());
     else
-      PtrBuilder.SetInsertPoint(OldPtr);
-    PtrBuilder.SetCurrentDebugLocation(OldPtr->getDebugLoc());
+      IRB.SetInsertPoint(OldPtr);
+    IRB.SetCurrentDebugLocation(OldPtr->getDebugLoc());
 
-    Value *NewPtr = getNewAllocaSlicePtr(PtrBuilder, OldPtr->getType());
+    Value *NewPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
     // Replace the operands which were using the old pointer.
     std::replace(PN.op_begin(), PN.op_end(), cast<Value>(OldPtr), NewPtr);
 
