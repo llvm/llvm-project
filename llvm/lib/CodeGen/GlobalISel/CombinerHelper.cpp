@@ -1377,7 +1377,8 @@ bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
   assert((MI.getOpcode() == TargetOpcode::G_SHL ||
-          MI.getOpcode() == TargetOpcode::G_LSHR) && "Expected a shift");
+          MI.getOpcode() == TargetOpcode::G_LSHR ||
+          MI.getOpcode() == TargetOpcode::G_ASHR) && "Expected a shift");
 
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   if (Ty.isVector()) // TODO:
@@ -1404,8 +1405,8 @@ bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
   LLT Ty = MRI.getType(SrcReg);
   unsigned Size = Ty.getSizeInBits();
   unsigned HalfSize = Size / 2;
-
   assert(ShiftVal >= HalfSize);
+
   LLT HalfTy = LLT::scalar(HalfSize);
 
   Builder.setInstr(MI);
@@ -1427,16 +1428,12 @@ bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
     Builder.buildMerge(DstReg, { Narrowed, Zero });
-  } else {
+  } else if (MI.getOpcode() == TargetOpcode::G_SHL) {
     Register Narrowed = Unmerge.getReg(0);
     //  dst = G_SHL s64:x, C for C >= 32
     // =>
     //   lo, hi = G_UNMERGE_VALUES x
     //   dst = G_MERGE_VALUES 0, (G_SHL hi, C - 32)
-
-    // TODO: ashr
-    assert(MI.getOpcode() == TargetOpcode::G_SHL);
-
     if (NarrowShiftAmt != 0) {
       Narrowed = Builder.buildShl(HalfTy, Narrowed,
         Builder.buildConstant(HalfTy, NarrowShiftAmt)).getReg(0);
@@ -1444,6 +1441,31 @@ bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
     Builder.buildMerge(DstReg, { Zero, Narrowed });
+  } else {
+    assert(MI.getOpcode() == TargetOpcode::G_ASHR);
+    auto Hi = Builder.buildAShr(
+      HalfTy, Unmerge.getReg(1),
+      Builder.buildConstant(HalfTy, HalfSize - 1));
+
+    if (ShiftVal == HalfSize) {
+      // (G_ASHR i64:x, 32) ->
+      //   G_MERGE_VALUES lo_32(x), (G_ASHR hi_32(x), 31)
+      Builder.buildMerge(DstReg, { Unmerge.getReg(0), Hi });
+    } else if (ShiftVal == Size - 1) {
+      // Don't need a second shift.
+      // (G_ASHR i64:x, 63) ->
+      //   %narrowed = (G_ASHR hi_32(x), 31)
+      //   G_MERGE_VALUES %narrowed, %narrowed
+      Builder.buildMerge(DstReg, { Hi, Hi });
+    } else {
+      auto Lo = Builder.buildAShr(
+        HalfTy, Unmerge.getReg(1),
+        Builder.buildConstant(HalfTy, ShiftVal - HalfSize));
+
+      // (G_ASHR i64:x, C) ->, for C >= 32
+      //   G_MERGE_VALUES (G_ASHR hi_32(x), C - 32), (G_ASHR hi_32(x), 31)
+      Builder.buildMerge(DstReg, { Lo, Hi });
+    }
   }
 
   MI.eraseFromParent();
