@@ -108,6 +108,14 @@ def gi_mubuf_offset_atomic :
     GIComplexOperandMatcher<s64, "selectMUBUFOffsetAtomic">,
     GIComplexPatternEquiv<MUBUFOffsetAtomic>;
 
+def gi_smrd_buffer_imm :
+    GIComplexOperandMatcher<s64, "selectSMRDBufferImm">,
+    GIComplexPatternEquiv<SMRDBufferImm>;
+
+def gi_smrd_buffer_imm32 :
+    GIComplexOperandMatcher<s64, "selectSMRDBufferImm32">,
+    GIComplexPatternEquiv<SMRDBufferImm32>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before before selecting a glue-less load, so hide this
@@ -182,6 +190,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
 
 class GISelSop2Pat <
   SDPatternOperator node,

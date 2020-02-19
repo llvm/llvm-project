@@ -2859,6 +2859,45 @@ AMDGPUInstructionSelector::selectMUBUFOffsetAtomic(MachineOperand &Root) const {
     }};
 }
 
+/// Get an immediate that must be 32-bits, and treated as zero extended.
+static Optional<uint64_t> getConstantZext32Val(Register Reg,
+                                               const MachineRegisterInfo &MRI) {
+  // getConstantVRegVal sexts any values, so see if that matters.
+  Optional<int64_t> OffsetVal = getConstantVRegVal(Reg, MRI);
+  if (!OffsetVal || !isInt<32>(*OffsetVal))
+    return None;
+  return Lo_32(*OffsetVal);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSMRDBufferImm(MachineOperand &Root) const {
+  Optional<uint64_t> OffsetVal = getConstantZext32Val(Root.getReg(), *MRI);
+  if (!OffsetVal)
+    return {};
+
+  Optional<int64_t> EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, *OffsetVal);
+  if (!EncodedImm)
+    return {};
+
+  return {{ [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSMRDBufferImm32(MachineOperand &Root) const {
+  assert(STI.getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
+
+  Optional<uint64_t> OffsetVal = getConstantZext32Val(Root.getReg(), *MRI);
+  if (!OffsetVal)
+    return {};
+
+  Optional<int64_t> EncodedImm
+    = AMDGPU::getSMRDEncodedLiteralOffset32(STI, *OffsetVal);
+  if (!EncodedImm)
+    return {};
+
+  return {{ [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }  }};
+}
+
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI,
                                                  int OpIdx) const {
