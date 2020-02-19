@@ -225,13 +225,13 @@ __OMP_RTL(omp_set_nested, false, Void, Int32)
 __OMP_RTL(omp_set_schedule, false, Void, Int32, Int32)
 __OMP_RTL(omp_set_max_active_levels, false, Void, Int32)
 
-__OMP_RTL(__last, false, Void, )
-
 __OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
 __OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy, Int32)
 __OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
+
+__OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
 #undef OMP_RTL
