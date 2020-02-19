@@ -66,6 +66,7 @@ class Pseudo<dag oops, dag iops, list<dag> pattern, string cstr = "">
   dag InOperandList  = iops;
   let Pattern        = pattern;
   let isCodeGenOnly  = 1;
+  let isPseudo       = 1;
 }
 
 // Real instructions (have encoding information)

@@ -874,6 +874,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
+
+    for (MVT VT : MVT::fp_scalable_vector_valuetypes()) {
+      if (isTypeLegal(VT)) {
+        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+      }
+    }
   }
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
@@ -7483,14 +7489,6 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   // Extend input splat value where needed to fit into a GPR (32b or 64b only)
   // FPRs don't have this restriction.
   switch (ElemVT.getSimpleVT().SimpleTy) {
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
-    SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i32);
-    return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
-  case MVT::i64:
-    SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
-    return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
   case MVT::i1: {
     // The general case of i1.  There isn't any natural way to do this,
     // so we use some trickery with whilelo.
@@ -7503,13 +7501,24 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID,
                        DAG.getConstant(0, dl, MVT::i64), SplatVal);
   }
-  // TODO: we can support float types, but haven't added patterns yet.
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+    SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i32);
+    break;
+  case MVT::i64:
+    SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
+    break;
   case MVT::f16:
   case MVT::f32:
   case MVT::f64:
+    // Fine as is
+    break;
   default:
     report_fatal_error("Unsupported SPLAT_VECTOR input operand type");
   }
+
+  return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
 }
 
 static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
