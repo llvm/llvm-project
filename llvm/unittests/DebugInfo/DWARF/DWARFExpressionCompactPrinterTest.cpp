@@ -74,3 +74,27 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_reg10) {
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_regx) {
   TestExprPrinter({DW_OP_regx, 0x80, 0x02}, "D0");
 }
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg0) {
+  TestExprPrinter({DW_OP_breg0, 0x04}, "[R0+4]");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg0_large_offset) {
+  TestExprPrinter({DW_OP_breg0, 0x80, 0x02}, "[R0+256]");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg13) {
+  TestExprPrinter({DW_OP_breg13, 0x10}, "[SP+16]");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg13_zero_offset) {
+  TestExprPrinter({DW_OP_breg13, 0x00}, "[SP]");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg0_negative) {
+  TestExprPrinter({DW_OP_breg0, 0x70}, "[R0-16]");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_bregx) {
+  TestExprPrinter({DW_OP_bregx, 0x0d, 0x28}, "[SP+40]");
+}
