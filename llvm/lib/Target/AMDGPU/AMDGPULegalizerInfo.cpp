@@ -190,7 +190,7 @@ static LegalityPredicate greaterThan(unsigned TypeIdx0, unsigned TypeIdx1) {
     return Query.Types[TypeIdx0].getSizeInBits() >
            Query.Types[TypeIdx1].getSizeInBits();
   };
-};
+}
 
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                          const GCNTargetMachine &TM)
