@@ -33646,7 +33646,8 @@ static bool matchBinaryPermuteShuffle(
 
   // Attempt to match against PALIGNR byte rotate.
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSSE3()) ||
-                         (MaskVT.is256BitVector() && Subtarget.hasAVX2()))) {
+                         (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
+                         (MaskVT.is512BitVector() && Subtarget.hasBWI()))) {
     int ByteRotation = matchShuffleAsByteRotate(MaskVT, V1, V2, Mask);
     if (0 < ByteRotation) {
       Shuffle = X86ISD::PALIGNR;
