@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify
-// RUN: %clang_cc1 -std=c++2a %s -verify
-// RUN: %clang_cc1 -std=c++2a %s -verify -Wc++17-compat -DCOMPAT
+// RUN: %clang_cc1 -std=c++20 %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -verify -Wc++17-compat -DCOMPAT
 //
 // RUN: %clang_cc1 -std=c++17 %s -E -o - | FileCheck %s --check-prefix=CXX17
-// RUN: %clang_cc1 -std=c++2a %s -E -o - | FileCheck %s --check-prefix=CXX20
+// RUN: %clang_cc1 -std=c++20 %s -E -o - | FileCheck %s --check-prefix=CXX20
 
 namespace N {
 
@@ -12,19 +12,19 @@ void operator<=(A, A);
 #if __cplusplus > 201703L
 void operator<=>(A, A);
 #ifdef COMPAT
-// expected-warning@-2 {{'<=>' operator is incompatible with C++ standards before C++2a}}
+// expected-warning@-2 {{'<=>' operator is incompatible with C++ standards before C++20}}
 #endif
 #endif
 
 template<auto> struct X {};
 X<operator<=>
 #if __cplusplus <= 201703L
-  // expected-warning@-2 {{'<=>' is a single token in C++2a; add a space to avoid a change in behavior}}
+  // expected-warning@-2 {{'<=>' is a single token in C++20; add a space to avoid a change in behavior}}
 #else
   >
 #endif
 #ifdef COMPAT
-// expected-warning@-7 {{'<=>' operator is incompatible with C++ standards before C++2a}}
+// expected-warning@-7 {{'<=>' operator is incompatible with C++ standards before C++20}}
 #endif
   x;
 }

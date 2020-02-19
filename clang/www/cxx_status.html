@@ -819,14 +819,13 @@ code. This issue is expected to be rectified soon.
 </p>
 </details>
 
-<h2 id="cxx20">C++2a implementation status</h2>
+<h2 id="cxx20">C++20 implementation status</h2>
 
-<p>Clang has <b>experimental</b> support for some proposed features of
-the C++ standard following C++17, provisionally named C++2a.
-Note that support for these features may change or be removed without notice,
-as the draft C++2a standard evolves.
+<p>Clang has support for some of the features of the
+ISO C++ 2020 Draft International Standard.
 
-<p>You can use Clang in C++2a mode with the <code>-std=c++2a</code> option.</p>
+<p>You can use Clang in C++20 mode with the <code>-std=c++20</code> option
+(use <code>-std=c++2a</code> in Clang 10 and earlier).</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -834,7 +833,7 @@ as the draft C++2a standard evolves.
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-    <th>C++2a Proposal</th>
+    <th>C++20 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <!-- Toronto 2017 papers -->
@@ -1206,7 +1205,7 @@ as the draft C++2a standard evolves.
 
 <p>
 <span id="p0482">(11): Prior to Clang 8, this feature is not enabled by
-<tt>-std=c++2a</tt>, but can be enabled with <tt>-fchar8_t</tt>.
+<tt>-std=c++20</tt>, but can be enabled with <tt>-fchar8_t</tt>.
 </span>
 </p>
 </details>
@@ -1299,7 +1298,7 @@ and library features that are not part of standard C++.</p>
       <td class="full" align="center">Clang 5</td>
     </tr>
     <tr>
-      <td><tt>-std=c++2a<br>-stdlib=libc++</tt></td>
+      <td><tt>-std=c++20<br>-stdlib=libc++</tt></td>
       <td class="na" align="center">Superseded by <a href="#p0912">P0912R5</a></td>
     </tr>
     <tr>
