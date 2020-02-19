@@ -182,6 +182,9 @@ static DecodeStatus DecodetGPROddRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodetGPREvenRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
+static DecodeStatus
+DecodeGPRwithAPSR_NZCVnospRegisterClass(MCInst &Inst, unsigned RegNo,
+                                        uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRnopcRegisterClass(MCInst &Inst,
                                                unsigned RegNo, uint64_t Address,
                                                const void *Decoder);
@@ -200,6 +203,8 @@ static DecodeStatus DecodetcGPRRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeGPRPairnospRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRspRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
@@ -1083,8 +1088,12 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
+  uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
+  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
+                                    ? DecoderTableThumb2CDE32
+                                    : DecoderTableThumb2CoProc32;
   Result =
-      decodeInstruction(DecoderTableThumb2CoProc32, MI, Insn32, Address, this, STI);
+      decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
     Size = 4;
     Check(Result, AddThumbPredicate(MI));
@@ -1225,6 +1234,19 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
   unsigned RegisterPair = GPRPairDecoderTable[RegNo/2];
   Inst.addOperand(MCOperand::createReg(RegisterPair));
   return S;
+}
+
+static DecodeStatus DecodeGPRPairnospRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 13)
+    return MCDisassembler::Fail;
+
+  unsigned RegisterPair = GPRPairDecoderTable[RegNo/2];
+  Inst.addOperand(MCOperand::createReg(RegisterPair));
+
+  if ((RegNo & 1) || RegNo > 10)
+     return MCDisassembler::SoftFail;
+  return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeGPRspRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -6061,6 +6083,23 @@ static DecodeStatus DecodetGPREvenRegisterClass(MCInst &Inst, unsigned RegNo,
 
   unsigned Register = GPRDecoderTable[(RegNo)];
   Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus
+DecodeGPRwithAPSR_NZCVnospRegisterClass(MCInst &Inst, unsigned RegNo,
+                                        uint64_t Address, const void *Decoder) {
+  if (RegNo == 15) {
+    Inst.addOperand(MCOperand::createReg(ARM::APSR_NZCV));
+    return MCDisassembler::Success;
+  }
+
+  unsigned Register = GPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+
+  if (RegNo == 13)
+    return MCDisassembler::SoftFail;
+
   return MCDisassembler::Success;
 }
 
