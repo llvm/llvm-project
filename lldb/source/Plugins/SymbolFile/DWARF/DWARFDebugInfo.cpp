@@ -109,7 +109,7 @@ size_t DWARFDebugInfo::GetNumUnits() {
   return m_units.size();
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
+DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(size_t idx) {
   DWARFUnit *cu = nullptr;
   if (idx < GetNumUnits())
     cu = m_units[idx].get();
