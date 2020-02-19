@@ -145,6 +145,16 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   UseIntegratedAssembler = true;
 }
 
+void X86MCAsmInfoMicrosoftMASM::anchor() { }
+
+X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
+    : X86MCAsmInfoMicrosoft(Triple) {
+  DollarIsPC = true;
+  SeparatorString = "\n";
+  CommentString = ";";
+  AllowSymbolAtNameStart = true;
+}
+
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {

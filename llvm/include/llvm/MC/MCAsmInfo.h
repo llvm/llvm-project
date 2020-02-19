@@ -156,6 +156,10 @@ protected:
   /// Defaults to false.
   bool AllowAtInName = false;
 
+  /// This is true if the assembler allows $ @ ? characters at the start of
+  /// symbol names. Defaults to false.
+  bool AllowSymbolAtNameStart = false;
+
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
   bool SupportsQuotedNames = true;
@@ -537,6 +541,7 @@ public:
   const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
+  bool doesAllowSymbolAtNameStart() const { return AllowSymbolAtNameStart; }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
   bool doesSupportDataRegionDirectives() const {
