@@ -45,6 +45,16 @@ class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
+/// A TypeSystem implementation based on Clang.
+///
+/// This class uses a single clang::ASTContext as the backend for storing
+/// its types and declarations. Every clang::ASTContext should also just have
+/// a single associated TypeSystemClang instance that manages it.
+///
+/// The clang::ASTContext instance can either be created by TypeSystemClang
+/// itself or it can adopt an existing clang::ASTContext (for example, when
+/// it is necessary to provide a TypeSystem interface for an existing
+/// clang::ASTContext that was created by clang::CompilerInstance).
 class TypeSystemClang : public TypeSystem {
   // LLVM RTTI support
   static char ID;
@@ -114,6 +124,7 @@ public:
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
+  /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
   clang::ASTContext &getASTContext();
 
   clang::MangleContext *getMangleContext();
@@ -997,6 +1008,8 @@ private:
   void SetTargetTriple(llvm::StringRef target_triple);
 };
 
+/// The TypeSystemClang instance used for the scratch ASTContext in a
+/// lldb::Target.
 class TypeSystemClangForExpressions : public TypeSystemClang {
 public:
   TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
