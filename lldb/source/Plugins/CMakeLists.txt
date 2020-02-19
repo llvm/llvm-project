@@ -27,11 +27,20 @@ get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 set(LLDB_ENUM_PLUGINS "")
 
+# FIXME: ProcessWindowsCommon needs to be initialized after all other process
+# plugins but before ProcessGDBRemote.
+set(LLDB_PROCESS_WINDOWS_PLUGIN "")
+set(LLDB_PROCESS_GDB_PLUGIN "")
+
 foreach(p ${LLDB_ALL_PLUGINS})
   # Strip lldbPlugin form the plugin name.
   string(SUBSTRING ${p} 10 -1 pStripped)
   if(${pStripped} MATCHES "^ScriptInterpreter*")
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_SCRIPT_PLUGIN(${pStripped})\n")
+  elseif(${pStripped} STREQUAL "ProcessWindowsCommon")
+    set(LLDB_PROCESS_WINDOWS_PLUGIN "LLDB_PLUGIN(${pStripped})\n")
+  elseif(${pStripped} STREQUAL "ProcessGDBRemote")
+    set(LLDB_PROCESS_GDB_PLUGIN "LLDB_PLUGIN(${pStripped})\n")
   else()
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_PLUGIN(${pStripped})\n")
   endif()
