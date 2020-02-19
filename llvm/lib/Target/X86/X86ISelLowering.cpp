@@ -21209,6 +21209,24 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
   }
 
+  // 0-x == y --> x+y == 0
+  // 0-x != y --> x+y != 0
+  if (Op0.getOpcode() == ISD::SUB && isNullConstant(Op0.getOperand(0)) &&
+      (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+    SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
+    SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(1), Op1);
+    return Add.getValue(1);
+  }
+
+  // x == 0-y --> x+y == 0
+  // x != 0-y --> x+y != 0
+  if (Op1.getOpcode() == ISD::SUB && isNullConstant(Op1.getOperand(0)) &&
+      (X86CC == X86::COND_E || X86CC == X86::COND_NE)) {
+    SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
+    SDValue Add = DAG.getNode(X86ISD::ADD, dl, VTs, Op0, Op1.getOperand(1));
+    return Add.getValue(1);
+  }
+
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
@@ -44523,21 +44541,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    // 0-x == y --> x+y == 0
-    // 0-x != y --> x+y != 0
-    if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-        LHS.hasOneUse()) {
-      SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, RHS, LHS.getOperand(1));
-      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
-    }
-    // x == 0-y --> x+y == 0
-    // x != 0-y --> x+y != 0
-    if (RHS.getOpcode() == ISD::SUB && isNullConstant(RHS.getOperand(0)) &&
-        RHS.hasOneUse()) {
-      SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
-      return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
-    }
-
     if (SDValue V = combineVectorSizedSetCCEquality(N, DAG, Subtarget))
       return V;
   }
