@@ -22226,9 +22226,6 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (Op0.getSimpleValueType().isInteger()) {
     SDValue X86CC;
     SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC);
-    if (!EFLAGS)
-      return SDValue();
-
     SDValue Res = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
     return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
   }
