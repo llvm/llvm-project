@@ -5,11 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass replaces dynamic allocation of coroutine frame with alloca and
-// replaces calls to llvm.coro.resume and llvm.coro.destroy with direct calls
-// to coroutine sub-functions.
-//===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Coroutines/CoroElide.h"
 #include "CoroInternal.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -37,6 +34,7 @@ struct Lowerer : coro::LowererBase {
 
   void elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA);
   bool shouldElide(Function *F, DominatorTree &DT) const;
+  void collectPostSplitCoroIds(Function *F);
   bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
 };
 } // end anonymous namespace
@@ -188,6 +186,16 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   return ReferencedCoroBegins.size() == CoroBegins.size();
 }
 
+void Lowerer::collectPostSplitCoroIds(Function *F) {
+  CoroIds.clear();
+  for (auto &I : instructions(F))
+    if (auto *CII = dyn_cast<CoroIdInst>(&I))
+      if (CII->getInfo().isPostSplit())
+        // If it is the coroutine itself, don't touch it.
+        if (CII->getCoroutine() != CII->getFunction())
+          CoroIds.push_back(CII);
+}
+
 bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
                             DominatorTree &DT) {
   CoroBegins.clear();
@@ -272,9 +280,31 @@ static bool replaceDevirtTrigger(Function &F) {
   return true;
 }
 
-//===----------------------------------------------------------------------===//
-//                              Top Level Driver
-//===----------------------------------------------------------------------===//
+static bool declaresCoroElideIntrinsics(Module &M) {
+  return coro::declaresIntrinsics(M, {"llvm.coro.id"});
+}
+
+PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &M = *F.getParent();
+  if (!declaresCoroElideIntrinsics(M))
+    return PreservedAnalyses::all();
+
+  Lowerer L(M);
+  L.CoroIds.clear();
+  L.collectPostSplitCoroIds(&F);
+  // If we did not find any coro.id, there is nothing to do.
+  if (L.CoroIds.empty())
+    return PreservedAnalyses::all();
+
+  AAResults &AA = AM.getResult<AAManager>(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+
+  bool Changed = false;
+  for (auto *CII : L.CoroIds)
+    Changed |= L.processCoroId(CII, AA, DT);
+
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
 
 namespace {
 struct CoroElideLegacy : FunctionPass {
@@ -286,7 +316,7 @@ struct CoroElideLegacy : FunctionPass {
   std::unique_ptr<Lowerer> L;
 
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(M, {"llvm.coro.id"}))
+    if (declaresCoroElideIntrinsics(M))
       L = std::make_unique<Lowerer>(M);
     return false;
   }
@@ -301,15 +331,7 @@ struct CoroElideLegacy : FunctionPass {
       Changed = replaceDevirtTrigger(F);
 
     L->CoroIds.clear();
-
-    // Collect all PostSplit coro.ids.
-    for (auto &I : instructions(F))
-      if (auto *CII = dyn_cast<CoroIdInst>(&I))
-        if (CII->getInfo().isPostSplit())
-          // If it is the coroutine itself, don't touch it.
-          if (CII->getCoroutine() != CII->getFunction())
-            L->CoroIds.push_back(CII);
-
+    L->collectPostSplitCoroIds(&F);
     // If we did not find any coro.id, there is nothing to do.
     if (L->CoroIds.empty())
       return Changed;
