@@ -1517,9 +1517,12 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         // is rare.
         if (!Bypasses.IsBypassed(&D) &&
             !(!getLangOpts().CPlusPlus && hasLabelBeenSeenInCurrentScope())) {
-          uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
+          llvm::TypeSize size =
+              CGM.getDataLayout().getTypeAllocSize(allocaTy);
           emission.SizeForLifetimeMarkers =
-              EmitLifetimeStart(size, AllocaAddr.getPointer());
+              size.isScalable() ? EmitLifetimeStart(-1, AllocaAddr.getPointer())
+                                : EmitLifetimeStart(size.getFixedSize(),
+                                                    AllocaAddr.getPointer());
         }
       } else {
         assert(!emission.useLifetimeMarkers());

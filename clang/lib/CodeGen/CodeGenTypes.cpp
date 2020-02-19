@@ -511,23 +511,44 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-
-    // TODO: real CodeGen support for SVE types requires more infrastructure
-    // to be added first.  Report an error until then.
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-    {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet generate code for SVE type '%0'");
-      auto *BT = cast<BuiltinType>(Ty);
-      auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
-      CGM.getDiags().Report(DiagID) << Name;
-      // Return something safe.
-      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
+    case BuiltinType::SveInt8:
+    case BuiltinType::SveUint8:
+      return llvm::VectorType::get(llvm::IntegerType::get(getLLVMContext(), 8),
+                                   {16, true});
+    case BuiltinType::SveInt16:
+    case BuiltinType::SveUint16:
+      return llvm::VectorType::get(llvm::IntegerType::get(getLLVMContext(), 16),
+                                   {8, true});
+    case BuiltinType::SveInt32:
+    case BuiltinType::SveUint32:
+      return llvm::VectorType::get(llvm::IntegerType::get(getLLVMContext(), 32),
+                                   {4, true});
+    case BuiltinType::SveInt64:
+    case BuiltinType::SveUint64:
+      return llvm::VectorType::get(llvm::IntegerType::get(getLLVMContext(), 64),
+                                   {2, true});
+    case BuiltinType::SveFloat16:
+      return llvm::VectorType::get(
+          getTypeForFormat(getLLVMContext(),
+                           Context.getFloatTypeSemantics(Context.HalfTy),
+                           /* UseNativeHalf = */ true),
+          {8, true});
+    case BuiltinType::SveFloat32:
+      return llvm::VectorType::get(
+          getTypeForFormat(getLLVMContext(),
+                           Context.getFloatTypeSemantics(Context.FloatTy),
+                           /* UseNativeHalf = */ false),
+          {4, true});
+    case BuiltinType::SveFloat64:
+      return llvm::VectorType::get(
+          getTypeForFormat(getLLVMContext(),
+                           Context.getFloatTypeSemantics(Context.DoubleTy),
+                           /* UseNativeHalf = */ false),
+          {2, true});
+    case BuiltinType::SveBool:
+      return llvm::VectorType::get(llvm::IntegerType::get(getLLVMContext(), 1),
+                                   {16, true});
       break;
-    }
-
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
