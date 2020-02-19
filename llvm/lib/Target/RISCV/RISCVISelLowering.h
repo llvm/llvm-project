@@ -181,6 +181,7 @@ private:
                                          Type *Ty) const override {
     return true;
   }
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
