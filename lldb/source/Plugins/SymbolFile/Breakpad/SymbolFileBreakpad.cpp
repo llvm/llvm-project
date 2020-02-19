@@ -294,7 +294,7 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
 }
 
 void SymbolFileBreakpad::FindFunctions(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   // TODO
@@ -307,7 +307,7 @@ void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
 }
 
 void SymbolFileBreakpad::FindTypes(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
     TypeMap &types) {}
 

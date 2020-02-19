@@ -82,7 +82,7 @@ public:
   size_t ParseBlocksRecursive(Function &func) override { return 0; }
 
   void FindGlobalVariables(ConstString name,
-                           const CompilerDeclContext *parent_decl_ctx,
+                           const CompilerDeclContext &parent_decl_ctx,
                            uint32_t max_matches,
                            VariableList &variables) override {}
 
@@ -110,14 +110,14 @@ public:
                 TypeList &type_list) override {}
 
   void FindFunctions(ConstString name,
-                     const CompilerDeclContext *parent_decl_ctx,
+                     const CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask,
                      bool include_inlines, SymbolContextList &sc_list) override;
 
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
-  void FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
+  void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
                  uint32_t max_matches,
                  llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  TypeMap &types) override;
@@ -135,7 +135,7 @@ public:
 
   CompilerDeclContext
   FindNamespace(ConstString name,
-                const CompilerDeclContext *parent_decl_ctx) override {
+                const CompilerDeclContext &parent_decl_ctx) override {
     return CompilerDeclContext();
   }
 

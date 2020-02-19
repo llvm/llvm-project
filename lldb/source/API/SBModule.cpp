@@ -401,8 +401,8 @@ lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
     const bool symbols_ok = true;
     const bool inlines_ok = true;
     FunctionNameType type = static_cast<FunctionNameType>(name_type_mask);
-    module_sp->FindFunctions(ConstString(name), nullptr, type, symbols_ok,
-                             inlines_ok, *sb_sc_list);
+    module_sp->FindFunctions(ConstString(name), CompilerDeclContext(), type,
+                             symbols_ok, inlines_ok, *sb_sc_list);
   }
   return LLDB_RECORD_RESULT(sb_sc_list);
 }
@@ -417,8 +417,8 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
   ModuleSP module_sp(GetSP());
   if (name && module_sp) {
     VariableList variable_list;
-    module_sp->FindGlobalVariables(ConstString(name), nullptr, max_matches,
-                                   variable_list);
+    module_sp->FindGlobalVariables(ConstString(name), CompilerDeclContext(),
+                                   max_matches, variable_list);
     for (const VariableSP &var_sp : variable_list) {
       lldb::ValueObjectSP valobj_sp;
       TargetSP target_sp(target.GetSP());
