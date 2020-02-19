@@ -3298,7 +3298,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
 
   // Otherwise unroll into some nasty scalar code and rebuild the vector.
   EVT EltVT = WidenVT.getVectorElementType();
-  std::array<EVT, 2> EltVTs = {EltVT, MVT::Other};
+  std::array<EVT, 2> EltVTs = {{EltVT, MVT::Other}};
   SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
   SmallVector<SDValue, 32> OpChains;
   // Use the original element count so we don't do more scalar opts than
