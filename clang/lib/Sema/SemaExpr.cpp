@@ -5210,7 +5210,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
 
       // Emit the location of the prototype.
       if (!TC && FDecl && !FDecl->getBuiltinID() && !IsExecConfig)
-        Diag(FDecl->getBeginLoc(), diag::note_callee_decl) << FDecl;
+        Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
 
       return true;
     }
@@ -5255,7 +5255,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
 
       // Emit the location of the prototype.
       if (!TC && FDecl && !FDecl->getBuiltinID() && !IsExecConfig)
-        Diag(FDecl->getBeginLoc(), diag::note_callee_decl) << FDecl;
+        Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
 
       // This deletes the extra arguments.
       Call->shrinkNumArgs(NumParams);
