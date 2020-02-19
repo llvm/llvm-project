@@ -7,7 +7,7 @@
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "codeActionProvider": true,
 # CHECK-NEXT:      "completionProvider": {
-# CHECK-NEXT:        "allCommitCharacters": " \t()[]{}<>:;,+-/*%^&#?.=\"",
+# CHECK-NEXT:        "allCommitCharacters": " \t()[]{}<>:;,+-/*%^&#?.=\"'|",
 # CHECK-NEXT:        "resolveProvider": false,
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          ".",
