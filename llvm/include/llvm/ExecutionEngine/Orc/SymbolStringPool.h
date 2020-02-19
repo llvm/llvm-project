@@ -53,7 +53,7 @@ class SymbolStringPtr {
 
 public:
   SymbolStringPtr() = default;
-  SymbolStringPtr(nullptr_t) {}
+  SymbolStringPtr(std::nullptr_t) {}
   SymbolStringPtr(const SymbolStringPtr &Other)
     : S(Other.S) {
     if (isRealPoolEntry(S))
