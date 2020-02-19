@@ -53,23 +53,6 @@ public:
 
   llvm::Error verify(StringRef GsymPath);
 
-  /// Set valid .text address ranges that all functions be contained in.
-  ///
-  /// Any functions whose addresses do not exist within these function bounds
-  /// will not be converted into the final GSYM. This allows the object file
-  /// to figure out the valid file address ranges of all the code sections
-  /// and ensure we don't add invalid functions to the final output. Many
-  /// linkers have issues when dead stripping functions where they set the
-  /// DW_AT_low_pc to zero, but newer DWARF has the DW_AT_high_pc as an offset
-  /// from the DW_AT_low_pc and these size attributes have no relocations that
-  /// can be applied. This results in DWARF where many functions have an
-  /// DW_AT_low_pc of zero and a valid offset size for DW_AT_high_pc. If we
-  /// extract all valid ranges from an object file that are marked with
-  /// executable permissions, we can properly ensure that these functions are
-  /// removed.
-  void SetValidTextRanges(AddressRanges &TextRanges) {
-    ValidTextRanges = TextRanges;
-  }
 
 private:
 
@@ -98,7 +81,6 @@ private:
   DWARFContext &DICtx;
   raw_ostream &Log;
   GsymCreator &Gsym;
-  Optional<AddressRanges> ValidTextRanges;
 
   friend class DwarfTransformerTest;
 };

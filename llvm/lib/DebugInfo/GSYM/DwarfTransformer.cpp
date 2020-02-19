@@ -384,7 +384,7 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
       // high PC can be an offset from the low PC in more recent DWARF versions
       // we need to watch for a zero'ed low pc which we do using
       // ValidTextRanges below.
-      if (ValidTextRanges && !ValidTextRanges->contains(Range.LowPC)) {
+      if (!Gsym.IsValidTextAddress(Range.LowPC)) {
         // We expect zero and -1 to be invalid addresses in DWARF depending
         // on the linker of the DWARF. This indicates a function was stripped
         // and the debug info wasn't able to be stripped from the DWARF. If
@@ -392,8 +392,8 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
         if (Range.LowPC != 0) {
           // Unexpected invalid address, emit an error
           Log << "warning: DIE has an address range whose start address is "
-              "not in any executable sections (" << *ValidTextRanges <<
-              ") and will not be processed:\n";
+              "not in any executable sections (" <<
+              *Gsym.GetValidTextRanges() << ") and will not be processed:\n";
           Die.dump(Log, 0, DIDumpOptions::getForSingleDIE());
         }
         break;
