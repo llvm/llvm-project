@@ -12583,9 +12583,9 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
 }
 
-static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
-                                        unsigned Opcode,
-                                        bool OnlyPackedOffsets = true) {
+static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
+                                          unsigned Opcode,
+                                          bool OnlyPackedOffsets = true) {
   const SDValue Src = N->getOperand(2);
   const EVT SrcVT = Src->getValueType(0);
   assert(SrcVT.isScalableVector() &&
@@ -12610,12 +12610,12 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(5);
 
-  // SST1_IMM requires that the offset is an immediate:
-  // * multiple of #SizeInBytes
-  // * in the range [0, 31 x #SizeInBytes]
-  // where #SizeInBytes is the size in bytes of the stored
-  // items. For immediates outside that range and non-immediate scalar offsets use
-  // SST1 or SST1_UXTW instead.
+  // SST1_IMM requires that the offset is an immediate that is:
+  //    * a multiple of #SizeInBytes,
+  //    * in the range [0, 31 x #SizeInBytes],
+  // where #SizeInBytes is the size in bytes of the stored items. For
+  // immediates outside that range and non-immediate scalar offsets use SST1 or
+  // SST1_UXTW instead.
   if (Opcode == AArch64ISD::SST1_IMM) {
     uint64_t MaxIndex = 31;
     uint64_t SrcElSize = SrcElVT.getStoreSize().getKnownMinSize();
@@ -12650,9 +12650,9 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
   // Source value type that is representable in hardware
   EVT HwSrcVt = getSVEContainerType(SrcVT);
 
-  // Keep the original type of the input data to store - this is needed to
-  // differentiate between ST1B, ST1H, ST1W and ST1D. For FP values we want the
-  // integer equivalent, so just use HwSrcVt.
+  // Keep the original type of the input data to store - this is needed to be
+  // able to select the correct instruction, e.g. ST1B, ST1H, ST1W and ST1D. For
+  // FP values we want the integer equivalent, so just use HwSrcVt.
   SDValue InputVT = DAG.getValueType(SrcVT);
   if (SrcVT.isFloatingPoint())
     InputVT = DAG.getValueType(HwSrcVt);
@@ -12675,14 +12675,17 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opcode, DL, VTs, Ops);
 }
 
-static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
-                                       unsigned Opcode,
-                                       bool OnlyPackedOffsets = true) {
-  EVT RetVT = N->getValueType(0);
+static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
+                                        unsigned Opcode,
+                                        bool OnlyPackedOffsets = true) {
+  const EVT RetVT = N->getValueType(0);
   assert(RetVT.isScalableVector() &&
          "Gather loads are only possible for SVE vectors");
-  SDLoc DL(N);
 
+  SDLoc DL(N);
+  MVT RetElVT = RetVT.getVectorElementType().getSimpleVT();
+
+  // Make sure that the loaded data will fit into an SVE register
   if (RetVT.getSizeInBits().getKnownMinSize() > AArch64::SVEBitsPerBlock)
     return SDValue();
 
@@ -12693,18 +12696,15 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
 
-  // GLD1_IMM requires that the offset is an immediate:
-  // * multiple of #SizeInBytes
-  // * in the range [0, 31 x #SizeInBytes]
-  // where #SizeInBytes is the size in bytes of the loaded items.  For immediates
-  // outside that range and non-immediate scalar offsets use GLD1 or GLD1_UXTW
-  // instead.
+  // GLD1_IMM requires that the offset is an immediate that is:
+  //    * a multiple of #SizeInBytes,
+  //    * in the range [0, 31 x #SizeInBytes],
+  // where #SizeInBytes is the size in bytes of the loaded items. For
+  // immediates outside that range and non-immediate scalar offsets use GLD1 or
+  // GLD1_UXTW instead.
   if (Opcode == AArch64ISD::GLD1_IMM) {
     uint64_t MaxIndex = 31;
-    uint64_t RetElSize = RetVT.getVectorElementType()
-                             .getSimpleVT()
-                             .getStoreSize()
-                             .getKnownMinSize();
+    uint64_t RetElSize = RetElVT.getStoreSize().getKnownMinSize();
 
     ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
     if (nullptr == OffsetConst ||
@@ -12733,10 +12733,9 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
   // Return value type that is representable in hardware
   EVT HwRetVt = getSVEContainerType(RetVT);
 
-  // Keep the original output value type around - this will better inform
-  // optimisations (e.g. instruction folding when load is followed by
-  // zext/sext). This will only be used for ints, so the value for FPs
-  // doesn't matter.
+  // Keep the original output value type around - this is needed to be able to
+  // select the correct instruction, e.g. LD1B, LD1H, LD1W and LD1D. For FP
+  // values we want the integer equivalent, so just use HwRetVT.
   SDValue OutVT = DAG.getValueType(RetVT);
   if (RetVT.isFloatingPoint())
     OutVT = DAG.getValueType(HwRetVt);
@@ -12759,7 +12758,6 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
 
   return DAG.getMergeValues({Load, LoadChain}, DL);
 }
-
 
 static SDValue
 performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
@@ -12924,41 +12922,41 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_stnt1:
       return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1);
     case Intrinsic::aarch64_sve_ld1_gather_index:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SCALED);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SCALED);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SXTW,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_UXTW,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
-      return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_IMM);
     case Intrinsic::aarch64_sve_st1_scatter:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1);
     case Intrinsic::aarch64_sve_st1_scatter_index:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SCALED);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SCALED);
     case Intrinsic::aarch64_sve_st1_scatter_sxtw:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SXTW,
-                                      /*OnlyPackedOffsets=*/false);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SXTW,
+                                        /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_uxtw:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW,
-                                      /*OnlyPackedOffsets=*/false);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_UXTW,
+                                        /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_SXTW_SCALED,
-                                      /*OnlyPackedOffsets=*/false);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SXTW_SCALED,
+                                        /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
-                                      /*OnlyPackedOffsets=*/false);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
+                                        /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
-      return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_IMM);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_IMM);
     default:
       break;
     }
