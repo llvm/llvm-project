@@ -761,12 +761,22 @@ TEST(Error, Stream) {
   }
 }
 
-TEST(Error, ErrorMatchers) {
+TEST(Error, SucceededMatcher) {
   EXPECT_THAT_ERROR(Error::success(), Succeeded());
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_ERROR(make_error<CustomError>(0), Succeeded()),
       "Expected: succeeded\n  Actual: failed  (CustomError {0})");
 
+  EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           Succeeded()),
+      "Expected: succeeded\n  Actual: failed  (CustomError {0})");
+  int a = 1;
+  EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
+}
+
+TEST(Error, FailedMatcher) {
   EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed());
   EXPECT_NONFATAL_FAILURE(EXPECT_THAT_ERROR(Error::success(), Failed()),
                           "Expected: failed\n  Actual: succeeded");
@@ -796,17 +806,14 @@ TEST(Error, ErrorMatchers) {
       "  Actual: failed  (CustomError {0})");
   EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed<ErrorInfoBase>());
 
-  EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
-  EXPECT_NONFATAL_FAILURE(
-      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
-                           Succeeded()),
-      "Expected: succeeded\n  Actual: failed  (CustomError {0})");
-
   EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)), Failed());
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(0), Failed()),
       "Expected: failed\n  Actual: succeeded with value 0");
+  EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
+}
 
+TEST(Error, HasValueMatcher) {
   EXPECT_THAT_EXPECTED(Expected<int>(0), HasValue(0));
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
@@ -818,9 +825,7 @@ TEST(Error, ErrorMatchers) {
       "Expected: succeeded with value (is equal to 0)\n"
       "  Actual: succeeded with value 1, (isn't equal to 0)");
 
-  EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
   int a = 1;
-  EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
   EXPECT_THAT_EXPECTED(Expected<int &>(a), HasValue(testing::Eq(1)));
 
   EXPECT_THAT_EXPECTED(Expected<int>(1), HasValue(testing::Gt(0)));
