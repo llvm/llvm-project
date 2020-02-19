@@ -78,6 +78,9 @@ public:
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
   bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
+  bool applyMappingBFEIntrinsic(const OperandsMapper &OpdMapper,
+                                bool Signed) const;
+
   void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
