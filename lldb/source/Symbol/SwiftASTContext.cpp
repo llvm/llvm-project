@@ -8393,9 +8393,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   s.PutCString("kind = ");
 
   switch (file_unit->getKind()) {
-  default: {
-    s.PutCString("<unknown>");
-  }
   case swift::FileUnitKind::Source: {
     s.PutCString("Source, ");
     if (swift::SourceFile *source_file =
@@ -8426,7 +8423,10 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
     swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
     s.Printf("filename = \"%s\"", loaded_file->getFilename().str().c_str());
   } break;
+  case swift::FileUnitKind::DWARFModule:
+    s.PutCString("DWARF");
   };
+  s.PutCString(";");
 }
 
 // Gets the full module name from the module passed in.
@@ -8466,7 +8466,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
 
   error.Clear();
   ConstString toplevel = module.path.front();
-  llvm::SmallString<1> m_description;
+  const std::string &m_description = swift_ast_context.GetDescription();
   LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing module %s",
              toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
@@ -8496,14 +8496,11 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
   }
 
   if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing %s with source files:",
-               module.path.front().AsCString());
-
-    for (swift::FileUnit *file_unit : swift_module->getFiles()) {
-      StreamString ss;
+    StreamString ss;
+    for (swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
-      LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "  %s", ss.GetData());
-    }
+    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Imported module %s from {%s}",
+               module.path.front().AsCString(), ss.GetData());
   }
 
   additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
