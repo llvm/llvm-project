@@ -121,10 +121,6 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   DenseMap<Value, PromotionInfo> promotionInfoMap;
   for (auto v : subViews) {
     SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
-    auto viewType = subView.getType();
-    // TODO(ntv): support more cases than just float.
-    if (!viewType.getElementType().isa<FloatType>())
-      continue;
     auto promotionInfo =
         promoteFullTileBuffer(b, loc, subView, dynamicBuffers, folder);
     promotionInfoMap.insert(std::make_pair(subView.getResult(), promotionInfo));
@@ -136,10 +132,12 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
-    // TODO(ntv): value to fill with should be related to the operation.
-    // For now, just use APFloat(0.0f).
-    auto t = subView.getType().getElementType().cast<FloatType>();
-    Value fillVal = folded_std_constant_float(folder, APFloat(0.0f), t);
+    Value fillVal;
+    if (auto t = subView.getType().getElementType().dyn_cast<FloatType>())
+      fillVal = folded_std_constant(folder, FloatAttr::get(t, 0.0));
+    else if (auto t =
+                 subView.getType().getElementType().dyn_cast<IntegerType>())
+      fillVal = folded_std_constant_int(folder, 0, t);
     // TODO(ntv): fill is only necessary if `promotionInfo` has a full local
     // view that is different from the partial local view and we are on the
     // boundary.
@@ -214,13 +212,14 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
     if (!op.hasBufferSemantics())
       return;
 
-    // TODO(ntv) some heuristic here to decide what to promote. Atm it is all or
-    // nothing.
+    // TODO(ntv) some heuristic here to decide what to promote. Atm only float
+    // and integer buffers can be promoted.
     SetVector<Value> subViews;
     OpBuilder b(op);
     for (auto it : op.getInputsAndOutputBuffers())
       if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
-        subViews.insert(sv);
+        if (sv.getType().getElementType().isIntOrFloat())
+          subViews.insert(sv);
     if (!subViews.empty()) {
       promoteSubViewOperands(b, op, subViews, dynamicBuffers, &folder);
       toErase.push_back(op);
