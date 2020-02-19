@@ -119,7 +119,7 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   for (auto &T : DfaTransitions)
     Table.add(T.second.second);
   Table.layout();
-  OS << "constexpr std::array<NfaStatePair, " << Table.size() << "> " << Name
+  OS << "const std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
   Table.emit(
       OS,
