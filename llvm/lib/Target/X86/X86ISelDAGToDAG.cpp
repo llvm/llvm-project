@@ -643,6 +643,11 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
         if ((U->getOpcode() == ISD::ADD || U->getOpcode() == ISD::SUB) &&
             (-Imm->getAPIntValue()).isSignedIntN(8))
           return false;
+
+        if ((U->getOpcode() == X86ISD::ADD || U->getOpcode() == X86ISD::SUB) &&
+            (-Imm->getAPIntValue()).isSignedIntN(8) &&
+            hasNoCarryFlagUses(SDValue(U, 1)))
+          return false;
       }
 
       // If the other operand is a TLS address, we should fold it instead.

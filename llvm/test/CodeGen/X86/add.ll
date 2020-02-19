@@ -560,8 +560,8 @@ declare void @bar_i64(i64)
 define void @add_i32_128_flag(i32 %x) {
 ; X32-LABEL: add_i32_128_flag:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl $128, %eax
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    subl $-128, %eax
 ; X32-NEXT:    je .LBB19_2
 ; X32-NEXT:  # %bb.1: # %if.then
 ; X32-NEXT:    pushl %eax
