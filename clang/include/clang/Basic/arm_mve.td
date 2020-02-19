@@ -332,8 +332,8 @@ let params = T.Usual in {
 
 multiclass DblVectorVectorArithmetic<string operation, dag extraArgs = (?)> {
   defm "" : IntrinsicMX<
-      DblVector, (args Vector:$a, Vector:$b, Predicate:$pred),
-      !con((IRInt<operation, [DblVector, Vector, Predicate]> $a, $b),
+      DblVector, (args Vector:$a, Vector:$b, DblPredicate:$pred),
+      !con((IRInt<operation, [DblVector, Vector, DblPredicate]> $a, $b),
            extraArgs, (? $pred, $inactive))>;
 }
 
@@ -881,8 +881,8 @@ multiclass vshll_imm<int top> {
         (IRInt<"vshll_imm", [DblVector, Vector]>
             $v, $sh, (unsignedflag Scalar), top)>;
     defm "": IntrinsicMX<DblVector, (args Vector:$v, imm_1toN:$sh,
-                                          Predicate:$pred),
-        (IRInt<"vshll_imm_predicated", [DblVector, Vector, Predicate]>
+                                          DblPredicate:$pred),
+        (IRInt<"vshll_imm_predicated", [DblVector, Vector, DblPredicate]>
             $v, $sh, (unsignedflag Scalar), top, $pred, $inactive), 1, "_n">;
   }
 }
