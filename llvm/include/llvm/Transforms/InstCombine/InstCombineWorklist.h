@@ -97,12 +97,12 @@ public:
   /// Remove I from the worklist if it exists.
   void remove(Instruction *I) {
     DenseMap<Instruction*, unsigned>::iterator It = WorklistMap.find(I);
-    if (It == WorklistMap.end()) return; // Not in worklist.
+    if (It != WorklistMap.end()) {
+      // Don't bother moving everything down, just null out the slot.
+      Worklist[It->second] = nullptr;
+      WorklistMap.erase(It);
+    }
 
-    // Don't bother moving everything down, just null out the slot.
-    Worklist[It->second] = nullptr;
-
-    WorklistMap.erase(It);
     Deferred.remove(I);
   }
 
