@@ -65,36 +65,17 @@ Value *IRBuilderBase::getCastedInt8PtrValue(Value *Ptr) {
     return Ptr;
 
   // Otherwise, we need to insert a bitcast.
-  PT = getInt8PtrTy(PT->getAddressSpace());
-  BitCastInst *BCI = new BitCastInst(Ptr, PT, "");
-  BB->getInstList().insert(InsertPt, BCI);
-  SetInstDebugLocation(BCI);
-  return BCI;
+  return CreateBitCast(Ptr, getInt8PtrTy(PT->getAddressSpace()));
 }
 
 static CallInst *createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                   IRBuilderBase *Builder,
                                   const Twine &Name = "",
                                   Instruction *FMFSource = nullptr) {
-  CallInst *CI = CallInst::Create(Callee, Ops, Name);
+  CallInst *CI = Builder->CreateCall(Callee, Ops, Name);
   if (FMFSource)
     CI->copyFastMathFlags(FMFSource);
-  Builder->GetInsertBlock()->getInstList().insert(Builder->GetInsertPoint(),CI);
-  Builder->SetInstDebugLocation(CI);
   return CI;
-}
-
-static InvokeInst *createInvokeHelper(Function *Invokee, BasicBlock *NormalDest,
-                                      BasicBlock *UnwindDest,
-                                      ArrayRef<Value *> Ops,
-                                      IRBuilderBase *Builder,
-                                      const Twine &Name = "") {
-  InvokeInst *II =
-      InvokeInst::Create(Invokee, NormalDest, UnwindDest, Ops, Name);
-  Builder->GetInsertBlock()->getInstList().insert(Builder->GetInsertPoint(),
-                                                  II);
-  Builder->SetInstDebugLocation(II);
-  return II;
 }
 
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
@@ -696,8 +677,8 @@ static InvokeInst *CreateGCStatepointInvokeCommon(
   std::vector<Value *> Args =
       getStatepointArgs(*Builder, ID, NumPatchBytes, ActualInvokee, Flags,
                         InvokeArgs, TransitionArgs, DeoptArgs, GCArgs);
-  return createInvokeHelper(FnStatepoint, NormalDest, UnwindDest, Args, Builder,
-                            Name);
+  return Builder->CreateInvoke(FnStatepoint, NormalDest, UnwindDest, Args,
+                               Name);
 }
 
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
