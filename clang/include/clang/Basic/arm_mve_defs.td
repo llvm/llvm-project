@@ -131,6 +131,7 @@ def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
 def unzip: CGHelperFn<"VectorUnzip"> {
   let special_params = [IRBuilderIntParam<1, "bool">];
 }
+def zip: CGHelperFn<"VectorZip">;
 
 // Helper for making boolean flags in IR
 def i1: IRBuilderBase {
@@ -186,6 +187,10 @@ def seq;
 // _type_ as an argument, and it expands into 1 for an unsigned type
 // and 0 for a signed (or floating) one.
 def unsignedflag;
+
+// 'bitsize' also takes a scalar type, and expands into an integer
+// constant giving its size in bits.
+def bitsize;
 
 // If you put CustomCodegen<"foo"> in an intrinsic's codegen field, it
 // indicates that the IR generation for that intrinsic is done by handwritten
