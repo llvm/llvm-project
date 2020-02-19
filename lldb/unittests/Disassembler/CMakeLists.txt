@@ -6,7 +6,7 @@ if("ARM" IN_LIST LLVM_TARGETS_TO_BUILD)
       lldbCore
       lldbSymbol
       lldbTarget
-      lldbPluginDisassemblerLLVM
+      lldbPluginDisassemblerLLVMC
       lldbPluginProcessUtility
     LINK_COMPONENTS
       Support

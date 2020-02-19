@@ -32,7 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ABISysV_s390x)
+LLDB_PLUGIN_DEFINE_ADV(ABISysV_s390x, ABISystemZ)
 
 enum dwarf_regnums {
   // General Purpose Registers
