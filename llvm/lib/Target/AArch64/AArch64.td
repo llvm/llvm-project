@@ -240,11 +240,11 @@ def FeatureDotProd : SubtargetFeature<
 
 def FeaturePA : SubtargetFeature<
     "pa", "HasPA", "true",
-    "Enable v8.3-A Pointer Authentication enchancement">;
+    "Enable v8.3-A Pointer Authentication extension">;
 
 def FeatureJS : SubtargetFeature<
     "jsconv", "HasJS", "true",
-    "Enable v8.3-A JavaScript FP conversion enchancement",
+    "Enable v8.3-A JavaScript FP conversion instructions",
     [FeatureFPARMv8]>;
 
 def FeatureCCIDX : SubtargetFeature<
