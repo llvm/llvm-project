@@ -291,9 +291,6 @@
 // RUN:     -frename-registers                                                \
 // RUN:     -fschedule-insns2                                                 \
 // RUN:     -fsingle-precision-constant                                       \
-// RUN:     -ftree_loop_im                                                    \
-// RUN:     -ftree_loop_ivcanon                                               \
-// RUN:     -ftree_loop_linear                                                \
 // RUN:     -funsafe-loop-optimizations                                       \
 // RUN:     -fuse-linker-plugin                                               \
 // RUN:     -fvect-cost-model                                                 \
@@ -431,9 +428,6 @@
 // CHECK-WARNING-DAG: optimization flag '-frename-registers' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fschedule-insns2' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fsingle-precision-constant' is not supported
-// CHECK-WARNING-DAG: optimization flag '-ftree_loop_im' is not supported
-// CHECK-WARNING-DAG: optimization flag '-ftree_loop_ivcanon' is not supported
-// CHECK-WARNING-DAG: optimization flag '-ftree_loop_linear' is not supported
 // CHECK-WARNING-DAG: optimization flag '-funsafe-loop-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fuse-linker-plugin' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fvect-cost-model' is not supported
