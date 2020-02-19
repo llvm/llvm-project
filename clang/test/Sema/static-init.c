@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-bool-conversion %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-pointer-to-int-cast -Wno-bool-conversion %s
 
 typedef __typeof((int*) 0 - (int*) 0) intptr_t;
 
