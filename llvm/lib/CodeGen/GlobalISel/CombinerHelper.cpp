@@ -1376,7 +1376,8 @@ bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
 bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
-  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a shift");
+  assert((MI.getOpcode() == TargetOpcode::G_SHL ||
+          MI.getOpcode() == TargetOpcode::G_LSHR) && "Expected a shift");
 
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   if (Ty.isVector()) // TODO:
@@ -1396,32 +1397,55 @@ bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
   return ShiftVal >= Size / 2 && ShiftVal < Size;
 }
 
-//  dst = G_LSHR s64:x, C for C >= 32
-// =>
-//   lo, hi = G_UNMERGE_VALUES x
-//   dst = merge_values (G_LSHR hi, C - 32), 0
 bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
                                                 const unsigned &ShiftVal) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(SrcReg);
   unsigned Size = Ty.getSizeInBits();
+  unsigned HalfSize = Size / 2;
 
-  assert(ShiftVal >= Size / 2);
-  LLT HalfTy = LLT::scalar(Size / 2);
+  assert(ShiftVal >= HalfSize);
+  LLT HalfTy = LLT::scalar(HalfSize);
 
   Builder.setInstr(MI);
   auto Unmerge = Builder.buildUnmerge(HalfTy, SrcReg);
+  unsigned NarrowShiftAmt = ShiftVal - HalfSize;
 
-  Register Narrowed = Unmerge.getReg(1);
-  if (ShiftVal > Size / 2) {
-    Narrowed = Builder.buildLShr(
-      HalfTy, Narrowed,
-      Builder.buildConstant(HalfTy, ShiftVal - Size / 2)).getReg(0);
+  if (MI.getOpcode() == TargetOpcode::G_LSHR) {
+    Register Narrowed = Unmerge.getReg(1);
+
+    //  dst = G_LSHR s64:x, C for C >= 32
+    // =>
+    //   lo, hi = G_UNMERGE_VALUES x
+    //   dst = G_MERGE_VALUES (G_LSHR hi, C - 32), 0
+
+    if (NarrowShiftAmt != 0) {
+      Narrowed = Builder.buildLShr(HalfTy, Narrowed,
+        Builder.buildConstant(HalfTy, NarrowShiftAmt)).getReg(0);
+    }
+
+    auto Zero = Builder.buildConstant(HalfTy, 0);
+    Builder.buildMerge(DstReg, { Narrowed, Zero });
+  } else {
+    Register Narrowed = Unmerge.getReg(0);
+    //  dst = G_SHL s64:x, C for C >= 32
+    // =>
+    //   lo, hi = G_UNMERGE_VALUES x
+    //   dst = G_MERGE_VALUES 0, (G_SHL hi, C - 32)
+
+    // TODO: ashr
+    assert(MI.getOpcode() == TargetOpcode::G_SHL);
+
+    if (NarrowShiftAmt != 0) {
+      Narrowed = Builder.buildShl(HalfTy, Narrowed,
+        Builder.buildConstant(HalfTy, NarrowShiftAmt)).getReg(0);
+    }
+
+    auto Zero = Builder.buildConstant(HalfTy, 0);
+    Builder.buildMerge(DstReg, { Zero, Narrowed });
   }
 
-  Builder.buildMerge(
-    DstReg, { Narrowed, Builder.buildConstant(HalfTy, 0).getReg(0) });
   MI.eraseFromParent();
   return true;
 }
