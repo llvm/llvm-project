@@ -12,7 +12,7 @@
   !DEF: /MainProgram1/Block1/a (OmpPrivate) HostAssoc REAL(8)
   a = 2.
   !$omp do  private(a)
-  !DEF: /MainProgram1/Block1/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+  !DEF: /MainProgram1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
      !DEF: /MainProgram1/Block1/Block1/a (OmpPrivate) HostAssoc REAL(8)
      a = 1.

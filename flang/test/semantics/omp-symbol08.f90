@@ -8,6 +8,9 @@
 !      increment of the associated do-loop.
 !   c) The loop iteration variables in the associated do-loops of a simd
 !      construct with multiple associated do-loops are lastprivate.
+!   d) A loop iteration variable for a sequential loop in a parallel or task
+!      generating construct is private in the innermost such construct that
+!      encloses the loop.
 !   - TBD
 
 ! All the tests assume that the do-loops association for collapse/ordered
@@ -28,16 +31,16 @@ subroutine test_do
  !REF: /test_do/i
  i = 99
 !$omp do  collapse(2)
- !DEF: /test_do/Block1/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+ !DEF: /test_do/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_do/Block1/Block1/j (OmpPrivate) HostAssoc INTEGER(4)
+  !DEF: /test_do/Block1/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
    !REF: /test_do/a
    a(1,1,1) = 0.
-   !REF: /test_do/k
+   !DEF: /test_do/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_do/a
-    !REF: /test_do/k
+    !REF: /test_do/Block1/k
     !REF: /test_do/Block1/Block1/j
     !REF: /test_do/Block1/Block1/i
     a(k,j,i) = 1.
@@ -58,13 +61,13 @@ subroutine test_pardo
  !DEF: /test_pardo/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do  collapse(2) private(k) ordered(2)
- !DEF: /test_pardo/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+ !DEF: /test_pardo/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_pardo/Block1/j (OmpPrivate) HostAssoc INTEGER(4)
-  do j=6,10
+   !DEF: /test_pardo/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+    do j=6,10
    !REF: /test_pardo/a
    a(1,1,1) = 0.
-   !DEF: /test_pardo/Block1/k (OmpPrivate) HostAssoc INTEGER(4)
+   !DEF: /test_pardo/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_pardo/a
     !REF: /test_pardo/Block1/k
@@ -86,9 +89,9 @@ subroutine test_taskloop
  !DEF: /test_taskloop/j ObjectEntity INTEGER(4)
  integer i, j
 !$omp taskloop  private(j)
- !DEF: /test_taskloop/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+ !DEF: /test_taskloop/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_taskloop/Block1/j (OmpPrivate) HostAssoc INTEGER(4)
+  !DEF: /test_taskloop/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   !REF: /test_taskloop/Block1/i
   do j=1,i
    !REF: /test_taskloop/a
@@ -129,13 +132,13 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp target  map(to:b,c)  map(tofrom:sum)
 !$omp teams  num_teams(num_teams) thread_limit(block_threads) reduction(+:sum)
 !$omp distribute
- !DEF: /dotprod/Block1/Block1/Block1/i0 (OmpPrivate) HostAssoc INTEGER(4)
+ !DEF: /dotprod/Block1/Block1/Block1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  !REF: /dotprod/n
  !REF: /dotprod/block_size
  do i0=1,n,block_size
 !$omp parallel do  reduction(+:sum)
-  !DEF: /dotprod/Block1/Block1/Block1/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
-  !REF: /dotprod/i0
+  !DEF: /dotprod/Block1/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !REF: /dotprod/Block1/Block1/Block1/i0
   !DEF: /dotprod/min INTRINSIC (Function) ProcEntity
   !REF: /dotprod/block_size
   !REF: /dotprod/n
@@ -165,15 +168,15 @@ subroutine test_simd
  !DEF: /test_simd/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd
- !DEF: /test_simd/Block1/i (OmpLinear) HostAssoc INTEGER(4)
+ !DEF: /test_simd/Block1/i (OmpLinear, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !REF: /test_simd/j
+  !DEF: /test_simd/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
-   !REF: /test_simd/k
+   !DEF: /test_simd/Block1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_simd/a
-    !REF: /test_simd/k
-    !REF: /test_simd/j
+    !REF: /test_simd/Block1/k
+    !REF: /test_simd/Block1/j
     !REF: /test_simd/Block1/i
     a(k,j,i) = 3.14
    end do
@@ -192,11 +195,11 @@ subroutine test_simd_multi
  !DEF: /test_simd_multi/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd  collapse(3)
- !DEF: /test_simd_multi/Block1/i (OmpLastPrivate) HostAssoc INTEGER(4)
+ !DEF: /test_simd_multi/Block1/i (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_simd_multi/Block1/j (OmpLastPrivate) HostAssoc INTEGER(4)
+  !DEF: /test_simd_multi/Block1/j (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
-   !DEF: /test_simd_multi/Block1/k (OmpLastPrivate) HostAssoc INTEGER(4)
+   !DEF: /test_simd_multi/Block1/k (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_simd_multi/a
     !REF: /test_simd_multi/Block1/k
@@ -207,3 +210,42 @@ subroutine test_simd_multi
   end do
  end do
 end subroutine test_simd_multi
+
+! Rule d)
+!DEF: /test_seq_loop (Subroutine) Subprogram
+subroutine test_seq_loop
+  implicit none
+  !DEF: /test_seq_loop/i ObjectEntity INTEGER(4)
+  !DEF: /test_seq_loop/j ObjectEntity INTEGER(4)
+  integer i, j
+  !REF: /test_seq_loop/i
+  i = -1
+  !REF: /test_seq_loop/j
+  j = -1
+  !$omp parallel
+  !REF: /test_seq_loop/i
+  !REF: /test_seq_loop/j
+  print *, i, j
+  !$omp parallel
+  !REF: /test_seq_loop/i
+  !DEF: /test_seq_loop/Block1/Block1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  print *, i, j
+  !$omp do
+  !DEF: /test_seq_loop/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  do i=1,10
+   !REF: /test_seq_loop/Block1/Block1/j
+   do j=1,10
+   end do
+  end do
+  !REF: /test_seq_loop/i
+  !REF: /test_seq_loop/Block1/Block1/j
+  print *, i, j
+  !$omp end parallel
+  !REF: /test_seq_loop/i
+  !REF: /test_seq_loop/j
+  print *, i, j
+  !$omp end parallel
+  !REF: /test_seq_loop/i
+  !REF: /test_seq_loop/j
+  print *, i, j
+end subroutine test_seq_loop

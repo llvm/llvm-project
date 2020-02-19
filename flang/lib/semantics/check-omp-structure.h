@@ -88,6 +88,8 @@ static constexpr OmpDirectiveSet simdSet{
     OmpDirective::TASKLOOP_SIMD,
     OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
     OmpDirective::TEAMS_DISTRIBUTE_SIMD};
+static constexpr OmpDirectiveSet taskGeneratingSet{
+    OmpDirectiveSet{OmpDirective::TASK} | taskloopSet};
 
 class OmpStructureChecker : public virtual BaseChecker {
 public:

@@ -8,7 +8,7 @@
   !DEF: /MainProgram1/a (Implicit) ObjectEntity REAL(4)
   a = 1.
   !$omp parallel do  firstprivate(a) lastprivate(a)
-  !DEF: /MainProgram1/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+  !DEF: /MainProgram1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
      !DEF: /MainProgram1/Block1/a (OmpFirstPrivate, OmpLastPrivate) HostAssoc REAL(4)
      a = 2.

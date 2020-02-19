@@ -1167,6 +1167,7 @@ public:
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
+  bool Pre(const parser::DoConstruct &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -1224,26 +1225,33 @@ private:
   void SetContextDirectiveEnum(OmpDirective dir) {
     GetContext().directive = dir;
   }
-  const Scope &currScope() { return GetContext().scope; }
+  Scope &currScope() { return GetContext().scope; }
   void SetContextDefaultDSA(Symbol::Flag flag) {
     GetContext().defaultDSA = flag;
   }
+  void AddToContextObjectWithDSA(
+      const Symbol &symbol, Symbol::Flag flag, OmpContext &context) {
+    context.objectWithDSA.emplace(&symbol, flag);
+  }
   void AddToContextObjectWithDSA(const Symbol &symbol, Symbol::Flag flag) {
-    GetContext().objectWithDSA.emplace(&symbol, flag);
+    AddToContextObjectWithDSA(symbol, flag, GetContext());
   }
   bool IsObjectWithDSA(const Symbol &symbol) {
     auto it{GetContext().objectWithDSA.find(&symbol)};
     return it != GetContext().objectWithDSA.end();
   }
+
   void SetContextAssociatedLoopLevel(std::size_t level) {
     GetContext().associatedLoopLevel = level;
   }
   std::size_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
 
-  Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev) {
-    const auto pair{
-        GetContext().scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
+  Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev, Scope &scope) {
+    const auto pair{scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
     return *pair.first->second;
+  }
+  Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev) {
+    return MakeAssocSymbol(name, prev, currScope());
   }
 
   static const parser::Name *GetDesignatorNameIfDataRef(
@@ -1277,14 +1285,17 @@ private:
       const parser::ExecutionPartConstruct &);
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
+  const parser::Name &GetLoopIndex(const parser::DoConstruct &);
+  void ResolveSeqLoopIndexInParallelOrTaskConstruct(const parser::Name &);
 
   void ResolveOmpObjectList(const parser::OmpObjectList &, Symbol::Flag);
   void ResolveOmpObject(const parser::OmpObject &, Symbol::Flag);
-  Symbol *ResolveOmp(const parser::Name &, Symbol::Flag);
-  Symbol *ResolveOmp(Symbol &, Symbol::Flag);
+  Symbol *ResolveOmp(const parser::Name &, Symbol::Flag, Scope &);
+  Symbol *ResolveOmp(Symbol &, Symbol::Flag, Scope &);
   Symbol *ResolveOmpCommonBlockName(const parser::Name *);
-  Symbol *DeclarePrivateAccessEntity(const parser::Name &, Symbol::Flag);
-  Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag);
+  Symbol *DeclarePrivateAccessEntity(
+      const parser::Name &, Symbol::Flag, Scope &);
+  Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(
@@ -1380,6 +1391,7 @@ private:
   void FinishSpecificationParts(const ProgramTree &);
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
+  void ResolveOmpParts(const parser::ProgramUnit &);
 };
 
 // ImplicitRules implementation
@@ -5766,7 +5778,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
   ResolveExecutionParts(root);
-  OmpAttributeVisitor{context(), *this}.Walk(x);
+  ResolveOmpParts(x);
   return false;
 }
 
@@ -6072,6 +6084,53 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   return true;
 }
 
+const parser::Name &OmpAttributeVisitor::GetLoopIndex(
+    const parser::DoConstruct &x) {
+  auto &loopControl{x.GetLoopControl().value()};
+  using Bounds = parser::LoopControl::Bounds;
+  const Bounds &bounds{std::get<Bounds>(loopControl.u)};
+  return bounds.name.thing;
+}
+
+void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
+    const parser::Name &iv) {
+  auto targetIt{ompContext_.rbegin()};
+  for (;; ++targetIt) {
+    if (targetIt == ompContext_.rend()) {
+      return;
+    }
+    if (parallelSet.test(targetIt->directive) ||
+        taskGeneratingSet.test(targetIt->directive)) {
+      break;
+    }
+  }
+  if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
+    targetIt++;
+    symbol->set(Symbol::Flag::OmpPreDetermined);
+    iv.symbol = symbol;  // adjust the symbol within region
+    for (auto it{ompContext_.rbegin()}; it != targetIt; ++it) {
+      AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
+    }
+  }
+}
+
+// 2.15.1.1 Data-sharing Attribute Rules - Predetermined
+//   - A loop iteration variable for a sequential loop in a parallel
+//     or task generating construct is private in the innermost such
+//     construct that encloses the loop
+bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
+  if (!ompContext_.empty() && GetContext().withinConstruct) {
+    if (const auto &iv{GetLoopIndex(x)}; iv.symbol) {
+      if (!iv.symbol->test(Symbol::Flag::OmpPreDetermined)) {
+        ResolveSeqLoopIndexInParallelOrTaskConstruct(iv);
+      } else {
+        // TODO: conflict checks with explicitly determined DSA
+      }
+    }
+  }
+  return true;
+}
+
 const parser::DoConstruct *OmpAttributeVisitor::GetDoConstructIf(
     const parser::ExecutionPartConstruct &x) {
   if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
@@ -6137,11 +6196,9 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
   auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
-    auto &loopControl{loop->GetLoopControl().value()};
-    using Bounds = parser::LoopControl::Bounds;
-    const Bounds &bounds{std::get<Bounds>(loopControl.u)};
-    const parser::Name &iv{bounds.name.thing};
-    if (auto *symbol{ResolveOmp(iv, ivDSA)}) {
+    const parser::Name &iv{GetLoopIndex(*loop)};
+    if (auto *symbol{ResolveOmp(iv, ivDSA, currScope())}) {
+      symbol->set(Symbol::Flag::OmpPreDetermined);
       iv.symbol = symbol;  // adjust the symbol within region
       AddToContextObjectWithDSA(*symbol, ivDSA);
     }
@@ -6207,7 +6264,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       //       predetermined, explicitly determined, and implicitly
       //       determined data-sharing attributes (2.15.1.1).
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
-        if (IsObjectWithDSA(*found)) {
+        if (symbol != found) {
           name.symbol = found;  // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone) {
           context_.Say(name.source,
@@ -6250,7 +6307,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {
-              if (auto *symbol{ResolveOmp(*name, ompFlag)}) {
+              if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
                 AddToContextObjectWithDSA(*symbol, ompFlag);
                 if (dataSharingAttributeFlags.test(ompFlag)) {
                   CheckMultipleAppearances(*name, *symbol, ompFlag);
@@ -6288,7 +6345,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
               for (const Symbol &object :
                   symbol->get<CommonBlockDetails>().objects()) {
                 Symbol &mutableObject{const_cast<Symbol &>(object)};
-                if (auto *resolvedObject{ResolveOmp(mutableObject, ompFlag)}) {
+                if (auto *resolvedObject{
+                        ResolveOmp(mutableObject, ompFlag, currScope())}) {
                   AddToContextObjectWithDSA(*resolvedObject, ompFlag);
                 }
               }
@@ -6303,35 +6361,36 @@ void OmpAttributeVisitor::ResolveOmpObject(
 }
 
 Symbol *OmpAttributeVisitor::ResolveOmp(
-    const parser::Name &name, Symbol::Flag ompFlag) {
+    const parser::Name &name, Symbol::Flag ompFlag, Scope &scope) {
   if (ompFlagsRequireNewSymbol.test(ompFlag)) {
-    return DeclarePrivateAccessEntity(name, ompFlag);
+    return DeclarePrivateAccessEntity(name, ompFlag, scope);
   } else {
     return DeclareOrMarkOtherAccessEntity(name, ompFlag);
   }
 }
 
-Symbol *OmpAttributeVisitor::ResolveOmp(Symbol &symbol, Symbol::Flag ompFlag) {
+Symbol *OmpAttributeVisitor::ResolveOmp(
+    Symbol &symbol, Symbol::Flag ompFlag, Scope &scope) {
   if (ompFlagsRequireNewSymbol.test(ompFlag)) {
-    return DeclarePrivateAccessEntity(symbol, ompFlag);
+    return DeclarePrivateAccessEntity(symbol, ompFlag, scope);
   } else {
     return DeclareOrMarkOtherAccessEntity(symbol, ompFlag);
   }
 }
 
 Symbol *OmpAttributeVisitor::DeclarePrivateAccessEntity(
-    const parser::Name &name, Symbol::Flag ompFlag) {
+    const parser::Name &name, Symbol::Flag ompFlag, Scope &scope) {
   if (!name.symbol) {
     return nullptr;  // not resolved by Name Resolution step, do nothing
   }
-  name.symbol = DeclarePrivateAccessEntity(*name.symbol, ompFlag);
+  name.symbol = DeclarePrivateAccessEntity(*name.symbol, ompFlag, scope);
   return name.symbol;
 }
 
 Symbol *OmpAttributeVisitor::DeclarePrivateAccessEntity(
-    Symbol &object, Symbol::Flag ompFlag) {
+    Symbol &object, Symbol::Flag ompFlag, Scope &scope) {
   if (object.owner() != currScope()) {
-    auto &symbol{MakeAssocSymbol(object.name(), object)};
+    auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
     symbol.set(ompFlag);
     return &symbol;
   } else {
@@ -6452,6 +6511,18 @@ void ResolveNamesVisitor::ResolveExecutionParts(const ProgramTree &node) {
   PopScope();  // converts unclassified entities into objects
   for (const auto &child : node.children()) {
     ResolveExecutionParts(child);
+  }
+}
+
+void ResolveNamesVisitor::ResolveOmpParts(const parser::ProgramUnit &node) {
+  OmpAttributeVisitor{context(), *this}.Walk(node);
+  if (!context().AnyFatalError()) {
+    // The data-sharing attribute of the loop iteration variable for a
+    // sequential loop (2.15.1.1) can only be determined when visiting
+    // the corresponding DoConstruct, a second walk is to adjust the
+    // symbols for all the data-refs of that loop iteration variable
+    // prior to the DoConstruct.
+    OmpAttributeVisitor{context(), *this}.Walk(node);
   }
 }
 

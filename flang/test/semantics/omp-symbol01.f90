@@ -45,7 +45,7 @@ program mm
  !DEF: /mm/c (Implicit) ObjectEntity REAL(4)
  c = 2.0
 !$omp parallel do  private(a,t,/c/) shared(c)
- !DEF: /mm/Block1/i (OmpPrivate) HostAssoc INTEGER(4)
+ !DEF: /mm/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,10
   !DEF: /mm/Block1/a (OmpPrivate) HostAssoc REAL(4)
   !REF: /mm/b
