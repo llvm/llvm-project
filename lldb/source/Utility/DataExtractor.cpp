@@ -689,17 +689,6 @@ uint64_t DataExtractor::GetAddress_unchecked(offset_t *offset_ptr) const {
   return GetMaxU64_unchecked(offset_ptr, m_addr_size);
 }
 
-// Extract a single pointer from the data and update the offset pointed to by
-// "offset_ptr". The size of the extracted pointer comes from the
-// "this->m_addr_size" member variable and should be set correctly prior to
-// extracting any pointer values.
-//
-// RETURNS the pointer that was extracted, or zero on failure.
-uint64_t DataExtractor::GetPointer(offset_t *offset_ptr) const {
-  assert(m_addr_size == 4 || m_addr_size == 8);
-  return GetMaxU64(offset_ptr, m_addr_size);
-}
-
 size_t DataExtractor::ExtractBytes(offset_t offset, offset_t length,
                                    ByteOrder dst_byte_order, void *dst) const {
   const uint8_t *src = PeekData(offset, length);
