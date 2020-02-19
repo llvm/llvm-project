@@ -327,18 +327,25 @@ public:
   }
 
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
-    ID.AddInteger(D->getPropertyAttributes());
-    ID.AddInteger(D->getPropertyImplementation());
-    // Presence of nullability might occur as part of extra annotations from
-    // APINotes. When ODR checking merged definitions between an APINotes'd
-    // module and a non-modular header, skip the nullability annotation to
-    // prevent ODR errors - they are too conservative here and there's
-    // currently no properly reason given that APINotes only applies to one
-    // specific modules.
+    unsigned AttrsAsWritten = D->getPropertyAttributesAsWritten();
+    unsigned Attrs = D->getPropertyAttributes();
+
+    // If null_resettable is present but was not written, it came from
+    // APINotes. This workaround is for not allowing ODR mismatches between
+    // non-modular content annotated in a module by APINotes versus the
+    // same non-modular content found elsewhere. Long term we need to get
+    // rid of this kind of annotations.
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_null_resettable &&
+        !(AttrsAsWritten & ObjCPropertyDecl::OBJC_PR_null_resettable))
+      Attrs &= ~ObjCPropertyDecl::OBJC_PR_null_resettable;
+
+    QualType T = D->getType();
     if (D->getType()->canHaveNullability())
-      Hash.AddType(D->getType()->getUnqualifiedDesugaredType());
-    else
-      AddQualType(D->getType());
+      AttributedType::stripOuterNullability(T);
+    AddQualType(T);
+
+    ID.AddInteger(Attrs);
+    ID.AddInteger(D->getPropertyImplementation());
     AddDecl(D);
 
     Inherited::VisitObjCPropertyDecl(D);
