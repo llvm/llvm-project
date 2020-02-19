@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -61,6 +62,15 @@ Register llvm::constrainOperandRegClass(
       BuildMI(MBB, std::next(InsertIt), InsertPt.getDebugLoc(),
               TII.get(TargetOpcode::COPY), Reg)
           .addReg(ConstrainedReg);
+    }
+  } else {
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      if (!RegMO.isDef()) {
+        MachineInstr *RegDef = MRI.getVRegDef(Reg);
+        Observer->changedInstr(*RegDef);
+      }
+      Observer->changingAllUsesOfReg(MRI, Reg);
+      Observer->finishedChangingAllUsesOfReg();
     }
   }
   return ConstrainedReg;

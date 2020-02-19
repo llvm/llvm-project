@@ -120,6 +120,8 @@ public:
 
   void setMF(MachineFunction &MF);
 
+  Error verify();
+
   /// Records a newly created inst in a list and lazily insert it to the CSEMap.
   /// Sometimes, this method might be called with a partially constructed
   /// MachineInstr,
