@@ -674,25 +674,6 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted =
       getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted;
-  if (CallerKnownEmitted) {
-    // Host-side references to a __global__ function refer to the stub, so the
-    // function itself is never emitted and therefore should not be marked.
-    if (!shouldIgnoreInHostDeviceCheck(Callee))
-      markKnownEmitted(
-          *this, Caller, Callee, Loc, [](Sema &S, FunctionDecl *FD) {
-            return S.getEmissionStatus(FD) == FunctionEmissionStatus::Emitted;
-          });
-  } else {
-    // If we have
-    //   host fn calls kernel fn calls host+device,
-    // the HD function does not get instantiated on the host.  We model this by
-    // omitting at the call to the kernel from the callgraph.  This ensures
-    // that, when compiling for host, only HD functions actually called from the
-    // host get marked as known-emitted.
-    if (!shouldIgnoreInHostDeviceCheck(Callee))
-      DeviceCallGraph[Caller].insert({Callee, Loc});
-  }
-
   DeviceDiagBuilder::Kind DiagKind = [this, Caller, Callee,
                                       CallerKnownEmitted] {
     switch (IdentifyCUDAPreference(Caller, Callee)) {
