@@ -42251,7 +42251,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
        VT == MVT::v64i1) && VT == StVT && TLI.isTypeLegal(VT) &&
       ISD::isBuildVectorOfConstantSDNodes(StoredVal.getNode())) {
     // If its a v64i1 store without 64-bit support, we need two stores.
-    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+    if (!DCI.isBeforeLegalize() && VT == MVT::v64i1 && !Subtarget.is64Bit()) {
       SDValue Lo = DAG.getBuildVector(MVT::v32i1, dl,
                                       StoredVal->ops().slice(0, 32));
       Lo = combinevXi1ConstantToInteger(Lo, DAG);
