@@ -1,9 +1,9 @@
 ; Disable machine cse to stress the different path of the algorithm.
 ; Otherwise, we always fall in the simple case, i.e., only one definition.
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-machine-cse -aarch64-stress-promote-const -mcpu=cyclone | FileCheck -check-prefix=PROMOTED %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-machine-cse -aarch64-stress-promote-const -mcpu=cyclone -verify-machineinstrs | FileCheck -check-prefix=PROMOTED %s
 ; The REGULAR run just checks that the inputs passed to promote const expose
 ; the appropriate patterns.
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-machine-cse -aarch64-enable-promote-const=false -mcpu=cyclone | FileCheck -check-prefix=REGULAR %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-machine-cse -aarch64-enable-promote-const=false -mcpu=cyclone -verify-machineinstrs | FileCheck -check-prefix=REGULAR %s
 
 %struct.uint8x16x4_t = type { [4 x <16 x i8>] }
 
