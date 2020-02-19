@@ -761,7 +761,7 @@ void ClangdLSPServer::onWorkspaceSymbol(
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
                                       Callback<llvm::Optional<Range>> Reply) {
   Server->prepareRename(Params.textDocument.uri.file(), Params.position,
-                        std::move(Reply));
+                        RenameOpts, std::move(Reply));
 }
 
 void ClangdLSPServer::onRename(const RenameParams &Params,
@@ -772,8 +772,7 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
   Server->rename(
-      File, Params.position, Params.newName,
-      /*WantFormat=*/true,
+      File, Params.position, Params.newName, RenameOpts,
       [File, Params, Reply = std::move(Reply),
        this](llvm::Expected<FileEdits> Edits) mutable {
         if (!Edits)
@@ -1230,12 +1229,14 @@ void ClangdLSPServer::onDocumentLink(
 ClangdLSPServer::ClangdLSPServer(
     class Transport &Transp, const FileSystemProvider &FSProvider,
     const clangd::CodeCompleteOptions &CCOpts,
+    const clangd::RenameOptions &RenameOpts,
     llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
     llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
     const ClangdServer::Options &Opts)
     : BackgroundContext(Context::current().clone()), Transp(Transp),
       MsgHandler(new MessageHandler(*this)), FSProvider(FSProvider),
-      CCOpts(CCOpts), SupportedSymbolKinds(defaultSymbolKinds()),
+      CCOpts(CCOpts), RenameOpts(RenameOpts),
+      SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
       UseDirBasedCDB(UseDirBasedCDB),
       CompileCommandsDir(std::move(CompileCommandsDir)), ClangdServerOpts(Opts),

@@ -131,8 +131,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      : nullptr),
       GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
-      CrossFileRename(Opts.CrossFileRename), TweakFilter(Opts.TweakFilter),
-      WorkspaceRoot(Opts.WorkspaceRoot),
+      TweakFilter(Opts.TweakFilter), WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
@@ -319,8 +318,9 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
+                                 const RenameOptions &RenameOpts,
                                  Callback<llvm::Optional<Range>> CB) {
-  auto Action = [Pos, File = File.str(), CB = std::move(CB),
+  auto Action = [Pos, File = File.str(), CB = std::move(CB), RenameOpts,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -338,14 +338,13 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
         SM, CharSourceRange::getCharRange(TouchingIdentifier->location(),
                                           TouchingIdentifier->endLocation()));
 
-    if (CrossFileRename)
+    if (RenameOpts.AllowCrossFile)
       // FIXME: we now assume cross-file rename always succeeds, revisit this.
       return CB(Range);
 
     // Performing the local rename isn't substantially more expensive than
     // doing an AST-based check, so we just rename and throw away the results.
-    auto Changes = clangd::rename({Pos, "dummy", AST, File, Index,
-                                   /*AllowCrossFile=*/false,
+    auto Changes = clangd::rename({Pos, "dummy", AST, File, Index, RenameOpts,
                                    /*GetDirtyBuffer=*/nullptr});
     if (!Changes) {
       // LSP says to return null on failure, but that will result in a generic
@@ -359,10 +358,10 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          bool WantFormat, Callback<FileEdits> CB) {
+                          const RenameOptions &Opts, Callback<FileEdits> CB) {
   // A snapshot of all file dirty buffers.
   llvm::StringMap<std::string> Snapshot = WorkScheduler.getAllFileContents();
-  auto Action = [File = File.str(), NewName = NewName.str(), Pos, WantFormat,
+  auto Action = [File = File.str(), NewName = NewName.str(), Pos, Opts,
                  CB = std::move(CB), Snapshot = std::move(Snapshot),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -374,12 +373,12 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
         return llvm::None;
       return It->second;
     };
-    auto Edits = clangd::rename({Pos, NewName, InpAST->AST, File, Index,
-                                 CrossFileRename, GetDirtyBuffer});
+    auto Edits = clangd::rename(
+        {Pos, NewName, InpAST->AST, File, Index, Opts, GetDirtyBuffer});
     if (!Edits)
       return CB(Edits.takeError());
 
-    if (WantFormat) {
+    if (Opts.WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
                                          InpAST->Inputs.FS.get());
       llvm::Error Err = llvm::Error::success();
@@ -393,6 +392,14 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     return CB(std::move(*Edits));
   };
   WorkScheduler.runWithAST("Rename", File, std::move(Action));
+}
+
+void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
+                          bool WantFormat, Callback<FileEdits> CB) {
+  RenameOptions Opts;
+  Opts.WantFormat = WantFormat;
+  Opts.AllowCrossFile = false;
+  rename(File, Pos, NewName, Opts, std::move(CB));
 }
 
 // May generate several candidate selections, due to SelectionTree ambiguity.
