@@ -99,6 +99,9 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisVec<2>, SDTCVecEltisVT<2,i1>]>;
 def AArch64dup_pred : SDNode<"AArch64ISD::DUP_PRED", SDT_AArch64DUP_PRED>;
 
+def SDT_IndexVector : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<1, 2>, SDTCisInt<2>]>;
+def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
+
 let Predicates = [HasSVE] in {
 
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -961,10 +964,10 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index">;
-  defm INDEX_IR : sve_int_index_ir<"index">;
-  defm INDEX_RI : sve_int_index_ri<"index">;
-  defm INDEX_II : sve_int_index_ii<"index">;
+  defm INDEX_RR : sve_int_index_rr<"index", index_vector>;
+  defm INDEX_IR : sve_int_index_ir<"index", index_vector>;
+  defm INDEX_RI : sve_int_index_ri<"index", index_vector>;
+  defm INDEX_II : sve_int_index_ii<"index", index_vector>;
 
   // Unpredicated shifts
   defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr">;
