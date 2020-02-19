@@ -233,6 +233,12 @@ public:
     return DerivedT::dereference_iterator(base, index);
   }
 
+  /// Compare this range with another.
+  template <typename OtherT> bool operator==(const OtherT &other) {
+    return size() == llvm::size(other) &&
+           std::equal(begin(), end(), other.begin());
+  }
+
   /// Return the size of this range.
   size_t size() const { return count; }
 

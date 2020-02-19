@@ -275,7 +275,7 @@ func @func_with_ops(i32, i32, i32) {
 
 func @func_with_ops(i1, i32, i64) {
 ^bb0(%cond : i1, %t : i32, %f : i64):
-  // expected-error@+1 {{'true' and 'false' arguments to be of the same type}}
+  // expected-error@+1 {{all of {true_value, false_value, result} have same type}}
   %r = "std.select"(%cond, %t, %f) : (i1, i32, i64) -> i32
 }
 
@@ -460,7 +460,7 @@ func @extract_element_invalid_index_type(%v : vector<3xf32>, %i : i32) {
 // -----
 
 func @extract_element_element_result_type_mismatch(%v : vector<3xf32>, %i : index) {
-  // expected-error@+1 {{result type must match element type of aggregate}}
+  // expected-error@+1 {{result type matches element type of aggregate}}
   %0 = "std.extract_element"(%v, %i) : (vector<3xf32>, index) -> f64
   return
 }

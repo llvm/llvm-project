@@ -310,7 +310,15 @@ def CallOp : Std_Op<"call", [CallOpInterface]> {
   }];
 }
 
-def CallIndirectOp : Std_Op<"call_indirect", [CallOpInterface]> {
+def CallIndirectOp : Std_Op<"call_indirect", [
+      CallOpInterface,
+      TypesMatchWith<"callee input types match argument types",
+                     "callee", "operands",
+                     "$_self.cast<FunctionType>().getInputs()">,
+      TypesMatchWith<"callee result types match result types",
+                     "callee", "results",
+                     "$_self.cast<FunctionType>().getResults()">
+    ]> {
   let summary = "indirect call operation";
   let description = [{
     The "call_indirect" operation represents an indirect call to a value of
@@ -322,7 +330,7 @@ def CallIndirectOp : Std_Op<"call_indirect", [CallOpInterface]> {
   }];
 
   let arguments = (ins FunctionType:$callee, Variadic<AnyType>:$operands);
-  let results = (outs Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
 
   let builders = [OpBuilder<
     "Builder *, OperationState &result, Value callee,"
@@ -347,6 +355,7 @@ def CallIndirectOp : Std_Op<"call_indirect", [CallOpInterface]> {
     CallInterfaceCallable getCallableForCallee() { return getCallee(); }
   }];
 
+  let verifier = ?;
   let hasCanonicalizer = 1;
 }
 
@@ -361,7 +370,10 @@ def CeilFOp : FloatUnaryOp<"ceilf"> {
 }
 
 def CmpFOp : Std_Op<"cmpf",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {
+    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
+     TypesMatchWith<
+       "result type has i1 element type and same shape as operands",
+       "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The "cmpf" operation compares its two operands according to the float
@@ -386,7 +398,7 @@ def CmpFOp : Std_Op<"cmpf",
   }];
 
   let arguments = (ins FloatLike:$lhs, FloatLike:$rhs);
-  let results = (outs BoolLike);
+  let results = (outs BoolLike:$result);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, CmpFPredicate predicate,"
@@ -426,7 +438,10 @@ def CmpIPredicateAttr : I64EnumAttr<
 }
 
 def CmpIOp : Std_Op<"cmpi",
-    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {
+    [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
+     TypesMatchWith<
+       "result type has i1 element type and same shape as operands",
+       "lhs", "result", "getI1SameShape($_self)">]> {
   let summary = "integer comparison operation";
   let description = [{
     The "cmpi" operation compares its two operands according to the integer
@@ -454,7 +469,7 @@ def CmpIOp : Std_Op<"cmpi",
       IntegerLike:$lhs,
       IntegerLike:$rhs
   );
-  let results = (outs BoolLike);
+  let results = (outs BoolLike:$result);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, CmpIPredicate predicate,"
@@ -708,7 +723,11 @@ def ExpOp : FloatUnaryOp<"exp"> {
   let summary = "base-e exponential of the specified value";
 }
 
-def ExtractElementOp : Std_Op<"extract_element", [NoSideEffect]> {
+def ExtractElementOp : Std_Op<"extract_element",
+    [NoSideEffect,
+     TypesMatchWith<"result type matches element type of aggregate",
+                    "aggregate", "result",
+                    "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "element extract operation";
   let description = [{
     The "extract_element" op reads a tensor or vector and returns one element
@@ -723,7 +742,7 @@ def ExtractElementOp : Std_Op<"extract_element", [NoSideEffect]> {
 
   let arguments = (ins AnyTypeOf<[AnyVector, AnyTensor]>:$aggregate,
                        Variadic<Index>:$indices);
-  let results = (outs AnyType);
+  let results = (outs AnyType:$result);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value aggregate,"
@@ -796,7 +815,10 @@ def FPTruncOp : CastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
   let hasFolder = 0;
 }
 
-def LoadOp : Std_Op<"load"> {
+def LoadOp : Std_Op<"load",
+     [TypesMatchWith<"result type matches element type of 'memref'",
+                     "memref", "result",
+                     "$_self.cast<MemRefType>().getElementType()">]> {
   let summary = "load operation";
   let description = [{
     The "load" op reads an element from a memref specified by an index list. The
@@ -809,7 +831,7 @@ def LoadOp : Std_Op<"load"> {
   }];
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices);
-  let results = (outs AnyType);
+  let results = (outs AnyType:$result);
 
   let builders = [OpBuilder<
     "Builder *, OperationState &result, Value memref,"
@@ -1029,7 +1051,11 @@ def ReturnOp : Std_Op<"return", [Terminator, HasParent<"FuncOp">]> {
   >];
 }
 
-def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape]> {
+def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
+     AllTypesMatch<["true_value", "false_value", "result"]>,
+     TypesMatchWith<"condition type matches i1 equivalent of result type",
+                     "result", "condition",
+                     "getI1SameShape($_self)">]> {
   let summary = "select operation";
   let description = [{
     The "select" operation chooses one value based on a binary condition
@@ -1044,9 +1070,10 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape]> {
       %3 = select %2, %0, %1 : i32
   }];
 
-  let arguments = (ins BoolLike:$condition, AnyType:$true_value,
-                       AnyType:$false_value);
-  let results = (outs AnyType);
+  let arguments = (ins BoolLike:$condition, IntegerOrFloatLike:$true_value,
+                       IntegerOrFloatLike:$false_value);
+  let results = (outs IntegerOrFloatLike:$result);
+  let verifier = ?;
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value condition,"
@@ -1158,7 +1185,10 @@ def SIToFPOp : CastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
   let hasFolder = 0;
 }
 
-def SplatOp : Std_Op<"splat", [NoSideEffect]> {
+def SplatOp : Std_Op<"splat", [NoSideEffect,
+     TypesMatchWith<"operand type matches element type of result",
+                    "aggregate", "input",
+                    "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "splat or broadcast operation";
   let description = [{
     The "splat" op reads a value of integer or float type and broadcasts it into
@@ -1193,7 +1223,10 @@ def SplatOp : Std_Op<"splat", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def StoreOp : Std_Op<"store"> {
+def StoreOp : Std_Op<"store",
+     [TypesMatchWith<"type of 'value' matches element type of 'memref'",
+                     "memref", "value",
+                     "$_self.cast<MemRefType>().getElementType()">]> {
   let summary = "store operation";
   let description = [{
     The "store" op writes an element to a memref specified by an index list.
@@ -1455,7 +1488,10 @@ def TensorCastOp : CastOp<"tensor_cast"> {
 }
 
 def TensorLoadOp : Std_Op<"tensor_load",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType]> {
+    [SameOperandsAndResultShape, SameOperandsAndResultElementType,
+     TypesMatchWith<"result type matches tensor equivalent of 'memref'",
+                    "memref", "result",
+                    "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor load operation";
   let description = [{
     The "tensor_load" operation creates a tensor from a memref, making an
@@ -1466,8 +1502,8 @@ def TensorLoadOp : Std_Op<"tensor_load",
        %12 = tensor_load %10 : memref<4x?xf32, #layout, memspace0>
   }];
 
-  let arguments = (ins AnyMemRef);
-  let results = (outs AnyTensor);
+  let arguments = (ins AnyMemRef:$memref);
+  let results = (outs AnyTensor:$result);
   // TensorLoadOp is fully verified by traits.
   let verifier = ?;
 
@@ -1488,7 +1524,10 @@ def TensorLoadOp : Std_Op<"tensor_load",
 }
 
 def TensorStoreOp : Std_Op<"tensor_store",
-    [SameOperandsShape, SameOperandsElementType]> {
+    [SameOperandsShape, SameOperandsElementType,
+     TypesMatchWith<"type of 'value' matches tensor equivalent of 'memref'",
+                    "memref", "tensor",
+                    "getTensorTypeFromMemRefType($_self)">]> {
   let summary = "tensor store operation";
   let description = [{
     The "tensor_store" operation stores the contents of a tensor into a memref.
