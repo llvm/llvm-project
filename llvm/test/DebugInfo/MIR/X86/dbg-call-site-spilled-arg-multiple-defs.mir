@@ -2,10 +2,10 @@
 # into the forwarding register has a memory operand and multiple defs.
 # The generated code was modified a bit in order to have the scenario.
 #
-# RUN: llc -start-after=machineverifier -filetype=obj %s -o - \
+# RUN: llc -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - \
 # RUN:  | llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 #
-# Command: clang -g -O2 test.c
+# Command: clang -g -O2 -Xclang -femit-debug-entry-values test.c
 #          -mllvm -stop-before=machineverifier -o test.mir -c
 # extern void callee(int);
 # extern int y;
