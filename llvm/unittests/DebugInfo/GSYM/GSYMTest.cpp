@@ -1288,21 +1288,21 @@ TEST(GSYMTest, TestGsymReader) {
   ASSERT_FALSE((bool)Err);
   if (auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str())) {
     const GsymReader &GR = ExpectedGR.get();
-    VerifyFunctionInfoError(GR, Func1Addr-1, "address 0xfff not in GSYM");
+    VerifyFunctionInfoError(GR, Func1Addr-1, "address 0xfff is not in GSYM");
 
     FunctionInfo Func1(Func1Addr, FuncSize, Func1Name);
     VerifyFunctionInfo(GR, Func1Addr, Func1);
     VerifyFunctionInfo(GR, Func1Addr+1, Func1);
     VerifyFunctionInfo(GR, Func1Addr+FuncSize-1, Func1);
     VerifyFunctionInfoError(GR, Func1Addr+FuncSize,
-                            "address 0x1010 not in GSYM");
-    VerifyFunctionInfoError(GR, Func2Addr-1, "address 0x101f not in GSYM");
+                            "address 0x1010 is not in GSYM");
+    VerifyFunctionInfoError(GR, Func2Addr-1, "address 0x101f is not in GSYM");
     FunctionInfo Func2(Func2Addr, FuncSize, Func2Name);
     VerifyFunctionInfo(GR, Func2Addr, Func2);
     VerifyFunctionInfo(GR, Func2Addr+1, Func2);
     VerifyFunctionInfo(GR, Func2Addr+FuncSize-1, Func2);
     VerifyFunctionInfoError(GR, Func2Addr+FuncSize,
-                            "address 0x1030 not in GSYM");
+                            "address 0x1030 is not in GSYM");
   }
 }
 
@@ -1765,7 +1765,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   // GSYM.
   AddressRanges TextRanges;
   TextRanges.insert(AddressRange(0x1000, 0x2000));
-  DT.SetValidTextRanges(TextRanges);
+  GC.SetValidTextRanges(TextRanges);
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
