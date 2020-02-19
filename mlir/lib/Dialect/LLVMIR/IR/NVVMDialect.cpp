@@ -131,7 +131,7 @@ static LogicalResult verify(MmaOp op) {
                                              f32Ty, f32Ty, f32Ty, f32Ty, f32Ty,
                                              f32Ty, f32Ty, f32Ty} &&
       op.getType() == f32x8StructTy && alayout.getValue() == "row" &&
-      blayout.getValue() == "row") {
+      blayout.getValue() == "col") {
     return success();
   }
   return op.emitOpError("unimplemented mma.sync variant");
