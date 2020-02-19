@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+
 #include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -25,7 +26,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
-
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
@@ -375,9 +375,10 @@ Type LLVMTypeConverter::convertStandardType(Type t) {
       .Default([](Type) { return Type(); });
 }
 
-LLVMOpLowering::LLVMOpLowering(StringRef rootOpName, MLIRContext *context,
-                               LLVMTypeConverter &typeConverter_,
-                               PatternBenefit benefit)
+ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
+                                           MLIRContext *context,
+                                           LLVMTypeConverter &typeConverter_,
+                                           PatternBenefit benefit)
     : ConversionPattern(rootOpName, benefit, context),
       typeConverter(typeConverter_) {}
 
@@ -703,13 +704,13 @@ namespace {
 // provided as template argument.  Carries a reference to the LLVM dialect in
 // case it is necessary for rewriters.
 template <typename SourceOp>
-class LLVMLegalizationPattern : public LLVMOpLowering {
+class LLVMLegalizationPattern : public ConvertToLLVMPattern {
 public:
   // Construct a conversion pattern.
   explicit LLVMLegalizationPattern(LLVM::LLVMDialect &dialect_,
                                    LLVMTypeConverter &typeConverter_)
-      : LLVMOpLowering(SourceOp::getOperationName(), dialect_.getContext(),
-                       typeConverter_),
+      : ConvertToLLVMPattern(SourceOp::getOperationName(),
+                             dialect_.getContext(), typeConverter_),
         dialect(dialect_) {}
 
   // Get the LLVM IR dialect.

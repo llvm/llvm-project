@@ -364,10 +364,11 @@ public:
 };
 /// Base class for operation conversions targeting the LLVM IR dialect. Provides
 /// conversion patterns with access to an LLVMTypeConverter.
-class LLVMOpLowering : public ConversionPattern {
+class ConvertToLLVMPattern : public ConversionPattern {
 public:
-  LLVMOpLowering(StringRef rootOpName, MLIRContext *context,
-                 LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1);
+  ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
+                       LLVMTypeConverter &typeConverter,
+                       PatternBenefit benefit = 1);
 
 protected:
   /// Reference to the type converter, with potential extensions.

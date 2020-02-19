@@ -19,7 +19,6 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
@@ -49,13 +48,13 @@ public:
 };
 
 /// Converts all_reduce op to LLVM/NVVM ops.
-struct GPUAllReduceOpLowering : public LLVMOpLowering {
+struct GPUAllReduceOpLowering : public ConvertToLLVMPattern {
   using AccumulatorFactory =
       std::function<Value(Location, Value, Value, ConversionPatternRewriter &)>;
 
   explicit GPUAllReduceOpLowering(LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(gpu::AllReduceOp::getOperationName(),
-                       lowering_.getDialect()->getContext(), lowering_),
+      : ConvertToLLVMPattern(gpu::AllReduceOp::getOperationName(),
+                             lowering_.getDialect()->getContext(), lowering_),
         int32Type(LLVM::LLVMType::getInt32Ty(lowering_.getDialect())) {}
 
   PatternMatchResult
@@ -463,10 +462,10 @@ private:
   static constexpr int kWarpSize = 32;
 };
 
-struct GPUShuffleOpLowering : public LLVMOpLowering {
+struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   explicit GPUShuffleOpLowering(LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(gpu::ShuffleOp::getOperationName(),
-                       lowering_.getDialect()->getContext(), lowering_) {}
+      : ConvertToLLVMPattern(gpu::ShuffleOp::getOperationName(),
+                             lowering_.getDialect()->getContext(), lowering_) {}
 
   /// Lowers a shuffle to the corresponding NVVM op.
   ///
@@ -521,11 +520,11 @@ struct GPUShuffleOpLowering : public LLVMOpLowering {
   }
 };
 
-struct GPUFuncOpLowering : LLVMOpLowering {
+struct GPUFuncOpLowering : ConvertToLLVMPattern {
   explicit GPUFuncOpLowering(LLVMTypeConverter &typeConverter)
-      : LLVMOpLowering(gpu::GPUFuncOp::getOperationName(),
-                       typeConverter.getDialect()->getContext(),
-                       typeConverter) {}
+      : ConvertToLLVMPattern(gpu::GPUFuncOp::getOperationName(),
+                             typeConverter.getDialect()->getContext(),
+                             typeConverter) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -656,11 +655,11 @@ struct GPUFuncOpLowering : LLVMOpLowering {
   }
 };
 
-struct GPUReturnOpLowering : public LLVMOpLowering {
+struct GPUReturnOpLowering : public ConvertToLLVMPattern {
   GPUReturnOpLowering(LLVMTypeConverter &typeConverter)
-      : LLVMOpLowering(gpu::ReturnOp::getOperationName(),
-                       typeConverter.getDialect()->getContext(),
-                       typeConverter) {}
+      : ConvertToLLVMPattern(gpu::ReturnOp::getOperationName(),
+                             typeConverter.getDialect()->getContext(),
+                             typeConverter) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
