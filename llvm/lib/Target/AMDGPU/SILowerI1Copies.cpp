@@ -452,6 +452,11 @@ static unsigned insertUndefLaneMask(MachineBasicBlock &MBB) {
 /// all others, because phi lowering looks through copies and can therefore
 /// often make copy lowering unnecessary.
 bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
+  // Only need to run this in SelectionDAG path.
+  if (TheMF.getProperties().hasProperty(
+        MachineFunctionProperties::Property::Selected))
+    return false;
+
   MF = &TheMF;
   MRI = &MF->getRegInfo();
   DT = &getAnalysis<MachineDominatorTree>();
