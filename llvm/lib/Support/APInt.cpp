@@ -670,7 +670,7 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 }
 
 APInt APInt::byteSwap() const {
-  assert(BitWidth >= 16 && BitWidth % 16 == 0 && "Cannot byteswap!");
+  assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
     return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
   if (BitWidth == 32)
