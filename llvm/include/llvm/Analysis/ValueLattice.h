@@ -220,14 +220,21 @@ public:
     return true;
   }
 
+  /// Mark the object as constant range with \p NewR. If the object is already a
+  /// constant range, nothing changes if the existing range is equal to \p
+  /// NewR. Otherwise \p NewR must be a superset of the existing range or the
+  /// object must be undefined.
   bool markConstantRange(ConstantRange NewR) {
     if (isConstantRange()) {
+      if (getConstantRange() == NewR)
+        return false;
+
       if (NewR.isEmptySet())
-        markOverdefined();
-      else {
-        assert(NewR.contains(getConstantRange()) && "Existing range must be a subset of NewR");
-        Range = std::move(NewR);
-      }
+        return markOverdefined();
+
+      assert(NewR.contains(getConstantRange()) &&
+             "Existing range must be a subset of NewR");
+      Range = std::move(NewR);
       return true;
     }
 
