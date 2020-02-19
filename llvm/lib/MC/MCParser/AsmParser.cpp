@@ -3029,7 +3029,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
 
   const MCTargetAsmParser &MCT = getTargetParser();
   const MCSubtargetInfo &STI = MCT.getSTI();
-  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
+  if (getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
     return Error(NameLoc, "unknown relocation name");
 
   return false;
@@ -3419,7 +3419,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     // numberless .file directives. This allows some portability of assembler
     // between different object file formats.
     if (getContext().getAsmInfo()->hasSingleParameterDotFile())
-      getStreamer().EmitFileDirective(Filename);
+      getStreamer().emitFileDirective(Filename);
   } else {
     // In case there is a -g option as well as debug info from directive .file,
     // we turn off the -g option, directly use the existing debug info instead.
@@ -4661,7 +4661,7 @@ bool AsmParser::parseDirectiveBundleAlignMode() {
 
   // Because of AlignSizePow2's verified range we can safely truncate it to
   // unsigned.
-  getStreamer().EmitBundleAlignMode(static_cast<unsigned>(AlignSizePow2));
+  getStreamer().emitBundleAlignMode(static_cast<unsigned>(AlignSizePow2));
   return false;
 }
 
@@ -4686,7 +4686,7 @@ bool AsmParser::parseDirectiveBundleLock() {
     AlignToEnd = true;
   }
 
-  getStreamer().EmitBundleLock(AlignToEnd);
+  getStreamer().emitBundleLock(AlignToEnd);
   return false;
 }
 
@@ -4698,7 +4698,7 @@ bool AsmParser::parseDirectiveBundleUnlock() {
                  "unexpected token in '.bundle_unlock' directive"))
     return true;
 
-  getStreamer().EmitBundleUnlock();
+  getStreamer().emitBundleUnlock();
   return false;
 }
 
@@ -5726,7 +5726,7 @@ bool AsmParser::parseDirectivePrint(SMLoc DirectiveLoc) {
 }
 
 bool AsmParser::parseDirectiveAddrsig() {
-  getStreamer().EmitAddrsig();
+  getStreamer().emitAddrsig();
   return false;
 }
 
@@ -5736,7 +5736,7 @@ bool AsmParser::parseDirectiveAddrsigSym() {
             "expected identifier in '.addrsig_sym' directive"))
     return true;
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  getStreamer().EmitAddrsigSym(Sym);
+  getStreamer().emitAddrsigSym(Sym);
   return false;
 }
 

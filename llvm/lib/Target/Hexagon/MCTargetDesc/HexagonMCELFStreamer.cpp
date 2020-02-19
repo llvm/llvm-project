@@ -112,7 +112,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     if (ELFSymbol->isUndefined()) {
       emitValueToAlignment(ByteAlignment, 0, 1, 0);
       emitLabel(Symbol);
-      EmitZeros(Size);
+      emitZeros(Size);
     }
 
     // Update the maximum alignment of the section if necessary.

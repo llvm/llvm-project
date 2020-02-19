@@ -1810,7 +1810,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case ARM::SPACE:
-    OutStreamer->EmitZeros(MI->getOperand(1).getImm());
+    OutStreamer->emitZeros(MI->getOperand(1).getImm());
     return;
   case ARM::TRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.

@@ -129,9 +129,9 @@ public:
   /// can change its size during relaxation.
   virtual void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
-  void EmitBundleAlignMode(unsigned AlignPow2) override;
-  void EmitBundleLock(bool AlignToEnd) override;
-  void EmitBundleUnlock() override;
+  void emitBundleAlignMode(unsigned AlignPow2) override;
+  void emitBundleLock(bool AlignToEnd) override;
+  void emitBundleUnlock() override;
   void emitBytes(StringRef Data) override;
   void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
@@ -170,7 +170,7 @@ public:
   void emitTPRel64Value(const MCExpr *Value) override;
   void emitGPRel32Value(const MCExpr *Value) override;
   void emitGPRel64Value(const MCExpr *Value) override;
-  bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+  bool emitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc,
                           const MCSubtargetInfo &STI) override;
   using MCStreamer::emitFill;
@@ -178,10 +178,10 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
-  void EmitFileDirective(StringRef Filename) override;
+  void emitFileDirective(StringRef Filename) override;
 
-  void EmitAddrsig() override;
-  void EmitAddrsigSym(const MCSymbol *Sym) override;
+  void emitAddrsig() override;
+  void emitAddrsigSym(const MCSymbol *Sym) override;
 
   void FinishImpl() override;
 

@@ -242,7 +242,7 @@ protected:
 
   virtual void EmitWindowsUnwindTables();
 
-  virtual void EmitRawTextImpl(StringRef String);
+  virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
@@ -562,7 +562,7 @@ public:
   /// \param CsectSym - Csect name for the block of storage.
   /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a
   /// power of 2.
-  virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+  virtual void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                           MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
@@ -620,7 +620,7 @@ public:
   /// \param Size - The size of the symbol.
   /// \param ByteAlignment - The alignment of the thread local common symbol
   /// if non-zero.  This must be a power of 2 on some targets.
-  virtual void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+  virtual void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                               uint64_t Size, unsigned ByteAlignment = 0);
 
   /// @}
@@ -756,7 +756,7 @@ public:
 
   /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.
-  void EmitZeros(uint64_t NumBytes);
+  void emitZeros(uint64_t NumBytes);
 
   /// Emit some number of copies of \p Value until the byte alignment \p
   /// ByteAlignment is reached.
@@ -813,11 +813,11 @@ public:
 
   /// Switch to a new logical file.  This is used to implement the '.file
   /// "foo.c"' assembler directive.
-  virtual void EmitFileDirective(StringRef Filename);
+  virtual void emitFileDirective(StringRef Filename);
 
   /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.
-  virtual void EmitIdent(StringRef IdentString) {}
+  virtual void emitIdent(StringRef IdentString) {}
 
   /// Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
@@ -995,19 +995,19 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void EmitSyntaxDirective();
+  virtual void emitSyntaxDirective();
 
   /// Emit a .reloc directive.
   /// Returns true if the relocation could not be emitted because Name is not
   /// known.
-  virtual bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
+  virtual bool emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                   const MCExpr *Expr, SMLoc Loc,
                                   const MCSubtargetInfo &STI) {
     return true;
   }
 
-  virtual void EmitAddrsig() {}
-  virtual void EmitAddrsigSym(const MCSymbol *Sym) {}
+  virtual void emitAddrsig() {}
+  virtual void emitAddrsigSym(const MCSymbol *Sym) {}
 
   /// Emit the given \p Instruction into the current section.
   virtual void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
@@ -1015,21 +1015,21 @@ public:
   /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The
   /// value 0 means turn the bundle alignment off.
-  virtual void EmitBundleAlignMode(unsigned AlignPow2);
+  virtual void emitBundleAlignMode(unsigned AlignPow2);
 
   /// The following instructions are a bundle-locked group.
   ///
   /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
   ///                     the end of a bundle.
-  virtual void EmitBundleLock(bool AlignToEnd);
+  virtual void emitBundleLock(bool AlignToEnd);
 
   /// Ends a bundle-locked group.
-  virtual void EmitBundleUnlock();
+  virtual void emitBundleUnlock();
 
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by
   /// the hasRawTextSupport() predicate.  By default this aborts.
-  void EmitRawText(const Twine &String);
+  void emitRawText(const Twine &String);
 
   /// Streamer specific finalization.
   virtual void FinishImpl();

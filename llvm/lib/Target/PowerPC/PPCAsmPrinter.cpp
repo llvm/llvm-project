@@ -1623,7 +1623,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
 
     if (GVKind.isBSSLocal())
-      OutStreamer->EmitXCOFFLocalCommonSymbol(
+      OutStreamer->emitXCOFFLocalCommonSymbol(
           GVSym, Size, Csect->getQualNameSymbol(), Align);
     else
       OutStreamer->emitCommonSymbol(Csect->getQualNameSymbol(), Size, Align);

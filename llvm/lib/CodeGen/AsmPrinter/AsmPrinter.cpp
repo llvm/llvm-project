@@ -287,7 +287,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // don't, this at least helps the user find where a global came from.
   if (MAI->hasSingleParameterDotFile()) {
     // .file "foo.c"
-    OutStreamer->EmitFileDirective(
+    OutStreamer->emitFileDirective(
         llvm::sys::path::filename(M.getSourceFileName()));
   }
 
@@ -604,7 +604,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     if (GVKind.isThreadBSS()) {
       TheSection = getObjFileLowering().getTLSBSSSection();
-      OutStreamer->EmitTBSSSymbol(TheSection, MangSym, Size, Alignment.value());
+      OutStreamer->emitTBSSSymbol(TheSection, MangSym, Size, Alignment.value());
     } else if (GVKind.isThreadData()) {
       OutStreamer->SwitchSection(TheSection);
 
@@ -1655,12 +1655,12 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
-    OutStreamer->EmitAddrsig();
+    OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values())
       if (!GV.use_empty() && !GV.isThreadLocal() &&
           !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
           !GV.hasAtLeastLocalUnnamedAddr())
-        OutStreamer->EmitAddrsigSym(getSymbol(&GV));
+        OutStreamer->emitAddrsigSym(getSymbol(&GV));
   }
 
   // Emit symbol partition specifications (ELF only).
@@ -1675,7 +1675,7 @@ bool AsmPrinter::doFinalization(Module &M) {
           OutContext.getELFSection(".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0,
                                    "", ++UniqueID, nullptr));
       OutStreamer->emitBytes(GV.getPartition());
-      OutStreamer->EmitZeros(1);
+      OutStreamer->emitZeros(1);
       OutStreamer->emitValue(
           MCSymbolRefExpr::create(getSymbol(&GV), OutContext),
           MAI->getCodePointerSize());
@@ -1835,7 +1835,7 @@ void AsmPrinter::emitConstantPool() {
       // Emit inter-object padding for alignment.
       unsigned AlignMask = CPE.getAlignment() - 1;
       unsigned NewOffset = (Offset + AlignMask) & ~AlignMask;
-      OutStreamer->EmitZeros(NewOffset - Offset);
+      OutStreamer->emitZeros(NewOffset - Offset);
 
       Type *Ty = CPE.getType();
       Offset = NewOffset + getDataLayout().getTypeAllocSize(Ty);
@@ -2133,7 +2133,7 @@ void AsmPrinter::emitModuleIdents(Module &M) {
       assert(N->getNumOperands() == 1 &&
              "llvm.ident metadata entry can have only one operand");
       const MDString *S = cast<MDString>(N->getOperand(0));
-      OutStreamer->EmitIdent(S->getString());
+      OutStreamer->emitIdent(S->getString());
     }
   }
 }
@@ -2149,14 +2149,14 @@ void AsmPrinter::emitModuleCommandLines(Module &M) {
 
   OutStreamer->PushSection();
   OutStreamer->SwitchSection(CommandLine);
-  OutStreamer->EmitZeros(1);
+  OutStreamer->emitZeros(1);
   for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
     const MDNode *N = NMD->getOperand(i);
     assert(N->getNumOperands() == 1 &&
            "llvm.commandline metadata entry can have only one operand");
     const MDString *S = cast<MDString>(N->getOperand(0));
     OutStreamer->emitBytes(S->getString());
-    OutStreamer->EmitZeros(1);
+    OutStreamer->emitZeros(1);
   }
   OutStreamer->PopSection();
 }
@@ -2203,7 +2203,7 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
   if (MAI->needsDwarfSectionOffsetDirective() && IsSectionRelative) {
     OutStreamer->EmitCOFFSecRel32(Label, Offset);
     if (Size > 4)
-      OutStreamer->EmitZeros(Size - 4);
+      OutStreamer->emitZeros(Size - 4);
     return;
   }
 
@@ -2494,7 +2494,7 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
                         CDS->getNumElements();
   assert(EmittedSize <= Size && "Size cannot be less than EmittedSize!");
   if (unsigned Padding = Size - EmittedSize)
-    AP.OutStreamer->EmitZeros(Padding);
+    AP.OutStreamer->emitZeros(Padding);
 }
 
 static void emitGlobalConstantArray(const DataLayout &DL,
@@ -2525,7 +2525,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
   unsigned EmittedSize = DL.getTypeAllocSize(CV->getType()->getElementType()) *
                          CV->getType()->getNumElements();
   if (unsigned Padding = Size - EmittedSize)
-    AP.OutStreamer->EmitZeros(Padding);
+    AP.OutStreamer->emitZeros(Padding);
 }
 
 static void emitGlobalConstantStruct(const DataLayout &DL,
@@ -2550,7 +2550,7 @@ static void emitGlobalConstantStruct(const DataLayout &DL,
     // Insert padding - this may include padding to increase the size of the
     // current field up to the ABI size (if the struct is not packed) as well
     // as padding to ensure that the next field starts at the right offset.
-    AP.OutStreamer->EmitZeros(PadSize);
+    AP.OutStreamer->emitZeros(PadSize);
   }
   assert(SizeSoFar == Layout->getSizeInBytes() &&
          "Layout of constant struct may be incorrect!");
@@ -2597,7 +2597,7 @@ static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP) {
 
   // Emit the tail padding for the long double.
   const DataLayout &DL = AP.getDataLayout();
-  AP.OutStreamer->EmitZeros(DL.getTypeAllocSize(ET) - DL.getTypeStoreSize(ET));
+  AP.OutStreamer->emitZeros(DL.getTypeAllocSize(ET) - DL.getTypeStoreSize(ET));
 }
 
 static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP) {
@@ -2827,7 +2827,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
   if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
-    return AP.OutStreamer->EmitZeros(Size);
+    return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
     switch (Size) {
@@ -3274,7 +3274,7 @@ void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
   Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Version), 1));
   auto Padding = (4 * Bytes) - ((2 * Bytes) + 3);
   assert(Padding >= 0 && "Instrumentation map entry > 4 * Word Size");
-  Out->EmitZeros(Padding);
+  Out->emitZeros(Padding);
 }
 
 void AsmPrinter::emitXRayTable() {

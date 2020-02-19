@@ -63,7 +63,7 @@ void MCTargetStreamer::changeSection(const MCSection *CurSection,
 }
 
 void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
-  Streamer.EmitRawText(Directive);
+  Streamer.emitRawText(Directive);
 }
 
 void MCTargetStreamer::emitValue(const MCExpr *Value) {
@@ -71,7 +71,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   raw_svector_ostream OS(Str);
 
   Value->print(OS, Streamer.getContext().getAsmInfo());
-  Streamer.EmitRawText(OS.str());
+  Streamer.emitRawText(OS.str());
 }
 
 void MCTargetStreamer::emitRawBytes(StringRef Data) {
@@ -82,7 +82,7 @@ void MCTargetStreamer::emitRawBytes(StringRef Data) {
     raw_svector_ostream OS(Str);
 
     OS << Directive << (unsigned)C;
-    Streamer.EmitRawText(OS.str());
+    Streamer.emitRawText(OS.str());
   }
 }
 
@@ -205,9 +205,7 @@ void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
 }
 
 /// The implementation in this class just redirects to emitFill.
-void MCStreamer::EmitZeros(uint64_t NumBytes) {
-  emitFill(NumBytes, 0);
-}
+void MCStreamer::emitZeros(uint64_t NumBytes) { emitFill(NumBytes, 0); }
 
 Expected<unsigned>
 MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
@@ -809,7 +807,7 @@ MCSection *MCStreamer::getAssociatedXDataSection(const MCSection *TextSec) {
                           TextSec);
 }
 
-void MCStreamer::EmitSyntaxDirective() {}
+void MCStreamer::emitSyntaxDirective() {}
 
 static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
@@ -935,7 +933,7 @@ void MCStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {}
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
-void MCStreamer::EmitRawTextImpl(StringRef String) {
+void MCStreamer::emitRawTextImpl(StringRef String) {
   // This is not llvm_unreachable for the sake of out of tree backend
   // developers who may not have assembly streamers and should serve as a
   // reminder to not accidentally call EmitRawText in the absence of such.
@@ -944,9 +942,9 @@ void MCStreamer::EmitRawTextImpl(StringRef String) {
                      "implementation)");
 }
 
-void MCStreamer::EmitRawText(const Twine &T) {
+void MCStreamer::emitRawText(const Twine &T) {
   SmallString<128> Str;
-  EmitRawTextImpl(T.toStringRef(Str));
+  emitRawTextImpl(T.toStringRef(Str));
 }
 
 void MCStreamer::EmitWindowsUnwindTables() {
@@ -1056,14 +1054,14 @@ void MCStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
 void MCStreamer::EndCOFFSymbolDef() {
   llvm_unreachable("this directive only supported on COFF targets");
 }
-void MCStreamer::EmitFileDirective(StringRef Filename) {}
+void MCStreamer::emitFileDirective(StringRef Filename) {}
 void MCStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::EmitCOFFSymbolType(int Type) {
   llvm_unreachable("this directive only supported on COFF targets");
 }
-void MCStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+void MCStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                             MCSymbol *CsectSym,
                                             unsigned ByteAlign) {
   llvm_unreachable("this directive only supported on XCOFF targets");
@@ -1073,7 +1071,7 @@ void MCStreamer::emitELFSymverDirective(StringRef AliasName,
                                         const MCSymbol *Aliasee) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {}
-void MCStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, unsigned ByteAlignment) {}
 void MCStreamer::ChangeSection(MCSection *, const MCExpr *) {}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
@@ -1094,10 +1092,10 @@ void MCStreamer::emitCodeAlignment(unsigned ByteAlignment,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::EmitBundleAlignMode(unsigned AlignPow2) {}
-void MCStreamer::EmitBundleLock(bool AlignToEnd) {}
+void MCStreamer::emitBundleAlignMode(unsigned AlignPow2) {}
+void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::FinishImpl() {}
-void MCStreamer::EmitBundleUnlock() {}
+void MCStreamer::emitBundleUnlock() {}
 
 void MCStreamer::SwitchSection(MCSection *Section, const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
