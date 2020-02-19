@@ -23,6 +23,8 @@ namespace llvm {
 /// IRBuilderFolder - Interface for constant folding in IRBuilder.
 class IRBuilderFolder {
 public:
+  virtual ~IRBuilderFolder();
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//

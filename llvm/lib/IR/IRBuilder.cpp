@@ -786,7 +786,8 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
   return createCallHelper(Fn, Args, this, Name, FMFSource);
 }
 
-void IRBuilderDefaultInserter::anchor() {}
-void IRBuilderCallbackInserter::anchor() {}
+IRBuilderDefaultInserter::~IRBuilderDefaultInserter() {}
+IRBuilderCallbackInserter::~IRBuilderCallbackInserter() {}
+IRBuilderFolder::~IRBuilderFolder() {}
 void ConstantFolder::anchor() {}
 void NoFolder::anchor() {}
