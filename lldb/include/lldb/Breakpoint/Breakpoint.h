@@ -568,6 +568,11 @@ public:
     return GetPermissions().GetAllowDelete();
   }
 
+  // This one should only be used by Target to copy breakpoints from target to
+  // target - primarily from the dummy target to prime new targets.
+  static lldb::BreakpointSP CopyFromBreakpoint(Target& new_target,
+      const Breakpoint &bp_to_copy_from);
+
 protected:
   friend class Target;
   // Protected Methods
@@ -625,9 +630,8 @@ protected:
   }
 
 private:
-  // This one should only be used by Target to copy breakpoints from target to
-  // target - primarily from the dummy target to prime new targets.
-  Breakpoint(Target &new_target, Breakpoint &bp_to_copy_from);
+  // To call from CopyFromBreakpoint.
+  Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
   bool m_being_created;
