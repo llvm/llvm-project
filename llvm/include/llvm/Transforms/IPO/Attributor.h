@@ -2685,6 +2685,24 @@ struct AAMemoryLocation
   /// Return the locations encoded by \p MLK as a readable string.
   static std::string getMemoryLocationsAsStr(MemoryLocationsKind MLK);
 
+  /// Simple enum to distinguish read/write/read-write accesses.
+  enum AccessKind {
+    NONE = 0,
+    READ = 1 << 0,
+    WRITE = 1 << 1,
+    READ_WRITE = READ | WRITE,
+  };
+
+  /// Check \p Pred on all accesses to the memory kinds specified by \p MLK.
+  ///
+  /// This method will evaluate \p Pred on all accesses (access instruction +
+  /// underlying accessed memory pointer) and it will return true if \p Pred
+  /// holds every time.
+  virtual bool checkForAllAccessesToMemoryKind(
+      const function_ref<bool(const Instruction &, const Value *, AccessKind,
+                              MemoryLocationsKind)> &Pred,
+      MemoryLocationsKind MLK) const = 0;
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAMemoryLocation &createForPosition(const IRPosition &IRP,
                                              Attributor &A);

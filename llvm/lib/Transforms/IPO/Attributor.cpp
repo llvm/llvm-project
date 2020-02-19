@@ -6201,17 +6201,101 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     return IRAttribute::manifest(A);
   }
 
+  /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).
+  bool checkForAllAccessesToMemoryKind(
+      const function_ref<bool(const Instruction &, const Value *, AccessKind,
+                              MemoryLocationsKind)> &Pred,
+      MemoryLocationsKind RequestedMLK) const override {
+    if (!isValidState())
+      return false;
+
+    MemoryLocationsKind AssumedMLK = getAssumedNotAccessedLocation();
+    if (AssumedMLK == NO_LOCATIONS)
+      return true;
+
+    for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
+      if (CurMLK & RequestedMLK)
+        continue;
+
+      const auto &Accesses = AccessKindAccessesMap.lookup(CurMLK);
+      for (const AccessInfo &AI : Accesses)
+        if (!Pred(*AI.I, AI.Ptr, AI.Kind, CurMLK))
+          return false;
+    }
+
+    return true;
+  }
+
+  ChangeStatus indicatePessimisticFixpoint() override {
+    // If we give up and indicate a pessimistic fixpoint this instruction will
+    // become an access for all potential access kinds:
+    // TODO: Add pointers for argmemonly and globals to improve the results of
+    //       checkForAllAccessesToMemoryKind.
+    bool Changed = false;
+    MemoryLocationsKind KnownMLK = getKnown();
+    Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
+    for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2)
+      if (!(CurMLK & KnownMLK))
+        updateStateAndAccessesMap(getState(), AccessKindAccessesMap, CurMLK, I,
+                                  nullptr, Changed);
+    return AAMemoryLocation::indicatePessimisticFixpoint();
+  }
+
 protected:
+  /// Helper struct to tie together an instruction that has a read or write
+  /// effect with the pointer it accesses (if any).
+  struct AccessInfo {
+
+    /// The instruction that caused the access.
+    const Instruction *I;
+
+    /// The base pointer that is accessed, or null if unknown.
+    const Value *Ptr;
+
+    /// The kind of access (read/write/read+write).
+    AccessKind Kind;
+
+    bool operator==(const AccessInfo &RHS) const {
+      return I == RHS.I & Ptr == RHS.Ptr & Kind == RHS.Kind;
+    }
+    bool operator()(const AccessInfo &LHS, const AccessInfo &RHS) const {
+      if (LHS.I != RHS.I)
+        return LHS.I < RHS.I;
+      if (LHS.Ptr != RHS.Ptr)
+        return LHS.Ptr < RHS.Ptr;
+      if (LHS.Kind != RHS.Kind)
+        return LHS.Kind < RHS.Kind;
+      return false;
+    }
+  };
+
+  /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
+  /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
+  using AccessKindAccessesMapTy =
+      DenseMap<unsigned, SmallSet<AccessInfo, 8, AccessInfo>>;
+  AccessKindAccessesMapTy AccessKindAccessesMap;
+
   /// Return the kind(s) of location that may be accessed by \p V.
   AAMemoryLocation::MemoryLocationsKind
   categorizeAccessedLocations(Attributor &A, Instruction &I, bool &Changed);
 
-  /// Update the state \p State given that \p I is an access to a \p MLK memory
-  /// location with the access pointer \p Ptr.
-  static void updateState(AAMemoryLocation::StateType &State,
-                          MemoryLocationsKind MLK, const Instruction &I,
-                          const Value *Ptr, bool &Changed) {
+  /// Update the state \p State and the AccessKindAccessesMap given that \p I is
+  /// an access to a \p MLK memory location with the access pointer \p Ptr.
+  static void updateStateAndAccessesMap(AAMemoryLocation::StateType &State,
+                                        AccessKindAccessesMapTy &AccessMap,
+                                        MemoryLocationsKind MLK,
+                                        const Instruction *I, const Value *Ptr,
+                                        bool &Changed) {
+    // TODO: The kind should be determined at the call sites based on the
+    // information we have there.
+    AccessKind Kind = READ_WRITE;
+    if (I) {
+      Kind = I->mayReadFromMemory() ? READ : NONE;
+      Kind = AccessKind(Kind | (I->mayWriteToMemory() ? WRITE : NONE));
+    }
+
     assert(isPowerOf2_32(MLK) && "Expected a single location set!");
+    Changed |= AccessMap[MLK].insert(AccessInfo{I, Ptr, Kind}).second;
     State.removeAssumedBits(MLK);
   }
 
@@ -6251,32 +6335,39 @@ void AAMemoryLocationImpl::categorizePtrValue(
       return true;
     if (auto *Arg = dyn_cast<Argument>(&V)) {
       if (Arg->hasByValAttr())
-        updateState(T, NO_LOCAL_MEM, I, &V, Changed);
+        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_LOCAL_MEM, &I,
+                                  &V, Changed);
       else
-        updateState(T, NO_ARGUMENT_MEM, I, &V, Changed);
+        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_ARGUMENT_MEM, &I,
+                                  &V, Changed);
       return true;
     }
     if (auto *GV = dyn_cast<GlobalValue>(&V)) {
       if (GV->hasLocalLinkage())
-        updateState(T, NO_GLOBAL_INTERNAL_MEM, I, &V, Changed);
+        updateStateAndAccessesMap(T, AccessKindAccessesMap,
+                                  NO_GLOBAL_INTERNAL_MEM, &I, &V, Changed);
       else
-        updateState(T, NO_GLOBAL_EXTERNAL_MEM, I, &V, Changed);
+        updateStateAndAccessesMap(T, AccessKindAccessesMap,
+                                  NO_GLOBAL_EXTERNAL_MEM, &I, &V, Changed);
       return true;
     }
     if (isa<AllocaInst>(V)) {
-      updateState(T, NO_LOCAL_MEM, I, &V, Changed);
+      updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_LOCAL_MEM, &I, &V,
+                                Changed);
       return true;
     }
     if (ImmutableCallSite ICS = ImmutableCallSite(&V)) {
       const auto &NoAliasAA =
           A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(ICS));
       if (NoAliasAA.isAssumedNoAlias()) {
-        updateState(T, NO_MALLOCED_MEM, I, &V, Changed);
+        updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_MALLOCED_MEM, &I,
+                                  &V, Changed);
         return true;
       }
     }
 
-    updateState(T, NO_UNKOWN_MEM, I, &V, Changed);
+    updateStateAndAccessesMap(T, AccessKindAccessesMap, NO_UNKOWN_MEM, &I, &V,
+                              Changed);
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value cannot be categorized: "
                       << V << " -> " << getMemoryLocationsAsStr(T.getAssumed())
                       << "\n");
@@ -6288,7 +6379,8 @@ void AAMemoryLocationImpl::categorizePtrValue(
           /* MaxValues */ 32, StripGEPCB)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
-    updateState(State, NO_UNKOWN_MEM, I, nullptr, Changed);
+    updateStateAndAccessesMap(State, AccessKindAccessesMap, NO_UNKOWN_MEM, &I,
+                              nullptr, Changed);
   } else {
     LLVM_DEBUG(
         dbgs()
@@ -6318,21 +6410,37 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
       return NO_LOCATIONS;
 
     if (ICSMemLocationAA.isAssumedInaccessibleMemOnly()) {
-      updateState(AccessedLocs, NO_INACCESSIBLE_MEM, I, nullptr, Changed);
+      updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap,
+                                NO_INACCESSIBLE_MEM, &I, nullptr, Changed);
       return AccessedLocs.getAssumed();
     }
 
     uint32_t ICSAssumedNotAccessedLocs =
         ICSMemLocationAA.getAssumedNotAccessedLocation();
 
-    // Set the argmemonly bit as we handle them separately below.
+    // Set the argmemonly and global bit as we handle them separately below.
     uint32_t ICSAssumedNotAccessedLocsNoArgMem =
-        ICSAssumedNotAccessedLocs | NO_ARGUMENT_MEM;
+        ICSAssumedNotAccessedLocs | NO_ARGUMENT_MEM | NO_GLOBAL_MEM;
 
     for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
       if (ICSAssumedNotAccessedLocsNoArgMem & CurMLK)
         continue;
-      updateState(AccessedLocs, CurMLK, I, nullptr, Changed);
+      updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, CurMLK, &I,
+                                nullptr, Changed);
+    }
+
+    // Now handle global memory if it might be accessed.
+    bool HasGlobalAccesses = !(ICSAssumedNotAccessedLocs & NO_GLOBAL_MEM);
+    if (HasGlobalAccesses) {
+      auto AccessPred = [&](const Instruction &, const Value *Ptr,
+                            AccessKind Kind, MemoryLocationsKind MLK) {
+        updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, MLK, &I,
+                                  Ptr, Changed);
+        return true;
+      };
+      if (!ICSMemLocationAA.checkForAllAccessesToMemoryKind(
+              AccessPred, inverseLocation(NO_GLOBAL_MEM, false, false)))
+        return AccessedLocs.getWorstState();
     }
 
     LLVM_DEBUG(
@@ -6381,7 +6489,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
   LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Failed to categorize instruction: "
                     << I << "\n");
-  updateState(AccessedLocs, NO_UNKOWN_MEM, I, nullptr, Changed);
+  updateStateAndAccessesMap(AccessedLocs, AccessKindAccessesMap, NO_UNKOWN_MEM,
+                            &I, nullptr, Changed);
   return AccessedLocs.getAssumed();
 }
 
@@ -6456,9 +6565,16 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AAMemoryLocation>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AAMemoryLocation::StateType &>(FnAA.getState()));
+    bool Changed = false;
+    auto AccessPred = [&](const Instruction &I, const Value *Ptr,
+                          AccessKind Kind, MemoryLocationsKind MLK) {
+      updateStateAndAccessesMap(getState(), AccessKindAccessesMap, MLK, &I, Ptr,
+                                Changed);
+      return true;
+    };
+    if (!FnAA.checkForAllAccessesToMemoryKind(AccessPred, ALL_LOCATIONS))
+      return indicatePessimisticFixpoint();
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
