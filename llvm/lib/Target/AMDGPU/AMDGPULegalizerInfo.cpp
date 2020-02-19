@@ -1354,6 +1354,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
     return legalizeUDIV_UREM(MI, MRI, B);
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_SREM:
+    return legalizeSDIV_SREM(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
@@ -2329,18 +2332,13 @@ static Register buildDivRCP(MachineIRBuilder &B, Register Src) {
   return B.buildFPTOUI(S32, Mul).getReg(0);
 }
 
-bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
-  B.setInstr(MI);
-  bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
-
+void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
+                                                  Register DstReg,
+                                                  Register Num,
+                                                  Register Den,
+                                                  bool IsRem) const {
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
-
-  Register DstReg = MI.getOperand(0).getReg();
-  Register Num = MI.getOperand(1).getReg();
-  Register Den = MI.getOperand(2).getReg();
 
   // RCP =  URECIP(Den) = 2^32 / Den + e
   // e is rounding error.
@@ -2422,7 +2420,17 @@ bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
   } else {
     B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
   }
+}
 
+bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  const bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Num = MI.getOperand(1).getReg();
+  Register Den = MI.getOperand(2).getReg();
+  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsRem);
   MI.eraseFromParent();
   return true;
 }
@@ -2432,6 +2440,52 @@ bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
   if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
     return legalizeUDIV_UREM32(MI, MRI, B);
+  return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  const LLT S32 = LLT::scalar(32);
+
+  const bool IsRem = MI.getOpcode() == AMDGPU::G_SREM;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  auto ThirtyOne = B.buildConstant(S32, 31);
+  auto LHSign = B.buildAShr(S32, LHS, ThirtyOne);
+  auto RHSign = B.buildAShr(S32, LHS, ThirtyOne);
+
+  LHS = B.buildAdd(S32, LHS, LHSign).getReg(0);
+  RHS = B.buildAdd(S32, RHS, RHSign).getReg(0);
+
+  LHS = B.buildXor(S32, LHS, LHSign).getReg(0);
+  RHS = B.buildXor(S32, RHS, RHSign).getReg(0);
+
+  Register UDivRem = MRI.createGenericVirtualRegister(S32);
+  legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsRem);
+
+  if (IsRem) {
+    auto RSign = LHSign; // Remainder sign is the same as LHS
+    UDivRem = B.buildXor(S32, UDivRem, RSign).getReg(0);
+    B.buildSub(DstReg, UDivRem, RSign);
+  } else {
+    auto DSign = B.buildXor(S32, LHSign, RHSign);
+    UDivRem = B.buildXor(S32, UDivRem, DSign).getReg(0);
+    B.buildSub(DstReg, UDivRem, DSign);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeSDIV_SREM(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
+    return legalizeSDIV_SREM32(MI, MRI, B);
   return false;
 }
 
