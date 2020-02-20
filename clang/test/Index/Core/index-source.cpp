@@ -321,7 +321,7 @@ template<>
 void functionSp<SpecializationDecl<Cls>, Record::C>() {
 // CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSp | c:@F@functionSp<#$@S@SpecializationDecl>#$@S@Cls#VI2># | __Z10functionSpI18SpecializationDeclI3ClsELi2EEvv | Def,RelSpecialization | rel: 1
 // CHECK:   RelSpecialization | functionSp | c:@FT@>2#T#NIfunctionSp#v#
-// CHECK: [[@LINE-3]]:17 | class(Gen,TS)/C++ | SpecializationDecl | c:@S@SpecializationDecl>#$@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:17 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-4]]:36 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-5]]:50 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-6]]:42 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
@@ -332,7 +332,7 @@ class ClassWithCorrectSpecialization { };
 
 template<>
 class ClassWithCorrectSpecialization<SpecializationDecl<Cls>, Record::C> { };
-// CHECK: [[@LINE-1]]:38 | class(Gen,TS)/C++ | SpecializationDecl | c:@S@SpecializationDecl>#$@S@Cls | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:38 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
 // CHECK: [[@LINE-2]]:57 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
 // CHECK: [[@LINE-3]]:71 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read | rel: 0
 // CHECK: [[@LINE-4]]:63 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref | rel: 0
@@ -505,7 +505,7 @@ struct Guided { T t; };
 // CHECK-NEXT: [[@LINE-2]]:19 | field/C++ | t | c:@ST>1#T@Guided@FI@t | <no-cgname> | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | Guided | c:@ST>1#T@Guided
 Guided(double) -> Guided<float>;
-// CHECK: [[@LINE-1]]:19 | struct(Gen,TS)/C++ | Guided | c:@S@Guided>#f | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:19 | struct(Gen)/C++ | Guided | c:@ST>1#T@Guided | <no-cgname> | Ref | rel: 0
 // CHECK-NEXT: [[@LINE-2]]:1 | struct(Gen)/C++ | Guided | c:@ST>1#T@Guided | <no-cgname> | Ref | rel: 0
 auto guided = Guided{1.0};
 // CHECK: [[@LINE-1]]:6 | variable/C | guided | c:@guided | _guided | Def | rel: 0
