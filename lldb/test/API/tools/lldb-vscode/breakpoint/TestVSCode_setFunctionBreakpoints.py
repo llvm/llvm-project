@@ -17,7 +17,7 @@ class TestVSCode_setFunctionBreakpoints(
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
-    @skipIfDarwinEmbedded
+    @skipIfRemote
     def test_set_and_clear(self):
         '''Tests setting and clearing function breakpoints.
            This packet is a bit tricky on the debug adaptor side since there
@@ -108,7 +108,7 @@ class TestVSCode_setFunctionBreakpoints(
                             "expect %u source breakpoints" % (len(functions)))
 
     @skipIfWindows
-    @skipIfDarwinEmbedded
+    @skipIfRemote
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single
            breakpoint, like 'conditions' and 'hitCondition' settings.'''

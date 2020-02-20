@@ -74,7 +74,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             self.verify_values(verify_dict[name], variable, varref_dict)
 
     @skipIfWindows
-    @skipIfDarwinEmbedded
+    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
         '''
             Tests the "scopes", "variables", "setVariable", and "evaluate"
