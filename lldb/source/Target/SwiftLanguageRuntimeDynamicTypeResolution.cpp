@@ -804,7 +804,8 @@ bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
   if (node_ptr->getNumChildren() != 1)
     return false;
   node_ptr = node_ptr->getFirstChild();
-  return node_ptr->getKind() == swift::Demangle::Node::Kind::Constructor;
+  return node_ptr->getKind() == swift::Demangle::Node::Kind::Constructor ||
+    node_ptr->getKind() == swift::Demangle::Node::Kind::Allocator;
 }
 
 /// Determine whether the scratch SwiftASTContext has been locked.

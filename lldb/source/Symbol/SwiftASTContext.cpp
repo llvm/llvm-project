@@ -1861,6 +1861,17 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
+/// Detect whether a Swift module was "imported" by DWARFImporter.
+/// All this *really* means is that it couldn't be loaded through any
+/// other mechanism.
+static bool IsDWARFImported(swift::ModuleDecl &module) {
+  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
+                     [](swift::FileUnit *file_unit) {
+                       return (file_unit->getKind() ==
+                               swift::FileUnitKind::DWARFModule);
+                     });
+}
+
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                                    Target &target,
                                                    const char *extra_options) {
@@ -2206,7 +2217,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   const bool can_create = true;
-  if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
+  swift::ModuleDecl *stdlib =
+      swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+  if (!stdlib || IsDWARFImported(*stdlib)) {
     logError("couldn't load the Swift stdlib");
     return {};
   }
@@ -2709,17 +2722,16 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
 }
 
 void SwiftASTContext::InitializeSearchPathOptions(
-    llvm::ArrayRef<std::string> module_search_paths,
-    llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths) {
-  swift::SearchPathOptions &search_path_opts =
-      GetCompilerInvocation().getSearchPathOptions();
+    llvm::ArrayRef<std::string> extra_module_search_paths,
+    llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
+  swift::CompilerInvocation &invocation = GetCompilerInvocation();
 
   assert(!m_initialized_search_path_options);
   m_initialized_search_path_options = true;
 
   bool set_sdk = false;
-  if (!search_path_opts.SDKPath.empty()) {
-    FileSpec provided_sdk_path(search_path_opts.SDKPath);
+  if (!invocation.getSDKPath().empty()) {
+    FileSpec provided_sdk_path(invocation.getSDKPath());
     if (FileSystem::Instance().Exists(provided_sdk_path)) {
       // We don't check whether the SDK supports swift because we figure if
       // someone is passing this to us on the command line (e.g., for the
@@ -2732,7 +2744,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
 
     if (FileSystem::Instance().Exists(platform_sdk) &&
         SDKSupportsSwift(platform_sdk, SDKType::unknown)) {
-      search_path_opts.SDKPath = m_platform_sdk_path.c_str();
+      invocation.setSDKPath(m_platform_sdk_path.c_str());
       set_sdk = true;
     }
   }
@@ -2753,38 +2765,45 @@ void SwiftASTContext::InitializeSearchPathOptions(
     if (sdk.sdk_type != SDKType::unknown) {
       auto dir = GetSDKDirectory(sdk.sdk_type, sdk.min_version_major,
                                  sdk.min_version_minor);
-      search_path_opts.SDKPath = dir.AsCString("");
+      // Note that calling setSDKPath() also recomputes all paths that
+      // depend on the SDK path including the
+      // RuntimeLibraryImportPaths, which are *only* initialized
+      // through this mechanism.
+      invocation.setSDKPath(dir.AsCString(""));
     }
 
-    std::vector<std::string>& lpaths = search_path_opts.LibrarySearchPaths;
+    std::vector<std::string> &lpaths =
+        invocation.getSearchPathOptions().LibrarySearchPaths;
     lpaths.insert(lpaths.begin(), "/usr/lib/swift");
   }
 
   llvm::StringMap<bool> processed;
+  std::vector<std::string> &invocation_import_paths =
+      invocation.getSearchPathOptions().ImportSearchPaths;
   // Add all deserialized paths to the map.
-  for (const auto &path : search_path_opts.ImportSearchPaths)
+  for (const auto &path : invocation_import_paths)
     processed.insert({path, false});
 
   // Add/unique all extra paths.
-  for (const auto &path : module_search_paths) {
-    search_path_opts.ImportSearchPaths.push_back(path);
+  for (const auto &path : extra_module_search_paths) {
     auto it_notseen = processed.insert({path, false});
     if (it_notseen.second)
-      search_path_opts.ImportSearchPaths.push_back(path);
+      invocation_import_paths.push_back(path);
   }
 
   // This preserves the IsSystem bit, but deduplicates entries ignoring it.
   processed.clear();
+  auto &invocation_framework_paths =
+      invocation.getSearchPathOptions().FrameworkSearchPaths;
   // Add all deserialized paths to the map.
-  for (const auto &path : search_path_opts.FrameworkSearchPaths)
+  for (const auto &path : invocation_framework_paths)
     processed.insert({path.Path, path.IsSystem});
 
   // Add/unique all extra paths.
-  for (const auto &path : framework_search_paths) {
+  for (const auto &path : extra_framework_search_paths) {
     auto it_notseen = processed.insert(path);
     if (it_notseen.second)
-      search_path_opts.FrameworkSearchPaths.push_back(
-          {path.first, path.second});
+      invocation_framework_paths.push_back({path.first, path.second});
   }
 }
 
@@ -8390,9 +8409,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   s.PutCString("kind = ");
 
   switch (file_unit->getKind()) {
-  default: {
-    s.PutCString("<unknown>");
-  }
   case swift::FileUnitKind::Source: {
     s.PutCString("Source, ");
     if (swift::SourceFile *source_file =
@@ -8423,7 +8439,10 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
     swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
     s.Printf("filename = \"%s\"", loaded_file->getFilename().str().c_str());
   } break;
+  case swift::FileUnitKind::DWARFModule:
+    s.PutCString("DWARF");
   };
+  s.PutCString(";");
 }
 
 // Gets the full module name from the module passed in.
@@ -8463,7 +8482,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
 
   error.Clear();
   ConstString toplevel = module.path.front();
-  llvm::SmallString<1> m_description;
+  const std::string &m_description = swift_ast_context.GetDescription();
   LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing module %s",
              toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
@@ -8483,6 +8502,16 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
   } else
     swift_module = swift_ast_context.GetModule(module, error);
 
+  if (swift_module && IsDWARFImported(*swift_module)) {
+    // This module was "imported" from DWARF. This basically means the
+    // import as a Swift or Clang module failed. We have not yet
+    // checked that DWARF debug info for this module actually exists
+    // and there is no good mechanism to do so ahead of time.
+    // We do know that we never load the stdlib from DWARF though.
+    if (toplevel.GetStringRef() == swift::STDLIB_NAME)
+      swift_module = nullptr;
+  }
+
   if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
     LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Couldn't import module %s: %s",
                toplevel.AsCString(), error.AsCString());
@@ -8493,14 +8522,11 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
   }
 
   if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing %s with source files:",
-               module.path.front().AsCString());
-
-    for (swift::FileUnit *file_unit : swift_module->getFiles()) {
-      StreamString ss;
+    StreamString ss;
+    for (swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
-      LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "  %s", ss.GetData());
-    }
+    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Imported module %s from {%s}",
+               module.path.front().AsCString(), ss.GetData());
   }
 
   additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
