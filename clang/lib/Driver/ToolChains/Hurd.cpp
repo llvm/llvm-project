@@ -149,7 +149,7 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     CIncludeDirs.split(Dirs, ":");
     for (StringRef Dir : Dirs) {
       StringRef Prefix =
-          llvm::sys::path::is_absolute(Dir) ? StringRef(SysRoot) : "";
+          llvm::sys::path::is_absolute(Dir) ? "" : StringRef(SysRoot);
       addExternCSystemInclude(DriverArgs, CC1Args, Prefix + Dir);
     }
     return;
