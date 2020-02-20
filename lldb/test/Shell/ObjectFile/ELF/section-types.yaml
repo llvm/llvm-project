@@ -34,6 +34,12 @@
 # CHECK-LABEL: Name: .debug_names
 # CHECK-NEXT: Type: dwarf-names
 
+# CHECK-LABEL: Name: .debug_cu_index
+# CHECK-NEXT: Type: dwarf-cu-index
+
+# CHECK-LABEL: Name: .debug_tu_index
+# CHECK-NEXT: Type: dwarf-tu-index
+
 # CHECK-LABEL: Name: .gnu_debugaltlink
 # CHECK-NEXT: Type: dwarf-gnu-debugaltlink
 
@@ -101,6 +107,14 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_cu_index
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_tu_index
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
