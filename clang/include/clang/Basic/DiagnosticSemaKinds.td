@@ -3033,6 +3033,9 @@ def err_alignment_too_big : Error<
   "requested alignment must be %0 or smaller">;
 def err_alignment_not_power_of_two : Error<
   "requested alignment is not a power of 2">;
+def warn_alignment_not_power_of_two : Warning<
+  err_alignment_not_power_of_two.Text>,
+  InGroup<DiagGroup<"non-power-of-two-alignment">>;
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
 

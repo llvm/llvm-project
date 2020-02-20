@@ -3892,6 +3892,10 @@ public:
     const auto *AlignmentCI = dyn_cast<llvm::ConstantInt>(Alignment);
     if (!AlignmentCI)
       return Attrs;
+    // We may legitimately have non-power-of-2 alignment here.
+    // If so, this is UB land, emit it via `@llvm.assume` instead.
+    if (!AlignmentCI->getValue().isPowerOf2())
+      return Attrs;
     llvm::AttributeList NewAttrs = maybeRaiseRetAlignmentAttribute(
         CGF.getLLVMContext(), Attrs,
         llvm::Align(

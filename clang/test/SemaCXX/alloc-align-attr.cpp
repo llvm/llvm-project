@@ -30,14 +30,14 @@ void dependent_impl(int align) {
   dependent_ret<int *> b;
   b.Foo(1);
   b.Foo2(1);
-  b.Foo(3);           // expected-error {{requested alignment is not a power of 2}}
-  b.Foo2(3);          // expected-error {{requested alignment is not a power of 2}}
+  b.Foo(3);           // expected-warning {{requested alignment is not a power of 2}}
+  b.Foo2(3);          // expected-warning {{requested alignment is not a power of 2}}
   b.Foo(1073741824);  // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
   b.Foo2(1073741824); // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
   b.Foo(align);
   b.Foo2(align);
 
-  dependent_param_struct<int> c; 
+  dependent_param_struct<int> c;
   c.Foo(1);
   dependent_param_struct<float> d; // expected-note {{in instantiation of template class 'dependent_param_struct<float>' requested here}}
   d.Foo(1.0);
