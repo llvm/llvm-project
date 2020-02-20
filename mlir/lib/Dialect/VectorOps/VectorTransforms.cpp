@@ -929,21 +929,9 @@ public:
       }
     }
 
-    // Lower the only remaining contraction dimensions.
-    // TODO(ajcbik): handle multi-dim reductions
-    auto loc = op.getLoc();
-    Type resType = op.getResultType();
-    if (!resType.isa<VectorType>() && lhsType.getRank() == 1 &&
-        rhsType.getRank() == 1) {
-
-      Value zero = rewriter.create<ConstantOp>(loc, resType,
-                                               rewriter.getZeroAttr(resType));
-      Value splat = rewriter.create<SplatOp>(loc, lhsType, zero);
-      Value fma =
-          rewriter.create<vector::FMAOp>(loc, op.lhs(), op.rhs(), splat);
-      StringAttr kind = rewriter.getStringAttr("add");
-      rewriter.replaceOpWithNewOp<vector::ReductionV2Op>(op, resType, kind, fma,
-                                                         op.acc());
+    // Lower the first remaining reduction dimension.
+    if (!contractingDimMap.empty()) {
+      rewriter.replaceOp(op, lowerReduction(op, rewriter));
       return matchSuccess();
     }
 
@@ -981,27 +969,14 @@ private:
     Optional<int64_t> lookup = getResultIndex(iMap[2], iterIndex);
     assert(lookup.hasValue() && "parallel index not listed in reduction");
     int64_t resIndex = lookup.getValue();
-    // Construct new iterator types.
-    ArrayAttr iteratorTypes = op.iterator_types();
-    SmallVector<Attribute, 4> lowIterTypes;
-    for (auto it : llvm::enumerate(iteratorTypes)) {
-      int64_t idx = it.index();
-      if (idx == iterIndex) {
-        assert(it.value().cast<StringAttr>().getValue() ==
-                   getParallelIteratorTypeName() &&
-               "parallel index not marked as such");
-        continue;
-      }
-      lowIterTypes.push_back(it.value());
-    }
-    // Construct new affine map array attribute.
+    // Construct new iterator types and affine map array attribute.
     SmallVector<AffineMap, 4> lowIndexingMaps;
     lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
     lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
     lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
     auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
-    // Construct new iterator types array attribute.
-    auto lowIter = rewriter.getArrayAttr(lowIterTypes);
+    auto lowIter =
+        rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
     // Unroll into a series of lower dimensional vector.contract ops.
     Location loc = op.getLoc();
     Value result = zeroVector(loc, resType, rewriter);
@@ -1013,6 +988,56 @@ private:
           loc, lhs, rhs, acc, lowAffine, lowIter);
       result = reshapeStore(loc, lowContract, result, resType, resIndex, d,
                             rewriter);
+    }
+    return result;
+  }
+
+  // Lower one reduction dimension.
+  Value lowerReduction(vector::ContractionOp op,
+                       PatternRewriter &rewriter) const {
+    auto loc = op.getLoc();
+    VectorType lhsType = op.getLhsType();
+    VectorType rhsType = op.getRhsType();
+    Type resType = op.getResultType();
+    assert(!resType.isa<VectorType>());
+    // Use iterator index 0.
+    int64_t iterIndex = 0;
+    SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+    Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
+    Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
+    assert(lookupLhs.hasValue() && "missing LHS parallel index");
+    assert(lookupRhs.hasValue() && "missing RHS parallel index");
+    int64_t lhsIndex = lookupLhs.getValue();
+    int64_t rhsIndex = lookupRhs.getValue();
+    int64_t dimSize = lhsType.getDimSize(lhsIndex);
+    assert(dimSize == rhsType.getDimSize(rhsIndex) && "corrupt shape");
+    // Base case.
+    if (lhsType.getRank() == 1) {
+      assert(rhsType.getRank() == 1 && "corrupt contraction");
+      Value zero = zeroVector(loc, lhsType, rewriter);
+      Value fma = rewriter.create<vector::FMAOp>(loc, op.lhs(), op.rhs(), zero);
+      StringAttr kind = rewriter.getStringAttr("add");
+      return rewriter.create<vector::ReductionV2Op>(loc, resType, kind, fma,
+                                                    op.acc());
+    }
+    // Construct new iterator types and affine map array attribute.
+    SmallVector<AffineMap, 4> lowIndexingMaps;
+    lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
+    lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
+    lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+    auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
+    auto lowIter =
+        rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
+    // Unroll into a series of lower dimensional vector.contract ops.
+    // By feeding the initial accumulator into the first contraction,
+    // and the result of each contraction into the next, eventually
+    // the sum of all reductions is computed.
+    Value result = op.acc();
+    for (int64_t d = 0; d < dimSize; ++d) {
+      auto lhs = reshapeLoad(loc, op.lhs(), lhsType, lhsIndex, d, rewriter);
+      auto rhs = reshapeLoad(loc, op.rhs(), rhsType, rhsIndex, d, rewriter);
+      result = rewriter.create<vector::ContractionOp>(loc, lhs, rhs, result,
+                                                      lowAffine, lowIter);
     }
     return result;
   }
@@ -1034,6 +1059,20 @@ private:
         return i;
     }
     return None;
+  }
+
+  // Helper to construct iterator types with one index removed.
+  static SmallVector<Attribute, 4> adjustIter(ArrayAttr iteratorTypes,
+                                              int64_t index) {
+    SmallVector<Attribute, 4> results;
+    for (auto it : llvm::enumerate(iteratorTypes)) {
+      int64_t idx = it.index();
+      if (idx == index) {
+        continue;
+      }
+      results.push_back(it.value());
+    }
+    return results;
   }
 
   // Helper to construct an affine map with one index removed.
