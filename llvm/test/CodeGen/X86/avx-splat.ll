@@ -169,12 +169,12 @@ define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; X86-LABEL: splat_load_2f64_11:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup 8(%eax), %xmm0 # xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: splat_load_2f64_11:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup 8(%rdi), %xmm0 # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %ptr
   %x1 = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 1, i32 1>
