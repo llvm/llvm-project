@@ -127,7 +127,7 @@ invalidated) based upon other properties such as analyses sets.
 
 ### Querying Analyses
 
-The base `OperationPass` class provide utilities for querying and preserving
+The base `OperationPass` class provides utilities for querying and preserving
 analyses for the current operation being processed.
 
 *   OperationPass automatically provides the following utilities for querying
