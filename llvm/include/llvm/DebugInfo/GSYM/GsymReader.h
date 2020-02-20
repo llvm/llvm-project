@@ -257,11 +257,15 @@ protected:
   /// \returns The matching address offset index. This index will be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   template <class T>
-  uint64_t getAddressOffsetIndex(const uint64_t AddrOffset) const {
+  llvm::Optional<uint64_t> getAddressOffsetIndex(const uint64_t AddrOffset) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     const auto Begin = AIO.begin();
     const auto End = AIO.end();
     auto Iter = std::lower_bound(Begin, End, AddrOffset);
+    // Watch for addresses that fall between the gsym::Header::BaseAddress and
+    // the first address offset.
+    if (Iter == Begin && AddrOffset < *Begin)
+      return llvm::None;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
     return std::distance(Begin, Iter);
