@@ -887,6 +887,7 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
+
 bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
                                                     ValueObject &object) {
   if (object.IsUninitializedReference()) {
