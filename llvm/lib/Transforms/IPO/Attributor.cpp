@@ -645,6 +645,14 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
       if (const Function *Callee = ICS.getCalledFunction()) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
+        for (const Argument &Arg : Callee->args())
+          if (Arg.hasReturnedAttr()) {
+            IRPositions.emplace_back(
+                IRPosition::callsite_argument(ICS, Arg.getArgNo()));
+            IRPositions.emplace_back(
+                IRPosition::value(*ICS.getArgOperand(Arg.getArgNo())));
+            IRPositions.emplace_back(IRPosition::argument(Arg));
+          }
       }
     }
     IRPositions.emplace_back(
