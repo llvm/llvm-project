@@ -12,6 +12,9 @@ add_entrypoint_library(
     # sys/mman.h entrypoints
     mmap
     munmap
+
+    # signal.h entrypoints
+    raise
 )
 
 add_entrypoint_library(
