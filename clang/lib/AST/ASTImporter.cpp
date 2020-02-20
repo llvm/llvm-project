@@ -463,7 +463,7 @@ namespace clang {
                                         ParmVarDecl *ToParam);
 
     template <typename T>
-    bool hasSameVisibilityContext(T *Found, T *From);
+    bool hasSameVisibilityContextAndLinkage(T *Found, T *From);
 
     bool IsStructuralMatch(Decl *From, Decl *To, bool Complain);
     bool IsStructuralMatch(RecordDecl *FromRecord, RecordDecl *ToRecord,
@@ -973,7 +973,10 @@ Expected<LambdaCapture> ASTNodeImporter::import(const LambdaCapture &From) {
 }
 
 template <typename T>
-bool ASTNodeImporter::hasSameVisibilityContext(T *Found, T *From) {
+bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(T *Found, T *From) {
+  if (Found->getLinkageInternal() != From->getLinkageInternal())
+    return false;
+
   if (From->hasExternalFormalLinkage())
     return Found->hasExternalFormalLinkage();
   if (Importer.GetFromTU(Found) != From->getTranslationUnitDecl())
@@ -986,8 +989,11 @@ bool ASTNodeImporter::hasSameVisibilityContext(T *Found, T *From) {
 }
 
 template <>
-bool ASTNodeImporter::hasSameVisibilityContext(TypedefNameDecl *Found,
+bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(TypedefNameDecl *Found,
                                                TypedefNameDecl *From) {
+  if (Found->getLinkageInternal() != From->getLinkageInternal())
+    return false;
+
   if (From->isInAnonymousNamespace() && Found->isInAnonymousNamespace())
     return Importer.GetFromTU(Found) == From->getTranslationUnitDecl();
   return From->isInAnonymousNamespace() == Found->isInAnonymousNamespace();
@@ -2392,7 +2398,7 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
       if (!FoundDecl->isInIdentifierNamespace(IDNS))
         continue;
       if (auto *FoundTypedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
-        if (!hasSameVisibilityContext(FoundTypedef, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundTypedef, D))
           continue;
 
         QualType FromUT = D->getUnderlyingType();
@@ -2593,7 +2599,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
-        if (!hasSameVisibilityContext(FoundEnum, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundEnum, D))
           continue;
         if (IsStructuralMatch(D, FoundEnum)) {
           EnumDecl *FoundDef = FoundEnum->getDefinition();
@@ -2715,7 +2721,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           if (!IsStructuralMatch(D, FoundRecord, false))
             continue;
 
-        if (!hasSameVisibilityContext(FoundRecord, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundRecord, D))
           continue;
 
         if (IsStructuralMatch(D, FoundRecord)) {
@@ -3163,7 +3169,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         continue;
 
       if (auto *FoundFunction = dyn_cast<FunctionDecl>(FoundDecl)) {
-        if (!hasSameVisibilityContext(FoundFunction, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundFunction, D))
           continue;
 
         if (IsStructuralMatch(D, FoundFunction)) {
@@ -3785,7 +3791,7 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
         continue;
 
       if (auto *FoundVar = dyn_cast<VarDecl>(FoundDecl)) {
-        if (!hasSameVisibilityContext(FoundVar, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundVar, D))
           continue;
         if (Importer.IsStructurallyEquivalent(D->getType(),
                                               FoundVar->getType())) {
@@ -5191,7 +5197,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       Decl *Found = FoundDecl;
       auto *FoundTemplate = dyn_cast<ClassTemplateDecl>(Found);
       if (FoundTemplate) {
-        if (!hasSameVisibilityContext(FoundTemplate, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundTemplate, D))
           continue;
 
         if (IsStructuralMatch(D, FoundTemplate)) {
@@ -5719,7 +5725,7 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
         continue;
 
       if (auto *FoundTemplate = dyn_cast<FunctionTemplateDecl>(FoundDecl)) {
-        if (!hasSameVisibilityContext(FoundTemplate, D))
+        if (!hasSameVisibilityContextAndLinkage(FoundTemplate, D))
           continue;
         if (IsStructuralMatch(D, FoundTemplate)) {
           FunctionTemplateDecl *TemplateWithDef =
