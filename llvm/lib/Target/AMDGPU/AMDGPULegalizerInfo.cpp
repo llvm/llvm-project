@@ -569,7 +569,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &Exp2Ops = getActionDefinitionsBuilder({G_FEXP2, G_FLOG2, G_FPOW});
+  auto &Exp2Ops = getActionDefinitionsBuilder({G_FEXP2, G_FLOG2});
   if (ST.has16BitInsts())
     Exp2Ops.legalFor({S32, S16});
   else
@@ -577,7 +577,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
   Exp2Ops.scalarize(0);
 
-  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10});
+  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10, G_FPOW});
   if (ST.has16BitInsts())
     ExpOps.customFor({{S32}, {S16}});
   else
@@ -1365,6 +1365,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
+  case TargetOpcode::G_FPOW:
+    return legalizeFPow(MI, B);
   case TargetOpcode::G_FFLOOR:
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
@@ -2095,6 +2097,42 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   auto K = B.buildFConstant(Ty, numbers::log2e);
   auto Mul = B.buildFMul(Ty, Src, K, Flags);
   B.buildFExp2(Dst, Mul, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = B.getMRI()->getType(Dst);
+  B.setInstr(MI);
+  const LLT S16 = LLT::scalar(16);
+  const LLT S32 = LLT::scalar(32);
+
+  if (Ty == S32) {
+    auto Log = B.buildFLog2(S32, Src0, Flags);
+    auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {S32}, false)
+      .addUse(Log.getReg(0))
+      .addUse(Src1)
+      .setMIFlags(Flags);
+    B.buildFExp2(Dst, Mul, Flags);
+  } else if (Ty == S16) {
+    // There's no f16 fmul_legacy, so we need to convert for it.
+    auto Log = B.buildFLog2(S16, Src0, Flags);
+    auto Ext0 = B.buildFPExt(S32, Log, Flags);
+    auto Ext1 = B.buildFPExt(S32, Src1, Flags);
+    auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {S32}, false)
+      .addUse(Ext0.getReg(0))
+      .addUse(Ext1.getReg(0))
+      .setMIFlags(Flags);
+
+    B.buildFExp2(Dst, B.buildFPTrunc(S16, Mul), Flags);
+  } else
+    return false;
+
   MI.eraseFromParent();
   return true;
 }
