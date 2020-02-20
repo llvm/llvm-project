@@ -140,13 +140,21 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   # RHEL7 has ar and ranlib being non-deterministic by default. The D flag forces determinism,
-  # however only GNU version of ar and ranlib (2.27) have this option. 
+  # however only GNU version of ar and ranlib (2.27) have this option.
   # RHEL DTS7 is also affected by this, which uses GNU binutils 2.28
   execute_process(COMMAND ${CMAKE_AR} rD t.a
-                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR} RESULT_VARIABLE AR_RESULT OUTPUT_VARIABLE RANLIB_OUTPUT)
+                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                  RESULT_VARIABLE AR_RESULT
+                  OUTPUT_QUIET
+                  ERROR_QUIET
+                  )
   if(${AR_RESULT} EQUAL 0)
     execute_process(COMMAND ${CMAKE_RANLIB} -D t.a
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} RESULT_VARIABLE RANLIB_RESULT OUTPUT_VARIABLE RANLIB_OUTPUT)
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    RESULT_VARIABLE RANLIB_RESULT
+                    OUTPUT_QUIET
+                    ERROR_QUIET
+                    )
     if(${RANLIB_RESULT} EQUAL 0)
       set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
       set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
