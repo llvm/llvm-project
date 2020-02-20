@@ -247,6 +247,13 @@ public:
 template <typename JITType, typename SetterImpl, typename State>
 class LLJITBuilderSetters {
 public:
+
+  /// Set an ExecutionSession for this instance.
+  SetterImpl &setExecutionSession(std::unique_ptr<ExecutionSession> ES) {
+    impl().ES = std::move(ES);
+    return impl();
+  }
+
   /// Set the JITTargetMachineBuilder for this instance.
   ///
   /// If this method is not called, JITTargetMachineBuilder::detectHost will be
