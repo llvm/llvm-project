@@ -3071,11 +3071,11 @@ multiclass avx512_binop_pat<SDPatternOperator VOpNode, SDPatternOperator OpNode,
   def : Pat<(VOpNode VK2:$src1, VK2:$src2),
         (COPY_TO_REGCLASS (Inst
                            (COPY_TO_REGCLASS VK2:$src1, VK16),
-                           (COPY_TO_REGCLASS VK2:$src2, VK16)), VK1)>;
+                           (COPY_TO_REGCLASS VK2:$src2, VK16)), VK2)>;
   def : Pat<(VOpNode VK4:$src1, VK4:$src2),
         (COPY_TO_REGCLASS (Inst
                            (COPY_TO_REGCLASS VK4:$src1, VK16),
-                           (COPY_TO_REGCLASS VK4:$src2, VK16)), VK1)>;
+                           (COPY_TO_REGCLASS VK4:$src2, VK16)), VK4)>;
 }
 
 defm : avx512_binop_pat<and,   and,  KANDWrr>;
