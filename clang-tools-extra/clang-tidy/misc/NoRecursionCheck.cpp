@@ -204,9 +204,8 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
 
   // First of all, call out every stongly connected function.
   for (CallGraphNode *N : SCC) {
-    Decl *D = N->getDecl();
-    diag(D->getLocation(), "function %0 is within a recursive call chain")
-        << cast<NamedDecl>(D);
+    FunctionDecl *D = N->getDefinition();
+    diag(D->getLocation(), "function %0 is within a recursive call chain") << D;
   }
 
   // Now, SCC only tells us about strongly connected function declarations in
@@ -228,13 +227,13 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
   assert(CyclicCallStack.size() >= 2 && "Cycle requires at least 2 frames");
 
   // Which function we decided to be the entry point that lead to the recursion?
-  Decl *CycleEntryFn = CyclicCallStack.front().Callee->getDecl();
+  FunctionDecl *CycleEntryFn = CyclicCallStack.front().Callee->getDefinition();
   // And now, for ease of understanding, let's print the call sequence that
   // forms the cycle in question.
   diag(CycleEntryFn->getLocation(),
        "example recursive call chain, starting from function %0",
        DiagnosticIDs::Note)
-      << cast<NamedDecl>(CycleEntryFn);
+      << CycleEntryFn;
   for (int CurFrame = 1, NumFrames = CyclicCallStack.size();
        CurFrame != NumFrames; ++CurFrame) {
     CallGraphNode::CallRecord PrevNode = CyclicCallStack[CurFrame - 1];
