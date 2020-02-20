@@ -49,19 +49,19 @@ class LibCxxFunctionTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        self.run_frame_var_check_cache_use("foo2_f", "Lambda in File main.cpp at Line 30")
+        self.run_frame_var_check_cache_use("foo2_f", "Lambda in File main.cpp at Line 22")
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.run_frame_var_check_cache_use("add_num2_f", "Lambda in File main.cpp at Line 21")
+        self.run_frame_var_check_cache_use("add_num2_f", "Lambda in File main.cpp at Line 13")
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 43")
-        self.run_frame_var_check_cache_use("f3", "Lambda in File main.cpp at Line 47", True)
+        self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 35")
+        self.run_frame_var_check_cache_use("f3", "Lambda in File main.cpp at Line 39", True)
         # TODO reenable this case when std::function formatter supports
         # general callable object case.
-        #self.run_frame_var_check_cache_use("f4", "Function in File main.cpp at Line 16")
+        #self.run_frame_var_check_cache_use("f4", "Function in File main.cpp at Line 8")
 
         # These cases won't hit the cache at all but also don't require
         # an expensive lookup.

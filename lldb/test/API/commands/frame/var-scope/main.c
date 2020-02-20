@@ -1,11 +1,3 @@
-//===-- main.c --------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 int foo(int x, int y) {
     int z = 3 + x;
     return z + y; //% self.expect("frame variable -s", substrs=['ARG: (int) x = -3','ARG: (int) y = 0'])

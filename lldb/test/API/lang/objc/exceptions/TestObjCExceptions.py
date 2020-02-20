@@ -142,8 +142,8 @@ class ObjCExceptionsTestCase(TestBase):
                 '(NSException *) exception = ',
                 '"SomeReason"',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:24',
-                'a.out`rethrow', 'at main.mm:35',
+                'a.out`foo', 'at main.mm:16',
+                'a.out`rethrow', 'at main.mm:27',
                 'a.out`main',
             ])
 
@@ -169,8 +169,8 @@ class ObjCExceptionsTestCase(TestBase):
         self.expect('thread exception', substrs=[
                 '(MyCustomException *) exception = ',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:26',
-                'a.out`rethrow', 'at main.mm:35',
+                'a.out`foo', 'at main.mm:18',
+                'a.out`rethrow', 'at main.mm:27',
                 'a.out`main',
             ])
 

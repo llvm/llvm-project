@@ -1,11 +1,3 @@
-//===-- blocked.m --------------------------------------------------*- ObjC -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 // This file is for testing running "print object" in a case where another thread
 // blocks the print object from making progress.  Set a breakpoint on the line in 
 // my_pthread_routine as indicated.  Then switch threads to the main thread, and
