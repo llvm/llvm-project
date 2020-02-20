@@ -4577,13 +4577,34 @@ class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VQDMULL_halves<string suffix, bit size, string cstr=""> {
-  def bh : MVE_VQDMULL<"vqdmullb", suffix, size, 0b0, cstr>;
-  def th : MVE_VQDMULL<"vqdmullt", suffix, size, 0b1, cstr>;
+multiclass MVE_VQDMULL_m<string iname, MVEVectorVTInfo VTI, bit size, bit T,
+                         string cstr> {
+  def "" : MVE_VQDMULL<iname, VTI.Suffix, size, T, cstr>;
+  defvar Inst = !cast<Instruction>(NAME);
+
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated saturating multiply
+    def : Pat<(VTI.DblVec (int_arm_mve_vqdmull (VTI.Vec MQPR:$Qm),
+                                               (VTI.Vec MQPR:$Qn), (i32 T))),
+              (VTI.DblVec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
+    // Predicated saturating multiply
+    def : Pat<(VTI.DblVec (int_arm_mve_vqdmull_predicated
+                                    (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                                    (i32 T), (VTI.DblPred VCCR:$mask),
+                                    (VTI.DblVec MQPR:$inactive))),
+              (VTI.DblVec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                                ARMVCCThen, (VTI.DblPred VCCR:$mask),
+                                (VTI.DblVec MQPR:$inactive)))>;
+  }
 }
 
-defm MVE_VQDMULLs16 : MVE_VQDMULL_halves<"s16", 0b0>;
-defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<"s32", 0b1, "@earlyclobber $Qd">;
+multiclass MVE_VQDMULL_halves<MVEVectorVTInfo VTI, bit size, string cstr=""> {
+  defm bh : MVE_VQDMULL_m<"vqdmullb", VTI, size, 0b0, cstr>;
+  defm th : MVE_VQDMULL_m<"vqdmullt", VTI, size, 0b1, cstr>;
+}
+
+defm MVE_VQDMULLs16 : MVE_VQDMULL_halves<MVE_v8s16, 0b0>;
+defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<MVE_v4s32, 0b1, "@earlyclobber $Qd">;
 
 // end of mve_qDest_qSrc
 
@@ -4766,13 +4787,37 @@ class MVE_VQDMULL_qr<string iname, string suffix, bit size,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VQDMULL_qr_halves<string suffix, bit size, string cstr=""> {
-  def bh : MVE_VQDMULL_qr<"vqdmullb", suffix, size, 0b0, cstr>;
-  def th : MVE_VQDMULL_qr<"vqdmullt", suffix, size, 0b1, cstr>;
+multiclass MVE_VQDMULL_qr_m<string iname, MVEVectorVTInfo VTI, bit size,
+                            bit T, string cstr> {
+  def "" : MVE_VQDMULL_qr<iname, VTI.Suffix, size, T, cstr>;
+  defvar Inst = !cast<Instruction>(NAME);
+
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated saturating multiply
+    def : Pat<(VTI.DblVec (int_arm_mve_vqdmull (VTI.Vec MQPR:$Qm),
+                                               (VTI.Vec (ARMvdup rGPR:$val)),
+                                               (i32 T))),
+              (VTI.DblVec (Inst (VTI.Vec MQPR:$Qm), (i32 rGPR:$val)))>;
+    // Predicated saturating multiply
+    def : Pat<(VTI.DblVec (int_arm_mve_vqdmull_predicated
+                                    (VTI.Vec MQPR:$Qm),
+                                    (VTI.Vec (ARMvdup rGPR:$val)),
+                                    (i32 T),
+                                    (VTI.DblPred VCCR:$mask),
+                                    (VTI.DblVec MQPR:$inactive))),
+              (VTI.DblVec (Inst (VTI.Vec MQPR:$Qm), (i32 rGPR:$val),
+                             ARMVCCThen, (VTI.DblPred VCCR:$mask),
+                             (VTI.DblVec MQPR:$inactive)))>;
+  }
 }
 
-defm MVE_VQDMULL_qr_s16 : MVE_VQDMULL_qr_halves<"s16", 0b0>;
-defm MVE_VQDMULL_qr_s32 : MVE_VQDMULL_qr_halves<"s32", 0b1, "@earlyclobber $Qd">;
+multiclass MVE_VQDMULL_qr_halves<MVEVectorVTInfo VTI, bit size, string cstr=""> {
+  defm bh : MVE_VQDMULL_qr_m<"vqdmullb", VTI, size, 0b0, cstr>;
+  defm th : MVE_VQDMULL_qr_m<"vqdmullt", VTI, size, 0b1, cstr>;
+}
+
+defm MVE_VQDMULL_qr_s16 : MVE_VQDMULL_qr_halves<MVE_v8s16, 0b0>;
+defm MVE_VQDMULL_qr_s32 : MVE_VQDMULL_qr_halves<MVE_v4s32, 0b1, "@earlyclobber $Qd">;
 
 class MVE_VxADDSUB_qr<string iname, string suffix,
                       bit bit_28, bits<2> bits_21_20, bit subtract,
