@@ -461,11 +461,26 @@ public:
   void validateInstrOrdering() const;
 
 private:
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__ibmxl__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+  BEGIN_TWO_BYTE_PACK()
   /// Bitfield to help interpret the bits in Value::SubclassData.
   struct BasicBlockBits {
     unsigned short BlockAddressRefCount : 15;
     unsigned short InstrOrderValid : 1;
   };
+  END_TWO_BYTE_PACK()
+
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
 
   /// Safely reinterpret the subclass data bits to a more useful form.
   BasicBlockBits getBasicBlockBits() const {
