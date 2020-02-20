@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t -- -- -fexceptions
 // FIXME: Fix the checker to work in C++2a mode.
 
 struct S {
