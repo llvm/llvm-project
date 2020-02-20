@@ -26,11 +26,9 @@ add_llvm_library(MLIRAnalysis
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
   )
 add_dependencies(MLIRAnalysis
-  MLIRAffineOps
   MLIRCallOpInterfacesIncGen
   MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
-  MLIRLoopOps
   )
 
 target_link_libraries(MLIRAnalysis
@@ -50,11 +48,9 @@ add_llvm_library(MLIRLoopAnalysis
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
   )
 add_dependencies(MLIRLoopAnalysis
-  MLIRAffineOps
   MLIRCallOpInterfacesIncGen
   MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
-  MLIRLoopOps
   )
 
 target_link_libraries(MLIRLoopAnalysis
