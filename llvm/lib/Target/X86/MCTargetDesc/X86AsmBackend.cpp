@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -811,6 +812,7 @@ class DarwinX86AsmBackend : public X86AsmBackend {
   enum { CU_NUM_SAVED_REGS = 6 };
 
   mutable unsigned SavedRegs[CU_NUM_SAVED_REGS];
+  Triple TT;
   bool Is64Bit;
 
   unsigned OffsetSize;                   ///< Offset of a "push" instruction.
@@ -838,10 +840,142 @@ protected:
     return 1;
   }
 
+private:
+  /// Get the compact unwind number for a given register. The number
+  /// corresponds to the enum lists in compact_unwind_encoding.h.
+  int getCompactUnwindRegNum(unsigned Reg) const {
+    static const MCPhysReg CU32BitRegs[7] = {
+      X86::EBX, X86::ECX, X86::EDX, X86::EDI, X86::ESI, X86::EBP, 0
+    };
+    static const MCPhysReg CU64BitRegs[] = {
+      X86::RBX, X86::R12, X86::R13, X86::R14, X86::R15, X86::RBP, 0
+    };
+    const MCPhysReg *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
+    for (int Idx = 1; *CURegs; ++CURegs, ++Idx)
+      if (*CURegs == Reg)
+        return Idx;
+
+    return -1;
+  }
+
+  /// Return the registers encoded for a compact encoding with a frame
+  /// pointer.
+  uint32_t encodeCompactUnwindRegistersWithFrame() const {
+    // Encode the registers in the order they were saved --- 3-bits per
+    // register. The list of saved registers is assumed to be in reverse
+    // order. The registers are numbered from 1 to CU_NUM_SAVED_REGS.
+    uint32_t RegEnc = 0;
+    for (int i = 0, Idx = 0; i != CU_NUM_SAVED_REGS; ++i) {
+      unsigned Reg = SavedRegs[i];
+      if (Reg == 0) break;
+
+      int CURegNum = getCompactUnwindRegNum(Reg);
+      if (CURegNum == -1) return ~0U;
+
+      // Encode the 3-bit register number in order, skipping over 3-bits for
+      // each register.
+      RegEnc |= (CURegNum & 0x7) << (Idx++ * 3);
+    }
+
+    assert((RegEnc & 0x3FFFF) == RegEnc &&
+           "Invalid compact register encoding!");
+    return RegEnc;
+  }
+
+  /// Create the permutation encoding used with frameless stacks. It is
+  /// passed the number of registers to be saved and an array of the registers
+  /// saved.
+  uint32_t encodeCompactUnwindRegistersWithoutFrame(unsigned RegCount) const {
+    // The saved registers are numbered from 1 to 6. In order to encode the
+    // order in which they were saved, we re-number them according to their
+    // place in the register order. The re-numbering is relative to the last
+    // re-numbered register. E.g., if we have registers {6, 2, 4, 5} saved in
+    // that order:
+    //
+    //    Orig  Re-Num
+    //    ----  ------
+    //     6       6
+    //     2       2
+    //     4       3
+    //     5       3
+    //
+    for (unsigned i = 0; i < RegCount; ++i) {
+      int CUReg = getCompactUnwindRegNum(SavedRegs[i]);
+      if (CUReg == -1) return ~0U;
+      SavedRegs[i] = CUReg;
+    }
+
+    // Reverse the list.
+    std::reverse(&SavedRegs[0], &SavedRegs[CU_NUM_SAVED_REGS]);
+
+    uint32_t RenumRegs[CU_NUM_SAVED_REGS];
+    for (unsigned i = CU_NUM_SAVED_REGS - RegCount; i < CU_NUM_SAVED_REGS; ++i){
+      unsigned Countless = 0;
+      for (unsigned j = CU_NUM_SAVED_REGS - RegCount; j < i; ++j)
+        if (SavedRegs[j] < SavedRegs[i])
+          ++Countless;
+
+      RenumRegs[i] = SavedRegs[i] - Countless - 1;
+    }
+
+    // Take the renumbered values and encode them into a 10-bit number.
+    uint32_t permutationEncoding = 0;
+    switch (RegCount) {
+    case 6:
+      permutationEncoding |= 120 * RenumRegs[0] + 24 * RenumRegs[1]
+                             + 6 * RenumRegs[2] +  2 * RenumRegs[3]
+                             +     RenumRegs[4];
+      break;
+    case 5:
+      permutationEncoding |= 120 * RenumRegs[1] + 24 * RenumRegs[2]
+                             + 6 * RenumRegs[3] +  2 * RenumRegs[4]
+                             +     RenumRegs[5];
+      break;
+    case 4:
+      permutationEncoding |=  60 * RenumRegs[2] + 12 * RenumRegs[3]
+                             + 3 * RenumRegs[4] +      RenumRegs[5];
+      break;
+    case 3:
+      permutationEncoding |=  20 * RenumRegs[3] +  4 * RenumRegs[4]
+                             +     RenumRegs[5];
+      break;
+    case 2:
+      permutationEncoding |=   5 * RenumRegs[4] +      RenumRegs[5];
+      break;
+    case 1:
+      permutationEncoding |=       RenumRegs[5];
+      break;
+    }
+
+    assert((permutationEncoding & 0x3FF) == permutationEncoding &&
+           "Invalid compact register encoding!");
+    return permutationEncoding;
+  }
+
+public:
+  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
+                      const MCSubtargetInfo &STI)
+      : X86AsmBackend(T, STI), MRI(MRI), TT(STI.getTargetTriple()),
+        Is64Bit(TT.isArch64Bit()) {
+    memset(SavedRegs, 0, sizeof(SavedRegs));
+    OffsetSize = Is64Bit ? 8 : 4;
+    MoveInstrSize = Is64Bit ? 3 : 2;
+    StackDivide = Is64Bit ? 8 : 4;
+  }
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    uint32_t CPUType =
+        cantFail(object::MachOObjectFile::getCPUTypeFromTriple(TT));
+    uint32_t CPUSubType =
+        cantFail(object::MachOObjectFile::getCPUSubTypeFromTriple(TT));
+    return createX86MachObjectWriter(Is64Bit, CPUType, CPUSubType);
+  }
+
   /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
   uint32_t
-  generateCompactUnwindEncodingImpl(ArrayRef<MCCFIInstruction> Instrs) const {
+  generateCompactUnwindEncoding(ArrayRef<MCCFIInstruction> Instrs) const override {
     if (Instrs.empty()) return 0;
 
     // Reset the saved registers.
@@ -991,168 +1125,6 @@ protected:
 
     return CompactUnwindEncoding;
   }
-
-private:
-  /// Get the compact unwind number for a given register. The number
-  /// corresponds to the enum lists in compact_unwind_encoding.h.
-  int getCompactUnwindRegNum(unsigned Reg) const {
-    static const MCPhysReg CU32BitRegs[7] = {
-      X86::EBX, X86::ECX, X86::EDX, X86::EDI, X86::ESI, X86::EBP, 0
-    };
-    static const MCPhysReg CU64BitRegs[] = {
-      X86::RBX, X86::R12, X86::R13, X86::R14, X86::R15, X86::RBP, 0
-    };
-    const MCPhysReg *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
-    for (int Idx = 1; *CURegs; ++CURegs, ++Idx)
-      if (*CURegs == Reg)
-        return Idx;
-
-    return -1;
-  }
-
-  /// Return the registers encoded for a compact encoding with a frame
-  /// pointer.
-  uint32_t encodeCompactUnwindRegistersWithFrame() const {
-    // Encode the registers in the order they were saved --- 3-bits per
-    // register. The list of saved registers is assumed to be in reverse
-    // order. The registers are numbered from 1 to CU_NUM_SAVED_REGS.
-    uint32_t RegEnc = 0;
-    for (int i = 0, Idx = 0; i != CU_NUM_SAVED_REGS; ++i) {
-      unsigned Reg = SavedRegs[i];
-      if (Reg == 0) break;
-
-      int CURegNum = getCompactUnwindRegNum(Reg);
-      if (CURegNum == -1) return ~0U;
-
-      // Encode the 3-bit register number in order, skipping over 3-bits for
-      // each register.
-      RegEnc |= (CURegNum & 0x7) << (Idx++ * 3);
-    }
-
-    assert((RegEnc & 0x3FFFF) == RegEnc &&
-           "Invalid compact register encoding!");
-    return RegEnc;
-  }
-
-  /// Create the permutation encoding used with frameless stacks. It is
-  /// passed the number of registers to be saved and an array of the registers
-  /// saved.
-  uint32_t encodeCompactUnwindRegistersWithoutFrame(unsigned RegCount) const {
-    // The saved registers are numbered from 1 to 6. In order to encode the
-    // order in which they were saved, we re-number them according to their
-    // place in the register order. The re-numbering is relative to the last
-    // re-numbered register. E.g., if we have registers {6, 2, 4, 5} saved in
-    // that order:
-    //
-    //    Orig  Re-Num
-    //    ----  ------
-    //     6       6
-    //     2       2
-    //     4       3
-    //     5       3
-    //
-    for (unsigned i = 0; i < RegCount; ++i) {
-      int CUReg = getCompactUnwindRegNum(SavedRegs[i]);
-      if (CUReg == -1) return ~0U;
-      SavedRegs[i] = CUReg;
-    }
-
-    // Reverse the list.
-    std::reverse(&SavedRegs[0], &SavedRegs[CU_NUM_SAVED_REGS]);
-
-    uint32_t RenumRegs[CU_NUM_SAVED_REGS];
-    for (unsigned i = CU_NUM_SAVED_REGS - RegCount; i < CU_NUM_SAVED_REGS; ++i){
-      unsigned Countless = 0;
-      for (unsigned j = CU_NUM_SAVED_REGS - RegCount; j < i; ++j)
-        if (SavedRegs[j] < SavedRegs[i])
-          ++Countless;
-
-      RenumRegs[i] = SavedRegs[i] - Countless - 1;
-    }
-
-    // Take the renumbered values and encode them into a 10-bit number.
-    uint32_t permutationEncoding = 0;
-    switch (RegCount) {
-    case 6:
-      permutationEncoding |= 120 * RenumRegs[0] + 24 * RenumRegs[1]
-                             + 6 * RenumRegs[2] +  2 * RenumRegs[3]
-                             +     RenumRegs[4];
-      break;
-    case 5:
-      permutationEncoding |= 120 * RenumRegs[1] + 24 * RenumRegs[2]
-                             + 6 * RenumRegs[3] +  2 * RenumRegs[4]
-                             +     RenumRegs[5];
-      break;
-    case 4:
-      permutationEncoding |=  60 * RenumRegs[2] + 12 * RenumRegs[3]
-                             + 3 * RenumRegs[4] +      RenumRegs[5];
-      break;
-    case 3:
-      permutationEncoding |=  20 * RenumRegs[3] +  4 * RenumRegs[4]
-                             +     RenumRegs[5];
-      break;
-    case 2:
-      permutationEncoding |=   5 * RenumRegs[4] +      RenumRegs[5];
-      break;
-    case 1:
-      permutationEncoding |=       RenumRegs[5];
-      break;
-    }
-
-    assert((permutationEncoding & 0x3FF) == permutationEncoding &&
-           "Invalid compact register encoding!");
-    return permutationEncoding;
-  }
-
-public:
-  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                      const MCSubtargetInfo &STI, bool Is64Bit)
-    : X86AsmBackend(T, STI), MRI(MRI), Is64Bit(Is64Bit) {
-    memset(SavedRegs, 0, sizeof(SavedRegs));
-    OffsetSize = Is64Bit ? 8 : 4;
-    MoveInstrSize = Is64Bit ? 3 : 2;
-    StackDivide = Is64Bit ? 8 : 4;
-  }
-};
-
-class DarwinX86_32AsmBackend : public DarwinX86AsmBackend {
-public:
-  DarwinX86_32AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         const MCSubtargetInfo &STI)
-      : DarwinX86AsmBackend(T, MRI, STI, false) {}
-
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86MachObjectWriter(/*Is64Bit=*/false,
-                                     MachO::CPU_TYPE_I386,
-                                     MachO::CPU_SUBTYPE_I386_ALL);
-  }
-
-  /// Generate the compact unwind encoding for the CFI instructions.
-  uint32_t generateCompactUnwindEncoding(
-                             ArrayRef<MCCFIInstruction> Instrs) const override {
-    return generateCompactUnwindEncodingImpl(Instrs);
-  }
-};
-
-class DarwinX86_64AsmBackend : public DarwinX86AsmBackend {
-  const MachO::CPUSubTypeX86 Subtype;
-public:
-  DarwinX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         const MCSubtargetInfo &STI, MachO::CPUSubTypeX86 st)
-      : DarwinX86AsmBackend(T, MRI, STI, true), Subtype(st) {}
-
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86MachObjectWriter(/*Is64Bit=*/true, MachO::CPU_TYPE_X86_64,
-                                     Subtype);
-  }
-
-  /// Generate the compact unwind encoding for the CFI instructions.
-  uint32_t generateCompactUnwindEncoding(
-                             ArrayRef<MCCFIInstruction> Instrs) const override {
-    return generateCompactUnwindEncodingImpl(Instrs);
-  }
 };
 
 } // end anonymous namespace
@@ -1163,7 +1135,7 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinX86_32AsmBackend(T, MRI, STI);
+    return new DarwinX86AsmBackend(T, MRI, STI);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, false, STI);
@@ -1181,13 +1153,8 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-  if (TheTriple.isOSBinFormatMachO()) {
-    MachO::CPUSubTypeX86 CS =
-        StringSwitch<MachO::CPUSubTypeX86>(TheTriple.getArchName())
-            .Case("x86_64h", MachO::CPU_SUBTYPE_X86_64_H)
-            .Default(MachO::CPU_SUBTYPE_X86_64_ALL);
-    return new DarwinX86_64AsmBackend(T, MRI, STI, CS);
-  }
+  if (TheTriple.isOSBinFormatMachO())
+    return new DarwinX86AsmBackend(T, MRI, STI);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, true, STI);
