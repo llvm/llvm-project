@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
@@ -34,7 +33,6 @@ namespace {
 class AArch64AsmBackend : public MCAsmBackend {
   static const unsigned PCRelFlagVal =
       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
-protected:
   Triple TheTriple;
 
 public:
@@ -546,6 +544,7 @@ enum CompactUnwindEncodings {
 // FIXME: This should be in a separate file.
 class DarwinAArch64AsmBackend : public AArch64AsmBackend {
   const MCRegisterInfo &MRI;
+  bool IsILP32;
 
   /// Encode compact unwind stack adjustment for frameless functions.
   /// See UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK in compact_unwind_encoding.h.
@@ -556,17 +555,18 @@ class DarwinAArch64AsmBackend : public AArch64AsmBackend {
 
 public:
   DarwinAArch64AsmBackend(const Target &T, const Triple &TT,
-                          const MCRegisterInfo &MRI)
-      : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI) {}
+                          const MCRegisterInfo &MRI, bool IsILP32)
+      : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI),
+        IsILP32(IsILP32) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    uint32_t CPUType =
-        cantFail(object::MachOObjectFile::getCPUTypeFromTriple(TheTriple));
-    uint32_t CPUSubType =
-        cantFail(object::MachOObjectFile::getCPUSubTypeFromTriple(TheTriple));
-    return createAArch64MachObjectWriter(CPUType, CPUSubType,
-                                         TheTriple.isArch32Bit());
+    if (IsILP32)
+      return createAArch64MachObjectWriter(
+          MachO::CPU_TYPE_ARM64_32, MachO::CPU_SUBTYPE_ARM64_32_V8, true);
+    else
+      return createAArch64MachObjectWriter(MachO::CPU_TYPE_ARM64,
+                                           MachO::CPU_SUBTYPE_ARM64_ALL, false);
   }
 
   /// Generate the compact unwind encoding from the CFI directives.
@@ -749,7 +749,8 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
                                               const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
   if (TheTriple.isOSBinFormatMachO()) {
-    return new DarwinAArch64AsmBackend(T, TheTriple, MRI);
+    const bool IsILP32 = TheTriple.isArch32Bit();
+    return new DarwinAArch64AsmBackend(T, TheTriple, MRI, IsILP32);
   }
 
   if (TheTriple.isOSBinFormatCOFF())

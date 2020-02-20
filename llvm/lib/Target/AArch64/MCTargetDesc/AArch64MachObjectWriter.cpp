@@ -407,5 +407,5 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
                                     bool IsILP32) {
   return std::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype,
-                                                   IsILP32);
+                                                    IsILP32);
 }

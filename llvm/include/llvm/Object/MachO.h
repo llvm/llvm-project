@@ -571,10 +571,6 @@ public:
   static Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
                               const char **McpuDefault = nullptr,
                               const char **ArchFlag = nullptr);
-
-  static Expected<uint32_t> getCPUTypeFromTriple(const Triple &T);
-  static Expected<uint32_t> getCPUSubTypeFromTriple(const Triple &T);
-
   static bool isValidArch(StringRef ArchFlag);
   static ArrayRef<StringRef> getValidArchs();
   static Triple getHostArch();
