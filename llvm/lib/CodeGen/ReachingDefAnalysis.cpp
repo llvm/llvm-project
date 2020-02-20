@@ -136,30 +136,9 @@ void ReachingDefAnalysis::processBasicBlock(
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   TRI = MF->getSubtarget().getRegisterInfo();
-
-  LiveRegs.clear();
-  NumRegUnits = TRI->getNumRegUnits();
-
-  MBBReachingDefs.resize(mf.getNumBlockIDs());
-
   LLVM_DEBUG(dbgs() << "********** REACHING DEFINITION ANALYSIS **********\n");
-
-  // Initialize the MBBOutRegsInfos
-  MBBOutRegsInfos.resize(mf.getNumBlockIDs());
-
-  // Traverse the basic blocks.
-  LoopTraversal Traversal;
-  LoopTraversal::TraversalOrder TraversedMBBOrder = Traversal.traverse(mf);
-  for (LoopTraversal::TraversedMBBInfo TraversedMBB : TraversedMBBOrder) {
-    processBasicBlock(TraversedMBB);
-  }
-
-  // Sorting all reaching defs found for a ceartin reg unit in a given BB.
-  for (MBBDefsInfo &MBBDefs : MBBReachingDefs) {
-    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs)
-      llvm::sort(RegUnitDefs);
-  }
-
+  init();
+  traverse();
   return false;
 }
 
@@ -168,6 +147,33 @@ void ReachingDefAnalysis::releaseMemory() {
   MBBOutRegsInfos.clear();
   MBBReachingDefs.clear();
   InstIds.clear();
+  LiveRegs.clear();
+}
+
+void ReachingDefAnalysis::reset() {
+  releaseMemory();
+  init();
+  traverse();
+}
+
+void ReachingDefAnalysis::init() {
+  NumRegUnits = TRI->getNumRegUnits();
+  MBBReachingDefs.resize(MF->getNumBlockIDs());
+  // Initialize the MBBOutRegsInfos
+  MBBOutRegsInfos.resize(MF->getNumBlockIDs());
+  LoopTraversal Traversal;
+  TraversedMBBOrder = Traversal.traverse(*MF);
+}
+
+void ReachingDefAnalysis::traverse() {
+  // Traverse the basic blocks.
+  for (LoopTraversal::TraversedMBBInfo TraversedMBB : TraversedMBBOrder)
+    processBasicBlock(TraversedMBB);
+  // Sorting all reaching defs found for a ceartin reg unit in a given BB.
+  for (MBBDefsInfo &MBBDefs : MBBReachingDefs) {
+    for (MBBRegUnitDefs &RegUnitDefs : MBBDefs)
+      llvm::sort(RegUnitDefs);
+  }
 }
 
 int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) const {
