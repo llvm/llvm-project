@@ -17,116 +17,48 @@ define void @pr34653() {
 ; CHECK-NEXT:    callq test
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm1
-; CHECK-NEXT:    vmovaps %xmm1, %xmm2
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm2
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm3
-; CHECK-NEXT:    vmovaps %xmm3, %xmm4
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm4
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm5
-; CHECK-NEXT:    vmovaps %xmm5, %xmm6
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm6
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm7
-; CHECK-NEXT:    vmovaps %xmm7, %xmm8
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm8
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm9
-; CHECK-NEXT:    vmovaps %xmm9, %xmm10
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm10
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm11
-; CHECK-NEXT:    vmovaps %xmm11, %xmm12
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm12
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm13
-; CHECK-NEXT:    vmovaps %xmm13, %xmm14
+; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm14
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm15
-; CHECK-NEXT:    vmovaps %zmm15, %zmm16
 ; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm17
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm18
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm19
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm20
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm21
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm22
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovupd {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    vmovaps %zmm0, %zmm23
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm5[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm7[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm9 = xmm9[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm11 = xmm11[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm13 = xmm13[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm15 = xmm15[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm16 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm17 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm18 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm19 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm20 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm21 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm22 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm23 = mem[0],zero
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm24 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm25 # 8-byte Reload
-; CHECK-NEXT:    # xmm25 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm26 # 8-byte Reload
-; CHECK-NEXT:    # xmm26 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm27 # 8-byte Reload
-; CHECK-NEXT:    # xmm27 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm28 # 8-byte Reload
-; CHECK-NEXT:    # xmm28 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm29 # 8-byte Reload
-; CHECK-NEXT:    # xmm29 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm30 # 8-byte Reload
-; CHECK-NEXT:    # xmm30 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm31 # 8-byte Reload
-; CHECK-NEXT:    # xmm31 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm25 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm26 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm27 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm28 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm29 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm30 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm31 = mem[0],zero
 ; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
@@ -142,7 +74,6 @@ define void @pr34653() {
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
   %v = call fastcc <38 x double> @test()

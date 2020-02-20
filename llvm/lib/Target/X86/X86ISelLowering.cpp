@@ -12867,6 +12867,8 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Go up the chain of (vector) values to find a scalar load that we can
   // combine with the broadcast.
+  // TODO: Combine this logic with findEltLoadSrc() used by
+  //       EltsFromConsecutiveLoads().
   int BitOffset = BroadcastIdx * NumEltBits;
   SDValue V = V1;
   for (;;) {
@@ -12880,6 +12882,19 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
       int OpIdx = BitOffset / OpBitWidth;
       V = V.getOperand(OpIdx);
       BitOffset %= OpBitWidth;
+      continue;
+    }
+    case ISD::EXTRACT_SUBVECTOR: {
+      auto *ConstantIdx = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      if (!ConstantIdx)
+        break;
+
+      // The extraction index adds to the existing offset.
+      unsigned EltBitWidth = V.getScalarValueSizeInBits();
+      unsigned Idx = ConstantIdx->getZExtValue();
+      unsigned BeginOffset = Idx * EltBitWidth;
+      BitOffset += BeginOffset;
+      V = V.getOperand(0);
       continue;
     }
     case ISD::INSERT_SUBVECTOR: {
