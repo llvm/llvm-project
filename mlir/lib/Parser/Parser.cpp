@@ -1808,6 +1808,24 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   return builder.getIntegerAttr(type, isNegative ? -apInt : apInt);
 }
 
+/// Parse elements values stored within a hex etring. On success, the values are
+/// stored into 'result'.
+static ParseResult parseElementAttrHexValues(Parser &parser, Token tok,
+                                             std::string &result) {
+  std::string val = tok.getStringValue();
+  if (val.size() < 2 || val[0] != '0' || val[1] != 'x')
+    return parser.emitError(tok.getLoc(),
+                            "elements hex string should start with '0x'");
+
+  StringRef hexValues = StringRef(val).drop_front(2);
+  if (!llvm::all_of(hexValues, llvm::isHexDigit))
+    return parser.emitError(tok.getLoc(),
+                            "elements hex string only contains hex digits");
+
+  result = llvm::fromHex(hexValues);
+  return success();
+}
+
 /// Parse an opaque elements attribute.
 Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   consumeToken(Token::kw_opaque);
@@ -1825,31 +1843,23 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   if (!dialect)
     return (emitError("no registered dialect with namespace '" + name + "'"),
             nullptr);
-
   consumeToken(Token::string);
+
   if (parseToken(Token::comma, "expected ','"))
     return nullptr;
 
-  if (getToken().getKind() != Token::string)
-    return (emitError("opaque string should start with '0x'"), nullptr);
-
-  auto val = getToken().getStringValue();
-  if (val.size() < 2 || val[0] != '0' || val[1] != 'x')
-    return (emitError("opaque string should start with '0x'"), nullptr);
-
-  val = val.substr(2);
-  if (!llvm::all_of(val, llvm::isHexDigit))
-    return (emitError("opaque string only contains hex digits"), nullptr);
-
-  consumeToken(Token::string);
-  if (parseToken(Token::greater, "expected '>'"))
+  Token hexTok = getToken();
+  if (parseToken(Token::string, "elements hex string should start with '0x'") ||
+      parseToken(Token::greater, "expected '>'"))
     return nullptr;
-
   auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
 
-  return OpaqueElementsAttr::get(dialect, type, llvm::fromHex(val));
+  std::string data;
+  if (parseElementAttrHexValues(*this, hexTok, data))
+    return nullptr;
+  return OpaqueElementsAttr::get(dialect, type, data);
 }
 
 namespace {
@@ -1857,11 +1867,9 @@ class TensorLiteralParser {
 public:
   TensorLiteralParser(Parser &p) : p(p) {}
 
-  ParseResult parse() {
-    if (p.getToken().is(Token::l_square))
-      return parseList(shape);
-    return parseElement();
-  }
+  /// Parse the elements of a tensor literal. If 'allowHex' is true, the parser
+  /// may also parse a tensor literal that is store as a hex string.
+  ParseResult parse(bool allowHex);
 
   /// Build a dense attribute instance with the parsed elements and the given
   /// shaped type.
@@ -1893,6 +1901,9 @@ private:
   DenseElementsAttr getFloatAttr(llvm::SMLoc loc, ShapedType type,
                                  FloatType eltTy);
 
+  /// Build a Dense attribute with hex data for the given type.
+  DenseElementsAttr getHexAttr(llvm::SMLoc loc, ShapedType type);
+
   /// Parse a single element, returning failure if it isn't a valid element
   /// literal. For example:
   /// parseElement(1) -> Success, 1
@@ -1907,6 +1918,9 @@ private:
   ///   parseList([[1, [2, 3]], [4, [5]]]) -> Failure
   ParseResult parseList(SmallVectorImpl<int64_t> &dims);
 
+  /// Parse a literal that was printed as a hex string.
+  ParseResult parseHexElements();
+
   Parser &p;
 
   /// The shape inferred from the parsed elements.
@@ -1917,13 +1931,35 @@ private:
 
   /// A flag that indicates the type of elements that have been parsed.
   Optional<ElementKind> knownEltKind;
+
+  /// Storage used when parsing elements that were stored as hex values.
+  Optional<Token> hexStorage;
 };
 } // namespace
+
+/// Parse the elements of a tensor literal. If 'allowHex' is true, the parser
+/// may also parse a tensor literal that is store as a hex string.
+ParseResult TensorLiteralParser::parse(bool allowHex) {
+  // If hex is allowed, check for a string literal.
+  if (allowHex && p.getToken().is(Token::string)) {
+    hexStorage = p.getToken();
+    p.consumeToken(Token::string);
+    return success();
+  }
+  // Otherwise, parse a list or an individual element.
+  if (p.getToken().is(Token::l_square))
+    return parseList(shape);
+  return parseElement();
+}
 
 /// Build a dense attribute instance with the parsed elements and the given
 /// shaped type.
 DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
                                                ShapedType type) {
+  // Check to see if we parsed the literal from a hex string.
+  if (hexStorage.hasValue())
+    return getHexAttr(loc, type);
+
   // Check that the parsed storage size has the same number of elements to the
   // type, or is a known splat.
   if (!shape.empty() && getShape() != type.getShape()) {
@@ -2045,6 +2081,33 @@ DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
   return DenseElementsAttr::get(type, floatValues);
 }
 
+/// Build a Dense attribute with hex data for the given type.
+DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
+                                                  ShapedType type) {
+  Type elementType = type.getElementType();
+  if (!elementType.isIntOrFloat()) {
+    p.emitError(loc) << "expected floating-point or integer element type, got "
+                     << elementType;
+    return nullptr;
+  }
+
+  std::string data;
+  if (parseElementAttrHexValues(p, hexStorage.getValue(), data))
+    return nullptr;
+
+  // Check that the size of the hex data correpsonds to the size of the type, or
+  // a splat of the type.
+  if (static_cast<int64_t>(data.size() * CHAR_BIT) !=
+      (type.getNumElements() * elementType.getIntOrFloatBitWidth())) {
+    p.emitError(loc) << "elements hex data size is invalid for provided type: "
+                     << type;
+    return nullptr;
+  }
+
+  return DenseElementsAttr::getFromRawBuffer(
+      type, ArrayRef<char>(data.data(), data.size()), /*isSplatBuffer=*/false);
+}
+
 ParseResult TensorLiteralParser::parseElement() {
   switch (p.getToken().getKind()) {
   // Parse a boolean element.
@@ -2125,7 +2188,7 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
 
   // Parse the literal data.
   TensorLiteralParser literalParser(*this);
-  if (literalParser.parse())
+  if (literalParser.parse(/*allowHex=*/true))
     return nullptr;
 
   if (parseToken(Token::greater, "expected '>'"))
@@ -2170,19 +2233,20 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
 
-  /// Parse indices
+  /// Parse the indices. We don't allow hex values here as we may need to use
+  /// the inferred shape.
   auto indicesLoc = getToken().getLoc();
   TensorLiteralParser indiceParser(*this);
-  if (indiceParser.parse())
+  if (indiceParser.parse(/*allowHex=*/false))
     return nullptr;
 
   if (parseToken(Token::comma, "expected ','"))
     return nullptr;
 
-  /// Parse values.
+  /// Parse the values.
   auto valuesLoc = getToken().getLoc();
   TensorLiteralParser valuesParser(*this);
-  if (valuesParser.parse())
+  if (valuesParser.parse(/*allowHex=*/true))
     return nullptr;
 
   if (parseToken(Token::greater, "expected '>'"))
