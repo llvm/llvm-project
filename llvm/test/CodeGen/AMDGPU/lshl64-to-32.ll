@@ -125,7 +125,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ; GCN-NEXT:    v_mov_b32_e32 v4, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v0, 0x800000, v1
-; GCN-NEXT:    v_mul_i32_i24_e32 v0, 0xfffff9, v0
+; GCN-NEXT:    v_mul_i32_i24_e32 v0, -7, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[1:2], v[3:4], s[0:3], 0 addr64
 ; GCN-NEXT:    s_endpgm
