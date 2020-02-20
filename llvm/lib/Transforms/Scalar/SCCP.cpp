@@ -1501,6 +1501,13 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
           if (TrackedRetVals.count(F))
             continue;
 
+      if (isa<LoadInst>(I)) {
+        // A load here means one of two things: a load of undef from a global,
+        // a load from an unknown pointer.  Either way, having it return undef
+        // is okay.
+        continue;
+      }
+
       markOverdefined(&I);
       return true;
     }
