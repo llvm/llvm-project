@@ -1034,9 +1034,8 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     TermMI->setDesc(TII->get(AMDGPU::S_AND_B64_term));
     break;
   case AMDGPU::SI_DEMOTE_I1:
-    TermMI->setDesc(TII->get(AMDGPU::SI_DEMOTE_I1_TERMINATOR));
-    break;
-  case AMDGPU::SI_DEMOTE_I1_TERMINATOR:
+    // We come here for demotes in Exact mode, which we can just turn into kills.
+    TermMI->setDesc(TII->get(AMDGPU::SI_KILL_I1_TERMINATOR));
     break;
   default:
     if (BB->getFirstTerminator() == BB->end()) {

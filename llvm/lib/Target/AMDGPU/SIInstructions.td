@@ -381,11 +381,12 @@ def SI_WQM_HELPER : PseudoInstSI <
 }
 
 let Defs = [EXEC] in {
+// Demote: Turn a pixel shader thread into a helper lane.
+// Threads may exit entirely after demote if their quad has been reduced to
+// contain only helper lanes. (TODO: implement this)
 def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)> {
 }
-def SI_DEMOTE_I1_TERMINATOR : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)> {
-  let isTerminator = 1;
-}
+
 } // End Defs = [EXEC]
 
 } // End Uses = [EXEC]
