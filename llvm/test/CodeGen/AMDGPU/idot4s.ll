@@ -927,35 +927,31 @@ define amdgpu_kernel void @idot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
-; GFX8-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_load_dword s3, s[6:7], 0x0
+; GFX8-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_ushort v2, v[0:1]
 ; GFX8-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_bfe_i32 s6, s3, 0x80000
-; GFX8-NEXT:    s_lshr_b32 s4, s3, 16
-; GFX8-NEXT:    v_ashrrev_i16_e64 v3, 8, s3
-; GFX8-NEXT:    s_bfe_i32 s3, s4, 0x80000
-; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX8-NEXT:    s_bfe_i32 s5, s0, 0x80000
-; GFX8-NEXT:    v_ashrrev_i16_e64 v4, 8, s0
-; GFX8-NEXT:    s_bfe_i32 s0, s1, 0x80000
-; GFX8-NEXT:    v_ashrrev_i16_e64 v6, 8, s1
-; GFX8-NEXT:    s_and_b32 s1, s2, s6
-; GFX8-NEXT:    v_ashrrev_i16_e64 v5, 8, s4
-; GFX8-NEXT:    s_and_b32 s4, s2, s5
-; GFX8-NEXT:    v_mov_b32_e32 v7, s1
-; GFX8-NEXT:    s_and_b32 s3, s2, s3
-; GFX8-NEXT:    s_and_b32 s0, s2, s0
+; GFX8-NEXT:    s_sext_i32_i8 s1, s2
+; GFX8-NEXT:    v_lshrrev_b16_e64 v3, 8, s2
+; GFX8-NEXT:    v_mov_b32_e32 v4, s1
+; GFX8-NEXT:    s_bfe_i32 s3, s2, 0x80010
+; GFX8-NEXT:    v_lshrrev_b16_e64 v5, 8, s0
+; GFX8-NEXT:    s_sext_i32_i8 s1, s0
+; GFX8-NEXT:    v_bfe_i32 v5, v5, 0, 8
+; GFX8-NEXT:    v_bfe_i32 v3, v3, 0, 8
+; GFX8-NEXT:    s_bfe_i32 s4, s0, 0x80010
+; GFX8-NEXT:    s_ashr_i32 s2, s2, 24
+; GFX8-NEXT:    v_mov_b32_e32 v6, s3
+; GFX8-NEXT:    s_ashr_i32 s0, s0, 24
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mad_u32_u24 v2, s4, v7, v2
-; GFX8-NEXT:    v_mad_u32_u24 v2, v4, v3, v2
-; GFX8-NEXT:    v_mov_b32_e32 v3, s3
-; GFX8-NEXT:    v_mad_u32_u24 v2, s0, v3, v2
-; GFX8-NEXT:    v_mad_u32_u24 v2, v6, v5, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s1, v4, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, v5, v3, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s4, v6, v2
+; GFX8-NEXT:    v_mov_b32_e32 v3, s2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s0, v3, v2
 ; GFX8-NEXT:    flat_store_short v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
