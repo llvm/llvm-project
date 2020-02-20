@@ -222,7 +222,7 @@ public:
 
   DWARFDebugAbbrev *DebugAbbrev();
 
-  DWARFDebugInfo *DebugInfo();
+  DWARFDebugInfo &DebugInfo();
 
   DWARFDebugRanges *GetDebugRanges();
 
