@@ -473,7 +473,7 @@ option(LLVM_USE_SPLIT_DWARF
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   # TODO: support other platforms and toolchains.
   option(LLVM_BUILD_32_BITS "Build 32 bits executables and libraries." OFF)
 endif()
