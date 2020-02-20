@@ -664,9 +664,18 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   return getRaw(type, intValues);
 }
 
-// Constructs a dense elements attribute from an array of raw APInt values.
-// Each APInt value is expected to have the same bitwidth as the element type
-// of 'type'.
+/// Construct a dense elements attribute from a raw buffer representing the
+/// data for this attribute. Users should generally not use this methods as
+/// the expected buffer format may not be a form the user expects.
+DenseElementsAttr DenseElementsAttr::getFromRawBuffer(ShapedType type,
+                                                      ArrayRef<char> rawBuffer,
+                                                      bool isSplatBuffer) {
+  return getRaw(type, rawBuffer, isSplatBuffer);
+}
+
+/// Constructs a dense elements attribute from an array of raw APInt values.
+/// Each APInt value is expected to have the same bitwidth as the element type
+/// of 'type'.
 DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
                                             ArrayRef<APInt> values) {
   assert(hasSameElementsOrSplat(type, values));
@@ -725,11 +734,6 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
 bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize,
                                           bool isInt) const {
   return ::isValidIntOrFloat(getType(), dataEltSize, isInt);
-}
-
-/// Return the raw storage data held by this attribute.
-ArrayRef<char> DenseElementsAttr::getRawData() const {
-  return static_cast<ImplType *>(impl)->data;
 }
 
 /// Returns if this attribute corresponds to a splat, i.e. if all element
@@ -793,6 +797,11 @@ auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
 }
 auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
   return getFloatValues().end();
+}
+
+/// Return the raw storage data held by this attribute.
+ArrayRef<char> DenseElementsAttr::getRawData() const {
+  return static_cast<ImplType *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current

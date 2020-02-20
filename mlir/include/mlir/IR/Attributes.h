@@ -723,6 +723,13 @@ public:
     return get(type, ArrayRef<T>(list));
   }
 
+  /// Construct a dense elements attribute from a raw buffer representing the
+  /// data for this attribute. Users should generally not use this methods as
+  /// the expected buffer format may not be a form the user expects.
+  static DenseElementsAttr getFromRawBuffer(ShapedType type,
+                                            ArrayRef<char> rawBuffer,
+                                            bool isSplatBuffer);
+
   //===--------------------------------------------------------------------===//
   // Iterators
   //===--------------------------------------------------------------------===//
@@ -918,6 +925,11 @@ public:
   FloatElementIterator float_value_begin() const;
   FloatElementIterator float_value_end() const;
 
+  /// Return the raw storage data held by this attribute. Users should generally
+  /// not use this directly, as the internal storage format is not always in the
+  /// form the user might expect.
+  ArrayRef<char> getRawData() const;
+
   //===--------------------------------------------------------------------===//
   // Mutation Utilities
   //===--------------------------------------------------------------------===//
@@ -941,9 +953,6 @@ public:
             function_ref<APInt(const APFloat &)> mapping) const;
 
 protected:
-  /// Return the raw storage data held by this attribute.
-  ArrayRef<char> getRawData() const;
-
   /// Get iterators to the raw APInt values for each element in this attribute.
   IntElementIterator raw_int_begin() const {
     return IntElementIterator(*this, 0);
