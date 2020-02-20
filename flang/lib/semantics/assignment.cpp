@@ -29,192 +29,60 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::semantics {
 
-using ControlExpr = evaluate::Expr<evaluate::SubscriptInteger>;
-using MaskExpr = evaluate::Expr<evaluate::LogicalResult>;
-
-// The context tracks some number of active FORALL statements/constructs
-// and some number of active WHERE statements/constructs.  WHERE can nest
-// in FORALL but not vice versa.  Pointer assignments are allowed in
-// FORALL but not in WHERE.  These constraints are manifest in the grammar
-// and don't need to be rechecked here, since errors cannot appear in the
-// parse tree.
-struct Control {
-  Symbol *name;
-  ControlExpr lower, upper, step;
-};
-
-struct ForallContext {
-  explicit ForallContext(const ForallContext *that) : outer{that} {}
-
-  const ForallContext *outer{nullptr};
-  std::optional<parser::CharBlock> constructName;
-  std::vector<Control> control;
-  std::optional<MaskExpr> maskExpr;
-  std::set<parser::CharBlock> activeNames;
-};
-
-struct WhereContext {
-  WhereContext(MaskExpr &&x, const WhereContext *o, const ForallContext *f)
-    : outer{o}, forall{f}, thisMaskExpr{std::move(x)} {}
-  const WhereContext *outer{nullptr};
-  const ForallContext *forall{nullptr};  // innermost enclosing FORALL
-  std::optional<parser::CharBlock> constructName;
-  MaskExpr thisMaskExpr;  // independent of outer WHERE, if any
-  MaskExpr cumulativeMaskExpr{thisMaskExpr};
-};
-
 class AssignmentContext {
 public:
-  explicit AssignmentContext(SemanticsContext &c) : context_{c} {}
-  AssignmentContext(const AssignmentContext &c, WhereContext &w)
-    : context_{c.context_}, where_{&w} {}
-  AssignmentContext(const AssignmentContext &c, ForallContext &f)
-    : context_{c.context_}, forall_{&f} {}
-
+  explicit AssignmentContext(SemanticsContext &context) : context_{context} {}
+  AssignmentContext(AssignmentContext &&) = default;
+  AssignmentContext(const AssignmentContext &) = delete;
   bool operator==(const AssignmentContext &x) const { return this == &x; }
 
+  template<typename A> void PushWhereContext(const A &);
+  void PopWhereContext();
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
-  void Analyze(const parser::WhereStmt &);
-  void Analyze(const parser::WhereConstruct &);
-  void Analyze(const parser::ForallConstruct &);
-
-  template<typename A> void Analyze(const parser::UnlabeledStatement<A> &stmt) {
-    context_.set_location(stmt.source);
-    Analyze(stmt.statement);
-  }
-  template<typename A> void Analyze(const common::Indirection<A> &x) {
-    Analyze(x.value());
-  }
-  template<typename A> std::enable_if_t<UnionTrait<A>> Analyze(const A &x) {
-    std::visit([&](const auto &y) { Analyze(y); }, x.u);
-  }
-  template<typename A> void Analyze(const std::list<A> &list) {
-    for (const auto &elem : list) {
-      Analyze(elem);
-    }
-  }
-  template<typename A> void Analyze(const std::optional<A> &x) {
-    if (x) {
-      Analyze(*x);
-    }
-  }
+  void Analyze(const parser::ConcurrentControl &);
 
 private:
-  void Analyze(const parser::WhereConstruct::MaskedElsewhere &);
-  void Analyze(const parser::MaskedElsewhereStmt &);
-  void Analyze(const parser::WhereConstruct::Elsewhere &);
-
   void CheckForPureContext(const SomeExpr &lhs, const SomeExpr &rhs,
       parser::CharBlock rhsSource, bool isPointerAssignment);
-
-  MaskExpr GetMask(const parser::LogicalExpr &, bool defaultValue = true);
-
+  void CheckShape(parser::CharBlock, const SomeExpr *);
   template<typename... A>
   parser::Message *Say(parser::CharBlock at, A &&... args) {
     return &context_.Say(at, std::forward<A>(args)...);
   }
+  evaluate::FoldingContext &foldingContext() {
+    return context_.foldingContext();
+  }
 
   SemanticsContext &context_;
-  WhereContext *where_{nullptr};
-  ForallContext *forall_{nullptr};
+  int whereDepth_{0};  // number of WHEREs currently nested in
+  // shape of masks in LHS of assignments in current WHERE:
+  std::vector<std::optional<std::int64_t>> whereExtents_;
 };
 
 void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
-  // Assignment statement analysis is in expression.cpp where user-defined
-  // assignments can be recognized and replaced.
   if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
-    if (forall_) {
-      // TODO: Warn if some name in forall_->activeNames or its outer
-      // contexts does not appear on LHS
+    const SomeExpr &lhs{assignment->lhs};
+    const SomeExpr &rhs{assignment->rhs};
+    auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
+    auto rhsLoc{std::get<parser::Expr>(stmt.t).source};
+    if (whereDepth_ > 0) {
+      CheckShape(lhsLoc, &lhs);
     }
-    CheckForPureContext(assignment->lhs, assignment->rhs,
-        std::get<parser::Expr>(stmt.t).source, false /* not => */);
+    CheckForPureContext(lhs, rhs, rhsLoc, false);
   }
-  // TODO: Fortran 2003 ALLOCATABLE assignment semantics (automatic
-  // (re)allocation of LHS array when unallocated or nonconformable)
 }
 
 void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
-  CHECK(!where_);
-  const evaluate::Assignment *assignment{GetAssignment(stmt)};
-  if (!assignment) {
-    return;
+  CHECK(whereDepth_ == 0);
+  if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
+    const SomeExpr &lhs{assignment->lhs};
+    const SomeExpr &rhs{assignment->rhs};
+    CheckForPureContext(lhs, rhs, std::get<parser::Expr>(stmt.t).source, true);
+    auto restorer{
+        foldingContext().messages().SetLocation(context_.location().value())};
+    CheckPointerAssignment(foldingContext(), *assignment);
   }
-  const SomeExpr &lhs{assignment->lhs};
-  const SomeExpr &rhs{assignment->rhs};
-  if (forall_) {
-    // TODO: Warn if some name in forall_->activeNames or its outer
-    // contexts does not appear on LHS
-  }
-  CheckForPureContext(lhs, rhs, std::get<parser::Expr>(stmt.t).source,
-      true /* isPointerAssignment */);
-  auto restorer{context_.foldingContext().messages().SetLocation(
-      context_.location().value())};
-  CheckPointerAssignment(context_.foldingContext(), *assignment);
-}
-
-void AssignmentContext::Analyze(const parser::WhereStmt &stmt) {
-  WhereContext where{
-      GetMask(std::get<parser::LogicalExpr>(stmt.t)), where_, forall_};
-  AssignmentContext nested{*this, where};
-  nested.Analyze(std::get<parser::AssignmentStmt>(stmt.t));
-}
-
-// N.B. Construct name matching is checked during label resolution.
-void AssignmentContext::Analyze(const parser::WhereConstruct &construct) {
-  const auto &whereStmt{
-      std::get<parser::Statement<parser::WhereConstructStmt>>(construct.t)};
-  WhereContext where{
-      GetMask(std::get<parser::LogicalExpr>(whereStmt.statement.t)), where_,
-      forall_};
-  if (const auto &name{
-          std::get<std::optional<parser::Name>>(whereStmt.statement.t)}) {
-    where.constructName = name->source;
-  }
-  AssignmentContext nested{*this, where};
-  nested.Analyze(std::get<std::list<parser::WhereBodyConstruct>>(construct.t));
-  nested.Analyze(std::get<std::list<parser::WhereConstruct::MaskedElsewhere>>(
-      construct.t));
-  nested.Analyze(
-      std::get<std::optional<parser::WhereConstruct::Elsewhere>>(construct.t));
-}
-
-void AssignmentContext::Analyze(
-    const parser::WhereConstruct::MaskedElsewhere &elsewhere) {
-  CHECK(where_);
-  Analyze(
-      std::get<parser::Statement<parser::MaskedElsewhereStmt>>(elsewhere.t));
-  Analyze(std::get<std::list<parser::WhereBodyConstruct>>(elsewhere.t));
-}
-
-void AssignmentContext::Analyze(const parser::MaskedElsewhereStmt &elsewhere) {
-  MaskExpr mask{GetMask(std::get<parser::LogicalExpr>(elsewhere.t))};
-  MaskExpr copyCumulative{where_->cumulativeMaskExpr};
-  MaskExpr notOldMask{evaluate::LogicalNegation(std::move(copyCumulative))};
-  if (!evaluate::AreConformable(notOldMask, mask)) {
-    context_.Say("mask of ELSEWHERE statement is not conformable with "
-                 "the prior mask(s) in its WHERE construct"_err_en_US);
-  }
-  MaskExpr copyMask{mask};
-  where_->cumulativeMaskExpr =
-      evaluate::BinaryLogicalOperation(evaluate::LogicalOperator::Or,
-          std::move(where_->cumulativeMaskExpr), std::move(copyMask));
-  where_->thisMaskExpr = evaluate::BinaryLogicalOperation(
-      evaluate::LogicalOperator::And, std::move(notOldMask), std::move(mask));
-  if (where_->outer &&
-      !evaluate::AreConformable(
-          where_->outer->thisMaskExpr, where_->thisMaskExpr)) {
-    context_.Say("effective mask of ELSEWHERE statement is not conformable "
-                 "with the mask of the surrounding WHERE construct"_err_en_US);
-  }
-}
-
-void AssignmentContext::Analyze(
-    const parser::WhereConstruct::Elsewhere &elsewhere) {
-  MaskExpr copyCumulative{DEREF(where_).cumulativeMaskExpr};
-  where_->thisMaskExpr = evaluate::LogicalNegation(std::move(copyCumulative));
-  Analyze(std::get<std::list<parser::WhereBodyConstruct>>(elsewhere.t));
 }
 
 // C1594 checks
@@ -333,14 +201,45 @@ void AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
   }
 }
 
-MaskExpr AssignmentContext::GetMask(
-    const parser::LogicalExpr &logicalExpr, bool defaultValue) {
-  MaskExpr mask{defaultValue};
-  if (const SomeExpr * expr{GetExpr(logicalExpr)}) {
-    auto *logical{std::get_if<evaluate::Expr<evaluate::SomeLogical>>(&expr->u)};
-    mask = evaluate::ConvertTo(mask, common::Clone(DEREF(logical)));
+// 10.2.3.1(2) The masks and LHS of assignments must all have the same shape
+void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
+  if (auto shape{evaluate::GetShape(foldingContext(), expr)}) {
+    std::size_t size{shape->size()};
+    if (whereDepth_ == 0) {
+      whereExtents_.resize(size);
+    } else if (whereExtents_.size() != size) {
+      Say(at,
+          "Must have rank %zd to match prior mask or assignment of"
+          " WHERE construct"_err_en_US,
+          whereExtents_.size());
+      return;
+    }
+    for (std::size_t i{0}; i < size; ++i) {
+      if (std::optional<std::int64_t> extent{evaluate::ToInt64((*shape)[i])}) {
+        if (!whereExtents_[i]) {
+          whereExtents_[i] = *extent;
+        } else if (*whereExtents_[i] != *extent) {
+          Say(at,
+              "Dimension %d must have extent %jd to match prior mask or"
+              " assignment of WHERE construct"_err_en_US,
+              i + 1, static_cast<std::intmax_t>(*whereExtents_[i]));
+        }
+      }
+    }
   }
-  return mask;
+}
+
+template<typename A> void AssignmentContext::PushWhereContext(const A &x) {
+  const auto &expr{std::get<parser::LogicalExpr>(x.t)};
+  CheckShape(expr.thing.value().source, GetExpr(expr));
+  ++whereDepth_;
+}
+
+void AssignmentContext::PopWhereContext() {
+  --whereDepth_;
+  if (whereDepth_ == 0) {
+    whereExtents_.clear();
+  }
 }
 
 AssignmentChecker::~AssignmentChecker() {}
@@ -354,10 +253,22 @@ void AssignmentChecker::Enter(const parser::PointerAssignmentStmt &x) {
   context_.value().Analyze(x);
 }
 void AssignmentChecker::Enter(const parser::WhereStmt &x) {
-  context_.value().Analyze(x);
+  context_.value().PushWhereContext(x);
 }
-void AssignmentChecker::Enter(const parser::WhereConstruct &x) {
-  context_.value().Analyze(x);
+void AssignmentChecker::Leave(const parser::WhereStmt &) {
+  context_.value().PopWhereContext();
+}
+void AssignmentChecker::Enter(const parser::WhereConstructStmt &x) {
+  context_.value().PushWhereContext(x);
+}
+void AssignmentChecker::Leave(const parser::EndWhereStmt &) {
+  context_.value().PopWhereContext();
+}
+void AssignmentChecker::Enter(const parser::MaskedElsewhereStmt &x) {
+  context_.value().PushWhereContext(x);
+}
+void AssignmentChecker::Leave(const parser::MaskedElsewhereStmt &) {
+  context_.value().PopWhereContext();
 }
 
 }

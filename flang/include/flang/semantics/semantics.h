@@ -159,10 +159,13 @@ public:
   void CheckIndexVarRedefine(const parser::Name &);
   void ActivateIndexVar(const parser::Name &, IndexVarKind);
   void DeactivateIndexVar(const parser::Name &);
+  SymbolVector GetIndexVars(IndexVarKind);
 
 private:
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
+  bool CheckError(bool);
+
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl languageFeatures_;
   parser::AllSources &allSources_;
@@ -176,8 +179,6 @@ private:
   Scope globalScope_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
-
-  bool CheckError(bool);
   ConstructStack constructStack_;
   struct IndexVarInfo {
     parser::CharBlock location;

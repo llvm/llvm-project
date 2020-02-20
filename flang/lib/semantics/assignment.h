@@ -16,9 +16,11 @@
 namespace Fortran::parser {
 class ContextualMessages;
 struct AssignmentStmt;
+struct EndWhereStmt;
+struct MaskedElsewhereStmt;
 struct PointerAssignmentStmt;
+struct WhereConstructStmt;
 struct WhereStmt;
-struct WhereConstruct;
 }
 
 namespace Fortran::semantics {
@@ -41,7 +43,11 @@ public:
   void Enter(const parser::AssignmentStmt &);
   void Enter(const parser::PointerAssignmentStmt &);
   void Enter(const parser::WhereStmt &);
-  void Enter(const parser::WhereConstruct &);
+  void Leave(const parser::WhereStmt &);
+  void Enter(const parser::WhereConstructStmt &);
+  void Leave(const parser::EndWhereStmt &);
+  void Enter(const parser::MaskedElsewhereStmt &);
+  void Leave(const parser::MaskedElsewhereStmt &);
 
 private:
   common::Indirection<AssignmentContext> context_;

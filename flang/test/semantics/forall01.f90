@@ -16,7 +16,6 @@ subroutine forall1
   end forall
 end
 
-
 subroutine forall2
   integer, pointer :: a(:)
   integer, target :: b(10,10)
@@ -72,4 +71,35 @@ subroutine forall4
   forall(i=1:10:i) a(i) = i
   !ERROR: FORALL step expression may not be zero
   forall(i=1:10:zero) a(i) = i
+end
+
+! Note: this gets warnings but not errors
+subroutine forall5
+  real, target :: x(10), y(10)
+  forall(i=1:10)
+    x(i) = y(i)
+  end forall
+  forall(i=1:10)
+    x = y  ! warning: i not used on LHS
+    forall(j=1:10)
+      x(i) = y(i)  ! warning: j not used on LHS
+      x(j) = y(j)  ! warning: i not used on LHS
+    endforall
+  endforall
+  do concurrent(i=1:10)
+    x = y
+    forall(i=1:10) x = y
+  end do
+end
+
+subroutine forall6
+  type t
+    real, pointer :: p
+  end type
+  type(t) :: a(10)
+  real, target :: b(10)
+  forall(i=1:10)
+    a(i)%p => b(i)
+    a(1)%p => b(i)  ! warning: i not used on LHS
+  end forall
 end

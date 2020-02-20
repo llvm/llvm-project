@@ -452,6 +452,7 @@ public:
         common::visitors{[&](const auto &x) { return GetAssignment(x); }},
         stmt.u)};
     if (assignment) {
+      CheckForallIndexesUsed(*assignment);
       CheckForImpureCall(assignment->lhs);
       CheckForImpureCall(assignment->rhs);
       if (const auto *proc{
@@ -750,6 +751,38 @@ private:
       context_.Say(
           "Impure procedure '%s' may not be referenced in a %s"_err_en_US, *bad,
           LoopKindName());
+    }
+  }
+
+  // Each index should be used on the LHS of each assignment in a FORALL
+  void CheckForallIndexesUsed(const evaluate::Assignment &assignment) {
+    SymbolVector indexVars{context_.GetIndexVars(IndexVarKind::FORALL)};
+    if (!indexVars.empty()) {
+      SymbolSet symbols{evaluate::CollectSymbols(assignment.lhs)};
+      std::visit(
+          common::visitors{
+              [&](const evaluate::Assignment::BoundsSpec &spec) {
+                for (const auto &bound : spec) {
+                  symbols.merge(evaluate::CollectSymbols(bound));
+                }
+              },
+              [&](const evaluate::Assignment::BoundsRemapping &remapping) {
+                for (const auto &bounds : remapping) {
+                  symbols.merge(evaluate::CollectSymbols(bounds.first));
+                  symbols.merge(evaluate::CollectSymbols(bounds.second));
+                }
+              },
+              [](const auto &) {},
+          },
+          assignment.u);
+      for (const Symbol &index : indexVars) {
+        if (symbols.count(index) == 0) {
+          context_.Say(
+              "Warning: FORALL index variable '%s' not used on left-hand side"
+              " of assignment"_en_US,
+              index.name());
+        }
+      }
     }
   }
 
