@@ -77,7 +77,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if(LLVM_ENABLE_PIC)
+if(LLVM_ENABLE_PIC OR NOT LIBCLANG_BUILD_STATIC)
   set(ENABLE_SHARED SHARED)
 endif()
 
@@ -113,8 +113,15 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   Support
   )
 
+if(ENABLE_STATIC)
+  foreach(name libclang obj.libclang libclang_static)
+    if (TARGET ${name})
+      target_compile_definitions(${name} PUBLIC CINDEX_NO_EXPORTS)
+    endif()
+  endforeach()
+endif()
+
 if(ENABLE_SHARED)
-  target_compile_definitions(libclang PUBLIC CINDEX_EXPORTS)
   if(WIN32)
     set_target_properties(libclang
       PROPERTIES

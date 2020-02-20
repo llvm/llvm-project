@@ -19,6 +19,9 @@
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /* Windows DLL import/export. */
+#ifndef CINDEX_NO_EXPORTS
+  #define CINDEX_EXPORTS
+#endif
 #ifdef _WIN32
   #ifdef CINDEX_EXPORTS
     #ifdef _CINDEX_LIB_
@@ -27,7 +30,7 @@ LLVM_CLANG_C_EXTERN_C_BEGIN
       #define CINDEX_LINKAGE __declspec(dllimport)
     #endif
   #endif
-#elif defined(CINDEX_EXPORTS)
+#elif defined(CINDEX_EXPORTS) && defined(__GNUC__)
   #define CINDEX_LINKAGE __attribute__((visibility("default")))
 #endif
 
