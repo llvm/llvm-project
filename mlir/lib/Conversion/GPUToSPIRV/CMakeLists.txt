@@ -5,10 +5,10 @@ add_public_tablegen_target(MLIRGPUToSPIRVIncGen)
 add_mlir_conversion_library(MLIRGPUtoSPIRVTransforms
   ConvertGPUToSPIRV.cpp
   ConvertGPUToSPIRVPass.cpp
-  )
 
-add_dependencies(MLIRGPUtoSPIRVTransforms
-  MLIRGPUToSPIRVIncGen)
+  DEPENDS
+  MLIRGPUToSPIRVIncGen
+  )
 
 target_link_libraries(MLIRGPUtoSPIRVTransforms
   PUBLIC
