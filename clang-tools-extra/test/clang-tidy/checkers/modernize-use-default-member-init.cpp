@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t -- -- -fexceptions
 // FIXME: Fix the checker to work in C++2a mode.
 
 struct S {
@@ -418,3 +418,17 @@ NegativeTemplateExisting<double> nted(0);
   };
 
 MACRO();
+
+
+class FunctionTryBlock {
+public:
+  FunctionTryBlock() try : i(5), k(8) {}
+  // CHECK-FIXES: FunctionTryBlock() try  {}
+  catch (...) {}
+
+private:
+  int i, k;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'i' [modernize-use-default-member-init]
+  // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: use default member initializer for 'k' [modernize-use-default-member-init]
+  // CHECK-FIXES: int i{5}, k{8};
+};

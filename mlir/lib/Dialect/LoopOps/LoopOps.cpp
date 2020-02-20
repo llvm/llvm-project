@@ -232,8 +232,15 @@ void ParallelOp::build(Builder *builder, OperationState &result, ValueRange lbs,
   result.addOperands(steps);
   Region *bodyRegion = result.addRegion();
   ParallelOp::ensureTerminator(*bodyRegion, *builder, result.location);
-  for (size_t i = 0; i < steps.size(); ++i)
+  for (size_t i = 0, e = steps.size(); i < e; ++i)
     bodyRegion->front().addArgument(builder->getIndexType());
+}
+
+void ParallelOp::build(Builder *builder, OperationState &result, ValueRange lbs,
+                       ValueRange ubs, ValueRange steps,
+                       ArrayRef<Type> resultTypes) {
+  result.addTypes(resultTypes);
+  build(builder, result, lbs, ubs, steps);
 }
 
 static LogicalResult verify(ParallelOp op) {
@@ -353,6 +360,16 @@ ParallelOp mlir::loop::getParallelForInductionVarOwner(Value val) {
 //===----------------------------------------------------------------------===//
 // ReduceOp
 //===----------------------------------------------------------------------===//
+
+void ReduceOp::build(Builder *builder, OperationState &result, Value operand) {
+  auto type = operand.getType();
+  result.addOperands(operand);
+  Region *bodyRegion = result.addRegion();
+
+  Block *b = new Block();
+  b->addArguments(ArrayRef<Type>{type, type});
+  bodyRegion->getBlocks().insert(bodyRegion->end(), b);
+}
 
 static LogicalResult verify(ReduceOp op) {
   // The region of a ReduceOp has two arguments of the same type as its operand.

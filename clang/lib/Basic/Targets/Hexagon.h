@@ -57,6 +57,12 @@ public:
     LargeArrayAlign = 64;
     UseBitFieldTypeAlignment = true;
     ZeroLengthBitfieldBoundary = 32;
+
+    // These are the default values anyway, but explicitly make sure
+    // that the size of the boolean type is 8 bits. Bool vectors are used
+    // for modeling predicate registers in HVX, and the bool -> byte
+    // correspondence matches the HVX architecture.
+    BoolWidth = BoolAlign = 8;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;

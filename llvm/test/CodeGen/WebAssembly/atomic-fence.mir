@@ -31,14 +31,14 @@ body: |
     ; CHECK: COMPILER_FENCE
     ; CHECK: ADD_I32
     ; CHECK: LOCAL_GET_I32 [[LOCAL]]
-    ; CHECK: CALL_VOID @foo
+    ; CHECK: CALL @foo
 
     liveins: $arguments
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:i32 = ATOMIC_NOTIFY 2, 0, %0:i32, %0:i32, implicit-def $arguments
     COMPILER_FENCE implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
-    CALL_VOID @foo, %2:i32, %1:i32, implicit-def $arguments
+    CALL @foo, %2:i32, %1:i32, implicit-def $arguments
     RETURN implicit-def $arguments
 ...
 
@@ -55,13 +55,13 @@ body: |
     ; CHECK: ATOMIC_FENCE
     ; CHECK: ADD_I32
     ; CHECK: LOCAL_GET_I32 [[LOCAL]]
-    ; CHECK: CALL_VOID @foo
+    ; CHECK: CALL @foo
 
     liveins: $arguments
     %0:i32 = CONST_I32 0, implicit-def $arguments
     %1:i32 = ATOMIC_NOTIFY 2, 0, %0:i32, %0:i32, implicit-def $arguments
     ATOMIC_FENCE 0, implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
-    CALL_VOID @foo, %2:i32, %1:i32, implicit-def $arguments
+    CALL @foo, %2:i32, %1:i32, implicit-def $arguments
     RETURN implicit-def $arguments
 ...

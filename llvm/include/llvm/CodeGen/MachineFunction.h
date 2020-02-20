@@ -72,6 +72,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
+class GISelChangeObserver;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
   void deleteNode(MachineBasicBlock *MBB);
@@ -396,6 +397,7 @@ public:
 
 private:
   Delegate *TheDelegate = nullptr;
+  GISelChangeObserver *Observer = nullptr;
 
   using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
@@ -443,6 +445,10 @@ public:
 
     TheDelegate = delegate;
   }
+
+  void setObserver(GISelChangeObserver *O) { Observer = O; }
+
+  GISelChangeObserver *getObserver() const { return Observer; }
 
   MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }

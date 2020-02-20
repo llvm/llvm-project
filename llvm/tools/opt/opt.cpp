@@ -716,7 +716,7 @@ int main(int argc, char **argv) {
                            RemarksFile.get(), PassPipeline, OK, VK,
                            PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash, EnableDebugify)
+                           EmitModuleHash, EnableDebugify, Coroutines)
                ? 0
                : 1;
   }

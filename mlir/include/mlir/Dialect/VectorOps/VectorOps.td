@@ -339,10 +339,11 @@ def Vector_ShuffleOp :
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [NoSideEffect,
-     PredOpTrait<"operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+     TypesMatchWith<"result type matches element type of vector operand",
+                    "vector", "result",
+                    "$_self.cast<ShapedType>().getElementType()">]>,
     Arguments<(ins AnyVector:$vector, AnyInteger:$position)>,
-    Results<(outs AnyType)> {
+    Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
     Takes an 1-D vector and a dynamic index position and extracts the
@@ -482,12 +483,12 @@ def Vector_FMAOp :
 
 def Vector_InsertElementOp :
   Vector_Op<"insertelement", [NoSideEffect,
-     PredOpTrait<"source operand and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>,
-     PredOpTrait<"dest operand and result have same type",
-                 TCresIsSameAsOpBase<0, 1>>]>,
+     TypesMatchWith<"source operand type matches element type of result",
+                    "result", "source",
+                    "$_self.cast<ShapedType>().getElementType()">,
+     AllTypesMatch<["dest", "result"]>]>,
      Arguments<(ins AnyType:$source, AnyVector:$dest, AnyInteger:$position)>,
-     Results<(outs AnyVector)> {
+     Results<(outs AnyVector:$result)> {
   let summary = "insertelement operation";
   let description = [{
     Takes a scalar source, an 1-D destination vector and a dynamic index

@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
 #include "mlir/Dialect/VectorOps/VectorTransforms.h"
 #include "mlir/Dialect/VectorOps/VectorUtils.h"
@@ -864,6 +865,19 @@ public:
 };
 
 /// Progressive lowering of ConstractionOp.
+/// One:
+///   %x = vector.contract with at least one free/batch dimension
+/// is replaced by:
+///   %a = vector.contract with one less free/batch dimension
+///   %b = vector.contract with one less free/batch dimension
+///   ..
+///   %x = combine %a %b ..
+/// until a pure contraction is reached (no free/batch dimensions),
+/// which is replaced by a fma/reduction op.
+///
+/// TODO(ajcbik): break down into transpose/reshape/cast ops
+///               when they become available to avoid code dup
+/// TODO(ajcbik): investigate lowering order impact on performance
 class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -874,16 +888,13 @@ public:
     if (llvm::size(op.masks()) != 0)
       return matchFailure();
 
-    auto loc = op.getLoc();
-    VectorType lhsType = op.getLhsType();
-    VectorType rhsType = op.getRhsType();
-    Type resType = op.getResultType();
-
-    // Find first batch dimension in lhs/rhs, and lower when found.
+    // Find first batch dimension in LHS/RHS, and lower when found.
     std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();
     if (!batchDimMap.empty()) {
-      // TODO(ajcbik): implement batch
-      return matchFailure();
+      int64_t lhsIndex = batchDimMap[0].first;
+      int64_t rhsIndex = batchDimMap[0].second;
+      rewriter.replaceOp(op, lowerParallel(op, lhsIndex, rhsIndex, rewriter));
+      return matchSuccess();
     }
 
     // Collect contracting dimensions.
@@ -896,24 +907,35 @@ public:
       rhsContractingDimSet.insert(dimPair.second);
     }
 
-    // Find free dimension in lhs/rhs, and lower first when found.
-    for (int64_t i = 0, e = lhsType.getRank(); i < e; ++i) {
-      if (lhsContractingDimSet.count(i) == 0) {
-        // TODO(ajcbik): implement free
-        return matchFailure();
-      }
-    }
-    for (int64_t i = 0, e = rhsType.getRank(); i < e; ++i) {
-      if (rhsContractingDimSet.count(i) == 0) {
-        // TODO(ajcbik): implement free
-        return matchFailure();
+    // Find first free dimension in LHS, and lower when found.
+    VectorType lhsType = op.getLhsType();
+    for (int64_t lhsIndex = 0, e = lhsType.getRank(); lhsIndex < e;
+         ++lhsIndex) {
+      if (lhsContractingDimSet.count(lhsIndex) == 0) {
+        rewriter.replaceOp(
+            op, lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter));
+        return matchSuccess();
       }
     }
 
-    // Only contraction dimensions remain.
+    // Find first free dimension in RHS, and lower when found.
+    VectorType rhsType = op.getRhsType();
+    for (int64_t rhsIndex = 0, e = rhsType.getRank(); rhsIndex < e;
+         ++rhsIndex) {
+      if (rhsContractingDimSet.count(rhsIndex) == 0) {
+        rewriter.replaceOp(
+            op, lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter));
+        return matchSuccess();
+      }
+    }
+
+    // Lower the only remaining contraction dimensions.
+    // TODO(ajcbik): handle multi-dim reductions
+    auto loc = op.getLoc();
+    Type resType = op.getResultType();
     if (!resType.isa<VectorType>() && lhsType.getRank() == 1 &&
         rhsType.getRank() == 1) {
-      // Handle reduction into scalar.
+
       Value zero = rewriter.create<ConstantOp>(loc, resType,
                                                rewriter.getZeroAttr(resType));
       Value splat = rewriter.create<SplatOp>(loc, lhsType, zero);
@@ -924,8 +946,190 @@ public:
                                                          op.acc());
       return matchSuccess();
     }
-    // TODO(ajcbik): implement more contraction
+
     return matchFailure();
+  }
+
+private:
+  // Lower one parallel dimension.
+  // TODO(ajcbik): consider reusing existing contract unrolling
+  Value lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
+                      int64_t rhsIndex, PatternRewriter &rewriter) const {
+    VectorType lhsType = op.getLhsType();
+    VectorType rhsType = op.getRhsType();
+    VectorType resType = op.getResultType().cast<VectorType>();
+    // Find the iterator type index and result index.
+    SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
+    int64_t iterIndex = -1;
+    int64_t dimSize = -1;
+    if (lhsIndex >= 0) {
+      iterIndex =
+          iMap[0].getResult(lhsIndex).cast<AffineDimExpr>().getPosition();
+      assert((rhsIndex < 0 || iterIndex == iMap[1]
+                                               .getResult(rhsIndex)
+                                               .cast<AffineDimExpr>()
+                                               .getPosition()) &&
+             "parallel index should be free in LHS or batch in LHS/RHS");
+      dimSize = lhsType.getDimSize(lhsIndex);
+    } else {
+      assert(rhsIndex >= 0 && "missing parallel index");
+      iterIndex =
+          iMap[1].getResult(rhsIndex).cast<AffineDimExpr>().getPosition();
+      dimSize = rhsType.getDimSize(rhsIndex);
+    }
+    assert(iterIndex >= 0 && "parallel index not listed in operand mapping");
+    Optional<int64_t> lookup = getResultIndex(iMap[2], iterIndex);
+    assert(lookup.hasValue() && "parallel index not listed in reduction");
+    int64_t resIndex = lookup.getValue();
+    // Construct new iterator types.
+    ArrayAttr iteratorTypes = op.iterator_types();
+    SmallVector<Attribute, 4> lowIterTypes;
+    for (auto it : llvm::enumerate(iteratorTypes)) {
+      int64_t idx = it.index();
+      if (idx == iterIndex) {
+        assert(it.value().cast<StringAttr>().getValue() ==
+                   getParallelIteratorTypeName() &&
+               "parallel index not marked as such");
+        continue;
+      }
+      lowIterTypes.push_back(it.value());
+    }
+    // Construct new affine map array attribute.
+    SmallVector<AffineMap, 4> lowIndexingMaps;
+    lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
+    lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
+    lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+    auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
+    // Construct new iterator types array attribute.
+    auto lowIter = rewriter.getArrayAttr(lowIterTypes);
+    // Unroll into a series of lower dimensional vector.contract ops.
+    Location loc = op.getLoc();
+    Value result = zeroVector(loc, resType, rewriter);
+    for (int64_t d = 0; d < dimSize; ++d) {
+      auto lhs = reshapeLoad(loc, op.lhs(), lhsType, lhsIndex, d, rewriter);
+      auto rhs = reshapeLoad(loc, op.rhs(), rhsType, rhsIndex, d, rewriter);
+      auto acc = reshapeLoad(loc, op.acc(), resType, resIndex, d, rewriter);
+      Value lowContract = rewriter.create<vector::ContractionOp>(
+          loc, lhs, rhs, acc, lowAffine, lowIter);
+      result = reshapeStore(loc, lowContract, result, resType, resIndex, d,
+                            rewriter);
+    }
+    return result;
+  }
+
+  // Helper method to construct a zero vector.
+  static Value zeroVector(Location loc, VectorType vType,
+                          PatternRewriter &rewriter) {
+    Type eltType = vType.getElementType();
+    Value zero = rewriter.create<ConstantOp>(loc, eltType,
+                                             rewriter.getZeroAttr(eltType));
+    return rewriter.create<SplatOp>(loc, vType, zero);
+  }
+
+  // Helper to find an index in an affine map.
+  static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
+    for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+      int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
+      if (idx == index)
+        return i;
+    }
+    return None;
+  }
+
+  // Helper to construct an affine map with one index removed.
+  static AffineMap adjustMap(AffineMap map, int64_t index,
+                             PatternRewriter &rewriter) {
+    SmallVector<AffineExpr, 4> results;
+    for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+      int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
+      if (idx == index)
+        continue;
+      // Re-insert remaining indices, but renamed when occurring
+      // after the removed index.
+      auto targetExpr =
+          getAffineDimExpr(idx < index ? idx : idx - 1, rewriter.getContext());
+      results.push_back(targetExpr);
+    }
+    // Since (...) -> () cannot be represented properly,
+    // we resort to an empty map when this situation happens.
+    return results.empty() ? AffineMap::get(rewriter.getContext())
+                           : AffineMap::get(map.getNumDims() - 1, 0, results);
+  }
+
+  // Helper to drop dimension from vector type.
+  static Type adjustType(VectorType tp, int64_t index) {
+    int64_t rank = tp.getRank();
+    Type eltType = tp.getElementType();
+    if (rank == 1) {
+      assert(index == 0 && "index for scalar result out of bounds");
+      return eltType;
+    }
+    SmallVector<int64_t, 4> adjustedShape;
+    for (int64_t i = 0; i < rank; ++i) {
+      // Omit dimension at the given index.
+      if (i == index)
+        continue;
+      // Otherwise, add dimension back.
+      adjustedShape.push_back(tp.getDimSize(i));
+    }
+    return VectorType::get(adjustedShape, eltType);
+  }
+
+  // Helper method to possibly drop a dimension in a load.
+  // TODO(ajcbik): use a reshaping vector load (and share lowering code)
+  static Value reshapeLoad(Location loc, Value val, VectorType type,
+                           int64_t index, int64_t pos,
+                           PatternRewriter &rewriter) {
+    if (index == -1)
+      return val;
+    Type lowType = adjustType(type, 0);
+    // At extraction dimension?
+    if (index == 0) {
+      auto posAttr = rewriter.getI64ArrayAttr(pos);
+      return rewriter.create<vector::ExtractOp>(loc, lowType, val, posAttr);
+    }
+    // Unroll leading dimensions.
+    VectorType vType = lowType.cast<VectorType>();
+    VectorType resType = adjustType(type, index).cast<VectorType>();
+    Value result = zeroVector(loc, resType, rewriter);
+    for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
+      auto posAttr = rewriter.getI64ArrayAttr(d);
+      Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, posAttr);
+      Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
+      result = rewriter.create<vector::InsertOp>(loc, resType, load, result,
+                                                 posAttr);
+    }
+    return result;
+  }
+
+  // Helper method to possibly drop a dimension in a store.
+  // TODO(ajcbik): use a reshaping vector store (and share lowering code)
+  static Value reshapeStore(Location loc, Value val, Value result,
+                            VectorType type, int64_t index, int64_t pos,
+                            PatternRewriter &rewriter) {
+    // Unmodified?
+    if (index == -1)
+      return val;
+    // At insertion dimension?
+    if (index == 0) {
+      auto posAttr = rewriter.getI64ArrayAttr(pos);
+      return rewriter.create<vector::InsertOp>(loc, type, val, result, posAttr);
+    }
+    // Unroll leading dimensions.
+    Type lowType = adjustType(type, 0);
+    VectorType vType = lowType.cast<VectorType>();
+    Type insType = adjustType(vType, 0);
+    for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
+      auto posAttr = rewriter.getI64ArrayAttr(d);
+      Value ext =
+          rewriter.create<vector::ExtractOp>(loc, vType, result, posAttr);
+      Value ins =
+          rewriter.create<vector::ExtractOp>(loc, insType, val, posAttr);
+      Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
+      result =
+          rewriter.create<vector::InsertOp>(loc, type, sto, result, posAttr);
+    }
+    return result;
   }
 };
 

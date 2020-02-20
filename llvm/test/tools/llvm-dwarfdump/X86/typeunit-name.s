@@ -13,7 +13,7 @@
 str_TU_4:
         .asciz "V4_type_unit"
 
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 dwo_TU_5:
         .asciz "V5_split_type_unit"
 
@@ -36,7 +36,7 @@ dwo_TU_5:
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy for the .dwo section.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x41  # DW_TAG_type_unit
         .byte 0x01  # DW_CHILDREN_yes
@@ -75,7 +75,7 @@ TU_4_type:
         .byte 0 # NULL
 TU_4_end:
 
-        .section .debug_types.dwo,"",@progbits
+        .section .debug_types.dwo,"e",@progbits
 # FIXME: DWARF v5 wants type units in .debug_info[.dwo] not .debug_types[.dwo].
 
 # DWARF v5 split type unit header.

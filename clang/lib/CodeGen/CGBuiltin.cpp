@@ -15007,10 +15007,46 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
 }
 
+static std::pair<Intrinsic::ID, unsigned>
+getIntrinsicForHexagonNonGCCBuiltin(unsigned BuiltinID) {
+  struct Info {
+    unsigned BuiltinID;
+    Intrinsic::ID IntrinsicID;
+    unsigned VecLen;
+  };
+  Info Infos[] = {
+#define CUSTOM_BUILTIN_MAPPING(x,s) \
+  { Hexagon::BI__builtin_HEXAGON_##x, Intrinsic::hexagon_##x, s },
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstoreq, 64)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorenq, 64)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorentq, 64)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorentnq, 64)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstoreq_128B, 128)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorenq_128B, 128)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorentq_128B, 128)
+    CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorentnq_128B, 128)
+#include "clang/Basic/BuiltinsHexagonMapCustomDep.def"
+#undef CUSTOM_BUILTIN_MAPPING
+  };
+
+  auto CmpInfo = [] (Info A, Info B) { return A.BuiltinID < B.BuiltinID; };
+  static const bool SortOnce = (llvm::sort(Infos, CmpInfo), true);
+  (void)SortOnce;
+
+  const Info *F = std::lower_bound(std::begin(Infos), std::end(Infos),
+                                   Info{BuiltinID, 0, 0}, CmpInfo);
+  if (F == std::end(Infos) || F->BuiltinID != BuiltinID)
+    return {Intrinsic::not_intrinsic, 0};
+
+  return {F->IntrinsicID, F->VecLen};
+}
+
 Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
                                                const CallExpr *E) {
   SmallVector<llvm::Value *, 4> Ops;
-  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  Intrinsic::ID ID;
+  unsigned VecLen;
+  std::tie(ID, VecLen) = getIntrinsicForHexagonNonGCCBuiltin(BuiltinID);
 
   auto MakeCircLd = [&](unsigned IntID, bool HasImm) {
     // The base pointer is passed by address, so it needs to be loaded.
@@ -15099,51 +15135,41 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateExtractValue(Result, 1);
   };
 
+  auto V2Q = [this, VecLen] (llvm::Value *Vec) {
+    Intrinsic::ID ID = VecLen == 128 ? Intrinsic::hexagon_V6_vandvrt_128B
+                                     : Intrinsic::hexagon_V6_vandvrt;
+    return Builder.CreateCall(CGM.getIntrinsic(ID),
+                              {Vec, Builder.getInt32(-1)});
+  };
+  auto Q2V = [this, VecLen] (llvm::Value *Pred) {
+    Intrinsic::ID ID = VecLen == 128 ? Intrinsic::hexagon_V6_vandqrt_128B
+                                     : Intrinsic::hexagon_V6_vandqrt;
+    return Builder.CreateCall(CGM.getIntrinsic(ID),
+                              {Pred, Builder.getInt32(-1)});
+  };
+
   switch (BuiltinID) {
+  // These intrinsics return a tuple {Vector, VectorPred} in LLVM IR,
+  // and the corresponding C/C++ builtins use loads/stores to update
+  // the predicate.
   case Hexagon::BI__builtin_HEXAGON_V6_vaddcarry:
-  case Hexagon::BI__builtin_HEXAGON_V6_vaddcarry_128B: {
-    Address Dest = EmitPointerWithAlignment(E->getArg(2));
-    unsigned Size;
-    if (BuiltinID == Hexagon::BI__builtin_HEXAGON_V6_vaddcarry) {
-      Size = 512;
-      ID = Intrinsic::hexagon_V6_vaddcarry;
-    } else {
-      Size = 1024;
-      ID = Intrinsic::hexagon_V6_vaddcarry_128B;
-    }
-    Dest = Builder.CreateBitCast(Dest,
-        llvm::VectorType::get(Builder.getInt1Ty(), Size)->getPointerTo(0));
-    LoadInst *QLd = Builder.CreateLoad(Dest);
-    Ops = { EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), QLd };
-    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
-    llvm::Value *Vprd = Builder.CreateExtractValue(Result, 1);
-    llvm::Value *Base = Builder.CreateBitCast(EmitScalarExpr(E->getArg(2)),
-                                              Vprd->getType()->getPointerTo(0));
-    Builder.CreateAlignedStore(Vprd, Base, Dest.getAlignment());
-    return Builder.CreateExtractValue(Result, 0);
-  }
+  case Hexagon::BI__builtin_HEXAGON_V6_vaddcarry_128B:
   case Hexagon::BI__builtin_HEXAGON_V6_vsubcarry:
   case Hexagon::BI__builtin_HEXAGON_V6_vsubcarry_128B: {
-    Address Dest = EmitPointerWithAlignment(E->getArg(2));
-    unsigned Size;
-    if (BuiltinID == Hexagon::BI__builtin_HEXAGON_V6_vsubcarry) {
-      Size = 512;
-      ID = Intrinsic::hexagon_V6_vsubcarry;
-    } else {
-      Size = 1024;
-      ID = Intrinsic::hexagon_V6_vsubcarry_128B;
-    }
-    Dest = Builder.CreateBitCast(Dest,
-        llvm::VectorType::get(Builder.getInt1Ty(), Size)->getPointerTo(0));
-    LoadInst *QLd = Builder.CreateLoad(Dest);
-    Ops = { EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), QLd };
-    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
-    llvm::Value *Vprd = Builder.CreateExtractValue(Result, 1);
-    llvm::Value *Base = Builder.CreateBitCast(EmitScalarExpr(E->getArg(2)),
-                                              Vprd->getType()->getPointerTo(0));
-    Builder.CreateAlignedStore(Vprd, Base, Dest.getAlignment());
+    // Get the type from the 0-th argument.
+    llvm::Type *VecType = ConvertType(E->getArg(0)->getType());
+    Address PredAddr = Builder.CreateBitCast(
+        EmitPointerWithAlignment(E->getArg(2)), VecType->getPointerTo(0));
+    llvm::Value *PredIn = V2Q(Builder.CreateLoad(PredAddr));
+    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), PredIn});
+
+    llvm::Value *PredOut = Builder.CreateExtractValue(Result, 1);
+    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.getPointer(),
+        PredAddr.getAlignment());
     return Builder.CreateExtractValue(Result, 0);
   }
+
   case Hexagon::BI__builtin_HEXAGON_L2_loadrub_pci:
     return MakeCircLd(Intrinsic::hexagon_L2_loadrub_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrb_pci:
@@ -15200,8 +15226,38 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
     return MakeBrevLd(Intrinsic::hexagon_L2_loadri_pbr, Int32Ty);
   case Hexagon::BI__builtin_brev_ldd:
     return MakeBrevLd(Intrinsic::hexagon_L2_loadrd_pbr, Int64Ty);
-  default:
-    break;
+  default: {
+    if (ID == Intrinsic::not_intrinsic)
+      return nullptr;
+
+    auto IsVectorPredTy = [] (llvm::Type *T) {
+      return T->isVectorTy() && T->getVectorElementType()->isIntegerTy(1);
+    };
+
+    llvm::Function *IntrFn = CGM.getIntrinsic(ID);
+    llvm::FunctionType *IntrTy = IntrFn->getFunctionType();
+    SmallVector<llvm::Value*,4> Ops;
+    for (unsigned i = 0, e = IntrTy->getNumParams(); i != e; ++i) {
+      llvm::Type *T = IntrTy->getParamType(i);
+      const Expr *A = E->getArg(i);
+      if (IsVectorPredTy(T)) {
+        // There will be an implicit cast to a boolean vector. Strip it.
+        if (auto *Cast = dyn_cast<ImplicitCastExpr>(A)) {
+          if (Cast->getCastKind() == CK_BitCast)
+            A = Cast->getSubExpr();
+        }
+        Ops.push_back(V2Q(EmitScalarExpr(A)));
+      } else {
+        Ops.push_back(EmitScalarExpr(A));
+      }
+    }
+
+    llvm::Value *Call = Builder.CreateCall(IntrFn, Ops);
+    if (IsVectorPredTy(IntrTy->getReturnType()))
+      Call = Q2V(Call);
+
+    return Call;
+  } // default
   } // switch
 
   return nullptr;

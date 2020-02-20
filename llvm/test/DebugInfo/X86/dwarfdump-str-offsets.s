@@ -69,7 +69,7 @@ str_Variable3:
         .long str_TU_type
 .debug_str_offsets_segment2_end:
 
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 dwo_str_CU_5_producer:
         .asciz "Handmade split DWARF producer"
 dwo_str_CU_5_name:
@@ -81,7 +81,7 @@ dwo_str_TU_5:
 dwo_str_TU_5_type:
         .asciz "V5_split_Mystruct"
 
-        .section .debug_str_offsets.dwo,"",@progbits
+        .section .debug_str_offsets.dwo,"e",@progbits
 # One contribution only in a .dwo file
         .long .debug_dwo_str_offsets_segment0_end-.debug_dwo_str_offsets_base0+4
         .short 5    # DWARF version
@@ -174,7 +174,7 @@ dwo_str_TU_5_type:
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy of a subset for the .dwo sections.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -300,7 +300,7 @@ TU_5_type:
         .byte 0 # NULL
 TU_5_end:
         
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 
 # DWARF v5 split CU header.
         .long  CU_split_5_end-CU_split_5_version  # Length of Unit
@@ -318,7 +318,7 @@ CU_split_5_version:
         .byte 0 # NULL
 CU_split_5_end:
         
-        .section .debug_types.dwo,"",@progbits
+        .section .debug_types.dwo,"e",@progbits
 
 # DWARF v5 split type unit header.
 TU_split_5_start:

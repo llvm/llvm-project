@@ -1576,7 +1576,8 @@ void LazyCallGraph::addNewFunctionIntoRefSCC(Function &NewF, RefSCC &RC) {
   auto *C = createSCC(RC, SmallVector<Node *, 1>());
   addNodeToSCC(*C, N);
 
-  RC.SCCIndices[C] = RC.SCCIndices.size();
+  auto Index = RC.SCCIndices.size();
+  RC.SCCIndices[C] = Index;
   RC.SCCs.push_back(C);
 }
 

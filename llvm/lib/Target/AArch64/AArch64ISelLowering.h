@@ -471,6 +471,13 @@ public:
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
 
+  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                            bool MathUsed) const override {
+    // Using overflow ops for overflow checks only should beneficial on
+    // AArch64.
+    return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+  }
+
   Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilder<> &Builder, Value *Val,

@@ -1047,6 +1047,11 @@ namespace memory_leaks {
   static_assert(h({new bool(true)})); // ok
 }
 
+void *operator new(std::size_t, void*);
+namespace std {
+  template<typename T> constexpr T *construct(T *p) { return new (p) T; }
+}
+
 namespace dtor_call {
   struct A { int n; };
   constexpr void f() { // expected-error {{never produces a constant expression}}
@@ -1065,15 +1070,22 @@ namespace dtor_call {
   }
   static_assert((g(), true));
 
-  constexpr bool pseudo() {
+  constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false;
-    // This does evaluate the store to 'b'...
+    bool b = false; // expected-note {{lifetime has already ended}}
+    // This evaluates the store to 'b'...
     (b = true).~T();
-    // ... but does not end the lifetime of the object.
-    return b;
+    // ... and ends the lifetime of the object.
+    return (read
+            ? b // expected-note {{read of object outside its lifetime}}
+            : true) +
+           (recreate
+            ? (std::construct(&b), true)
+            : true);
   }
-  static_assert(pseudo());
+  static_assert(pseudo(false, false)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(pseudo(true, false)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(pseudo(false, true));
 
   constexpr void use_after_destroy() {
     A a;
@@ -1248,6 +1260,8 @@ namespace dtor_call {
     // We used to think this was an -> member access because its left-hand side
     // is a pointer. Ensure we don't crash.
     p.~T();
+    // Put a T back so we can destroy it again.
+    std::construct(&p);
   }
   static_assert((destroy_pointer(), true));
 }
@@ -1278,4 +1292,57 @@ namespace value_dependent_init {
   template<typename T> void f() {
     A a = T();
   }
+}
+
+namespace mutable_subobjects {
+  struct A {
+    int m;
+    mutable int n; // expected-note 2{{here}}
+    constexpr int f() const { return m; }
+    constexpr int g() const { return n; } // expected-note {{mutable}}
+  };
+
+  constexpr A a = {1, 2};
+  static_assert(a.f() == 1); // OK (PR44958)
+  static_assert(a.g() == 2); // expected-error {{constant}} expected-note {{in call}}
+
+  constexpr A b = a; // expected-error {{constant}} expected-note {{read of mutable member 'n'}} expected-note {{in call}}
+
+  auto &ti1 = typeid(a);
+  auto &ti2 = typeid(a.m);
+  auto &ti3 = typeid(a.n);
+
+  constexpr void destroy1() { // expected-error {{constexpr}}
+    a.~A(); // expected-note {{cannot modify an object that is visible outside}}
+  }
+  using T = int;
+  constexpr void destroy2() { // expected-error {{constexpr}}
+    a.m.~T(); // expected-note {{cannot modify an object that is visible outside}}
+  }
+  constexpr void destroy3() { // expected-error {{constexpr}}
+    a.n.~T(); // expected-note {{cannot modify an object that is visible outside}}
+  }
+
+  struct X {
+    mutable int n = 0;
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {
+  };
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
+
+  // FIXME: It's unclear whether this should be accepted. The dynamic_cast is
+  // undefined after 'z.y.~Y()`, for example. We essentially assume that all
+  // objects that the evaluator can reach have unbounded lifetimes. (We make
+  // the same assumption when evaluating member function calls.)
+  struct Z {
+    mutable Y y;
+  };
+  constexpr Z z;
+  constexpr const X *pz = &z.y;
+  constexpr const Y *qz = dynamic_cast<const Y*>(pz);
+  auto &zti = typeid(z.y);
+  static_assert(&zti == &typeid(Y));
 }

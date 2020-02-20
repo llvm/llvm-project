@@ -36,6 +36,7 @@ source_set("sources") {
     "primary32.h",
     "primary64.h",
     "quarantine.h",
+    "release.cpp",
     "release.h",
     "report.cpp",
     "report.h",

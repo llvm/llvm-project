@@ -867,7 +867,7 @@ public:
     int getExternalUsesCost(const std::pair<Value *, int> &LHS,
                             const std::pair<Value *, int> &RHS) {
       int Cost = 0;
-      std::array<std::pair<Value *, int>, 2> Values = {LHS, RHS};
+      std::array<std::pair<Value *, int>, 2> Values = {{LHS, RHS}};
       for (int Idx = 0, IdxE = Values.size(); Idx != IdxE; ++Idx) {
         Value *V = Values[Idx].first;
         // Calculate the absolute lane, using the minimum relative lane of LHS

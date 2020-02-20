@@ -57,7 +57,7 @@ class ExprFormattersTestCase(TestBase):
             self.runCmd("frame variable foo1.b --show-types")
             self.runCmd("frame variable foo1.b.b_ref --show-types")
 
-        self.filecheck("expression --show-types -- *(new foo(47))", __file__,
+        self.filecheck("expression --show-types -- *(new_foo(47))", __file__,
                 '-check-prefix=EXPR-TYPES-NEW-FOO')
         # EXPR-TYPES-NEW-FOO: (foo) ${{.*}} = {
         # EXPR-TYPES-NEW-FOO-NEXT:   (int) a = 47
@@ -90,13 +90,13 @@ class ExprFormattersTestCase(TestBase):
 
         self.runCmd("type summary add -F formatters.foo_SummaryProvider foo")
 
-        self.expect("expression new int(12)",
+        self.expect("expression new_int(12)",
                     substrs=['(int *) $', ' = 0x'])
 
         self.runCmd(
             "type summary add -s \"${var%pointer} -> ${*var%decimal}\" \"int *\"")
 
-        self.expect("expression new int(12)",
+        self.expect("expression new_int(12)",
                     substrs=['(int *) $', '= 0x', ' -> 12'])
 
         self.expect("expression foo1.a_ptr",
@@ -112,7 +112,7 @@ class ExprFormattersTestCase(TestBase):
         # EXPR-FOO1-SAME: h = 27
         # EXPR-FOO1-SAME: k = 29
 
-        self.filecheck("expression --ptr-depth=1 -- new foo(47)", __file__,
+        self.filecheck("expression --ptr-depth=1 -- new_foo(47)", __file__,
                 '-check-prefix=EXPR-PTR-DEPTH1')
         # EXPR-PTR-DEPTH1: (foo *) $
         # EXPR-PTR-DEPTH1-SAME: a = 47

@@ -13,14 +13,16 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h"
-
 #include "lldb/lldb-private-enumerations.h"
-
+#include "lldb/lldb-types.h"
+#include <memory>
 #include <set>
 
 namespace lldb_private {
-typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp, const ArchSpec &arch);
+typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
+                                         const ArchSpec &arch);
+typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
+    const ArchSpec &arch);
 typedef Disassembler *(*DisassemblerCreateInstance)(const ArchSpec &arch,
                                                     const char *flavor);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,

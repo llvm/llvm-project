@@ -231,6 +231,8 @@ struct IRPosition {
   /// Create a position describing the argument of \p ACS at position \p ArgNo.
   static const IRPosition callsite_argument(AbstractCallSite ACS,
                                             unsigned ArgNo) {
+    if (ACS.getNumArgOperands() <= ArgNo)
+      return IRPosition();
     int CSArgNo = ACS.getCallArgOperandNo(ArgNo);
     if (CSArgNo >= 0)
       return IRPosition::callsite_argument(
@@ -567,8 +569,10 @@ private:
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG),
-        CGSCC(CGSCC) {}
+      : DL(M.getDataLayout()),
+        Explorer(/* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+                 /* ExploreCFGBackward */ true),
+        AG(AG), CGSCC(CGSCC) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -772,6 +776,12 @@ struct Attributor {
 
   /// Return the internal information cache.
   InformationCache &getInfoCache() { return InfoCache; }
+
+  /// Return true if this is a module pass, false otherwise.
+  bool isModulePass() const {
+    return !Functions.empty() &&
+           Functions.size() == Functions.front()->getParent()->size();
+  }
 
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.

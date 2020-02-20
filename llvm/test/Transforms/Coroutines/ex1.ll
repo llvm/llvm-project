@@ -1,5 +1,6 @@
 ; First example from Doc/Coroutines.rst (one block loop)
 ; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:

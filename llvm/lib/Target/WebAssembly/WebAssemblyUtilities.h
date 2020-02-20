@@ -44,6 +44,10 @@ template <typename T> MachineBasicBlock *getBottom(const T *Unit) {
   return Bottom;
 }
 
+/// Returns the operand number of a callee, assuming the argument is a call
+/// instruction.
+const MachineOperand &getCalleeOp(const MachineInstr &MI);
+
 } // end namespace WebAssembly
 
 } // end namespace llvm

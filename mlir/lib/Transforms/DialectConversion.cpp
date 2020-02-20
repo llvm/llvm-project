@@ -1646,11 +1646,24 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 /// This hooks allows for converting a type.
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) {
-  if (auto newT = convertType(t)) {
-    results.push_back(newT);
-    return success();
-  }
+  // Walk the added converters in reverse order to apply the most recently
+  // registered first.
+  for (ConversionCallbackFn &converter : llvm::reverse(conversions))
+    if (Optional<LogicalResult> result = converter(t, results))
+      return *result;
   return failure();
+}
+
+/// This hook simplifies defining 1-1 type conversions. This function returns
+/// the type to convert to on success, and a null type on failure.
+Type TypeConverter::convertType(Type t) {
+  // Use the multi-type result version to convert the type.
+  SmallVector<Type, 1> results;
+  if (failed(convertType(t, results)))
+    return nullptr;
+
+  // Check to ensure that only one type was produced.
+  return results.size() == 1 ? results.front() : nullptr;
 }
 
 /// Convert the given set of types, filling 'results' as necessary. This

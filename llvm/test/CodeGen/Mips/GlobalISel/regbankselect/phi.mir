@@ -34,8 +34,8 @@
 
   define void @phi_ambiguous_i64_in_fpr(i1 %cnd, i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {
   entry:
-    %0 = load i64, i64* %i64_ptr_a, align 4
-    %1 = load i64, i64* %i64_ptr_b, align 4
+    %0 = load i64, i64* %i64_ptr_a, align 8
+    %1 = load i64, i64* %i64_ptr_b, align 8
     br i1 %cnd, label %cond.true, label %cond.false
 
   cond.true:                                        ; preds = %entry
@@ -46,7 +46,7 @@
 
   cond.end:                                         ; preds = %cond.false, %cond.true
     %cond = phi i64 [ %0, %cond.true ], [ %1, %cond.false ]
-    store i64 %cond, i64* %i64_ptr_c, align 4
+    store i64 %cond, i64* %i64_ptr_c, align 8
     ret void
   }
 
@@ -230,8 +230,8 @@ body:             |
   ; MIPS32:   [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
   ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
-  ; MIPS32:   [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY1]](p0) :: (load 8 from %ir.i64_ptr_a, align 4)
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY2]](p0) :: (load 8 from %ir.i64_ptr_b, align 4)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY1]](p0) :: (load 8 from %ir.i64_ptr_a)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY2]](p0) :: (load 8 from %ir.i64_ptr_b)
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
   ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY4]], [[C]]
@@ -244,7 +244,7 @@ body:             |
   ; MIPS32:   successors: %bb.3(0x80000000)
   ; MIPS32: bb.3.cond.end:
   ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD]](s64), %bb.1, [[LOAD1]](s64), %bb.2
-  ; MIPS32:   G_STORE [[PHI]](s64), [[COPY3]](p0) :: (store 8 into %ir.i64_ptr_c, align 4)
+  ; MIPS32:   G_STORE [[PHI]](s64), [[COPY3]](p0) :: (store 8 into %ir.i64_ptr_c)
   ; MIPS32:   RetRA
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
@@ -253,8 +253,8 @@ body:             |
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
     %3:_(p0) = COPY $a3
-    %5:_(s64) = G_LOAD %1(p0) :: (load 8 from %ir.i64_ptr_a, align 4)
-    %6:_(s64) = G_LOAD %2(p0) :: (load 8 from %ir.i64_ptr_b, align 4)
+    %5:_(s64) = G_LOAD %1(p0) :: (load 8 from %ir.i64_ptr_a)
+    %6:_(s64) = G_LOAD %2(p0) :: (load 8 from %ir.i64_ptr_b)
     %9:_(s32) = G_CONSTANT i32 1
     %10:_(s32) = COPY %4(s32)
     %8:_(s32) = G_AND %10, %9
@@ -268,7 +268,7 @@ body:             |
 
   bb.4.cond.end:
     %7:_(s64) = G_PHI %5(s64), %bb.2, %6(s64), %bb.3
-    G_STORE %7(s64), %3(p0) :: (store 8 into %ir.i64_ptr_c, align 4)
+    G_STORE %7(s64), %3(p0) :: (store 8 into %ir.i64_ptr_c)
     RetRA
 
 ...
@@ -283,11 +283,11 @@ body:             |
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
   ; MIPS32:   [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-  ; MIPS32:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
-  ; MIPS32:   [[MTC1_1:%[0-9]+]]:fgr32(s32) = MTC1 $a2
+  ; MIPS32:   [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+  ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
-  ; MIPS32:   [[COPY1:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
-  ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY1]], [[C]]
+  ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
+  ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
   ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
   ; MIPS32:   G_BR %bb.2
   ; MIPS32: bb.1.cond.true:
@@ -296,15 +296,15 @@ body:             |
   ; MIPS32: bb.2.cond.false:
   ; MIPS32:   successors: %bb.3(0x80000000)
   ; MIPS32: bb.3.cond.end:
-  ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s32) = G_PHI [[MTC1_]](s32), %bb.1, [[MTC1_1]](s32), %bb.2
+  ; MIPS32:   [[PHI:%[0-9]+]]:gprb(s32) = G_PHI [[COPY1]](s32), %bb.1, [[COPY2]](s32), %bb.2
   ; MIPS32:   $f0 = COPY [[PHI]](s32)
   ; MIPS32:   RetRA implicit $f0
   bb.1.entry:
     liveins: $a0, $a1, $a2
 
     %3:_(s32) = COPY $a0
-    %1:fgr32(s32) = MTC1 $a1
-    %2:fgr32(s32) = MTC1 $a2
+    %1:_(s32) = COPY $a1
+    %2:_(s32) = COPY $a2
     %6:_(s32) = G_CONSTANT i32 1
     %7:_(s32) = COPY %3(s32)
     %5:_(s32) = G_AND %7, %6

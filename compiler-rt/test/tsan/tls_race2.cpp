@@ -1,4 +1,6 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_tsan %darwin_min_target_with_tls_support -O1 %s -o %t && \
+// RUN:   %deflake %run %t | \
+// RUN:   FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 #include "test.h"
 
 void *Thread2(void *a) {

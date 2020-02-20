@@ -318,9 +318,11 @@ def SScalar: Signed<Scalar>;
 def SVector: VecOf<SScalar>;
 
 // DblVector expands to a vector of scalars of size twice the size of Scalar.
+// DblPredicate expands to a predicate corresponding to DblVector
 // HalfVector, similarly, expands to a vector of half-sized scalars. And
 // UHalfVector is a vector of half-sized _unsigned integers_.
 def DblVector: VecOf<DoubleSize<Scalar>>;
+def DblPredicate: PredOf<DoubleSize<Scalar>>;
 def HalfVector: VecOf<HalfSize<Scalar>>;
 def UHalfVector: VecOf<Unsigned<HalfSize<Scalar>>>;
 

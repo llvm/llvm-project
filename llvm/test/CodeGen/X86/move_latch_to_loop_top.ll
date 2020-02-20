@@ -173,8 +173,8 @@ exit:
 ;CHECK:       %header
 ;CHECK:       %true
 ;CHECK:       %latch
-;CHECK:       %false
 ;CHECK:       %exit
+;CHECK:       %false
 define i32 @test4(i32 %t, i32* %p) {
 entry:
   br label %header

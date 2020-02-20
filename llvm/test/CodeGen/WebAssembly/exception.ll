@@ -40,10 +40,10 @@ define void @test_throw(i8* %p) {
 ; CHECK:       extract_exception $[[EXN:[0-9]+]]=
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
 ; CHECK-DAG:   i32.store  __wasm_lpad_context+4
-; CHECK:       i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
-; CHECK:         i32.call  $drop=, __cxa_begin_catch
+; CHECK:         call      $drop=, __cxa_begin_catch
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        1
 ; CHECK:       end_block
@@ -94,7 +94,7 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK:   call      foo
 ; CHECK: catch     $[[EXNREF:[0-9]+]]=
 ; CHECK:   global.set  __stack_pointer
-; CHECK:   i32.call  $drop=, _ZN4TempD2Ev
+; CHECK:   call      $drop=, _ZN4TempD2Ev
 ; CHECK:   rethrow   $[[EXNREF]]
 ; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -129,7 +129,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
-; CHECK:   i32.call  $drop=, __cxa_begin_catch
+; CHECK:   call      $drop=, __cxa_begin_catch
 ; CHECK:   try
 ; CHECK:     call      foo
 ; CHECK:   catch
@@ -213,7 +213,7 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK:       block
 ; CHECK:         block
 ; CHECK:           br_if     0
-; CHECK:           i32.call  $drop=, __cxa_begin_catch
+; CHECK:           call      $drop=, __cxa_begin_catch
 ; CHECK:           try
 ; CHECK:             call      foo
 ; CHECK:           catch
@@ -286,7 +286,7 @@ ehcleanup:                                        ; preds = %catch
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
-; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      $drop=, __cxa_begin_catch
 ; CHECK:       call      __cxa_end_catch
 ; CHECK:     end_try
 ; CHECK-NOT: global.set  __stack_pointer

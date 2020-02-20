@@ -668,8 +668,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.b += v{{[0-9]+}}.b
 define <16 x i32> @test84(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -677,8 +677,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.h += v{{[0-9]+}}.h
 define <16 x i32> @test85(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddhq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddhq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -686,8 +686,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.w += v{{[0-9]+}}.w
 define <16 x i32> @test86(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddwq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddwq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -695,8 +695,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.b += v{{[0-9]+}}.b
 define <16 x i32> @test87(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -704,8 +704,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.h += v{{[0-9]+}}.h
 define <16 x i32> @test88(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddhnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddhnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -713,8 +713,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.w += v{{[0-9]+}}.w
 define <16 x i32> @test89(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -722,8 +722,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.b -= v{{[0-9]+}}.b
 define <16 x i32> @test90(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubbq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubbq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -731,8 +731,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.h -= v{{[0-9]+}}.h
 define <16 x i32> @test91(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubhq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubhq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -740,8 +740,8 @@ entry:
 ; CHECK: if (q{{[0-3]}}) v{{[0-9]+}}.w -= v{{[0-9]+}}.w
 define <16 x i32> @test92(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubwq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubwq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -749,8 +749,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.b -= v{{[0-9]+}}.b
 define <16 x i32> @test93(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubbnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubbnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -758,8 +758,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.h -= v{{[0-9]+}}.h
 define <16 x i32> @test94(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -767,8 +767,8 @@ entry:
 ; CHECK: if (!q{{[0-3]}}) v{{[0-9]+}}.w -= v{{[0-9]+}}.w
 define <16 x i32> @test95(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c) #0 {
 entry:
-  %0 = bitcast <16 x i32> %a to <512 x i1>
-  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1> %0, <16 x i32> %c, <16 x i32> %b)
+  %0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  %1 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1> %0, <16 x i32> %c, <16 x i32> %b)
   ret <16 x i32> %1
 }
 
@@ -999,18 +999,18 @@ declare <16 x i32> @llvm.hexagon.V6.vxor(<16 x i32>, <16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vaddw(<16 x i32>, <16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vaddubsat(<16 x i32>, <16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddhq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddwq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddhnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubbq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubhq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubwq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubbnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddhq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddwq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddhnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubbq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubhq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubwq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubbnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vabsh(<16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vabsh.sat(<16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vabsw(<16 x i32>) #0
@@ -1029,6 +1029,7 @@ declare <32 x i32> @llvm.hexagon.V6.vzh(<16 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vsb(<16 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vsh(<16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vassign(<16 x i32>) #0
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #0
 
 attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 

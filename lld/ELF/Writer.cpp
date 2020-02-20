@@ -1205,6 +1205,27 @@ findOrphanPos(std::vector<BaseCommand *>::iterator b,
   return i;
 }
 
+// Adds random priorities to sections not already in the map.
+static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
+  if (!config->shuffleSectionSeed)
+    return;
+
+  std::vector<int> priorities(inputSections.size() - order.size());
+  // Existing priorities are < 0, so use priorities >= 0 for the missing
+  // sections.
+  int curPrio = 0;
+  for (int &prio : priorities)
+    prio = curPrio++;
+  uint32_t seed = *config->shuffleSectionSeed;
+  std::mt19937 g(seed ? seed : std::random_device()());
+  std::shuffle(priorities.begin(), priorities.end(), g);
+  int prioIndex = 0;
+  for (InputSectionBase *sec : inputSections) {
+    if (order.try_emplace(sec, priorities[prioIndex]).second)
+      ++prioIndex;
+  }
+}
+
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> sectionOrder;
@@ -1384,6 +1405,7 @@ static void sortSection(OutputSection *sec,
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
   // Build the order once since it is expensive.
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder();
+  maybeShuffle(order);
   for (BaseCommand *base : script->sectionCommands)
     if (auto *sec = dyn_cast<OutputSection>(base))
       sortSection(sec, order);

@@ -595,6 +595,11 @@ def FloatLike : TypeConstraint<Or<[AnyFloat.predicate,
         VectorOf<[AnyFloat]>.predicate, TensorOf<[AnyFloat]>.predicate]>,
     "floating-point-like">;
 
+// Type constraint for integer-like or float-like types.
+def IntegerOrFloatLike : TypeConstraint<Or<[IntegerLike.predicate,
+                                            FloatLike.predicate]>,
+    "integer-like or floating-point-like">;
+
 
 //===----------------------------------------------------------------------===//
 // Attribute definitions
@@ -1715,6 +1720,17 @@ class AllShapesMatch<list<string> names> :
 
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
+
+// A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
+class TypesMatchWith<string description, string lhsArg, string rhsArg,
+                     string transform> :
+    PredOpTrait<description, CPred<
+      !subst("$_self", "$" # lhsArg # ".getType()", transform)
+      # " == $" # rhsArg # ".getType()">> {
+  string lhs = lhsArg;
+  string rhs = rhsArg;
+  string transformer = transform;
+}
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[

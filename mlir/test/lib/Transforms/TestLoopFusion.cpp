@@ -154,13 +154,12 @@ using LoopFunc = function_ref<bool(AffineForOp, AffineForOp, unsigned, unsigned,
 // Run tests on all combinations of src/dst loop nests in 'depthToLoops'.
 // If 'return_on_change' is true, returns on first invocation of 'fn' which
 // returns true.
-static bool
-iterateLoops(DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops,
-             LoopFunc fn, bool return_on_change = false) {
+static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
+                         LoopFunc fn, bool return_on_change = false) {
   bool changed = false;
-  for (auto &depthAndLoops : depthToLoops) {
-    unsigned loopDepth = depthAndLoops.first;
-    auto &loops = depthAndLoops.second;
+  for (unsigned loopDepth = 0, end = depthToLoops.size(); loopDepth < end;
+       ++loopDepth) {
+    auto &loops = depthToLoops[loopDepth];
     unsigned numLoops = loops.size();
     for (unsigned j = 0; j < numLoops; ++j) {
       for (unsigned k = 0; k < numLoops; ++k) {
@@ -176,7 +175,7 @@ iterateLoops(DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops,
 }
 
 void TestLoopFusion::runOnFunction() {
-  DenseMap<unsigned, SmallVector<AffineForOp, 2>> depthToLoops;
+  std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   if (clTestLoopFusionTransformation) {
     // Run loop fusion until a fixed point is reached.
     do {

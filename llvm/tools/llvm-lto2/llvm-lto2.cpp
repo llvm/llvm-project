@@ -65,7 +65,9 @@ static cl::opt<bool>
                                        "import files for the "
                                        "distributed backend case"));
 
-// Default to using all hardware cores in the system.
+// Default to using all available threads in the system, but using only one
+// thread per core, as indicated by the usage of
+// heavyweight_hardware_concurrency() in the InProcessThinBackend constructor.
 static cl::opt<int> Threads("thinlto-threads", cl::init(0));
 
 static cl::list<std::string> SymbolResolutions(

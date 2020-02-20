@@ -93,8 +93,6 @@ define float @call_float_in_gpr(i32 %a, float %b) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    mtc1 $5, $f0
-; MIPS32-NEXT:    mfc1 $5, $f0
 ; MIPS32-NEXT:    jal float_in_gpr
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -108,39 +106,18 @@ entry:
 
 
 define double @call_double_in_gpr(i32 %a, double %b) {
-; FP32-LABEL: call_double_in_gpr:
-; FP32:       # %bb.0: # %entry
-; FP32-NEXT:    addiu $sp, $sp, -24
-; FP32-NEXT:    .cfi_def_cfa_offset 24
-; FP32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; FP32-NEXT:    .cfi_offset 31, -4
-; FP32-NEXT:    mtc1 $6, $f0
-; FP32-NEXT:    mtc1 $7, $f1
-; FP32-NEXT:    mfc1 $7, $f1
-; FP32-NEXT:    mfc1 $6, $f0
-; FP32-NEXT:    jal double_in_gpr
-; FP32-NEXT:    nop
-; FP32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; FP32-NEXT:    addiu $sp, $sp, 24
-; FP32-NEXT:    jr $ra
-; FP32-NEXT:    nop
-;
-; FP64-LABEL: call_double_in_gpr:
-; FP64:       # %bb.0: # %entry
-; FP64-NEXT:    addiu $sp, $sp, -24
-; FP64-NEXT:    .cfi_def_cfa_offset 24
-; FP64-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; FP64-NEXT:    .cfi_offset 31, -4
-; FP64-NEXT:    mtc1 $6, $f0
-; FP64-NEXT:    mthc1 $7, $f0
-; FP64-NEXT:    mfhc1 $7, $f0
-; FP64-NEXT:    mfc1 $6, $f0
-; FP64-NEXT:    jal double_in_gpr
-; FP64-NEXT:    nop
-; FP64-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; FP64-NEXT:    addiu $sp, $sp, 24
-; FP64-NEXT:    jr $ra
-; FP64-NEXT:    nop
+; MIPS32-LABEL: call_double_in_gpr:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    jal double_in_gpr
+; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
 entry:
   %call = call double @double_in_gpr(i32 %a, double %b)
   ret double %call

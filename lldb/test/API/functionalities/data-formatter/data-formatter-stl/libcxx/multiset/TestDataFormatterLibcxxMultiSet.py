@@ -16,13 +16,12 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        ns = 'ndk' if lldbplatformutil.target_is_android() else ''
-        self.namespace = 'std::__' + ns + '1'
+        self.namespace = 'std'
 
     def getVariableType(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
-        return var.GetType().GetCanonicalType().GetName()
+        return var.GetType().GetDisplayTypeName()
 
     def check_ii(self, var_name):
         """ This checks the value of the bitset stored in ii at the call to by_ref_and_ptr.

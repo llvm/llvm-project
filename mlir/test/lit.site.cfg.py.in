@@ -36,6 +36,8 @@ config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.run_cuda_tests = @MLIR_CUDA_CONVERSIONS_ENABLED@
 config.cuda_wrapper_library_dir = "@MLIR_CUDA_WRAPPER_LIBRARY_DIR@"
 config.enable_cuda_runner = @MLIR_CUDA_RUNNER_ENABLED@
+config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
+config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

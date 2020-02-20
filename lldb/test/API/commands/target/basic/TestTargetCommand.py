@@ -44,6 +44,7 @@ class targetCommandTestCase(TestBase):
         self.buildAll()
         self.do_target_command()
 
+    @expectedFailureAll(archs=['arm64e']) # <rdar://problem/37773624>
     def test_target_variable_command(self):
         """Test 'target variable' command before and after starting the inferior."""
         d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
@@ -52,6 +53,7 @@ class targetCommandTestCase(TestBase):
 
         self.do_target_variable_command('globals')
 
+    @expectedFailureAll(archs=['arm64e']) # <rdar://problem/37773624>
     def test_target_variable_command_no_fail(self):
         """Test 'target variable' command before and after starting the inferior."""
         d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
@@ -177,8 +179,6 @@ class targetCommandTestCase(TestBase):
 
         self.runCmd("c")
 
-        # rdar://problem/9763907
-        # 'target variable' command fails if the target program has been run
         self.expect(
             "target variable my_global_str",
             VARIABLES_DISPLAYED_CORRECTLY,

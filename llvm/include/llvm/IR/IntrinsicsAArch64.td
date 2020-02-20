@@ -1998,4 +1998,13 @@ def int_aarch64_sve_adclt       : AdvSIMD_3VectorArg_Intrinsic;
 def int_aarch64_sve_sbclb       : AdvSIMD_3VectorArg_Intrinsic;
 def int_aarch64_sve_sbclt       : AdvSIMD_3VectorArg_Intrinsic;
 
+//
+// SVE2 - Polynomial arithmetic
+//
+
+def int_aarch64_sve_eorbt       : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_eortb       : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_pmullb_pair : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_pmullt_pair : AdvSIMD_2VectorArg_Intrinsic;
+
 }

@@ -1,6 +1,7 @@
 ; Need to move users of allocas that were moved into the coroutine frame after
 ; coro.begin.
 ; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
 define nonnull i8* @f(i32 %n) {
 entry:

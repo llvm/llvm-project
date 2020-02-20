@@ -25,6 +25,8 @@ static_library("Orc") {
     "Layer.cpp",
     "LazyReexports.cpp",
     "Legacy.cpp",
+    "MachOPlatform.cpp",
+    "Mangling.cpp",
     "NullResolver.cpp",
     "ObjectLinkingLayer.cpp",
     "ObjectTransformLayer.cpp",

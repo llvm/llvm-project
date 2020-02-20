@@ -209,8 +209,7 @@ bb4:                                              ; preds = %bb1
   br label %bb9
 
 bb6:                                              ; preds = %bb1
-; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* nofree readonly %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -220,12 +219,9 @@ bb9:                                              ; preds = %bb4, %bb
 }
 
 define internal i32* @f2(i32* %arg) {
-; FIXME: missing nonnull. It should be nonnull @f2(i32* nonnull %arg)
-; ATTRIBUTOR: define internal nonnull i32* @f2(i32* nofree readonly %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) %arg)
 bb:
-
-; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* nofree readonly %arg)
+; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* nofree nonnull readonly align 4 dereferenceable(4) %arg)
   %tmp = tail call i32* @f1(i32* %arg)
   ret i32* %tmp
 }

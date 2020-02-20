@@ -296,6 +296,28 @@ let Predicates = [HasSVE] in {
   defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy", AArch64dup_pred>;
   defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy", AArch64dup_pred>;
 
+  // Duplicate FP scalar into all vector elements
+  def : Pat<(nxv8f16 (AArch64dup (f16 FPR16:$src))),
+            (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
+  def : Pat<(nxv4f16 (AArch64dup (f16 FPR16:$src))),
+            (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
+  def : Pat<(nxv2f16 (AArch64dup (f16 FPR16:$src))),
+            (DUP_ZZI_H (INSERT_SUBREG (IMPLICIT_DEF), FPR16:$src, hsub), 0)>;
+  def : Pat<(nxv4f32 (AArch64dup (f32 FPR32:$src))),
+            (DUP_ZZI_S (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$src, ssub), 0)>;
+  def : Pat<(nxv2f32 (AArch64dup (f32 FPR32:$src))),
+            (DUP_ZZI_S (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$src, ssub), 0)>;
+  def : Pat<(nxv2f64 (AArch64dup (f64 FPR64:$src))),
+            (DUP_ZZI_D (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$src, dsub), 0)>;
+
+  // Duplicate +0.0 into all vector elements
+  def : Pat<(nxv8f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv4f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv2f16 (AArch64dup (f16 fpimm0))), (DUP_ZI_H 0, 0)>;
+  def : Pat<(nxv4f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
+  def : Pat<(nxv2f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
+  def : Pat<(nxv2f64 (AArch64dup (f64 fpimm0))), (DUP_ZI_D 0, 0)>;
+
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
 
@@ -1609,8 +1631,8 @@ let Predicates = [HasSVE2] in {
   defm SMULLT_ZZZ   : sve2_wide_int_arith_long<0b11101, "smullt",   int_aarch64_sve_smullt>;
   defm UMULLB_ZZZ   : sve2_wide_int_arith_long<0b11110, "umullb",   int_aarch64_sve_umullb>;
   defm UMULLT_ZZZ   : sve2_wide_int_arith_long<0b11111, "umullt",   int_aarch64_sve_umullt>;
-  defm PMULLB_ZZZ   : sve2_pmul_long<0b0, "pmullb">;
-  defm PMULLT_ZZZ   : sve2_pmul_long<0b1, "pmullt">;
+  defm PMULLB_ZZZ   : sve2_pmul_long<0b0, "pmullb", int_aarch64_sve_pmullb_pair>;
+  defm PMULLT_ZZZ   : sve2_pmul_long<0b1, "pmullt", int_aarch64_sve_pmullt_pair>;
 
   // SVE2 bitwise shift and insert
   defm SRI_ZZI : sve2_int_bin_shift_imm_right<0b0, "sri", int_aarch64_sve_sri>;
@@ -1689,8 +1711,8 @@ let Predicates = [HasSVE2] in {
   defm NMATCH_PPzZZ : sve2_char_match<0b1, "nmatch", int_aarch64_sve_nmatch>;
 
   // SVE2 bitwise exclusive-or interleaved
-  defm EORBT_ZZZ : sve2_bitwise_xor_interleaved<0b0, "eorbt">;
-  defm EORTB_ZZZ : sve2_bitwise_xor_interleaved<0b1, "eortb">;
+  defm EORBT_ZZZ : sve2_bitwise_xor_interleaved<0b0, "eorbt", int_aarch64_sve_eorbt>;
+  defm EORTB_ZZZ : sve2_bitwise_xor_interleaved<0b1, "eortb", int_aarch64_sve_eortb>;
 
   // SVE2 bitwise shift left long
   defm SSHLLB_ZZI : sve2_bitwise_shift_left_long<0b00, "sshllb", int_aarch64_sve_sshllb>;
@@ -1811,10 +1833,8 @@ let Predicates = [HasSVE2AES] in {
   // PMULLB and PMULLT instructions which operate with 64-bit source and
   // 128-bit destination elements are enabled with crypto extensions, similar
   // to NEON PMULL2 instruction.
-  def PMULLB_ZZZ_Q : sve2_wide_int_arith<0b00, 0b11010, "pmullb",
-                                         ZPR128, ZPR64, ZPR64>;
-  def PMULLT_ZZZ_Q : sve2_wide_int_arith<0b00, 0b11011, "pmullt",
-                                         ZPR128, ZPR64, ZPR64>;
+  defm PMULLB_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11010, "pmullb", int_aarch64_sve_pmullb_pair>;
+  defm PMULLT_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11011, "pmullt", int_aarch64_sve_pmullt_pair>;
 }
 
 let Predicates = [HasSVE2SM4] in {

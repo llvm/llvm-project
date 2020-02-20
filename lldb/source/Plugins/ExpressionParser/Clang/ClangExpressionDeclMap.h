@@ -281,7 +281,7 @@ public:
   ///     for logging purposes.
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
-                                CompilerDeclContext &namespace_decl,
+                                const CompilerDeclContext &namespace_decl,
                                 unsigned int current_id);
 
 protected:
@@ -468,7 +468,7 @@ private:
   ///    True iff a local variable was found.
   bool LookupLocalVariable(NameSearchContext &context, ConstString name,
                            unsigned current_id, SymbolContext &sym_ctx,
-                           CompilerDeclContext &namespace_decl);
+                           const CompilerDeclContext &namespace_decl);
 
   /// Searches for functions in the given SymbolContextList.
   ///
@@ -505,7 +505,8 @@ private:
   ///     The ID for the current FindExternalVisibleDecls invocation,
   ///     for logging purposes.
   void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
-                      ConstString name, CompilerDeclContext &namespace_decl,
+                      ConstString name,
+                      const CompilerDeclContext &namespace_decl,
                       unsigned current_id);
 
   /// Given a target, find a variable that matches the given name and type.
@@ -524,9 +525,9 @@ private:
   ///
   /// \return
   ///     The LLDB Variable found, or NULL if none was found.
-  lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
-                                      ConstString name,
-                                      CompilerDeclContext *namespace_decl);
+  lldb::VariableSP
+  FindGlobalVariable(Target &target, lldb::ModuleSP &module, ConstString name,
+                     const CompilerDeclContext &namespace_decl);
 
   /// Get the value of a variable in a given execution context and return the
   /// associated Types if needed.

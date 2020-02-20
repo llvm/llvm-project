@@ -50,7 +50,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -502,7 +501,6 @@ bool Vectorizer::lookThroughSelects(Value *PtrA, Value *PtrB,
 }
 
 void Vectorizer::reorder(Instruction *I) {
-  OrderedBasicBlock OBB(I->getParent());
   SmallPtrSet<Instruction *, 16> InstructionsToMove;
   SmallVector<Instruction *, 16> Worklist;
 
@@ -520,7 +518,7 @@ void Vectorizer::reorder(Instruction *I) {
       if (IM->getParent() != I->getParent())
         continue;
 
-      if (!OBB.dominates(IM, I)) {
+      if (!IM->comesBefore(I)) {
         InstructionsToMove.insert(IM);
         Worklist.push_back(IM);
       }
@@ -636,8 +634,6 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
     }
   }
 
-  OrderedBasicBlock OBB(Chain[0]->getParent());
-
   // Loop until we find an instruction in ChainInstrs that we can't vectorize.
   unsigned ChainInstrIdx = 0;
   Instruction *BarrierMemoryInstr = nullptr;
@@ -647,14 +643,14 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
 
     // If a barrier memory instruction was found, chain instructions that follow
     // will not be added to the valid prefix.
-    if (BarrierMemoryInstr && OBB.dominates(BarrierMemoryInstr, ChainInstr))
+    if (BarrierMemoryInstr && BarrierMemoryInstr->comesBefore(ChainInstr))
       break;
 
     // Check (in BB order) if any instruction prevents ChainInstr from being
     // vectorized. Find and store the first such "conflicting" instruction.
     for (Instruction *MemInstr : MemoryInstrs) {
       // If a barrier memory instruction was found, do not check past it.
-      if (BarrierMemoryInstr && OBB.dominates(BarrierMemoryInstr, MemInstr))
+      if (BarrierMemoryInstr && BarrierMemoryInstr->comesBefore(MemInstr))
         break;
 
       auto *MemLoad = dyn_cast<LoadInst>(MemInstr);
@@ -673,12 +669,12 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
       // vectorize it (the vectorized load is inserted at the location of the
       // first load in the chain).
       if (isa<StoreInst>(MemInstr) && ChainLoad &&
-          (IsInvariantLoad(ChainLoad) || OBB.dominates(ChainLoad, MemInstr)))
+          (IsInvariantLoad(ChainLoad) || ChainLoad->comesBefore(MemInstr)))
         continue;
 
       // Same case, but in reverse.
       if (MemLoad && isa<StoreInst>(ChainInstr) &&
-          (IsInvariantLoad(MemLoad) || OBB.dominates(MemLoad, ChainInstr)))
+          (IsInvariantLoad(MemLoad) || MemLoad->comesBefore(ChainInstr)))
         continue;
 
       if (!AA.isNoAlias(MemoryLocation::get(MemInstr),
@@ -704,7 +700,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
     // the basic block.
     if (IsLoadChain && BarrierMemoryInstr) {
       // The BarrierMemoryInstr is a store that precedes ChainInstr.
-      assert(OBB.dominates(BarrierMemoryInstr, ChainInstr));
+      assert(BarrierMemoryInstr->comesBefore(ChainInstr));
       break;
     }
   }

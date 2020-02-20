@@ -364,11 +364,11 @@ void Module::ParseAllDebugSymbols() {
   if (num_comp_units == 0)
     return;
 
-  SymbolContext sc;
-  sc.module_sp = shared_from_this();
   SymbolFile *symbols = GetSymbolFile();
 
   for (size_t cu_idx = 0; cu_idx < num_comp_units; cu_idx++) {
+    SymbolContext sc;
+    sc.module_sp = shared_from_this();
     sc.comp_unit = symbols->GetCompileUnitAtIndex(cu_idx).get();
     if (!sc.comp_unit)
       continue;

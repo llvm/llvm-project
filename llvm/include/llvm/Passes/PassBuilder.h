@@ -92,6 +92,12 @@ public:
   /// is that of the flag: `-forget-scev-loop-unroll`.
   bool ForgetAllSCEVInLoopUnroll;
 
+  /// Tuning option to enable/disable coroutine intrinsic lowering. Its default
+  /// value is false. Frontends such as Clang may enable this conditionally. For
+  /// example, Clang enables this option if the flags `-std=c++2a` or above, or
+  /// `-fcoroutines-ts`, have been specified.
+  bool Coroutines;
+
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
   unsigned LicmMssaOptCap;

@@ -171,6 +171,9 @@ private:
   // Generates getters for the attributes.
   void genAttrGetters();
 
+  // Generates setter for the attributes.
+  void genAttrSetters();
+
   // Generates getters for named operands.
   void genNamedOperandGetters();
 
@@ -300,6 +303,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genNamedResultGetters();
   genNamedRegionGetters();
   genAttrGetters();
+  genAttrSetters();
   genBuilder();
   genParser();
   genPrinter();
@@ -378,6 +382,25 @@ void OpEmitter::genAttrGetters() {
       emitAttrWithStorageType(name, attr);
       emitAttrWithReturnType(name, attr);
     }
+  }
+}
+
+void OpEmitter::genAttrSetters() {
+  // Generate raw named setter type. This is a wrapper class that allows setting
+  // to the attributes via setters instead of having to use the string interface
+  // for better compile time verification.
+  auto emitAttrWithStorageType = [&](StringRef name, Attribute attr) {
+    auto &method = opClass.newMethod("void", (name + "Attr").str(),
+                                     (attr.getStorageType() + " attr").str());
+    auto &body = method.body();
+    body << "  this->setAttr(\"" << name << "\", attr);";
+  };
+
+  for (auto &namedAttr : op.getAttributes()) {
+    const auto &name = namedAttr.name;
+    const auto &attr = namedAttr.attr;
+    if (!attr.isDerivedAttr())
+      emitAttrWithStorageType(name, attr);
   }
 }
 
@@ -1104,29 +1127,55 @@ void OpEmitter::genVerifier() {
   auto &method = opClass.newMethod("LogicalResult", "verify", /*params=*/"");
   auto &body = method.body();
 
+  const char *checkAttrSizedValueSegmentsCode = R"(
+  auto sizeAttr = getAttrOfType<DenseIntElementsAttr>("{0}");
+  auto numElements = sizeAttr.getType().cast<ShapedType>().getNumElements();
+  if (numElements != {1}) {{
+    return emitOpError("'{0}' attribute for specifying {2} segments "
+                       "must have {1} elements");
+  }
+  )";
+
+  // Verify a few traits first so that we can use
+  // getODSOperands()/getODSResults() in the rest of the verifier.
+  for (auto &trait : op.getTraits()) {
+    if (auto *t = dyn_cast<tblgen::NativeOpTrait>(&trait)) {
+      if (t->getTrait() == "OpTrait::AttrSizedOperandSegments") {
+        body << formatv(checkAttrSizedValueSegmentsCode,
+                        "operand_segment_sizes", op.getNumOperands(),
+                        "operand");
+      } else if (t->getTrait() == "OpTrait::AttrSizedResultSegments") {
+        body << formatv(checkAttrSizedValueSegmentsCode, "result_segment_sizes",
+                        op.getNumResults(), "result");
+      }
+    }
+  }
+
   // Populate substitutions for attributes and named operands and results.
   for (const auto &namedAttr : op.getAttributes())
     verifyCtx.addSubst(namedAttr.name,
                        formatv("this->getAttr(\"{0}\")", namedAttr.name));
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     auto &value = op.getOperand(i);
-    // Skip from from first variadic operands for now. Else getOperand index
-    // used below doesn't match.
+    if (value.name.empty())
+      continue;
+
     if (value.isVariadic())
-      break;
-    if (!value.name.empty())
+      verifyCtx.addSubst(value.name, formatv("this->getODSOperands({0})", i));
+    else
       verifyCtx.addSubst(value.name,
-                         formatv("this->getOperation()->getOperand({0})", i));
+                         formatv("(*this->getODSOperands({0}).begin())", i));
   }
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     auto &value = op.getResult(i);
-    // Skip from from first variadic results for now. Else getResult index used
-    // below doesn't match.
+    if (value.name.empty())
+      continue;
+
     if (value.isVariadic())
-      break;
-    if (!value.name.empty())
+      verifyCtx.addSubst(value.name, formatv("this->getODSResults({0})", i));
+    else
       verifyCtx.addSubst(value.name,
-                         formatv("this->getOperation()->getResult({0})", i));
+                         formatv("(*this->getODSResults({0}).begin())", i));
   }
 
   // Verify the attributes have the correct type.
@@ -1166,14 +1215,8 @@ void OpEmitter::genVerifier() {
     body << "  }\n";
   }
 
-  const char *code = R"(
-  auto sizeAttr = getAttrOfType<DenseIntElementsAttr>("{0}");
-  auto numElements = sizeAttr.getType().cast<ShapedType>().getNumElements();
-  if (numElements != {1}) {{
-    return emitOpError("'{0}' attribute for specifying {2} segments "
-                       "must have {1} elements");
-  }
-  )";
+  genOperandResultVerifier(body, op.getOperands(), "operand");
+  genOperandResultVerifier(body, op.getResults(), "result");
 
   for (auto &trait : op.getTraits()) {
     if (auto *t = dyn_cast<tblgen::PredOpTrait>(&trait)) {
@@ -1181,22 +1224,8 @@ void OpEmitter::genVerifier() {
                     "return emitOpError(\"failed to verify that $1\");\n  }\n",
                     &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
                     t->getDescription());
-    } else if (auto *t = dyn_cast<tblgen::NativeOpTrait>(&trait)) {
-      if (t->getTrait() == "OpTrait::AttrSizedOperandSegments") {
-        body << formatv(code, "operand_segment_sizes", op.getNumOperands(),
-                        "operand");
-      } else if (t->getTrait() == "OpTrait::AttrSizedResultSegments") {
-        body << formatv(code, "result_segment_sizes", op.getNumResults(),
-                        "result");
-      }
     }
   }
-
-  // These should happen after we verified the traits because
-  // getODSOperands()/getODSResults() may depend on traits (e.g.,
-  // AttrSizedOperandSegments/AttrSizedResultSegments).
-  genOperandResultVerifier(body, op.getOperands(), "operand");
-  genOperandResultVerifier(body, op.getResults(), "result");
 
   genRegionVerifier(body);
 

@@ -1956,7 +1956,7 @@ void CodeGenRegBank::computeRegUnitSets() {
       // Speculatively grow the RegUnitSets to hold the new set.
       RegUnitSets.resize(RegUnitSets.size() + 1);
       RegUnitSets.back().Name =
-        RegUnitSets[Idx].Name + "+" + RegUnitSets[SearchIdx].Name;
+        RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
 
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),

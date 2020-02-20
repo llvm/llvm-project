@@ -115,9 +115,9 @@ entry:
 define float @select_float(i1 %test, float %a, float %b) {
 ; MIPS32-LABEL: select_float:
 ; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    andi $1, $4, 1
 ; MIPS32-NEXT:    mtc1 $5, $f0
 ; MIPS32-NEXT:    mtc1 $6, $f1
-; MIPS32-NEXT:    andi $1, $4, 1
 ; MIPS32-NEXT:    movn.s $f1, $f0, $1
 ; MIPS32-NEXT:    mov.s $f0, $f1
 ; MIPS32-NEXT:    jr $ra

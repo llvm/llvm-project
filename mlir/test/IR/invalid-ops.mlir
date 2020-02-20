@@ -275,7 +275,7 @@ func @func_with_ops(i32, i32, i32) {
 
 func @func_with_ops(i1, i32, i64) {
 ^bb0(%cond : i1, %t : i32, %f : i64):
-  // expected-error@+1 {{'true' and 'false' arguments to be of the same type}}
+  // expected-error@+1 {{all of {true_value, false_value, result} have same type}}
   %r = "std.select"(%cond, %t, %f) : (i1, i32, i64) -> i32
 }
 
@@ -460,7 +460,7 @@ func @extract_element_invalid_index_type(%v : vector<3xf32>, %i : i32) {
 // -----
 
 func @extract_element_element_result_type_mismatch(%v : vector<3xf32>, %i : index) {
-  // expected-error@+1 {{result type must match element type of aggregate}}
+  // expected-error@+1 {{result type matches element type of aggregate}}
   %0 = "std.extract_element"(%v, %i) : (vector<3xf32>, index) -> f64
   return
 }
@@ -1034,5 +1034,23 @@ func @invalid_memref_cast() {
   %1 = memref_cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
   // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32>' are cast incompatible}}
   %2 = memref_cast %1 : memref<*xf32, 0> to memref<*xf32, 0>
+  return
+}
+
+// -----
+
+// alignment is not power of 2.
+func @assume_alignment(%0: memref<4x4xf16>) {
+  // expected-error@+1 {{alignment must be power of 2}}
+  std.assume_alignment %0, 12 : memref<4x4xf16>
+  return
+}
+
+// -----
+
+// 0 alignment value.
+func @assume_alignment(%0: memref<4x4xf16>) {
+  // expected-error@+1 {{'std.assume_alignment' op attribute 'alignment' failed to satisfy constraint: positive 32-bit integer attribute}}
+  std.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }

@@ -593,11 +593,11 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
 
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
     Target &target, ModuleSP &module, ConstString name,
-    CompilerDeclContext *namespace_decl) {
+    const CompilerDeclContext &namespace_decl) {
   VariableList vars;
 
   if (module && namespace_decl)
-    module->FindGlobalVariables(name, *namespace_decl, -1, vars);
+    module->FindGlobalVariables(name, namespace_decl, -1, vars);
   else
     target.GetImages().FindGlobalVariables(name, -1, vars);
 
@@ -1073,7 +1073,7 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
 bool ClangExpressionDeclMap::LookupLocalVariable(
     NameSearchContext &context, ConstString name, unsigned current_id,
-    SymbolContext &sym_ctx, CompilerDeclContext &namespace_decl) {
+    SymbolContext &sym_ctx, const CompilerDeclContext &namespace_decl) {
   if (sym_ctx.block == nullptr)
     return false;
 
@@ -1213,11 +1213,9 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   return sc_func_list;
 }
 
-void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
-                                            lldb::ModuleSP module_sp,
-                                            ConstString name,
-                                            CompilerDeclContext &namespace_decl,
-                                            unsigned current_id) {
+void ClangExpressionDeclMap::LookupFunction(
+    NameSearchContext &context, lldb::ModuleSP module_sp, ConstString name,
+    const CompilerDeclContext &namespace_decl, unsigned current_id) {
   if (!m_parser_vars)
     return;
 
@@ -1339,7 +1337,7 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
 
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
-    CompilerDeclContext &namespace_decl, unsigned int current_id) {
+    const CompilerDeclContext &namespace_decl, unsigned int current_id) {
   assert(m_ast_context);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -1424,7 +1422,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (target) {
     ValueObjectSP valobj;
     VariableSP var;
-    var = FindGlobalVariable(*target, module_sp, name, &namespace_decl);
+    var = FindGlobalVariable(*target, module_sp, name, namespace_decl);
 
     if (var) {
       valobj = ValueObjectVariable::Create(target, var);

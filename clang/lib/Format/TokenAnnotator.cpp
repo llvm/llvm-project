@@ -819,10 +819,15 @@ private:
         Tok->Type = TT_BitFieldColon;
       } else if (Contexts.size() == 1 &&
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) {
-        if (Tok->getPreviousNonComment()->isOneOf(tok::r_paren,
-                                                  tok::kw_noexcept))
+        FormatToken *Prev = Tok->getPreviousNonComment();
+        if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept))
           Tok->Type = TT_CtorInitializerColon;
-        else
+        else if (Prev->is(tok::kw_try)) {
+          // Member initializer list within function try block.
+          FormatToken *PrevPrev = Prev->getPreviousNonComment();
+          if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
+            Tok->Type = TT_CtorInitializerColon;
+        } else
           Tok->Type = TT_InheritanceColon;
       } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
                  (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||

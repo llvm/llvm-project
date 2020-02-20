@@ -28,6 +28,11 @@ static bool allowUndefined(const Symbol* sym) {
   // compiling with -fPIC)
   if (isa<DataSymbol>(sym))
     return false;
+  // Undefined functions with explicit import name are allowed to be undefined
+  // at link time.
+  if (auto *F = dyn_cast<UndefinedFunction>(sym))
+    if (F->importName)
+      return true;
   return (config->allowUndefined ||
           config->allowUndefinedSymbols.count(sym->getName()) != 0);
 }

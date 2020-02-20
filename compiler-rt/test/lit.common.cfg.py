@@ -257,6 +257,15 @@ if config.gwp_asan:
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
+# Maps a lit substitution name for the minimum target OS flag
+# to the macOS version that first contained the relevant feature.
+darwin_min_deployment_target_substitutions = {
+  '%macos_min_target_10_11': '10.11',
+  # rdar://problem/22207160
+  '%darwin_min_target_with_full_runtime_arc_support': '10.11',
+  '%darwin_min_target_with_tls_support': '10.12',
+}
+
 if config.host_os == 'Darwin':
   def get_apple_platform_version_aligned_with(macos_version, apple_platform):
     """
@@ -326,25 +335,29 @@ if config.host_os == 'Darwin':
   except:
     pass
 
-  min_os_aligned_with_osx_10_11 = get_apple_platform_version_aligned_with('10.11', config.apple_platform)
-  min_os_aligned_with_osx_10_11_flag = ''
-  if min_os_aligned_with_osx_10_11:
-    min_os_aligned_with_osx_10_11_flag = '{flag}={version}'.format(
-      flag=config.apple_platform_min_deployment_target_flag,
-      version=min_os_aligned_with_osx_10_11)
-  else:
-    lit_config.warning('Could not find a version of {} that corresponds with macOS 10.11'.format(config.apple_platform))
-  config.substitutions.append( ("%macos_min_target_10_11", min_os_aligned_with_osx_10_11_flag) )
-  # rdar://problem/22207160
-  config.substitutions.append( ("%darwin_min_target_with_full_runtime_arc_support", min_os_aligned_with_osx_10_11_flag) )
+  def get_apple_min_deploy_target_flag_aligned_with_osx(version):
+    min_os_aligned_with_osx_v = get_apple_platform_version_aligned_with(version, config.apple_platform)
+    min_os_aligned_with_osx_v_flag = ''
+    if min_os_aligned_with_osx_v:
+      min_os_aligned_with_osx_v_flag = '{flag}={version}'.format(
+        flag=config.apple_platform_min_deployment_target_flag,
+        version=min_os_aligned_with_osx_v)
+    else:
+      lit_config.warning('Could not find a version of {} that corresponds with macOS {}'.format(
+        config.apple_platform,
+        version))
+    return min_os_aligned_with_osx_v_flag
+
+  for substitution, osx_version in darwin_min_deployment_target_substitutions.items():
+    config.substitutions.append( (substitution, get_apple_min_deploy_target_flag_aligned_with_osx(osx_version)) )
 
   # 32-bit iOS simulator is deprecated and removed in latest Xcode.
   if config.apple_platform == "iossim":
     if config.target_arch == "i386":
       config.unsupported = True
 else:
-  config.substitutions.append( ("%macos_min_target_10_11", "") )
-  config.substitutions.append( ("%darwin_min_target_with_full_runtime_arc_support", "") )
+  for substitution in darwin_min_deployment_target_substitutions.keys():
+    config.substitutions.append( (substitution, "") )
 
 if config.android:
   env = os.environ.copy()

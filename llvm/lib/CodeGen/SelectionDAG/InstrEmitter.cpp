@@ -195,7 +195,10 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
          "IMPLICIT_DEF should have been handled as a special case elsewhere!");
 
   unsigned NumResults = CountResults(Node);
-  for (unsigned i = 0; i < II.getNumDefs(); ++i) {
+  bool HasVRegVariadicDefs = !MF->getTarget().usesPhysRegsForValues() &&
+                             II.isVariadic() && II.variadicOpsAreDefs();
+  unsigned NumVRegs = HasVRegVariadicDefs ? NumResults : II.getNumDefs();
+  for (unsigned i = 0; i < NumVRegs; ++i) {
     // If the specific node value is only used by a CopyToReg and the dest reg
     // is a vreg in the same register class, use the CopyToReg'd destination
     // register instead of creating a new vreg.
@@ -216,7 +219,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
         RC = VTRC;
     }
 
-    if (II.OpInfo[i].isOptionalDef()) {
+    if (II.OpInfo != nullptr && II.OpInfo[i].isOptionalDef()) {
       // Optional def must be a physical register.
       VRBase = cast<RegisterSDNode>(Node->getOperand(i-NumResults))->getReg();
       assert(Register::isPhysicalRegister(VRBase));
@@ -829,7 +832,10 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   unsigned NumImpUses = 0;
   unsigned NodeOperands =
     countOperands(Node, II.getNumOperands() - NumDefs, NumImpUses);
-  bool HasPhysRegOuts = NumResults > NumDefs && II.getImplicitDefs()!=nullptr;
+  bool HasVRegVariadicDefs = !MF->getTarget().usesPhysRegsForValues() &&
+                             II.isVariadic() && II.variadicOpsAreDefs();
+  bool HasPhysRegOuts = NumResults > NumDefs &&
+                        II.getImplicitDefs() != nullptr && !HasVRegVariadicDefs;
 #ifndef NDEBUG
   unsigned NumMIOperands = NodeOperands + NumResults;
   if (II.isVariadic())

@@ -16,7 +16,7 @@
 	.asciz	"/tmp"                  # string offset=8
 .Lskel_string2:
 	.asciz	"foobar"                # string offset=13
-	.section	.debug_loc.dwo,"",@progbits
+	.section	.debug_loc.dwo,"e",@progbits
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                       # Abbreviation Code
 	.byte	17                      # DW_TAG_compile_unit
@@ -49,7 +49,7 @@
 	.section	.debug_ranges,"",@progbits
 	.section	.debug_macinfo,"",@progbits
 	.byte	0                       # End Of Macro List Mark
-	.section	.debug_str.dwo,"MS",@progbits,1
+	.section	.debug_str.dwo,"MSe",@progbits,1
 .Linfo_string0:
 	.asciz	"foo.dwo"               # string offset=0
 .Linfo_string1:
@@ -58,12 +58,12 @@
 	.asciz	"/tmp/cu1.c"            # string offset=63
 .Linfo_string3:
 	.asciz	"foobar"                # string offset=74
-	.section	.debug_str_offsets.dwo,"",@progbits
+	.section	.debug_str_offsets.dwo,"e",@progbits
 	.long	0
 	.long	8
 	.long	63
 	.long	74
-	.section	.debug_info.dwo,"",@progbits
+	.section	.debug_info.dwo,"e",@progbits
 	.long	34                      # Length of Unit
 	.short	4                       # DWARF version number
 	.long	0                       # Offset Into Abbrev. Section
@@ -85,7 +85,7 @@
 	.byte	0
 	.byte	3                       # Abbrev [3] 0x24:0x1 DW_TAG_pointer_type
 	.byte	0                       # End Of Children Mark
-	.section	.debug_abbrev.dwo,"",@progbits
+	.section	.debug_abbrev.dwo,"e",@progbits
 	.byte	1                       # Abbreviation Code
 	.byte	17                      # DW_TAG_compile_unit
 	.byte	1                       # DW_CHILDREN_yes

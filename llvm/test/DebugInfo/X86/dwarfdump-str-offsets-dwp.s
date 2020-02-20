@@ -7,7 +7,7 @@
 # file, and CU3 from a third object file that was compiled with 
 # -gdwarf-4.
 #
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 str_producer:
         .asciz "Handmade DWARF producer"
 str_CU1:
@@ -31,7 +31,7 @@ str_CU3:
 str_CU3_dir:
         .asciz "/home/test/CU3"
 
-        .section .debug_str_offsets.dwo,"",@progbits
+        .section .debug_str_offsets.dwo,"e",@progbits
 # Object files 1's portion of the .debug_str_offsets.dwo section.
 # CU1 and TU1 share a contribution to the string offsets table.
 .debug_str_offsets_object_file1_start:
@@ -72,7 +72,7 @@ str_CU3_dir:
 .debug_str_offsets_object_file3_end:
 
 # Abbrevs are shared for all compile and type units
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -112,7 +112,7 @@ str_CU3_dir:
         .byte 0x00  # EOM(3)
 abbrev_end:
 
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 
 # DWARF v5 CU header.
 CU1_5_start:
@@ -162,7 +162,7 @@ CU3_4_version:
         .byte 0 # NULL
 CU3_4_end:
 
-        .section .debug_types.dwo,"",@progbits
+        .section .debug_types.dwo,"e",@progbits
 # DWARF v5 Type unit header.
 TU1_5_start:
         .long  TU1_5_end-TU1_5_version  # Length of Unit

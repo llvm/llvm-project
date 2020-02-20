@@ -9,11 +9,11 @@
 # RUN: llvm-readobj -V %t1 | FileCheck %s --check-prefix=LLVM-VERNEED-NAME
 
 # GNU-VERNEED-NAME:      Version symbols section '.gnu.version' contains 2 entries:
-# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 5 (.dynsym)
+# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 3 (.dynsym)
 # GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 ()
 
 # GNU-VERNEED-NAME:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 6 (.dynstr)
+# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 4 (.dynstr)
 # GNU-VERNEED-NAME-NEXT:   0x0000: Version: 1  File: somefile  Cnt: 1
 # GNU-VERNEED-NAME-NEXT:   0x0010:   Name:   Flags: none  Version: 2
 
@@ -85,7 +85,7 @@ DynamicSymbols:
 # RUN: llvm-readobj -V %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=LLVM-NOLINK
 
 # GNU-NOLINK:      Version symbols section '.gnu.version' contains 2 entries:
-# GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
 # GNU-NOLINK-NEXT: warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # GNU-NOLINK-NEXT:   000:   0 (*local*) 2 (<corrupt>)
 # GNU-NOLINK:      Version needs section '.gnu.version_r' contains 1 entries:
@@ -159,7 +159,7 @@ DynamicSymbols:
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=BROKEN-AUX-LLVM
 
 # BROKEN-AUX-GNU:      Version symbols section '.gnu.version' contains 1 entries:
-# BROKEN-AUX-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# BROKEN-AUX-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
 # BROKEN-AUX-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 0 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
 # BROKEN-AUX-GNU-NEXT:  000:   2 (<corrupt>)
 
@@ -377,7 +377,7 @@ DynamicSymbols:
 # RUN: llvm-readobj --sections -V %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DATA
 # RUN: llvm-readelf --sections -V %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DATA
 
-# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verneed section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x230)
+# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verneed section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x228)
 
 --- !ELF
 FileHeader:
@@ -559,7 +559,7 @@ DynamicSymbols:
 # RUN: llvm-readobj -V %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=LLVM-CUSTOM-DYNSTR
 
 # GNU-CUSTOM-DYNSTR:      Version symbols section '.gnu.version' contains 2 entries:
-# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 6 (.dynsym)
+# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
 # GNU-CUSTOM-DYNSTR-NEXT:   000:   0 (*local*)       2 (bcdefghij)
 # GNU-CUSTOM-DYNSTR:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 3 (.custom.dynstr)

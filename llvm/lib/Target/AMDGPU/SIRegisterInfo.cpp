@@ -41,53 +41,8 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   AMDGPUGenRegisterInfo(0),
   ST(ST),
-  SGPRPressureSets(getNumRegPressureSets()),
-  VGPRPressureSets(getNumRegPressureSets()),
-  AGPRPressureSets(getNumRegPressureSets()),
   SpillSGPRToVGPR(EnableSpillSGPRToVGPR),
   isWave32(ST.isWave32()) {
-  unsigned NumRegPressureSets = getNumRegPressureSets();
-
-  SGPRSetID = NumRegPressureSets;
-  VGPRSetID = NumRegPressureSets;
-  AGPRSetID = NumRegPressureSets;
-
-  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
-    classifyPressureSet(i, AMDGPU::SGPR0, SGPRPressureSets);
-    classifyPressureSet(i, AMDGPU::VGPR0, VGPRPressureSets);
-    classifyPressureSet(i, AMDGPU::AGPR0, AGPRPressureSets);
-  }
-
-  // Determine the number of reg units for each pressure set.
-  std::vector<unsigned> PressureSetRegUnits(NumRegPressureSets, 0);
-  for (unsigned i = 0, e = getNumRegUnits(); i != e; ++i) {
-    const int *PSets = getRegUnitPressureSets(i);
-    for (unsigned j = 0; PSets[j] != -1; ++j) {
-      ++PressureSetRegUnits[PSets[j]];
-    }
-  }
-
-  unsigned VGPRMax = 0, SGPRMax = 0, AGPRMax = 0;
-  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
-    if (isVGPRPressureSet(i) && PressureSetRegUnits[i] > VGPRMax) {
-      VGPRSetID = i;
-      VGPRMax = PressureSetRegUnits[i];
-      continue;
-    }
-    if (isSGPRPressureSet(i) && PressureSetRegUnits[i] > SGPRMax) {
-      SGPRSetID = i;
-      SGPRMax = PressureSetRegUnits[i];
-    }
-    if (isAGPRPressureSet(i) && PressureSetRegUnits[i] > AGPRMax) {
-      AGPRSetID = i;
-      AGPRMax = PressureSetRegUnits[i];
-      continue;
-    }
-  }
-
-  assert(SGPRSetID < NumRegPressureSets &&
-         VGPRSetID < NumRegPressureSets &&
-         AGPRSetID < NumRegPressureSets);
 }
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
@@ -146,25 +101,6 @@ const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
   return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
-}
-
-static bool hasPressureSet(const int *PSets, unsigned PSetID) {
-  for (unsigned i = 0; PSets[i] != -1; ++i) {
-    if (PSets[i] == (int)PSetID)
-      return true;
-  }
-  return false;
-}
-
-void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
-                                         BitVector &PressureSets) const {
-  for (MCRegUnitIterator U(Reg, this); U.isValid(); ++U) {
-    const int *PSets = getRegUnitPressureSets(*U);
-    if (hasPressureSet(PSets, PSetID)) {
-      PressureSets.set(PSetID);
-      break;
-    }
-  }
 }
 
 // FIXME: TableGen should generate something to make this manageable for all
@@ -1875,11 +1811,12 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 
 unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                                 unsigned Idx) const {
-  if (Idx == getVGPRPressureSet() || Idx == getAGPRPressureSet())
+  if (Idx == AMDGPU::RegisterPressureSets::VGPR_32 ||
+      Idx == AMDGPU::RegisterPressureSets::AGPR_32)
     return getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 
-  if (Idx == getSGPRPressureSet())
+  if (Idx == AMDGPU::RegisterPressureSets::SReg_32)
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 

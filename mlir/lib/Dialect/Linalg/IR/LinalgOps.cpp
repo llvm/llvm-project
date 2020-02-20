@@ -361,11 +361,10 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
       if (!cst || cst.getValue() != 0)
         return op.emitOpError("expected indexing_map #")
                << idx << " to be 0 to match 0-D view: " << view;
-    }
-
-    if (m.getNumResults() != view.getRank())
+    } else if (m.getNumResults() != view.getRank()) {
       return op.emitOpError("expected indexing_map #")
              << idx << " results to match view rank: " << view;
+    }
   }
 
   auto concatMap = concatAffineMaps(indexingMaps);

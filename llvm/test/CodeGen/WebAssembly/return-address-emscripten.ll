@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-emscripten"
 ; CHECK-LABEL: test_returnaddress:
 ; CHECK-NEXT: .functype test_returnaddress () -> (i32){{$}}
 ; CHECK-NEXT: {{^}} i32.const 0{{$}}
-; CHECK-NEXT: {{^}} i32.call emscripten_return_address{{$}}
+; CHECK-NEXT: {{^}} call emscripten_return_address{{$}}
 ; CHECK-NEXT: {{^}} end_function{{$}}
 define i8* @test_returnaddress() {
   %r = call i8* @llvm.returnaddress(i32 0)

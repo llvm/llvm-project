@@ -136,29 +136,19 @@ private:
 void IncomingValueHandler::assignValueToReg(Register ValVReg,
                                             const CCValAssign &VA,
                                             const EVT &VT) {
-  const MipsSubtarget &STI =
-      static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
   Register PhysReg = VA.getLocReg();
   if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
     const MipsSubtarget &STI =
         static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
-
-    MIRBuilder
-        .buildInstr(STI.isFP64bit() ? Mips::BuildPairF64_64
-                                    : Mips::BuildPairF64)
-        .addDef(ValVReg)
-        .addUse(PhysReg + (STI.isLittle() ? 0 : 1))
-        .addUse(PhysReg + (STI.isLittle() ? 1 : 0))
-        .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                          *STI.getRegBankInfo());
+    bool IsEL = STI.isLittle();
+    LLT s32 = LLT::scalar(32);
+    auto Lo = MIRBuilder.buildCopy(s32, Register(PhysReg + (IsEL ? 0 : 1)));
+    auto Hi = MIRBuilder.buildCopy(s32, Register(PhysReg + (IsEL ? 1 : 0)));
+    MIRBuilder.buildMerge(ValVReg, {Lo, Hi});
     markPhysRegUsed(PhysReg);
     markPhysRegUsed(PhysReg + 1);
   } else if (VT == MVT::f32 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    MIRBuilder.buildInstr(Mips::MTC1)
-        .addDef(ValVReg)
-        .addUse(PhysReg)
-        .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                          *STI.getRegBankInfo());
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
     markPhysRegUsed(PhysReg);
   } else {
     switch (VA.getLocInfo()) {
@@ -247,32 +237,15 @@ void OutgoingValueHandler::assignValueToReg(Register ValVReg,
                                             const CCValAssign &VA,
                                             const EVT &VT) {
   Register PhysReg = VA.getLocReg();
-  const MipsSubtarget &STI =
-      static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
-
   if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    MIRBuilder
-        .buildInstr(STI.isFP64bit() ? Mips::ExtractElementF64_64
-                                    : Mips::ExtractElementF64)
-        .addDef(PhysReg + (STI.isLittle() ? 1 : 0))
-        .addUse(ValVReg)
-        .addImm(1)
-        .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                          *STI.getRegBankInfo());
-    MIRBuilder
-        .buildInstr(STI.isFP64bit() ? Mips::ExtractElementF64_64
-                                    : Mips::ExtractElementF64)
-        .addDef(PhysReg + (STI.isLittle() ? 0 : 1))
-        .addUse(ValVReg)
-        .addImm(0)
-        .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                          *STI.getRegBankInfo());
+    const MipsSubtarget &STI =
+        static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
+    bool IsEL = STI.isLittle();
+    auto Unmerge = MIRBuilder.buildUnmerge(LLT::scalar(32), ValVReg);
+    MIRBuilder.buildCopy(Register(PhysReg + (IsEL ? 0 : 1)), Unmerge.getReg(0));
+    MIRBuilder.buildCopy(Register(PhysReg + (IsEL ? 1 : 0)), Unmerge.getReg(1));
   } else if (VT == MVT::f32 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    MIRBuilder.buildInstr(Mips::MFC1)
-        .addDef(PhysReg)
-        .addUse(ValVReg)
-        .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
-                          *STI.getRegBankInfo());
+    MIRBuilder.buildCopy(PhysReg, ValVReg);
   } else {
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);

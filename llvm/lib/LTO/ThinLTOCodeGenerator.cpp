@@ -80,7 +80,9 @@ extern cl::opt<std::string> RemarksFormat;
 
 namespace {
 
-// Default to using one job per hardware core in the system
+// Default to using all available threads in the system, but using only one
+// thred per core, as indicated by the usage of
+// heavyweight_hardware_concurrency() below.
 static cl::opt<int> ThreadCount("threads", cl::init(0));
 
 // Simple helper to save temporary files for debug.

@@ -133,3 +133,104 @@ define <vscale x 16 x i1> @sve_splat_16xi1(i1 %val) {
   %splat = shufflevector <vscale x 16 x i1> %ins, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i1> %splat
 }
+
+;; Splats of legal floating point vector types
+
+define <vscale x 8 x half> @splat_nxv8f16(half %val) {
+; CHECK-LABEL: splat_nxv8f16:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 8 x half> undef, half %val, i32 0
+  %2 = shufflevector <vscale x 8 x half> %1, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x half> %2
+}
+
+define <vscale x 4 x half> @splat_nxv4f16(half %val) {
+; CHECK-LABEL: splat_nxv4f16:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 4 x half> undef, half %val, i32 0
+  %2 = shufflevector <vscale x 4 x half> %1, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x half> %2
+}
+
+define <vscale x 2 x half> @splat_nxv2f16(half %val) {
+; CHECK-LABEL: splat_nxv2f16:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 2 x half> undef, half %val, i32 0
+  %2 = shufflevector <vscale x 2 x half> %1, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x half> %2
+}
+
+define <vscale x 4 x float> @splat_nxv4f32(float %val) {
+; CHECK-LABEL: splat_nxv4f32:
+; CHECK: mov z0.s, s0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 4 x float> undef, float %val, i32 0
+  %2 = shufflevector <vscale x 4 x float> %1, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x float> %2
+}
+
+define <vscale x 2 x float> @splat_nxv2f32(float %val) {
+; CHECK-LABEL: splat_nxv2f32:
+; CHECK: mov z0.s, s0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 2 x float> undef, float %val, i32 0
+  %2 = shufflevector <vscale x 2 x float> %1, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x float> %2
+}
+
+define <vscale x 2 x double> @splat_nxv2f64(double %val) {
+; CHECK-LABEL: splat_nxv2f64:
+; CHECK: mov z0.d, d0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 2 x double> undef, double %val, i32 0
+  %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x double> %2
+}
+
+; TODO: The f16 constant should be folded into the move.
+define <vscale x 8 x half> @splat_nxv8f16_zero() {
+; CHECK-LABEL: splat_nxv8f16_zero:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  ret <vscale x 8 x half> zeroinitializer
+}
+
+; TODO: The f16 constant should be folded into the move.
+define <vscale x 4 x half> @splat_nxv4f16_zero() {
+; CHECK-LABEL: splat_nxv4f16_zero:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  ret <vscale x 4 x half> zeroinitializer
+}
+
+; TODO: The f16 constant should be folded into the move.
+define <vscale x 2 x half> @splat_nxv2f16_zero() {
+; CHECK-LABEL: splat_nxv2f16_zero:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  ret <vscale x 2 x half> zeroinitializer
+}
+
+define <vscale x 4 x float> @splat_nxv4f32_zero() {
+; CHECK-LABEL: splat_nxv4f32_zero:
+; CHECK: mov z0.s, #0
+; CHECK-NEXT: ret
+  ret <vscale x 4 x float> zeroinitializer
+}
+
+define <vscale x 2 x float> @splat_nxv2f32_zero() {
+; CHECK-LABEL: splat_nxv2f32_zero:
+; CHECK: mov z0.s, #0
+; CHECK-NEXT: ret
+  ret <vscale x 2 x float> zeroinitializer
+}
+
+define <vscale x 2 x double> @splat_nxv2f64_zero() {
+; CHECK-LABEL: splat_nxv2f64_zero:
+; CHECK: mov z0.d, #0
+; CHECK-NEXT: ret
+  ret <vscale x 2 x double> zeroinitializer
+}

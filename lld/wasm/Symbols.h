@@ -11,6 +11,7 @@
 
 #include "Config.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 
@@ -203,20 +204,21 @@ public:
 
 class UndefinedFunction : public FunctionSymbol {
 public:
-  UndefinedFunction(StringRef name, StringRef importName,
-                    StringRef importModule, uint32_t flags,
+  UndefinedFunction(StringRef name, llvm::Optional<StringRef> importName,
+                    llvm::Optional<StringRef> importModule, uint32_t flags,
                     InputFile *file = nullptr,
                     const WasmSignature *type = nullptr,
                     bool isCalledDirectly = true)
       : FunctionSymbol(name, UndefinedFunctionKind, flags, file, type),
-        importName(importName), importModule(importModule), isCalledDirectly(isCalledDirectly) {}
+        importName(importName), importModule(importModule),
+        isCalledDirectly(isCalledDirectly) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == UndefinedFunctionKind;
   }
 
-  StringRef importName;
-  StringRef importModule;
+  llvm::Optional<StringRef> importName;
+  llvm::Optional<StringRef> importModule;
   bool isCalledDirectly;
 };
 
@@ -335,8 +337,9 @@ public:
 
 class UndefinedGlobal : public GlobalSymbol {
 public:
-  UndefinedGlobal(StringRef name, StringRef importName, StringRef importModule,
-                  uint32_t flags, InputFile *file = nullptr,
+  UndefinedGlobal(StringRef name, llvm::Optional<StringRef> importName,
+                  llvm::Optional<StringRef> importModule, uint32_t flags,
+                  InputFile *file = nullptr,
                   const WasmGlobalType *type = nullptr)
       : GlobalSymbol(name, UndefinedGlobalKind, flags, file, type),
         importName(importName), importModule(importModule) {}
@@ -345,8 +348,8 @@ public:
     return s->kind() == UndefinedGlobalKind;
   }
 
-  StringRef importName;
-  StringRef importModule;
+  llvm::Optional<StringRef> importName;
+  llvm::Optional<StringRef> importModule;
 };
 
 // Wasm events are features that suspend the current execution and transfer the
@@ -510,7 +513,7 @@ union SymbolUnion {
 // It is important to keep the size of SymbolUnion small for performance and
 // memory usage reasons. 96 bytes is a soft limit based on the size of
 // UndefinedFunction on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 96, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 112, "SymbolUnion too large");
 
 void printTraceSymbol(Symbol *sym);
 void printTraceSymbolUndefined(StringRef name, const InputFile* file);

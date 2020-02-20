@@ -11,6 +11,7 @@ class TestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
         self.expect_expr("ClassWithImplicitCtor().foo()", result_type="int", result_value="1")
+        self.expect_expr("ClassWithOneCtor(2).value", result_type="int", result_value="2")
         self.expect_expr("ClassWithMultipleCtor(3).value", result_type="int", result_value="3")
         self.expect_expr("ClassWithMultipleCtor(3, 1).value", result_type="int", result_value="4")
 
@@ -24,3 +25,10 @@ class TestCase(TestBase):
         self.expect("expr ClassWithDeletedCtor(1).value", error=True, substrs=["Couldn't lookup symbols:"])
         self.expect("expr ClassWithDeletedDefaultCtor().value", error=True, substrs=["Couldn't lookup symbols:"])
 
+    @skipIfWindows # Can't find operator new.
+    @skipIfLinux # Fails on some Linux systems with SIGABRT.
+    def test_constructors_new(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
+
+        self.expect_expr("(new ClassWithOneCtor(1))->value; 1", result_type="int", result_value="1")

@@ -98,41 +98,37 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
   return llvm::None;
 }
 
-static Type convertStdType(Type type) {
-  // If the type is already valid in SPIR-V, directly return.
-  if (spirv::SPIRVDialect::isValidType(type)) {
-    return type;
-  }
-
-  if (auto indexType = type.dyn_cast<IndexType>()) {
-    return SPIRVTypeConverter::getIndexType(type.getContext());
-  }
-
-  if (auto memRefType = type.dyn_cast<MemRefType>()) {
+SPIRVTypeConverter::SPIRVTypeConverter() {
+  addConversion([](Type type) -> Optional<Type> {
+    // If the type is already valid in SPIR-V, directly return.
+    return spirv::SPIRVDialect::isValidType(type) ? type : Optional<Type>();
+  });
+  addConversion([](IndexType indexType) {
+    return SPIRVTypeConverter::getIndexType(indexType.getContext());
+  });
+  addConversion([this](MemRefType memRefType) -> Type {
     // TODO(ravishankarm): For now only support default memory space. The memory
     // space description is not set is stone within MLIR, i.e. it depends on the
     // context it is being used. To map this to SPIR-V storage classes, we
     // should rely on the ABI attributes, and not on the memory space. This is
     // still evolving, and needs to be revisited when there is more clarity.
-    if (memRefType.getMemorySpace()) {
+    if (memRefType.getMemorySpace())
       return Type();
-    }
 
-    auto elementType = convertStdType(memRefType.getElementType());
-    if (!elementType) {
+    auto elementType = convertType(memRefType.getElementType());
+    if (!elementType)
       return Type();
-    }
 
     auto elementSize = getTypeNumBytes(elementType);
-    if (!elementSize) {
+    if (!elementSize)
       return Type();
-    }
+
     // TODO(ravishankarm) : Handle dynamic shapes.
     if (memRefType.hasStaticShape()) {
       auto arraySize = getTypeNumBytes(memRefType);
-      if (!arraySize) {
+      if (!arraySize)
         return Type();
-      }
+
       auto arrayType = spirv::ArrayType::get(
           elementType, arraySize.getValue() / elementSize.getValue(),
           elementSize.getValue());
@@ -142,33 +138,30 @@ static Type convertStdType(Type type) {
       return spirv::PointerType::get(structType,
                                      spirv::StorageClass::StorageBuffer);
     }
-  }
-
-  if (auto tensorType = type.dyn_cast<TensorType>()) {
+    return Type();
+  });
+  addConversion([this](TensorType tensorType) -> Type {
     // TODO(ravishankarm) : Handle dynamic shapes.
-    if (!tensorType.hasStaticShape()) {
+    if (!tensorType.hasStaticShape())
       return Type();
-    }
-    auto elementType = convertStdType(tensorType.getElementType());
-    if (!elementType) {
+
+    auto elementType = convertType(tensorType.getElementType());
+    if (!elementType)
       return Type();
-    }
+
     auto elementSize = getTypeNumBytes(elementType);
-    if (!elementSize) {
+    if (!elementSize)
       return Type();
-    }
+
     auto tensorSize = getTypeNumBytes(tensorType);
-    if (!tensorSize) {
+    if (!tensorSize)
       return Type();
-    }
+
     return spirv::ArrayType::get(elementType,
                                  tensorSize.getValue() / elementSize.getValue(),
                                  elementSize.getValue());
-  }
-  return Type();
+  });
 }
-
-Type SPIRVTypeConverter::convertType(Type type) { return convertStdType(type); }
 
 //===----------------------------------------------------------------------===//
 // FuncOp Conversion Patterns

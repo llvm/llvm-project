@@ -16,14 +16,14 @@ call_direct:
   .hidden call_direct
   .globl call_direct
   .functype call_direct () -> (i32)
-  i32.call foo
+  call foo
   end_function
 
 call_alias:
   .hidden call_alias
   .globl call_alias
   .functype call_alias () -> (i32)
-  i32.call foo_alias
+  call foo_alias
   end_function
 
 call_direct_ptr:

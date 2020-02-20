@@ -1849,11 +1849,20 @@ void UnwrappedLineParser::parseTryCatch() {
   if (FormatTok->is(tok::colon)) {
     // We are in a function try block, what comes is an initializer list.
     nextToken();
+
+    // In case identifiers were removed by clang-tidy, what might follow is
+    // multiple commas in sequence - before the first identifier.
+    while (FormatTok->is(tok::comma))
+      nextToken();
+
     while (FormatTok->is(tok::identifier)) {
       nextToken();
       if (FormatTok->is(tok::l_paren))
         parseParens();
-      if (FormatTok->is(tok::comma))
+
+      // In case identifiers were removed by clang-tidy, what might follow is
+      // multiple commas in sequence - after the first identifier.
+      while (FormatTok->is(tok::comma))
         nextToken();
     }
   }

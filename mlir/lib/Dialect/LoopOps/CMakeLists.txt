@@ -21,3 +21,5 @@ target_link_libraries(MLIRLoopOps
   MLIRStandardOps
   LLVMSupport
   )
+
+add_subdirectory(Transforms)

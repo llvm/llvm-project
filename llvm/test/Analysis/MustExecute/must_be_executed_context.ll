@@ -24,7 +24,6 @@
 ;                F    | A, B,       E, F
 ;                   G | A, B,       E, F, G
 ;
-; FIXME: We miss the B -> E and backward exploration.
 ;
 ; There are no loops so print-mustexec will not do anything.
 ; ME-NOT: mustexec
@@ -48,6 +47,7 @@ bb:
 ; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
 ; MBEC-NEXT:   [F: simple_conditional]   call void @E()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: %tmp
 
@@ -62,6 +62,10 @@ bb1:                                              ; preds = %bb
 ; MBEC-NEXT:   [F: simple_conditional]   br label %bb2
 ; MBEC-NEXT:   [F: simple_conditional]   call void @E()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
+; MBEC-NEXT:   [F: simple_conditional]   %tmp = icmp eq i32 %arg, 0
+; MBEC-NEXT:   [F: simple_conditional]   call void @B()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 
   call void @D()
@@ -70,6 +74,11 @@ bb1:                                              ; preds = %bb
 ; MBEC-NEXT:   [F: simple_conditional]   br label %bb2
 ; MBEC-NEXT:   [F: simple_conditional]   call void @E()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   call void @C()
+; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
+; MBEC-NEXT:   [F: simple_conditional]   %tmp = icmp eq i32 %arg, 0
+; MBEC-NEXT:   [F: simple_conditional]   call void @B()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: br
 
@@ -80,17 +89,32 @@ bb2:                                              ; preds = %bb, %bb1
 ; MBEC:      -- Explore context of:   call void @E()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @E()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
+; MBEC-NEXT:   [F: simple_conditional]   %tmp = icmp eq i32 %arg, 0
+; MBEC-NEXT:   [F: simple_conditional]   call void @B()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 
   call void @F() ; might not return!
 ; MBEC:      -- Explore context of:   call void @F()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   call void @E()
+; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
+; MBEC-NEXT:   [F: simple_conditional]   %tmp = icmp eq i32 %arg, 0
+; MBEC-NEXT:   [F: simple_conditional]   call void @B()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 
   call void @G()
 ; MBEC:      -- Explore context of:   call void @G()
 ; MBEC-NEXT:   [F: simple_conditional]   call void @G()
 ; MBEC-NEXT:   [F: simple_conditional]   ret void
+; MBEC-NEXT:   [F: simple_conditional]   call void @F()
+; MBEC-NEXT:   [F: simple_conditional]   call void @E()
+; MBEC-NEXT:   [F: simple_conditional]   br i1 %tmp, label %bb2, label %bb1
+; MBEC-NEXT:   [F: simple_conditional]   %tmp = icmp eq i32 %arg, 0
+; MBEC-NEXT:   [F: simple_conditional]   call void @B()
+; MBEC-NEXT:   [F: simple_conditional]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: ret
 
@@ -158,6 +182,12 @@ bb2:                                              ; preds = %.backedge, %bb
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
 ; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: %tmp
   %tmp = add nsw i32 %.0, 1
@@ -169,13 +199,19 @@ bb4:                                              ; preds = %bb2
 ; ME: call void @C()
 ; ME-NOT: mustexec
 ; ME-NEXT: br
-; FIXME: Missing A and B (backward)
 ; MBEC:      -- Explore context of:   call void @C()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   call void @C()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb5
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
 ; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @B()
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: br
   br label %bb5
@@ -197,12 +233,21 @@ bb9:                                              ; preds = %bb5
 ; ME: call void @D()
 ; ME-NOT: mustexec
 ; ME-NEXT: %tmp10
-; FIXME: Missing A and B (backward)
 ; MBEC:      -- Explore context of:   call void @D()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   call void @D()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp10 = add nsw i32 %.0, 3
 ; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp11 = icmp eq i32 %tmp10, %arg1
 ; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp11, label %bb12, label %bb13
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @B()
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: %tmp10
   %tmp10 = add nsw i32 %.0, 3
@@ -229,13 +274,32 @@ bb18:                                             ; preds = %bb14
 ; ME: call void @E()
 ; ME-NOT: mustexec
 ; ME-NEXT: br
-; FIXME: Missing A, B, and D (backward), as well as F
+; FIXME: Missing F
 ; MBEC:      -- Explore context of:   call void @E()
-; MBEC-NEXT:   [F: complex_loops_and_control]   call void @E()
-; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb19
-; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp20 = add nsw i32 %.1, 2
-; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp21 = icmp eq i32 %tmp20, %arg1
-; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp21, label %bb14, label %bb22
+; MBEC-NEXT:  [F: complex_loops_and_control]   call void @E()
+; MBEC-NEXT:  [F: complex_loops_and_control]   br label %bb19
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp20 = add nsw i32 %.1, 2
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp21 = icmp eq i32 %tmp20, %arg1
+; MBEC-NEXT:  [F: complex_loops_and_control]   br i1 %tmp21, label %bb14, label %bb22
+; MBEC-NEXT:  [F: complex_loops_and_control]   br i1 %tmp16, label %bb17, label %bb18
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp16 = icmp eq i32 %tmp15, %arg1
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp15 = add nsw i32 %.1, 1
+; MBEC-NEXT:  [F: complex_loops_and_control]   %.1 = phi i32 [ %tmp10, %bb13 ], [ %tmp20, %bb19 ]
+; MBEC-NEXT:  [F: complex_loops_and_control]   br label %bb14
+; MBEC-NEXT:  [F: complex_loops_and_control]   br i1 %tmp11, label %bb12, label %bb13
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp11 = icmp eq i32 %tmp10, %arg1
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp10 = add nsw i32 %.0, 3
+; MBEC-NEXT:  [F: complex_loops_and_control]   call void @D()
+; MBEC-NEXT:  [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
+; MBEC-NEXT:  [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
+; MBEC-NEXT:  [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
+; MBEC-NEXT:  [F: complex_loops_and_control]   call void @B()
+; MBEC-NEXT:  [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:  [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:  [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: br
   br label %bb19
@@ -251,9 +315,31 @@ bb22:                                             ; preds = %bb19
 ; ME: call void @F()
 ; ME-NOT: mustexec
 ; ME-NEXT: br
-; FIXME: Missing A, B, and D (backward)
 ; MBEC:      -- Explore context of:   call void @F()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   call void @F()
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.lcssa = phi i32 [ %tmp20, %bb19 ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp21, label %bb14, label %bb22
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp21 = icmp eq i32 %tmp20, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp20 = add nsw i32 %.1, 2
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp16, label %bb17, label %bb18
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp16 = icmp eq i32 %tmp15, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp15 = add nsw i32 %.1, 1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.1 = phi i32 [ %tmp10, %bb13 ], [ %tmp20, %bb19 ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb14
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp11, label %bb12, label %bb13
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp11 = icmp eq i32 %tmp10, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp10 = add nsw i32 %.0, 3
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @D()
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @B()
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: br
   br label %.backedge
@@ -263,10 +349,24 @@ bb23:                                             ; preds = %bb12
 ; ME: call void @G()
 ; ME-NOT: mustexec
 ; ME-NEXT: ret
-; FIXME: Missing A, B, and D (backward)
 ; MBEC:      -- Explore context of:   call void @G()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   call void @G()
 ; MBEC-NEXT:   [F: complex_loops_and_control]   ret void
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb23
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp11, label %bb12, label %bb13
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp11 = icmp eq i32 %tmp10, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp10 = add nsw i32 %.0, 3
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @D()
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp7, label %bb8, label %bb9
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp7 = icmp eq i32 %tmp6, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp6 = add nsw i32 %.0, 2
+; MBEC-NEXT:   [F: complex_loops_and_control]   br i1 %tmp3, label %bb4, label %bb5
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp3 = icmp eq i32 %tmp, %arg1
+; MBEC-NEXT:   [F: complex_loops_and_control]   %tmp = add nsw i32 %.0, 1
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @B()
+; MBEC-NEXT:   [F: complex_loops_and_control]   %.0 = phi i32 [ %arg, %bb ], [ %.0.be, %.backedge ]
+; MBEC-NEXT:   [F: complex_loops_and_control]   br label %bb2
+; MBEC-NEXT:   [F: complex_loops_and_control]   call void @A()
 ; MBEC-NOT:    call
 ; MBEC:      -- Explore context of: ret
   ret void
@@ -291,36 +391,62 @@ declare i32 @g(i32*) nounwind willreturn
 declare void @h(i32*) nounwind willreturn
 
 define i32 @nonnull_exec_ctx_1(i32* %a, i32 %b) {
-; MBEC:      -- Explore context of:   %tmp3 = icmp eq i32 %b, 0
+; MBEC: -- Explore context of:   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
 ; MBEC-NEXT: -- Explore context of:   br i1 %tmp3, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   ret i32 %tmp5
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp5 = tail call i32 @g(i32* nonnull %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   tail call void @h(i32* %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp9, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   tail call void @h(i32* %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   tail call void @h(i32* %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp9, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp9, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp9, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp8 = add nuw i32 %tmp7, 1
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp9, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp9 = icmp eq i32 %tmp8, %b
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp8 = add nuw i32 %tmp7, 1
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_1]   %tmp3 = icmp eq i32 %b, 0
 en:
   %tmp3 = icmp eq i32 %b, 0
   br i1 %tmp3, label %ex, label %hd
@@ -338,7 +464,7 @@ hd:
 }
 
 define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) nounwind willreturn {
-; MBEC:      -- Explore context of:   %tmp3 = icmp eq i32 %b, 0
+; MBEC: -- Explore context of:   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
@@ -347,11 +473,17 @@ define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) nounwind willreturn {
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   ret i32 %tmp5
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   tail call void @h(i32* %a)
@@ -360,6 +492,8 @@ define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) nounwind willreturn {
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   tail call void @h(i32* %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   tail call void @h(i32* %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp8 = add nuw i32 %tmp7, 1
@@ -367,21 +501,39 @@ define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) nounwind willreturn {
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp8 = add nuw i32 %tmp7, 1
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp9 = icmp eq i32 %tmp8, %b
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp8 = add nuw i32 %tmp7, 1
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 ; MBEC-NEXT: -- Explore context of:   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp9, label %ex, label %hd
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp5 = tail call i32 @g(i32* nonnull %a)
 ; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   ret i32 %tmp5
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp9 = icmp eq i32 %tmp8, %b
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp8 = add nuw i32 %tmp7, 1
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   tail call void @h(i32* %a)
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   br i1 %tmp3, label %ex, label %hd
+; MBEC-NEXT:   [F: nonnull_exec_ctx_2]   %tmp3 = icmp eq i32 %b, 0
 en:
   %tmp3 = icmp eq i32 %b, 0
   br i1 %tmp3, label %ex, label %hd

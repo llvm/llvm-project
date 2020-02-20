@@ -1,5 +1,6 @@
 ; Verify that we correctly handle suspend when the coro.end block contains phi
 ; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:

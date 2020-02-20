@@ -2837,6 +2837,8 @@ private:
         __parse_awk_escape(_ForwardIterator __first, _ForwardIterator __last,
                           basic_string<_CharT>* __str = nullptr);
 
+    bool __test_back_ref(_CharT c);
+
     _LIBCPP_INLINE_VISIBILITY
     void __push_l_anchor();
     void __push_r_anchor();
@@ -3408,18 +3410,8 @@ basic_regex<_CharT, _Traits>::__parse_BACKREF(_ForwardIterator __first,
     if (__first != __last)
     {
         _ForwardIterator __temp = _VSTD::next(__first);
-        if (__temp != __last)
-        {
-            if (*__first == '\\')
-            {
-                int __val = __traits_.value(*__temp, 10);
-                if (__val >= 1 && __val <= 9)
-                {
-                    __push_back_ref(__val);
-                    __first = ++__temp;
-                }
-            }
-        }
+        if (__temp != __last && *__first == '\\' && __test_back_ref(*__temp))
+            __first = ++__temp;
     }
     return __first;
 }
@@ -3547,6 +3539,8 @@ basic_regex<_CharT, _Traits>::__parse_QUOTED_CHAR_ERE(_ForwardIterator __first,
                 default:
                     if (__get_grammar(__flags_) == awk)
                         __first = __parse_awk_escape(++__first, __last);
+                    else if(__test_back_ref(*__temp))
+                        __first = ++__temp;
                     break;
                 }
             }
@@ -4658,6 +4652,20 @@ basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first,
             ++__first;
     }
     return __first;
+}
+
+template <class _CharT, class _Traits>
+bool
+basic_regex<_CharT, _Traits>::__test_back_ref(_CharT c)
+{
+    unsigned __val = __traits_.value(c, 10);
+    if (__val >= 1 && __val <= 9)
+    {
+        __push_back_ref(__val);
+        return true;
+    }
+
+    return false;
 }
 
 template <class _CharT, class _Traits>

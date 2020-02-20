@@ -238,9 +238,14 @@ public:
 
     // 1.a. Emit std_load from input views.
     for (unsigned i = 0; i < nInputs; ++i) {
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, genericOp.getInputIndexingMap(i), allIvs));
-      indexedValues[i] = std_load(genericOp.getInput(i), indexing);
+      Value input = genericOp.getInput(i);
+      if (!input.getType().cast<ShapedType>().getRank()) {
+        indexedValues[i] = std_load(input);
+      } else {
+        ValueHandleArray indexing(makeCanonicalAffineApplies(
+            b, loc, genericOp.getInputIndexingMap(i), allIvs));
+        indexedValues[i] = std_load(input, indexing);
+      }
     }
 
     // 1.b. Emit std_load from output views.
@@ -339,10 +344,14 @@ public:
 
     // 1.a. Emit std_load from input views.
     for (unsigned i = 0; i < nInputs; ++i) {
-      ValueHandleArray indexing(makeCanonicalAffineApplies(
-          b, loc, indexedGenericOp.getInputIndexingMap(i), allIvs));
-      indexedValues[nLoops + i] =
-          std_load(indexedGenericOp.getInput(i), indexing);
+      Value input = indexedGenericOp.getInput(i);
+      if (!input.getType().cast<ShapedType>().getRank()) {
+        indexedValues[nLoops + i] = std_load(input);
+      } else {
+        ValueHandleArray indexing(makeCanonicalAffineApplies(
+            b, loc, indexedGenericOp.getInputIndexingMap(i), allIvs));
+        indexedValues[nLoops + i] = std_load(input, indexing);
+      }
     }
 
     // 1.b. Emit std_load from output views.

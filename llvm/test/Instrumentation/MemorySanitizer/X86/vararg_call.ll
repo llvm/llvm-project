@@ -42,10 +42,8 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
 
-; CHECK: [[VA_ARG_TLS:%[_0-9a-z]+]] = bitcast {{.*}} @__msan_va_arg_tls
-; CHECK: call void @llvm.memcpy.{{.*}} [[SHADOW_COPY:%[_0-9a-z]+]], {{.*}} [[VA_ARG_TLS]]
-; CHECK-ORIGIN: [[VA_ARG_ORIGIN_TLS:%[_0-9a-z]+]] = bitcast {{.*}} @__msan_va_arg_origin_tls
-; CHECK-ORIGIN: call void @llvm.memcpy{{.*}} [[ORIGIN_COPY:%[_0-9a-z]+]], {{.*}} [[VA_ARG_ORIGIN_TLS]]
+; CHECK: call void @llvm.memcpy.{{.*}} [[SHADOW_COPY:%[_0-9a-z]+]], {{.*}} bitcast ({{.*}} @__msan_va_arg_tls to i8*)
+; CHECK-ORIGIN: call void @llvm.memcpy{{.*}} [[ORIGIN_COPY:%[_0-9a-z]+]], {{.*}} bitcast ({{.*}} @__msan_va_arg_origin_tls to i8*)
 
 ; CHECK: call void @llvm.va_start
 ; CHECK: call void @llvm.memcpy.{{.*}}, {{.*}} [[SHADOW_COPY]], i{{.*}} [[REGSAVE:[0-9]+]]
