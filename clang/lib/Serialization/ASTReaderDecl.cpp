@@ -1181,12 +1181,6 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
   bool DetectedOdrViolation = false;
   auto &DD = D->data();
 
-  // FIXME: add support for categories and extensions, for now
-  // skip any potential ODR violation.
-  if (!D->known_extensions_empty() || !D->known_categories_empty() ||
-      NewDD.CategoryList)
-    return;
-
   auto &FirstProtos = D->getReferencedProtocols();
   auto &SecondProtos = NewDD.ReferencedProtocols;
   if (MergeCheckProtocolList(FirstProtos, SecondProtos))
