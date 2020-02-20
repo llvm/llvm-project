@@ -14,10 +14,12 @@ add_toy_chapter(toyc-ch3
   mlir/MLIRGen.cpp
   mlir/Dialect.cpp
   mlir/ToyCombine.cpp
+
+  DEPENDS
+  ToyCh3OpsIncGen
+  ToyCh3CombineIncGen
   )
 
-add_dependencies(toyc-ch3 ToyCh3OpsIncGen)
-add_dependencies(toyc-ch3 ToyCh3CombineIncGen)
 include_directories(include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)

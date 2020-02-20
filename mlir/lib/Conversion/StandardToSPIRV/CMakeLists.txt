@@ -11,6 +11,9 @@ add_mlir_conversion_library(MLIRStandardToSPIRVTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
+  DEPENDS
+  MLIRStandardToSPIRVIncGen
+
   LINK_LIBS
   MLIRIR
   MLIRPass
@@ -22,6 +25,3 @@ add_mlir_conversion_library(MLIRStandardToSPIRVTransforms
   MLIRStandardOps
   LLVMSupport
   )
-
-add_dependencies(MLIRStandardToSPIRVTransforms
-  MLIRStandardToSPIRVIncGen)

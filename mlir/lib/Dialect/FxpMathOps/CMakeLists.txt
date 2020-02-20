@@ -5,6 +5,9 @@ add_mlir_dialect_library(MLIRFxpMathOps
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/FxpMathOps
 
+  DEPENDS
+  MLIRFxpMathOpsIncGen
+
   LINK_LIBS
   MLIRQuantOps
   MLIRIR
@@ -14,7 +17,4 @@ add_mlir_dialect_library(MLIRFxpMathOps
   MLIRTransforms
   MLIRTransformUtils
   LLVMSupport
-  )
-add_dependencies(MLIRFxpMathOps
-  MLIRFxpMathOpsIncGen
   )
