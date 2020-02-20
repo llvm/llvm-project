@@ -155,7 +155,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       return make_error<DWPError>(
           std::string("unit type DW_UT_split_compile type not found in "
                       "debug_info header. Unexpected unit type 0x" +
-                      utostr(UnitType) + " found!"));
+                      utostr(UnitType) + " found"));
   }
   InfoData.getU32(&Offset); // Abbrev offset (should be zero)
   uint8_t AddrSize = InfoData.getU8(&Offset);
