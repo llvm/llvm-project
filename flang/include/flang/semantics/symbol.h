@@ -13,6 +13,7 @@
 #include "flang/common/Fortran.h"
 #include "flang/common/enum-set.h"
 #include "flang/common/reference.h"
+#include <array>
 #include <list>
 #include <optional>
 #include <set>
