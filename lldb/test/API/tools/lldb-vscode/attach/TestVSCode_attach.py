@@ -46,6 +46,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD # Hangs on NetBSD as well
+    @skipIfDarwinEmbedded
     def test_by_pid(self):
         '''
             Tests attaching to a process by process ID.
@@ -61,6 +62,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD # Hangs on NetBSD as well
+    @skipIfDarwinEmbedded
     def test_by_name(self):
         '''
             Tests attaching to a process by process name.
