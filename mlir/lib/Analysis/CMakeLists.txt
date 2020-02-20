@@ -31,10 +31,8 @@ add_llvm_library(MLIRAnalysis
   LLVMSupport
   )
 add_dependencies(MLIRAnalysis
-  MLIRAffineOps
   MLIRCallOpInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
-  MLIRLoopOps
   )
 
 add_llvm_library(MLIRLoopAnalysis
@@ -56,8 +54,6 @@ add_llvm_library(MLIRLoopAnalysis
   LLVMSupport
   )
 add_dependencies(MLIRLoopAnalysis
-  MLIRAffineOps
   MLIRCallOpInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
-  MLIRLoopOps
   )
