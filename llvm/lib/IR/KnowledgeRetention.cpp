@@ -206,6 +206,8 @@ static Value *getValueFromBundleOpInfo(IntrinsicInst &Assume,
 bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
                                 StringRef AttrName, uint64_t *ArgVal,
                                 AssumeQuery AQR) {
+  assert(isa<IntrinsicInst>(AssumeCI) &&
+         "this function is intended to be used on llvm.assume");
   IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
   assert(Assume.getIntrinsicID() == Intrinsic::assume &&
          "this function is intended to be used on llvm.assume");
@@ -253,19 +255,19 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
     if (Key.first == nullptr && Key.second == Attribute::None)
       continue;
     if (!BundleHasArguement(Bundles, BOIE_Argument)) {
-      Result[Key] = {0, 0};
+      Result[Key][&Assume] = {0, 0};
       continue;
     }
     unsigned Val = cast<ConstantInt>(
                        getValueFromBundleOpInfo(Assume, Bundles, BOIE_Argument))
                        ->getZExtValue();
     auto Lookup = Result.find(Key);
-    if (Lookup == Result.end()) {
-      Result[Key] = {Val, Val};
+    if (Lookup == Result.end() || !Lookup->second.count(&Assume)) {
+      Result[Key][&Assume] = {Val, Val};
       continue;
     }
-    Lookup->second.Min = std::min(Val, Lookup->second.Min);
-    Lookup->second.Max = std::max(Val, Lookup->second.Max);
+    Lookup->second[&Assume].Min = std::min(Val, Lookup->second[&Assume].Min);
+    Lookup->second[&Assume].Max = std::max(Val, Lookup->second[&Assume].Max);
   }
 }
 
