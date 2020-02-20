@@ -39,7 +39,7 @@ framework, we need to provide two things (and an optional third):
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)
 
-    -   These are the set of [patterns](../../QuickstartRewrites.md) used to
+    -   This is the set of [patterns](../../QuickstartRewrites.md) used to
         convert `illegal` operations into a set of zero or more `legal` ones.
 
 *   Optionally, a [Type Converter](../../DialectConversion.md#type-conversion).

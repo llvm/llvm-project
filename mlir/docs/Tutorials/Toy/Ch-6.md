@@ -275,7 +275,7 @@ int dumpLLVMIR(mlir::ModuleOp module) {
 Setting up a JIT to run the module containing the LLVM dialect can be done using
 the `mlir::ExecutionEngine` infrastructure. This is a utility wrapper around
 LLVM's JIT that accepts `.mlir` as input. The full code listing for setting up
-the JIT can be found in `Ch6/toy.cpp` in the `runJit()` function:
+the JIT can be found in `Ch6/toyc.cpp` in the `runJit()` function:
 
 ```c++
 int runJit(mlir::ModuleOp module) {
