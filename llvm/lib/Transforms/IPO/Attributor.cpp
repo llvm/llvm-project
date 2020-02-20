@@ -4618,6 +4618,8 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     // the replaced value and not the copy that byval creates implicitly.
     Argument *Arg = getAssociatedArgument();
     if (Arg->hasByValAttr()) {
+      // TODO: We probably need to verify synchronization is not an issue, e.g.,
+      //       there is no race by not copying a constant byval.
       const auto &MemAA = A.getAAFor<AAMemoryBehavior>(*this, getIRPosition());
       if (!MemAA.isAssumedReadOnly())
         return indicatePessimisticFixpoint();
@@ -7680,6 +7682,8 @@ ChangeStatus Attributor::run() {
     ChangeStatus LocalChange = AA->manifest(*this);
     if (LocalChange == ChangeStatus::CHANGED && AreStatisticsEnabled())
       AA->trackStatistics();
+    LLVM_DEBUG(dbgs() << "[Attributor] Manifest " << LocalChange << " : " << *AA
+                      << "\n");
 
     ManifestChange = ManifestChange | LocalChange;
 
