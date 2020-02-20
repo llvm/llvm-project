@@ -178,6 +178,15 @@ bool SBReproducer::Generate() {
   return false;
 }
 
+bool SBReproducer::SetAutoGenerate(bool b) {
+  auto &r = Reproducer::Instance();
+  if (auto generator = r.GetGenerator()) {
+    generator->SetAutoGenerate(b);
+    return true;
+  }
+  return false;
+}
+
 const char *SBReproducer::GetPath() {
   static std::string path;
   auto &r = Reproducer::Instance();
