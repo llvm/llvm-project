@@ -20,8 +20,10 @@
 int test__compiler_rt_logb(fp_t x) {
   fp_t crt_value = __compiler_rt_logb(x);
   fp_t libm_value = logb(x);
-  // Compare actual rep, e.g. to avoid NaN != the same NaN
-  if (toRep(crt_value) != toRep(libm_value)) {
+  // Compare the values, considering all NaNs equivalent, as the spec doesn't
+  // specify the NaN signedness/payload.
+  if (crt_value != libm_value &&
+      !(crt_isnan(crt_value) && crt_isnan(libm_value))) {
     printf("error: in __compiler_rt_logb(%a [%lX]) = %a [%lX] !=  %a [%lX]\n",
            x, toRep(x), crt_value, toRep(crt_value), libm_value,
            toRep(libm_value));
