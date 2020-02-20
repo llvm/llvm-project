@@ -8,7 +8,7 @@
 .global __start
 __start:
 
-.section        .eh_frame,"aw",@progbits
+.section        .eh_frame,"a",@progbits
         .4byte  9
         .4byte  0x0
         .byte   0x1

@@ -15,6 +15,6 @@
 // CHECK:      Name: foo
 // CHECK-NEXT: Value: [[ADDR]]
 
-        .section .eh_frame
+        .section .eh_frame,"a",@unwind
 foo:
         .long 0

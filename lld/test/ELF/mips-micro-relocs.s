@@ -71,5 +71,5 @@ __start:
   .data
   .gpword __start                 # R_MIPS_GPREL32
 
-  .section .debug_info
+  .section .debug_info,"",@0x7000001e
   .word __start                   # R_MIPS_32

@@ -6,7 +6,7 @@
 # CHECK:      error: corrupted .eh_frame: corrupted CIE (failed to read string)
 # CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0x9)
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
 .align 1
   .byte 0x08
   .byte 0x00
