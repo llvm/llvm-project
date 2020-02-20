@@ -18,7 +18,7 @@ class TestVSCode_setExceptionBreakpoints(
 
     @skipIfWindows
     @expectedFailureNetBSD
-    @skipIfDarwinEmbedded
+    @skipIfRemote
     def test_functionality(self):
         '''Tests setting and clearing exception breakpoints.
            This packet is a bit tricky on the debug adaptor side since there
