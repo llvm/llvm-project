@@ -185,8 +185,6 @@
 ; CHECK-NEXT:    Flags [ (0x10)
 ; CHECK-NEXT:      UNDEFINED (0x10)
 ; CHECK-NEXT:    ]
-; CHECK-NEXT:    ImportName:
-; CHECK-NEXT:    ImportModule:
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: ptr2

@@ -31,8 +31,6 @@ class MCSymbolWasm : public MCSymbol {
   const MCExpr *SymbolSize = nullptr;
 
 public:
-  // Use a module name of "env" for now, for compatibility with existing tools.
-  // This is temporary, and may change, as the ABI is not yet stable.
   MCSymbolWasm(const StringMapEntry<bool> *Name, bool isTemporary)
       : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
   static bool classof(const MCSymbol *S) { return S->isWasm(); }
@@ -71,10 +69,15 @@ public:
   bool isComdat() const { return IsComdat; }
   void setComdat(bool isComdat) { IsComdat = isComdat; }
 
+  bool hasImportModule() const { return ImportModule.hasValue(); }
   const StringRef getImportModule() const {
       if (ImportModule.hasValue()) {
           return ImportModule.getValue();
       }
+      // Use a default module name of "env" for now, for compatibility with
+      // existing tools.
+      // TODO(sbc): Find a way to specify a default value in the object format
+      // without picking a hardcoded value like this.
       return "env";
   }
   void setImportModule(StringRef Name) {
