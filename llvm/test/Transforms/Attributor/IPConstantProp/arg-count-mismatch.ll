@@ -30,6 +30,8 @@
 ; This test is just to verify that we do not crash/assert due to mismatch in
 ; argument count between the caller and callee.
 
+; FIXME we should recognize this as UB and make it an unreachable.
+
 define dso_local i16 @foo(i16 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i16 [[A:%.*]])
