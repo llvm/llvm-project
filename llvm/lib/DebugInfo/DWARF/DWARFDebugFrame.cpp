@@ -380,7 +380,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint64_t EndStructureOffset = Offset + Length;
 
     // The Id field's size depends on the DWARF format
-    Id = Data.getUnsigned(&Offset, (IsDWARF64 && !IsEH) ? 8 : 4);
+    Id = Data.getRelocatedValue((IsDWARF64 && !IsEH) ? 8 : 4, &Offset);
     bool IsCIE =
         ((IsDWARF64 && Id == DW64_CIE_ID) || Id == DW_CIE_ID || (IsEH && !Id));
 
