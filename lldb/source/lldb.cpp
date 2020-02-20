@@ -50,8 +50,10 @@ const char *lldb_private::GetVersion() {
       g_version_str += " (";
       if (lldb_repo)
         g_version_str += lldb_repo;
+      if (lldb_repo && lldb_rev)
+        g_version_str += " ";
       if (lldb_rev) {
-        g_version_str += " revision ";
+        g_version_str += "revision ";
         g_version_str += lldb_rev;
       }
       g_version_str += ")";
