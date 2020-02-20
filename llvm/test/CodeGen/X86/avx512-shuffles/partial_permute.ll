@@ -2161,11 +2161,11 @@ define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask6(<8 x i64> %vec, <4 x i
 define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask7(<8 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_to_4xi64_perm_mask7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm4 = [2,0,3,4]
-; CHECK-NEXT:    vpermi2q %ymm3, %ymm0, %ymm4
+; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [2,0,3,4,2,0,3,4]
+; CHECK-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm0
 ; CHECK-NEXT:    vptestnmq %ymm2, %ymm2, %k1
-; CHECK-NEXT:    vpblendmq %ymm4, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 4>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
@@ -2176,11 +2176,10 @@ define <4 x i64> @test_masked_8xi64_to_4xi64_perm_mask7(<8 x i64> %vec, <4 x i64
 define <4 x i64> @test_masked_z_8xi64_to_4xi64_perm_mask7(<8 x i64> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_to_4xi64_perm_mask7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [2,0,3,4]
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; CHECK-NEXT:    vpermi2q %ymm3, %ymm0, %ymm2 {%k1} {z}
-; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 4>
   %cmp = icmp eq <4 x i64> %mask, zeroinitializer
@@ -4351,17 +4350,13 @@ define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask0(<8 x doub
   ret <2 x double> %res
 }
 
-; TODO - we'd be better off splitting the load to 2*xmm and performing a VSHUFPD.
 define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask1(<8 x double>* %vp, <2 x double> %vec2, <2 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_to_2xdouble_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [1,4,1,4,1,4,1,4]
-; CHECK-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm2
+; CHECK-NEXT:    vmovddup 8(%rdi), %xmm2 # xmm2 = mem[0,0]
 ; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
-; CHECK-NEXT:    vmovapd %xmm2, %xmm0 {%k1}
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vunpcklpd 32(%rdi), %xmm2, %xmm0 {%k1} # xmm0 {%k1} = xmm2[0],mem[0]
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 4>
@@ -4370,16 +4365,13 @@ define <2 x double> @test_masked_8xdouble_to_2xdouble_perm_mem_mask1(<8 x double
   ret <2 x double> %res
 }
 
-; TODO - we'd be better off splitting the load to 2*xmm and performing a VSHUFPD.
 define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask1(<8 x double>* %vp, <2 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_to_2xdouble_perm_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd {{.*#+}} xmm1 = [1,4]
+; CHECK-NEXT:    vmovddup 8(%rdi), %xmm1 # xmm1 = mem[0,0]
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
-; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vunpcklpd 32(%rdi), %xmm1, %xmm0 {%k1} {z} # xmm0 {%k1} {z} = xmm1[0],mem[0]
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 1, i32 4>

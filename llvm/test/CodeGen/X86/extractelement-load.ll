@@ -161,7 +161,7 @@ define float @t6(<8 x float> *%a0) {
 ;
 ; X64-AVX-LABEL: t6:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovshdup (%rdi), %xmm0 # xmm0 = mem[1,1,3,3]
+; X64-AVX-NEXT:    vmovss 4(%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
 ; X64-AVX-NEXT:    vmovss {{.*}}(%rip), %xmm2 # xmm2 = mem[0],zero,zero,zero
@@ -204,7 +204,7 @@ define void @PR43971(<8 x float> *%a0, float *%a1) {
 ;
 ; X64-AVX-LABEL: PR43971:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vpermilpd $1, 16(%rdi), %xmm0 # xmm0 = mem[1,0]
+; X64-AVX-NEXT:    vmovss 24(%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vmovss (%rsi), %xmm2 # xmm2 = mem[0],zero,zero,zero
@@ -252,7 +252,7 @@ define float @PR43971_1(<8 x float> *%a0) nounwind {
 ;
 ; X64-AVX-LABEL: PR43971_1:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vmovshdup (%rdi), %xmm0 # xmm0 = mem[1,1,3,3]
+; X64-AVX-NEXT:    vmovss 4(%rdi), %xmm0 # xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
 ; X64-AVX-NEXT:    vmovss {{.*}}(%rip), %xmm2 # xmm2 = mem[0],zero,zero,zero
