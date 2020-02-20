@@ -23,7 +23,7 @@
 // DISASM-NEXT:   201154: {{.*}} movq 2097440, %rax
 // DISASM-NEXT:   20115c: {{.*}} movq 2097445, %rax
 
-.section .eh_frame,"ax",@unwind
+.section .eh_frame,"a",@unwind
 
 .section .text
 .globl _start

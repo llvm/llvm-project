@@ -6,7 +6,7 @@
 # CHECK: error: corrupted .eh_frame: unknown FDE encoding
 # CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xE)
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x0E
   .byte 0x00
   .byte 0x00
