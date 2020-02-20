@@ -156,6 +156,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                              Depth + (Opcode != TargetOpcode::COPY));
         Known.One &= Known2.One;
         Known.Zero &= Known2.Zero;
+        // If we reach a point where we don't know anything
+        // just stop looking through the operands.
+        if (Known.One == 0 && Known.Zero == 0)
+          break;
       } else {
         // We know nothing.
         Known = KnownBits(BitWidth);
