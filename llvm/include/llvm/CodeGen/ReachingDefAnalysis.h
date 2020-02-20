@@ -37,6 +37,7 @@ class ReachingDefAnalysis : public MachineFunctionPass {
 private:
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
+  LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
@@ -92,6 +93,15 @@ public:
         MachineFunctionProperties::Property::NoVRegs).set(
           MachineFunctionProperties::Property::TracksLiveness);
   }
+
+  /// Re-run the analysis.
+  void reset();
+
+  /// Initialize data structures.
+  void init();
+
+  /// Traverse the machine function, mapping definitions.
+  void traverse();
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// PhysReg that reaches MI, relative to the begining of MI's basic block.
