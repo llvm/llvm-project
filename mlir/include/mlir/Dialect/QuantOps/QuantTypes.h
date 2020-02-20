@@ -66,8 +66,7 @@ public:
   static constexpr unsigned MaxStorageBits = 32;
 
   static LogicalResult
-  verifyConstructionInvariants(Optional<Location> loc, MLIRContext *context,
-                               unsigned flags, Type storageType,
+  verifyConstructionInvariants(Location loc, unsigned flags, Type storageType,
                                Type expressedType, int64_t storageTypeMin,
                                int64_t storageTypeMax);
 
@@ -229,8 +228,7 @@ public:
 
   /// Verifies construction invariants and issues errors/warnings.
   static LogicalResult
-  verifyConstructionInvariants(Optional<Location> loc, MLIRContext *context,
-                               unsigned flags, Type storageType,
+  verifyConstructionInvariants(Location loc, unsigned flags, Type storageType,
                                Type expressedType, int64_t storageTypeMin,
                                int64_t storageTypeMax);
 };
@@ -288,10 +286,11 @@ public:
              Location location);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verifyConstructionInvariants(
-      Optional<Location> loc, MLIRContext *context, unsigned flags,
-      Type storageType, Type expressedType, double scale, int64_t zeroPoint,
-      int64_t storageTypeMin, int64_t storageTypeMax);
+  static LogicalResult
+  verifyConstructionInvariants(Location loc, unsigned flags, Type storageType,
+                               Type expressedType, double scale,
+                               int64_t zeroPoint, int64_t storageTypeMin,
+                               int64_t storageTypeMax);
 
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) {
@@ -351,11 +350,12 @@ public:
              int64_t storageTypeMax, Location location);
 
   /// Verifies construction invariants and issues errors/warnings.
-  static LogicalResult verifyConstructionInvariants(
-      Optional<Location> loc, MLIRContext *context, unsigned flags,
-      Type storageType, Type expressedType, ArrayRef<double> scales,
-      ArrayRef<int64_t> zeroPoints, int32_t quantizedDimension,
-      int64_t storageTypeMin, int64_t storageTypeMax);
+  static LogicalResult
+  verifyConstructionInvariants(Location loc, unsigned flags, Type storageType,
+                               Type expressedType, ArrayRef<double> scales,
+                               ArrayRef<int64_t> zeroPoints,
+                               int32_t quantizedDimension,
+                               int64_t storageTypeMin, int64_t storageTypeMax);
 
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) {
