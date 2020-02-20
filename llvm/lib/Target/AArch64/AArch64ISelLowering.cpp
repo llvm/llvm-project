@@ -2350,15 +2350,6 @@ SDValue AArch64TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
   return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
 }
 
-// Returns true if the given Op is the overflow flag result of an overflow
-// intrinsic operation.
-static bool isOverflowIntrOpRes(SDValue Op) {
-  unsigned Opc = Op.getOpcode();
-  return (Op.getResNo() == 1 &&
-          (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-           Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO));
-}
-
 static SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) {
   SDValue Sel = Op.getOperand(0);
   SDValue Other = Op.getOperand(1);
@@ -2371,7 +2362,7 @@ static SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) {
   // (csel 1, 0, invert(cc), overflow_op_bool)
   // ... which later gets transformed to just a cset instruction with an
   // inverted condition code, rather than a cset + eor sequence.
-  if (isOneConstant(Other) && isOverflowIntrOpRes(Sel)) {
+  if (isOneConstant(Other) && ISD::isOverflowIntrOpRes(Sel)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(Sel->getValueType(0)))
       return SDValue();
@@ -5058,7 +5049,7 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
   // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a branch
   // instruction.
-  if (isOverflowIntrOpRes(LHS) && isOneConstant(RHS) &&
+  if (ISD::isOverflowIntrOpRes(LHS) && isOneConstant(RHS) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))
@@ -5590,7 +5581,7 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
 
   // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a select
   // instruction.
-  if (isOverflowIntrOpRes(CCVal)) {
+  if (ISD::isOverflowIntrOpRes(CCVal)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(CCVal->getValueType(0)))
       return SDValue();
