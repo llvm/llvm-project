@@ -128,7 +128,6 @@ Changes in existing checks
 Renamed checks
 ^^^^^^^^^^^^^^
 
-
 Improvements to include-fixer
 -----------------------------
 
