@@ -1990,19 +1990,13 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   // to the stack pointer and hence does not need an adjustment here.
   // Only CR2 (the first nonvolatile spilled) has an associated frame
   // index so that we have a single uniform save area.
-  if (spillsCR(MF) && !(Subtarget.isPPC64() && Subtarget.isSVR4ABI())) {
+  if (spillsCR(MF) && Subtarget.is32BitELFABI()) {
     // Adjust the frame index of the CR spill slot.
-    for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-      unsigned Reg = CSI[i].getReg();
-
-      if ((Subtarget.isSVR4ABI() && Reg == PPC::CR2)
-          // Leave Darwin logic as-is.
-          || (!Subtarget.isSVR4ABI() &&
-              (PPC::CRBITRCRegClass.contains(Reg) ||
-               PPC::CRRCRegClass.contains(Reg)))) {
-        int FI = CSI[i].getFrameIdx();
-
+    for (const auto &CSInfo : CSI) {
+      if (CSInfo.getReg() == PPC::CR2) {
+        int FI = CSInfo.getFrameIdx();
         MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
+        break;
       }
     }
 
