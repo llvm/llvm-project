@@ -39562,7 +39562,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
                                                    : ISD::SIGN_EXTEND,
                        DL, VT, MulLo);
 
-  MVT ResVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
+  EVT ResVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts / 2);
   // Generate the higher part of mul: pmulhw/pmulhuw. For MULU16/MULS16,
   // the higher part is also needed.
   SDValue MulHi =
