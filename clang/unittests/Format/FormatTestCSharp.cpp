@@ -513,7 +513,7 @@ var x = foo(className, $@"some code:
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
-  // Start code fragemnts with a comment line so that C++ raw string literals
+  // Start code fragments with a comment line so that C++ raw string literals
   // as seen are identical to expected formatted code.
 
   verifyFormat(R"(//
@@ -536,6 +536,21 @@ Shape[] shapes = new[] {new Circle {Radius = 2.7281, Colour = Colours.Red},
                             Side = 101.1,
                             Colour = Colours.Yellow,
                         }};)",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpNamedArguments) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+PrintOrderDetails(orderNum: 31, productName: "Red Mug",
+                  sellerName: "Gift Shop");)",
+               Style);
+
+  // Ensure that trailing comments do not cause problems.
+  verifyFormat(R"(//
+PrintOrderDetails(orderNum: 31, productName: "Red Mug",  // comment
+                  sellerName: "Gift Shop");)",
                Style);
 }
 
