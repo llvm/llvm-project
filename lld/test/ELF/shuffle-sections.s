@@ -13,12 +13,12 @@
 # RUN: ld.lld --symbol-ordering-file %t_order.txt --shuffle-sections=2 %t.o -o %t2.out
 # RUN: llvm-readelf -x .text %t2.out | FileCheck %s --check-prefix=SHUFFLE2
 # SHUFFLE2: Hex dump of section '.text':
-# SHUFFLE2-NEXT: 02cccccc 010403
+# SHUFFLE2-NEXT: 02cccccc 01{{....}}
 
 # RUN: ld.lld --symbol-ordering-file %t_order.txt --shuffle-sections=3 %t.o -o %t3.out
 # RUN: llvm-readelf -x .text %t3.out | FileCheck %s --check-prefix=SHUFFLE3
 # SHUFFLE3: Hex dump of section '.text':
-# SHUFFLE3-NEXT: 02cccccc 010304
+# SHUFFLE3-NEXT: 02cccccc 01{{....}}
 
 ## .text has an alignment of 4.
 .global _start
