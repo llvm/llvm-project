@@ -2677,6 +2677,16 @@ namespace ISD {
       SDValue LHS, SDValue RHS,
       std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
       bool AllowUndefs = false, bool AllowTypeMismatch = false);
+
+  /// Returns true if the specified value is the overflow result from one
+  /// of the overflow intrinsic nodes.
+  inline bool isOverflowIntrOpRes(SDValue Op) {
+    unsigned Opc = Op.getOpcode();
+    return (Op.getResNo() == 1 &&
+            (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
+             Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO));
+  }
+
 } // end namespace ISD
 
 } // end namespace llvm
