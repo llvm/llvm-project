@@ -2057,6 +2057,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::MSCATTER);
   setTargetDAGCombine(ISD::MGATHER);
   setTargetDAGCombine(ISD::FP16_TO_FP);
+  setTargetDAGCombine(ISD::FP_EXTEND);
+  setTargetDAGCombine(ISD::FP_ROUND);
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -28830,6 +28832,20 @@ SDValue X86TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
   return Tmp.first;
 }
 
+// Custom split CVTPS2PH with wide types.
+static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
+  SDLoc(dl);
+  EVT VT = Op.getValueType();
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  SDValue RC = Op.getOperand(1);
+  Lo = DAG.getNode(X86ISD::CVTPS2PH, dl, LoVT, Lo, RC);
+  Hi = DAG.getNode(X86ISD::CVTPS2PH, dl, HiVT, Hi, RC);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -28965,8 +28981,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MSCATTER:           return LowerMSCATTER(Op, Subtarget, DAG);
   case ISD::GC_TRANSITION_START:
   case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION(Op, DAG);
-  case ISD::ADDRSPACECAST:
-    return LowerADDRSPACECAST(Op, DAG);
+  case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
+  case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   }
 }
 
@@ -29012,6 +29028,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     N->dump(&DAG);
 #endif
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case X86ISD::CVTPH2PS: {
+    EVT VT = N->getValueType(0);
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
+    EVT LoVT, HiVT;
+    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+    Lo = DAG.getNode(X86ISD::CVTPH2PS, dl, LoVT, Lo);
+    Hi = DAG.getNode(X86ISD::CVTPH2PS, dl, HiVT, Hi);
+    SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+    Results.push_back(Res);
+    return;
+  }
   case ISD::CTPOP: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
     // Use a v2i64 if possible.
@@ -35803,10 +35831,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   // TODO: Can we generalize this using computeKnownBits.
   if (N->getOpcode() == X86ISD::VZEXT_MOVL &&
       (VT == MVT::v2f64 || VT == MVT::v2i64) &&
-      N->getOperand(0).getOpcode() == ISD::BITCAST &&
-      (N->getOperand(0).getOperand(0).getValueType() == MVT::v4f32 ||
-       N->getOperand(0).getOperand(0).getValueType() == MVT::v4i32)) {
+      N->getOperand(0).getOpcode() == ISD::BITCAST) {
     SDValue In = N->getOperand(0).getOperand(0);
+    EVT InVT = In.getValueType();
     switch (In.getOpcode()) {
     default:
       break;
@@ -35817,8 +35844,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     case X86ISD::CVTSI2P:   case X86ISD::CVTUI2P:
     case X86ISD::MCVTSI2P:  case X86ISD::MCVTUI2P:
     case X86ISD::VFPROUND:  case X86ISD::VMFPROUND:
-      if (In.getOperand(0).getValueType() == MVT::v2f64 ||
-          In.getOperand(0).getValueType() == MVT::v2i64)
+      if ((InVT == MVT::v4f32 || InVT == MVT::v4i32) &&
+          (In.getOperand(0).getValueType() == MVT::v2f64 ||
+           In.getOperand(0).getValueType() == MVT::v2i64))
         return N->getOperand(0); // return the bitcast
       break;
     case X86ISD::STRICT_CVTTP2SI:
@@ -35826,9 +35854,19 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     case X86ISD::STRICT_CVTSI2P:
     case X86ISD::STRICT_CVTUI2P:
     case X86ISD::STRICT_VFPROUND:
-      if (In.getOperand(1).getValueType() == MVT::v2f64 ||
-          In.getOperand(1).getValueType() == MVT::v2i64)
-        return N->getOperand(0);
+      if ((InVT == MVT::v4f32 || InVT == MVT::v4i32) &&
+          (In.getOperand(1).getValueType() == MVT::v2f64 ||
+           In.getOperand(1).getValueType() == MVT::v2i64))
+        return N->getOperand(0); // return the bitcast
+      break;
+    case X86ISD::CVTPS2PH:
+    case X86ISD::MCVTPS2PH:
+      if (InVT == MVT::v8i16 && In.getOperand(0).getValueType() == MVT::v4f32)
+        return N->getOperand(0); // return the bitcast
+      break;
+    case X86ISD::STRICT_CVTPS2PH:
+      if (InVT == MVT::v8i16 && In.getOperand(1).getValueType() == MVT::v4f32)
+        return N->getOperand(0); // return the bitcast
       break;
     }
   }
@@ -43774,6 +43812,22 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Src = N->getOperand(0);
+
+  if (N->getValueType(0) == MVT::v4f32 && Src.getValueType() == MVT::v8i16) {
+    APInt KnownUndef, KnownZero;
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    APInt DemandedElts = APInt::getLowBitsSet(8, 4);
+    if (TLI.SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
+                                       DCI))
+      return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
+
 // Try to combine sext_in_reg of a cmov of constants by extending the constants.
 static SDValue combineSextInRegCmov(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::SIGN_EXTEND_INREG);
@@ -46640,6 +46694,97 @@ static SDValue combineFP16_TO_FP(SDNode *N, SelectionDAG &DAG,
                      DAG.getIntPtrConstant(0, dl));
 }
 
+static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::f16)
+    return SDValue();
+
+  if (VT.getVectorElementType() != MVT::f32 &&
+      VT.getVectorElementType() != MVT::f64)
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts == 1 || !isPowerOf2_32(NumElts))
+    return SDValue();
+
+  SDLoc dl(N);
+
+  // Convert the input to vXi16.
+  EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
+  Src = DAG.getBitcast(IntVT, Src);
+
+  // Widen to at least 8 input elements.
+  if (NumElts < 8) {
+    unsigned NumConcats = 8 / NumElts;
+    SDValue Fill = NumElts == 4 ? DAG.getUNDEF(IntVT)
+                                : DAG.getConstant(0, dl, IntVT);
+    SmallVector<SDValue, 4> Ops(NumConcats, Fill);
+    Ops[0] = Src;
+    Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i16, Ops);
+  }
+
+  // Destination is vXf32 with at least 4 elements.
+  EVT CvtVT = EVT::getVectorVT(*DAG.getContext(), MVT::f32,
+                               std::max(4U, NumElts));
+  SDValue Cvt = DAG.getNode(X86ISD::CVTPH2PS, dl, CvtVT, Src);
+
+  if (NumElts < 4) {
+    assert(NumElts == 2 && "Unexpected size");
+    Cvt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2f32, Cvt,
+                      DAG.getIntPtrConstant(0, dl));
+  }
+
+  // Extend to the original VT if necessary.
+  return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
+}
+
+static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (!VT.isVector() || VT.getVectorElementType() != MVT::f16 ||
+      SrcVT.getVectorElementType() != MVT::f32)
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts == 1 || !isPowerOf2_32(NumElts))
+    return SDValue();
+
+  SDLoc dl(N);
+
+  // Widen to at least 4 input elements.
+  if (NumElts < 4)
+    Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
+                      DAG.getConstantFP(0.0, dl, SrcVT));
+
+  // Destination is v8i16 with at least 8 elements.
+  EVT CvtVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
+                               std::max(8U, NumElts));
+  SDValue Cvt = DAG.getNode(X86ISD::CVTPS2PH, dl, CvtVT, Src,
+                            DAG.getTargetConstant(4, dl, MVT::i32));
+
+  // Extract down to real number of elements.
+  if (NumElts < 8) {
+    EVT IntVT = VT.changeVectorElementTypeToInteger();
+    Cvt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, IntVT, Cvt,
+                      DAG.getIntPtrConstant(0, dl));
+  }
+
+  return DAG.getBitcast(VT, Cvt);
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -46707,6 +46852,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CVTP2UI:
   case X86ISD::CVTTP2SI:
   case X86ISD::CVTTP2UI:    return combineCVTP2I_CVTTP2I(N, DAG, DCI);
+  case X86ISD::CVTPH2PS:    return combineCVTPH2PS(N, DAG, DCI);
   case X86ISD::BT:          return combineBT(N, DAG, DCI);
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:    return combineZext(N, DAG, DCI, Subtarget);
@@ -46792,6 +46938,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
+  case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
+  case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
   }
 
   return SDValue();
