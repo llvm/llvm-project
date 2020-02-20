@@ -1168,4 +1168,14 @@ defm int_arm_mve_vbrsr: MVEMXPredicated<
   [llvm_anyvector_ty], [],
   [LLVMMatchType<0>, llvm_i32_ty], LLVMMatchType<0>, llvm_anyvector_ty>;
 
+def int_arm_mve_vqdmull: Intrinsic<
+  [llvm_anyvector_ty],
+  [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty],
+  [IntrNoMem]>;
+def int_arm_mve_vqdmull_predicated: Intrinsic<
+  [llvm_anyvector_ty],
+  [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty,
+   LLVMMatchType<0>],
+  [IntrNoMem]>;
+
 } // end TargetPrefix
