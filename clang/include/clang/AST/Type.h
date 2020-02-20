@@ -1926,6 +1926,15 @@ public:
   /// or QualType::getSingleStepDesugaredType(const ASTContext&).
   QualType getLocallyUnqualifiedSingleStepDesugaredType() const;
 
+  /// As an extension, we classify types as one of "sized" or "sizeless";
+  /// every type is one or the other.  Standard types are all sized;
+  /// sizeless types are purely an extension.
+  ///
+  /// Sizeless types contain data with no specified size, alignment,
+  /// or layout.
+  bool isSizelessType() const;
+  bool isSizelessBuiltinType() const;
+
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
 
