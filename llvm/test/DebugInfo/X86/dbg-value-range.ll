@@ -56,6 +56,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 ;CHECK-NEXT:	.quad	[[CLOBBER_OFF]]
 ;CHECK-NEXT:  .short 1 ## Loc expr size
 ;CHECK-NEXT:	.byte	85 ## DW_OP_reg
-;CHECK:        .quad  0
+;CHECK-NEXT:	.quad	0
 ;CHECK-NEXT:	.quad	0
 !24 = !{i32 1, !"Debug Info Version", i32 3}
