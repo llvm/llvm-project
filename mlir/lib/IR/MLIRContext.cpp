@@ -518,7 +518,7 @@ IntegerType IntegerType::getChecked(unsigned width, MLIRContext *context,
                                     Location location) {
   if (auto cached = getCachedIntegerType(width, context))
     return cached;
-  return Base::getChecked(location, context, StandardTypes::Integer, width);
+  return Base::getChecked(location, StandardTypes::Integer, width);
 }
 
 /// Get an instance of the NoneType.
@@ -638,4 +638,17 @@ IntegerSet IntegerSet::get(unsigned dimCount, unsigned symbolCount,
   // instance.
   llvm::sys::SmartScopedWriter<true> affineLock(impl.affineMutex);
   return constructorFn();
+}
+
+//===----------------------------------------------------------------------===//
+// StorageUniquerSupport
+//===----------------------------------------------------------------------===//
+
+/// Utility method to generate a default location for use when checking the
+/// construction invariants of a storage object. This is defined out-of-line to
+/// avoid the need to include Location.h.
+const AttributeStorage *
+mlir::detail::generateUnknownStorageLocation(MLIRContext *ctx) {
+  return reinterpret_cast<const AttributeStorage *>(
+      ctx->getImpl().unknownLocAttr.getAsOpaquePointer());
 }

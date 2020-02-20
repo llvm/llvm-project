@@ -46,10 +46,8 @@ struct OpaqueTypeStorage;
 ///        current type. Used for isa/dyn_cast casting functionality.
 ///
 ///  * Optional:
-///    - static LogicalResult verifyConstructionInvariants(
-///                                               Optional<Location> loc,
-///                                               MLIRContext *context,
-///                                               Args... args)
+///    - static LogicalResult verifyConstructionInvariants(Location loc,
+///                                                        Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
 ///        methods to ensure that the arguments passed in are valid to construct
 ///        a type instance with.
@@ -238,8 +236,7 @@ public:
   StringRef getTypeData() const;
 
   /// Verify the construction of an opaque type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef typeData);
 

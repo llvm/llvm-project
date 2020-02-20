@@ -90,10 +90,11 @@ public:
 
   static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
 
-  static LogicalResult
-  verifyConstructionInvariants(Optional<Location> loc, MLIRContext *context,
-                               IntegerAttr version, ArrayAttr extensions,
-                               ArrayAttr capabilities, DictionaryAttr limits);
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    IntegerAttr version,
+                                                    ArrayAttr extensions,
+                                                    ArrayAttr capabilities,
+                                                    DictionaryAttr limits);
 };
 
 /// Returns the attribute name for specifying argument ABI information.
