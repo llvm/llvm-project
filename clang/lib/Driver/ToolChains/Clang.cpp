@@ -5940,7 +5940,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Arg->render(Args, OriginalArgs);
 
     SmallString<256> Flags;
-    EscapeSpacesAndBackslashes(Exec, Flags);
+    Flags += Exec;
     for (const char *OriginalArg : OriginalArgs) {
       SmallString<128> EscapedArg;
       EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
@@ -6848,7 +6848,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<256> Flags;
     const char *Exec = getToolChain().getDriver().getClangProgramPath();
-    EscapeSpacesAndBackslashes(Exec, Flags);
+    Flags += Exec;
     for (const char *OriginalArg : OriginalArgs) {
       SmallString<128> EscapedArg;
       EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
