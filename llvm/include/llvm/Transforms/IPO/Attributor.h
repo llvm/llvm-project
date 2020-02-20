@@ -569,8 +569,10 @@ private:
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG),
-        CGSCC(CGSCC) {}
+      : DL(M.getDataLayout()),
+        Explorer(/* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+                 /* ExploreCFGBackward */ true),
+        AG(AG), CGSCC(CGSCC) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;

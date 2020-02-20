@@ -143,9 +143,7 @@ if.true:
 ; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
   %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
 
-; FIXME: This should be tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
-;        Making must-be-executed-context backward exploration will fix this.
-; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
   %E = tail call i32 @unkown_f(i32* %ptr)
 
   ret void
@@ -178,9 +176,7 @@ if.true:
   %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
 
   %E = tail call i32 @unkown_f(i32* %ptr)
-; FIXME: This should be @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
-;        Making must-be-executed-context backward exploration will fix this.
-; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr)
 
   ret void
 

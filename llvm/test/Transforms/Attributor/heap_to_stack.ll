@@ -170,7 +170,7 @@ define void @test8() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo(i32* %2)
-  ; CHECK: @free(i8* %1)
+  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -185,7 +185,7 @@ define void @test9() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @foo_nounw(i32* %2)
-  ; CHECK: @free(i8* %1)
+  ; CHECK: @free(i8* nonnull dereferenceable(4) %1)
   tail call void @free(i8* %1)
   ret void
 }
@@ -307,7 +307,7 @@ define i32 @test13() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -320,7 +320,7 @@ define i32 @test_sle() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -333,7 +333,7 @@ define i32 @test_overflow() {
   store i32 10, i32* %2
   %3 = load i32, i32* %2
   tail call void @free(i8* %1)
-  ; CHECK: tail call void @free(i8* noalias %1)
+  ; CHECK: tail call void @free(i8* noalias nonnull dereferenceable(4) %1)
   ret i32 %3
 }
 
@@ -362,10 +362,10 @@ define void @test16a(i8 %v, i8** %P) {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK-NEXT: store i8 %v, i8* %1
   store i8 %v, i8* %1
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree nonnull dereferenceable(1) %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NOT: @free(i8* %1)
-  tail call void @free(i8* %1)
+  tail call void @free(i8* nonnull dereferenceable(1) %1)
   ret void
 }
 
