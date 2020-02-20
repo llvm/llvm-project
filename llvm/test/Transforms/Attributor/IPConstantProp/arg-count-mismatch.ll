@@ -33,7 +33,7 @@
 define dso_local i16 @foo(i16 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i16 [[A:%.*]])
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @bar()
 ; CHECK-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16) *)(i16 %a)
@@ -41,12 +41,32 @@ define dso_local i16 @foo(i16 %a) {
 }
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
-; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]])
+; CHECK-LABEL: define {{[^@]+}}@bar()
 ; CHECK-NEXT:    ret i16 0
 ;
   ret i16 0
 }
+
+define dso_local i16 @foo2(i16 %a) {
+; CHECK-LABEL: define {{[^@]+}}@foo2
+; CHECK-SAME: (i16 [[A:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
+; CHECK-NEXT:    ret i16 [[CALL]]
+;
+  %call = call i16 bitcast (i16 (i16, i16) * @bar2 to i16 (i16) *)(i16 %a)
+  ret i16 %call
+}
+
+define internal i16 @bar2(i16 %p1, i16 %p2) {
+; CHECK-LABEL: define {{[^@]+}}@bar2
+; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
+; CHECK-NEXT:    ret i16 [[A]]
+;
+  %a = add i16 %p1, %p2
+  ret i16 %a
+}
+
 
 ;-------------------------------------------------------------------------------
 ; Additional tests to verify that we still optimize when having a mismatch
