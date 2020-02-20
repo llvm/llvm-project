@@ -2135,8 +2135,9 @@ AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
 }
 
 std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectVOP3ModsImpl(
-  Register Src) const {
+AMDGPUInstructionSelector::selectVOP3ModsImpl(MachineOperand &Root) const {
+  Register Src = Root.getReg();
+  Register OrigSrc = Src;
   unsigned Mods = 0;
   MachineInstr *MI = getDefIgnoringCopies(Src, *MRI);
 
@@ -2149,6 +2150,20 @@ AMDGPUInstructionSelector::selectVOP3ModsImpl(
   if (MI && MI->getOpcode() == AMDGPU::G_FABS) {
     Src = MI->getOperand(1).getReg();
     Mods |= SISrcMods::ABS;
+  }
+
+  if (Mods != 0 &&
+      RBI.getRegBank(Src, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID) {
+    MachineInstr *UseMI = Root.getParent();
+
+    // If we looked through copies to find source modifiers on an SGPR operand,
+    // we now have an SGPR register source. To avoid potentially violating the
+    // constant bus restriction, we need to insert a copy to a VGPR.
+    Register VGPRSrc = MRI->cloneVirtualRegister(OrigSrc);
+    BuildMI(*UseMI->getParent(), UseMI, UseMI->getDebugLoc(),
+            TII.get(AMDGPU::COPY), VGPRSrc)
+      .addReg(Src);
+    Src = VGPRSrc;
   }
 
   return std::make_pair(Src, Mods);
@@ -2168,7 +2183,7 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
@@ -2191,7 +2206,7 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
@@ -2215,7 +2230,7 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
   if (!TM.Options.NoNaNsFPMath && !isKnownNeverNaN(Src, *MRI))
     return None;
 
