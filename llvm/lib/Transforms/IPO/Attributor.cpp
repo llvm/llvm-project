@@ -4577,6 +4577,17 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     if (hasAttr({Attribute::InAlloca, Attribute::StructRet, Attribute::Nest},
                 /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
+
+    // FIXME: This is a hack to prevent us from propagating function poiner in
+    // the new pass manager CGSCC pass as it creates call edges the
+    // CallGraphUpdater cannot handle yet.
+    Value &V = getAssociatedValue();
+    if (V.getType()->isPointerTy() &&
+        V.getType()->getPointerElementType()->isFunctionTy() &&
+        !A.isModulePass() &&
+        A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(
+            *getAnchorScope()))
+      indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -4700,6 +4711,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    AAValueSimplifyImpl::initialize(A);
     Value &V = getAnchorValue();
 
     // TODO: add other stuffs
