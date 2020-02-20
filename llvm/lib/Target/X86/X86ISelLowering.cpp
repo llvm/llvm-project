@@ -1441,10 +1441,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ANY_EXTEND,  VT, Custom);
     }
 
-    for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
+    for (auto VT : { MVT::v1i1, MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
       setOperationAction(ISD::ADD,              VT, Custom);
       setOperationAction(ISD::SUB,              VT, Custom);
       setOperationAction(ISD::MUL,              VT, Custom);
+    }
+
+    for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
       setOperationAction(ISD::SETCC,            VT, Custom);
       setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
       setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
