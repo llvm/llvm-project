@@ -724,7 +724,7 @@ public:
     if (I.getNumOperands() < 8) {
       for (Use &Operand : I.operands())
         if (auto *Inst = dyn_cast<Instruction>(Operand))
-          Worklist.push(Inst);
+          Worklist.add(Inst);
     }
     Worklist.remove(&I);
     I.eraseFromParent();
