@@ -103,6 +103,7 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNullCoalescing)                                                   \
+  TYPE(CSharpNamedArgument)                                                    \
   TYPE(Unknown)
 
 enum TokenType {
