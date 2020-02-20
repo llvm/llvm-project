@@ -1123,6 +1123,8 @@ def : BitConvert <v4f32, v2f64, VReg_128>;
 def : BitConvert <v4i32, v2f64, VReg_128>;
 def : BitConvert <v2i64, v2f64, VReg_128>;
 def : BitConvert <v2f64, v2i64, VReg_128>;
+def : BitConvert <v4f32, v2i64, VReg_128>;
+def : BitConvert <v2i64, v4f32, VReg_128>;
 
 // 160-bit bitcast
 def : BitConvert <v5i32, v5f32, SGPR_160>;
