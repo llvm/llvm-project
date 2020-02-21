@@ -170,5 +170,61 @@ declare void @t2_check(i32* nocapture align 256, i64, i32* nocapture)
 
 declare !callback !0 void @t2_callback_broker(i32* nocapture , i32* nocapture , void (i32*, i32*, ...)* nocapture, ...)
 
+; Test 3
+;
+; Basically test 2 with the casted callback callee used twice.
+
+define void @t3_caller(i32* noalias %a) {
+; CHECK-LABEL: define {{[^@]+}}@t3_caller
+; CHECK-SAME: (i32* noalias nocapture align 256 [[A:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 32
+; CHECK-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i32, align 128
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
+; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
+; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias align 536870912 null, i32* noalias nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* noalias nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b = alloca i32, align 32
+  %c = alloca i32*, align 64
+  %ptr = alloca i32, align 128
+  %0 = bitcast i32* %b to i8*
+  store i32 42, i32* %b, align 4
+  store i32* %b, i32** %c, align 8
+  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  ret void
+}
+
+; Note that the first two arguments are provided by the callback_broker according to the callback in !1 below!
+; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
+;
+; FIXME: We should derive noalias for %a and add a "fake use" of %a in all potentially synchronizing calls.
+define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
+; CHECK-LABEL: define {{[^@]+}}@t3_callback_callee
+; CHECK-SAME: (i32* nocapture nonnull writeonly dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nonnull readonly align 64 dereferenceable(8) [[C:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
+; CHECK-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
+; CHECK-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 99, i32* [[TMP0]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ptr_val = load i32, i32* %ptr, align 8
+  store i32 %ptr_val, i32* %is_not_null
+  %0 = load i32*, i32** %c, align 8
+  tail call void @t3_check(i32* %a, i64 %b, i32* %0)
+  ret void
+}
+
+declare void @t3_check(i32* nocapture align 256, i64, i32* nocapture)
+
+declare !callback !0 void @t3_callback_broker(i32* nocapture , i32* nocapture , void (i32*, i32*, ...)* nocapture, ...)
+
 !0 = !{!1}
 !1 = !{i64 2, i64 -1, i64 -1, i1 true}
