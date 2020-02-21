@@ -173,9 +173,8 @@ public:
       if (auto CN = dyn_cast<ConstantFPSDNode>(Opnd0))
         if (CN->isZero())
           return true;
-    }
-    default:
       break;
+    }
     }
 
     return false;
