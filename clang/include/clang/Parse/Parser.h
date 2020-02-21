@@ -2963,9 +2963,14 @@ private:
   /// Parses OpenMP context selectors.
   bool parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI);
 
+  /// Parse a `match` clause for an '#pragma omp declare variant'. Return true
+  /// if there was an error.
+  bool parseOMPDeclareVariantMatchClause(SourceLocation Loc, OMPTraitInfo &TI);
+
   /// Parse clauses for '#pragma omp declare variant'.
   void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,
                                      SourceLocation Loc);
+
   /// Parse clauses for '#pragma omp declare target'.
   DeclGroupPtrTy ParseOMPDeclareTargetClauses();
   /// Parse '#pragma omp end declare target'.
@@ -2975,6 +2980,17 @@ private:
   /// Skip tokens until a `annot_pragma_openmp_end` was found. Emit a warning if
   /// it is not the current token.
   void skipUntilPragmaOpenMPEnd(OpenMPDirectiveKind DKind);
+
+  /// Check the \p FoundKind against the \p ExpectedKind, if not issue an error
+  /// that the "end" matching the "begin" directive of kind \p BeginKind was not
+  /// found. Finally, if the expected kind was found or if \p SkipUntilOpenMPEnd
+  /// is set, skip ahead using the helper `skipUntilPragmaOpenMPEnd`.
+  void parseOMPEndDirective(OpenMPDirectiveKind BeginKind,
+                            OpenMPDirectiveKind ExpectedKind,
+                            OpenMPDirectiveKind FoundKind,
+                            SourceLocation MatchingLoc,
+                            SourceLocation FoundLoc,
+                            bool SkipUntilOpenMPEnd);
 
   /// Parses declarative OpenMP directives.
   DeclGroupPtrTy ParseOpenMPDeclarativeDirectiveWithExtDecl(

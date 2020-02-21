@@ -1868,9 +1868,12 @@ void OMPClausePrinter::VisitOMPExclusiveClause(OMPExclusiveClause *Node) {
   }
 }
 
-void OMPTraitInfo::getAsVariantMatchInfo(
-    ASTContext &ASTCtx, VariantMatchInfo &VMI) const {
+void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
+                                         VariantMatchInfo &VMI,
+                                         bool DeviceSetOnly) const {
   for (const OMPTraitSet &Set : Sets) {
+    if (DeviceSetOnly && Set.Kind != TraitSet::device)
+      continue;
     for (const OMPTraitSelector &Selector : Set.Selectors) {
 
       // User conditions are special as we evaluate the condition here.

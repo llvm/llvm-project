@@ -450,6 +450,8 @@ llvm::omp::listOpenMPContextTraitProperties(TraitSet Set,
       StringRef(Str) != "invalid")                                             \
     S.append("'").append(Str).append("'").append(" ");
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  if (S.empty())
+    return "<none>";
   S.pop_back();
   return S;
 }

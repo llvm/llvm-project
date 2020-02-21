@@ -7178,9 +7178,11 @@ public:
   /// former is a flat representation the actual main difference is that the
   /// latter uses clang::Expr to store the score/condition while the former is
   /// independent of clang. Thus, expressions and conditions are evaluated in
-  /// this method.
+  /// this method. If \p DeviceSetOnly is true, only the device selector set, if
+  /// present, is put in \p VMI, otherwise all selector sets are put in \p VMI.
   void getAsVariantMatchInfo(ASTContext &ASTCtx,
-                             llvm::omp::VariantMatchInfo &VMI) const;
+                             llvm::omp::VariantMatchInfo &VMI,
+                             bool DeviceSetOnly) const;
 
   /// Print a human readable representation into \p OS.
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;

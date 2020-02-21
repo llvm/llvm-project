@@ -1025,6 +1025,8 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_unknown:
@@ -1288,6 +1290,8 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_end_declare_target:
   case OMPD_requires:
   case OMPD_declare_variant:
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
