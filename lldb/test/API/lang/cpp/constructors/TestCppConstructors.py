@@ -11,6 +11,7 @@ class TestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
         self.expect_expr("ClassWithImplicitCtor().foo()", result_type="int", result_value="1")
+        self.expect_expr("ClassWithOneCtor(2).value", result_type="int", result_value="2")
         self.expect_expr("ClassWithMultipleCtor(3).value", result_type="int", result_value="3")
         self.expect_expr("ClassWithMultipleCtor(3, 1).value", result_type="int", result_value="4")
 
