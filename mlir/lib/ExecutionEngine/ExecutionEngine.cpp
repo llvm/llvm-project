@@ -234,7 +234,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     auto dataLayout = deserModule->getDataLayout();
     llvm::orc::JITDylib *mainJD = session.getJITDylibByName("<main>");
     if (!mainJD)
-      mainJD = &session.createJITDylib("<main>");
+      mainJD = &session.createBareJITDylib("<main>");
 
     // Resolve symbols that are statically linked in the current process.
     mainJD->addGenerator(
@@ -248,7 +248,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
         errs() << "Fail to create MemoryBuffer for: " << libPath << "\n";
         continue;
       }
-      auto &JD = session.createJITDylib(std::string(libPath));
+      auto &JD = session.createBareJITDylib(std::string(libPath));
       auto loaded = DynamicLibrarySearchGenerator::Load(
           libPath.data(), dataLayout.getGlobalPrefix());
       if (!loaded) {
