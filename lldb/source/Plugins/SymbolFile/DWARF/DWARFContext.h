@@ -42,6 +42,7 @@ private:
   SectionData m_data_debug_rnglists;
   SectionData m_data_debug_str;
   SectionData m_data_debug_str_offsets;
+  SectionData m_data_debug_tu_index;
   SectionData m_data_debug_types;
 
   const DWARFDataExtractor &
@@ -50,6 +51,7 @@ private:
                    SectionData &data);
 
   const DWARFDataExtractor &getOrLoadCuIndexData();
+  const DWARFDataExtractor &getOrLoadTuIndexData();
 
 public:
   explicit DWARFContext(SectionList *main_section_list,
