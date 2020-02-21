@@ -66,9 +66,12 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
 // Destructor
 Breakpoint::~Breakpoint() = default;
 
-BreakpointSP Breakpoint::CopyFromBreakpoint(Target& new_target,
+BreakpointSP Breakpoint::CopyFromBreakpoint(TargetSP new_target,
     const Breakpoint& bp_to_copy_from) {
-  BreakpointSP bp(new Breakpoint(new_target, bp_to_copy_from));
+  if (!new_target)
+    return BreakpointSP();
+
+  BreakpointSP bp(new Breakpoint(*new_target, bp_to_copy_from));
   // Now go through and copy the filter & resolver:
   bp->m_resolver_sp = bp_to_copy_from.m_resolver_sp->CopyForBreakpoint(*bp);
   bp->m_filter_sp = bp_to_copy_from.m_filter_sp->CopyForBreakpoint(*bp);
@@ -125,8 +128,10 @@ StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
 }
 
 lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
-    Target &target, StructuredData::ObjectSP &object_data, Status &error) {
+    TargetSP target_sp, StructuredData::ObjectSP &object_data, Status &error) {
   BreakpointSP result_sp;
+  if (!target_sp)
+    return result_sp;
 
   StructuredData::Dictionary *breakpoint_dict = object_data->GetAsDictionary();
 
@@ -160,11 +165,11 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       SearchFilter::GetSerializationKey(), filter_dict);
   SearchFilterSP filter_sp;
   if (!success)
-    filter_sp = std::make_shared<SearchFilterForUnconstrainedSearches>(
-        target.shared_from_this());
+    filter_sp =
+        std::make_shared<SearchFilterForUnconstrainedSearches>(target_sp);
   else {
-    filter_sp = SearchFilter::CreateFromStructuredData(target, *filter_dict,
-                                                       create_error);
+    filter_sp = SearchFilter::CreateFromStructuredData(target_sp, *filter_dict,
+        create_error);
     if (create_error.Fail()) {
       error.SetErrorStringWithFormat(
           "Error creating breakpoint filter from data: %s.",
@@ -175,6 +180,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
 
   std::unique_ptr<BreakpointOptions> options_up;
   StructuredData::Dictionary *options_dict;
+  Target& target = *target_sp;
   success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointOptions::GetSerializationKey(), options_dict);
   if (success) {
@@ -192,8 +198,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   success = breakpoint_dict->GetValueForKeyAsBoolean(
       Breakpoint::GetKey(OptionNames::Hardware), hardware);
 
-  result_sp =
-      target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
+  result_sp = target.CreateBreakpoint(filter_sp, resolver_sp, false,
+                                      hardware, true);
 
   if (result_sp && options_up) {
     result_sp->m_options_up = std::move(options_up);
