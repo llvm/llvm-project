@@ -24,8 +24,8 @@ func @branch_argument() -> () {
 // -----
 
 func @missing_accessor() -> () {
+  // expected-error @+1 {{has incorrect number of successors: expected 1 but found 0}}
   spv.Branch
-  // expected-error @+1 {{expected block name}}
 }
 
 // -----

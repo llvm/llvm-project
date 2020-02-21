@@ -781,69 +781,6 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::BrOp.
-//===----------------------------------------------------------------------===//
-
-static void printBrOp(OpAsmPrinter &p, BrOp &op) {
-  p << op.getOperationName() << ' ';
-  p.printSuccessorAndUseList(op.getOperation(), 0);
-  p.printOptionalAttrDict(op.getAttrs());
-}
-
-// <operation> ::= `llvm.br` bb-id (`[` ssa-use-and-type-list `]`)?
-// attribute-dict?
-static ParseResult parseBrOp(OpAsmParser &parser, OperationState &result) {
-  Block *dest;
-  SmallVector<Value, 4> operands;
-  if (parser.parseSuccessorAndUseList(dest, operands) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  result.addSuccessor(dest, operands);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::CondBrOp.
-//===----------------------------------------------------------------------===//
-
-static void printCondBrOp(OpAsmPrinter &p, CondBrOp &op) {
-  p << op.getOperationName() << ' ' << op.getOperand(0) << ", ";
-  p.printSuccessorAndUseList(op.getOperation(), 0);
-  p << ", ";
-  p.printSuccessorAndUseList(op.getOperation(), 1);
-  p.printOptionalAttrDict(op.getAttrs());
-}
-
-// <operation> ::= `llvm.cond_br` ssa-use `,`
-//                  bb-id (`[` ssa-use-and-type-list `]`)? `,`
-//                  bb-id (`[` ssa-use-and-type-list `]`)? attribute-dict?
-static ParseResult parseCondBrOp(OpAsmParser &parser, OperationState &result) {
-  Block *trueDest;
-  Block *falseDest;
-  SmallVector<Value, 4> trueOperands;
-  SmallVector<Value, 4> falseOperands;
-  OpAsmParser::OperandType condition;
-
-  Builder &builder = parser.getBuilder();
-  auto *llvmDialect =
-      builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
-  auto i1Type = LLVM::LLVMType::getInt1Ty(llvmDialect);
-
-  if (parser.parseOperand(condition) || parser.parseComma() ||
-      parser.parseSuccessorAndUseList(trueDest, trueOperands) ||
-      parser.parseComma() ||
-      parser.parseSuccessorAndUseList(falseDest, falseOperands) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.resolveOperand(condition, i1Type, result.operands))
-    return failure();
-
-  result.addSuccessor(trueDest, trueOperands);
-  result.addSuccessor(falseDest, falseOperands);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::ReturnOp.
 //===----------------------------------------------------------------------===//
 

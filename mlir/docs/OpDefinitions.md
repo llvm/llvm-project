@@ -625,6 +625,10 @@ The available directives are as follows:
 
     -   Represents all of the results of an operation.
 
+*   `successors`
+
+    -   Represents all of the successors of an operation.
+
 *   `type` ( input )
 
     -   Represents the type of the given input.
@@ -641,8 +645,8 @@ The following are the set of valid punctuation:
 #### Variables
 
 A variable is an entity that has been registered on the operation itself, i.e.
-an argument(attribute or operand), result, etc. In the `CallOp` example above,
-the variables would be `$callee`  and `$args`.
+an argument(attribute or operand), result, successor, etc. In the `CallOp`
+example above, the variables would be `$callee` and `$args`.
 
 Attribute variables are printed with their respective value type, unless that
 value type is buildable. In those cases, the type of the attribute is elided.

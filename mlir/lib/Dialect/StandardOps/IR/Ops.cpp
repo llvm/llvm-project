@@ -414,20 +414,6 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
 };
 } // end anonymous namespace.
 
-static ParseResult parseBranchOp(OpAsmParser &parser, OperationState &result) {
-  Block *dest;
-  SmallVector<Value, 4> destOperands;
-  if (parser.parseSuccessorAndUseList(dest, destOperands))
-    return failure();
-  result.addSuccessor(dest, destOperands);
-  return success();
-}
-
-static void print(OpAsmPrinter &p, BranchOp op) {
-  p << "br ";
-  p.printSuccessorAndUseList(op.getOperation(), 0);
-}
-
 Block *BranchOp::getDest() { return getSuccessor(0); }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block, 0); }
@@ -809,42 +795,6 @@ struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
   }
 };
 } // end anonymous namespace.
-
-static ParseResult parseCondBranchOp(OpAsmParser &parser,
-                                     OperationState &result) {
-  SmallVector<Value, 4> destOperands;
-  Block *dest;
-  OpAsmParser::OperandType condInfo;
-
-  // Parse the condition.
-  Type int1Ty = parser.getBuilder().getI1Type();
-  if (parser.parseOperand(condInfo) || parser.parseComma() ||
-      parser.resolveOperand(condInfo, int1Ty, result.operands)) {
-    return parser.emitError(parser.getNameLoc(),
-                            "expected condition type was boolean (i1)");
-  }
-
-  // Parse the true successor.
-  if (parser.parseSuccessorAndUseList(dest, destOperands))
-    return failure();
-  result.addSuccessor(dest, destOperands);
-
-  // Parse the false successor.
-  destOperands.clear();
-  if (parser.parseComma() ||
-      parser.parseSuccessorAndUseList(dest, destOperands))
-    return failure();
-  result.addSuccessor(dest, destOperands);
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, CondBranchOp op) {
-  p << "cond_br " << op.getCondition() << ", ";
-  p.printSuccessorAndUseList(op.getOperation(), CondBranchOp::trueIndex);
-  p << ", ";
-  p.printSuccessorAndUseList(op.getOperation(), CondBranchOp::falseIndex);
-}
 
 void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
