@@ -36,7 +36,7 @@ struct PlatformConnectOptions {
       m_url = url;
   }
 
-  ~PlatformConnectOptions() {}
+  ~PlatformConnectOptions() = default;
 
   std::string m_url;
   std::string m_rsync_options;
@@ -54,7 +54,7 @@ struct PlatformShellCommand {
       m_command = shell_command;
   }
 
-  ~PlatformShellCommand() {}
+  ~PlatformShellCommand() = default;
 
   std::string m_command;
   std::string m_working_dir;
@@ -301,7 +301,7 @@ SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBPlatform::~SBPlatform() {}
+SBPlatform::~SBPlatform() = default;
 
 bool SBPlatform::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBPlatform, IsValid);

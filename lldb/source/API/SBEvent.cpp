@@ -58,7 +58,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBEvent::~SBEvent() {}
+SBEvent::~SBEvent() = default;
 
 const char *SBEvent::GetDataFlavor() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBEvent, GetDataFlavor);

@@ -120,9 +120,9 @@ LLDB_PLUGIN_DECLARE(DynamicLoaderWindowsDYLD)
 
 using namespace lldb_private;
 
-SystemInitializerFull::SystemInitializerFull() {}
+SystemInitializerFull::SystemInitializerFull() = default;
 
-SystemInitializerFull::~SystemInitializerFull() {}
+SystemInitializerFull::~SystemInitializerFull() = default;
 
 // BEGIN SWIFT
 static void SwiftInitialize() {

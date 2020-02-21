@@ -74,7 +74,7 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
 }
 
 // Destructor
-SBProcess::~SBProcess() {}
+SBProcess::~SBProcess() = default;
 
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBProcess,

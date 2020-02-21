@@ -48,7 +48,7 @@ const lldb::SBListener &SBListener::operator=(const lldb::SBListener &rhs) {
 SBListener::SBListener(const lldb::ListenerSP &listener_sp)
     : m_opaque_sp(listener_sp), m_unused_ptr(nullptr) {}
 
-SBListener::~SBListener() {}
+SBListener::~SBListener() = default;
 
 bool SBListener::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, IsValid);
