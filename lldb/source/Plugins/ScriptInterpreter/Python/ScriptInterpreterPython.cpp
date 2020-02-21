@@ -277,36 +277,14 @@ public:
 
 private:
   void InitializePythonHome() {
-#if LLDB_EMBED_PYTHON_HOME
+#if defined(LLDB_PYTHON_HOME)
 #if PY_MAJOR_VERSION >= 3
-    typedef const wchar_t* str_type;
+    size_t size = 0;
+    static wchar_t *g_python_home = Py_DecodeLocale(LLDB_PYTHON_HOME, &size);
 #else
-    typedef char* str_type;
+    static char g_python_home[] = LLDB_PYTHON_HOME;
 #endif
-    static str_type g_python_home = []() -> str_type {
-      const char *lldb_python_home = LLDB_PYTHON_HOME;
-      const char *absolute_python_home = nullptr;
-      llvm::SmallString<64> path;
-      if (llvm::sys::path::is_absolute(lldb_python_home)) {
-        absolute_python_home = lldb_python_home;
-      } else {
-        FileSpec spec = HostInfo::GetShlibDir();
-        if (!spec)
-          return nullptr;
-        spec.GetPath(path);
-        llvm::sys::path::append(path, lldb_python_home);
-        absolute_python_home = path.c_str();
-      }
-#if PY_MAJOR_VERSION >= 3
-      size_t size = 0;
-      return Py_DecodeLocale(absolute_python_home, &size);
-#else
-      return strdup(absolute_python_home);
-#endif
-    }();
-    if (g_python_home != nullptr) {
-      Py_SetPythonHome(g_python_home);
-    }
+    Py_SetPythonHome(g_python_home);
 #else
 #if defined(__APPLE__) && PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION == 7
     // For Darwin, the only Python version supported is the one shipped in the
