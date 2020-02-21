@@ -219,16 +219,26 @@ struct OperationFormat {
     void setBuilderIdx(int idx) { builderIdx = idx; }
 
     /// Get the variable this type is resolved to, or None.
-    Optional<StringRef> getVariable() const { return variableName; }
-    void setVariable(StringRef variable) { variableName = variable; }
+    const NamedTypeConstraint *getVariable() const { return variable; }
+    Optional<StringRef> getVarTransformer() const {
+      return variableTransformer;
+    }
+    void setVariable(const NamedTypeConstraint *var,
+                     Optional<StringRef> transformer) {
+      variable = var;
+      variableTransformer = transformer;
+    }
 
   private:
     /// If the type is resolved with a buildable type, this is the index into
     /// 'buildableTypes' in the parent format.
     Optional<int> builderIdx;
     /// If the type is resolved based upon another operand or result, this is
-    /// the name of the variable that this type is resolved to.
-    Optional<StringRef> variableName;
+    /// the variable that this type is resolved to.
+    const NamedTypeConstraint *variable;
+    /// If the type is resolved based upon another operand or result, this is
+    /// a transformer to apply to the variable when resolving.
+    Optional<StringRef> variableTransformer;
   };
 
   OperationFormat(const Operator &op)
@@ -487,6 +497,34 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
 
 void OperationFormat::genParserTypeResolution(Operator &op,
                                               OpMethodBody &body) {
+  // If any of type resolutions use transformed variables, make sure that the
+  // types of those variables are resolved.
+  SmallPtrSet<const NamedTypeConstraint *, 8> verifiedVariables;
+  FmtContext verifierFCtx;
+  for (TypeResolution &resolver :
+       llvm::concat<TypeResolution>(resultTypes, operandTypes)) {
+    Optional<StringRef> transformer = resolver.getVarTransformer();
+    if (!transformer)
+      continue;
+    // Ensure that we don't verify the same variables twice.
+    const NamedTypeConstraint *variable = resolver.getVariable();
+    if (!verifiedVariables.insert(variable).second)
+      continue;
+
+    auto constraint = variable->constraint;
+    body << "  for (Type type : " << variable->name << "Types) {\n"
+         << "    (void)type;\n"
+         << "    if (!("
+         << tgfmt(constraint.getConditionTemplate(),
+                  &verifierFCtx.withSelf("type"))
+         << ")) {\n"
+         << formatv("      return parser.emitError(parser.getNameLoc()) << "
+                    "\"'{0}' must be {1}, but got \" << type;\n",
+                    variable->name, constraint.getDescription())
+         << "    }\n"
+         << "  }\n";
+  }
+
   // Initialize the set of buildable types.
   if (!buildableTypes.empty()) {
     body << "  Builder &builder = parser.getBuilder();\n";
@@ -498,18 +536,27 @@ void OperationFormat::genParserTypeResolution(Operator &op,
            << tgfmt(it.first, &typeBuilderCtx) << ";\n";
   }
 
+  // Emit the code necessary for a type resolver.
+  auto emitTypeResolver = [&](TypeResolution &resolver, StringRef curVar) {
+    if (Optional<int> val = resolver.getBuilderIdx()) {
+      body << "odsBuildableType" << *val;
+    } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
+      if (Optional<StringRef> tform = resolver.getVarTransformer())
+        body << tgfmt(*tform, &FmtContext().withSelf(var->name + "Types[0]"));
+      else
+        body << var->name << "Types";
+    } else {
+      body << curVar << "Types";
+    }
+  };
+
   // Resolve each of the result types.
   if (allResultTypes) {
     body << "  result.addTypes(allResultTypes);\n";
   } else {
     for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
       body << "  result.addTypes(";
-      if (Optional<int> val = resultTypes[i].getBuilderIdx())
-        body << "odsBuildableType" << *val;
-      else if (Optional<StringRef> var = resultTypes[i].getVariable())
-        body << *var << "Types";
-      else
-        body << op.getResultName(i) << "Types";
+      emitTypeResolver(resultTypes[i], op.getResultName(i));
       body << ");\n";
     }
   }
@@ -552,25 +599,19 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   if (hasAllOperands) {
     body << "  if (parser.resolveOperands(allOperands, ";
 
-    auto emitOperandType = [&](int idx) {
-      if (Optional<int> val = operandTypes[idx].getBuilderIdx())
-        body << "ArrayRef<Type>(odsBuildableType" << *val << ")";
-      else if (Optional<StringRef> var = operandTypes[idx].getVariable())
-        body << *var << "Types";
-      else
-        body << op.getOperand(idx).name << "Types";
-    };
-
     // Group all of the operand types together to perform the resolution all at
     // once. Use llvm::concat to perform the merge. llvm::concat does not allow
     // the case of a single range, so guard it here.
     if (op.getNumOperands() > 1) {
       body << "llvm::concat<const Type>(";
-      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body,
-                      emitOperandType);
+      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+        body << "ArrayRef<Type>(";
+        emitTypeResolver(operandTypes[i], op.getOperand(i).name);
+        body << ")";
+      });
       body << ")";
     } else {
-      emitOperandType(/*idx=*/0);
+      emitTypeResolver(operandTypes.front(), op.getOperand(0).name);
     }
 
     body << ", allOperandLoc, result.operands))\n"
@@ -583,13 +624,12 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
-    if (Optional<int> val = operandTypes[i].getBuilderIdx())
-      body << "odsBuildableType" << *val << ", ";
-    else if (Optional<StringRef> var = operandTypes[i].getVariable())
-      body << *var << "Types, " << operand.name << "OperandsLoc, ";
-    else
-      body << operand.name << "Types, " << operand.name << "OperandsLoc, ";
-    body << "result.operands))\n    return failure();\n";
+    emitTypeResolver(operandTypes[i], operand.name);
+
+    // If this isn't a buildable type, verify the sizes match by adding the loc.
+    if (!operandTypes[i].getBuilderIdx())
+      body << ", " << operand.name << "OperandsLoc";
+    body << ", result.operands))\n    return failure();\n";
   }
 }
 
@@ -954,17 +994,29 @@ public:
   LogicalResult parse();
 
 private:
+  /// This struct represents a type resolution instance. It includes a specific
+  /// type as well as an optional transformer to apply to that type in order to
+  /// properly resolve the type of a variable.
+  struct TypeResolutionInstance {
+    const NamedTypeConstraint *type;
+    Optional<StringRef> transformer;
+  };
+
   /// Given the values of an `AllTypesMatch` trait, check for inferrable type
   /// resolution.
   void handleAllTypesMatchConstraint(
       ArrayRef<StringRef> values,
-      llvm::StringMap<const NamedTypeConstraint *> &variableTyResolver);
+      llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
   /// Check for inferrable type resolution given all operands, and or results,
   /// have the same type. If 'includeResults' is true, the results also have the
   /// same type as all of the operands.
   void handleSameTypesConstraint(
-      llvm::StringMap<const NamedTypeConstraint *> &variableTyResolver,
+      llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
       bool includeResults);
+
+  /// Returns an argument with the given name that has been seen within the
+  /// format.
+  const NamedTypeConstraint *findSeenArg(StringRef name);
 
   /// Parse a specific element.
   LogicalResult parseElement(std::unique_ptr<Element> &element,
@@ -1044,16 +1096,21 @@ LogicalResult FormatParser::parse() {
     return emitError(loc, "format missing 'attr-dict' directive");
 
   // Check for any type traits that we can use for inferring types.
-  llvm::StringMap<const NamedTypeConstraint *> variableTyResolver;
+  llvm::StringMap<TypeResolutionInstance> variableTyResolver;
   for (const OpTrait &trait : op.getTraits()) {
     const llvm::Record &def = trait.getDef();
-    if (def.isSubClassOf("AllTypesMatch"))
+    if (def.isSubClassOf("AllTypesMatch")) {
       handleAllTypesMatchConstraint(def.getValueAsListOfStrings("values"),
                                     variableTyResolver);
-    else if (def.getName() == "SameTypeOperands")
+    } else if (def.getName() == "SameTypeOperands") {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/false);
-    else if (def.getName() == "SameOperandsAndResultType")
+    } else if (def.getName() == "SameOperandsAndResultType") {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
+    } else if (def.isSubClassOf("TypesMatchWith")) {
+      if (const auto *lhsArg = findSeenArg(def.getValueAsString("lhs")))
+        variableTyResolver[def.getValueAsString("rhs")] = {
+            lhsArg, def.getValueAsString("transformer")};
+    }
   }
 
   // Check that all of the result types can be inferred.
@@ -1066,7 +1123,8 @@ LogicalResult FormatParser::parse() {
       // Check to see if we can infer this type from another variable.
       auto varResolverIt = variableTyResolver.find(op.getResultName(i));
       if (varResolverIt != variableTyResolver.end()) {
-        fmt.resultTypes[i].setVariable(varResolverIt->second->name);
+        fmt.resultTypes[i].setVariable(varResolverIt->second.type,
+                                       varResolverIt->second.transformer);
         continue;
       }
 
@@ -1102,7 +1160,8 @@ LogicalResult FormatParser::parse() {
     // Check to see if we can infer this type from another variable.
     auto varResolverIt = variableTyResolver.find(op.getOperand(i).name);
     if (varResolverIt != variableTyResolver.end()) {
-      fmt.operandTypes[i].setVariable(varResolverIt->second->name);
+      fmt.operandTypes[i].setVariable(varResolverIt->second.type,
+                                      varResolverIt->second.transformer);
       continue;
     }
 
@@ -1121,30 +1180,23 @@ LogicalResult FormatParser::parse() {
 
 void FormatParser::handleAllTypesMatchConstraint(
     ArrayRef<StringRef> values,
-    llvm::StringMap<const NamedTypeConstraint *> &variableTyResolver) {
+    llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
   for (unsigned i = 0, e = values.size(); i != e; ++i) {
     // Check to see if this value matches a resolved operand or result type.
-    const NamedTypeConstraint *arg = nullptr;
-    if ((arg = findArg(op.getOperands(), values[i]))) {
-      if (!seenOperandTypes.test(arg - op.operand_begin()))
-        continue;
-    } else if ((arg = findArg(op.getResults(), values[i]))) {
-      if (!seenResultTypes.test(arg - op.result_begin()))
-        continue;
-    } else {
+    const NamedTypeConstraint *arg = findSeenArg(values[i]);
+    if (!arg)
       continue;
-    }
 
     // Mark this value as the type resolver for the other variables.
     for (unsigned j = 0; j != i; ++j)
-      variableTyResolver[values[j]] = arg;
+      variableTyResolver[values[j]] = {arg, llvm::None};
     for (unsigned j = i + 1; j != e; ++j)
-      variableTyResolver[values[j]] = arg;
+      variableTyResolver[values[j]] = {arg, llvm::None};
   }
 }
 
 void FormatParser::handleSameTypesConstraint(
-    llvm::StringMap<const NamedTypeConstraint *> &variableTyResolver,
+    llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
     bool includeResults) {
   const NamedTypeConstraint *resolver = nullptr;
   int resolvedIt = -1;
@@ -1160,12 +1212,20 @@ void FormatParser::handleSameTypesConstraint(
   // Set the resolvers for each operand and result.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i)
     if (!seenOperandTypes.test(i) && !op.getOperand(i).name.empty())
-      variableTyResolver[op.getOperand(i).name] = resolver;
+      variableTyResolver[op.getOperand(i).name] = {resolver, llvm::None};
   if (includeResults) {
     for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
       if (!seenResultTypes.test(i) && !op.getResultName(i).empty())
-        variableTyResolver[op.getResultName(i)] = resolver;
+        variableTyResolver[op.getResultName(i)] = {resolver, llvm::None};
   }
+}
+
+const NamedTypeConstraint *FormatParser::findSeenArg(StringRef name) {
+  if (auto *arg = findArg(op.getOperands(), name))
+    return seenOperandTypes.test(arg - op.operand_begin()) ? arg : nullptr;
+  if (auto *arg = findArg(op.getResults(), name))
+    return seenResultTypes.test(arg - op.result_begin()) ? arg : nullptr;
+  return nullptr;
 }
 
 LogicalResult FormatParser::parseElement(std::unique_ptr<Element> &element,
@@ -1191,7 +1251,8 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
   StringRef name = varTok.getSpelling().drop_front();
   llvm::SMLoc loc = varTok.getLoc();
 
-  // Check that the parsed argument is something actually registered on the op.
+  // Check that the parsed argument is something actually registered on the
+  // op.
   /// Attributes
   if (const NamedAttribute *attr = findArg(op.getAttributes(), name)) {
     if (isTopLevel && !seenAttrs.insert(attr).second)
