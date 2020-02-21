@@ -540,7 +540,7 @@ void CallIndirectOp::getCanonicalizationPatterns(
 // Return the type of the same shape (scalar, vector or tensor) containing i1.
 static Type getCheckedI1SameShape(Type type) {
   auto i1Type = IntegerType::get(1, type.getContext());
-  if (type.isIntOrIndexOrFloat())
+  if (type.isSignlessIntOrIndexOrFloat())
     return i1Type;
   if (auto tensorType = type.dyn_cast<RankedTensorType>())
     return RankedTensorType::get(tensorType.getShape(), i1Type);
@@ -1077,7 +1077,7 @@ bool ConstantFloatOp::classof(Operation *op) {
 /// ConstantIntOp only matches values whose result type is an IntegerType.
 bool ConstantIntOp::classof(Operation *op) {
   return ConstantOp::classof(op) &&
-         op->getResult(0).getType().isa<IntegerType>();
+         op->getResult(0).getType().isSignlessInteger();
 }
 
 void ConstantIntOp::build(Builder *builder, OperationState &result,
@@ -1091,7 +1091,8 @@ void ConstantIntOp::build(Builder *builder, OperationState &result,
 /// which must be an integer type.
 void ConstantIntOp::build(Builder *builder, OperationState &result,
                           int64_t value, Type type) {
-  assert(type.isa<IntegerType>() && "ConstantIntOp can only have integer type");
+  assert(type.isSignlessInteger() &&
+         "ConstantIntOp can only have signless integer type");
   ConstantOp::build(builder, result, type,
                     builder->getIntegerAttr(type, value));
 }
@@ -1553,8 +1554,8 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 
 // Index cast is applicable from index to integer and backwards.
 bool IndexCastOp::areCastCompatible(Type a, Type b) {
-  return (a.isIndex() && b.isa<IntegerType>()) ||
-         (a.isa<IntegerType>() && b.isIndex());
+  return (a.isIndex() && b.isSignlessInteger()) ||
+         (a.isSignlessInteger() && b.isIndex());
 }
 
 OpFoldResult IndexCastOp::fold(ArrayRef<Attribute> cstOperands) {
@@ -1894,7 +1895,7 @@ static LogicalResult verify(ReturnOp op) {
 
 // sitofp is applicable from integer types to float types.
 bool SIToFPOp::areCastCompatible(Type a, Type b) {
-  return a.isa<IntegerType>() && b.isa<FloatType>();
+  return a.isSignlessInteger() && b.isa<FloatType>();
 }
 
 //===----------------------------------------------------------------------===//

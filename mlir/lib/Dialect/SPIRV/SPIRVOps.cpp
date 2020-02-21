@@ -392,11 +392,11 @@ static unsigned getBitWidth(Type type) {
     // TODO: Make sure not caller relies on the actual pointer width value.
     return 64;
   }
-  if (type.isIntOrFloat()) {
+  if (type.isSignlessIntOrFloat()) {
     return type.getIntOrFloatBitWidth();
   }
   if (auto vectorType = type.dyn_cast<VectorType>()) {
-    assert(vectorType.getElementType().isIntOrFloat());
+    assert(vectorType.getElementType().isSignlessIntOrFloat());
     return vectorType.getNumElements() *
            vectorType.getElementType().getIntOrFloatBitWidth();
   }
@@ -537,7 +537,7 @@ static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
 static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   auto ptrType = op->getOperand(0).getType().cast<spirv::PointerType>();
   auto elementType = ptrType.getPointeeType();
-  if (!elementType.isa<IntegerType>())
+  if (!elementType.isSignlessInteger())
     return op->emitOpError(
                "pointer operand must point to an integer value, found ")
            << elementType;
@@ -1382,7 +1382,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
       numElements *= t.getNumElements();
       opElemType = t.getElementType();
     }
-    if (!opElemType.isIntOrFloat()) {
+    if (!opElemType.isSignlessIntOrFloat()) {
       return constOp.emitOpError("only support nested array result type");
     }
 

@@ -503,7 +503,7 @@ public:
                      SmallVectorImpl<OpFoldResult> &results);
 
   /// Returns if the operation was registered with a particular trait, e.g.
-  /// hasTrait<OperandsAreIntegerLike>().
+  /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait> bool hasTrait() {
     auto *absOp = getAbstractOperation();
     return absOp ? absOp->hasTrait<Trait>() : false;

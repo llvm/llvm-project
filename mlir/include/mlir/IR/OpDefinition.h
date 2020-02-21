@@ -365,7 +365,7 @@ LogicalResult verifyOneOperand(Operation *op);
 LogicalResult verifyNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyAtLeastNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyOperandsAreFloatLike(Operation *op);
-LogicalResult verifyOperandsAreIntegerLike(Operation *op);
+LogicalResult verifyOperandsAreSignlessIntegerLike(Operation *op);
 LogicalResult verifySameTypeOperands(Operation *op);
 LogicalResult verifyZeroResult(Operation *op);
 LogicalResult verifyOneResult(Operation *op);
@@ -378,7 +378,7 @@ LogicalResult verifySameOperandsAndResultElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultType(Operation *op);
 LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
-LogicalResult verifyResultsAreIntegerLike(Operation *op);
+LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
 LogicalResult verifyIsTerminator(Operation *op);
 LogicalResult verifyOperandSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyResultSizeAttr(Operation *op, StringRef sizeAttrName);
@@ -725,14 +725,14 @@ public:
   }
 };
 
-/// This class verifies that any results of the specified op have an integer or
-/// index type, a vector thereof, or a tensor thereof.
+/// This class verifies that any results of the specified op have a signless
+/// integer or index type, a vector thereof, or a tensor thereof.
 template <typename ConcreteType>
-class ResultsAreIntegerLike
-    : public TraitBase<ConcreteType, ResultsAreIntegerLike> {
+class ResultsAreSignlessIntegerLike
+    : public TraitBase<ConcreteType, ResultsAreSignlessIntegerLike> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifyResultsAreIntegerLike(op);
+    return impl::verifyResultsAreSignlessIntegerLike(op);
   }
 };
 
@@ -767,14 +767,14 @@ public:
   }
 };
 
-/// This class verifies that all operands of the specified op have an integer or
-/// index type, a vector thereof, or a tensor thereof.
+/// This class verifies that all operands of the specified op have a signless
+/// integer or index type, a vector thereof, or a tensor thereof.
 template <typename ConcreteType>
-class OperandsAreIntegerLike
-    : public TraitBase<ConcreteType, OperandsAreIntegerLike> {
+class OperandsAreSignlessIntegerLike
+    : public TraitBase<ConcreteType, OperandsAreSignlessIntegerLike> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifyOperandsAreIntegerLike(op);
+    return impl::verifyOperandsAreSignlessIntegerLike(op);
   }
 };
 

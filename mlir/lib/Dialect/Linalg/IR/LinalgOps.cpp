@@ -1022,7 +1022,7 @@ static void appendMangledType(llvm::raw_string_ostream &ss, Type t) {
     interleave(
         vec.getShape(), [&](int64_t i) { ss << i; }, [&]() { ss << "x"; });
     appendMangledType(ss, vec.getElementType());
-  } else if (t.isIntOrIndexOrFloat()) {
+  } else if (t.isSignlessIntOrIndexOrFloat()) {
     ss << t;
   } else {
     llvm_unreachable("Invalid type for linalg library name mangling");

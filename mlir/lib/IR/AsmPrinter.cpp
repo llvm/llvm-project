@@ -1258,12 +1258,14 @@ void ModulePrinter::printAttribute(Attribute attr,
     break;
   case StandardAttributes::Integer: {
     auto intAttr = attr.cast<IntegerAttr>();
-    // Print all integer attributes as signed unless i1.
-    bool isSigned = attrType.isIndex() || attrType.getIntOrFloatBitWidth() != 1;
+    // Print all signed/signless integer attributes as signed unless i1.
+    bool isSigned =
+        attrType.isIndex() || (!attrType.isUnsignedInteger() &&
+                               attrType.getIntOrFloatBitWidth() != 1);
     intAttr.getValue().print(os, isSigned);
 
     // IntegerAttr elides the type if I64.
-    if (typeElision == AttrTypeElision::May && attrType.isInteger(64))
+    if (typeElision == AttrTypeElision::May && attrType.isSignlessInteger(64))
       return;
     break;
   }
@@ -1495,6 +1497,10 @@ void ModulePrinter::printType(Type type) {
 
   case StandardTypes::Integer: {
     auto integer = type.cast<IntegerType>();
+    if (integer.isSigned())
+      os << 's';
+    else if (integer.isUnsigned())
+      os << 'u';
     os << 'i' << integer.getWidth();
     return;
   }

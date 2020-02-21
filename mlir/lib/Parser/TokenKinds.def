@@ -52,7 +52,7 @@ TOK_IDENTIFIER(exclamation_identifier) // !foo
 TOK_LITERAL(floatliteral)               // 2.0
 TOK_LITERAL(integer)                    // 42
 TOK_LITERAL(string)                     // "foo"
-TOK_LITERAL(inttype)                    // i421
+TOK_LITERAL(inttype)                    // i4, si8, ui16
 
 // Punctuation.
 TOK_PUNCTUATION(arrow,            "->")

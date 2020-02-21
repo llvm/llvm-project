@@ -150,13 +150,13 @@ static ValueHandle createBinaryHandle(
   (void)thatType;
   if (thisType.isIndex()) {
     return createBinaryIndexHandle(lhs, rhs, affCombiner);
-  } else if (thisType.isa<IntegerType>()) {
+  } else if (thisType.isSignlessInteger()) {
     return createBinaryHandle<IOp>(lhs, rhs);
   } else if (thisType.isa<FloatType>()) {
     return createBinaryHandle<FOp>(lhs, rhs);
   } else if (thisType.isa<VectorType>() || thisType.isa<TensorType>()) {
     auto aggregateType = thisType.cast<ShapedType>();
-    if (aggregateType.getElementType().isa<IntegerType>())
+    if (aggregateType.getElementType().isSignedInteger())
       return createBinaryHandle<IOp>(lhs, rhs);
     else if (aggregateType.getElementType().isa<FloatType>())
       return createBinaryHandle<FOp>(lhs, rhs);
@@ -223,7 +223,7 @@ static ValueHandle createIComparisonExpr(CmpIPredicate predicate,
   (void)lhsType;
   (void)rhsType;
   assert(lhsType == rhsType && "cannot mix types in operators");
-  assert((lhsType.isa<IndexType>() || lhsType.isa<IntegerType>()) &&
+  assert((lhsType.isa<IndexType>() || lhsType.isSignedInteger()) &&
          "only integer comparisons are supported");
 
   auto op = ScopedContext::getBuilder().create<CmpIOp>(

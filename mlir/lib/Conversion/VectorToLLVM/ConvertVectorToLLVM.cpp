@@ -289,7 +289,7 @@ public:
     auto kind = reductionOp.kind();
     Type eltType = reductionOp.dest().getType();
     Type llvmType = typeConverter.convertType(eltType);
-    if (eltType.isInteger(32) || eltType.isInteger(64)) {
+    if (eltType.isSignlessInteger(32) || eltType.isSignlessInteger(64)) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       if (kind == "add")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_add>(
@@ -989,9 +989,9 @@ public:
     Type eltType = vectorType ? vectorType.getElementType() : printType;
     int64_t rank = vectorType ? vectorType.getRank() : 0;
     Operation *printer;
-    if (eltType.isInteger(32))
+    if (eltType.isSignlessInteger(32))
       printer = getPrintI32(op);
-    else if (eltType.isInteger(64))
+    else if (eltType.isSignlessInteger(64))
       printer = getPrintI64(op);
     else if (eltType.isF32())
       printer = getPrintFloat(op);
@@ -1111,7 +1111,7 @@ public:
 
     auto loc = op.getLoc();
     auto elemType = dstType.getElementType();
-    assert(elemType.isIntOrIndexOrFloat());
+    assert(elemType.isSignlessIntOrIndexOrFloat());
     Value zero = rewriter.create<ConstantOp>(loc, elemType,
                                              rewriter.getZeroAttr(elemType));
     Value res = rewriter.create<SplatOp>(loc, dstType, zero);

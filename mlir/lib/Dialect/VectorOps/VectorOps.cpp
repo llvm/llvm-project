@@ -74,13 +74,13 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (eltType.isF32() || eltType.isF64() || eltType.isInteger(32) ||
-        eltType.isInteger(64))
+    if (eltType.isF32() || eltType.isF64() || eltType.isSignlessInteger(32) ||
+        eltType.isSignlessInteger(64))
       return success();
     return op.emitOpError("unsupported reduction type");
   }
   if (kind == "and" || kind == "or" || kind == "xor") {
-    if (eltType.isInteger(32) || eltType.isInteger(64))
+    if (eltType.isSignlessInteger(32) || eltType.isSignlessInteger(64))
       return success();
     return op.emitOpError("unsupported reduction type");
   }

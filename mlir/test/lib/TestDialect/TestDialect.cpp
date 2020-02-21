@@ -112,8 +112,10 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                                        Type resultType,
                                        Location conversionLoc) const final {
     // Only allow conversion for i16/i32 types.
-    if (!(resultType.isInteger(16) || resultType.isInteger(32)) ||
-        !(input.getType().isInteger(16) || input.getType().isInteger(32)))
+    if (!(resultType.isSignlessInteger(16) ||
+          resultType.isSignlessInteger(32)) ||
+        !(input.getType().isSignlessInteger(16) ||
+          input.getType().isSignlessInteger(32)))
       return nullptr;
     return builder.create<TestCastOp>(conversionLoc, resultType, input);
   }
