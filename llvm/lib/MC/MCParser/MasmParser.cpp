@@ -155,9 +155,6 @@ private:
   /// List of bodies of anonymous macros.
   std::deque<MCAsmMacro> MacroLikeBodies;
 
-  /// Boolean tracking whether macro substitution is enabled.
-  unsigned MacrosEnabledFlag : 1;
-
   /// Keeps track of how many .macro's have been instantiated.
   unsigned NumOfMacroInstantiations;
 
@@ -290,12 +287,6 @@ private:
                    ArrayRef<MCAsmMacroArgument> A, bool EnableAtPseudoVariable,
                    SMLoc L);
 
-  /// Are macros enabled in the parser?
-  bool areMacrosEnabled() {return MacrosEnabledFlag;}
-
-  /// Control a flag in the parser that enables or disables macros.
-  void setMacrosEnabled(bool Flag) {MacrosEnabledFlag = Flag;}
-
   /// Are we inside a macro instantiation?
   bool isInsideMacroInstantiation() {return !ActiveMacros.empty();}
 
@@ -330,11 +321,6 @@ private:
   /// Enter the specified file. This returns true on failure.
   bool enterIncludeFile(const std::string &Filename);
 
-  /// Process the specified file for the .incbin directive.
-  /// This returns true on failure.
-  bool processIncbinFile(const std::string &Filename, int64_t Skip = 0,
-                         const MCExpr *Count = nullptr, SMLoc Loc = SMLoc());
-
   /// Reset the current lexer position to that given by \p Loc. The
   /// current token is not set; clients should ensure Lex() is called
   /// subsequently.
@@ -347,10 +333,6 @@ private:
   /// current token until the end of the statement; the current token on exit
   /// will be either the EndOfStatement or EOF.
   StringRef parseStringToEndOfStatement() override;
-
-  /// Parse until the end of a statement or a comma is encountered,
-  /// return the contents from the current token up to the end or comma.
-  StringRef parseStringToComma();
 
   bool parseTextItem(std::string &Data);
 
@@ -562,7 +544,6 @@ private:
   bool parseDirectiveExitMacro(StringRef Directive);
   bool parseDirectiveEndMacro(StringRef Directive);
   bool parseDirectiveMacro(SMLoc DirectiveLoc);
-  bool parseDirectiveMacrosOnOff(StringRef Directive);
   // alternate macro mode directives
   bool parseDirectiveAltmacro(StringRef Directive);
 
@@ -653,7 +634,7 @@ enum { DEFAULT_ADDRSPACE = 0 };
 MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                        const MCAsmInfo &MAI, unsigned CB = 0)
     : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), MacrosEnabledFlag(true) {
+      CurBuffer(CB ? CB : SM.getMainFileID()) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -730,32 +711,6 @@ bool MasmParser::enterIncludeFile(const std::string &Filename) {
 
   CurBuffer = NewBuf;
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer());
-  return false;
-}
-
-/// Process the specified .incbin file by searching for it in the include paths
-/// then just emitting the byte contents of the file to the streamer. This
-/// returns true on failure.
-bool MasmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
-                                   const MCExpr *Count, SMLoc Loc) {
-  std::string IncludedFile;
-  unsigned NewBuf =
-      SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
-  if (!NewBuf)
-    return true;
-
-  // Pick up the bytes from the file and emit them.
-  StringRef Bytes = SrcMgr.getMemoryBuffer(NewBuf)->getBuffer();
-  Bytes = Bytes.drop_front(Skip);
-  if (Count) {
-    int64_t Res;
-    if (!Count->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
-      return Error(Loc, "expected absolute expression");
-    if (Res < 0)
-      return Warning(Loc, "negative count has no effect");
-    Bytes = Bytes.take_front(Res);
-  }
-  getStreamer().emitBytes(Bytes);
   return false;
 }
 
@@ -976,17 +931,6 @@ StringRef MasmParser::parseStringToEndOfStatement() {
   const char *Start = getTok().getLoc().getPointer();
 
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
-    Lexer.Lex();
-
-  const char *End = getTok().getLoc().getPointer();
-  return StringRef(Start, End - Start);
-}
-
-StringRef MasmParser::parseStringToComma() {
-  const char *Start = getTok().getLoc().getPointer();
-
-  while (Lexer.isNot(AsmToken::EndOfStatement) &&
-         Lexer.isNot(AsmToken::Comma) && Lexer.isNot(AsmToken::Eof))
     Lexer.Lex();
 
   const char *End = getTok().getLoc().getPointer();
@@ -1699,10 +1643,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
-  if (areMacrosEnabled())
-    if (const MCAsmMacro *M = getContext().lookupMacro(IDVal)) {
-      return handleMacroEntry(M, IDLoc);
-    }
+  if (const MCAsmMacro *M = getContext().lookupMacro(IDVal)) {
+    return handleMacroEntry(M, IDLoc);
+  }
 
   // Otherwise, we have a normal instruction or directive.
 
@@ -3956,18 +3899,6 @@ bool MasmParser::parseDirectiveAltmacro(StringRef Directive) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in '" + Directive + "' directive");
   AltMacroMode = (Directive == ".altmacro");
-  return false;
-}
-
-/// parseDirectiveMacrosOnOff
-/// ::= .macros_on
-/// ::= .macros_off
-bool MasmParser::parseDirectiveMacrosOnOff(StringRef Directive) {
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '" + Directive + "' directive"))
-    return true;
-
-  setMacrosEnabled(Directive == ".macros_on");
   return false;
 }
 
