@@ -2742,10 +2742,11 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       Pred == CmpInst::ICMP_NE) {
     Value *A, *B;
     if (match(UMulWithOv, m_Intrinsic<Intrinsic::umul_with_overflow>(
-                              m_Value(A), m_Value(B))))
-
-      return BinaryOperator::CreateAnd(Builder.CreateIsNotNull(A),
-                                       Builder.CreateIsNotNull(B));
+                              m_Value(A), m_Value(B)))) {
+      Value *NotNullA = Builder.CreateIsNotNull(A);
+      Value *NotNullB = Builder.CreateIsNotNull(B);
+      return BinaryOperator::CreateAnd(NotNullA, NotNullB);
+    }
   }
 
   return nullptr;
