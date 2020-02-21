@@ -179,8 +179,6 @@ class targetCommandTestCase(TestBase):
 
         self.runCmd("c")
 
-        # rdar://problem/9763907
-        # 'target variable' command fails if the target program has been run
         self.expect(
             "target variable my_global_str",
             VARIABLES_DISPLAYED_CORRECTLY,
