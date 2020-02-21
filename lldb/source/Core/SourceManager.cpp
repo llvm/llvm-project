@@ -336,7 +336,7 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
     SymbolContextList sc_list;
     bool symbols_okay = false; // Force it to be a debug symbol.
     bool inlines_okay = true;
-    exe_module->FindFunctions(entry_point_name, NULL,
+    exe_module->FindFunctions(entry_point_name, CompilerDeclContext(),
                               lldb::eFunctionNameTypeBase, inlines_okay,
                               symbols_okay, sc_list);
     size_t num_matches = sc_list.GetSize();
