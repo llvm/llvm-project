@@ -25,6 +25,7 @@ class TestCase(TestBase):
         self.expect("expr ClassWithDeletedCtor(1).value", error=True, substrs=["Couldn't lookup symbols:"])
         self.expect("expr ClassWithDeletedDefaultCtor().value", error=True, substrs=["Couldn't lookup symbols:"])
 
+    @skipIfWindows # Can't find operator new.
     @skipIfLinux # Fails on some Linux systems with SIGABRT.
     def test_constructors_new(self):
         self.build()
