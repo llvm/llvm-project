@@ -455,9 +455,14 @@ public:
   /// Renumber instructions and mark the ordering as valid.
   void renumberInstructions();
 
-  /// Returns false if the instruction ordering is incorrect in an debug build.
-  /// Always returns true when assertions are disabled. The method does not
-  /// assert internally so that we get better location info.
+  /// Asserts that instruction order numbers are marked invalid, or that they
+  /// are in ascending order. This is constant time if the ordering is invalid,
+  /// and linear in the number of instructions if the ordering is valid. Callers
+  /// should be careful not to call this in ways that make common operations
+  /// O(n^2). For example, it takes O(n) time to assign order numbers to
+  /// instructions, so the order should be validated no more than once after
+  /// each ordering to ensure that transforms have the same algorithmic
+  /// complexity when asserts are enabled as when they are disabled.
   void validateInstrOrdering() const;
 
 private:
