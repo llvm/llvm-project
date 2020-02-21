@@ -225,7 +225,7 @@ void mapLoopToProcessorIds(loop::ForOp forOp, ArrayRef<Value> processorId,
 
 /// Gathers all AffineForOps in 'func' grouped by loop depth.
 void gatherLoops(FuncOp func,
-                 DenseMap<unsigned, SmallVector<AffineForOp, 2>> &depthToLoops);
+                 std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 
 } // end namespace mlir
 
