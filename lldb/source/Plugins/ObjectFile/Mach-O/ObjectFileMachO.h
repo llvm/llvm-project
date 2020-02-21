@@ -193,7 +193,7 @@ protected:
 
   size_t ParseSymtab();
 
-  typedef lldb_private::RangeArray<uint32_t, uint32_t, 8> EncryptedFileRanges;
+  typedef lldb_private::RangeVector<uint32_t, uint32_t, 8> EncryptedFileRanges;
   EncryptedFileRanges GetEncryptedFileRanges();
 
   struct SegmentParsingContext;
