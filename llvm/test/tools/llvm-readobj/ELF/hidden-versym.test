@@ -2,7 +2,7 @@
 # RUN: llvm-readelf -V %t | FileCheck %s --check-prefix=HIDDEN
 
 # HIDDEN:      Version symbols section '.gnu.version' contains 2 entries:
-# HIDDEN-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 5 (.dynsym)
+# HIDDEN-NEXT:  Addr: 0000000000200210  Offset: 0x000040  Link: 3 (.dynsym)
 # HIDDEN-NEXT:   000:   0 (*local*)       3h(hiddensym)
 
 --- !ELF

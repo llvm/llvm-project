@@ -47,10 +47,10 @@ Sections:
         Value: 0x88
       - Tag:   DT_STRSZ
         Value: 0x5
-## Offset of .dynstr is 0x19f. Offset of PT_LOAD is 0xb0.
-## 0x19f - 0xb0 == 0xef
+## Offset of .dynstr is 0x168. Offset of PT_LOAD is 0xb0.
+## 0x168 - 0xb0 == 0xb8
       - Tag:   DT_STRTAB
-        Value: 0xef
+        Value: 0xb8
       - Tag:   DT_NULL
         Value: 0x0
   - Name:    .dynsym
