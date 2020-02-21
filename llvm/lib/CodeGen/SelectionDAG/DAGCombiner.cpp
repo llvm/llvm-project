@@ -6681,8 +6681,7 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
     SDValue Value = Trunc.getOperand(0);
     if (Value.getOpcode() == ISD::SRL ||
         Value.getOpcode() == ISD::SRA) {
-      ConstantSDNode *ShiftOffset =
-        dyn_cast<ConstantSDNode>(Value.getOperand(1));
+      auto *ShiftOffset = dyn_cast<ConstantSDNode>(Value.getOperand(1));
       // Trying to match the following pattern. The shift offset must be
       // a constant and a multiple of 8. It is the byte offset in "y".
       //
@@ -9461,8 +9460,7 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
   SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad,
                               N1.getOperand(1));
 
-  APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-  Mask = Mask.zext(VT.getSizeInBits());
+  APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
   SDLoc DL0(N0);
   SDValue And = DAG.getNode(N0.getOpcode(), DL0, VT, Shift,
                             DAG.getConstant(Mask, DL0, VT));
@@ -9768,8 +9766,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                                          LN00->getChain(), LN00->getBasePtr(),
                                          LN00->getMemoryVT(),
                                          LN00->getMemOperand());
-        APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-        Mask = Mask.sext(VT.getSizeInBits());
+        APInt Mask = N0.getConstantOperandAPInt(1).sext(VT.getSizeInBits());
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
         ExtendSetCCUses(SetCCs, N0.getOperand(0), ExtLoad, ISD::SIGN_EXTEND);
@@ -10037,8 +10034,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
        !TLI.isZExtFree(N0.getValueType(), VT))) {
     SDValue X = N0.getOperand(0).getOperand(0);
     X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
-    APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    Mask = Mask.zext(VT.getSizeInBits());
+    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
     SDLoc DL(N);
     return DAG.getNode(ISD::AND, DL, VT,
                        X, DAG.getConstant(Mask, DL, VT));
@@ -10092,8 +10088,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                                          LN00->getChain(), LN00->getBasePtr(),
                                          LN00->getMemoryVT(),
                                          LN00->getMemOperand());
-        APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-        Mask = Mask.zext(VT.getSizeInBits());
+        APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
         SDLoc DL(N);
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
@@ -10253,8 +10248,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     SDLoc DL(N);
     SDValue X = N0.getOperand(0).getOperand(0);
     X = DAG.getAnyExtOrTrunc(X, DL, VT);
-    APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    Mask = Mask.zext(VT.getSizeInBits());
+    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
     return DAG.getNode(ISD::AND, DL, VT,
                        X, DAG.getConstant(Mask, DL, VT));
   }
@@ -10494,9 +10488,8 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       }
 
       // At this point, we must have a load or else we can't do the transform.
-      if (!isa<LoadSDNode>(N0)) return SDValue();
-
-      auto *LN0 = cast<LoadSDNode>(N0);
+      auto *LN0 = dyn_cast<LoadSDNode>(N0);
+      if (!LN0) return SDValue();
 
       // Because a SRL must be assumed to *need* to zero-extend the high bits
       // (as opposed to anyext the high bits), we can't combine the zextload
@@ -10515,8 +10508,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       SDNode *Mask = *(SRL->use_begin());
       if (Mask->getOpcode() == ISD::AND &&
           isa<ConstantSDNode>(Mask->getOperand(1))) {
-        const APInt &ShiftMask =
-          cast<ConstantSDNode>(Mask->getOperand(1))->getAPIntValue();
+        const APInt& ShiftMask = Mask->getConstantOperandAPInt(1);
         if (ShiftMask.isMask()) {
           EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
                                            ShiftMask.countTrailingOnes());
