@@ -19,6 +19,7 @@
 ; CHECK-LABEL: V6_vscattermhwq
 ; CHECK: if (q{{[0-3]}}) vscatter(r{{[0-9]+}},m{{[0-9]+}},v{{[0-9]+}}:{{[0-9]+}}.w).h = v{{[0-9]+}}
 
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32)
 
 declare void @llvm.hexagon.V6.vscattermw(i32, i32, <16 x i32>, <16 x i32>)
 define void @V6_vscattermw(i32 %a, i32 %b, <16 x i32> %c, <16 x i32> %d) {
@@ -44,17 +45,17 @@ define void @V6_vscattermh_add(i32 %a, i32 %b, <16 x i32> %c, <16 x i32> %d) {
   ret void
 }
 
-declare void @llvm.hexagon.V6.vscattermwq(<512 x i1>, i32, i32, <16 x i32>, <16 x i32>)
+declare void @llvm.hexagon.V6.vscattermwq(<64 x i1>, i32, i32, <16 x i32>, <16 x i32>)
 define void @V6_vscattermwq(<16 x i32> %a, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e) {
-  %1 = bitcast <16 x i32> %a to <512 x i1>
-  call void @llvm.hexagon.V6.vscattermwq(<512 x i1> %1, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e)
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  call void @llvm.hexagon.V6.vscattermwq(<64 x i1> %1, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e)
   ret void
 }
 
-declare void @llvm.hexagon.V6.vscattermhq(<512 x i1>, i32, i32, <16 x i32>, <16 x i32>)
+declare void @llvm.hexagon.V6.vscattermhq(<64 x i1>, i32, i32, <16 x i32>, <16 x i32>)
 define void @V6_vscattermhq(<16 x i32> %a, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e) {
-  %1 = bitcast <16 x i32> %a to <512 x i1>
-  call void @llvm.hexagon.V6.vscattermhq(<512 x i1> %1, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e)
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  call void @llvm.hexagon.V6.vscattermhq(<64 x i1> %1, i32 %b, i32 %c, <16 x i32> %d, <16 x i32> %e)
   ret void
 }
 
@@ -70,9 +71,9 @@ define void @V6_vscattermhw_add(i32 %a, i32 %b, <32 x i32> %c, <16 x i32> %d) {
   ret void
 }
 
-declare void @llvm.hexagon.V6.vscattermhwq(<512 x i1>, i32, i32, <32 x i32>, <16 x i32>)
+declare void @llvm.hexagon.V6.vscattermhwq(<64 x i1>, i32, i32, <32 x i32>, <16 x i32>)
 define void @V6_vscattermhwq(<16 x i32> %a, i32 %b, i32 %c, <32 x i32> %d, <16 x i32> %e) {
-  %1 = bitcast <16 x i32> %a to <512 x i1>
-  call void @llvm.hexagon.V6.vscattermhwq(<512 x i1> %1, i32 %b, i32 %c, <32 x i32> %d, <16 x i32> %e)
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %a, i32 -1)
+  call void @llvm.hexagon.V6.vscattermhwq(<64 x i1> %1, i32 %b, i32 %c, <32 x i32> %d, <16 x i32> %e)
   ret void
 }

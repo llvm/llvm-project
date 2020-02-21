@@ -172,7 +172,7 @@ inline Type castElementType(Type t, Type newElementType) {
           .setElementType(newElementType);
     }
   }
-  assert(t.isIntOrFloat());
+  assert(t.isSignlessIntOrFloat());
   return newElementType;
 }
 
@@ -180,13 +180,13 @@ inline Type castElementType(Type t, Type newElementType) {
 /// be a scalar primitive or a shaped type).
 inline Attribute broadcastScalarConstIntValue(Type t, int64_t value) {
   if (auto st = t.dyn_cast<ShapedType>()) {
-    assert(st.getElementType().isa<IntegerType>());
+    assert(st.getElementType().isSignlessInteger());
     return DenseElementsAttr::get(st,
                                   IntegerAttr::get(st.getElementType(), value));
   }
 
   auto integerType = t.cast<IntegerType>();
-  assert(t.isa<IntegerType>() && "integer broadcast must be of integer type");
+  assert(t.isSignlessInteger() && "integer broadcast must be of integer type");
   return IntegerAttr::get(integerType, value);
 }
 

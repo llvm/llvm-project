@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple hexagon-unknown-elf -target-cpu hexagonv65 -target-feature +hvxv65 -target-feature +hvx-length128b -emit-llvm %s -o - | FileCheck %s
 
 void test() {
+  int q128 __attribute__((__vector_size__(128)));
   int v128 __attribute__((__vector_size__(128)));
   int v256 __attribute__((__vector_size__(256)));
 
@@ -18,33 +19,33 @@ void test() {
   // CHECK: @llvm.hexagon.V6.lvsplatw.128B
   __builtin_HEXAGON_V6_lvsplatw_128B(0);
   // CHECK: @llvm.hexagon.V6.pred.and.128B
-  __builtin_HEXAGON_V6_pred_and_128B(v128, v128);
+  __builtin_HEXAGON_V6_pred_and_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.pred.and.n.128B
-  __builtin_HEXAGON_V6_pred_and_n_128B(v128, v128);
+  __builtin_HEXAGON_V6_pred_and_n_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.pred.not.128B
-  __builtin_HEXAGON_V6_pred_not_128B(v128);
+  __builtin_HEXAGON_V6_pred_not_128B(q128);
   // CHECK: @llvm.hexagon.V6.pred.or.128B
-  __builtin_HEXAGON_V6_pred_or_128B(v128, v128);
+  __builtin_HEXAGON_V6_pred_or_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.pred.or.n.128B
-  __builtin_HEXAGON_V6_pred_or_n_128B(v128, v128);
+  __builtin_HEXAGON_V6_pred_or_n_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.pred.scalar2.128B
   __builtin_HEXAGON_V6_pred_scalar2_128B(0);
   // CHECK: @llvm.hexagon.V6.pred.scalar2v2.128B
   __builtin_HEXAGON_V6_pred_scalar2v2_128B(0);
   // CHECK: @llvm.hexagon.V6.pred.xor.128B
-  __builtin_HEXAGON_V6_pred_xor_128B(v128, v128);
+  __builtin_HEXAGON_V6_pred_xor_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.shuffeqh.128B
-  __builtin_HEXAGON_V6_shuffeqh_128B(v128, v128);
+  __builtin_HEXAGON_V6_shuffeqh_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.shuffeqw.128B
-  __builtin_HEXAGON_V6_shuffeqw_128B(v128, v128);
+  __builtin_HEXAGON_V6_shuffeqw_128B(q128, q128);
   // CHECK: @llvm.hexagon.V6.vS32b.nqpred.ai.128B
-  __builtin_HEXAGON_V6_vS32b_nqpred_ai_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vS32b_nqpred_ai_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vS32b.nt.nqpred.ai.128B
-  __builtin_HEXAGON_V6_vS32b_nt_nqpred_ai_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vS32b_nt_nqpred_ai_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vS32b.nt.qpred.ai.128B
-  __builtin_HEXAGON_V6_vS32b_nt_qpred_ai_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vS32b_nt_qpred_ai_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vS32b.qpred.ai.128B
-  __builtin_HEXAGON_V6_vS32b_qpred_ai_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vS32b_qpred_ai_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vabsb.128B
   __builtin_HEXAGON_V6_vabsb_128B(v128);
   // CHECK: @llvm.hexagon.V6.vabsb.sat.128B
@@ -70,9 +71,9 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vaddb.dv.128B
   __builtin_HEXAGON_V6_vaddb_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vaddbnq.128B
-  __builtin_HEXAGON_V6_vaddbnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddbnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddbq.128B
-  __builtin_HEXAGON_V6_vaddbq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddbq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddbsat.128B
   __builtin_HEXAGON_V6_vaddbsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddbsat.dv.128B
@@ -88,9 +89,9 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vaddh.dv.128B
   __builtin_HEXAGON_V6_vaddh_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vaddhnq.128B
-  __builtin_HEXAGON_V6_vaddhnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddhnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddhq.128B
-  __builtin_HEXAGON_V6_vaddhq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddhq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddhsat.128B
   __builtin_HEXAGON_V6_vaddhsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddhsat.dv.128B
@@ -126,9 +127,9 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vaddw.dv.128B
   __builtin_HEXAGON_V6_vaddw_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vaddwnq.128B
-  __builtin_HEXAGON_V6_vaddwnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddwnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddwq.128B
-  __builtin_HEXAGON_V6_vaddwq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vaddwq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddwsat.128B
   __builtin_HEXAGON_V6_vaddwsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vaddwsat.dv.128B
@@ -140,21 +141,21 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vand.128B
   __builtin_HEXAGON_V6_vand_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vandnqrt.128B
-  __builtin_HEXAGON_V6_vandnqrt_128B(v128, 0);
+  __builtin_HEXAGON_V6_vandnqrt_128B(q128, 0);
   // CHECK: @llvm.hexagon.V6.vandnqrt.acc.128B
-  __builtin_HEXAGON_V6_vandnqrt_acc_128B(v128, v128, 0);
+  __builtin_HEXAGON_V6_vandnqrt_acc_128B(v128, q128, 0);
   // CHECK: @llvm.hexagon.V6.vandqrt.128B
-  __builtin_HEXAGON_V6_vandqrt_128B(v128, 0);
+  __builtin_HEXAGON_V6_vandqrt_128B(q128, 0);
   // CHECK: @llvm.hexagon.V6.vandqrt.acc.128B
-  __builtin_HEXAGON_V6_vandqrt_acc_128B(v128, v128, 0);
+  __builtin_HEXAGON_V6_vandqrt_acc_128B(v128, q128, 0);
   // CHECK: @llvm.hexagon.V6.vandvnqv.128B
-  __builtin_HEXAGON_V6_vandvnqv_128B(v128, v128);
+  __builtin_HEXAGON_V6_vandvnqv_128B(q128, v128);
   // CHECK: @llvm.hexagon.V6.vandvqv.128B
-  __builtin_HEXAGON_V6_vandvqv_128B(v128, v128);
+  __builtin_HEXAGON_V6_vandvqv_128B(q128, v128);
   // CHECK: @llvm.hexagon.V6.vandvrt.128B
   __builtin_HEXAGON_V6_vandvrt_128B(v128, 0);
   // CHECK: @llvm.hexagon.V6.vandvrt.acc.128B
-  __builtin_HEXAGON_V6_vandvrt_acc_128B(v128, v128, 0);
+  __builtin_HEXAGON_V6_vandvrt_acc_128B(q128, v128, 0);
   // CHECK: @llvm.hexagon.V6.vaslh.128B
   __builtin_HEXAGON_V6_vaslh_128B(v128, 0);
   // CHECK: @llvm.hexagon.V6.vaslh.acc.128B
@@ -296,87 +297,87 @@ void test() {
   // CHECK: @llvm.hexagon.V6.veqb.128B
   __builtin_HEXAGON_V6_veqb_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.veqb.and.128B
-  __builtin_HEXAGON_V6_veqb_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqb_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqb.or.128B
-  __builtin_HEXAGON_V6_veqb_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqb_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqb.xor.128B
-  __builtin_HEXAGON_V6_veqb_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqb_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqh.128B
   __builtin_HEXAGON_V6_veqh_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.veqh.and.128B
-  __builtin_HEXAGON_V6_veqh_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqh_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqh.or.128B
-  __builtin_HEXAGON_V6_veqh_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqh_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqh.xor.128B
-  __builtin_HEXAGON_V6_veqh_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqh_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqw.128B
   __builtin_HEXAGON_V6_veqw_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.veqw.and.128B
-  __builtin_HEXAGON_V6_veqw_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqw_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqw.or.128B
-  __builtin_HEXAGON_V6_veqw_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqw_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.veqw.xor.128B
-  __builtin_HEXAGON_V6_veqw_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_veqw_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgathermh.128B
   __builtin_HEXAGON_V6_vgathermh_128B(0, 0, 0, v128);
   // CHECK: @llvm.hexagon.V6.vgathermhq.128B
-  __builtin_HEXAGON_V6_vgathermhq_128B(0, v128, 0, 0, v128);
+  __builtin_HEXAGON_V6_vgathermhq_128B(0, q128, 0, 0, v128);
   // CHECK: @llvm.hexagon.V6.vgathermhw.128B
   __builtin_HEXAGON_V6_vgathermhw_128B(0, 0, 0, v256);
   // CHECK: @llvm.hexagon.V6.vgathermhwq.128B
-  __builtin_HEXAGON_V6_vgathermhwq_128B(0, v128, 0, 0, v256);
+  __builtin_HEXAGON_V6_vgathermhwq_128B(0, q128, 0, 0, v256);
   // CHECK: @llvm.hexagon.V6.vgathermw.128B
   __builtin_HEXAGON_V6_vgathermw_128B(0, 0, 0, v128);
   // CHECK: @llvm.hexagon.V6.vgathermwq.128B
-  __builtin_HEXAGON_V6_vgathermwq_128B(0, v128, 0, 0, v128);
+  __builtin_HEXAGON_V6_vgathermwq_128B(0, q128, 0, 0, v128);
   // CHECK: @llvm.hexagon.V6.vgtb.128B
   __builtin_HEXAGON_V6_vgtb_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtb.and.128B
-  __builtin_HEXAGON_V6_vgtb_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtb_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtb.or.128B
-  __builtin_HEXAGON_V6_vgtb_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtb_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtb.xor.128B
-  __builtin_HEXAGON_V6_vgtb_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtb_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgth.128B
   __builtin_HEXAGON_V6_vgth_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgth.and.128B
-  __builtin_HEXAGON_V6_vgth_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgth_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgth.or.128B
-  __builtin_HEXAGON_V6_vgth_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgth_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgth.xor.128B
-  __builtin_HEXAGON_V6_vgth_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgth_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtub.128B
   __builtin_HEXAGON_V6_vgtub_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtub.and.128B
-  __builtin_HEXAGON_V6_vgtub_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtub_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtub.or.128B
-  __builtin_HEXAGON_V6_vgtub_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtub_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtub.xor.128B
-  __builtin_HEXAGON_V6_vgtub_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtub_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuh.128B
   __builtin_HEXAGON_V6_vgtuh_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuh.and.128B
-  __builtin_HEXAGON_V6_vgtuh_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuh_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuh.or.128B
-  __builtin_HEXAGON_V6_vgtuh_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuh_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuh.xor.128B
-  __builtin_HEXAGON_V6_vgtuh_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuh_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuw.128B
   __builtin_HEXAGON_V6_vgtuw_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuw.and.128B
-  __builtin_HEXAGON_V6_vgtuw_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuw_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuw.or.128B
-  __builtin_HEXAGON_V6_vgtuw_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuw_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtuw.xor.128B
-  __builtin_HEXAGON_V6_vgtuw_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtuw_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtw.128B
   __builtin_HEXAGON_V6_vgtw_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtw.and.128B
-  __builtin_HEXAGON_V6_vgtw_and_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtw_and_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtw.or.128B
-  __builtin_HEXAGON_V6_vgtw_or_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtw_or_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vgtw.xor.128B
-  __builtin_HEXAGON_V6_vgtw_xor_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vgtw_xor_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vinsertwr.128B
   __builtin_HEXAGON_V6_vinsertwr_128B(v128, 0);
   // CHECK: @llvm.hexagon.V6.vlalignb.128B
@@ -416,13 +417,13 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vlutvwhi.128B
   __builtin_HEXAGON_V6_vlutvwhi_128B(v128, v128, 0);
   // CHECK: @llvm.hexagon.V6.vmaskedstorenq.128B
-  __builtin_HEXAGON_V6_vmaskedstorenq_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vmaskedstorenq_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vmaskedstorentnq.128B
-  __builtin_HEXAGON_V6_vmaskedstorentnq_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vmaskedstorentnq_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vmaskedstorentq.128B
-  __builtin_HEXAGON_V6_vmaskedstorentq_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vmaskedstorentq_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vmaskedstoreq.128B
-  __builtin_HEXAGON_V6_vmaskedstoreq_128B(v128, 0, v128);
+  __builtin_HEXAGON_V6_vmaskedstoreq_128B(q128, 0, v128);
   // CHECK: @llvm.hexagon.V6.vmaxb.128B
   __builtin_HEXAGON_V6_vmaxb_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vmaxh.128B
@@ -566,7 +567,7 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vmpyuhv.acc.128B
   __builtin_HEXAGON_V6_vmpyuhv_acc_128B(v256, v128, v128);
   // CHECK: @llvm.hexagon.V6.vmux.128B
-  __builtin_HEXAGON_V6_vmux_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vmux_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vnavgb.128B
   __builtin_HEXAGON_V6_vnavgb_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vnavgh.128B
@@ -602,11 +603,11 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vpopcounth.128B
   __builtin_HEXAGON_V6_vpopcounth_128B(v128);
   // CHECK: @llvm.hexagon.V6.vprefixqb.128B
-  __builtin_HEXAGON_V6_vprefixqb_128B(v128);
+  __builtin_HEXAGON_V6_vprefixqb_128B(q128);
   // CHECK: @llvm.hexagon.V6.vprefixqh.128B
-  __builtin_HEXAGON_V6_vprefixqh_128B(v128);
+  __builtin_HEXAGON_V6_vprefixqh_128B(q128);
   // CHECK: @llvm.hexagon.V6.vprefixqw.128B
-  __builtin_HEXAGON_V6_vprefixqw_128B(v128);
+  __builtin_HEXAGON_V6_vprefixqw_128B(q128);
   // CHECK: @llvm.hexagon.V6.vrdelta.128B
   __builtin_HEXAGON_V6_vrdelta_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vrmpybub.rtt.128B
@@ -676,19 +677,19 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vscattermh.add.128B
   __builtin_HEXAGON_V6_vscattermh_add_128B(0, 0, v128, v128);
   // CHECK: @llvm.hexagon.V6.vscattermhq.128B
-  __builtin_HEXAGON_V6_vscattermhq_128B(v128, 0, 0, v128, v128);
+  __builtin_HEXAGON_V6_vscattermhq_128B(q128, 0, 0, v128, v128);
   // CHECK: @llvm.hexagon.V6.vscattermhw.128B
   __builtin_HEXAGON_V6_vscattermhw_128B(0, 0, v256, v128);
   // CHECK: @llvm.hexagon.V6.vscattermhw.add.128B
   __builtin_HEXAGON_V6_vscattermhw_add_128B(0, 0, v256, v128);
   // CHECK: @llvm.hexagon.V6.vscattermhwq.128B
-  __builtin_HEXAGON_V6_vscattermhwq_128B(v128, 0, 0, v256, v128);
+  __builtin_HEXAGON_V6_vscattermhwq_128B(q128, 0, 0, v256, v128);
   // CHECK: @llvm.hexagon.V6.vscattermw.128B
   __builtin_HEXAGON_V6_vscattermw_128B(0, 0, v128, v128);
   // CHECK: @llvm.hexagon.V6.vscattermw.add.128B
   __builtin_HEXAGON_V6_vscattermw_add_128B(0, 0, v128, v128);
   // CHECK: @llvm.hexagon.V6.vscattermwq.128B
-  __builtin_HEXAGON_V6_vscattermwq_128B(v128, 0, 0, v128, v128);
+  __builtin_HEXAGON_V6_vscattermwq_128B(q128, 0, 0, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsh.128B
   __builtin_HEXAGON_V6_vsh_128B(v128);
   // CHECK: @llvm.hexagon.V6.vshufeh.128B
@@ -714,9 +715,9 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vsubb.dv.128B
   __builtin_HEXAGON_V6_vsubb_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vsubbnq.128B
-  __builtin_HEXAGON_V6_vsubbnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubbnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubbq.128B
-  __builtin_HEXAGON_V6_vsubbq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubbq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubbsat.128B
   __builtin_HEXAGON_V6_vsubbsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubbsat.dv.128B
@@ -728,9 +729,9 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vsubh.dv.128B
   __builtin_HEXAGON_V6_vsubh_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vsubhnq.128B
-  __builtin_HEXAGON_V6_vsubhnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubhnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubhq.128B
-  __builtin_HEXAGON_V6_vsubhq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubhq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubhsat.128B
   __builtin_HEXAGON_V6_vsubhsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubhsat.dv.128B
@@ -760,15 +761,15 @@ void test() {
   // CHECK: @llvm.hexagon.V6.vsubw.dv.128B
   __builtin_HEXAGON_V6_vsubw_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vsubwnq.128B
-  __builtin_HEXAGON_V6_vsubwnq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubwnq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubwq.128B
-  __builtin_HEXAGON_V6_vsubwq_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vsubwq_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubwsat.128B
   __builtin_HEXAGON_V6_vsubwsat_128B(v128, v128);
   // CHECK: @llvm.hexagon.V6.vsubwsat.dv.128B
   __builtin_HEXAGON_V6_vsubwsat_dv_128B(v256, v256);
   // CHECK: @llvm.hexagon.V6.vswap.128B
-  __builtin_HEXAGON_V6_vswap_128B(v128, v128, v128);
+  __builtin_HEXAGON_V6_vswap_128B(q128, v128, v128);
   // CHECK: @llvm.hexagon.V6.vtmpyb.128B
   __builtin_HEXAGON_V6_vtmpyb_128B(v256, 0);
   // CHECK: @llvm.hexagon.V6.vtmpyb.acc.128B

@@ -52,7 +52,10 @@ target(libclang_target_type, "libclang") {
   }
 
   if (host_os == "win") {
-    defines += [ "_CINDEX_LIB_" ]
+    defines += [
+      "CINDEX_EXPORTS",
+      "_CINDEX_LIB_",
+    ]
   }
 
   sources = [

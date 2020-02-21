@@ -313,7 +313,7 @@ def CopyOp : LinalgStructured_Op<"copy", [NInputs<1>, NOutputs<1>]> {
 
 def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
   let arguments = (ins AnyStridedMemRef:$output,
-                   AnyTypeOf<[AnyFloat, AnyInteger, AnyVector]>:$value);
+                   AnyTypeOf<[AnyFloat, AnySignlessInteger, AnyVector]>:$value);
   let extraClassDeclaration = libraryCallName # [{
     // Defined in C++ for now.
     // TODO(ntv): auto-generate.

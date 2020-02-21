@@ -66,14 +66,13 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
                                          __m128 w, int edx, __m128 q, NonTrivial nt) {
   gv128 = x + y + z + w + q;
 }
-// FIXME: Enable these checks, clang generates wrong IR.
 // CHECK-LABEL: define dso_local x86_vectorcallcc void @"?vectorcall_receive_vec@@Y{{[^"]*}}"
-// CHECKX-SAME: (double inreg %xmm0,
-// CHECKX-SAME: double inreg %xmm1,
-// CHECKX-SAME: double inreg %xmm2,
-// CHECKX-SAME: <4 x float> inreg %x,
-// CHECKX-SAME: <4 x float> inreg %y,
-// CHECKX-SAME: <4 x float> inreg %z,
-// CHECKX-SAME: <4 x float>* inreg %0,
-// CHECKX-SAME: i32 inreg %edx,
-// CHECKX-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca %1)
+// CHECK-SAME: (double inreg %xmm0,
+// CHECK-SAME: double inreg %xmm1,
+// CHECK-SAME: double inreg %xmm2,
+// CHECK-SAME: <4 x float> inreg %x,
+// CHECK-SAME: <4 x float> inreg %y,
+// CHECK-SAME: <4 x float> inreg %z,
+// CHECK-SAME: <4 x float>* inreg %0,
+// CHECK-SAME: i32 inreg %edx,
+// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca %1)

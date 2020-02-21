@@ -5,8 +5,7 @@
 @G2 = constant i32* @G1
 
 define internal i32 @test(i32** %x) {
-; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32** nocapture nofree nonnull readonly align 8 dereferenceable(8) [[X:%.*]])
+; CHECK-LABEL: define {{[^@]+}}@test()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = load i32*, i32** @G2, align 8
 ; CHECK-NEXT:    [[Z:%.*]] = load i32, i32* [[Y]]
@@ -21,7 +20,7 @@ entry:
 define i32 @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = call i32 @test(i32** nofree nonnull readonly align 8 dereferenceable(8) @G2)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @test()
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:

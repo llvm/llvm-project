@@ -323,7 +323,8 @@ namespace {
     }
 
     bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
-                              const APInt &DemandedElts);
+                              const APInt &DemandedElts,
+                              bool AssumeSingleUse = false);
     bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
                                     bool AssumeSingleUse = false);
 
@@ -1058,10 +1059,12 @@ CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
 /// Check the specified integer node value to see if it can be simplified or if
 /// things it uses can be simplified by bit propagation. If so, return true.
 bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
-                                       const APInt &DemandedElts) {
+                                       const APInt &DemandedElts,
+                                       bool AssumeSingleUse) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   KnownBits Known;
-  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, DemandedElts, Known, TLO))
+  if (!TLI.SimplifyDemandedBits(Op, DemandedBits, DemandedElts, Known, TLO, 0,
+                                AssumeSingleUse))
     return false;
 
   // Revisit the node.
@@ -6678,8 +6681,7 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
     SDValue Value = Trunc.getOperand(0);
     if (Value.getOpcode() == ISD::SRL ||
         Value.getOpcode() == ISD::SRA) {
-      ConstantSDNode *ShiftOffset =
-        dyn_cast<ConstantSDNode>(Value.getOperand(1));
+      auto *ShiftOffset = dyn_cast<ConstantSDNode>(Value.getOperand(1));
       // Trying to match the following pattern. The shift offset must be
       // a constant and a multiple of 8. It is the byte offset in "y".
       //
@@ -7569,8 +7571,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, NewOp1);
   }
 
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   // fold (shl (shl x, c1), c2) -> 0 or (shl x, (add c1, c2))
@@ -7936,8 +7937,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   }
 
   // Simplify, based on bits shifted out of the LHS.
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   // If the sign bit is known to be zero, switch this to a SRL.
@@ -8133,8 +8133,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   // fold operands of srl based on knowledge that the low bits are not
   // demanded.
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   if (N1C && !N1C->isOpaque())
@@ -9458,8 +9457,7 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
   SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad,
                               N1.getOperand(1));
 
-  APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-  Mask = Mask.zext(VT.getSizeInBits());
+  APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
   SDLoc DL0(N0);
   SDValue And = DAG.getNode(N0.getOpcode(), DL0, VT, Shift,
                             DAG.getConstant(Mask, DL0, VT));
@@ -9765,8 +9763,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                                          LN00->getChain(), LN00->getBasePtr(),
                                          LN00->getMemoryVT(),
                                          LN00->getMemOperand());
-        APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-        Mask = Mask.sext(VT.getSizeInBits());
+        APInt Mask = N0.getConstantOperandAPInt(1).sext(VT.getSizeInBits());
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
         ExtendSetCCUses(SetCCs, N0.getOperand(0), ExtLoad, ISD::SIGN_EXTEND);
@@ -10034,8 +10031,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
        !TLI.isZExtFree(N0.getValueType(), VT))) {
     SDValue X = N0.getOperand(0).getOperand(0);
     X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
-    APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    Mask = Mask.zext(VT.getSizeInBits());
+    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
     SDLoc DL(N);
     return DAG.getNode(ISD::AND, DL, VT,
                        X, DAG.getConstant(Mask, DL, VT));
@@ -10089,8 +10085,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                                          LN00->getChain(), LN00->getBasePtr(),
                                          LN00->getMemoryVT(),
                                          LN00->getMemOperand());
-        APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-        Mask = Mask.zext(VT.getSizeInBits());
+        APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
         SDLoc DL(N);
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
@@ -10250,8 +10245,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     SDLoc DL(N);
     SDValue X = N0.getOperand(0).getOperand(0);
     X = DAG.getAnyExtOrTrunc(X, DL, VT);
-    APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    Mask = Mask.zext(VT.getSizeInBits());
+    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
     return DAG.getNode(ISD::AND, DL, VT,
                        X, DAG.getConstant(Mask, DL, VT));
   }
@@ -10491,9 +10485,8 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       }
 
       // At this point, we must have a load or else we can't do the transform.
-      if (!isa<LoadSDNode>(N0)) return SDValue();
-
-      auto *LN0 = cast<LoadSDNode>(N0);
+      auto *LN0 = dyn_cast<LoadSDNode>(N0);
+      if (!LN0) return SDValue();
 
       // Because a SRL must be assumed to *need* to zero-extend the high bits
       // (as opposed to anyext the high bits), we can't combine the zextload
@@ -10512,8 +10505,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       SDNode *Mask = *(SRL->use_begin());
       if (Mask->getOpcode() == ISD::AND &&
           isa<ConstantSDNode>(Mask->getOperand(1))) {
-        const APInt &ShiftMask =
-          cast<ConstantSDNode>(Mask->getOperand(1))->getAPIntValue();
+        const APInt& ShiftMask = Mask->getConstantOperandAPInt(1);
         if (ShiftMask.isMask()) {
           EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
                                            ShiftMask.countTrailingOnes());
@@ -17210,6 +17202,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   // extract_vector_elt of out-of-bounds element -> UNDEF
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   unsigned NumElts = VecVT.getVectorNumElements();
+  unsigned VecEltBitWidth = VecVT.getScalarSizeInBits();
   if (IndexC && IndexC->getAPIntValue().uge(NumElts))
     return DAG.getUNDEF(ScalarVT);
 
@@ -17251,7 +17244,6 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
              "Extract element and scalar to vector can't change element type "
              "from FP to integer.");
       unsigned XBitWidth = X.getValueSizeInBits();
-      unsigned VecEltBitWidth = VecVT.getScalarSizeInBits();
       BCTruncElt = IsLE ? 0 : XBitWidth / VecEltBitWidth - 1;
 
       // An extract element return value type can be wider than its vector
@@ -17328,6 +17320,14 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
         DemandedElts.setBit(CstElt->getZExtValue());
     }
     if (SimplifyDemandedVectorElts(VecOp, DemandedElts, true)) {
+      // We simplified the vector operand of this extract element. If this
+      // extract is not dead, visit it again so it is folded properly.
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+    APInt DemandedBits = APInt::getAllOnesValue(VecEltBitWidth);
+    if (SimplifyDemandedBits(VecOp, DemandedBits, DemandedElts, true)) {
       // We simplified the vector operand of this extract element. If this
       // extract is not dead, visit it again so it is folded properly.
       if (N->getOpcode() != ISD::DELETED_NODE)

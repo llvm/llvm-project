@@ -18,10 +18,15 @@
 #include "mlir/Support/StorageUniquer.h"
 
 namespace mlir {
-class Location;
+class AttributeStorage;
 class MLIRContext;
 
 namespace detail {
+/// Utility method to generate a raw default location for use when checking the
+/// construction invariants of a storage object. This is defined out-of-line to
+/// avoid the need to include Location.h.
+const AttributeStorage *generateUnknownStorageLocation(MLIRContext *ctx);
+
 /// Utility class for implementing users of storage classes uniqued by a
 /// StorageUniquer. Clients are not expected to interact with this class
 /// directly.
@@ -53,21 +58,20 @@ protected:
   template <typename... Args>
   static ConcreteT get(MLIRContext *ctx, unsigned kind, Args... args) {
     // Ensure that the invariants are correct for construction.
-    assert(succeeded(
-        ConcreteT::verifyConstructionInvariants(llvm::None, ctx, args...)));
+    assert(succeeded(ConcreteT::verifyConstructionInvariants(
+        generateUnknownStorageLocation(ctx), args...)));
     return UniquerT::template get<ConcreteT>(ctx, kind, args...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx, defined at
   /// the given, potentially unknown, location. If the arguments provided are
   /// invalid then emit errors and return a null object.
-  template <typename... Args>
-  static ConcreteT getChecked(const Location &loc, MLIRContext *ctx,
-                              unsigned kind, Args... args) {
+  template <typename LocationT, typename... Args>
+  static ConcreteT getChecked(LocationT loc, unsigned kind, Args... args) {
     // If the construction invariants fail then we return a null attribute.
-    if (failed(ConcreteT::verifyConstructionInvariants(loc, ctx, args...)))
+    if (failed(ConcreteT::verifyConstructionInvariants(loc, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(ctx, kind, args...);
+    return UniquerT::template get<ConcreteT>(loc.getContext(), kind, args...);
   }
 
   /// Default implementation that just returns success.

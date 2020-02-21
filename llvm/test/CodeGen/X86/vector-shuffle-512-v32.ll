@@ -65,7 +65,6 @@ define <32 x i16> @shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_
 define <32 x i16> @shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_38(<32 x i16> %a, <32 x i16> %b)  {
 ; KNL-LABEL: shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_38:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; KNL-NEXT:    vpermq {{.*#+}} ymm3 = ymm2[2,3,0,1]
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4,5],ymm2[6],ymm3[7],ymm2[8,9,10,11],ymm3[12,13],ymm2[14],ymm3[15]
@@ -74,7 +73,7 @@ define <32 x i16> @shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_1
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm4[5,6,7],ymm0[8,9,10,11,12],ymm4[13,14,15]
 ; KNL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[14,15,u,u,12,13,u,u,10,11,u,u,8,9,u,u,22,23,u,u,20,21,u,u,18,19,u,u,16,17,u,u]
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm3 = ymm0[0],ymm3[1],ymm0[2],ymm3[3],ymm0[4],ymm3[5],ymm0[6],ymm3[7],ymm0[8],ymm3[9],ymm0[10],ymm3[11],ymm0[12],ymm3[13],ymm0[14],ymm3[15]
-; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; KNL-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
 ; KNL-NEXT:    vpbroadcastw %xmm1, %ymm1
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm3[0,1,2,3,4,5,6],ymm1[7],ymm3[8,9,10,11,12,13,14],ymm1[15]
 ; KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]

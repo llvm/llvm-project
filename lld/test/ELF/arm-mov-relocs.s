@@ -11,6 +11,8 @@
 ///  * R_ARM_MOVW_PREL_NC and R_ARM_MOVT_PREL
 ///  * R_ARM_MOVW_BREL_NC and R_ARM_MOVT_BREL
 ///
+///  * R_ARM_THM_MOVW_ABS_NC and R_ARM_THM_MOVT_ABS
+///  * R_ARM_THM_MOVW_PREL_NC and R_ARM_THM_MOVT_PREL
 ///  * R_ARM_THM_MOVW_BREL_NC and R_ARM_THM_MOVT_BREL
 
  .syntax unified
@@ -131,6 +133,76 @@ _start:
 /// :upper16:label3.4 - SB = :upper16:0x10000 = 1
 // CHECK:        movt    r4, #1
 
+.section .R_ARM_THM_MOVW_ABS_NC, "ax",%progbits
+.align 8
+ movw r0, :lower16:label
+ movw r1, :lower16:label1
+ movw r2, :lower16:label2 + 4
+ movw r3, :lower16:label3
+ movw r4, :lower16:label3 + 4
+// CHECK-LABEL: Disassembly of section .R_ARM_THM_MOVW_ABS_NC
+// CHECK-EMPTY:
+// CHECK: 12600: movw    r0, #0
+// CHECK:        movw    r1, #4
+// CHECK:        movw    r2, #12
+// CHECK:        movw    r3, #65532
+// CHECK:        movw    r4, #0
+
+.section .R_ARM_THM_MOVT_ABS, "ax",%progbits
+.align 8
+ movt r0, :upper16:label
+ movt r1, :upper16:label1
+ movt r2, :upper16:label2 + 4
+ movt r3, :upper16:label3
+ movt r4, :upper16:label3 + 4
+// CHECK-LABEL: Disassembly of section .R_ARM_THM_MOVT_ABS
+// CHECK-EMPTY:
+// CHECK: 12700: movt    r0, #2
+// CHECK:        movt    r1, #2
+// CHECK:        movt    r2, #2
+// CHECK:        movt    r3, #2
+// CHECK:        movt    r4, #3
+
+.section .R_ARM_THM_MOVW_PREL_NC, "ax",%progbits
+.align 8
+ movw r0, :lower16:label - .
+ movw r1, :lower16:label1 - .
+ movw r2, :lower16:label2 + 4 - .
+ movw r3, :lower16:label3 - .
+ movw r4, :lower16:label3 + 0x2814 - .
+// CHECK-LABEL: Disassembly of section .R_ARM_THM_MOVW_PREL_NC
+// CHECK-EMPTY:
+/// :lower16:label - . = 55296
+// CHECK: 12800: movw    r0, #55296
+/// :lower16:label1 - . = 55296
+// CHECK:        movw    r1, #55296
+/// :lower16:label2 - . + 4 = 55300
+// CHECK:        movw    r2, #55300
+/// :lower16:label3 - . = 55280
+// CHECK:        movw    r3, #55280
+/// :lower16:label3 - . + 0x2814 = 0x20000
+// CHECK:        movw    r4, #0
+
+.section .R_ARM_THM_MOVT_PREL, "ax",%progbits
+.align 8
+ movt r0, :upper16:label - .
+ movt r1, :upper16:label1 - .
+ movt r2, :upper16:label2 + 0x4 - .
+ movt r3, :upper16:label3 - .
+ movt r4, :upper16:label3 + 0x2914 - .
+// CHECK-LABEL: Disassembly of section .R_ARM_THM_MOVT_PREL
+// CHECK-EMPTY:
+/// :upper16:label - . = :upper16:0xd700  = 0
+// CHECK: 12900: movt    r0, #0
+/// :upper16:label1 - . = :upper16:0xd700 = 0
+// CHECK:        movt    r1, #0
+/// :upper16:label2 - . + 4 = :upper16:0xd704 = 0
+// CHECK:        movt    r2, #0
+/// :upper16:label3 - . = :upper16:0x1d6f0 = 1
+// CHECK:        movt    r3, #1
+/// :upper16:label3 - . + 0x2914 = :upper16:0x20000 = 2
+// CHECK:        movt    r4, #2
+
 .section .R_ARM_THM_MOVW_BREL_NC, "ax",%progbits
 .align 8
  movw r0, :lower16:label(sbrel)
@@ -142,7 +214,7 @@ _start:
 // CHECK-EMPTY:
 // SB = .destination
 /// :lower16:label - SB = 0
-// CHECK: 12600: movw    r0, #0
+// CHECK: 12a00: movw    r0, #0
 /// :lower16:label1 - SB = 4
 // CHECK:        movw    r1, #4
 /// :lower16:label2 - SB = 8
@@ -163,7 +235,7 @@ _start:
 // CHECK-EMPTY:
 /// SB = .destination
 /// :upper16:label - SB = 0
-// CHECK: 12700: movt    r0, #0
+// CHECK: 12b00: movt    r0, #0
 /// :upper16:label1 - SB = 0
 // CHECK:        movt    r1, #0
 /// :upper16:label2 - SB = 0

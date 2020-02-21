@@ -25,9 +25,9 @@ b3:                                               ; preds = %b3, %b2
   %v2 = phi i32 [ 0, %b2 ], [ %v8, %b3 ]
   %v3 = phi <32 x i32> [ zeroinitializer, %b2 ], [ %v0, %b3 ]
   %v4 = phi <32 x i32> [ %v1, %b2 ], [ %v7, %b3 ]
-  %v5 = tail call <1024 x i1> @llvm.hexagon.V6.vgtuh.128B(<32 x i32> %v3, <32 x i32> undef)
-  %v6 = tail call <1024 x i1> @llvm.hexagon.V6.veqh.and.128B(<1024 x i1> %v5, <32 x i32> undef, <32 x i32> undef)
-  %v7 = tail call <32 x i32> @llvm.hexagon.V6.vaddhq.128B(<1024 x i1> %v6, <32 x i32> %v4, <32 x i32> undef)
+  %v5 = tail call <128 x i1> @llvm.hexagon.V6.vgtuh.128B(<32 x i32> %v3, <32 x i32> undef)
+  %v6 = tail call <128 x i1> @llvm.hexagon.V6.veqh.and.128B(<128 x i1> %v5, <32 x i32> undef, <32 x i32> undef)
+  %v7 = tail call <32 x i32> @llvm.hexagon.V6.vaddhq.128B(<128 x i1> %v6, <32 x i32> %v4, <32 x i32> undef)
   %v8 = add nsw i32 %v2, 1
   %v9 = icmp slt i32 %v8, %a2
   br i1 %v9, label %b3, label %b4
@@ -40,13 +40,13 @@ b5:                                               ; preds = %b4, %b0
 }
 
 ; Function Attrs: nounwind readnone
-declare <1024 x i1> @llvm.hexagon.V6.vgtuh.128B(<32 x i32>, <32 x i32>) #1
+declare <128 x i1> @llvm.hexagon.V6.vgtuh.128B(<32 x i32>, <32 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <1024 x i1> @llvm.hexagon.V6.veqh.and.128B(<1024 x i1>, <32 x i32>, <32 x i32>) #1
+declare <128 x i1> @llvm.hexagon.V6.veqh.and.128B(<128 x i1>, <32 x i32>, <32 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <32 x i32> @llvm.hexagon.V6.vaddhq.128B(<1024 x i1>, <32 x i32>, <32 x i32>) #1
+declare <32 x i32> @llvm.hexagon.V6.vaddhq.128B(<128 x i1>, <32 x i32>, <32 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #1

@@ -770,12 +770,14 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   }
 
   PrintStats("INITED");
-  if (!Options.FocusFunction.empty())
+  if (!Options.FocusFunction.empty()) {
     Printf("INFO: %zd/%zd inputs touch the focus function\n",
            Corpus.NumInputsThatTouchFocusFunction(), Corpus.size());
-  if (!Options.DataFlowTrace.empty())
-    Printf("INFO: %zd/%zd inputs have the Data Flow Trace\n",
-           Corpus.NumInputsWithDataFlowTrace(), Corpus.size());
+    if (!Options.DataFlowTrace.empty())
+      Printf("INFO: %zd/%zd inputs have the Data Flow Trace\n",
+             Corpus.NumInputsWithDataFlowTrace(),
+             Corpus.NumInputsThatTouchFocusFunction());
+  }
 
   if (Corpus.empty() && Options.MaxNumberOfRuns) {
     Printf("ERROR: no interesting inputs were found. "

@@ -218,7 +218,7 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
     OpBuilder b(op);
     for (auto it : op.getInputsAndOutputBuffers())
       if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
-        if (sv.getType().getElementType().isIntOrFloat())
+        if (sv.getType().getElementType().isSignlessIntOrFloat())
           subViews.insert(sv);
     if (!subViews.empty()) {
       promoteSubViewOperands(b, op, subViews, dynamicBuffers, &folder);

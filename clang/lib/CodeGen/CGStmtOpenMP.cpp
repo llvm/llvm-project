@@ -1450,15 +1450,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     // The cleanup callback that finalizes all variabels at the given location,
     // thus calls destructors etc.
     auto FiniCB = [this](InsertPointTy IP) {
-      CGBuilderTy::InsertPointGuard IPG(Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
-             "OpenMP IR Builder should cause terminated block!");
-      llvm::BasicBlock *IPBB = IP.getBlock();
-      llvm::BasicBlock *DestBB = IPBB->splitBasicBlock(IP.getPoint());
-      IPBB->getTerminator()->eraseFromParent();
-      Builder.SetInsertPoint(IPBB);
-      CodeGenFunction::JumpDest Dest = getJumpDestInCurrentScope(DestBB);
-      EmitBranchThroughCleanup(Dest);
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
     // Privatization callback that performs appropriate action for
@@ -1480,25 +1472,10 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     auto BodyGenCB = [ParallelRegionBodyStmt,
                       this](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                             llvm::BasicBlock &ContinuationBB) {
-      auto OldAllocaIP = AllocaInsertPt;
-      AllocaInsertPt = &*AllocaIP.getPoint();
-
-      auto OldReturnBlock = ReturnBlock;
-      ReturnBlock = getJumpDestInCurrentScope(&ContinuationBB);
-
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      CodeGenIPBB->splitBasicBlock(CodeGenIP.getPoint());
-      llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator();
-      CodeGenIPBBTI->removeFromParent();
-
-      Builder.SetInsertPoint(CodeGenIPBB);
-
-      EmitStmt(ParallelRegionBodyStmt);
-
-      Builder.Insert(CodeGenIPBBTI);
-
-      AllocaInsertPt = OldAllocaIP;
-      ReturnBlock = OldReturnBlock;
+      OMPBuilderCBHelpers::OutlinedRegionBodyRAII ORB(*this, AllocaIP,
+                                                      ContinuationBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, ParallelRegionBodyStmt,
+                                             CodeGenIP, ContinuationBB);
     };
 
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
@@ -3152,55 +3129,18 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
     const CapturedStmt *CS = S.getInnermostCapturedStmt();
     const Stmt *MasterRegionBodyStmt = CS->getCapturedStmt();
 
-    // TODO: Replace with a generic helper function for finalization
     auto FiniCB = [this](InsertPointTy IP) {
-      CGBuilderTy::InsertPointGuard IPG(Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
-             "OpenMP IR Builder should cause terminated block!");
-
-      llvm::BasicBlock *IPBB = IP.getBlock();
-      llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
-      assert(DestBB && "Finalization block should have one successor!");
-
-      // erase and replace with cleanup branch.
-      IPBB->getTerminator()->eraseFromParent();
-      Builder.SetInsertPoint(IPBB);
-      CodeGenFunction::JumpDest Dest = getJumpDestInCurrentScope(DestBB);
-      EmitBranchThroughCleanup(Dest);
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
-    // TODO: Replace with a generic helper function for emitting body
     auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                   InsertPointTy CodeGenIP,
                                                   llvm::BasicBlock &FiniBB) {
-      // Alloca insertion block should be in the entry block of the containing
-      // function So it expects an empty AllocaIP in which case will reuse the
-      // old alloca insertion point, or a new AllocaIP in the same block as the
-      // old one
-      assert((!AllocaIP.isSet() ||
-              AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
-             "Insertion point should be in the entry block of containing "
-             "function!");
-      auto OldAllocaIP = AllocaInsertPt;
-      if (AllocaIP.isSet())
-        AllocaInsertPt = &*AllocaIP.getPoint();
-      auto OldReturnBlock = ReturnBlock;
-      ReturnBlock = getJumpDestInCurrentScope(&FiniBB);
-
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
-        CodeGenIPBBTI->eraseFromParent();
-
-      Builder.SetInsertPoint(CodeGenIPBB);
-
-      EmitStmt(MasterRegionBodyStmt);
-
-      if (Builder.saveIP().isSet())
-        Builder.CreateBr(&FiniBB);
-
-      AllocaInsertPt = OldAllocaIP;
-      ReturnBlock = OldReturnBlock;
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MasterRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
     };
+
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     Builder.restoreIP(OMPBuilder->CreateMaster(Builder, BodyGenCB, FiniCB));
@@ -3229,53 +3169,16 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
       HintInst =
           Builder.CreateIntCast(EmitScalarExpr(Hint), CGM.Int32Ty, false);
 
-    // TODO: Replace with a generic helper function for finalization
     auto FiniCB = [this](InsertPointTy IP) {
-      CGBuilderTy::InsertPointGuard IPG(Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
-             "OpenMP IR Builder should cause terminated block!");
-      llvm::BasicBlock *IPBB = IP.getBlock();
-      llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
-      assert(DestBB && "Finalization block should have one successor!");
-
-      // erase and replace with cleanup branch.
-      IPBB->getTerminator()->eraseFromParent();
-      Builder.SetInsertPoint(IPBB);
-      CodeGenFunction::JumpDest Dest = getJumpDestInCurrentScope(DestBB);
-      EmitBranchThroughCleanup(Dest);
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
-    // TODO: Replace with a generic helper function for emitting body
     auto BodyGenCB = [CriticalRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                     InsertPointTy CodeGenIP,
                                                     llvm::BasicBlock &FiniBB) {
-      // Alloca insertion block should be in the entry block of the containing
-      // function So it expects an empty AllocaIP in which case will reuse the
-      // old alloca insertion point, or a new AllocaIP in the same block as the
-      // old one
-      assert((!AllocaIP.isSet() ||
-              AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
-             "Insertion point should be in the entry block of containing "
-             "function!");
-      auto OldAllocaIP = AllocaInsertPt;
-      if (AllocaIP.isSet())
-        AllocaInsertPt = &*AllocaIP.getPoint();
-      auto OldReturnBlock = ReturnBlock;
-      ReturnBlock = getJumpDestInCurrentScope(&FiniBB);
-
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
-        CodeGenIPBBTI->eraseFromParent();
-
-      Builder.SetInsertPoint(CodeGenIPBB);
-
-      EmitStmt(CriticalRegionBodyStmt);
-
-      if (Builder.saveIP().isSet())
-        Builder.CreateBr(&FiniBB);
-
-      AllocaInsertPt = OldAllocaIP;
-      ReturnBlock = OldReturnBlock;
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CriticalRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
     };
 
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);

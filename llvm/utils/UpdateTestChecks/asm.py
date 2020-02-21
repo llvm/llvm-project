@@ -148,6 +148,12 @@ SCRUB_X86_SHUFFLES_RE = (
     re.compile(
         r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
         flags=re.M))
+
+SCRUB_X86_SHUFFLES_NO_MEM_RE = (
+    re.compile(
+        r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = (?!.*(?:mem)).*)$',
+        flags=re.M))
+
 SCRUB_X86_SPILL_RELOAD_RE = (
     re.compile(
         r'-?\d+\(%([er])[sb]p\)(.*(?:Spill|Reload))$',
@@ -163,8 +169,13 @@ def scrub_asm_x86(asm, args):
   asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
   # Expand the tabs used for indentation.
   asm = string.expandtabs(asm, 2)
+
   # Detect shuffle asm comments and hide the operands in favor of the comments.
-  asm = SCRUB_X86_SHUFFLES_RE.sub(r'\1 {{.*#+}} \2', asm)
+  if getattr(args, 'no_x86_scrub_mem_shuffle', True):
+    asm = SCRUB_X86_SHUFFLES_NO_MEM_RE.sub(r'\1 {{.*#+}} \2', asm)
+  else:
+    asm = SCRUB_X86_SHUFFLES_RE.sub(r'\1 {{.*#+}} \2', asm)
+
   # Detect stack spills and reloads and hide their exact offset and whether
   # they used the stack pointer or frame pointer.
   asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r'{{[-0-9]+}}(%\1{{[sb]}}p)\2', asm)

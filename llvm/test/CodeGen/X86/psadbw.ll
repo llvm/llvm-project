@@ -21,8 +21,7 @@ define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) {
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,3,2]
 ; X86-NEXT:    psadbw %xmm0, %xmm1
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X86-NEXT:    movd %xmm0, %edx
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_psadbw_demandedelt:

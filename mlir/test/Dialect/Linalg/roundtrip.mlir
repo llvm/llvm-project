@@ -347,7 +347,7 @@ func @indexed_generic_with_tensor_input_and_output(
 
 #broadcast_access = [
   affine_map<(i, j) -> (0)>,
-  affine_map<(i,j) -> (i,j)>
+  affine_map<(i, j) -> (i, j)>
 ]
 
 #trait_broadcast = {
@@ -358,10 +358,19 @@ func @indexed_generic_with_tensor_input_and_output(
   library_call = "some_broadcast_external_fn"
 }
 
-func @generic_op_zero_rank(%arg0 : tensor<f32>) ->  (tensor<3x4xf32>)
+func @generic_op_zero_rank(%arg0: tensor<f32>) -> (tensor<3x4xf32>)
 {
   %0 = linalg.generic #trait_broadcast %arg0 {
     ^bb(%a: f32) :
+      linalg.yield %a : f32
+  } : tensor<f32> -> tensor<3x4xf32>
+  return %0 : tensor<3x4xf32>
+}
+
+func @indexed_generic_op_zero_rank(%arg0: tensor<f32>) -> (tensor<3x4xf32>)
+{
+  %0 = linalg.indexed_generic #trait_broadcast %arg0 {
+    ^bb(%i: index, %j: index, %a: f32) :
       linalg.yield %a : f32
   } : tensor<f32> -> tensor<3x4xf32>
   return %0 : tensor<3x4xf32>

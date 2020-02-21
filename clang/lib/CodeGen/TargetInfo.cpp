@@ -1687,7 +1687,7 @@ void X86_32ABIInfo::runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) c
         isHomogeneousAggregate(Ty, Base, NumElts)) {
       if (State.FreeSSERegs >= NumElts) {
         State.FreeSSERegs -= NumElts;
-        Args[I].info = ABIArgInfo::getDirect();
+        Args[I].info = ABIArgInfo::getDirectInReg();
         State.IsPreassigned.set(I);
       }
     }

@@ -26,7 +26,6 @@
 # CHECK-NEXT:     Flags [ (0x10)
 # CHECK-NEXT:       UNDEFINED (0x10)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     ImportName: puts
 # CHECK-NEXT:     ImportModule: env
 # CHECK-NEXT:     ElementIndex: 0x0
 # CHECK-NEXT:   }
@@ -44,7 +43,6 @@
 # CHECK-NEXT:     Flags [ (0x10)
 # CHECK-NEXT:       UNDEFINED (0x10)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     ImportName: SomeOtherFunction
 # CHECK-NEXT:     ImportModule: env
 # CHECK-NEXT:     ElementIndex: 0x1
 # CHECK-NEXT:   }

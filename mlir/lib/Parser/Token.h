@@ -74,6 +74,11 @@ public:
   /// For an inttype token, return its bitwidth.
   Optional<unsigned> getIntTypeBitwidth() const;
 
+  /// For an inttype token, return its signedness semantics: llvm::None means no
+  /// signedness semantics; true means signed integer type; false means unsigned
+  /// integer type.
+  Optional<bool> getIntTypeSignedness() const;
+
   /// Given a hash_identifier token like #123, try to parse the number out of
   /// the identifier, returning None if it is a named identifier like #x or
   /// if the integer doesn't fit.

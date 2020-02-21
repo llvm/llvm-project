@@ -256,8 +256,7 @@ define void @complicated_args_byval() {
 }
 
 define internal i8*@test_byval2(%struct.X* byval %a) {
-; CHECK-LABEL: define {{[^@]+}}@test_byval2
-; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[A:%.*]])
+; CHECK-LABEL: define {{[^@]+}}@test_byval2()
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
 ; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
 ; CHECK-NEXT:    ret i8* [[L]]
@@ -268,7 +267,7 @@ define internal i8*@test_byval2(%struct.X* byval %a) {
 }
 define i8* @complicated_args_byval2() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval2()
-; CHECK-NEXT:    [[C:%.*]] = call i8* @test_byval2(%struct.X* nofree nonnull readonly align 8 dereferenceable(8) @S)
+; CHECK-NEXT:    [[C:%.*]] = call i8* @test_byval2()
 ; CHECK-NEXT:    ret i8* [[C]]
 ;
   %c = call i8* @test_byval2(%struct.X* @S)

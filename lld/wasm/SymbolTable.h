@@ -15,6 +15,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 
 namespace lld {
 namespace wasm {
@@ -59,14 +60,18 @@ public:
   Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
                           InputEvent *e);
 
-  Symbol *addUndefinedFunction(StringRef name, StringRef importName,
-                               StringRef importModule, uint32_t flags,
-                               InputFile *file, const WasmSignature *signature,
+  Symbol *addUndefinedFunction(StringRef name,
+                               llvm::Optional<StringRef> importName,
+                               llvm::Optional<StringRef> importModule,
+                               uint32_t flags, InputFile *file,
+                               const WasmSignature *signature,
                                bool isCalledDirectly);
   Symbol *addUndefinedData(StringRef name, uint32_t flags, InputFile *file);
-  Symbol *addUndefinedGlobal(StringRef name, StringRef importName,
-                             StringRef importModule,  uint32_t flags,
-                             InputFile *file, const WasmGlobalType *type);
+  Symbol *addUndefinedGlobal(StringRef name,
+                             llvm::Optional<StringRef> importName,
+                             llvm::Optional<StringRef> importModule,
+                             uint32_t flags, InputFile *file,
+                             const WasmGlobalType *type);
 
   void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
 

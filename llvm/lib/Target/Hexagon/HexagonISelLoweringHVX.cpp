@@ -9,6 +9,7 @@
 #include "HexagonISelLowering.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -39,7 +40,6 @@ HexagonTargetLowering::initializeHVXLowering() {
     addRegisterClass(MVT::v16i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
-    addRegisterClass(MVT::v512i1, &Hexagon::HvxQRRegClass);
   } else if (Subtarget.useHVX128BOps()) {
     addRegisterClass(MVT::v128i8,  &Hexagon::HvxVRRegClass);
     addRegisterClass(MVT::v64i16,  &Hexagon::HvxVRRegClass);
@@ -50,7 +50,6 @@ HexagonTargetLowering::initializeHVXLowering() {
     addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
-    addRegisterClass(MVT::v1024i1, &Hexagon::HvxQRRegClass);
   }
 
   // Set up operation actions.
@@ -66,8 +65,9 @@ HexagonTargetLowering::initializeHVXLowering() {
     AddPromotedToType(Opc, FromTy, ToTy);
   };
 
-  setOperationAction(ISD::VECTOR_SHUFFLE, ByteV, Legal);
-  setOperationAction(ISD::VECTOR_SHUFFLE, ByteW, Legal);
+  setOperationAction(ISD::VECTOR_SHUFFLE,     ByteV,      Legal);
+  setOperationAction(ISD::VECTOR_SHUFFLE,     ByteW,      Legal);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   for (MVT T : LegalV) {
     setIndexedLoadAction(ISD::POST_INC,  T, Legal);
@@ -194,12 +194,13 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::XOR,                BoolV, Legal);
   }
 
-  if (Use64b)
+  if (Use64b) {
     for (MVT T: {MVT::v32i8, MVT::v32i16, MVT::v16i8, MVT::v16i16, MVT::v16i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Legal);
-  else
+  } else {
     for (MVT T: {MVT::v64i8, MVT::v64i16, MVT::v32i8, MVT::v32i16, MVT::v32i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Legal);
+  }
 
   setTargetDAGCombine(ISD::VSELECT);
 }
@@ -281,6 +282,12 @@ bool
 HexagonTargetLowering::isHvxPairTy(MVT Ty) const {
   return Subtarget.isHVXVectorType(Ty) &&
          Ty.getSizeInBits() == 16 * Subtarget.getVectorLength();
+}
+
+bool
+HexagonTargetLowering::isHvxBoolTy(MVT Ty) const {
+  return Subtarget.isHVXVectorType(Ty, true) &&
+         Ty.getVectorElementType() == MVT::i1;
 }
 
 SDValue
@@ -1446,6 +1453,28 @@ HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  MVT ResTy = ty(Op);
+
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  bool Use64b = Subtarget.useHVX64BOps();
+  unsigned IntPredCast = Use64b ? Intrinsic::hexagon_V6_pred_typecast
+                                : Intrinsic::hexagon_V6_pred_typecast_128B;
+  if (IntNo == IntPredCast) {
+    SDValue Vs = Op.getOperand(1);
+    MVT OpTy = ty(Vs);
+    if (isHvxBoolTy(ResTy) && isHvxBoolTy(OpTy)) {
+      if (ResTy == OpTy)
+        return Vs;
+      return DAG.getNode(HexagonISD::TYPECAST, dl, ResTy, Vs);
+    }
+  }
+
+  return Op;
+}
+
+SDValue
 HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
   assert(!Op.isMachineOpcode());
   SmallVector<SDValue,2> OpsL, OpsH;
@@ -1580,6 +1609,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
     case ISD::SETCC:
     case ISD::INTRINSIC_VOID:          return Op;
+    case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
     // Unaligned loads will be handled by the default lowering.
     case ISD::LOAD:                    return SDValue();
   }

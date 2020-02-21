@@ -296,3 +296,106 @@ entry:
   %call = call i8* @internal_argmem_only_rec_1(i32* nonnull %add.ptr)
   ret i8* %call
 }
+
+declare i8* @unknown_ptr() readnone
+declare i8* @argmem_only(i8* %arg) argmemonly
+declare i8* @inaccesible_argmem_only_decl(i8* %arg) inaccessiblemem_or_argmemonly
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) nounwind argmemonly willreturn
+
+define void @callerA1(i8* %arg) {
+; CHECK: Function Attrs: argmemonly
+; CHECK-LABEL: define {{[^@]+}}@callerA1
+; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* [[ARG]])
+; CHECK-NEXT:    ret void
+;
+  call i8* @argmem_only(i8* %arg)
+  ret void
+}
+define void @callerA2(i8* %arg) {
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-LABEL: define {{[^@]+}}@callerA2
+; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* [[ARG]])
+; CHECK-NEXT:    ret void
+;
+  call i8* @inaccesible_argmem_only_decl(i8* %arg)
+  ret void
+}
+define void @callerB1() {
+; CHECK: Function Attrs: readnone
+; CHECK-LABEL: define {{[^@]+}}@callerB1()
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* nonnull dereferenceable(1) [[STACK]])
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca i8
+  call i8* @argmem_only(i8* %stack)
+  ret void
+}
+define void @callerB2() {
+; CHECK: Function Attrs: inaccessiblememonly
+; CHECK-LABEL: define {{[^@]+}}@callerB2()
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* nonnull dereferenceable(1) [[STACK]])
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca i8
+  call i8* @inaccesible_argmem_only_decl(i8* %stack)
+  ret void
+}
+define void @callerC1() {
+; CHECK-NOT: Function Attrs
+; CHECK-LABEL: define {{[^@]+}}@callerC1()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* [[UNKNOWN]])
+; CHECK-NEXT:    ret void
+;
+  %unknown = call i8* @unknown_ptr()
+  call i8* @argmem_only(i8* %unknown)
+  ret void
+}
+define void @callerC2() {
+; CHECK-NOT: Function Attrs
+; CHECK-LABEL: define {{[^@]+}}@callerC2()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* [[UNKNOWN]])
+; CHECK-NEXT:    ret void
+;
+  %unknown = call i8* @unknown_ptr()
+  call i8* @inaccesible_argmem_only_decl(i8* %unknown)
+  ret void
+}
+define void @callerD1() {
+; CHECK-NOT: Function Attrs
+; CHECK-LABEL: define {{[^@]+}}@callerD1()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias align 536870912 null)
+; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
+; CHECK-NEXT:    ret void
+;
+  %unknown = call i8* @argmem_only(i8* null)
+  store i8 0, i8* %unknown
+  ret void
+}
+define void @callerD2() {
+; CHECK-NOT: Function Attrs
+; CHECK-LABEL: define {{[^@]+}}@callerD2()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias align 536870912 null)
+; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
+; CHECK-NEXT:    ret void
+;
+  %unknown = call i8* @inaccesible_argmem_only_decl(i8* null)
+  store i8 0, i8* %unknown
+  ret void
+}
+define void @callerE(i8* %arg) {
+; CHECK: Function Attrs: argmemonly nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@callerE
+; CHECK-SAME: (i8* nocapture [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nocapture [[ARG]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %arg)
+  ret void
+}
+

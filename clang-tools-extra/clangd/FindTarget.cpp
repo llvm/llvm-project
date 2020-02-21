@@ -31,6 +31,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -139,7 +140,14 @@ const Type *getPointeeType(const Type *T) {
 
 const NamedDecl *getTemplatePattern(const NamedDecl *D) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(D)) {
-    return CRD->getTemplateInstantiationPattern();
+    if (const auto *Result = CRD->getTemplateInstantiationPattern())
+      return Result;
+    // getTemplateInstantiationPattern returns null if the Specialization is
+    // incomplete (e.g. the type didn't need to be complete), fall back to the
+    // primary template.
+    if (CRD->getTemplateSpecializationKind() == TSK_Undeclared)
+      if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(CRD))
+        return Spec->getSpecializedTemplate()->getTemplatedDecl();
   } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     return FD->getTemplateInstantiationPattern();
   } else if (auto *VD = dyn_cast<VarDecl>(D)) {

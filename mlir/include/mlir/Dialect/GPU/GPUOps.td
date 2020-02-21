@@ -19,7 +19,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 // Type constraint accepting standard integers, indices and wrapped LLVM integer
 // types.
 def IntLikeOrLLVMInt : TypeConstraint<
-  Or<[AnyInteger.predicate, Index.predicate, LLVMInt.predicate]>,
+  Or<[AnySignlessInteger.predicate, Index.predicate, LLVMInt.predicate]>,
   "integer, index or LLVM dialect equivalent">;
 
 //===----------------------------------------------------------------------===//

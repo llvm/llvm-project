@@ -279,9 +279,6 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     }
   }
 
-  if (TotalSpeculationCost == 0)
-    return false; // nothing to hoist
-
   for (auto I = FromBlock.begin(); I != FromBlock.end();) {
     // We have to increment I before moving Current as moving Current
     // changes the list that I is iterating through.

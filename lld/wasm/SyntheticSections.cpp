@@ -156,11 +156,11 @@ void ImportSection::writeBody() {
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
     if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-      import.Field = f->importName;
-      import.Module = f->importModule;
+      import.Field = f->importName ? *f->importName : sym->getName();
+      import.Module = f->importModule ? *f->importModule : defaultModule;
     } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
-      import.Field = g->importName;
-      import.Module = g->importModule;
+      import.Field = g->importName ? *g->importName : sym->getName();
+      import.Module = g->importModule ? *g->importModule : defaultModule;
     } else {
       import.Field = sym->getName();
       import.Module = defaultModule;

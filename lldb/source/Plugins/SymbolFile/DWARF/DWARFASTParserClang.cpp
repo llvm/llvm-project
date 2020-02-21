@@ -2001,12 +2001,12 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
         dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
 
         if (!method_die_offsets.empty()) {
-          DWARFDebugInfo *debug_info = dwarf->DebugInfo();
+          DWARFDebugInfo &debug_info = dwarf->DebugInfo();
 
           const size_t num_matches = method_die_offsets.size();
           for (size_t i = 0; i < num_matches; ++i) {
             const DIERef &die_ref = method_die_offsets[i];
-            DWARFDIE method_die = debug_info->GetDIE(die_ref);
+            DWARFDIE method_die = debug_info.GetDIE(die_ref);
 
             if (method_die)
               method_die.ResolveType();

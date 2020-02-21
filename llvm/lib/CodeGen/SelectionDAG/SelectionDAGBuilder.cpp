@@ -3872,13 +3872,17 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
-  unsigned VectorWidth = I.getType()->isVectorTy() ?
-    I.getType()->getVectorNumElements() : 0;
+  bool IsVectorGEP = I.getType()->isVectorTy();
+  ElementCount VectorElementCount = IsVectorGEP ?
+    I.getType()->getVectorElementCount() : ElementCount(0, false);
 
-  if (VectorWidth && !N.getValueType().isVector()) {
+  if (IsVectorGEP && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
-    EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorWidth);
-    N = DAG.getSplatBuildVector(VT, dl, N);
+    EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorElementCount);
+    if (VectorElementCount.Scalable)
+      N = DAG.getSplatVector(VT, dl, N);
+    else
+      N = DAG.getSplatBuildVector(VT, dl, N);
   }
 
   for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
@@ -3900,9 +3904,16 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
                         DAG.getConstant(Offset, dl, N.getValueType()), Flags);
       }
     } else {
+      // IdxSize is the width of the arithmetic according to IR semantics.
+      // In SelectionDAG, we may prefer to do arithmetic in a wider bitwidth
+      // (and fix up the result later).
       unsigned IdxSize = DAG.getDataLayout().getIndexSizeInBits(AS);
       MVT IdxTy = MVT::getIntegerVT(IdxSize);
-      APInt ElementSize(IdxSize, DL->getTypeAllocSize(GTI.getIndexedType()));
+      TypeSize ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
+      // We intentionally mask away the high bits here; ElementSize may not
+      // fit in IdxTy.
+      APInt ElementMul(IdxSize, ElementSize.getKnownMinSize());
+      bool ElementScalable = ElementSize.isScalable();
 
       // If this is a scalar constant or a splat vector of constants,
       // handle it quickly.
@@ -3910,14 +3921,18 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       if (C && isa<VectorType>(C->getType()))
         C = C->getSplatValue();
 
-      if (const auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
-        if (CI->isZero())
-          continue;
-        APInt Offs = ElementSize * CI->getValue().sextOrTrunc(IdxSize);
+      const auto *CI = dyn_cast_or_null<ConstantInt>(C);
+      if (CI && CI->isZero())
+        continue;
+      if (CI && !ElementScalable) {
+        APInt Offs = ElementMul * CI->getValue().sextOrTrunc(IdxSize);
         LLVMContext &Context = *DAG.getContext();
-        SDValue OffsVal = VectorWidth ?
-          DAG.getConstant(Offs, dl, EVT::getVectorVT(Context, IdxTy, VectorWidth)) :
-          DAG.getConstant(Offs, dl, IdxTy);
+        SDValue OffsVal;
+        if (IsVectorGEP)
+          OffsVal = DAG.getConstant(
+              Offs, dl, EVT::getVectorVT(Context, IdxTy, VectorElementCount));
+        else
+          OffsVal = DAG.getConstant(Offs, dl, IdxTy);
 
         // In an inbounds GEP with an offset that is nonnegative even when
         // interpreted as signed, assume there is no unsigned overflow.
@@ -3931,31 +3946,45 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         continue;
       }
 
-      // N = N + Idx * ElementSize;
+      // N = N + Idx * ElementMul;
       SDValue IdxN = getValue(Idx);
 
-      if (!IdxN.getValueType().isVector() && VectorWidth) {
-        EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(), VectorWidth);
-        IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);
+      if (!IdxN.getValueType().isVector() && IsVectorGEP) {
+        EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(),
+                                  VectorElementCount);
+        if (VectorElementCount.Scalable)
+          IdxN = DAG.getSplatVector(VT, dl, IdxN);
+        else
+          IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);
       }
 
       // If the index is smaller or larger than intptr_t, truncate or extend
       // it.
       IdxN = DAG.getSExtOrTrunc(IdxN, dl, N.getValueType());
 
-      // If this is a multiply by a power of two, turn it into a shl
-      // immediately.  This is a very common case.
-      if (ElementSize != 1) {
-        if (ElementSize.isPowerOf2()) {
-          unsigned Amt = ElementSize.logBase2();
-          IdxN = DAG.getNode(ISD::SHL, dl,
-                             N.getValueType(), IdxN,
-                             DAG.getConstant(Amt, dl, IdxN.getValueType()));
-        } else {
-          SDValue Scale = DAG.getConstant(ElementSize.getZExtValue(), dl,
-                                          IdxN.getValueType());
-          IdxN = DAG.getNode(ISD::MUL, dl,
-                             N.getValueType(), IdxN, Scale);
+      if (ElementScalable) {
+        EVT VScaleTy = N.getValueType().getScalarType();
+        SDValue VScale = DAG.getNode(
+            ISD::VSCALE, dl, VScaleTy,
+            DAG.getConstant(ElementMul.getZExtValue(), dl, VScaleTy));
+        if (IsVectorGEP)
+          VScale = DAG.getSplatVector(N.getValueType(), dl, VScale);
+        IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale);
+      } else {
+        // If this is a multiply by a power of two, turn it into a shl
+        // immediately.  This is a very common case.
+        if (ElementMul != 1) {
+          if (ElementMul.isPowerOf2()) {
+            unsigned Amt = ElementMul.logBase2();
+            IdxN = DAG.getNode(ISD::SHL, dl,
+                               N.getValueType(), IdxN,
+                               DAG.getConstant(Amt, dl, IdxN.getValueType()));
+          } else {
+            SDValue Scale = DAG.getConstant(ElementMul.getZExtValue(), dl,
+                                            IdxN.getValueType());
+            IdxN = DAG.getNode(ISD::MUL, dl,
+                               N.getValueType(), IdxN, Scale);
+          }
         }
       }
 

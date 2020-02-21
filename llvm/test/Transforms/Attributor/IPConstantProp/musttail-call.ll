@@ -63,7 +63,7 @@ define internal i8* @side_effects(i8 %v) {
 define internal i8* @no_side_effects(i8 %v) readonly nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@no_side_effects
 ; CHECK-SAME: (i8 [[V:%.*]])
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret i8* undef
 ;
   ret i8* null
 }
@@ -72,7 +72,7 @@ define internal i8* @dont_zap_me(i8 %v) {
 ; CHECK-LABEL: define {{[^@]+}}@dont_zap_me
 ; CHECK-SAME: (i8 [[V:%.*]])
 ; CHECK-NEXT:    [[I1:%.*]] = call i32 @external()
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret i8* undef
 ;
   %i1 = call i32 @external()
   ret i8* null

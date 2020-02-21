@@ -52,9 +52,9 @@ bool isDefinedInPloopBody(Value memref, ParallelOp ploop) {
   return memrefDef && ploop.getOperation()->isAncestor(memrefDef);
 }
 
-// Checks if the parallel loops have mixed access to the same buffers. Returns
-// `true` if the first parallel loop writes to the same indices that the second
-// loop reads.
+/// Checks if the parallel loops have mixed access to the same buffers. Returns
+/// `true` if the first parallel loop writes to the same indices that the second
+/// loop reads.
 static bool haveNoReadsAfterWriteExceptSameIndex(
     ParallelOp firstPloop, ParallelOp secondPloop,
     const BlockAndValueMapping &firstToSecondPloopIndices) {
@@ -158,7 +158,6 @@ static void naivelyFuseParallelOps(Operation *op) {
         noSideEffects &= op.hasNoSideEffect();
       }
       for (ArrayRef<ParallelOp> ploops : ploop_chains) {
-        llvm::errs() << "poo size = " << ploops.size() << '\n';
         for (int i = 0, e = ploops.size(); i + 1 < e; ++i)
           fuseIfLegal(ploops[i], ploops[i + 1], b);
       }

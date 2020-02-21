@@ -404,31 +404,33 @@ Symbol *SymbolTable::addDefinedEvent(StringRef name, uint32_t flags,
 // become available when the LTO object is read.  In this case we silently
 // replace the empty attributes with the valid ones.
 template <typename T>
-static void setImportAttributes(T *existing, StringRef importName,
-                                StringRef importModule, InputFile *file) {
-  if (!importName.empty()) {
-    if (existing->importName.empty())
+static void setImportAttributes(T *existing, Optional<StringRef> importName,
+                                Optional<StringRef> importModule,
+                                InputFile *file) {
+  if (importName) {
+    if (!existing->importName)
       existing->importName = importName;
     if (existing->importName != importName)
       error("import name mismatch for symbol: " + toString(*existing) +
-            "\n>>> defined as " + existing->importName + " in " +
-            toString(existing->getFile()) + "\n>>> defined as " + importName +
+            "\n>>> defined as " + *existing->importName + " in " +
+            toString(existing->getFile()) + "\n>>> defined as " + *importName +
             " in " + toString(file));
   }
 
-  if (!importModule.empty()) {
-    if (existing->importModule.empty())
+  if (importModule) {
+    if (!existing->importModule)
       existing->importModule = importModule;
     if (existing->importModule != importModule)
       error("import module mismatch for symbol: " + toString(*existing) +
-            "\n>>> defined as " + existing->importModule + " in " +
-            toString(existing->getFile()) + "\n>>> defined as " + importModule +
-            " in " + toString(file));
+            "\n>>> defined as " + *existing->importModule + " in " +
+            toString(existing->getFile()) + "\n>>> defined as " +
+            *importModule + " in " + toString(file));
   }
 }
 
-Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
-                                          StringRef importModule,
+Symbol *SymbolTable::addUndefinedFunction(StringRef name,
+                                          Optional<StringRef> importName,
+                                          Optional<StringRef> importModule,
                                           uint32_t flags, InputFile *file,
                                           const WasmSignature *sig,
                                           bool isCalledDirectly) {
@@ -497,9 +499,10 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
   return s;
 }
 
-Symbol *SymbolTable::addUndefinedGlobal(StringRef name, StringRef importName,
-                                        StringRef importModule, uint32_t flags,
-                                        InputFile *file,
+Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
+                                        Optional<StringRef> importName,
+                                        Optional<StringRef> importModule,
+                                        uint32_t flags, InputFile *file,
                                         const WasmGlobalType *type) {
   LLVM_DEBUG(dbgs() << "addUndefinedGlobal: " << name << "\n");
   assert(flags & WASM_SYMBOL_UNDEFINED);

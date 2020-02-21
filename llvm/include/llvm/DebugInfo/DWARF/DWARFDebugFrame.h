@@ -223,9 +223,6 @@ private:
 /// DWARF Frame Description Entry (FDE)
 class FDE : public FrameEntry {
 public:
-  // Each FDE has a CIE it's "linked to". Our FDE contains is constructed with
-  // an offset to the CIE (provided by parsing the FDE header). The CIE itself
-  // is obtained lazily once it's actually required.
   FDE(uint64_t Offset, uint64_t Length, int64_t LinkedCIEOffset,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
       Optional<uint64_t> LSDAAddress, Triple::ArchType Arch)

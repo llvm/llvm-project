@@ -204,6 +204,14 @@ func @illegaltype(i0) // expected-error {{invalid integer width}}
 
 // -----
 
+func @illegaltype(ui1) // expected-error {{cannot have signedness semantics for i1}}
+
+// -----
+
+func @illegaltype(si1) // expected-error {{cannot have signedness semantics for i1}}
+
+// -----
+
 func @malformed_for_percent() {
   affine.for i = 1 to 10 { // expected-error {{expected SSA operand}}
 
@@ -703,14 +711,14 @@ func @elementsattr_malformed_opaque() -> () {
 
 func @elementsattr_malformed_opaque1() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{opaque string only contains hex digits}}
+  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{elements hex string only contains hex digits}}
 }
 
 // -----
 
 func @elementsattr_malformed_opaque2() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{opaque string should start with '0x'}}
+  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{elements hex string should start with '0x'}}
 }
 
 // -----
@@ -1206,5 +1214,21 @@ func @bool_literal_in_non_bool_tensor() {
   "foo"() {bar = dense<true> : tensor<2xi16>} : () -> ()
 }
 
+// -----
+
 // expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
 func @bad_arrow(%arg : !unreg.ptr<(i32)->)
+
+// -----
+
+func @negative_value_in_unsigned_int_attr() {
+  // expected-error @+1 {{negative integer literal not valid for unsigned integer type}}
+  "foo"() {bar = -5 : ui32} : () -> ()
+}
+
+// -----
+
+func @negative_value_in_unsigned_vector_attr() {
+  // expected-error @+1 {{expected unsigned integer elements, but parsed negative value}}
+  "foo"() {bar = dense<[5, -5]> : vector<2xui32>} : () -> ()
+}

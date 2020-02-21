@@ -37,6 +37,11 @@ using namespace llvm;
 
 #include "AMDGPUGenCallingConv.inc"
 
+static cl::opt<bool> AMDGPUBypassSlowDiv(
+  "amdgpu-bypass-slow-div",
+  cl::desc("Skip 64-bit divide for dynamic 32-bit values"),
+  cl::init(true));
+
 // Find a larger type to do a load / store of a vector with.
 EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   unsigned StoreSize = VT.getStoreSizeInBits();
@@ -481,6 +486,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpy  = 0xffffffff;
   MaxStoresPerMemmove = 0xffffffff;
   MaxStoresPerMemset  = 0xffffffff;
+
+  // The expansion for 64-bit division is enormous.
+  if (AMDGPUBypassSlowDiv)
+    addBypassSlowDiv(64, 32);
 
   setTargetDAGCombine(ISD::BITCAST);
   setTargetDAGCombine(ISD::SHL);
@@ -2831,6 +2840,7 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
 static SDValue simplifyI24(SDNode *Node24,
                            TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool IsIntrin = Node24->getOpcode() == ISD::INTRINSIC_WO_CHAIN;
 
   SDValue LHS = IsIntrin ? Node24->getOperand(1) : Node24->getOperand(0);
@@ -2844,11 +2854,11 @@ static SDValue simplifyI24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using GetDemandedBits which allows the operands to
-  // have other uses, but will only perform simplifications that involve
-  // bypassing some nodes for this user.
-  SDValue DemandedLHS = DAG.GetDemandedBits(LHS, Demanded);
-  SDValue DemandedRHS = DAG.GetDemandedBits(RHS, Demanded);
+  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
+  // the operands to have other uses, but will only perform simplifications that
+  // involve bypassing some nodes for this user.
+  SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
+  SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
   if (DemandedLHS || DemandedRHS)
     return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
@@ -2856,7 +2866,6 @@ static SDValue simplifyI24(SDNode *Node24,
 
   // Now try SimplifyDemandedBits which can simplify the nodes used by our
   // operands if this node is the only user.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
     return SDValue(Node24, 0);
   if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))

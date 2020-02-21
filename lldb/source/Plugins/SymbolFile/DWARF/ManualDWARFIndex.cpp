@@ -105,7 +105,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
   IndexUnitImpl(unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
-    DWARFDebugInfo &dwo_info = *dwo_symbol_file->DebugInfo();
+    DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
     for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
       IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
   }

@@ -158,7 +158,7 @@ ThinLtoJIT::ThinLtoJIT(ArrayRef<std::string> InputFiles,
 
   // We are restricted to a single dylib currently. Add runtime overrides and
   // symbol generators.
-  MainJD = &ES.createJITDylib("main");
+  MainJD = &ES.createBareJITDylib("main");
   Err = setupJITDylib(MainJD, AllowNudgeIntoDiscovery, PrintStats);
   if (Err)
     return;

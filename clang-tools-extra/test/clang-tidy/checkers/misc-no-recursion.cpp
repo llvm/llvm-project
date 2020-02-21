@@ -60,12 +60,12 @@ void indirect_recursion() {
     conditionally_executed();
 }
 
+// CHECK-NOTES: :[[@LINE-9]]:6: warning: function 'conditionally_executed' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-6]]:6: note: example recursive call chain, starting from function 'indirect_recursion'
+// CHECK-NOTES: :[[@LINE-5]]:5: note: Frame #1: function 'indirect_recursion' calls function 'conditionally_executed' here:
+// CHECK-NOTES: :[[@LINE-10]]:5: note: Frame #2: function 'conditionally_executed' calls function 'indirect_recursion' here:
+// CHECK-NOTES: :[[@LINE-11]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
 // CHECK-NOTES: :[[@LINE-10]]:6: warning: function 'indirect_recursion' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-10]]:6: warning: function 'conditionally_executed' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-12]]:6: note: example recursive call chain, starting from function 'indirect_recursion'
-// CHECK-NOTES: :[[@LINE-6]]:5: note: Frame #1: function 'indirect_recursion' calls function 'conditionally_executed' here:
-// CHECK-NOTES: :[[@LINE-11]]:5: note: Frame #2: function 'conditionally_executed' calls function 'indirect_recursion' here:
-// CHECK-NOTES: :[[@LINE-12]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
 
 void taint();
 void maybe_selfrecursion_with_two_backedges() {
@@ -97,13 +97,13 @@ void indirect_recursion_with_alternatives() {
     conditionally_executed_choice_1();
 }
 
-// CHECK-NOTES: :[[@LINE-16]]:6: warning: function 'indirect_recursion_with_alternatives' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-16]]:6: warning: function 'conditionally_executed_choice_0' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-18]]:6: note: example recursive call chain, starting from function 'indirect_recursion_with_alternatives'
-// CHECK-NOTES: :[[@LINE-8]]:5: note: Frame #1: function 'indirect_recursion_with_alternatives' calls function 'conditionally_executed_choice_0' here:
-// CHECK-NOTES: :[[@LINE-17]]:5: note: Frame #2: function 'conditionally_executed_choice_0' calls function 'indirect_recursion_with_alternatives' here:
-// CHECK-NOTES: :[[@LINE-18]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
-// CHECK-NOTES: :[[@LINE-17]]:6: warning: function 'conditionally_executed_choice_1' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-15]]:6: warning: function 'conditionally_executed_choice_0' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-8]]:6: note: example recursive call chain, starting from function 'indirect_recursion_with_alternatives'
+// CHECK-NOTES: :[[@LINE-7]]:5: note: Frame #1: function 'indirect_recursion_with_alternatives' calls function 'conditionally_executed_choice_0' here:
+// CHECK-NOTES: :[[@LINE-16]]:5: note: Frame #2: function 'conditionally_executed_choice_0' calls function 'indirect_recursion_with_alternatives' here:
+// CHECK-NOTES: :[[@LINE-17]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
+// CHECK-NOTES: :[[@LINE-16]]:6: warning: function 'conditionally_executed_choice_1' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-13]]:6: warning: function 'indirect_recursion_with_alternatives' is within a recursive call chain [misc-no-recursion]
 
 static void indirect_recursion_with_depth2();
 static void conditionally_executed_depth1() {
@@ -119,14 +119,14 @@ void indirect_recursion_with_depth2() {
     conditionally_executed_depth0();
 }
 
-// CHECK-NOTES: :[[@LINE-14]]:13: warning: function 'indirect_recursion_with_depth2' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-14]]:13: warning: function 'conditionally_executed_depth1' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-11]]:13: note: example recursive call chain, starting from function 'conditionally_executed_depth0'
-// CHECK-NOTES: :[[@LINE-10]]:5: note: Frame #1: function 'conditionally_executed_depth0' calls function 'conditionally_executed_depth1' here:
-// CHECK-NOTES: :[[@LINE-15]]:5: note: Frame #2: function 'conditionally_executed_depth1' calls function 'indirect_recursion_with_depth2' here:
-// CHECK-NOTES: :[[@LINE-8]]:5: note: Frame #3: function 'indirect_recursion_with_depth2' calls function 'conditionally_executed_depth0' here:
-// CHECK-NOTES: :[[@LINE-9]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
-// CHECK-NOTES: :[[@LINE-16]]:13: warning: function 'conditionally_executed_depth0' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-13]]:13: warning: function 'conditionally_executed_depth1' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-10]]:13: note: example recursive call chain, starting from function 'conditionally_executed_depth0'
+// CHECK-NOTES: :[[@LINE-9]]:5: note: Frame #1: function 'conditionally_executed_depth0' calls function 'conditionally_executed_depth1' here:
+// CHECK-NOTES: :[[@LINE-14]]:5: note: Frame #2: function 'conditionally_executed_depth1' calls function 'indirect_recursion_with_depth2' here:
+// CHECK-NOTES: :[[@LINE-7]]:5: note: Frame #3: function 'indirect_recursion_with_depth2' calls function 'conditionally_executed_depth0' here:
+// CHECK-NOTES: :[[@LINE-8]]:5: note: ... which was the starting point of the recursive call chain; there may be other cycles
+// CHECK-NOTES: :[[@LINE-15]]:13: warning: function 'conditionally_executed_depth0' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-12]]:6: warning: function 'indirect_recursion_with_depth2' is within a recursive call chain [misc-no-recursion]
 
 int boo();
 void foo(int x = boo()) {}
@@ -139,12 +139,12 @@ int boo() {
   return 0;
 }
 
-// CHECK-NOTES: :[[@LINE-11]]:5: warning: function 'boo' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-10]]:6: warning: function 'bar' is within a recursive call chain [misc-no-recursion]
-// CHECK-NOTES: :[[@LINE-13]]:5: note: example recursive call chain, starting from function 'boo'
-// CHECK-NOTES: :[[@LINE-7]]:3: note: Frame #1: function 'boo' calls function 'bar' here:
-// CHECK-NOTES: :[[@LINE-14]]:18: note: Frame #2: function 'bar' calls function 'boo' here:
-// CHECK-NOTES: :[[@LINE-15]]:18: note: ... which was the starting point of the recursive call chain; there may be other cycles
+// CHECK-NOTES: :[[@LINE-9]]:6: warning: function 'bar' is within a recursive call chain [misc-no-recursion]
+// CHECK-NOTES: :[[@LINE-6]]:5: note: example recursive call chain, starting from function 'boo'
+// CHECK-NOTES: :[[@LINE-6]]:3: note: Frame #1: function 'boo' calls function 'bar' here:
+// CHECK-NOTES: :[[@LINE-13]]:18: note: Frame #2: function 'bar' calls function 'boo' here:
+// CHECK-NOTES: :[[@LINE-14]]:18: note: ... which was the starting point of the recursive call chain; there may be other cycles
+// CHECK-NOTES: :[[@LINE-10]]:5: warning: function 'boo' is within a recursive call chain [misc-no-recursion]
 
 int recursion_through_function_ptr() {
   auto *ptr = &recursion_through_function_ptr;

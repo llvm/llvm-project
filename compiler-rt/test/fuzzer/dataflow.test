@@ -107,11 +107,13 @@ RUN: rm -rf %t/OUT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
 RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 %t/IN 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
 
-
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
 USE_DATA_FLOW_TRACE: d28cb407e8e1a702c72d25473f0553d3ec172262 => |000001|
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: 6 trace files, 3 functions, 1 traces with focus function
 USE_DATA_FLOW_TRACE: INFO: Focus function is set to 'Func2'
+USE_DATA_FLOW_TRACE: INITED
+USE_DATA_FLOW_TRACE: INFO: 2/6 inputs touch the focus function
+USE_DATA_FLOW_TRACE: INFO: 1/2 inputs have the Data Flow Trace
 
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
 RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input

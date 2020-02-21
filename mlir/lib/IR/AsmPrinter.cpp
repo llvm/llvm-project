@@ -63,6 +63,13 @@ OpAsmPrinter::~OpAsmPrinter() {}
 // OpPrintingFlags
 //===----------------------------------------------------------------------===//
 
+static llvm::cl::opt<int> printElementsAttrWithHexIfLarger(
+    "mlir-print-elementsattrs-with-hex-if-larger",
+    llvm::cl::desc(
+        "Print DenseElementsAttrs with a hex string that have "
+        "more elements than the given upper limit (use -1 to disable)"),
+    llvm::cl::init(100));
+
 static llvm::cl::opt<unsigned> elideElementsAttrIfLarger(
     "mlir-elide-elementsattrs-if-larger",
     llvm::cl::desc("Elide ElementsAttrs with \"...\" that have "
@@ -887,7 +894,10 @@ protected:
                              bool withKeyword = false);
   void printTrailingLocation(Location loc);
   void printLocationInternal(LocationAttr loc, bool pretty = false);
-  void printDenseElementsAttr(DenseElementsAttr attr);
+
+  /// Print a dense elements attribute. If 'allowHex' is true, a hex string is
+  /// used instead of individual elements when the elements attr is large.
+  void printDenseElementsAttr(DenseElementsAttr attr, bool allowHex);
 
   void printDialectAttribute(Attribute attr);
   void printDialectType(Type type);
@@ -1248,12 +1258,14 @@ void ModulePrinter::printAttribute(Attribute attr,
     break;
   case StandardAttributes::Integer: {
     auto intAttr = attr.cast<IntegerAttr>();
-    // Print all integer attributes as signed unless i1.
-    bool isSigned = attrType.isIndex() || attrType.getIntOrFloatBitWidth() != 1;
+    // Print all signed/signless integer attributes as signed unless i1.
+    bool isSigned =
+        attrType.isIndex() || (!attrType.isUnsignedInteger() &&
+                               attrType.getIntOrFloatBitWidth() != 1);
     intAttr.getValue().print(os, isSigned);
 
     // IntegerAttr elides the type if I64.
-    if (typeElision == AttrTypeElision::May && attrType.isInteger(64))
+    if (typeElision == AttrTypeElision::May && attrType.isSignlessInteger(64))
       return;
     break;
   }
@@ -1321,7 +1333,7 @@ void ModulePrinter::printAttribute(Attribute attr,
       break;
     }
     os << "dense<";
-    printDenseElementsAttr(eltsAttr);
+    printDenseElementsAttr(eltsAttr, /*allowHex=*/true);
     os << '>';
     break;
   }
@@ -1333,9 +1345,9 @@ void ModulePrinter::printAttribute(Attribute attr,
       break;
     }
     os << "sparse<";
-    printDenseElementsAttr(elementsAttr.getIndices());
+    printDenseElementsAttr(elementsAttr.getIndices(), /*allowHex=*/false);
     os << ", ";
-    printDenseElementsAttr(elementsAttr.getValues());
+    printDenseElementsAttr(elementsAttr.getValues(), /*allowHex=*/true);
     os << '>';
     break;
   }
@@ -1375,7 +1387,8 @@ static void printDenseFloatElement(DenseElementsAttr attr, raw_ostream &os,
   printFloatValue(value, os);
 }
 
-void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr) {
+void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
+                                           bool allowHex) {
   auto type = attr.getType();
   auto shape = type.getShape();
   auto rank = type.getRank();
@@ -1398,6 +1411,15 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr) {
       os << '[';
     for (int i = 0; i < rank; ++i)
       os << ']';
+    return;
+  }
+
+  // Check to see if we should format this attribute as a hex string.
+  if (allowHex && printElementsAttrWithHexIfLarger != -1 &&
+      numElements > printElementsAttrWithHexIfLarger) {
+    ArrayRef<char> rawData = attr.getRawData();
+    os << '"' << "0x" << llvm::toHex(StringRef(rawData.data(), rawData.size()))
+       << "\"";
     return;
   }
 
@@ -1475,6 +1497,10 @@ void ModulePrinter::printType(Type type) {
 
   case StandardTypes::Integer: {
     auto integer = type.cast<IntegerType>();
+    if (integer.isSigned())
+      os << 's';
+    else if (integer.isUnsigned())
+      os << 'u';
     os << 'i' << integer.getWidth();
     return;
   }

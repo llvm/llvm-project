@@ -82,14 +82,14 @@ entry:
   %asmresult58 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %1, 29
   %asmresult59 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %1, 30
   %asmresult60 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %1, 31
-  %2 = tail call { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } asm "nop", "=q,=q,=q,=q"() #1
-  %asmresult61 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %2, 0
-  %asmresult62 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %2, 1
-  %asmresult63 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %2, 2
-  %asmresult64 = extractvalue { <16 x i32>, <16 x i32>, <16 x i32>, <16 x i32> } %2, 3
-  %3 = tail call <16 x i32> asm "nop", "=q,q,q,q,q"(<16 x i32> %asmresult61, <16 x i32> %asmresult62, <16 x i32> %asmresult63, <16 x i32> %asmresult64) #1
-  tail call void asm sideeffect "nop", "q,q,q"(<16 x i32> %asmresult61, <16 x i32> %asmresult62, <16 x i32> %asmresult63) #2
-  tail call void asm sideeffect "nop", "q,q"(<16 x i32> %asmresult64, <16 x i32> %3) #2
+  %2 = tail call { <64 x i1>, <64 x i1>, <64 x i1>, <64 x i1> } asm "nop", "=q,=q,=q,=q"() #1
+  %asmresult61 = extractvalue { <64 x i1>, <64 x i1>, <64 x i1>, <64 x i1> } %2, 0
+  %asmresult62 = extractvalue { <64 x i1>, <64 x i1>, <64 x i1>, <64 x i1> } %2, 1
+  %asmresult63 = extractvalue { <64 x i1>, <64 x i1>, <64 x i1>, <64 x i1> } %2, 2
+  %asmresult64 = extractvalue { <64 x i1>, <64 x i1>, <64 x i1>, <64 x i1> } %2, 3
+  %3 = tail call <64 x i1> asm "nop", "=q,q,q,q,q"(<64 x i1> %asmresult61, <64 x i1> %asmresult62, <64 x i1> %asmresult63, <64 x i1> %asmresult64) #1
+  tail call void asm sideeffect "nop", "q,q,q"(<64 x i1> %asmresult61, <64 x i1> %asmresult62, <64 x i1> %asmresult63) #2
+  tail call void asm sideeffect "nop", "q,q"(<64 x i1> %asmresult64, <64 x i1> %3) #2
   tail call void asm sideeffect "nop", "v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v"(<16 x i32> %asmresult29, <16 x i32> %asmresult30, <16 x i32> %asmresult31, <16 x i32> %asmresult32, <16 x i32> %asmresult33, <16 x i32> %asmresult34, <16 x i32> %asmresult35, <16 x i32> %asmresult36, <16 x i32> %asmresult37, <16 x i32> %asmresult38, <16 x i32> %asmresult39, <16 x i32> %asmresult40, <16 x i32> %asmresult41, <16 x i32> %asmresult42, <16 x i32> %asmresult43, <16 x i32> %asmresult44, <16 x i32> %asmresult45, <16 x i32> %asmresult46, <16 x i32> %asmresult47, <16 x i32> %asmresult48, <16 x i32> %asmresult49, <16 x i32> %asmresult50, <16 x i32> %asmresult51, <16 x i32> %asmresult52, <16 x i32> %asmresult53, <16 x i32> %asmresult54, <16 x i32> %asmresult55, <16 x i32> %asmresult56, <16 x i32> %asmresult57, <16 x i32> %asmresult58, <16 x i32> %asmresult59, <16 x i32> %asmresult60) #2
   tail call void asm sideeffect "nop", "r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r"(i32 %asmresult, i32 %asmresult1, i32 %asmresult2, i32 %asmresult3, i32 %asmresult4, i32 %asmresult5, i32 %asmresult6, i32 %asmresult7, i32 %asmresult8, i32 %asmresult9, i32 %asmresult10, i32 %asmresult11, i32 %asmresult12, i32 %asmresult13, i32 %asmresult14, i32 %asmresult15, i32 %asmresult16, i32 %asmresult17, i32 %asmresult18, i32 %asmresult19, i32 %asmresult20, i32 %asmresult21, i32 %asmresult22, i32 %asmresult23, i32 %asmresult24, i32 %asmresult25, i32 %asmresult26, i32 %asmresult27, i32 %asmresult28) #2
   ret void

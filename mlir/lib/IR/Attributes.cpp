@@ -182,8 +182,7 @@ FloatAttr FloatAttr::get(Type type, double value) {
 }
 
 FloatAttr FloatAttr::getChecked(Type type, double value, Location loc) {
-  return Base::getChecked(loc, type.getContext(), StandardAttributes::Float,
-                          type, value);
+  return Base::getChecked(loc, StandardAttributes::Float, type, value);
 }
 
 FloatAttr FloatAttr::get(Type type, const APFloat &value) {
@@ -191,8 +190,7 @@ FloatAttr FloatAttr::get(Type type, const APFloat &value) {
 }
 
 FloatAttr FloatAttr::getChecked(Type type, const APFloat &value, Location loc) {
-  return Base::getChecked(loc, type.getContext(), StandardAttributes::Float,
-                          type, value);
+  return Base::getChecked(loc, StandardAttributes::Float, type, value);
 }
 
 APFloat FloatAttr::getValue() const { return getImpl()->getValue(); }
@@ -210,22 +208,18 @@ double FloatAttr::getValueAsDouble(APFloat value) {
 }
 
 /// Verify construction invariants.
-static LogicalResult verifyFloatTypeInvariants(Optional<Location> loc,
-                                               Type type) {
+static LogicalResult verifyFloatTypeInvariants(Location loc, Type type) {
   if (!type.isa<FloatType>())
-    return emitOptionalError(loc, "expected floating point type");
+    return emitError(loc, "expected floating point type");
   return success();
 }
 
-LogicalResult FloatAttr::verifyConstructionInvariants(Optional<Location> loc,
-                                                      MLIRContext *ctx,
-                                                      Type type, double value) {
+LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
+                                                      double value) {
   return verifyFloatTypeInvariants(loc, type);
 }
 
-LogicalResult FloatAttr::verifyConstructionInvariants(Optional<Location> loc,
-                                                      MLIRContext *ctx,
-                                                      Type type,
+LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
                                                       const APFloat &value) {
   // Verify that the type is correct.
   if (failed(verifyFloatTypeInvariants(loc, type)))
@@ -233,7 +227,7 @@ LogicalResult FloatAttr::verifyConstructionInvariants(Optional<Location> loc,
 
   // Verify that the type semantics match that of the value.
   if (&type.cast<FloatType>().getFloatSemantics() != &value.getSemantics()) {
-    return emitOptionalError(
+    return emitError(
         loc, "FloatAttr type doesn't match the type implied by its value");
   }
   return success();
@@ -279,38 +273,49 @@ IntegerAttr IntegerAttr::get(Type type, int64_t value) {
     return get(type, APInt(64, value));
 
   auto intType = type.cast<IntegerType>();
-  return get(type, APInt(intType.getWidth(), value));
+  return get(type, APInt(intType.getWidth(), value, intType.isSignedInteger()));
 }
 
 APInt IntegerAttr::getValue() const { return getImpl()->getValue(); }
 
-int64_t IntegerAttr::getInt() const { return getValue().getSExtValue(); }
-
-static LogicalResult verifyIntegerTypeInvariants(Optional<Location> loc,
-                                                 Type type) {
-  if (type.isa<IntegerType>() || type.isa<IndexType>())
-    return success();
-  return emitOptionalError(loc, "expected integer or index type");
+int64_t IntegerAttr::getInt() const {
+  assert((getImpl()->getType().isIndex() ||
+          getImpl()->getType().isSignlessInteger()) &&
+         "must be signless integer");
+  return getValue().getSExtValue();
 }
 
-LogicalResult IntegerAttr::verifyConstructionInvariants(Optional<Location> loc,
-                                                        MLIRContext *ctx,
-                                                        Type type,
+int64_t IntegerAttr::getSInt() const {
+  assert(getImpl()->getType().isSignedInteger() && "must be signed integer");
+  return getValue().getSExtValue();
+}
+
+uint64_t IntegerAttr::getUInt() const {
+  assert(getImpl()->getType().isUnsignedInteger() &&
+         "must be unsigned integer");
+  return getValue().getZExtValue();
+}
+
+static LogicalResult verifyIntegerTypeInvariants(Location loc, Type type) {
+  if (type.isa<IntegerType>() || type.isa<IndexType>())
+    return success();
+  return emitError(loc, "expected integer or index type");
+}
+
+LogicalResult IntegerAttr::verifyConstructionInvariants(Location loc, Type type,
                                                         int64_t value) {
   return verifyIntegerTypeInvariants(loc, type);
 }
 
-LogicalResult IntegerAttr::verifyConstructionInvariants(Optional<Location> loc,
-                                                        MLIRContext *ctx,
-                                                        Type type,
+LogicalResult IntegerAttr::verifyConstructionInvariants(Location loc, Type type,
                                                         const APInt &value) {
   if (failed(verifyIntegerTypeInvariants(loc, type)))
     return failure();
   if (auto integerType = type.dyn_cast<IntegerType>())
     if (integerType.getWidth() != value.getBitWidth())
-      return emitOptionalError(
-          loc, "integer type bit width (", integerType.getWidth(),
-          ") doesn't match value bit width (", value.getBitWidth(), ")");
+      return emitError(loc, "integer type bit width (")
+             << integerType.getWidth() << ") doesn't match value bit width ("
+             << value.getBitWidth() << ")";
   return success();
 }
 
@@ -337,8 +342,8 @@ OpaqueAttr OpaqueAttr::get(Identifier dialect, StringRef attrData, Type type,
 
 OpaqueAttr OpaqueAttr::getChecked(Identifier dialect, StringRef attrData,
                                   Type type, Location location) {
-  return Base::getChecked(location, type.getContext(),
-                          StandardAttributes::Opaque, dialect, attrData, type);
+  return Base::getChecked(location, StandardAttributes::Opaque, dialect,
+                          attrData, type);
 }
 
 /// Returns the dialect namespace of the opaque attribute.
@@ -350,13 +355,12 @@ Identifier OpaqueAttr::getDialectNamespace() const {
 StringRef OpaqueAttr::getAttrData() const { return getImpl()->attrData; }
 
 /// Verify the construction of an opaque attribute.
-LogicalResult OpaqueAttr::verifyConstructionInvariants(Optional<Location> loc,
-                                                       MLIRContext *context,
+LogicalResult OpaqueAttr::verifyConstructionInvariants(Location loc,
                                                        Identifier dialect,
                                                        StringRef attrData,
                                                        Type type) {
   if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitOptionalError(loc, "invalid dialect namespace '", dialect, "'");
+    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
   return success();
 }
 
@@ -604,7 +608,7 @@ DenseElementsAttr::FloatElementIterator::FloatElementIterator(
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(type.getElementType().isIntOrFloat() &&
+  assert(type.getElementType().isSignlessIntOrFloat() &&
          "expected int or float element type");
   assert(hasSameElementsOrSplat(type, values));
 
@@ -676,9 +680,18 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   return getRaw(type, intValues);
 }
 
-// Constructs a dense elements attribute from an array of raw APInt values.
-// Each APInt value is expected to have the same bitwidth as the element type
-// of 'type'.
+/// Construct a dense elements attribute from a raw buffer representing the
+/// data for this attribute. Users should generally not use this methods as
+/// the expected buffer format may not be a form the user expects.
+DenseElementsAttr DenseElementsAttr::getFromRawBuffer(ShapedType type,
+                                                      ArrayRef<char> rawBuffer,
+                                                      bool isSplatBuffer) {
+  return getRaw(type, rawBuffer, isSplatBuffer);
+}
+
+/// Constructs a dense elements attribute from an array of raw APInt values.
+/// Each APInt value is expected to have the same bitwidth as the element type
+/// of 'type'.
 DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
                                             ArrayRef<APInt> values) {
   assert(hasSameElementsOrSplat(type, values));
@@ -703,19 +716,28 @@ DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
                    data, isSplat);
 }
 
-/// Check the information for a c++ data type, check if this type is valid for
+/// Check the information for a C++ data type, check if this type is valid for
 /// the current attribute. This method is used to verify specific type
 /// invariants that the templatized 'getValues' method cannot.
-static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize,
-                              bool isInt) {
+static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
+                              bool isSigned) {
   // Make sure that the data element size is the same as the type element width.
   if (getDenseElementBitwidth(type.getElementType()) !=
       static_cast<size_t>(dataEltSize * CHAR_BIT))
     return false;
 
-  // Check that the element type is valid.
-  return isInt ? type.getElementType().isa<IntegerType>()
-               : type.getElementType().isa<FloatType>();
+  // Check that the element type is either float or integer.
+  if (!isInt)
+    return type.getElementType().isa<FloatType>();
+
+  auto intType = type.getElementType().dyn_cast<IntegerType>();
+  if (!intType)
+    return false;
+
+  // Make sure signedness semantics is consistent.
+  if (intType.isSignless())
+    return true;
+  return intType.isSigned() ? isSigned : !isSigned;
 }
 
 /// Overload of the 'getRaw' method that asserts that the given type is of
@@ -724,8 +746,9 @@ static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize,
 DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                       ArrayRef<char> data,
                                                       int64_t dataEltSize,
-                                                      bool isInt) {
-  assert(::isValidIntOrFloat(type, dataEltSize, isInt));
+                                                      bool isInt,
+                                                      bool isSigned) {
+  assert(::isValidIntOrFloat(type, dataEltSize, isInt, isSigned));
 
   int64_t numElements = data.size() / dataEltSize;
   assert(numElements == 1 || numElements == type.getNumElements());
@@ -734,14 +757,9 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
 
 /// A method used to verify specific type invariants that the templatized 'get'
 /// method cannot.
-bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize,
-                                          bool isInt) const {
-  return ::isValidIntOrFloat(getType(), dataEltSize, isInt);
-}
-
-/// Return the raw storage data held by this attribute.
-ArrayRef<char> DenseElementsAttr::getRawData() const {
-  return static_cast<ImplType *>(impl)->data;
+bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
+                                          bool isSigned) const {
+  return ::isValidIntOrFloat(getType(), dataEltSize, isInt, isSigned);
 }
 
 /// Returns if this attribute corresponds to a splat, i.e. if all element
@@ -805,6 +823,11 @@ auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
 }
 auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
   return getFloatValues().end();
+}
+
+/// Return the raw storage data held by this attribute.
+ArrayRef<char> DenseElementsAttr::getRawData() const {
+  return static_cast<ImplType *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current

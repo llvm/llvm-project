@@ -231,6 +231,8 @@ struct IRPosition {
   /// Create a position describing the argument of \p ACS at position \p ArgNo.
   static const IRPosition callsite_argument(AbstractCallSite ACS,
                                             unsigned ArgNo) {
+    if (ACS.getNumArgOperands() <= ArgNo)
+      return IRPosition();
     int CSArgNo = ACS.getCallArgOperandNo(ArgNo);
     if (CSArgNo >= 0)
       return IRPosition::callsite_argument(
@@ -409,22 +411,6 @@ struct IRPosition {
                 SmallVectorImpl<Attribute> &Attrs,
                 bool IgnoreSubsumingPositions = false) const;
 
-  /// Return the attribute of kind \p AK existing in the IR at this position.
-  Attribute getAttr(Attribute::AttrKind AK) const {
-    if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
-      return Attribute();
-
-    AttributeList AttrList;
-    if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
-      AttrList = ICS.getAttributes();
-    else
-      AttrList = getAssociatedFunction()->getAttributes();
-
-    if (AttrList.hasAttribute(getAttrIdx(), AK))
-      return AttrList.getAttribute(getAttrIdx(), AK);
-    return Attribute();
-  }
-
   /// Remove the attribute of kind \p AKs existing in the IR at this position.
   void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
     if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
@@ -478,6 +464,10 @@ private:
 
   /// Verify internal invariants.
   void verify();
+
+  /// Return the attributes of kind \p AK existing in the IR as attribute.
+  bool getAttrsFromIRAttr(Attribute::AttrKind AK,
+                          SmallVectorImpl<Attribute> &Attrs) const;
 
 protected:
   /// The value this position is anchored at.
@@ -567,8 +557,10 @@ private:
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()), Explorer(/* ExploreInterBlock */ true), AG(AG),
-        CGSCC(CGSCC) {}
+      : DL(M.getDataLayout()),
+        Explorer(/* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+                 /* ExploreCFGBackward */ true),
+        AG(AG), CGSCC(CGSCC) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -772,6 +764,12 @@ struct Attributor {
 
   /// Return the internal information cache.
   InformationCache &getInfoCache() { return InfoCache; }
+
+  /// Return true if this is a module pass, false otherwise.
+  bool isModulePass() const {
+    return !Functions.empty() &&
+           Functions.size() == Functions.front()->getParent()->size();
+  }
 
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.
