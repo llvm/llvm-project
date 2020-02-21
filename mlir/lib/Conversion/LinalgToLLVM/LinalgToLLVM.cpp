@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
+
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
@@ -32,7 +33,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
-
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
@@ -136,10 +136,10 @@ private:
 };
 
 // RangeOp creates a new range descriptor.
-class RangeOpConversion : public LLVMOpLowering {
+class RangeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit RangeOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(RangeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(RangeOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -164,11 +164,12 @@ public:
 // ReshapeOp creates a new view descriptor of the proper rank.
 // For now, the only conversion supported is for target MemRef with static sizes
 // and strides.
-class ReshapeOpConversion : public LLVMOpLowering {
+class ReshapeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit ReshapeOpConversion(MLIRContext *context,
                                LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(ReshapeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(ReshapeOp::getOperationName(), context,
+                             lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -211,10 +212,10 @@ public:
 ///      the parent view.
 ///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The linalg.slice op is replaced by the alloca'ed pointer.
-class SliceOpConversion : public LLVMOpLowering {
+class SliceOpConversion : public ConvertToLLVMPattern {
 public:
   explicit SliceOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(SliceOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(SliceOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -302,11 +303,12 @@ public:
 ///      and stride. Size and stride are permutations of the original values.
 ///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The linalg.transpose op is replaced by the alloca'ed pointer.
-class TransposeOpConversion : public LLVMOpLowering {
+class TransposeOpConversion : public ConvertToLLVMPattern {
 public:
   explicit TransposeOpConversion(MLIRContext *context,
                                  LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(TransposeOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(TransposeOp::getOperationName(), context,
+                             lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -346,10 +348,10 @@ public:
 };
 
 // YieldOp produces and LLVM::ReturnOp.
-class YieldOpConversion : public LLVMOpLowering {
+class YieldOpConversion : public ConvertToLLVMPattern {
 public:
   explicit YieldOpConversion(MLIRContext *context, LLVMTypeConverter &lowering_)
-      : LLVMOpLowering(YieldOp::getOperationName(), context, lowering_) {}
+      : ConvertToLLVMPattern(YieldOp::getOperationName(), context, lowering_) {}
 
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
