@@ -186,7 +186,7 @@ public:
     auto result{Analyze(x.thing)};
     if (result) {
       *result = Fold(std::move(*result));
-      if (!IsConstantExpr(*result)) {
+      if (!IsConstantExpr(*result)) { //C886,C887
         SayAt(x, "Must be a constant value"_err_en_US);
         ResetExpr(x);
         return std::nullopt;

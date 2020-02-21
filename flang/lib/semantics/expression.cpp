@@ -2471,7 +2471,7 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
     const MaybeExpr &result, TypeCategory category, bool defaultKind) {
   if (result) {
     if (auto type{result->GetType()}) {
-      if (type->category() != category) {
+      if (type->category() != category) { // C885
         Say(at, "Must have %s type, but is %s"_err_en_US,
             ToUpperCase(EnumToString(category)),
             ToUpperCase(type->AsFortran()));
