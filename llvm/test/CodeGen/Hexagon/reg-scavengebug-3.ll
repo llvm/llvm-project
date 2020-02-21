@@ -28,13 +28,13 @@ declare i32 @printf(i8*, ...) #0
 declare void @print_vecpred(i32, i8*) #0
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: nounwind
 declare void @init_vectors() #0
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
@@ -43,7 +43,7 @@ declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 declare void @init_addresses() #0
 
 ; Function Attrs: nounwind
-declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind
 define i32 @main() #0 {
@@ -63,13 +63,13 @@ entry:
   %7 = call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
   %call1381 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str1, i32 0, i32 0), i8* getelementptr inbounds ([43 x i8], [43 x i8]* @.str2, i32 0, i32 0), i8* getelementptr inbounds ([77 x i8], [77 x i8]* @.str251, i32 0, i32 0)) #3
   %8 = call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %9 = call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %8, i32 16843009)
+  %9 = call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %8, i32 16843009)
   call void @print_vector(i32 64, i8* bitcast (<16 x i32>* @VectorResult to i8*))
   %10 = call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %11 = call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %10, i32 16843009)
-  %12 = bitcast <512 x i1> %11 to <16 x i32>
-  %13 = bitcast <16 x i32> %12 to <512 x i1>
-  %14 = call <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1> %13, <16 x i32> undef, <16 x i32> undef)
+  %11 = call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %10, i32 16843009)
+  %12 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %11, i32 -1)
+  %13 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %12, i32 -1)
+  %14 = call <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1> %13, <16 x i32> undef, <16 x i32> undef)
   store <16 x i32> %14, <16 x i32>* @VectorResult, align 64
   ret i32 0
 }
