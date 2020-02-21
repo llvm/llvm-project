@@ -411,22 +411,6 @@ struct IRPosition {
                 SmallVectorImpl<Attribute> &Attrs,
                 bool IgnoreSubsumingPositions = false) const;
 
-  /// Return the attribute of kind \p AK existing in the IR at this position.
-  Attribute getAttr(Attribute::AttrKind AK) const {
-    if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
-      return Attribute();
-
-    AttributeList AttrList;
-    if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
-      AttrList = ICS.getAttributes();
-    else
-      AttrList = getAssociatedFunction()->getAttributes();
-
-    if (AttrList.hasAttribute(getAttrIdx(), AK))
-      return AttrList.getAttribute(getAttrIdx(), AK);
-    return Attribute();
-  }
-
   /// Remove the attribute of kind \p AKs existing in the IR at this position.
   void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
     if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
@@ -480,6 +464,10 @@ private:
 
   /// Verify internal invariants.
   void verify();
+
+  /// Return the attributes of kind \p AK existing in the IR as attribute.
+  bool getAttrsFromIRAttr(Attribute::AttrKind AK,
+                          SmallVectorImpl<Attribute> &Attrs) const;
 
 protected:
   /// The value this position is anchored at.
