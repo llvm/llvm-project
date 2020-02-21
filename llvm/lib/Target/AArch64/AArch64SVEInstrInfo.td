@@ -239,19 +239,32 @@ let Predicates = [HasSVE] in {
   defm FMAX_ZPmI    : sve_fp_2op_i_p_zds<0b110, "fmax", sve_fpimm_zero_one>;
   defm FMIN_ZPmI    : sve_fp_2op_i_p_zds<0b111, "fmin", sve_fpimm_zero_one>;
 
-  defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd",   int_aarch64_sve_fadd>;
-  defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub",   int_aarch64_sve_fsub>;
-  defm FMUL_ZPmZ   : sve_fp_2op_p_zds<0b0010, "fmul",   int_aarch64_sve_fmul>;
-  defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr",  int_aarch64_sve_fsubr>;
-  defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm", int_aarch64_sve_fmaxnm>;
-  defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm", int_aarch64_sve_fminnm>;
-  defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax",   int_aarch64_sve_fmax>;
-  defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin",   int_aarch64_sve_fmin>;
-  defm FABD_ZPmZ   : sve_fp_2op_p_zds<0b1000, "fabd",   int_aarch64_sve_fabd>;
+  defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd", "FADD_ZPZZ", int_aarch64_sve_fadd, DestructiveBinaryComm>;
+  defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub", "FSUB_ZPZZ", int_aarch64_sve_fsub, DestructiveBinaryCommWithRev, "FSUBR_ZPmZ", 1>;
+  defm FMUL_ZPmZ   : sve_fp_2op_p_zds<0b0010, "fmul", "FMUL_ZPZZ", int_aarch64_sve_fmul, DestructiveBinaryComm>;
+  defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr", "FSUBR_ZPZZ", int_aarch64_sve_fsubr, DestructiveBinaryCommWithRev, "FSUB_ZPmZ", 0>;
+  defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm", "FMAXNM_ZPZZ", int_aarch64_sve_fmaxnm, DestructiveBinaryComm>;
+  defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm", "FMINNM_ZPZZ", int_aarch64_sve_fminnm, DestructiveBinaryComm>;
+  defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax", "FMAX_ZPZZ", int_aarch64_sve_fmax, DestructiveBinaryComm>;
+  defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin", "FMIN_ZPZZ", int_aarch64_sve_fmin, DestructiveBinaryComm>;
+  defm FABD_ZPmZ   : sve_fp_2op_p_zds<0b1000, "fabd", "FABD_ZPZZ", int_aarch64_sve_fabd, DestructiveBinaryComm>;
   defm FSCALE_ZPmZ : sve_fp_2op_p_zds_fscale<0b1001, "fscale", int_aarch64_sve_fscale>;
-  defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx",  int_aarch64_sve_fmulx>;
-  defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr",  int_aarch64_sve_fdivr>;
-  defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv",   int_aarch64_sve_fdiv>;
+  defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx", "FMULX_ZPZZ", int_aarch64_sve_fmulx, DestructiveBinaryComm>;
+  defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr", "FDIVR_ZPZZ", int_aarch64_sve_fdivr, DestructiveBinaryCommWithRev, "FDIV_ZPmZ", 0>;
+  defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv", "FDIV_ZPZZ", int_aarch64_sve_fdiv, DestructiveBinaryCommWithRev, "FDIVR_ZPmZ", 1>;
+
+  defm FADD_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fadd>;
+  defm FSUB_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fsub>;
+  defm FMUL_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmul>;
+  defm FSUBR_ZPZZ  : sve_fp_2op_p_zds_zx<int_aarch64_sve_fsubr>;
+  defm FMAXNM_ZPZZ : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmaxnm>;
+  defm FMINNM_ZPZZ : sve_fp_2op_p_zds_zx<int_aarch64_sve_fminnm>;
+  defm FMAX_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmax>;
+  defm FMIN_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmin>;
+  defm FABD_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fabd>;
+  defm FMULX_ZPZZ  : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmulx>;
+  defm FDIVR_ZPZZ  : sve_fp_2op_p_zds_zx<int_aarch64_sve_fdivr>;
+  defm FDIV_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fdiv>;
 
   defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd",    fadd>;
   defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub",    fsub>;
