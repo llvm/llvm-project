@@ -276,6 +276,10 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // constrained classes first. The value has to be in the range [0,63].
   int AllocationPriority = 0;
 
+  // Generate register pressure set for this register class and any class
+  // synthesized from it. Set to 0 to inhibit unneeded pressure sets.
+  bit GeneratePressureSet = 1;
+
   // Weight override for register pressure calculation. This is the value
   // TargetRegisterClass::getRegClassWeight() will return. The weight is in
   // units of pressure for this register class. If unset tablegen will
