@@ -232,7 +232,7 @@ public:
 
   // Support operand type iteration.
   using operand_type_iterator = operand_range::type_iterator;
-  using operand_type_range = iterator_range<operand_type_iterator>;
+  using operand_type_range = operand_range::type_range;
   operand_type_iterator operand_type_begin() { return operand_begin(); }
   operand_type_iterator operand_type_end() { return operand_end(); }
   operand_type_range getOperandTypes() { return getOperands().getTypes(); }
@@ -260,7 +260,7 @@ public:
 
   /// Support result type iteration.
   using result_type_iterator = result_range::type_iterator;
-  using result_type_range = ArrayRef<Type>;
+  using result_type_range = result_range::type_range;
   result_type_iterator result_type_begin() { return getResultTypes().begin(); }
   result_type_iterator result_type_end() { return getResultTypes().end(); }
   result_type_range getResultTypes();
