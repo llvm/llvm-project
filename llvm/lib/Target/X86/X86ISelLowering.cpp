@@ -22583,7 +22583,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     SDValue Cmp = Cond.getOperand(1);
     bool IllegalFPCMov = false;
     if (VT.isFloatingPoint() && !VT.isVector() &&
-        !isScalarFPTypeInSSEReg(VT))  // FPStack?
+        !isScalarFPTypeInSSEReg(VT) && Subtarget.hasCMov())  // FPStack?
       IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
@@ -39253,7 +39253,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     if (!(FalseOp.getValueType() == MVT::f80 ||
           (FalseOp.getValueType() == MVT::f64 && !Subtarget.hasSSE2()) ||
           (FalseOp.getValueType() == MVT::f32 && !Subtarget.hasSSE1())) ||
-        hasFPCMov(CC)) {
+        !Subtarget.hasCMov() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
       return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
