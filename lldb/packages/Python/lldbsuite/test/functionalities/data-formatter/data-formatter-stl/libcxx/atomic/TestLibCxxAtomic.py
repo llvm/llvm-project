@@ -42,8 +42,19 @@ class LibCxxAtomicTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        s = self.get_variable('s')
-        i = self.get_variable('i')
+        s_atomic = self.get_variable('s')
+        i_atomic = self.get_variable('i')
+
+        if self.TraceOn():
+            print(s_atomic)
+        if self.TraceOn():
+            print(i_atomic)
+
+        # Extract the content of the std::atomic wrappers.
+        self.assertEqual(s_atomic.GetNumChildren(), 1)
+        s = s_atomic.GetChildAtIndex(0)
+        self.assertEqual(i_atomic.GetNumChildren(), 1)
+        i = i_atomic.GetChildAtIndex(0)
 
         if self.TraceOn():
             print(s)
@@ -58,3 +69,9 @@ class LibCxxAtomicTestCase(TestBase):
         self.assertTrue(
             s.GetChildAtIndex(1).GetValueAsUnsigned(0) == 2,
             "s.y == 2")
+
+        # Try printing the child that points to its own parent object.
+        # This should just treat the atomic pointer as a normal pointer.
+        self.expect("frame var p.child", substrs=["Value = 0x"])
+        self.expect("frame var p", substrs=["parent = {", "Value = 0x", "}"])
+        self.expect("frame var p.child.parent", substrs=["p.child.parent = {\n  Value = 0x"])
