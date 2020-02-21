@@ -492,7 +492,6 @@ set(armv7m_SOURCES ${arm_SOURCES})
 set(armv7em_SOURCES ${arm_SOURCES})
 
 # hexagon arch
-set(hexagon_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(hexagon_SOURCES
   hexagon/common_entry_exit_abi1.S
   hexagon/common_entry_exit_abi2.S
@@ -524,6 +523,8 @@ set(hexagon_SOURCES
   hexagon/udivsi3.S
   hexagon/umoddi3.S
   hexagon/umodsi3.S
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
 )
 
 
