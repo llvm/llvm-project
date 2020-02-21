@@ -378,7 +378,11 @@ foreach RType = [Float, Double, Half, Char, UChar, Short,
                  UShort, Int, UInt, Long, ULong] in {
   foreach IType = [Float, Double, Half, Char, UChar, Short,
                    UShort, Int, UInt, Long, ULong] in {
-    foreach sat = ["", "_sat"] in {
+    // Conversions to integer type have a sat and non-sat variant.
+    foreach sat = !cond(!eq(RType.Name, "float") : [""],
+                        !eq(RType.Name, "double") : [""],
+                        !eq(RType.Name, "half") : [""],
+                        1 : ["", "_sat"]) in {
       foreach rnd = ["", "_rte", "_rtn", "_rtp", "_rtz"] in {
         def : Builtin<"convert_" # RType.Name # sat # rnd, [RType, IType],
                       Attr.Const>;
