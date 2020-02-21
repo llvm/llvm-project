@@ -18,6 +18,8 @@
 
 #define DEBUG_TYPE "clang-tidy"
 
+// FixItHint
+
 using namespace clang::ast_matchers;
 
 namespace clang {
