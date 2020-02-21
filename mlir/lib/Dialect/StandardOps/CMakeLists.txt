@@ -1,6 +1,5 @@
-file(GLOB globbed *.c *.cpp)
 add_llvm_library(MLIRStandardOps
-  ${globbed}
+  IR/Ops.cpp
   EDSC/Builders.cpp
   EDSC/Intrinsics.cpp
 
