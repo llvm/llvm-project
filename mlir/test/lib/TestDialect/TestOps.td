@@ -1089,6 +1089,12 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+// Test that we elide attributes that are within the syntax.
+def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
+  let arguments = (ins I64Attr:$attr);
+  let assemblyFormat = "attr-dict-with-keyword";
+}
+
 // Test that we don't need to provide types in the format if they are buildable.
 def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
   let arguments = (ins I64:$buildable);
