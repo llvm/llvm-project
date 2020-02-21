@@ -9798,38 +9798,42 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
   unsigned Offset = N->getOpcode() - AMDGPUISD::CVT_F32_UBYTE0;
 
   SDValue Src = N->getOperand(0);
-  SDValue Srl = N->getOperand(0);
-  if (Srl.getOpcode() == ISD::ZERO_EXTEND)
-    Srl = Srl.getOperand(0);
+  SDValue Shift = N->getOperand(0);
+  if (Shift.getOpcode() == ISD::ZERO_EXTEND)
+    Shift = Shift.getOperand(0);
 
-  // TODO: Handle (or x, (srl y, 8)) pattern when known bits are zero.
-  if (Srl.getOpcode() == ISD::SRL) {
+  if (Shift.getOpcode() == ISD::SRL || Shift.getOpcode() == ISD::SHL) {
+    // cvt_f32_ubyte1 (shl x,  8) -> cvt_f32_ubyte0 x
+    // cvt_f32_ubyte3 (shl x, 16) -> cvt_f32_ubyte1 x
     // cvt_f32_ubyte0 (srl x, 16) -> cvt_f32_ubyte2 x
     // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
-    // cvt_f32_ubyte0 (srl x, 8) -> cvt_f32_ubyte1 x
+    // cvt_f32_ubyte0 (srl x,  8) -> cvt_f32_ubyte1 x
+    if (auto *C = dyn_cast<ConstantSDNode>(Shift.getOperand(1))) {
+      Shift = DAG.getZExtOrTrunc(Shift.getOperand(0),
+                                 SDLoc(Shift.getOperand(0)), MVT::i32);
 
-    if (const ConstantSDNode *C =
-        dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
-      Srl = DAG.getZExtOrTrunc(Srl.getOperand(0), SDLoc(Srl.getOperand(0)),
-                               EVT(MVT::i32));
+      unsigned ShiftOffset = 8 * Offset;
+      if (Shift.getOpcode() == ISD::SHL)
+        ShiftOffset -= C->getZExtValue();
+      else
+        ShiftOffset += C->getZExtValue();
 
-      unsigned SrcOffset = C->getZExtValue() + 8 * Offset;
-      if (SrcOffset < 32 && SrcOffset % 8 == 0) {
-        return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + SrcOffset / 8, SL,
-                           MVT::f32, Srl);
+      if (ShiftOffset < 32 && (ShiftOffset % 8) == 0) {
+        return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + ShiftOffset / 8, SL,
+                           MVT::f32, Shift);
       }
     }
   }
 
-  APInt Demanded = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
-
-  KnownBits Known;
-  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                        !DCI.isBeforeLegalizeOps());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.SimplifyDemandedBits(Src, Demanded, Known, TLO)) {
-    DCI.CommitTargetLoweringOpt(TLO);
-  }
+  APInt DemandedBits = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
+  if (TLI.SimplifyDemandedBits(Src, DemandedBits, DCI))
+    return SDValue(N, 0);
+
+  // Handle (or x, (srl y, 8)) pattern when known bits are zero.
+  if (SDValue DemandedSrc =
+          TLI.SimplifyMultipleUseDemandedBits(Src, DemandedBits, DAG))
+    return DAG.getNode(N->getOpcode(), SL, MVT::f32, DemandedSrc);
 
   return SDValue();
 }
