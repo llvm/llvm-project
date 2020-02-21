@@ -39250,7 +39250,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
   // Try to simplify the EFLAGS and condition code operands.
   // We can't always do this as FCMOV only supports a subset of X86 cond.
   if (SDValue Flags = combineSetCCEFLAGS(Cond, CC, DAG, Subtarget)) {
-    if (FalseOp.getValueType() != MVT::f80 || hasFPCMov(CC)) {
+    if (!(FalseOp.getValueType() == MVT::f80 ||
+          (FalseOp.getValueType() == MVT::f64 && !Subtarget.hasSSE2()) ||
+          (FalseOp.getValueType() == MVT::f32 && !Subtarget.hasSSE1())) ||
+        hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
       return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);

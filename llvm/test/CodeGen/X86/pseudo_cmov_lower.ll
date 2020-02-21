@@ -66,8 +66,8 @@ entry:
 ; This test checks that only a single js gets generated in the final code
 ; for lowering the CMOV pseudos that get created for this IR.
 ; CHECK-LABEL: foo4:
-; CHECK: js
-; CHECK-NOT: js
+; CHECK: jne
+; CHECK-NOT: jne
 define float @foo4(i32 %v1, float %v2, float %v3, float %v4) nounwind {
 entry:
   %cmp = icmp slt i32 %v1, 0
