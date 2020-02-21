@@ -68,6 +68,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-aranges";
   case eSectionTypeDWARFDebugCuIndex:
     return "dwarf-cu-index";
+  case eSectionTypeDWARFDebugTuIndex:
+    return "dwarf-tu-index";
   case eSectionTypeDWARFDebugFrame:
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:
