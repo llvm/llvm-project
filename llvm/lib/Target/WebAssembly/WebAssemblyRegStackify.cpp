@@ -135,12 +135,12 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
 // Determine whether a call to the callee referenced by
 // MI->getOperand(CalleeOpNo) reads memory, writes memory, and/or has side
 // effects.
-static void queryCallee(const MachineInstr &MI, unsigned CalleeOpNo, bool &Read,
-                        bool &Write, bool &Effects, bool &StackPointer) {
+static void queryCallee(const MachineInstr &MI, bool &Read, bool &Write,
+                        bool &Effects, bool &StackPointer) {
   // All calls can use the stack pointer.
   StackPointer = true;
 
-  const MachineOperand &MO = MI.getOperand(CalleeOpNo);
+  const MachineOperand &MO = WebAssembly::getCalleeOp(MI);
   if (MO.isGlobal()) {
     const Constant *GV = MO.getGlobal();
     if (const auto *GA = dyn_cast<GlobalAlias>(GV))
@@ -252,8 +252,7 @@ static void query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
 
   // Analyze calls.
   if (MI.isCall()) {
-    unsigned CalleeOpNo = WebAssembly::getCalleeOpNo(MI.getOpcode());
-    queryCallee(MI, CalleeOpNo, Read, Write, Effects, StackPointer);
+    queryCallee(MI, Read, Write, Effects, StackPointer);
   }
 }
 

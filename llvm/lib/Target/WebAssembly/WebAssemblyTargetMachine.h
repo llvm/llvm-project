@@ -47,7 +47,7 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
-  bool usesPhysRegsForPEI() const override { return false; }
+  bool usesPhysRegsForValues() const override { return false; }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *
