@@ -393,7 +393,7 @@ void OpEmitter::genAttrSetters() {
     auto &method = opClass.newMethod("void", (name + "Attr").str(),
                                      (attr.getStorageType() + " attr").str());
     auto &body = method.body();
-    body << "  this->setAttr(\"" << name << "\", attr);";
+    body << "  this->getOperation()->setAttr(\"" << name << "\", attr);";
   };
 
   for (auto &namedAttr : op.getAttributes()) {
