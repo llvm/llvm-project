@@ -69,6 +69,9 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
     if (!elementSize) {
       return llvm::None;
     }
+    if (memRefType.getRank() == 0) {
+      return elementSize;
+    }
     auto dims = memRefType.getShape();
     if (llvm::is_contained(dims, ShapedType::kDynamicSize) ||
         offset == MemRefType::getDynamicStrideOrOffset() ||
@@ -325,8 +328,12 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
   }
   SmallVector<Value, 2> linearizedIndices;
   // Add a '0' at the start to index into the struct.
-  linearizedIndices.push_back(builder.create<spirv::ConstantOp>(
-      loc, indexType, IntegerAttr::get(indexType, 0)));
+  auto zero = spirv::ConstantOp::getZero(indexType, loc, &builder);
+  linearizedIndices.push_back(zero);
+  // If it is a zero-rank memref type, extract the element directly.
+  if (!ptrLoc) {
+    ptrLoc = zero;
+  }
   linearizedIndices.push_back(ptrLoc);
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }

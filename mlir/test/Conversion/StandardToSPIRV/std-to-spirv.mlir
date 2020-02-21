@@ -312,3 +312,41 @@ func @sitofp(%arg0 : i32) {
 func @memref_type(%arg0: memref<3xi1>) {
   return
 }
+
+// CHECK-LABEL: @load_store_zero_rank_float
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>)
+func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
+  //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
+  //      CHECK: spv.AccessChain [[ARG0]][
+  // CHECK-SAME: [[ZERO1]], [[ZERO1]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Load "StorageBuffer" %{{.*}} : f32
+  %0 = load %arg0[] : memref<f32>
+  //      CHECK: [[ZERO2:%.*]] = spv.constant 0 : i32
+  //      CHECK: spv.AccessChain [[ARG1]][
+  // CHECK-SAME: [[ZERO2]], [[ZERO2]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Store "StorageBuffer" %{{.*}} : f32
+  store %0, %arg1[] : memref<f32>
+  return
+}
+
+// CHECK-LABEL: @load_store_zero_rank_int
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32 [4]> [0]>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32 [4]> [0]>, StorageBuffer>)
+func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
+  //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
+  //      CHECK: spv.AccessChain [[ARG0]][
+  // CHECK-SAME: [[ZERO1]], [[ZERO1]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Load "StorageBuffer" %{{.*}} : i32
+  %0 = load %arg0[] : memref<i32>
+  //      CHECK: [[ZERO2:%.*]] = spv.constant 0 : i32
+  //      CHECK: spv.AccessChain [[ARG1]][
+  // CHECK-SAME: [[ZERO2]], [[ZERO2]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Store "StorageBuffer" %{{.*}} : i32
+  store %0, %arg1[] : memref<i32>
+  return
+}
