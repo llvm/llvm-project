@@ -131,9 +131,8 @@ set(ERROR_TESTS
   deallocate05.f90
   coarrays01.f90
   altreturn01.f90
-# Issue 407
-#  altreturn02.f90
-#  altreturn03.f90
+  altreturn02.f90
+  altreturn03.f90
   altreturn04.f90
   altreturn05.f90
   allocate01.f90
