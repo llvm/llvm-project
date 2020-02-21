@@ -818,12 +818,10 @@ constexpr auto constantSubobject{constant(indirect(designator))};
 
 // R844 data-stmt-repeat -> scalar-int-constant | scalar-int-constant-subobject
 // R607 int-constant -> constant
-// Factored into:
-//   constant -> literal-constant -> int-literal-constant   and
-//   constant -> named-constant
+// Factored into: constant -> literal-constant -> int-literal-constant
+// The named-constant alternative of constant is subsumed by constant-subobject
 TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
-    construct<DataStmtRepeat>(scalar(integer(constantSubobject))) ||
-    construct<DataStmtRepeat>(scalar(integer(namedConstant))))
+    construct<DataStmtRepeat>(scalar(integer(constantSubobject))))
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -833,8 +831,8 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 // references into constant subobjects.
 TYPE_PARSER(first(construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
     construct<DataStmtConstant>(nullInit),
+    construct<DataStmtConstant>(scalar(constantSubobject)) / !"("_tok,
     construct<DataStmtConstant>(Parser<StructureConstructor>{}),
-    construct<DataStmtConstant>(scalar(constantSubobject)),
     construct<DataStmtConstant>(signedRealLiteralConstant),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(

@@ -1412,9 +1412,7 @@ struct DataStmtConstant {
 // (only literal-constant -> int-literal-constant applies)
 struct DataStmtRepeat {
   UNION_CLASS_BOILERPLATE(DataStmtRepeat);
-  std::variant<IntLiteralConstant, Scalar<Integer<NamedConstant>>,
-      Scalar<Integer<ConstantSubobject>>>
-      u;
+  std::variant<IntLiteralConstant, Scalar<Integer<ConstantSubobject>>> u;
 };
 
 // R843 data-stmt-value -> [data-stmt-repeat *] data-stmt-constant
