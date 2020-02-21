@@ -262,7 +262,7 @@ public:
 
         lldb::offset_t offset;
 
-        ptr = extractor.GetPointer(&offset);
+        ptr = extractor.GetAddress(&offset);
 
         dump_stream.PutChar('\n');
       }
