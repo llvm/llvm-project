@@ -6,12 +6,6 @@
 # CHECK: Hex dump of section '.text':
 # CHECK-NEXT: 01020304
 
-## --shuffle-sections= shuffles input sections.
-# RUN: ld.lld --shuffle-sections=1 %t.o -o %t1.out
-# RUN: llvm-readelf -x .text %t1.out | FileCheck %s --check-prefix=SHUFFLE1
-# SHUFFLE1: Hex dump of section '.text':
-# SHUFFLE1-NEXT: 01020403
-
 ## Test that --shuffle-sections= can be used with --symbol-ordering-file
 # RUN: echo "foo" > %t_order.txt
 # RUN: echo "_start " >> %t_order.txt
