@@ -48,6 +48,7 @@ def MipsFPBrcond : SDNode<"MipsISD::FPBrcond", SDT_MipsFPBrcond,
                           [SDNPHasChain, SDNPOptInGlue]>;
 def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
+def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64>;
 def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
                                    SDT_MipsExtractElementF64>;
 

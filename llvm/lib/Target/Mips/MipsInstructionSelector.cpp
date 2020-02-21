@@ -472,6 +472,36 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .add(I.getOperand(3));
     break;
   }
+  case G_UNMERGE_VALUES: {
+    if (I.getNumOperands() != 3)
+      return false;
+    Register Src = I.getOperand(2).getReg();
+    Register Lo = I.getOperand(0).getReg();
+    Register Hi = I.getOperand(1).getReg();
+    if (!isRegInFprb(Src, MRI) ||
+        !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
+      return false;
+
+    unsigned Opcode =
+        STI.isFP64bit() ? Mips::ExtractElementF64_64 : Mips::ExtractElementF64;
+
+    MachineInstr *ExtractLo = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                                  .addDef(Lo)
+                                  .addUse(Src)
+                                  .addImm(0);
+    if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
+      return false;
+
+    MachineInstr *ExtractHi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                                  .addDef(Hi)
+                                  .addUse(Src)
+                                  .addImm(1);
+    if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_IMPLICIT_DEF: {
     Register Dst = I.getOperand(0).getReg();
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))

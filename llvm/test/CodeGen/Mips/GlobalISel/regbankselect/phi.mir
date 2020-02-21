@@ -283,11 +283,11 @@ body:             |
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
   ; MIPS32:   [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-  ; MIPS32:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
-  ; MIPS32:   [[MTC1_1:%[0-9]+]]:fgr32(s32) = MTC1 $a2
+  ; MIPS32:   [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+  ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
-  ; MIPS32:   [[COPY1:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
-  ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY1]], [[C]]
+  ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
+  ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
   ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
   ; MIPS32:   G_BR %bb.2
   ; MIPS32: bb.1.cond.true:
@@ -296,15 +296,15 @@ body:             |
   ; MIPS32: bb.2.cond.false:
   ; MIPS32:   successors: %bb.3(0x80000000)
   ; MIPS32: bb.3.cond.end:
-  ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s32) = G_PHI [[MTC1_]](s32), %bb.1, [[MTC1_1]](s32), %bb.2
+  ; MIPS32:   [[PHI:%[0-9]+]]:gprb(s32) = G_PHI [[COPY1]](s32), %bb.1, [[COPY2]](s32), %bb.2
   ; MIPS32:   $f0 = COPY [[PHI]](s32)
   ; MIPS32:   RetRA implicit $f0
   bb.1.entry:
     liveins: $a0, $a1, $a2
 
     %3:_(s32) = COPY $a0
-    %1:fgr32(s32) = MTC1 $a1
-    %2:fgr32(s32) = MTC1 $a2
+    %1:_(s32) = COPY $a1
+    %2:_(s32) = COPY $a2
     %6:_(s32) = G_CONSTANT i32 1
     %7:_(s32) = COPY %3(s32)
     %5:_(s32) = G_AND %7, %6
