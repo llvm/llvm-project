@@ -865,8 +865,7 @@ MachineFunction::CallSiteInfoMap::iterator
 MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForCallSiteEntry() &&
          "Call site info refers only to call (MI) candidates");
-
-  if (!Target.Options.EnableDebugEntryValues)
+  if (!Target.Options.ShouldEmitDebugEntryValues())
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
