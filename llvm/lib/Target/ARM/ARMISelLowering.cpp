@@ -14024,9 +14024,6 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   //   VMLAV u/s 8/16/32
   //   VADDLV u/s 32
   //   VMLALV u/s 16/32
-  // TODOD:
-  //   VMLSV
-  //   VMLSLV
 
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {
     if (ResVT != RetTy || N0->getOpcode() != ExtendCode)
@@ -14036,7 +14033,8 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return A;
     return SDValue();
   };
-  auto IsVMLAV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes, SDValue &A, SDValue &B) {
+  auto IsVMLAV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes,
+                     SDValue &A, SDValue &B) {
     if (ResVT != RetTy || N0->getOpcode() != ISD::MUL)
       return false;
     SDValue ExtA = N0->getOperand(0);
@@ -14052,7 +14050,8 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   };
   auto Create64bitNode = [&](unsigned Opcode, ArrayRef<SDValue> Ops) {
     SDValue Node = DAG.getNode(Opcode, dl, {MVT::i32, MVT::i32}, Ops);
-    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Node, SDValue(Node.getNode(), 1));
+    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Node,
+                       SDValue(Node.getNode(), 1));
   };
 
   if (SDValue A = IsVADDV(MVT::i32, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v16i8}))
