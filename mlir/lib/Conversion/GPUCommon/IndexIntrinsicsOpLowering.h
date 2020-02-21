@@ -51,7 +51,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto dialect = lowering.getDialect();
+    auto dialect = typeConverter.getDialect();
     Value newOp;
     switch (dimensionToIndex(cast<Op>(op))) {
     case X:
