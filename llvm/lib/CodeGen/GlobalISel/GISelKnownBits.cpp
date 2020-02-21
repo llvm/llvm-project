@@ -69,7 +69,10 @@ KnownBits GISelKnownBits::getKnownBits(Register R) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isVector() ? APInt::getAllOnesValue(Ty.getNumElements()) : APInt(1, 1);
+  // For now, we only maintain the cache during one request.
+  assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
   computeKnownBitsImpl(R, Known, DemandedElts);
+  ComputeKnownBitsCache.clear();
   return Known;
 }
 
@@ -84,6 +87,17 @@ APInt GISelKnownBits::getKnownZeroes(Register R) {
 }
 
 APInt GISelKnownBits::getKnownOnes(Register R) { return getKnownBits(R).One; }
+
+static void dumpResult(const MachineInstr &MI, const KnownBits &Known,
+                       unsigned Depth) {
+  dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
+         << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"
+         << (Known.Zero | Known.One).toString(16, false) << "\n"
+         << "[" << Depth << "] Zero: 0x" << Known.Zero.toString(16, false)
+         << "\n"
+         << "[" << Depth << "] One:  0x" << Known.One.toString(16, false)
+         << "\n";
+}
 
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                           const APInt &DemandedElts,
@@ -102,6 +116,14 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   unsigned BitWidth = DstTy.getSizeInBits();
+  auto CacheEntry = ComputeKnownBitsCache.find(R);
+  if (CacheEntry != ComputeKnownBitsCache.end()) {
+    Known = CacheEntry->second;
+    LLVM_DEBUG(dbgs() << "Cache hit at ");
+    LLVM_DEBUG(dumpResult(MI, Known, Depth));
+    assert(Known.getBitWidth() == BitWidth && "Cache entry size doesn't match");
+    return;
+  }
   Known = KnownBits(BitWidth); // Don't know anything
 
   if (DstTy.isVector())
@@ -137,6 +159,14 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // point of the pipeline, otherwise the main live-range will be
     // defined more than once, which is against SSA.
     assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
+    // Record in the cache that we know nothing for MI.
+    // This will get updated later and in the meantime, if we reach that
+    // phi again, because of a loop, we will cut the search thanks to this
+    // cache entry. When this happens this cache entry is actually accurate,
+    // thus we are not losing anything by doing that, because right now,
+    // the main analysis will reach the maximum depth without being able
+    // to fully analyze the phi.
+    ComputeKnownBitsCache[R] = KnownBits(BitWidth);
     // PHI's operand are a mix of registers and basic blocks interleaved.
     // We only care about the register ones.
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
@@ -374,14 +404,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-  LLVM_DEBUG(dbgs() << "[" << Depth << "] Compute known bits: " << MI << "["
-                    << Depth << "] Computed for: " << MI << "[" << Depth
-                    << "] Known: 0x"
-                    << (Known.Zero | Known.One).toString(16, false) << "\n"
-                    << "[" << Depth << "] Zero: 0x"
-                    << Known.Zero.toString(16, false) << "\n"
-                    << "[" << Depth << "] One:  0x"
-                    << Known.One.toString(16, false) << "\n");
+  LLVM_DEBUG(dumpResult(MI, Known, Depth));
+
+  // Update the cache.
+  ComputeKnownBitsCache[R] = Known;
 }
 
 unsigned GISelKnownBits::computeNumSignBits(Register R,
