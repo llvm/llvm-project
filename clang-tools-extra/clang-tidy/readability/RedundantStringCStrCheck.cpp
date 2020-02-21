@@ -61,6 +61,55 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
   return (llvm::Twine("*") + Text).str();
 }
 
+// Trying to get CallExpr in which CxxConstructExpr is called.
+static const clang::CallExpr *
+tryGetCallExprAncestorForCxxConstructExpr(const Expr *TheExpr,
+                                          ASTContext &Context) {
+  // We skip nodes such as CXXBindTemporaryExpr, MaterializeTemporaryExpr.
+  for (ast_type_traits::DynTypedNode DynParent : Context.getParents(*TheExpr)) {
+    if (const auto *Parent = DynParent.get<Expr>()) {
+      if (const auto *TheCallExpr = dyn_cast<CallExpr>(Parent))
+        return TheCallExpr;
+
+      if (const clang::CallExpr *TheCallExpr =
+              tryGetCallExprAncestorForCxxConstructExpr(Parent, Context))
+        return TheCallExpr;
+    }
+  }
+
+  return nullptr;
+}
+
+// Check that ParamDecl of CallExprDecl has rvalue type.
+static bool checkParamDeclOfAncestorCallExprHasRValueRefType(
+    const Expr *TheCxxConstructExpr, ASTContext &Context) {
+  if (const clang::CallExpr *TheCallExpr =
+          tryGetCallExprAncestorForCxxConstructExpr(TheCxxConstructExpr,
+                                                    Context)) {
+    for (int i = 0; i < TheCallExpr->getNumArgs(); ++i) {
+      const Expr *Arg = TheCallExpr->getArg(i);
+      if (Arg->getSourceRange() == TheCxxConstructExpr->getSourceRange()) {
+        if (const auto *TheCallExprFuncProto =
+                TheCallExpr->getCallee()
+                    ->getType()
+                    ->getPointeeType()
+                    ->getAs<FunctionProtoType>()) {
+          if (TheCallExprFuncProto->getParamType(i)->isRValueReferenceType())
+            return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+AST_MATCHER(CXXConstructExpr,
+            matchedParamDeclOfAncestorCallExprHasRValueRefType) {
+  return checkParamDeclOfAncestorCallExprHasRValueRefType(
+      &Node, Finder->getASTContext());
+}
+
 } // end namespace
 
 void RedundantStringCStrCheck::registerMatchers(
@@ -95,9 +144,13 @@ void RedundantStringCStrCheck::registerMatchers(
           .bind("call");
 
   // Detect redundant 'c_str()' calls through a string constructor.
-  Finder->addMatcher(cxxConstructExpr(StringConstructorExpr,
-                                      hasArgument(0, StringCStrCallExpr)),
-                     this);
+  // If CxxConstructExpr is the part of some CallExpr we need to
+  // check that matched ParamDecl of the ancestor CallExpr is not rvalue.
+  Finder->addMatcher(
+      cxxConstructExpr(
+          StringConstructorExpr, hasArgument(0, StringCStrCallExpr),
+          unless(matchedParamDeclOfAncestorCallExprHasRValueRefType())),
+      this);
 
   // Detect: 's == str.c_str()'  ->  's == str'
   Finder->addMatcher(
