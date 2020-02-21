@@ -310,10 +310,8 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setg %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB4_2
+; NOCMOV-NEXT:    jg .LBB4_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -379,10 +377,8 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setge %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB5_2
+; NOCMOV-NEXT:    jge .LBB5_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -448,10 +444,8 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setl %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB6_2
+; NOCMOV-NEXT:    jl .LBB6_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -517,10 +511,8 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setle %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB7_2
+; NOCMOV-NEXT:    jle .LBB7_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -846,10 +838,8 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setg %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB12_2
+; NOCMOV-NEXT:    jg .LBB12_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -915,10 +905,8 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setge %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB13_2
+; NOCMOV-NEXT:    jge .LBB13_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -984,10 +972,8 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setl %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB14_2
+; NOCMOV-NEXT:    jl .LBB14_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1053,10 +1039,8 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setle %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB15_2
+; NOCMOV-NEXT:    jle .LBB15_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1308,7 +1292,6 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOSSE2-NEXT:    fstp %st(1)
 ; NOSSE2-NEXT:    retl
 ;
-; We don't emit a branch for fp80, why?
 ; NOSSE1-LABEL: test21:
 ; NOSSE1:       # %bb.0:
 ; NOSSE1-NEXT:    fldt {{[0-9]+}}(%esp)
@@ -1327,10 +1310,8 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setg %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB20_2
+; NOCMOV-NEXT:    jg .LBB20_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1338,6 +1319,7 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOCMOV-NEXT:  .LBB20_2:
 ; NOCMOV-NEXT:    fstp %st(1)
 ; NOCMOV-NEXT:    retl
+; We don't emit a branch for fp80, why?
   %cmp = icmp sgt i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
   ret x86_fp80 %sel
@@ -1388,10 +1370,8 @@ define x86_fp80 @test22(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setge %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB21_2
+; NOCMOV-NEXT:    jge .LBB21_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1449,10 +1429,8 @@ define x86_fp80 @test23(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setl %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB22_2
+; NOCMOV-NEXT:    jl .LBB22_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1510,10 +1488,8 @@ define x86_fp80 @test24(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    setle %al
-; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jne .LBB23_2
+; NOCMOV-NEXT:    jle .LBB23_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
