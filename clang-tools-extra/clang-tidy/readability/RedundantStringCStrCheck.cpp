@@ -86,7 +86,7 @@ static bool checkParamDeclOfAncestorCallExprHasRValueRefType(
   if (const clang::CallExpr *TheCallExpr =
           tryGetCallExprAncestorForCxxConstructExpr(TheCxxConstructExpr,
                                                     Context)) {
-    for (int i = 0; i < TheCallExpr->getNumArgs(); ++i) {
+    for (unsigned i = 0; i < TheCallExpr->getNumArgs(); ++i) {
       const Expr *Arg = TheCallExpr->getArg(i);
       if (Arg->getSourceRange() == TheCxxConstructExpr->getSourceRange()) {
         if (const auto *TheCallExprFuncProto =
