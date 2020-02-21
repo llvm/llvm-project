@@ -599,7 +599,7 @@ void SearchableTableEmitter::collectTableEntries(
   for (auto EntryRec : Items) {
     for (auto &Field : Table.Fields) {
       auto TI = dyn_cast<TypedInit>(EntryRec->getValueInit(Field.Name));
-      if (!TI) {
+      if (!TI || !TI->isComplete()) {
         PrintFatalError(EntryRec->getLoc(),
                         Twine("Record '") + EntryRec->getName() +
                             "' in table '" + Table.Name +
