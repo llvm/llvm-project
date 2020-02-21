@@ -4322,7 +4322,15 @@ let Predicates = [HasMVEInt] in {
             (v16i8 (MVE_VMOVNi16bh (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm)))>;
   def : Pat<(v16i8 (MVEvmovn (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm), (i32 1))),
             (v16i8 (MVE_VMOVNi16th (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm)))>;
+
+  def : Pat<(v8i16 (MVEvmovn (v8i16 MQPR:$Qm),
+                             (v8i16 (ARMvrev32 MQPR:$Qd_src)), (i32 1))),
+            (v8i16 (MVE_VMOVNi32bh (v8i16 MQPR:$Qd_src), (v8i16 MQPR:$Qm)))>;
+  def : Pat<(v16i8 (MVEvmovn (v16i8 MQPR:$Qm),
+                             (v16i8 (ARMvrev16 MQPR:$Qd_src)), (i32 1))),
+            (v16i8 (MVE_VMOVNi16bh (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm)))>;
 }
+
 
 class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
                   list<dag> pattern=[]>

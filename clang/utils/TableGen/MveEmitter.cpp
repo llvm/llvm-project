@@ -1188,6 +1188,18 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     } else {
       PrintFatalError("unsignedflag's argument should be a scalar type");
     }
+  } else if (Op->getName() == "bitsize") {
+    if (D->getNumArgs() != 1)
+      PrintFatalError("bitsize should have exactly one argument");
+    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    if (!TypeRec->isSubClassOf("Type"))
+      PrintFatalError("bitsize's argument should be a type");
+    if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
+      return std::make_shared<IntLiteralResult>(getScalarType("u32"),
+                                                ST->sizeInBits());
+    } else {
+      PrintFatalError("bitsize's argument should be a scalar type");
+    }
   } else {
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
