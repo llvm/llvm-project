@@ -26,13 +26,20 @@ def DirectiveAttrDictInvalidA : TestFormat_Op<"attrdict_invalid_a", [{
 def DirectiveAttrDictInvalidB : TestFormat_Op<"attrdict_invalid_b", [{
   attr-dict attr-dict
 }]>;
-// CHECK: error: 'attr-dict' directive can only be used as a top-level directive
+// CHECK: error: 'attr-dict' directive has already been seen
 def DirectiveAttrDictInvalidC : TestFormat_Op<"attrdict_invalid_c", [{
+  attr-dict attr-dict-with-keyword
+}]>;
+// CHECK: error: 'attr-dict' directive can only be used as a top-level directive
+def DirectiveAttrDictInvalidD : TestFormat_Op<"attrdict_invalid_d", [{
   type(attr-dict)
 }]>;
 // CHECK-NOT: error
-def DirectiveAttrDictValid : TestFormat_Op<"attrdict_valid", [{
+def DirectiveAttrDictValidA : TestFormat_Op<"attrdict_valid_a", [{
   attr-dict
+}]>;
+def DirectiveAttrDictValidB : TestFormat_Op<"attrdict_valid_b", [{
+  attr-dict-with-keyword
 }]>;
 
 //===----------------------------------------------------------------------===//
