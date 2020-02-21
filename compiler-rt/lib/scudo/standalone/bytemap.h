@@ -17,12 +17,10 @@ namespace scudo {
 
 template <uptr Size> class FlatByteMap {
 public:
-  void initLinkerInitialized() {
-    Map = reinterpret_cast<u8 *>(map(nullptr, Size, "scudo:bytemap"));
-  }
-  void init() { initLinkerInitialized(); }
+  void initLinkerInitialized() {}
+  void init() { memset(Map, 0, sizeof(Map)); }
 
-  void unmapTestOnly() { unmap(reinterpret_cast<void *>(Map), Size); }
+  void unmapTestOnly() {}
 
   void set(uptr Index, u8 Value) {
     DCHECK_LT(Index, Size);
@@ -38,7 +36,7 @@ public:
   void enable() {}
 
 private:
-  u8 *Map;
+  u8 Map[Size];
 };
 
 } // namespace scudo
