@@ -1267,7 +1267,7 @@ public:
   ///     LLDB_INVALID_ADDRESS.
   ///
   /// \return
-  ///     A StructureDataSP object which, if non-empty, will contain the
+  ///     A StructuredDataSP object which, if non-empty, will contain the
   ///     information the DynamicLoader needs to get the initial scan of
   ///     solibs resolved.
   virtual lldb_private::StructuredData::ObjectSP

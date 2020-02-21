@@ -12,6 +12,7 @@
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -84,7 +85,38 @@ public:
     iPhoneOS,
   };
 
+  llvm::Expected<lldb_private::StructuredData::DictionarySP>
+  FetchExtendedCrashInformation(lldb_private::Target &target) override;
+
 protected:
+  struct CrashInfoAnnotations {
+    uint64_t version;          // unsigned long
+    uint64_t message;          // char *
+    uint64_t signature_string; // char *
+    uint64_t backtrace;        // char *
+    uint64_t message2;         // char *
+    uint64_t thread;           // uint64_t
+    uint64_t dialog_mode;      // unsigned int
+    uint64_t abort_cause;      // unsigned int
+  };
+
+  /// Extract the `__crash_info` annotations from each of of the target's
+  /// modules.
+  ///
+  /// If the platform have a crashed processes with a `__crash_info` section,
+  /// extract the section to gather the messages annotations and the abort
+  /// cause.
+  ///
+  /// \param[in] target
+  ///     The target running the crashed process.
+  ///
+  /// \return
+  ///     A  structured data array containing at each entry in each entry, the
+  ///     module spec, its UUID, the crash messages and the abort cause.
+  ///     \b nullptr if process has no crash information annotations.
+  lldb_private::StructuredData::ArraySP
+  ExtractCrashInfoAnnotations(lldb_private::Target &target);
+
   void ReadLibdispatchOffsetsAddress(lldb_private::Process *process);
 
   void ReadLibdispatchOffsets(lldb_private::Process *process);
