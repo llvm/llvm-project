@@ -424,8 +424,26 @@ namespace PseudoDtor {
   int k;
   typedef int I;
   struct T {
-    int n : (k.~I(), 1); // cxx11-warning {{constant expression}} cxx11-note {{pseudo-destructor}}
+    int n : (k.~I(), 1); // expected-error {{constant expression}} expected-note {{visible outside that expression}}
   };
+
+  // FIXME: It's unclear whether this should be accepted in C++20 mode. The parameter is destroyed twice here.
+  constexpr int f(int a = 1) { // cxx11-error {{constant expression}}
+    return (
+        a.~I(), // cxx11-note 2{{pseudo-destructor}}
+        0);
+  }
+  static_assert(f() == 0, ""); // cxx11-error {{constant expression}} cxx11-note {{in call}}
+
+  // This is OK in C++20: the union has no active member after the
+  // pseudo-destructor call, so the union destructor has no effect.
+  union U { int x; };
+  constexpr int g(U u = {1}) { // cxx11-error {{constant expression}}
+    return (
+        u.x.~I(), // cxx11-note 2{{pseudo-destructor}}
+        0);
+  }
+  static_assert(g() == 0, ""); // cxx11-error {{constant expression}} cxx11-note {{in call}}
 }
 
 // - increment or decrement operations (5.2.6, 5.3.2);
