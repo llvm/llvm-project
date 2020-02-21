@@ -1270,81 +1270,100 @@ let Predicates = [HasSVE] in {
 
   // Add more complex addressing modes here as required
   multiclass pred_load<ValueType Ty, ValueType PredTy, SDPatternOperator Load,
-                        Instruction RegImmInst> {
-
+                       Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
+    // reg + reg
+    let AddedComplexity = 1 in {
+      def _reg_reg_z : Pat<(Ty (Load (AddrCP GPR64:$base, GPR64:$offset), (PredTy PPR:$gp), (SVEDup0Undef))),
+                           (RegRegInst PPR:$gp, GPR64:$base, GPR64:$offset)>;
+    }
+    // reg + imm
+    let AddedComplexity = 2 in {
+      def _reg_imm_z : Pat<(Ty (Load (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), (PredTy PPR:$gp), (SVEDup0Undef))),
+                           (RegImmInst PPR:$gp, GPR64:$base, simm4s1:$offset)>;
+    }
     def _default_z : Pat<(Ty (Load  GPR64:$base, (PredTy PPR:$gp), (SVEDup0Undef))),
                          (RegImmInst PPR:$gp, GPR64:$base, (i64 0))>;
   }
 
   // 2-element contiguous loads
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i8,   LD1B_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i8,  LD1SB_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i16,  LD1H_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i16, LD1SH_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i32,  LD1W_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i32, LD1SW_D_IMM>;
-  defm : pred_load<nxv2i64, nxv2i1, nonext_masked_load,    LD1D_IMM>;
-  defm : pred_load<nxv2f16, nxv2i1, nonext_masked_load,    LD1H_D_IMM>;
-  defm : pred_load<nxv2f32, nxv2i1, nonext_masked_load,    LD1W_D_IMM>;
-  defm : pred_load<nxv2f64, nxv2i1, nonext_masked_load,    LD1D_IMM>;
+  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i8,   LD1B_D,  LD1B_D_IMM,  am_sve_regreg_lsl0>;
+  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i8,  LD1SB_D, LD1SB_D_IMM, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i16,  LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i16, LD1SH_D, LD1SH_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2i64, nxv2i1, zext_masked_load_i32,  LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2i64, nxv2i1, asext_masked_load_i32, LD1SW_D, LD1SW_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2i64, nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
+  defm : pred_load<nxv2f16, nxv2i1, nonext_masked_load,    LD1H_D,  LD1H_D_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2f32, nxv2i1, nonext_masked_load,    LD1W_D,  LD1W_D_IMM,  am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f64, nxv2i1, nonext_masked_load,    LD1D,    LD1D_IMM,    am_sve_regreg_lsl3>;
 
   // 4-element contiguous loads
-  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i8,   LD1B_S_IMM>;
-  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i8,  LD1SB_S_IMM>;
-  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i16,  LD1H_S_IMM>;
-  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i16, LD1SH_S_IMM>;
-  defm : pred_load<nxv4i32, nxv4i1, nonext_masked_load,    LD1W_IMM>;
-  defm : pred_load<nxv4f16, nxv4i1, nonext_masked_load,    LD1H_S_IMM>;
-  defm : pred_load<nxv4f32, nxv4i1, nonext_masked_load,    LD1W_IMM>;
+  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i8,   LD1B_S,  LD1B_S_IMM,  am_sve_regreg_lsl0>;
+  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i8,  LD1SB_S, LD1SB_S_IMM, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv4i32, nxv4i1, zext_masked_load_i16,  LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4i32, nxv4i1, asext_masked_load_i16, LD1SH_S, LD1SH_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4i32, nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
+  defm : pred_load<nxv4f16, nxv4i1, nonext_masked_load,    LD1H_S,  LD1H_S_IMM,  am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4f32, nxv4i1, nonext_masked_load,    LD1W,    LD1W_IMM,    am_sve_regreg_lsl2>;
 
   // 8-element contiguous loads
-  defm : pred_load<nxv8i16, nxv8i1, zext_masked_load_i8,  LD1B_H_IMM>;
-  defm : pred_load<nxv8i16, nxv8i1, asext_masked_load_i8, LD1SB_H_IMM>;
-  defm : pred_load<nxv8i16, nxv8i1, nonext_masked_load,   LD1H_IMM>;
-  defm : pred_load<nxv8f16, nxv8i1, nonext_masked_load,   LD1H_IMM>;
+  defm : pred_load<nxv8i16, nxv8i1, zext_masked_load_i8,  LD1B_H,  LD1B_H_IMM,  am_sve_regreg_lsl0>;
+  defm : pred_load<nxv8i16, nxv8i1, asext_masked_load_i8, LD1SB_H, LD1SB_H_IMM, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv8i16, nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
+  defm : pred_load<nxv8f16, nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
 
   // 16-element contiguous loads
-  defm : pred_load<nxv16i8, nxv16i1, nonext_masked_load, LD1B_IMM>;
+  defm : pred_load<nxv16i8, nxv16i1, nonext_masked_load, LD1B, LD1B_IMM, am_sve_regreg_lsl0>;
 
   multiclass pred_store<ValueType Ty, ValueType PredTy, SDPatternOperator Store,
-                         Instruction RegImmInst> {
+                        Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
+    // reg + reg
+    let AddedComplexity = 1 in {
+      def _reg_reg : Pat<(Store (Ty ZPR:$vec), (AddrCP GPR64:$base, GPR64:$offset), (PredTy PPR:$gp)),
+                         (RegRegInst ZPR:$vec, PPR:$gp, GPR64:$base, GPR64:$offset)>;
+    }
+    // reg + imm
+    let AddedComplexity = 2 in {
+      def _reg_imm : Pat<(Store (Ty ZPR:$vec), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), (PredTy PPR:$gp)),
+                         (RegImmInst ZPR:$vec, PPR:$gp, GPR64:$base, simm4s1:$offset)>;
+    }
     def _default : Pat<(Store (Ty ZPR:$vec), GPR64:$base, (PredTy PPR:$gp)),
                        (RegImmInst ZPR:$vec, PPR:$gp, GPR64:$base, (i64 0))>;
   }
 
   // 2-element contiguous stores
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i8,  ST1B_D_IMM>;
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i16, ST1H_D_IMM>;
-  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i32, ST1W_D_IMM>;
-  defm : pred_store<nxv2i64, nxv2i1, nontrunc_masked_store,  ST1D_IMM>;
-  defm : pred_store<nxv2f16, nxv2i1, nontrunc_masked_store,  ST1H_D_IMM>;
-  defm : pred_store<nxv2f32, nxv2i1, nontrunc_masked_store,  ST1W_D_IMM>;
-  defm : pred_store<nxv2f64, nxv2i1, nontrunc_masked_store,  ST1D_IMM>;
+  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i8,  ST1B_D, ST1B_D_IMM, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i16, ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2i64, nxv2i1, trunc_masked_store_i32, ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2i64, nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
+  defm : pred_store<nxv2f16, nxv2i1, nontrunc_masked_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2f32, nxv2i1, nontrunc_masked_store,  ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f64, nxv2i1, nontrunc_masked_store,  ST1D,   ST1D_IMM,   am_sve_regreg_lsl3>;
 
   // 4-element contiguous stores
-  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i8,  ST1B_S_IMM>;
-  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i16, ST1H_S_IMM>;
-  defm : pred_store<nxv4i32, nxv4i1, nontrunc_masked_store,  ST1W_IMM>;
-  defm : pred_store<nxv4f16, nxv4i1, nontrunc_masked_store,  ST1H_S_IMM>;
-  defm : pred_store<nxv4f32, nxv4i1, nontrunc_masked_store,  ST1W_IMM>;
+  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i8,  ST1B_S, ST1B_S_IMM, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv4i32, nxv4i1, trunc_masked_store_i16, ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4i32, nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
+  defm : pred_store<nxv4f16, nxv4i1, nontrunc_masked_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f32, nxv4i1, nontrunc_masked_store,  ST1W,   ST1W_IMM,   am_sve_regreg_lsl2>;
 
   // 8-element contiguous stores
-  defm : pred_store<nxv8i16, nxv8i1, trunc_masked_store_i8, ST1B_H_IMM>;
-  defm : pred_store<nxv8i16, nxv8i1, nontrunc_masked_store, ST1H_IMM>;
-  defm : pred_store<nxv8f16, nxv8i1, nontrunc_masked_store, ST1H_IMM>;
+  defm : pred_store<nxv8i16, nxv8i1, trunc_masked_store_i8, ST1B_H, ST1B_H_IMM, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv8i16, nxv8i1, nontrunc_masked_store, ST1H,   ST1H_IMM,   am_sve_regreg_lsl1>;
+  defm : pred_store<nxv8f16, nxv8i1, nontrunc_masked_store, ST1H,   ST1H_IMM,   am_sve_regreg_lsl1>;
 
   // 16-element contiguous stores
-  defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B_IMM>;
+  defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B, ST1B_IMM, am_sve_regreg_lsl0>;
 
-  defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRI>;
-  defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRI>;
-  defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRI>;
-  defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRI>;
+  defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR, LDNT1B_ZRI, am_sve_regreg_lsl0>;
+  defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
 
-  defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRI>;
-  defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRI>;
-  defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRI>;
-  defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRI>;
+  defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR, STNT1B_ZRI, am_sve_regreg_lsl0>;
+  defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
 
   multiclass unpred_store<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
     def _fi : Pat<(store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
