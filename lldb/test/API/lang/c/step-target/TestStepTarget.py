@@ -73,7 +73,6 @@ class TestStepTarget(TestBase):
         self.assertEqual(frame.line_entry.line, self.end_line,
             "Stepped to the block end.")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_end_line_deeper(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
