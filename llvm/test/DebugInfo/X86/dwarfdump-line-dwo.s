@@ -4,7 +4,7 @@
 # RUN: llvm-dwarfdump -debug-line %t.o | FileCheck %s --check-prefixes=PART1,PART2
 # RUN: llvm-dwarfdump -debug-line=0x32 %t.o | FileCheck %s --check-prefix=PART2
 
-        .section .debug_line.dwo,"",@progbits
+        .section .debug_line.dwo,"e",@progbits
 LH_1_start:
         .long   LH_1_end-LH_1_version   # Length of Unit
 LH_1_version:
