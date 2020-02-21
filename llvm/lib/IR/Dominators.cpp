@@ -140,12 +140,7 @@ bool DominatorTree::dominates(const Instruction *Def,
   if (DefBB != UseBB)
     return dominates(DefBB, UseBB);
 
-  // Loop through the basic block until we find Def or User.
-  BasicBlock::const_iterator I = DefBB->begin();
-  for (; &*I != Def && &*I != User; ++I)
-    /*empty*/;
-
-  return &*I == Def;
+  return Def->comesBefore(User);
 }
 
 // true if Def would dominate a use in any instruction in UseBB.
@@ -289,12 +284,7 @@ bool DominatorTree::dominates(const Instruction *Def, const Use &U) const {
   if (isa<PHINode>(UserInst))
     return true;
 
-  // Otherwise, just loop through the basic block until we find Def or User.
-  BasicBlock::const_iterator I = DefBB->begin();
-  for (; &*I != Def && &*I != UserInst; ++I)
-    /*empty*/;
-
-  return &*I != UserInst;
+  return Def->comesBefore(UserInst);
 }
 
 bool DominatorTree::isReachableFromEntry(const Use &U) const {
