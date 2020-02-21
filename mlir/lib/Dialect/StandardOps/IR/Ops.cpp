@@ -1736,21 +1736,6 @@ OpFoldResult UnsignedRemIOp::fold(ArrayRef<Attribute> operands) {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 2> opInfo;
-  SmallVector<Type, 2> types;
-  llvm::SMLoc loc = parser.getCurrentLocation();
-  return failure(parser.parseOperandList(opInfo) ||
-                 (!opInfo.empty() && parser.parseColonTypeList(types)) ||
-                 parser.resolveOperands(opInfo, types, loc, result.operands));
-}
-
-static void print(OpAsmPrinter &p, ReturnOp op) {
-  p << "return";
-  if (op.getNumOperands() != 0)
-    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
-}
-
 static LogicalResult verify(ReturnOp op) {
   auto function = cast<FuncOp>(op.getParentOp());
 
