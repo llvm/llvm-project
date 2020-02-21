@@ -16,3 +16,5 @@ void foo(int i);
 // RUN: not c-index-test core -print-record %t/idx2 2> %t2.err
 // RUN: FileCheck %s -input-file %t2.err -check-prefix ERR-RECORD
 // ERR-RECORD: error loading record: empty file
+
+// REQUIRES: shell

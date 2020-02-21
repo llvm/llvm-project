@@ -166,3 +166,5 @@ struct ProhibitTemplateFunctions {
 };
 // CHECK-FUNCTION-TEMPLATE: "{{.*}}implement-declared-methods.cpp" "\n\nvoid ProhibitTemplateFunctions::function() { \n  <#code#>;\n}\n\nvoid ProhibitTemplateFunctions::anotherFunction() { \n  <#code#>;\n}\n" [[@LINE-1]]:3
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=template-function -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK-FUNCTION-TEMPLATE %s
+
+// UNSUPPORTED: system-windows
