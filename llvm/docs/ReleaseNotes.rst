@@ -254,6 +254,15 @@ Changes to LLDB
 
 * Initial support for debugging Windows ARM and ARM64 binaries
 
+* Improved error messages in the expression evaluator.
+
+* Tab completions for command options now also provide a description for each option.
+
+* Fixed that printing structs/classes with the `expression` command sometimes did not
+  print the members/contents of the class.
+
+* Improved support for using classes with bit-field members in the expression evaluator.
+
 External Open Source Projects Using LLVM 10
 ===========================================
 
