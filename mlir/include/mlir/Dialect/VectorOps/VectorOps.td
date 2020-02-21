@@ -363,6 +363,10 @@ def Vector_ExtractElementOp :
       return vector().getType().cast<VectorType>();
     }
   }];
+
+  let assemblyFormat = [{
+    $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
+  }];
 }
 
 def Vector_ExtractOp :
@@ -511,6 +515,11 @@ def Vector_InsertElementOp :
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
     }
+  }];
+
+  let assemblyFormat = [{
+    $source `,` $dest `[` $position `:` type($position) `]` attr-dict `:`
+    type($result)
   }];
 }
 
