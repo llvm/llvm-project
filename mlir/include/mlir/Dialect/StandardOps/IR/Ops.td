@@ -357,6 +357,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
 
   let verifier = ?;
   let hasCanonicalizer = 1;
+
+  let assemblyFormat = "$callee `(` $operands `)` attr-dict `:` type($callee)";
 }
 
 def CeilFOp : FloatUnaryOp<"ceilf"> {
@@ -490,6 +492,8 @@ def CmpIOp : Std_Op<"cmpi",
   let verifier = [{ return success(); }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
 def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
@@ -761,6 +765,10 @@ def ExtractElementOp : Std_Op<"extract_element",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $aggregate `[` $indices `]` attr-dict `:` type($aggregate)
+  }];
 }
 
 def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
@@ -853,6 +861,8 @@ def LoadOp : Std_Op<"load",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
 }
 
 def LogOp : FloatUnaryOp<"log"> {
@@ -1090,6 +1100,10 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $condition `,` $true_value `,` $false_value attr-dict `:` type($result)
+  }];
 }
 
 def SignExtendIOp : Std_Op<"sexti",
@@ -1222,6 +1236,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
                   [{ build(builder, result, aggregateType, element); }]>];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 }
 
 def StoreOp : Std_Op<"store",
@@ -1264,6 +1280,10 @@ def StoreOp : Std_Op<"store",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
+  }];
 }
 
 def SubFOp : FloatArithmeticOp<"subf"> {
@@ -1517,11 +1537,12 @@ def TensorLoadOp : Std_Op<"tensor_load",
       result.addTypes(resultType);
   }]>];
 
-
   let extraClassDeclaration = [{
     /// The result of a tensor_load is always a tensor.
     TensorType getType() { return getResult().getType().cast<TensorType>(); }
   }];
+
+  let assemblyFormat = "$memref attr-dict `:` type($memref)";
 }
 
 def TensorStoreOp : Std_Op<"tensor_store",
@@ -1545,6 +1566,8 @@ def TensorStoreOp : Std_Op<"tensor_store",
   let arguments = (ins AnyTensor:$tensor, AnyMemRef:$memref);
   // TensorStoreOp is fully verified by traits.
   let verifier = ?;
+
+  let assemblyFormat = "$tensor `,` $memref attr-dict `:` type($memref)";
 }
 
 def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {

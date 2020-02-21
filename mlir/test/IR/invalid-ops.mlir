@@ -226,7 +226,7 @@ func @func_with_ops(i32, i32) {
 // Integer comparisons are not recognized for float types.
 func @func_with_ops(f32, f32) {
 ^bb0(%a : f32, %b : f32):
-  %r = cmpi "eq", %a, %b : f32 // expected-error {{operand #0 must be integer-like}}
+  %r = cmpi "eq", %a, %b : f32 // expected-error {{'lhs' must be integer-like, but got 'f32'}}
 }
 
 // -----
@@ -298,13 +298,13 @@ func @func_with_ops(i1, tensor<42xi32>, tensor<?xi32>) {
 // -----
 
 func @invalid_select_shape(%cond : i1, %idx : () -> ()) {
-  // expected-error@+1 {{expected type with valid i1 shape}}
+  // expected-error@+1 {{'result' must be integer-like or floating-point-like, but got '() -> ()'}}
   %sel = select %cond, %idx, %idx : () -> ()
 
 // -----
 
 func @invalid_cmp_shape(%idx : () -> ()) {
-  // expected-error@+1 {{expected type with valid i1 shape}}
+  // expected-error@+1 {{'lhs' must be integer-like, but got '() -> ()'}}
   %cmp = cmpi "eq", %idx, %idx : () -> ()
 
 // -----
@@ -340,7 +340,7 @@ func @dma_wait_no_tag_memref(%tag : f32, %c0 : index) {
 // -----
 
 func @invalid_cmp_attr(%idx : i32) {
-  // expected-error@+1 {{expected string comparison predicate attribute}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   %cmp = cmpi i1, %idx, %idx : i32
 
 // -----
