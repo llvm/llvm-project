@@ -103,7 +103,8 @@ void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
                          const MachineRegisterInfo &MRI) {
-  if (NewMask == PrevMask)
+  if (SIRegisterInfo::getNumCoveredRegs(NewMask) ==
+      SIRegisterInfo::getNumCoveredRegs(PrevMask))
     return;
 
   int Sign = 1;
@@ -111,21 +112,17 @@ void GCNRegPressure::inc(unsigned Reg,
     std::swap(NewMask, PrevMask);
     Sign = -1;
   }
-#ifndef NDEBUG
-  const auto MaxMask = MRI.getMaxLaneMaskForVReg(Reg);
-#endif
+
   switch (auto Kind = getRegKind(Reg, MRI)) {
   case SGPR32:
   case VGPR32:
   case AGPR32:
-    assert(PrevMask.none() && NewMask == MaxMask);
     Value[Kind] += Sign;
     break;
 
   case SGPR_TUPLE:
   case VGPR_TUPLE:
   case AGPR_TUPLE:
-    assert(NewMask < MaxMask || NewMask == MaxMask);
     assert(PrevMask < NewMask);
 
     Value[Kind == SGPR_TUPLE ? SGPR32 : Kind == AGPR_TUPLE ? AGPR32 : VGPR32] +=
