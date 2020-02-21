@@ -40,7 +40,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(EmulateInstructionMIPS64)
+LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionMIPS64, InstructionMIPS64)
 
 #define UInt(x) ((uint64_t)x)
 #define integer int64_t
