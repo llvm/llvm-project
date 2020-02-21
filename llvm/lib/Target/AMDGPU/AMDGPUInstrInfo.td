@@ -151,7 +151,7 @@ def AMDGPUfmax_legacy : SDNode<"AMDGPUISD::FMAX_LEGACY", SDTFPBinOp,
   []
 >;
 
-def AMDGPUfmul_legacy : SDNode<"AMDGPUISD::FMUL_LEGACY", SDTFPBinOp,
+def AMDGPUfmul_legacy_impl : SDNode<"AMDGPUISD::FMUL_LEGACY", SDTFPBinOp,
   [SDNPCommutative, SDNPAssociative]
 >;
 
@@ -468,3 +468,7 @@ def AMDGPUbfe_i32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
 def AMDGPUbfe_u32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_ubfe node:$src0, node:$src1, node:$src2),
    (AMDGPUbfe_u32_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUfmul_legacy : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_fmul_legacy node:$src0, node:$src1),
+   (AMDGPUfmul_legacy_impl node:$src0, node:$src1)]>;
