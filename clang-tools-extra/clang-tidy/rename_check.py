@@ -169,21 +169,45 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
   with open(filename, 'r') as f:
     lines = f.readlines()
 
+  lineMatcher = re.compile('Renamed checks')
+  nextSectionMatcher = re.compile('Improvements to include-fixer')
+  checkMatcher = re.compile('- The \'(.*)')
+
   print('Updating %s...' % filename)
   with open(filename, 'wb') as f:
     note_added = False
     header_found = False
+    next_header_found = False
+    add_note_here = False
 
     for line in lines:
       if not note_added:
-        match = re.search('Renamed checks', line)
+        match = lineMatcher.match(line)
+        match_next = nextSectionMatcher.match(line)
+        match_check = checkMatcher.match(line)
+        if match_check:
+          last_check = match_check.group(1)
+          if last_check > old_check_name:
+            add_note_here = True
+
+        if match_next:
+          next_header_found = True
+          add_note_here = True
+
         if match:
           header_found = True
-        elif header_found:
+          f.write(line)
+          continue
+
+        if line.startswith('^^^^'):
+          f.write(line)
+          continue
+
+        if header_found and add_note_here:
           if not line.startswith('^^^^'):
-            f.write("""
-- The '%s' check was renamed to :doc:`%s
+            f.write("""- The '%s' check was renamed to :doc:`%s
   <clang-tidy/checks/%s>`
+
 """ % (old_check_name, new_check_name, new_check_name))
             note_added = True
 
