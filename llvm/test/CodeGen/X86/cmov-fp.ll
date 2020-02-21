@@ -284,13 +284,11 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE2-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE2-NEXT:    setg %al
+; NOSSE2-NEXT:    testb %al, %al
 ; NOSSE2-NEXT:    flds {{\.LCPI.*}}
-; NOSSE2-NEXT:    jg .LBB4_2
-; NOSSE2-NEXT:  # %bb.1:
-; NOSSE2-NEXT:    fstp %st(0)
-; NOSSE2-NEXT:    fldz
 ; NOSSE2-NEXT:    fxch %st(1)
-; NOSSE2-NEXT:  .LBB4_2:
+; NOSSE2-NEXT:    fcmovne %st(1), %st
 ; NOSSE2-NEXT:    fstp %st(1)
 ; NOSSE2-NEXT:    retl
 ;
@@ -299,13 +297,11 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE1-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setg %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jg .LBB4_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB4_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -314,8 +310,10 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setg %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jg .LBB4_2
+; NOCMOV-NEXT:    jne .LBB4_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -355,13 +353,11 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE2-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE2-NEXT:    setge %al
+; NOSSE2-NEXT:    testb %al, %al
 ; NOSSE2-NEXT:    flds {{\.LCPI.*}}
-; NOSSE2-NEXT:    jge .LBB5_2
-; NOSSE2-NEXT:  # %bb.1:
-; NOSSE2-NEXT:    fstp %st(0)
-; NOSSE2-NEXT:    fldz
 ; NOSSE2-NEXT:    fxch %st(1)
-; NOSSE2-NEXT:  .LBB5_2:
+; NOSSE2-NEXT:    fcmovne %st(1), %st
 ; NOSSE2-NEXT:    fstp %st(1)
 ; NOSSE2-NEXT:    retl
 ;
@@ -370,13 +366,11 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE1-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setge %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jge .LBB5_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB5_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -385,8 +379,10 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setge %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jge .LBB5_2
+; NOCMOV-NEXT:    jne .LBB5_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -426,13 +422,11 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE2-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE2-NEXT:    setl %al
+; NOSSE2-NEXT:    testb %al, %al
 ; NOSSE2-NEXT:    flds {{\.LCPI.*}}
-; NOSSE2-NEXT:    jl .LBB6_2
-; NOSSE2-NEXT:  # %bb.1:
-; NOSSE2-NEXT:    fstp %st(0)
-; NOSSE2-NEXT:    fldz
 ; NOSSE2-NEXT:    fxch %st(1)
-; NOSSE2-NEXT:  .LBB6_2:
+; NOSSE2-NEXT:    fcmovne %st(1), %st
 ; NOSSE2-NEXT:    fstp %st(1)
 ; NOSSE2-NEXT:    retl
 ;
@@ -441,13 +435,11 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE1-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setl %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jl .LBB6_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB6_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -456,8 +448,10 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setl %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jl .LBB6_2
+; NOCMOV-NEXT:    jne .LBB6_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -497,13 +491,11 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE2-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE2-NEXT:    setle %al
+; NOSSE2-NEXT:    testb %al, %al
 ; NOSSE2-NEXT:    flds {{\.LCPI.*}}
-; NOSSE2-NEXT:    jle .LBB7_2
-; NOSSE2-NEXT:  # %bb.1:
-; NOSSE2-NEXT:    fstp %st(0)
-; NOSSE2-NEXT:    fldz
 ; NOSSE2-NEXT:    fxch %st(1)
-; NOSSE2-NEXT:  .LBB7_2:
+; NOSSE2-NEXT:    fcmovne %st(1), %st
 ; NOSSE2-NEXT:    fstp %st(1)
 ; NOSSE2-NEXT:    retl
 ;
@@ -512,13 +504,11 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ; NOSSE1-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setle %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jle .LBB7_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB7_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -527,8 +517,10 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setle %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jle .LBB7_2
+; NOCMOV-NEXT:    jne .LBB7_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -841,13 +833,11 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setg %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jg .LBB12_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB12_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -856,8 +846,10 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setg %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jg .LBB12_2
+; NOCMOV-NEXT:    jne .LBB12_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -910,13 +902,11 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setge %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jge .LBB13_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB13_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -925,8 +915,10 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setge %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jge .LBB13_2
+; NOCMOV-NEXT:    jne .LBB13_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -979,13 +971,11 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setl %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jl .LBB14_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB14_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -994,8 +984,10 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setl %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jl .LBB14_2
+; NOCMOV-NEXT:    jne .LBB14_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
@@ -1048,13 +1040,11 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOSSE1-NEXT:    setle %al
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.LCPI.*}}
-; NOSSE1-NEXT:    jle .LBB15_2
-; NOSSE1-NEXT:  # %bb.1:
-; NOSSE1-NEXT:    fstp %st(0)
-; NOSSE1-NEXT:    fldz
 ; NOSSE1-NEXT:    fxch %st(1)
-; NOSSE1-NEXT:  .LBB15_2:
+; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
@@ -1063,8 +1053,10 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    setle %al
+; NOCMOV-NEXT:    testb %al, %al
 ; NOCMOV-NEXT:    flds {{\.LCPI.*}}
-; NOCMOV-NEXT:    jle .LBB15_2
+; NOCMOV-NEXT:    jne .LBB15_2
 ; NOCMOV-NEXT:  # %bb.1:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    fldz
