@@ -42,6 +42,7 @@ LLDB_PLUGIN_DECLARE(ABISystemZ)
 LLDB_PLUGIN_DECLARE(ABIX86)
 LLDB_PLUGIN_DECLARE(ObjectFileBreakpad)
 LLDB_PLUGIN_DECLARE(ObjectFileELF)
+LLDB_PLUGIN_DECLARE(ObjectFileJIT)
 LLDB_PLUGIN_DECLARE(ObjectFileMachO)
 LLDB_PLUGIN_DECLARE(ObjectFilePECOFF)
 LLDB_PLUGIN_DECLARE(ObjectFileWasm)
@@ -110,6 +111,7 @@ LLDB_PLUGIN_DECLARE(DynamicLoaderDarwinKernel)
 LLDB_PLUGIN_DECLARE(StructuredDataDarwinLog)
 LLDB_PLUGIN_DECLARE(PlatformGDB)
 LLDB_PLUGIN_DECLARE(ProcessGDBRemote)
+LLDB_PLUGIN_DECLARE(DynamicLoaderHexagonDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderMacOSXDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderPosixDYLD)
 LLDB_PLUGIN_DECLARE(DynamicLoaderStatic)
@@ -170,6 +172,7 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   LLDB_PLUGIN_INITIALIZE(ObjectFileBreakpad);
   LLDB_PLUGIN_INITIALIZE(ObjectFileELF);
+  LLDB_PLUGIN_INITIALIZE(ObjectFileJIT);
   LLDB_PLUGIN_INITIALIZE(ObjectFileMachO);
   LLDB_PLUGIN_INITIALIZE(ObjectFilePECOFF);
   LLDB_PLUGIN_INITIALIZE(ObjectFileWasm);
@@ -273,6 +276,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   LLDB_PLUGIN_INITIALIZE(PlatformGDB);
 
   LLDB_PLUGIN_INITIALIZE(ProcessGDBRemote);
+  LLDB_PLUGIN_INITIALIZE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderPosixDYLD);
   LLDB_PLUGIN_INITIALIZE(DynamicLoaderWasmDYLD); // Before DynamicLoaderStatic.
@@ -361,6 +365,7 @@ void SystemInitializerFull::Terminate() {
   LLDB_PLUGIN_TERMINATE(ProcessGDBRemote);
   LLDB_PLUGIN_TERMINATE(StructuredDataDarwinLog);
 
+  LLDB_PLUGIN_TERMINATE(DynamicLoaderHexagonDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderMacOSXDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderPosixDYLD);
   LLDB_PLUGIN_TERMINATE(DynamicLoaderWasmDYLD);
@@ -377,6 +382,7 @@ void SystemInitializerFull::Terminate() {
 
   LLDB_PLUGIN_TERMINATE(ObjectFileBreakpad);
   LLDB_PLUGIN_TERMINATE(ObjectFileELF);
+  LLDB_PLUGIN_TERMINATE(ObjectFileJIT);
   LLDB_PLUGIN_TERMINATE(ObjectFileMachO);
   LLDB_PLUGIN_TERMINATE(ObjectFilePECOFF);
   LLDB_PLUGIN_TERMINATE(ObjectFileWasm);
