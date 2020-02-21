@@ -182,6 +182,7 @@ public:
     VK_GOT,
     VK_GOTOFF,
     VK_GOTREL,
+    VK_PCREL,
     VK_GOTPCREL,
     VK_GOTTPOFF,
     VK_INDNTPOFF,
@@ -286,7 +287,6 @@ public:
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
-    VK_Hexagon_PCREL,
     VK_Hexagon_LO16,
     VK_Hexagon_HI16,
     VK_Hexagon_GPREL,
