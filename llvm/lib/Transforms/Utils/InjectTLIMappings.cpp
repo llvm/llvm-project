@@ -58,15 +58,6 @@ static std::string mangleTLIName(StringRef VectorName, const CallInst &CI,
   return std::string(Out.str());
 }
 
-/// A helper function for converting Scalar types to vector types.
-/// If the incoming type is void, we return void. If the VF is 1, we return
-/// the scalar type.
-static Type *ToVectorTy(Type *Scalar, unsigned VF, bool isScalable = false) {
-  if (Scalar->isVoidTy() || VF == 1)
-    return Scalar;
-  return VectorType::get(Scalar, {VF, isScalable});
-}
-
 /// A helper function that adds the vector function declaration that
 /// vectorizes the CallInst CI with a vectorization factor of VF
 /// lanes. The TLI assumes that all parameters and the return type of
