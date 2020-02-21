@@ -235,7 +235,7 @@ define double @fsub_undef_op0_constant_neg0(double %x) {
 
 define double @fsub_undef_op1_constant_neg0(double %x) {
 ; CHECK-LABEL: @fsub_undef_op1_constant_neg0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double undef
 ;
   %r = fsub double 0x8000000000000000, undef
   ret double %r
