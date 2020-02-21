@@ -124,7 +124,8 @@ struct OptionDefinition {
   OptionValidator *validator;
   /// If not empty, an array of enum values.
   OptionEnumValues enum_values;
-  /// Cookie the option class can use to do define the argument completion.
+  /// The kind of completion for this option.
+  /// Contains values of the CommandCompletions::CommonCompletionTypes enum.
   uint32_t completion_type;
   /// Type of argument this option takes.
   lldb::CommandArgumentType argument_type;
