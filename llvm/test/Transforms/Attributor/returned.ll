@@ -771,26 +771,35 @@ define weak_odr i32 @non_exact_1(i32 %a) {
 define weak_odr i32 @non_exact_2(i32 returned %a) {
   ret i32 %a
 }
-define weak_odr i32* @non_exact_3(i32* align 32 returned %a) {
+define weak_odr align 16 i32* @non_exact_3(i32* align 32 returned %a) {
   ret i32* %a
 }
-define i32 @exact(i32* %a) {
+define weak_odr align 16 i32* @non_exact_4(i32* align 32 %a) {
+  ret i32* %a
+}
+define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
   %c0 = call i32 @non_exact_0()
   %c1 = call i32 @non_exact_1(i32 1)
   %c2 = call i32 @non_exact_2(i32 2)
   %c3 = call i32* @non_exact_3(i32* %a)
-; We can use the information of the weak function non_exact_3 because it was
-; given to us and not derived (the alignment of the returned argument).
-; ATTRIBUTOR:  %c4 = load i32, i32* %c3
-  %c4 = load i32, i32* %c3
+  %c4 = call i32* @non_exact_4(i32* %b)
+; We can use the alignment information of the weak function non_exact_3 argument
+; because it was given to us and not derived.
+; ATTRIBUTOR:  %c3l = load i32, i32* %c3, align 32
+  %c3l = load i32, i32* %c3
+; We can use the return information of the weak function non_exact_4.
+; ATTRIBUTOR:  %c4l = load i32, i32* %c4, align 16
+  %c4l = load i32, i32* %c4
 ; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
 ; ATTRIBUTOR:  %add1 = add i32 %c0, %c1
 ; ATTRIBUTOR:  %add2 = add i32 %add1, %c2
-; ATTRIBUTOR:  %add3 = add i32 %add2, %c4
+; ATTRIBUTOR:  %add3 = add i32 %add2, %c3l
+; ATTRIBUTOR:  %add4 = add i32 %add3, %c4l
   %add1 = add i32 %c0, %c1
   %add2 = add i32 %add1, %c2
-  %add3 = add i32 %add2, %c4
-  ret i32 %add3
+  %add3 = add i32 %add2, %c3l
+  %add4 = add i32 %add3, %c4l
+  ret i32 %add4
 }
 
 @G = external global i8
