@@ -39,6 +39,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -1458,6 +1459,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
   case Intrinsic::bitreverse:
+  case Intrinsic::amdgcn_fmul_legacy:
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
@@ -2080,6 +2082,16 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         const APFloat &C1 = Op1->getValueAPF();
         const APFloat &C2 = Op2->getValueAPF();
         return ConstantFP::get(Ty->getContext(), maximum(C1, C2));
+      }
+
+      if (IntrinsicID == Intrinsic::amdgcn_fmul_legacy) {
+        const APFloat &C1 = Op1->getValueAPF();
+        const APFloat &C2 = Op2->getValueAPF();
+        // The legacy behaviour is that multiplying zero by anything, even NaN
+        // or infinity, gives +0.0.
+        if (C1.isZero() || C2.isZero())
+          return ConstantFP::getNullValue(Ty);
+        return ConstantFP::get(Ty->getContext(), C1 * C2);
       }
 
       if (!TLI)
