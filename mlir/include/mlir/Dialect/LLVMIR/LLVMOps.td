@@ -72,8 +72,7 @@ class LLVM_ZeroResultOp<string mnemonic, list<OpTrait> traits = []> :
 // Base class for LLVM terminator operations.  All terminator operations have
 // zero results and an optional list of successors.
 class LLVM_TerminatorOp<string mnemonic, list<OpTrait> traits = []> :
-    LLVM_Op<mnemonic, !listconcat(traits, [Terminator])>,
-    Arguments<(ins Variadic<LLVM_Type>:$args)>, Results<(outs)> {
+    LLVM_Op<mnemonic, !listconcat(traits, [Terminator])> {
   let builders = [
     OpBuilder<
       "Builder *, OperationState &result, "
@@ -320,15 +319,10 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
                     Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                                Variadic<LLVM_Type>)>,
                     Results<(outs Variadic<LLVM_Type>)> {
+  let successors = (successor AnySuccessor:$normalDest,
+                              AnySuccessor:$unwindDest);
+
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, ArrayRef<Type> tys, "
-    "FlatSymbolRefAttr callee, ValueRange ops, Block* normal, "
-    "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
-    [{
-      result.addAttribute("callee", callee);
-      build(b, result, tys, ops, normal, normalOps, unwind, unwindOps);
-    }]>,
-    OpBuilder<
     "Builder *b, OperationState &result, ArrayRef<Type> tys, "
     "ValueRange ops, Block* normal, "
     "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
@@ -460,19 +454,19 @@ def LLVM_SelectOp
 
 // Terminators.
 def LLVM_BrOp : LLVM_TerminatorOp<"br", []> {
+  let successors = (successor AnySuccessor:$dest);
   let parser = [{ return parseBrOp(parser, result); }];
   let printer = [{ printBrOp(p, *this); }];
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br", []> {
-  let verifier = [{
-    if (getNumSuccessors() != 2)
-      return emitOpError("expected exactly two successors");
-    return success();
-  }];
+  let arguments = (ins LLVMI1:$condition);
+  let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
+
   let parser = [{ return parseCondBrOp(parser, result); }];
   let printer = [{ printCondBrOp(p, *this); }];
 }
-def LLVM_ReturnOp : LLVM_TerminatorOp<"return", []> {
+def LLVM_ReturnOp : LLVM_TerminatorOp<"return", []>,
+                    Arguments<(ins Variadic<LLVM_Type>:$args)> {
   string llvmBuilder = [{
     if ($_numOperands != 0)
       builder.CreateRet($args[0]);

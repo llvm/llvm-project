@@ -159,6 +159,31 @@ const tblgen::NamedRegion &tblgen::Operator::getRegion(unsigned index) const {
   return regions[index];
 }
 
+auto tblgen::Operator::successor_begin() const -> const_successor_iterator {
+  return successors.begin();
+}
+auto tblgen::Operator::successor_end() const -> const_successor_iterator {
+  return successors.end();
+}
+auto tblgen::Operator::getSuccessors() const
+    -> llvm::iterator_range<const_successor_iterator> {
+  return {successor_begin(), successor_end()};
+}
+
+unsigned tblgen::Operator::getNumSuccessors() const {
+  return successors.size();
+}
+
+const tblgen::NamedSuccessor &
+tblgen::Operator::getSuccessor(unsigned index) const {
+  return successors[index];
+}
+
+unsigned tblgen::Operator::getNumVariadicSuccessors() const {
+  return llvm::count_if(successors,
+                        [](const NamedSuccessor &c) { return c.isVariadic(); });
+}
+
 auto tblgen::Operator::trait_begin() const -> const_trait_iterator {
   return traits.begin();
 }
@@ -283,6 +308,29 @@ void tblgen::Operator::populateOpStructure() {
                       Twine("undefined type for result #") + Twine(i));
     }
     results.push_back({name, TypeConstraint(resultDef)});
+  }
+
+  // Handle successors
+  auto *successorsDag = def.getValueAsDag("successors");
+  auto *successorsOp = dyn_cast<DefInit>(successorsDag->getOperator());
+  if (!successorsOp || successorsOp->getDef()->getName() != "successor") {
+    PrintFatalError(def.getLoc(),
+                    "'successors' must have 'successor' directive");
+  }
+
+  for (unsigned i = 0, e = successorsDag->getNumArgs(); i < e; ++i) {
+    auto name = successorsDag->getArgNameStr(i);
+    auto *successorInit = dyn_cast<DefInit>(successorsDag->getArg(i));
+    if (!successorInit) {
+      PrintFatalError(def.getLoc(),
+                      Twine("undefined kind for successor #") + Twine(i));
+    }
+    Successor successor(successorInit->getDef());
+
+    // Only support variadic successors if it is the last one for now.
+    if (i != e - 1 && successor.isVariadic())
+      PrintFatalError(def.getLoc(), "only the last successor can be variadic");
+    successors.push_back({name, successor});
   }
 
   // Create list of traits, skipping over duplicates: appending to lists in

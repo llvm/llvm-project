@@ -31,6 +31,25 @@ def LLVMInt : TypeConstraint<
        CPred<"$_self.cast<::mlir::LLVM::LLVMType>().isIntegerTy()">]>,
   "LLVM dialect integer">;
 
+def LLVMIntBase : TypeConstraint<
+  And<[LLVM_Type.predicate,
+       CPred<"$_self.cast<::mlir::LLVM::LLVMType>().isIntegerTy()">]>,
+  "LLVM dialect integer">;
+
+// Integer type of a specific width.
+class LLVMI<int width>
+    : Type<And<[
+        LLVM_Type.predicate,
+        CPred<
+         "$_self.cast<::mlir::LLVM::LLVMType>().isIntegerTy(" # width # ")">]>,
+         "LLVM dialect " # width # "-bit integer">,
+      BuildableType<
+        "::mlir::LLVM::LLVMType::getIntNTy("
+        "$_builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>(),"
+         # width # ")">;
+
+def LLVMI1 : LLVMI<1>;
+
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
 // used to translate to LLVM IR proper.
 class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :

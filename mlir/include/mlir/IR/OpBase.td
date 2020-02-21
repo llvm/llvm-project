@@ -185,6 +185,10 @@ class AttrConstraint<Pred predicate, string description = ""> :
 class RegionConstraint<Pred predicate, string description = ""> :
     Constraint<predicate, description>;
 
+// Subclass for constraints on a successor.
+class SuccessorConstraint<Pred predicate, string description = ""> :
+    Constraint<predicate, description>;
+
 // How to use these constraint categories:
 //
 // * Use TypeConstraint to specify
@@ -1342,6 +1346,21 @@ class SizedRegion<int numBlocks> : Region<
   "region with " # numBlocks # " blocks">;
 
 //===----------------------------------------------------------------------===//
+// Successor definitions
+//===----------------------------------------------------------------------===//
+
+class Successor<Pred condition, string descr = ""> :
+    SuccessorConstraint<condition, descr>;
+
+// Any successor.
+def AnySuccessor : Successor<?, "any successor">;
+
+// A variadic successor constraint. It expands to zero or more of the base
+// successor.
+class VariadicSuccessor<Successor successor>
+  : Successor<successor.predicate, successor.description>;
+
+//===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 
@@ -1537,6 +1556,9 @@ def outs;
 // Marker used to identify the region list for an op.
 def region;
 
+// Marker used to identify the successor list for an op.
+def successor;
+
 // Class for defining a custom builder.
 //
 // TableGen generates several generic builders for each op by default (see
@@ -1586,6 +1608,9 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 
   // The list of regions of the op. Default to 0 regions.
   dag regions = (region);
+
+  // The list of successors of the op. Default to 0 successors.
+  dag successors = (successor);
 
   // Attribute getters can be added to the op by adding an Attr member
   // with the name and type of the attribute. E.g., adding int attribute
