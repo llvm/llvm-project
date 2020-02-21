@@ -359,6 +359,11 @@ protected:
       unsigned int current_id, NameSearchContext &context,
       clang::ObjCInterfaceDecl *original_interface_decl, const char *log_info);
 
+  void FindDeclInModules(NameSearchContext &context, ConstString name,
+                         unsigned current_id);
+  void FindDeclInObjCRuntime(NameSearchContext &context, ConstString name,
+                             unsigned current_id);
+
   friend struct NameSearchContext;
 
   bool m_import_in_progress;
