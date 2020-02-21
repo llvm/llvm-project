@@ -942,6 +942,48 @@ defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v16s8, 0b0, 0b1>;
 defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v8s16, 0b0, 0b0>;
 defm MVE_VMLSDAV : MVE_VMLSDAV_multi<MVE_v4s32, 0b1, 0b0>;
 
+def SDTVecReduce2 : SDTypeProfile<1, 2, [    // VMLAV
+  SDTCisInt<0>, SDTCisVec<1>, SDTCisVec<2>
+]>;
+def SDTVecReduce2L : SDTypeProfile<2, 2, [    // VMLALV
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisVec<2>, SDTCisVec<3>
+]>;
+def SDTVecReduce2LA : SDTypeProfile<2, 4, [    // VMLALVA
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>,
+  SDTCisVec<4>, SDTCisVec<5>
+]>;
+def ARMVMLAVs       : SDNode<"ARMISD::VMLAVs", SDTVecReduce2>;
+def ARMVMLAVu       : SDNode<"ARMISD::VMLAVu", SDTVecReduce2>;
+def ARMVMLALVs      : SDNode<"ARMISD::VMLALVs", SDTVecReduce2L>;
+def ARMVMLALVu      : SDNode<"ARMISD::VMLALVu", SDTVecReduce2L>;
+def ARMVMLALVAs      : SDNode<"ARMISD::VMLALVAs", SDTVecReduce2LA>;
+def ARMVMLALVAu      : SDNode<"ARMISD::VMLALVAu", SDTVecReduce2LA>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(i32 (vecreduce_add (mul (v4i32 MQPR:$src1), (v4i32 MQPR:$src2)))),
+            (i32 (MVE_VMLADAVu32 $src1, $src2))>;
+  def : Pat<(i32 (ARMVMLAVs (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (i32 (MVE_VMLADAVs8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(i32 (ARMVMLAVu (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (i32 (MVE_VMLADAVu8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(i32 (ARMVMLAVs (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (i32 (MVE_VMLADAVs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(i32 (ARMVMLAVu (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (i32 (MVE_VMLADAVu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+
+  def : Pat<(i32 (add (i32 (vecreduce_add (mul (v4i32 MQPR:$src1), (v4i32 MQPR:$src2)))),
+                                          (i32 tGPREven:$src3))),
+            (i32 (MVE_VMLADAVau32 $src3, $src1, $src2))>;
+  def : Pat<(i32 (add (ARMVMLAVs (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)), tGPREven:$Rd)),
+            (i32 (MVE_VMLADAVas16 tGPREven:$Rd, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(i32 (add (ARMVMLAVu (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)), tGPREven:$Rd)),
+            (i32 (MVE_VMLADAVau16 tGPREven:$Rd, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(i32 (add (ARMVMLAVs (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)), tGPREven:$Rd)),
+            (i32 (MVE_VMLADAVas8 tGPREven:$Rd, (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(i32 (add (ARMVMLAVu (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)), tGPREven:$Rd)),
+            (i32 (MVE_VMLADAVau8 tGPREven:$Rd, (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+}
+
 // vmlav aliases vmladav
 foreach acc = ["", "a"] in {
   foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32"] in {
@@ -1032,6 +1074,26 @@ multiclass MVE_VMLALDAV_multi<string suffix, bit sz, list<dag> pattern=[]> {
 
 defm MVE_VMLALDAV : MVE_VMLALDAV_multi<"16", 0b0>;
 defm MVE_VMLALDAV : MVE_VMLALDAV_multi<"32", 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(ARMVMLALVs (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)),
+            (MVE_VMLALDAVs32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVu (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)),
+            (MVE_VMLALDAVu32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVs (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)),
+            (MVE_VMLALDAVs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVu (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)),
+            (MVE_VMLALDAVu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))>;
+
+  def : Pat<(ARMVMLALVAs tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)),
+            (MVE_VMLALDAVas32 tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVAu tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)),
+            (MVE_VMLALDAVau32 tGPREven:$Rda, tGPROdd:$Rdb, (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVAs tGPREven:$Rda, tGPROdd:$Rdb, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)),
+            (MVE_VMLALDAVas16 tGPREven:$Rda, tGPROdd:$Rdb, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))>;
+  def : Pat<(ARMVMLALVAu tGPREven:$Rda, tGPROdd:$Rdb, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)),
+            (MVE_VMLALDAVau16 tGPREven:$Rda, tGPROdd:$Rdb, (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))>;
+}
 
 // vmlalv aliases vmlaldav
 foreach acc = ["", "a"] in {

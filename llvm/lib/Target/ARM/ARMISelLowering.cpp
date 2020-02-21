@@ -1661,6 +1661,12 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VADDLVu:       return "ARMISD::VADDLVu";
   case ARMISD::VADDLVAs:      return "ARMISD::VADDLVAs";
   case ARMISD::VADDLVAu:      return "ARMISD::VADDLVAu";
+  case ARMISD::VMLAVs:        return "ARMISD::VMLAVs";
+  case ARMISD::VMLAVu:        return "ARMISD::VMLAVu";
+  case ARMISD::VMLALVs:       return "ARMISD::VMLALVs";
+  case ARMISD::VMLALVu:       return "ARMISD::VMLALVu";
+  case ARMISD::VMLALVAs:      return "ARMISD::VMLALVAs";
+  case ARMISD::VMLALVAu:      return "ARMISD::VMLALVAu";
   case ARMISD::UMAAL:         return "ARMISD::UMAAL";
   case ARMISD::UMLAL:         return "ARMISD::UMLAL";
   case ARMISD::SMLAL:         return "ARMISD::SMLAL";
@@ -11766,8 +11772,13 @@ static SDValue PerformADDVecReduce(SDNode *N,
     SDValue Hi = DCI.DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
                                  DCI.DAG.getConstant(1, dl, MVT::i32));
     SDValue Red =
-        DCI.DAG.getNode(OpcodeA, dl, DCI.DAG.getVTList({MVT::i32, MVT::i32}),
-                        Lo, Hi, VecRed->getOperand(0));
+        VecRed->getNumOperands() == 1
+            ? DCI.DAG.getNode(OpcodeA, dl,
+                              DCI.DAG.getVTList({MVT::i32, MVT::i32}), Lo, Hi,
+                              VecRed->getOperand(0))
+            : DCI.DAG.getNode(OpcodeA, dl,
+                              DCI.DAG.getVTList({MVT::i32, MVT::i32}), Lo, Hi,
+                              VecRed->getOperand(0), VecRed->getOperand(1));
     return DCI.DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Red,
                            SDValue(Red.getNode(), 1));
   };
@@ -11779,6 +11790,14 @@ static SDValue PerformADDVecReduce(SDNode *N,
   if (SDValue M = MakeVecReduce(ARMISD::VADDLVs, ARMISD::VADDLVAs, N1, N0))
     return M;
   if (SDValue M = MakeVecReduce(ARMISD::VADDLVu, ARMISD::VADDLVAu, N1, N0))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVs, ARMISD::VMLALVAs, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVu, ARMISD::VMLALVAu, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVs, ARMISD::VMLALVAs, N1, N0))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVu, ARMISD::VMLALVAu, N1, N0))
     return M;
   return SDValue();
 }
@@ -13997,10 +14016,17 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   // We are looking for something that will have illegal types if left alone,
   // but that we can convert to a single instruction undef MVE. For example
   // vecreduce_add(sext(A, v8i32)) => VADDV.s16 A
+  // or
+  // vecreduce_add(mul(zext(A, v16i32), zext(B, v16i32))) => VMLADAV.u8 A, B
 
   // Cases:
   //   VADDV u/s 8/16/32
+  //   VMLAV u/s 8/16/32
   //   VADDLV u/s 32
+  //   VMLALV u/s 16/32
+  // TODOD:
+  //   VMLSV
+  //   VMLSLV
 
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {
     if (ResVT != RetTy || N0->getOpcode() != ExtendCode)
@@ -14009,6 +14035,20 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
     if (llvm::any_of(ExtTypes, [&A](MVT Ty) { return A.getValueType() == Ty; }))
       return A;
     return SDValue();
+  };
+  auto IsVMLAV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes, SDValue &A, SDValue &B) {
+    if (ResVT != RetTy || N0->getOpcode() != ISD::MUL)
+      return false;
+    SDValue ExtA = N0->getOperand(0);
+    SDValue ExtB = N0->getOperand(1);
+    if (ExtA->getOpcode() != ExtendCode && ExtB->getOpcode() != ExtendCode)
+      return false;
+    A = ExtA->getOperand(0);
+    B = ExtB->getOperand(0);
+    if (A.getValueType() == B.getValueType() &&
+        llvm::any_of(ExtTypes, [&A](MVT Ty) { return A.getValueType() == Ty; }))
+      return true;
+    return false;
   };
   auto Create64bitNode = [&](unsigned Opcode, ArrayRef<SDValue> Ops) {
     SDValue Node = DAG.getNode(Opcode, dl, {MVT::i32, MVT::i32}, Ops);
@@ -14024,6 +14064,15 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue A = IsVADDV(MVT::i64, ISD::ZERO_EXTEND, {MVT::v4i32}))
     return Create64bitNode(ARMISD::VADDLVu, {A});
 
+  SDValue A, B;
+  if (IsVMLAV(MVT::i32, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v16i8}, A, B))
+    return DAG.getNode(ARMISD::VMLAVs, dl, ResVT, A, B);
+  if (IsVMLAV(MVT::i32, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v16i8}, A, B))
+    return DAG.getNode(ARMISD::VMLAVu, dl, ResVT, A, B);
+  if (IsVMLAV(MVT::i64, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v4i32}, A, B))
+    return Create64bitNode(ARMISD::VMLALVs, {A, B});
+  if (IsVMLAV(MVT::i64, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v4i32}, A, B))
+    return Create64bitNode(ARMISD::VMLALVu, {A, B});
   return SDValue();
 }
 
