@@ -87,9 +87,9 @@ bool InstCombiner::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
   Value *NewVal = SimplifyDemandedUseBits(U.get(), DemandedMask, Known,
                                           Depth, I);
   if (!NewVal) return false;
-  U = NewVal;
-  // Add the simplified instruction back to the worklist.
+  // Add the old operand back to the worklist.
   Worklist.addValue(U.get());
+  U = NewVal;
   return true;
 }
 
