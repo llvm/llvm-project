@@ -240,7 +240,7 @@ static lldb::addr_t GetVTableAddress(Process &process,
   if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
     return LLDB_INVALID_ADDRESS;
 
-  return data.GetPointer(&vbtable_ptr_offset);
+  return data.GetAddress(&vbtable_ptr_offset);
 }
 
 static int64_t ReadVBaseOffsetFromVTable(Process &process,

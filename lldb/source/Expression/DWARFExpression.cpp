@@ -1182,7 +1182,7 @@ bool DWARFExpression::Evaluate(
                 break;
               default:
                 stack.back().GetScalar() =
-                    addr_data.GetPointer(&addr_data_offset);
+                    addr_data.GetAddress(&addr_data_offset);
               }
               stack.back().ClearContext();
             } else {
