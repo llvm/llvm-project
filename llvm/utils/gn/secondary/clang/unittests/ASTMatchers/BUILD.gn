@@ -15,5 +15,6 @@ unittest("ASTMatchersTests") {
     "ASTMatchersNarrowingTest.cpp",
     "ASTMatchersNodeTest.cpp",
     "ASTMatchersTraversalTest.cpp",
+    "GtestMatchersTest.cpp",
   ]
 }
