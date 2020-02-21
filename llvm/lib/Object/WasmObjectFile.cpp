@@ -508,13 +508,16 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
           Function.SymbolName = Info.Name;
       } else {
         wasm::WasmImport &Import = *ImportedFunctions[Info.ElementIndex];
-        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
+        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
           Info.Name = readString(Ctx);
-        else
+          Info.ImportName = Import.Field;
+        } else {
           Info.Name = Import.Field;
+        }
         Signature = &Signatures[Import.SigIndex];
-        Info.ImportName = Import.Field;
-        Info.ImportModule = Import.Module;
+        if (!Import.Module.empty()) {
+          Info.ImportModule = Import.Module;
+        }
       }
       break;
 
@@ -537,13 +540,17 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
           Global.SymbolName = Info.Name;
       } else {
         wasm::WasmImport &Import = *ImportedGlobals[Info.ElementIndex];
-        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
+        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
           Info.Name = readString(Ctx);
-        else
+          Info.ImportName = Import.Field;
+        } else {
           Info.Name = Import.Field;
+        }
         GlobalType = &Import.Global;
         Info.ImportName = Import.Field;
-        Info.ImportModule = Import.Module;
+        if (!Import.Module.empty()) {
+          Info.ImportModule = Import.Module;
+        }
       }
       break;
 
@@ -597,14 +604,17 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
 
       } else {
         wasm::WasmImport &Import = *ImportedEvents[Info.ElementIndex];
-        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
+        if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
           Info.Name = readString(Ctx);
-        else
+          Info.ImportName = Import.Field;
+        } else {
           Info.Name = Import.Field;
+        }
         EventType = &Import.Event;
         Signature = &Signatures[EventType->SigIndex];
-        Info.ImportName = Import.Field;
-        Info.ImportModule = Import.Module;
+        if (!Import.Module.empty()) {
+          Info.ImportModule = Import.Module;
+        }
       }
       break;
     }
