@@ -7571,8 +7571,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, NewOp1);
   }
 
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   // fold (shl (shl x, c1), c2) -> 0 or (shl x, (add c1, c2))
@@ -7938,8 +7937,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   }
 
   // Simplify, based on bits shifted out of the LHS.
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   // If the sign bit is known to be zero, switch this to a SRL.
@@ -8135,8 +8133,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   // fold operands of srl based on knowledge that the low bits are not
   // demanded.
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
+  if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
   if (N1C && !N1C->isOpaque())
