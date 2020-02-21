@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginObjCRuntime
+add_lldb_library(lldbPluginObjCRuntime PLUGIN
   ObjCLanguageRuntime.cpp
 
   LINK_LIBS

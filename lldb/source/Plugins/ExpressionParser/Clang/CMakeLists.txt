@@ -2,7 +2,7 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
-add_lldb_library(lldbPluginExpressionParserClang 
+add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ASTResultSynthesizer.cpp
   ASTStructExtractor.cpp
   ASTUtils.cpp

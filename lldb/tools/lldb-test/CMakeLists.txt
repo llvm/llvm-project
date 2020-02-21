@@ -23,6 +23,5 @@ add_lldb_tool(lldb-test
   LINK_COMPONENTS
     Support
   )
-
-target_include_directories(lldb-test PRIVATE ${LLDB_SOURCE_DIR}/source)
-target_include_directories(lldb-test PRIVATE ${LLDB_BINARY_DIR}/source)
+  
+include_directories(${LLDB_SOURCE_DIR}/source)
