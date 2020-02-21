@@ -18,9 +18,9 @@ class DWARFDebugInfo;
 namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
-  ManualDWARFIndex(Module &module, DWARFDebugInfo *debug_info,
+  ManualDWARFIndex(Module &module, DWARFDebugInfo &debug_info,
                    llvm::DenseSet<dw_offset_t> units_to_avoid = {})
-      : DWARFIndex(module), m_debug_info(debug_info),
+      : DWARFIndex(module), m_debug_info(&debug_info),
         m_units_to_avoid(std::move(units_to_avoid)) {}
 
   void Preload() override { Index(); }

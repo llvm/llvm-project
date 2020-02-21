@@ -20,7 +20,7 @@ class DebugNamesDWARFIndex : public DWARFIndex {
 public:
   static llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
   Create(Module &module, DWARFDataExtractor debug_names,
-         DWARFDataExtractor debug_str, DWARFDebugInfo *debug_info);
+         DWARFDataExtractor debug_str, DWARFDebugInfo &debug_info);
 
   void Preload() override { m_fallback.Preload(); }
 
@@ -53,7 +53,7 @@ private:
       : DWARFIndex(module), m_debug_info(debug_info),
         m_debug_names_data(debug_names_data), m_debug_str_data(debug_str_data),
         m_debug_names_up(std::move(debug_names_up)),
-        m_fallback(module, &debug_info, GetUnits(*m_debug_names_up)) {}
+        m_fallback(module, debug_info, GetUnits(*m_debug_names_up)) {}
 
   DWARFDebugInfo &m_debug_info;
 
