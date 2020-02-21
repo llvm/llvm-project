@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 // This test is intended to create a situation in which one thread will exit
 // while a breakpoint is being handled in another thread.  This may not always
 // happen because it's possible that the exiting thread will exit before the
