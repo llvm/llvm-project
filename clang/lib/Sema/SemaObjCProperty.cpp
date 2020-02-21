@@ -1456,7 +1456,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
                                         PropertyLoc);
       PIDecl->setGetterMethodDecl(OMD);
     }
- 
+
     if (getLangOpts().CPlusPlus && Synthesize && !CompleteTypeErr &&
         Ivar->getType()->isRecordType()) {
       // For Objective-C++, need to synthesize the AST for the IVAR object to be
