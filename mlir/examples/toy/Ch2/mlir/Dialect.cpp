@@ -14,6 +14,7 @@
 #include "toy/Dialect.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 
 using namespace mlir;
@@ -36,6 +37,54 @@ ToyDialect::ToyDialect(mlir::MLIRContext *ctx) : mlir::Dialect("toy", ctx) {
 // Toy Operations
 //===----------------------------------------------------------------------===//
 
+/// A generalized parser for binary operations. This parses the different forms
+/// of 'printBinaryOp' below.
+static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
+                                       mlir::OperationState &result) {
+  SmallVector<mlir::OpAsmParser::OperandType, 2> operands;
+  llvm::SMLoc operandsLoc = parser.getCurrentLocation();
+  Type type;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/2) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type))
+    return mlir::failure();
+
+  // If the type is a function type, it contains the input and result types of
+  // this operation.
+  if (FunctionType funcType = type.dyn_cast<FunctionType>()) {
+    if (parser.resolveOperands(operands, funcType.getInputs(), operandsLoc,
+                               result.operands))
+      return mlir::failure();
+    result.addTypes(funcType.getResults());
+    return mlir::success();
+  }
+
+  // Otherwise, the parsed type is the type of both operands and results.
+  if (parser.resolveOperands(operands, type, result.operands))
+    return mlir::failure();
+  result.addTypes(type);
+  return mlir::success();
+}
+
+/// A generalized printer for binary operations. It prints in two different
+/// forms depending on if all of the types match.
+static void printBinaryOp(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
+  printer << op->getName() << " " << op->getOperands();
+  printer.printOptionalAttrDict(op->getAttrs());
+  printer << " : ";
+
+  // If all of the types are the same, print the type directly.
+  Type resultType = *op->result_type_begin();
+  if (llvm::all_of(op->getOperandTypes(),
+                   [=](Type type) { return type == resultType; })) {
+    printer << resultType;
+    return;
+  }
+
+  // Otherwise, print a functional type.
+  printer.printFunctionalType(op->getOperandTypes(), op->getResultTypes());
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 
@@ -47,6 +96,32 @@ void ConstantOp::build(mlir::Builder *builder, mlir::OperationState &state,
   auto dataType = RankedTensorType::get({}, builder->getF64Type());
   auto dataAttribute = DenseElementsAttr::get(dataType, value);
   ConstantOp::build(builder, state, dataType, dataAttribute);
+}
+
+/// The 'OpAsmPrinter' class provides a collection of methods for parsing
+/// various punctuation, as well as attributes, operands, types, etc. Each of
+/// these methods returns a `ParseResult`. This class is a wrapper around
+/// `LogicalResult` that can be converted to a boolean `true` value on failure,
+/// or `false` on success. This allows for easily chaining together a set of
+/// parser rules. These rules are used to populate an `mlir::OperationState`
+/// similarly to the `build` methods described above.
+static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::DenseElementsAttr value;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseAttribute(value, "value", result.attributes))
+    return failure();
+
+  result.addTypes(value.getType());
+  return success();
+}
+
+/// The 'OpAsmPrinter' class is a stream that will allows for formatting
+/// strings, attributes, operands, types, etc.
+static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
+  printer << "toy.constant ";
+  printer.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
+  printer << op.value();
 }
 
 /// Verifier for the constant operation. This corresponds to the `::verify(...)`

@@ -2,11 +2,11 @@
 // RUN: toyc-ch7 %s -emit=mlir-affine -opt 2>&1 | FileCheck %s --check-prefix=OPT
 
 func @main() {
-  %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-  %2 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
-  %3 = "toy.mul"(%2, %2) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-  "toy.print"(%3) : (tensor<3x2xf64>) -> ()
-  "toy.return"() : () -> ()
+  %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+  %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+  %3 = toy.mul %2, %2 : tensor<3x2xf64>
+  toy.print %3 : tensor<3x2xf64>
+  toy.return
 }
 
 // CHECK-LABEL: func @main()
@@ -35,7 +35,7 @@ func @main() {
 // CHECK:             [[VAL_15:%.*]] = affine.load [[VAL_7]]{{\[}}[[VAL_12]], [[VAL_13]]] : memref<3x2xf64>
 // CHECK:             [[VAL_16:%.*]] = mulf [[VAL_14]], [[VAL_15]] : f64
 // CHECK:             affine.store [[VAL_16]], [[VAL_6]]{{\[}}[[VAL_12]], [[VAL_13]]] : memref<3x2xf64>
-// CHECK:         "toy.print"([[VAL_6]]) : (memref<3x2xf64>) -> ()
+// CHECK:         toy.print [[VAL_6]] : memref<3x2xf64>
 // CHECK:         dealloc [[VAL_8]] : memref<2x3xf64>
 // CHECK:         dealloc [[VAL_7]] : memref<3x2xf64>
 // CHECK:         dealloc [[VAL_6]] : memref<3x2xf64>
@@ -60,6 +60,6 @@ func @main() {
 // OPT:             [[VAL_10:%.*]] = affine.load [[VAL_7]]{{\[}}[[VAL_9]], [[VAL_8]]] : memref<2x3xf64>
 // OPT:             [[VAL_11:%.*]] = mulf [[VAL_10]], [[VAL_10]] : f64
 // OPT:             affine.store [[VAL_11]], [[VAL_6]]{{\[}}[[VAL_8]], [[VAL_9]]] : memref<3x2xf64>
-// OPT:         "toy.print"([[VAL_6]]) : (memref<3x2xf64>) -> ()
+// OPT:         toy.print [[VAL_6]] : memref<3x2xf64>
 // OPT:         dealloc [[VAL_7]] : memref<2x3xf64>
 // OPT:         dealloc [[VAL_6]] : memref<3x2xf64>
