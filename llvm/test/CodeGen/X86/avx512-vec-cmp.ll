@@ -1567,3 +1567,25 @@ entry:
   %3 = select <8 x i1> %2, <8 x i64> %y, <8 x i64> %z
   ret <8 x i64> %3
 }
+
+define <2 x i32> @narrow_cmp_select_reverse(<2 x i64> %x, <2 x i32> %y) nounwind {
+; AVX512-LABEL: narrow_cmp_select_reverse:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe9,0xef,0xd2]
+; AVX512-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x29,0xc2]
+; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0xfd,0x48,0x25,0xc0,0x0f]
+; AVX512-NEXT:    vpshufd $232, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x70,0xc0,0xe8]
+; AVX512-NEXT:    ## xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0xc1]
+; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; SKX-LABEL: narrow_cmp_select_reverse:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1 ## encoding: [0x62,0xf2,0xfd,0x08,0x27,0xc8]
+; SKX-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x6f,0xc1]
+; SKX-NEXT:    retq ## encoding: [0xc3]
+  %mask = icmp eq <2 x i64> %x, zeroinitializer
+  %res = select <2 x i1> %mask, <2 x i32> zeroinitializer, <2 x i32> %y
+  ret <2 x i32> %res
+}
