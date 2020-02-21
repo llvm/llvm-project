@@ -11,6 +11,7 @@
 
 #include "ARMBuildAttributes.h"
 #include "ScopedPrinter.h"
+#include "llvm/Support/Endian.h"
 
 #include <map>
 
@@ -124,7 +125,7 @@ public:
 
   ARMAttributeParser() : SW(nullptr) { }
 
-  void Parse(ArrayRef<uint8_t> Section, bool isLittle);
+  void parse(ArrayRef<uint8_t> Section, support::endianness E);
 
   bool hasAttribute(unsigned Tag) const {
     return Attributes.count(Tag);
