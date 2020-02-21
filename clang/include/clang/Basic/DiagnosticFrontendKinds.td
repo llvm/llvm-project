@@ -106,7 +106,7 @@ def err_fe_invalid_wchar_type
 def err_fe_invalid_exception_model
    : Error<"invalid exception model '%0' for target '%1'">;
 def warn_fe_concepts_ts_flag : Warning<
-  "-fconcepts-ts is deprecated - use '-std=c++2a' for Concepts support">,
+  "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
   InGroup<Deprecated>;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
@@ -175,9 +175,9 @@ def note_incompatible_analyzer_plugin_api : Note<
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_cpp_modules : Error<
-  "module interface compilation requires '-std=c++2a' or '-fmodules-ts'">;
+  "module interface compilation requires '-std=c++20' or '-fmodules-ts'">;
 def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules', '-std=c++2a', or "
+  "header module compilation requires '-fmodules', '-std=c++20', or "
   "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "

@@ -344,13 +344,27 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                                                const LangOptions &LangOpts,
                                                const FrontendOptions &FEOpts,
                                                MacroBuilder &Builder) {
+  // C++ [cpp.predefined]p1:
+  //   The following macro names shall be defined by the implementation:
+
+  //   -- __STDC__
+  //      [C++] Whether __STDC__ is predefined and if so, what its value is,
+  //      are implementation-defined.
+  // (Removed in C++20.)
   if (!LangOpts.MSVCCompat && !LangOpts.TraditionalCPP)
     Builder.defineMacro("__STDC__");
+  //   -- __STDC_HOSTED__
+  //      The integer literal 1 if the implementation is a hosted
+  //      implementation or the integer literal 0 if it is not.
   if (LangOpts.Freestanding)
     Builder.defineMacro("__STDC_HOSTED__", "0");
   else
     Builder.defineMacro("__STDC_HOSTED__");
 
+  //   -- __STDC_VERSION__
+  //      [C++] Whether __STDC_VERSION__ is predefined and if so, what its
+  //      value is, are implementation-defined.
+  // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
     if (LangOpts.C17)
       Builder.defineMacro("__STDC_VERSION__", "201710L");
@@ -361,33 +375,29 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     else if (!LangOpts.GNUMode && LangOpts.Digraphs)
       Builder.defineMacro("__STDC_VERSION__", "199409L");
   } else {
-    // FIXME: Use correct value for C++20.
+    //   -- __cplusplus
+    //      [C++20] The integer literal 202002L.
     if (LangOpts.CPlusPlus2a)
-      Builder.defineMacro("__cplusplus", "201707L");
-    // C++17 [cpp.predefined]p1:
-    //   The name __cplusplus is defined to the value 201703L when compiling a
-    //   C++ translation unit.
+      Builder.defineMacro("__cplusplus", "202002L");
+    //      [C++17] The integer literal 201703L.
     else if (LangOpts.CPlusPlus17)
       Builder.defineMacro("__cplusplus", "201703L");
-    // C++1y [cpp.predefined]p1:
-    //   The name __cplusplus is defined to the value 201402L when compiling a
-    //   C++ translation unit.
+    //      [C++14] The name __cplusplus is defined to the value 201402L when
+    //      compiling a C++ translation unit.
     else if (LangOpts.CPlusPlus14)
       Builder.defineMacro("__cplusplus", "201402L");
-    // C++11 [cpp.predefined]p1:
-    //   The name __cplusplus is defined to the value 201103L when compiling a
-    //   C++ translation unit.
+    //      [C++11] The name __cplusplus is defined to the value 201103L when
+    //      compiling a C++ translation unit.
     else if (LangOpts.CPlusPlus11)
       Builder.defineMacro("__cplusplus", "201103L");
-    // C++03 [cpp.predefined]p1:
-    //   The name __cplusplus is defined to the value 199711L when compiling a
-    //   C++ translation unit.
+    //      [C++03] The name __cplusplus is defined to the value 199711L when
+    //      compiling a C++ translation unit.
     else
       Builder.defineMacro("__cplusplus", "199711L");
 
-    // C++1z [cpp.predefined]p1:
-    //   An integer literal of type std::size_t whose value is the alignment
-    //   guaranteed by a call to operator new(std::size_t)
+    //   -- __STDCPP_DEFAULT_NEW_ALIGNMENT__
+    //      [C++17] An integer literal of type std::size_t whose value is the
+    //      alignment guaranteed by a call to operator new(std::size_t)
     //
     // We provide this in all language modes, since it seems generally useful.
     Builder.defineMacro("__STDCPP_DEFAULT_NEW_ALIGNMENT__",
