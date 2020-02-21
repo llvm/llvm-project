@@ -14,36 +14,8 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v4i32_v4i64_zext(<4 x i32> %x) {
 ; CHECK-LABEL: add_v4i32_v4i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI1_0
-; CHECK-NEXT:    vmov.f32 s4, s0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    vand q0, q1, q2
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    adcs r0, r1
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    adcs r1, r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r3
+; CHECK-NEXT:    vaddlv.u32 r0, r1, q0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %xx)
@@ -53,29 +25,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v4i32_v4i64_sext(<4 x i32> %x) {
 ; CHECK-LABEL: add_v4i32_v4i64_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s4, s0
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.32 q2[0], r0
-; CHECK-NEXT:    asrs r0, r0, #31
-; CHECK-NEXT:    vmov.32 q2[1], r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.32 q2[2], r0
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    asrs r1, r0, #31
-; CHECK-NEXT:    vmov.32 q2[3], r1
-; CHECK-NEXT:    vmov r2, s10
-; CHECK-NEXT:    vmov r3, s8
-; CHECK-NEXT:    vmov r1, s9
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    adc.w r0, r1, r0, asr #31
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    adds r2, r2, r1
-; CHECK-NEXT:    adc.w r1, r0, r1, asr #31
-; CHECK-NEXT:    adds r0, r2, r3
-; CHECK-NEXT:    adc.w r1, r1, r3, asr #31
+; CHECK-NEXT:    vaddlv.s32 r0, r1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <4 x i32> %x to <4 x i64>
@@ -856,40 +806,8 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v4i32_v4i64_acc_zext(<4 x i32> %x, i64 %a) {
 ; CHECK-LABEL: add_v4i32_v4i64_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    adr r2, .LCPI29_0
-; CHECK-NEXT:    vmov.f32 s4, s0
-; CHECK-NEXT:    vldrw.u32 q2, [r2]
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vmov r12, s7
-; CHECK-NEXT:    vmov lr, s5
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    vand q0, q1, q2
-; CHECK-NEXT:    adds r4, r3, r2
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov r2, s1
-; CHECK-NEXT:    adc.w r12, r12, lr
-; CHECK-NEXT:    adds r3, r3, r4
-; CHECK-NEXT:    vmov r4, s3
-; CHECK-NEXT:    adc.w r12, r12, r2
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    adc.w r3, r12, r4
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r3
-; CHECK-NEXT:    pop {r4, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI29_0:
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    vaddlva.u32 r0, r1, q0
+; CHECK-NEXT:    bx lr
 entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %xx)
@@ -900,34 +818,8 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v4i32_v4i64_acc_sext(<4 x i32> %x, i64 %a) {
 ; CHECK-LABEL: add_v4i32_v4i64_acc_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov.f32 s4, s0
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    vmov.32 q2[0], r2
-; CHECK-NEXT:    asrs r2, r2, #31
-; CHECK-NEXT:    vmov.32 q2[1], r2
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov.32 q2[2], r2
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s6, s3
-; CHECK-NEXT:    asrs r3, r2, #31
-; CHECK-NEXT:    vmov.32 q2[3], r3
-; CHECK-NEXT:    vmov lr, s10
-; CHECK-NEXT:    vmov r3, s8
-; CHECK-NEXT:    vmov r12, s9
-; CHECK-NEXT:    adds.w r3, r3, lr
-; CHECK-NEXT:    adc.w r12, r12, r2, asr #31
-; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    adds r3, r3, r2
-; CHECK-NEXT:    adc.w r12, r12, r2, asr #31
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    adds r3, r3, r2
-; CHECK-NEXT:    adc.w r2, r12, r2, asr #31
-; CHECK-NEXT:    adds r0, r0, r3
-; CHECK-NEXT:    adcs r1, r2
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vaddlva.s32 r0, r1, q0
+; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <4 x i32> %x to <4 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %xx)
