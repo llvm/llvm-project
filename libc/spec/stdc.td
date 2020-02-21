@@ -179,10 +179,34 @@ def StdC : StandardSpec<"stdc"> {
       []  // Functions
   >;
 
+  HeaderSpec Signal = HeaderSpec<
+      "signal.h",
+      [
+        Macro<"SIG_BLOCK">,
+        Macro<"SIG_UNBLOCK">,
+        Macro<"SIG_SETMASK">,
+
+        Macro<"SIGABRT">,
+        Macro<"SIGFPE">,
+        Macro<"SIGILL">,
+        Macro<"SIGINT">,
+        Macro<"SIGSEGV">,
+        Macro<"SIGTERM">
+      ],
+      [
+        NamedType<"sigset_t">,
+        SizeTType,
+      ],
+      [
+        FunctionSpec<"raise", RetValSpec<IntType>, [ArgSpec<IntType>]>,
+      ]
+  >;
+
   let Headers = [
     Errno,
     Math,
     String,
     StdIO,
+    Signal,
   ];
 }
