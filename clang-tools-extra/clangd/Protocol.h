@@ -1101,6 +1101,8 @@ struct CompletionItem {
   /// the client side.
   float score = 0.f;
 
+  // TODO: Add custom commitCharacters for some of the completion items. For
+  // example, it makes sense to use () only for the functions.
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //

@@ -559,6 +559,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"codeActionProvider", std::move(CodeActionProvider)},
             {"completionProvider",
              llvm::json::Object{
+                 {"allCommitCharacters", " \t()[]{}<>:;,+-/*%^&#?.=\"'|"},
                  {"resolveProvider", false},
                  // We do extra checks for '>' and ':' in completion to only
                  // trigger on '->' and '::'.
