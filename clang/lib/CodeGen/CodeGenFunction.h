@@ -36,6 +36,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
@@ -253,6 +254,114 @@ public:
     llvm::BasicBlock *Block;
     EHScopeStack::stable_iterator ScopeDepth;
     unsigned Index;
+  };
+
+  // Helper class for the OpenMP IR Builder. Allows reusability of code used for
+  // region body, and finalization codegen callbacks. This will class will also
+  // contain privatization functions used by the privatization call backs
+  struct OMPBuilderCBHelpers {
+
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    /// Emit the Finalization for an OMP region
+    /// \param CGF	The Codegen function this belongs to
+    /// \param IP	Insertion point for generating the finalization code.
+    static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
+      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
+      assert(IP.getBlock()->end() != IP.getPoint() &&
+             "OpenMP IR Builder should cause terminated block!");
+
+      llvm::BasicBlock *IPBB = IP.getBlock();
+      llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
+      assert(DestBB && "Finalization block should have one successor!");
+
+      // erase and replace with cleanup branch.
+      IPBB->getTerminator()->eraseFromParent();
+      CGF.Builder.SetInsertPoint(IPBB);
+      CodeGenFunction::JumpDest Dest = CGF.getJumpDestInCurrentScope(DestBB);
+      CGF.EmitBranchThroughCleanup(Dest);
+    }
+
+    /// Emit the body of an OMP region
+    /// \param CGF	The Codegen function this belongs to
+    /// \param RegionBodyStmt	The body statement for the OpenMP region being
+    /// 			 generated
+    /// \param CodeGenIP	Insertion point for generating the body code.
+    /// \param FiniBB	The finalization basic block
+    static void EmitOMPRegionBody(CodeGenFunction &CGF,
+                                  const Stmt *RegionBodyStmt,
+                                  InsertPointTy CodeGenIP,
+                                  llvm::BasicBlock &FiniBB) {
+      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
+        CodeGenIPBBTI->eraseFromParent();
+
+      CGF.Builder.SetInsertPoint(CodeGenIPBB);
+
+      CGF.EmitStmt(RegionBodyStmt);
+
+      if (CGF.Builder.saveIP().isSet())
+        CGF.Builder.CreateBr(&FiniBB);
+    }
+
+    /// RAII for preserving necessary info during Outlined region body codegen.
+    class OutlinedRegionBodyRAII {
+
+      llvm::AssertingVH<llvm::Instruction> OldAllocaIP;
+      CodeGenFunction::JumpDest OldReturnBlock;
+      CodeGenFunction &CGF;
+
+    public:
+      OutlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
+                             llvm::BasicBlock &RetBB)
+          : CGF(cgf) {
+        assert(AllocaIP.isSet() &&
+               "Must specify Insertion point for allocas of outlined function");
+        OldAllocaIP = CGF.AllocaInsertPt;
+        CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+
+        OldReturnBlock = CGF.ReturnBlock;
+        CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
+      }
+
+      ~OutlinedRegionBodyRAII() {
+        CGF.AllocaInsertPt = OldAllocaIP;
+        CGF.ReturnBlock = OldReturnBlock;
+      }
+    };
+
+    /// RAII for preserving necessary info during inlined region body codegen.
+    class InlinedRegionBodyRAII {
+
+      llvm::AssertingVH<llvm::Instruction> OldAllocaIP;
+      CodeGenFunction &CGF;
+
+    public:
+      InlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
+                            llvm::BasicBlock &FiniBB)
+          : CGF(cgf) {
+        // Alloca insertion block should be in the entry block of the containing
+        // function so it expects an empty AllocaIP in which case will reuse the
+        // old alloca insertion point, or a new AllocaIP in the same block as
+        // the old one
+        assert((!AllocaIP.isSet() ||
+                CGF.AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
+               "Insertion point should be in the entry block of containing "
+               "function!");
+        OldAllocaIP = CGF.AllocaInsertPt;
+        if (AllocaIP.isSet())
+          CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+
+        // TODO: Remove the call, after making sure the counter is not used by
+        //       the EHStack.
+        // Since this is an inlined region, it should not modify the
+        // ReturnBlock, and should reuse the one for the enclosing outlined
+        // region. So, the JumpDest being return by the function is discarded
+        (void)CGF.getJumpDestInCurrentScope(&FiniBB);
+      }
+
+      ~InlinedRegionBodyRAII() { CGF.AllocaInsertPt = OldAllocaIP; }
+    };
   };
 
   CodeGenModule &CGM;  // Per-module state.
