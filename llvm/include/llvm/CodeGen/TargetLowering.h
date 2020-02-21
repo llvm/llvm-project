@@ -3239,7 +3239,7 @@ public:
 
   /// Helper wrapper around SimplifyDemandedBits.
   /// Adds Op back to the worklist upon success.
-  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                             DAGCombinerInfo &DCI) const;
 
   /// More limited version of SimplifyDemandedBits that can be used to "look
@@ -3249,6 +3249,12 @@ public:
                                           const APInt &DemandedElts,
                                           SelectionDAG &DAG,
                                           unsigned Depth) const;
+
+  /// Helper wrapper around SimplifyMultipleUseDemandedBits, demanding all
+  /// elements.
+  SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          SelectionDAG &DAG,
+                                          unsigned Depth = 0) const;
 
   /// Look at Vector Op. At this point, we know that only the DemandedElts
   /// elements of the result of Op are ever used downstream.  If we can use
@@ -3284,6 +3290,7 @@ public:
                                              const APInt &DemandedElts,
                                              const SelectionDAG &DAG,
                                              unsigned Depth = 0) const;
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
