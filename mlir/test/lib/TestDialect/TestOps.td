@@ -1139,4 +1139,9 @@ def FormatOperandEOp : FormatOperandBase<"format_operand_e_op", [{
   $buildable `,` $operand `:` type($buildable) `,` type($operand) attr-dict
 }]>;
 
+def FormatSuccessorAOp : TEST_Op<"format_successor_a_op", [Terminator]> {
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
+  let assemblyFormat = "$targets attr-dict";
+}
+
 #endif // TEST_OPS

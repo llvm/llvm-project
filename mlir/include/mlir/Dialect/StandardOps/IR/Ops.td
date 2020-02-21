@@ -250,6 +250,7 @@ def BranchOp : Std_Op<"br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$dest attr-dict";
 }
 
 def CallOp : Std_Op<"call", [CallOpInterface]> {
@@ -602,6 +603,7 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$condition `,` successors attr-dict";
 }
 
 def ConstantOp : Std_Op<"constant",

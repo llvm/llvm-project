@@ -455,15 +455,12 @@ def LLVM_SelectOp
 // Terminators.
 def LLVM_BrOp : LLVM_TerminatorOp<"br", []> {
   let successors = (successor AnySuccessor:$dest);
-  let parser = [{ return parseBrOp(parser, result); }];
-  let printer = [{ printBrOp(p, *this); }];
+  let assemblyFormat = "$dest attr-dict";
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br", []> {
   let arguments = (ins LLVMI1:$condition);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
-
-  let parser = [{ return parseCondBrOp(parser, result); }];
-  let printer = [{ printCondBrOp(p, *this); }];
+  let assemblyFormat = "$condition `,` successors attr-dict";
 }
 def LLVM_ReturnOp : LLVM_TerminatorOp<"return", []>,
                     Arguments<(ins Variadic<LLVM_Type>:$args)> {

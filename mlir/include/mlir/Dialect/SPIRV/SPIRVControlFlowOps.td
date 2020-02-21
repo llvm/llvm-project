@@ -69,6 +69,8 @@ def SPV_BranchOp : SPV_Op<"Branch", [InFunctionScope, Terminator]> {
   }];
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = "successors attr-dict";
 }
 
 // -----

@@ -94,8 +94,16 @@ def DirectiveOperandsValid : TestFormat_Op<"operands_valid", [{
 // results
 
 // CHECK: error: 'results' directive can not be used as a top-level directive
-def DirectiveResultsInvalidA : TestFormat_Op<"operands_invalid_a", [{
+def DirectiveResultsInvalidA : TestFormat_Op<"results_invalid_a", [{
   results
+}]>;
+
+//===----------------------------------------------------------------------===//
+// successors
+
+// CHECK: error: 'successors' is only valid as a top-level directive
+def DirectiveSuccessorsInvalidA : TestFormat_Op<"successors_invalid_a", [{
+  type(successors)
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -235,7 +243,7 @@ def OptionalInvalidK : TestFormat_Op<"optional_invalid_k", [{
 // Variables
 //===----------------------------------------------------------------------===//
 
-// CHECK: error: expected variable to refer to a argument or result
+// CHECK: error: expected variable to refer to a argument, result, or successor
 def VariableInvalidA : TestFormat_Op<"variable_invalid_a", [{
   $unknown_arg attr-dict
 }]>;
@@ -255,6 +263,18 @@ def VariableInvalidD : TestFormat_Op<"variable_invalid_d", [{
 def VariableInvalidE : TestFormat_Op<"variable_invalid_e", [{
   $result attr-dict
 }]>, Results<(outs I64:$result)>;
+// CHECK: error: successor 'successor' is already bound
+def VariableInvalidF : TestFormat_Op<"variable_invalid_f", [{
+  $successor $successor attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}
+// CHECK: error: successor 'successor' is already bound
+def VariableInvalidG : TestFormat_Op<"variable_invalid_g", [{
+  successors $successor attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}
 
 //===----------------------------------------------------------------------===//
 // Coverage Checks
