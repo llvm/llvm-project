@@ -27,9 +27,6 @@ include "BUFInstructions.td"
 defm EXP : EXP_m<0>;
 defm EXP_DONE : EXP_m<1>;
 
-// FIXME: GlobalISel successfully imports this pattern, but fails to
-// select because the i1 done_val does a type check on done_val, which
-// only works on register operands.
 class ExpPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
   (int_amdgcn_exp timm:$tgt, timm:$en,
                   (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
