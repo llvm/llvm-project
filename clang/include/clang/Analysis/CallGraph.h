@@ -189,6 +189,10 @@ public:
 
   Decl *getDecl() const { return FD; }
 
+  FunctionDecl *getDefinition() const {
+    return getDecl()->getAsFunction()->getDefinition();
+  }
+
   void print(raw_ostream &os) const;
   void dump() const;
 };
