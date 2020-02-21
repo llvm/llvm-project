@@ -2764,6 +2764,17 @@ SubViewOp::getStaticStrides(SmallVectorImpl<int64_t> &staticStrides) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// AssumeAlignmentOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AssumeAlignmentOp op) {
+  unsigned alignment = op.alignment().getZExtValue();
+  if (!llvm::isPowerOf2_32(alignment))
+    return op.emitOpError("alignment must be power of 2");
+  return success();
+}
+
 namespace {
 
 /// Pattern to rewrite a subview op with constant size arguments.
