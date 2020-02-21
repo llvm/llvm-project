@@ -1037,6 +1037,9 @@ public:
 
   bool haveGVs() const { return HaveGVs; }
 
+  uint64_t getFlags() const;
+  void setFlags(uint64_t Flags);
+
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
   gvsummary_iterator end() { return GlobalValueMap.end(); }

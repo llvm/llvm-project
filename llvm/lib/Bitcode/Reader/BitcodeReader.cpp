@@ -5836,35 +5836,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     default: // Default behavior: ignore.
       break;
     case bitc::FS_FLAGS: {  // [flags]
-      uint64_t Flags = Record[0];
-      // Scan flags.
-      assert(Flags <= 0x3f && "Unexpected bits in flag");
-
-      // 1 bit: WithGlobalValueDeadStripping flag.
-      // Set on combined index only.
-      if (Flags & 0x1)
-        TheIndex.setWithGlobalValueDeadStripping();
-      // 1 bit: SkipModuleByDistributedBackend flag.
-      // Set on combined index only.
-      if (Flags & 0x2)
-        TheIndex.setSkipModuleByDistributedBackend();
-      // 1 bit: HasSyntheticEntryCounts flag.
-      // Set on combined index only.
-      if (Flags & 0x4)
-        TheIndex.setHasSyntheticEntryCounts();
-      // 1 bit: DisableSplitLTOUnit flag.
-      // Set on per module indexes. It is up to the client to validate
-      // the consistency of this flag across modules being linked.
-      if (Flags & 0x8)
-        TheIndex.setEnableSplitLTOUnit();
-      // 1 bit: PartiallySplitLTOUnits flag.
-      // Set on combined index only.
-      if (Flags & 0x10)
-        TheIndex.setPartiallySplitLTOUnits();
-      // 1 bit: WithAttributePropagation flag.
-      // Set on combined index only.
-      if (Flags & 0x20)
-        TheIndex.setWithAttributePropagation();
+      TheIndex.setFlags(Record[0]);
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
