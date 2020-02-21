@@ -1005,8 +1005,8 @@ protected:
       m_byte_order;     ///< The byte order of the data we are extracting from.
   uint32_t m_addr_size; ///< The address size to use when extracting pointers or
                         /// addresses
-  mutable lldb::DataBufferSP m_data_sp; ///< The shared pointer to data that can
-                                        /// be shared among multiple instances
+  /// The shared pointer to data that can be shared among multiple instances
+  lldb::DataBufferSP m_data_sp;
   const uint32_t m_target_byte_size;
 };
 
