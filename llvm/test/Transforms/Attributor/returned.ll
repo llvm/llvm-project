@@ -781,7 +781,7 @@ define i32 @exact(i32* %a) {
   %c3 = call i32* @non_exact_3(i32* %a)
 ; We can use the information of the weak function non_exact_3 because it was
 ; given to us and not derived (the alignment of the returned argument).
-; ATTRIBUTOR:  %c4 = load i32, i32* %c3, align 32
+; ATTRIBUTOR:  %c4 = load i32, i32* %c3
   %c4 = load i32, i32* %c3
 ; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
 ; ATTRIBUTOR:  %add1 = add i32 %c0, %c1
