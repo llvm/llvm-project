@@ -270,8 +270,7 @@ ABICreateInstance PluginManager::GetABICreateCallbackAtIndex(uint32_t idx) {
 
 #pragma mark Architecture
 
-typedef PluginInstance<PluginManager::ArchitectureCreateInstance>
-    ArchitectureInstance;
+typedef PluginInstance<ArchitectureCreateInstance> ArchitectureInstance;
 typedef std::vector<ArchitectureInstance> ArchitectureInstances;
 
 static std::mutex &GetArchitectureMutex() {

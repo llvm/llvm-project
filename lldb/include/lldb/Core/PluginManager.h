@@ -62,9 +62,6 @@ public:
   static ABICreateInstance GetABICreateCallbackAtIndex(uint32_t idx);
 
   // Architecture
-  using ArchitectureCreateInstance =
-      std::unique_ptr<Architecture> (*)(const ArchSpec &);
-
   static void RegisterPlugin(ConstString name, llvm::StringRef description,
                              ArchitectureCreateInstance create_callback);
 
