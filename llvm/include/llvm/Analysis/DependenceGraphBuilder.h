@@ -58,6 +58,7 @@ public:
     createFineGrainedNodes();
     createDefUseEdges();
     createMemoryDependencyEdges();
+    simplify();
     createAndConnectRootNode();
     createPiBlocks();
     sortNodesTopologically();
@@ -91,6 +92,15 @@ public:
   /// program elements that need to stay together during codegen and turn
   /// the dependence graph into an acyclic graph.
   void createPiBlocks();
+
+  /// Go through all the nodes in the graph and collapse any two nodes
+  /// 'a' and 'b' if all of the following are true:
+  ///   - the only edge from 'a' is a def-use edge to 'b' and
+  ///   - the only edge to 'b' is a def-use edge from 'a' and
+  ///   - there is no cyclic edge from 'b' to 'a' and
+  ///   - all instructions in 'a' and 'b' belong to the same basic block and
+  ///   - both 'a' and 'b' are simple (single or multi instruction) nodes.
+  void simplify();
 
   /// Topologically sort the graph nodes.
   void sortNodesTopologically();
@@ -128,6 +138,18 @@ protected:
   /// Return true if creation of pi-blocks are supported and desired,
   /// and false otherwise.
   virtual bool shouldCreatePiBlocks() const { return true; }
+
+  /// Return true if graph simplification step is requested, and false
+  /// otherwise.
+  virtual bool shouldSimplify() const { return true; }
+
+  /// Return true if it's safe to merge the two nodes.
+  virtual bool areNodesMergeable(const NodeType &A,
+                                 const NodeType &B) const = 0;
+
+  /// Append the content of node \p B into node \p A and remove \p B and
+  /// the edge between \p A and \p B from the graph.
+  virtual void mergeNodes(NodeType &A, NodeType &B) = 0;
 
   /// Given an instruction \p I return its associated ordinal number.
   size_t getOrdinal(Instruction &I) {
