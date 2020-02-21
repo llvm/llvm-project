@@ -76,18 +76,60 @@ static LogicalResult verify(ForOp op) {
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = op.getBody();
-  if (body->getNumArguments() != 1 || !body->getArgument(0).getType().isIndex())
-    return op.emitOpError("expected body to have a single index argument for "
-                          "the induction variable");
+  if (!body->getArgument(0).getType().isIndex())
+    return op.emitOpError(
+        "expected body first argument to be an index argument for "
+        "the induction variable");
+
+  auto opNumResults = op.getNumResults();
+  if (opNumResults == 0)
+    return success();
+  // If ForOp defines values, check that the number and types of
+  // the defined values match ForOp initial iter operands and backedge
+  // basic block arguments.
+  if (op.getNumIterOperands() != opNumResults)
+    return op.emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  if (op.getNumRegionIterArgs() != opNumResults)
+    return op.emitOpError(
+        "mismatch in number of basic block args and defined values");
+  auto iterOperands = op.getIterOperands();
+  auto iterArgs = op.getRegionIterArgs();
+  auto opResults = op.getResults();
+  unsigned i = 0;
+  for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
+    if (std::get<0>(e).getType() != std::get<2>(e).getType())
+      return op.emitOpError() << "types mismatch between " << i
+                              << "th iter operand and defined value";
+    if (std::get<1>(e).getType() != std::get<2>(e).getType())
+      return op.emitOpError() << "types mismatch between " << i
+                              << "th iter region arg and defined value";
+
+    i++;
+  }
   return success();
 }
 
 static void print(OpAsmPrinter &p, ForOp op) {
+  bool printBlockTerminators = false;
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
+
+  if (op.hasIterOperands()) {
+    p << " iter_args(";
+    auto regionArgs = op.getRegionIterArgs();
+    auto operands = op.getIterOperands();
+
+    mlir::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " = " << std::get<1>(it);
+    });
+    p << ")";
+    p << " -> (" << op.getResultTypes() << ")";
+    printBlockTerminators = true;
+  }
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/printBlockTerminators);
   p.printOptionalAttrDict(op.getAttrs());
 }
 
@@ -108,9 +150,34 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(step, indexType, result.operands))
     return failure();
 
+  // Parse the optional initial iteration arguments.
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  SmallVector<Type, 4> argTypes;
+  regionArgs.push_back(inductionVariable);
+
+  if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
+    // Parse assignment list and results type list.
+    if (parser.parseAssignmentList(regionArgs, operands) ||
+        parser.parseArrowTypeList(result.types))
+      return failure();
+    // Resolve input operands.
+    for (auto operand_type : llvm::zip(operands, result.types))
+      if (parser.resolveOperand(std::get<0>(operand_type),
+                                std::get<1>(operand_type), result.operands))
+        return failure();
+  }
+  // Induction variable.
+  argTypes.push_back(indexType);
+  // Loop carried variables
+  argTypes.append(result.types.begin(), result.types.end());
   // Parse the body region.
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, inductionVariable, indexType))
+  if (regionArgs.size() != argTypes.size())
+    return parser.emitError(
+        parser.getNameLoc(),
+        "mismatch in number of loop-carried values and defined values");
+
+  if (parser.parseRegion(*body, regionArgs, argTypes))
     return failure();
 
   ForOp::ensureTerminator(*body, builder, result.location);
@@ -168,6 +235,9 @@ static LogicalResult verify(IfOp op) {
         return op.emitOpError(
             "requires that child entry blocks have no arguments");
   }
+  if (op.getNumResults() != 0 && op.elseRegion().empty())
+    return op.emitOpError("must have an else block if defining values");
+
   return success();
 }
 
@@ -183,7 +253,9 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, i1Type, result.operands))
     return failure();
-
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
@@ -199,15 +271,21 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
-
   return success();
 }
 
 static void print(OpAsmPrinter &p, IfOp op) {
+  bool printBlockTerminators = false;
+
   p << IfOp::getOperationName() << " " << op.condition();
+  if (!op.results().empty()) {
+    p << " -> (" << op.getResultTypes() << ")";
+    // Print yield explicitly if the op defines values.
+    printBlockTerminators = true;
+  }
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = op.elseRegion();
@@ -215,7 +293,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
     p << " else";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/false);
+                  /*printBlockTerminators=*/printBlockTerminators);
   }
 
   p.printOptionalAttrDict(op.getAttrs());
@@ -432,6 +510,54 @@ static LogicalResult verify(ReduceReturnOp op) {
     return op.emitOpError() << "needs to have type " << reduceType
                             << " (the type of the enclosing ReduceOp)";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+static LogicalResult verify(YieldOp op) {
+  auto parentOp = op.getParentOp();
+  auto results = parentOp->getResults();
+  auto operands = op.getOperands();
+
+  if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
+    if (parentOp->getNumResults() != op.getNumOperands())
+      return op.emitOpError() << "parent of yield must have same number of "
+                                 "results as the yield operands";
+    for (auto e : llvm::zip(results, operands)) {
+      if (std::get<0>(e).getType() != std::get<1>(e).getType())
+        return op.emitOpError()
+               << "types mismatch between yield op and its parent";
+    }
+  } else if (isa<ParallelOp>(parentOp)) {
+    if (op.getNumOperands() != 0)
+      return op.emitOpError()
+             << "yield inside loop.parallel is not allowed to have operands";
+  } else {
+    return op.emitOpError()
+           << "yield only terminates If, For or Parallel regions";
+  }
+
+  return success();
+}
+
+static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 4> operands;
+  SmallVector<Type, 4> types;
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  // Parse variadic operands list, their types, and resolve operands to SSA
+  // values.
+  if (parser.parseOperandList(operands) ||
+      parser.parseOptionalColonTypeList(types) ||
+      parser.resolveOperands(operands, types, loc, result.operands))
+    return failure();
+  return success();
+}
+
+static void print(OpAsmPrinter &p, YieldOp op) {
+  p << op.getOperationName();
+  if (op.getNumOperands() != 0)
+    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
 }
 
 //===----------------------------------------------------------------------===//

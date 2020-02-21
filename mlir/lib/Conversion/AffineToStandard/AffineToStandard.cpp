@@ -332,7 +332,7 @@ public:
 
   PatternMatchResult matchAndRewrite(AffineTerminatorOp op,
                                      PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<loop::TerminatorOp>(op);
+    rewriter.replaceOpWithNewOp<loop::YieldOp>(op);
     return matchSuccess();
   }
 };

@@ -4432,6 +4432,13 @@ public:
     return failure(!(result = parser.parseType()));
   }
 
+  /// Parse an arrow followed by a type list.
+  ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) override {
+    if (parseArrow() || parser.parseFunctionResultTypes(result))
+      return failure();
+    return success();
+  }
+
   /// Parse an optional arrow followed by a type list.
   ParseResult
   parseOptionalArrowTypeList(SmallVectorImpl<Type> &result) override {
@@ -4460,6 +4467,26 @@ public:
     if (!parser.consumeIf(Token::colon))
       return success();
     return parser.parseTypeListNoParens(result);
+  }
+
+  /// Parse a list of assignments of the form
+  /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
+  /// The list must contain at least one entry
+  ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                                  SmallVectorImpl<OperandType> &rhs) {
+    auto parseElt = [&]() -> ParseResult {
+      OperandType regionArg, operand;
+      Type type;
+      if (parseRegionArgument(regionArg) || parseEqual() ||
+          parseOperand(operand))
+        return failure();
+      lhs.push_back(regionArg);
+      rhs.push_back(operand);
+      return success();
+    };
+    if (parseLParen())
+      return failure();
+    return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 
 private:

@@ -29,7 +29,7 @@ func @loop_for_step_positive(%arg0: index) {
   %c0 = constant 0 : index
   "loop.for"(%arg0, %arg0, %c0) ({
     ^bb0(%arg1: index):
-      "loop.terminator"() : () -> ()
+      loop.yield
   }) : (index, index, index) -> ()
   return
 }
@@ -39,8 +39,8 @@ func @loop_for_step_positive(%arg0: index) {
 func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{incorrect number of regions: expected 1 but found 2}}
   "loop.for"(%arg0, %arg0, %arg0) (
-    {"loop.terminator"() : () -> ()},
-    {"loop.terminator"() : () -> ()}
+    {loop.yield},
+    {loop.yield}
   ) : (index, index, index) -> ()
   return
 }
@@ -52,9 +52,9 @@ func @loop_for_single_block(%arg0: index) {
   "loop.for"(%arg0, %arg0, %arg0) (
     {
     ^bb1:
-      "loop.terminator"() : () -> ()
+      loop.yield
     ^bb2:
-      "loop.terminator"() : () -> ()
+      loop.yield
     }
   ) : (index, index, index) -> ()
   return
@@ -63,11 +63,11 @@ func @loop_for_single_block(%arg0: index) {
 // -----
 
 func @loop_for_single_index_argument(%arg0: index) {
-  // expected-error@+1 {{expected body to have a single index argument for the induction variable}}
+  // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
   "loop.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):
-      "loop.terminator"() : () -> ()
+      loop.yield
     }
   ) : (index, index, index) -> ()
   return
@@ -95,9 +95,9 @@ func @loop_if_not_one_block_per_region(%arg0: i1) {
   // expected-error@+1 {{expects region #0 to have 0 or 1 blocks}}
   "loop.if"(%arg0) ({
     ^bb0:
-      "loop.terminator"() : () -> ()
+      loop.yield
     ^bb1:
-      "loop.terminator"() : () -> ()
+      loop.yield
   }, {}): (i1) -> ()
   return
 }
@@ -108,7 +108,7 @@ func @loop_if_illegal_block_argument(%arg0: i1) {
   // expected-error@+1 {{requires that child entry blocks have no arguments}}
   "loop.if"(%arg0) ({
     ^bb0(%0 : index):
-      "loop.terminator"() : () -> ()
+      loop.yield
   }, {}): (i1) -> ()
   return
 }
@@ -130,7 +130,7 @@ func @parallel_body_arguments_wrong_type(
   // expected-error@+1 {{'loop.parallel' op expects arguments for the induction variable to be of index type}}
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
-      "loop.terminator"() : () -> ()
+      loop.yield
   }): (index, index, index) -> ()
   return
 }
@@ -142,7 +142,7 @@ func @parallel_body_wrong_number_of_arguments(
   // expected-error@+1 {{'loop.parallel' op expects the same number of induction variables as bound and step values}}
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
-      "loop.terminator"() : () -> ()
+      loop.yield
   }): (index, index, index) -> ()
   return
 }
@@ -265,7 +265,7 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'loop.reduce.return' op}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32):
-        "loop.terminator"(): () -> ()
+        loop.yield
     } : f32
   } : f32
   return
@@ -292,5 +292,89 @@ func @reduceReturn_not_inside_reduce(%arg0 : f32) {
     // expected-error@+1 {{expects parent op 'loop.reduce'}}
     loop.reduce.return %arg0 : f32
   }): () -> ()
+  return
+}
+
+// -----
+
+func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
+{
+  %x, %y = loop.if %arg0 -> (f32, f32) {
+    %0 = addf %arg1, %arg1 : f32
+    // expected-error@+1 {{parent of yield must have same number of results as the yield operands}}
+    loop.yield %0 : f32
+  } else {
+    %0 = subf %arg1, %arg1 : f32
+    loop.yield %0 : f32
+  }
+  return
+}
+
+// -----
+
+func @std_if_missing_else(%arg0: i1, %arg1: f32)
+{
+  // expected-error@+1 {{must have an else block if defining values}}
+  %x = loop.if %arg0 -> (f32) {
+    %0 = addf %arg1, %arg1 : f32
+    loop.yield %0 : f32
+  }
+  return
+}
+
+// -----
+
+func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1 : i32
+  // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
+  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
+    %sn = addf %si, %si : f32
+    %tn = addi %ti, %ti : i32
+    loop.yield %sn, %tn, %sn : f32, i32, f32
+  }
+  return
+}
+
+// -----
+
+func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1 : i32
+  %u0 = constant 1.0 : f32
+  // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
+    %sn = addf %si, %si : f32
+    %tn = addi %ti, %ti : i32
+    %un = subf %ui, %ui : f32
+    loop.yield %sn, %tn, %un : f32, i32, f32
+  }
+  return
+}
+
+// -----
+
+func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-note@+1 {{prior use here}}
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1.0 : f32
+  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (i32, i32) {
+    %sn = addf %si, %si : i32
+    %tn = addf %ti, %ti : i32
+    loop.yield %sn, %tn : i32, i32
+  }
+  return
+}
+
+// -----
+
+func @parallel_invalid_yield(
+    %arg0: index, %arg1: index, %arg2: index) {
+  loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    %c0 = constant 1.0 : f32
+    // expected-error@+1 {{yield inside loop.parallel is not allowed to have operands}}
+    loop.yield %c0 : f32
+  }
   return
 }

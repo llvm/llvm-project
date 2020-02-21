@@ -246,12 +246,12 @@ module {
         %19 = load %16[%arg5, %arg6] : memref<?x?xf32, #map2>
         %20 = addf %17, %18 : f32
         store %20, %16[%arg5, %arg6] : memref<?x?xf32, #map2>
-        "loop.terminator"() : () -> ()
+        loop.yield
       } { mapping = [
           {processor = 3, map = #map3, bound = #map3},
           {processor = 4, map = #map3, bound = #map3}
         ] }
-      "loop.terminator"() : () -> ()
+      loop.yield
     } { mapping = [
         {processor = 0, map = #map3, bound = #map3},
         {processor = 1, map = #map3, bound = #map3}
