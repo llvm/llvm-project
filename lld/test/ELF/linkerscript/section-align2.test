@@ -4,8 +4,14 @@
 # RUN: echo '.globl _start; _start: ret; .data.rel.ro; .balign 8; .byte 0; .data; .byte 0; \
 # RUN:   .section .data2,"aw"; .balign 8; .byte 0; .bss; .balign 32; .byte 0' | \
 # RUN:   llvm-mc -filetype=obj -triple=aarch64 - -o %t.o
-# RUN: ld.lld -T %s %t.o -o %t 2>&1 | count 0
+# RUN: ld.lld -T %s %t.o -o %t 2>&1 | FileCheck --check-prefix=WARN %s --implicit-check-not=warning:
 # RUN: llvm-readelf -S %t | FileCheck %s
+
+## Check we don't warn in the absence of SECTIONS.
+# RUN: ld.lld --fatal-warnings -Ttext=0x10000 %t.o -o /dev/null
+
+# WARN: warning: start of section .data.rel.ro changes from 0x10004 to 0x10010
+# WARN: warning: start of section .bss changes from 0x20009 to 0x20010
 
 # CHECK:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0

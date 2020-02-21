@@ -2,8 +2,11 @@
 # RUN: echo '.globl _start; _start: ret; .data.rel.ro; .balign 16; .byte 0; \
 # RUN:   .data; .balign 32; .byte 0; .bss; .byte 0' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
-# RUN: ld.lld -T %s %t.o -o %t
+# RUN: ld.lld -T %s %t.o -o %t 2>&1 | FileCheck --check-prefix=WARN %s --implicit-check-not=warning:
 # RUN: llvm-readelf -S -l %t | FileCheck %s
+
+# WARN: warning: start of section .data changes from 0x11001 to 0x11010
+# WARN: warning: start of section .bss changes from 0x11021 to 0x11040
 
 # CHECK:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0
