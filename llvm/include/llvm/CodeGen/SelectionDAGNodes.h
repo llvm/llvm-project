@@ -469,11 +469,6 @@ public:
   bool hasAllowReassociation() const { return AllowReassociation; }
   bool hasNoFPExcept() const { return NoFPExcept; }
 
-  bool isFast() const {
-    return NoSignedZeros && AllowReciprocal && NoNaNs && NoInfs && NoFPExcept &&
-           AllowContract && ApproximateFuncs && AllowReassociation;
-  }
-
   /// Clear any flags in this flag set that aren't also set in Flags.
   /// If the given Flags are undefined then don't do anything.
   void intersectWith(const SDNodeFlags Flags) {
@@ -990,7 +985,6 @@ public:
 
   const SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
-  bool isFast() { return Flags.isFast(); }
 
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
