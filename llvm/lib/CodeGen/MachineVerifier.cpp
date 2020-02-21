@@ -1595,7 +1595,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     bool IsOptional = MI->isVariadic() && MONum == MCID.getNumOperands() - 1;
     if (!IsOptional) {
       if (MO->isReg()) {
-        if (MO->isDef() && !MCOI.isOptionalDef())
+        if (MO->isDef() && !MCOI.isOptionalDef() && !MCID.variadicOpsAreDefs())
           report("Explicit operand marked as def", MO, MONum);
         if (MO->isImplicit())
           report("Explicit operand marked as implicit", MO, MONum);

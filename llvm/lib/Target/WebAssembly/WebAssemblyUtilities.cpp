@@ -80,7 +80,7 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   return true;
 }
 
-inline const MachineOperand &getCalleeOp(const MachineInstr &MI) {
+const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_VOID:
   case WebAssembly::CALL_VOID_S:
@@ -138,7 +138,10 @@ inline const MachineOperand &getCalleeOp(const MachineInstr &MI) {
     return MI.getOperand(1);
   case WebAssembly::CALL:
   case WebAssembly::CALL_S:
-    return MI.getOperand(MI.getNumDefs());
+    return MI.getOperand(MI.getNumExplicitDefs());
+  case WebAssembly::CALL_INDIRECT:
+  case WebAssembly::CALL_INDIRECT_S:
+    return MI.getOperand(MI.getNumOperands() - 1);
   default:
     llvm_unreachable("Not a call instruction");
   }
