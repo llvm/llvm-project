@@ -9145,6 +9145,8 @@ def err_block_on_nonlocal : Error<
   "__block attribute not allowed, only allowed on local variables">;
 def err_block_on_vm : Error<
   "__block attribute not allowed on declaration with a variably modified type">;
+def err_sizeless_nonlocal : Error<
+  "non-local variable with sizeless type %0">;
 
 def err_vec_builtin_non_vector : Error<
  "first two arguments to %0 must be vectors">;
