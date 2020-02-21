@@ -277,7 +277,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     EnableDebugEntryValues("debug-entry-values",
-                           cl::desc("Emit debug info about parameter's entry values"),
+                           cl::desc("Enable debug info for the debug entry values"),
                            cl::init(false));
 
 static cl::opt<bool>
