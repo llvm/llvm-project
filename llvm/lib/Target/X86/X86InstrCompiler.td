@@ -531,10 +531,13 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
 
   defm _RFP80 : CMOVrr_PSEUDO<RFP80, f80>;
 
-  let Predicates = [NoAVX512] in {
+  let Predicates = [HasMMX] in
+    defm _VR64   : CMOVrr_PSEUDO<VR64, x86mmx>;
+
+  let Predicates = [HasSSE1,NoAVX512] in
     defm _FR32   : CMOVrr_PSEUDO<FR32, f32>;
+  let Predicates = [HasSSE2,NoAVX512] in
     defm _FR64   : CMOVrr_PSEUDO<FR64, f64>;
-  }
   let Predicates = [HasAVX512] in {
     defm _FR32X  : CMOVrr_PSEUDO<FR32X, f32>;
     defm _FR64X  : CMOVrr_PSEUDO<FR64X, f64>;
