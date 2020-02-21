@@ -228,6 +228,73 @@ define amdgpu_ps float @fcmp_s_s(float inreg %src0, float inreg %src1) {
   ret float %result
 }
 
+define amdgpu_ps float @select_vcc_s_s(float %cmp0, float %cmp1, float inreg %src0, float inreg %src1) {
+  ; GFX9-LABEL: name: select_vcc_s_s
+  ; GFX9: bb.1 (%ir-block.0):
+  ; GFX9:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; GFX9:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; GFX9:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+  ; GFX9:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; GFX9:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+  ; GFX9:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
+  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+  ; GFX9:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY3]](s32)
+  ; GFX9:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY4]], [[COPY5]]
+  ; GFX9:   $vgpr0 = COPY [[SELECT]](s32)
+  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX10-LABEL: name: select_vcc_s_s
+  ; GFX10: bb.1 (%ir-block.0):
+  ; GFX10:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; GFX10:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; GFX10:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+  ; GFX10:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; GFX10:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+  ; GFX10:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
+  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+  ; GFX10:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY3]](s32)
+  ; GFX10:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY4]], [[COPY5]]
+  ; GFX10:   $vgpr0 = COPY [[SELECT]](s32)
+  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %cmp = fcmp oeq float %cmp0, %cmp1
+  %result = select i1 %cmp, float %src0, float %src1
+  ret float %result
+}
+
+define amdgpu_ps float @select_vcc_fneg_s_s(float %cmp0, float %cmp1, float inreg %src0, float inreg %src1) {
+  ; GFX9-LABEL: name: select_vcc_fneg_s_s
+  ; GFX9: bb.1 (%ir-block.0):
+  ; GFX9:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; GFX9:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; GFX9:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+  ; GFX9:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; GFX9:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+  ; GFX9:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
+  ; GFX9:   [[FNEG:%[0-9]+]]:sgpr(s32) = G_FNEG [[COPY2]]
+  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[FNEG]](s32)
+  ; GFX9:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY3]](s32)
+  ; GFX9:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY4]], [[COPY5]]
+  ; GFX9:   $vgpr0 = COPY [[SELECT]](s32)
+  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX10-LABEL: name: select_vcc_fneg_s_s
+  ; GFX10: bb.1 (%ir-block.0):
+  ; GFX10:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
+  ; GFX10:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; GFX10:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+  ; GFX10:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; GFX10:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+  ; GFX10:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
+  ; GFX10:   [[FNEG:%[0-9]+]]:sgpr(s32) = G_FNEG [[COPY2]]
+  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[FNEG]](s32)
+  ; GFX10:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY3]](s32)
+  ; GFX10:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY4]], [[COPY5]]
+  ; GFX10:   $vgpr0 = COPY [[SELECT]](s32)
+  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %cmp = fcmp oeq float %cmp0, %cmp1
+  %neg.src0 = fneg float %src0
+  %result = select i1 %cmp, float %neg.src0, float %src1
+  ret float %result
+}
+
 ; Constant bus used by vcc
 define amdgpu_ps float @amdgcn_div_fmas_sss(float inreg %src, float %cmp.src) {
   ; GFX9-LABEL: name: amdgcn_div_fmas_sss

@@ -126,7 +126,7 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
-  selectVOP3ModsImpl(Register Src) const;
+  selectVOP3ModsImpl(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
