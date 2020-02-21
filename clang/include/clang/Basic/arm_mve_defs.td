@@ -125,6 +125,9 @@ def sitofp: IRBuilder<"CreateSIToFP">;
 def uitofp: IRBuilder<"CreateUIToFP">;
 def fptosi: IRBuilder<"CreateFPToSI">;
 def fptoui: IRBuilder<"CreateFPToUI">;
+def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
+  let special_params = [IRBuilderIntParam<1, "unsigned">];
+}
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
