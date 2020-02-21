@@ -34,7 +34,7 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
     reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
 
   ARMAttributeParser Parser;
-  Parser.Parse(Bytes, true);
+  Parser.parse(Bytes, support::little);
 
   return (Parser.hasAttribute(ExpectedTag) &&
     Parser.getAttributeValue(ExpectedTag) == ExpectedValue);
