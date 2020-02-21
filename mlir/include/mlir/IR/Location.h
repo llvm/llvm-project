@@ -54,6 +54,12 @@ public:
   Location(LocationAttr loc) : impl(loc) {
     assert(loc && "location should never be null.");
   }
+  Location(const LocationAttr::ImplType *impl) : impl(impl) {
+    assert(impl && "location should never be null.");
+  }
+
+  /// Return the context this location is uniqued in.
+  MLIRContext *getContext() const { return impl.getContext(); }
 
   /// Access the impl location attribute.
   operator LocationAttr() const { return impl; }

@@ -96,8 +96,7 @@ public:
                                 Location location);
 
   /// Verify the construction of an integer type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     unsigned width);
 
   /// Return the bitwidth of this integer type.
@@ -162,8 +161,7 @@ public:
   static ComplexType getChecked(Type elementType, Location location);
 
   /// Verify the construction of an integer type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Type elementType);
 
   Type getElementType();
@@ -270,8 +268,7 @@ public:
                                Location location);
 
   /// Verify the construction of a vector type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     ArrayRef<int64_t> shape,
                                                     Type elementType);
 
@@ -329,8 +326,7 @@ public:
                                      Location location);
 
   /// Verify the construction of a ranked tensor type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     ArrayRef<int64_t> shape,
                                                     Type elementType);
 
@@ -360,8 +356,7 @@ public:
   static UnrankedTensorType getChecked(Type elementType, Location location);
 
   /// Verify the construction of a unranked tensor type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Type elementType);
 
   ArrayRef<int64_t> getShape() const { return llvm::None; }
@@ -505,8 +500,7 @@ public:
                                        Location location);
 
   /// Verify the construction of a unranked memref type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Type elementType,
                                                     unsigned memorySpace);
 

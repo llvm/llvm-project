@@ -330,11 +330,9 @@ public:
   }
 
   /// Verify the construction invariants for a double value.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *ctx, Type type,
+  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     double value);
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *ctx, Type type,
+  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     const APFloat &value);
 };
 
@@ -361,11 +359,9 @@ public:
     return kind == StandardAttributes::Integer;
   }
 
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *ctx, Type type,
+  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     int64_t value);
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *ctx, Type type,
+  static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     const APInt &value);
 };
 
@@ -419,8 +415,7 @@ public:
   StringRef getAttrData() const;
 
   /// Verify the construction of an opaque attribute.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef attrData,
                                                     Type type);
