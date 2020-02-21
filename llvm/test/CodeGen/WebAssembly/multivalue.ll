@@ -8,6 +8,10 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %pair = type { i32, i64 }
+%rpair = type { i64, i32 }
+
+declare void @use_i32(i32)
+declare void @use_i64(i64)
 
 ; CHECK-LABEL: pair_const:
 ; CHECK-NEXT: .functype pair_const () -> (i32, i64)
@@ -27,12 +31,12 @@ define %pair @pair_ident(%pair %p) {
   ret %pair %p
 }
 
-;; TODO: Multivalue calls are a WIP and the following test cases do
-;; not necessarily produce correct output. For now just check that
-;; they do not crash.
-
 ; CHECK-LABEL: pair_call:
 ; CHECK-NEXT: .functype pair_call () -> ()
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: end_function{{$}}
 define void @pair_call() {
   %p = call %pair @pair_const()
   ret void
@@ -40,6 +44,8 @@ define void @pair_call() {
 
 ; CHECK-LABEL: pair_call_return:
 ; CHECK-NEXT: .functype pair_call_return () -> (i32, i64)
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: end_function{{$}}
 define %pair @pair_call_return() {
   %p = call %pair @pair_const()
   ret %pair %p
@@ -47,7 +53,9 @@ define %pair @pair_call_return() {
 
 ; CHECK-LABEL: pair_call_indirect:
 ; CHECK-NEXT: .functype pair_call_indirect (i32) -> (i32, i64)
-; CHECK: call_indirect () -> (i32, i64){{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
+; CHECK-NEXT: end_function{{$}}
 define %pair @pair_call_indirect(%pair()* %f) {
   %p = call %pair %f()
   ret %pair %p
@@ -55,6 +63,8 @@ define %pair @pair_call_indirect(%pair()* %f) {
 
 ; CHECK-LABEL: pair_tail_call:
 ; CHECK-NEXT: .functype pair_tail_call () -> (i32, i64)
+; CHECK-NEXT: return_call pair_const{{$}}
+; CHECK-NEXT: end_function{{$}}
 define %pair @pair_tail_call() {
   %p = musttail call %pair @pair_const()
   ret %pair %p
@@ -62,6 +72,9 @@ define %pair @pair_tail_call() {
 
 ; CHECK-LABEL: pair_call_return_first:
 ; CHECK-NEXT: .functype pair_call_return_first () -> (i32)
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: end_function{{$}}
 define i32 @pair_call_return_first() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 0
@@ -70,18 +83,140 @@ define i32 @pair_call_return_first() {
 
 ; CHECK-LABEL: pair_call_return_second:
 ; CHECK-NEXT: .functype pair_call_return_second () -> (i64)
+; CHECK-NEXT: .local i64{{$}}
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
 define i64 @pair_call_return_second() {
   %p = call %pair @pair_const()
   %v = extractvalue %pair %p, 1
   ret i64 %v
 }
 
+; CHECK-LABEL: pair_call_use_first:
+; CHECK-NEXT: .functype pair_call_use_first () -> ()
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: call use_i32{{$}}
+; CHECK-NEXT: end_function{{$}}
+define void @pair_call_use_first() {
+  %p = call %pair @pair_const()
+  %v = extractvalue %pair %p, 0
+  call void @use_i32(i32 %v)
+  ret void
+}
+
+; CHECK-LABEL: pair_call_use_second:
+; CHECK-NEXT: .functype pair_call_use_second () -> ()
+; CHECK-NEXT: .local i64
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: drop{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: call use_i64{{$}}
+; CHECK-NEXT: end_function{{$}}
+define void @pair_call_use_second() {
+  %p = call %pair @pair_const()
+  %v = extractvalue %pair %p, 1
+  call void @use_i64(i64 %v)
+  ret void
+}
+
+; CHECK-LABEL: pair_call_use_first_return_second:
+; CHECK-NEXT: .functype pair_call_use_first_return_second () -> (i64)
+; CHECK-NEXT: .local i64{{$}}
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: call use_i32{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
+define i64 @pair_call_use_first_return_second() {
+  %p = call %pair @pair_const()
+  %v = extractvalue %pair %p, 0
+  call void @use_i32(i32 %v)
+  %r = extractvalue %pair %p, 1
+  ret i64 %r
+}
+
+; CHECK-LABEL: pair_call_use_second_return_first:
+; CHECK-NEXT: .functype pair_call_use_second_return_first () -> (i32)
+; CHECK-NEXT: .local i32, i64{{$}}
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 1{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: local.get 1{{$}}
+; CHECK-NEXT: call use_i64{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
+define i32 @pair_call_use_second_return_first() {
+  %p = call %pair @pair_const()
+  %v = extractvalue %pair %p, 1
+  call void @use_i64(i64 %v)
+  %r = extractvalue %pair %p, 0
+  ret i32 %r
+}
 
 ; CHECK-LABEL: pair_pass_through:
 ; CHECK-NEXT: .functype pair_pass_through (i32, i64) -> (i32, i64)
+; CHECK-NEXT: local.get 0
+; CHECK-NEXT: local.get 1
+; CHECK-NEXT: call pair_ident{{$}}
+; CHECK-NEXT: end_function{{$}}
 define %pair @pair_pass_through(%pair %p) {
   %r = call %pair @pair_ident(%pair %p)
   ret %pair %r
+}
+
+; CHECK-LABEL: pair_swap:
+; CHECK-NEXT: .functype pair_swap (i32, i64) -> (i64, i32)
+; CHECK-NEXT: local.get 1{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
+define %rpair @pair_swap(%pair %p) {
+  %first = extractvalue %pair %p, 0
+  %second = extractvalue %pair %p, 1
+  %r1 = insertvalue %rpair undef, i32 %first, 1
+  %r2 = insertvalue %rpair %r1, i64 %second, 0
+  ret %rpair %r2
+}
+
+; CHECK-LABEL: pair_call_swap:
+; CHECK-NEXT: .functype pair_call_swap () -> (i64, i32)
+; CHECK-NEXT: .local i32, i64{{$}}
+; CHECK-NEXT: call pair_const{{$}}
+; CHECK-NEXT: local.set 1{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: local.get 1{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
+define %rpair @pair_call_swap() {
+  %p = call %pair @pair_const()
+  %first = extractvalue %pair %p, 0
+  %second = extractvalue %pair %p, 1
+  %r1 = insertvalue %rpair undef, i32 %first, 1
+  %r2 = insertvalue %rpair %r1, i64 %second, 0
+  ret %rpair %r2
+}
+
+; CHECK-LABEL: pair_pass_through_swap:
+; CHECK-NEXT: .functype pair_pass_through_swap (i32, i64) -> (i64, i32)
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: local.get 1{{$}}
+; CHECK-NEXT: call pair_ident{{$}}
+; CHECK-NEXT: local.set 1{{$}}
+; CHECK-NEXT: local.set 0{{$}}
+; CHECK-NEXT: local.get 1{{$}}
+; CHECK-NEXT: local.get 0{{$}}
+; CHECK-NEXT: end_function{{$}}
+define %rpair @pair_pass_through_swap(%pair %p) {
+  %p1 = call %pair @pair_ident(%pair %p)
+  %first = extractvalue %pair %p1, 0
+  %second = extractvalue %pair %p1, 1
+  %r1 = insertvalue %rpair undef, i32 %first, 1
+  %r2 = insertvalue %rpair %r1, i64 %second, 0
+  ret %rpair %r2
 }
 
 ; CHECK-LABEL: minimal_loop:
@@ -91,6 +226,7 @@ define %pair @pair_pass_through(%pair %p) {
 ; CHECK-NEXT: br 0{{$}}
 ; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_loop{{$}}
+; CHECK-NEXT: end_function{{$}}
 define %pair @minimal_loop(i32* %p) {
 entry:
   br label %loop
@@ -138,3 +274,23 @@ loop:
 ; OBJ-NEXT:         ParamTypes:      []
 ; OBJ-NEXT:         ReturnTypes:
 ; OBJ-NEXT:           - I64
+; OBJ-NEXT:       - Index:           6
+; OBJ-NEXT:         ParamTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:         ReturnTypes:     []
+; OBJ-NEXT:       - Index:           7
+; OBJ-NEXT:         ParamTypes:
+; OBJ-NEXT:           - I64
+; OBJ-NEXT:         ReturnTypes:     []
+; OBJ-NEXT:       - Index:           8
+; OBJ-NEXT:         ParamTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:           - I64
+; OBJ-NEXT:         ReturnTypes:
+; OBJ-NEXT:           - I64
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:       - Index:           9
+; OBJ-NEXT:         ParamTypes:      []
+; OBJ-NEXT:         ReturnTypes:
+; OBJ-NEXT:           - I64
+; OBJ-NEXT:           - I32
