@@ -107,6 +107,7 @@ XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
+  setOperationAction(ISD::BITREVERSE , MVT::i32, Legal);
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
