@@ -46,7 +46,7 @@ def DirectiveFunctionalTypeInvalidA : TestFormat_Op<"functype_invalid_a", [{
 def DirectiveFunctionalTypeInvalidB : TestFormat_Op<"functype_invalid_b", [{
   functional-type
 }]>;
-// CHECK: error: expected directive, literal, or variable
+// CHECK: error: expected directive, literal, variable, or optional group
 def DirectiveFunctionalTypeInvalidC : TestFormat_Op<"functype_invalid_c", [{
   functional-type(
 }]>;
@@ -54,7 +54,7 @@ def DirectiveFunctionalTypeInvalidC : TestFormat_Op<"functype_invalid_c", [{
 def DirectiveFunctionalTypeInvalidD : TestFormat_Op<"functype_invalid_d", [{
   functional-type(operands
 }]>;
-// CHECK: error: expected directive, literal, or variable
+// CHECK: error: expected directive, literal, variable, or optional group
 def DirectiveFunctionalTypeInvalidE : TestFormat_Op<"functype_invalid_e", [{
   functional-type(operands,
 }]>;
@@ -98,7 +98,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<"operands_invalid_a", [{
 def DirectiveTypeInvalidA : TestFormat_Op<"type_invalid_a", [{
   type
 }]>;
-// CHECK: error: expected directive, literal, or variable
+// CHECK: error: expected directive, literal, variable, or optional group
 def DirectiveTypeInvalidB : TestFormat_Op<"type_invalid_b", [{
   type(
 }]>;
@@ -165,7 +165,7 @@ def LiteralInvalidA : TestFormat_Op<"literal_invalid_a", [{
   `1`
 }]>;
 // CHECK: error: unexpected end of file in literal
-// CHECK: error: expected directive, literal, or variable
+// CHECK: error: expected directive, literal, variable, or optional group
 def LiteralInvalidB : TestFormat_Op<"literal_invalid_b", [{
   `
 }]>;
@@ -174,6 +174,55 @@ def LiteralValid : TestFormat_Op<"literal_valid", [{
   `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `->` `abc$._`
   attr-dict
 }]>;
+
+//===----------------------------------------------------------------------===//
+// Optional Groups
+//===----------------------------------------------------------------------===//
+
+// CHECK: error: optional groups can only be used as top-level elements
+def OptionalInvalidA : TestFormat_Op<"optional_invalid_a", [{
+  type(($attr^)?) attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+// CHECK: error: expected directive, literal, variable, or optional group
+def OptionalInvalidB : TestFormat_Op<"optional_invalid_b", [{
+  () attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+// CHECK: error: optional group specified no anchor element
+def OptionalInvalidC : TestFormat_Op<"optional_invalid_c", [{
+  ($attr)? attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+// CHECK: error: first element of an operand group must be a literal or operand
+def OptionalInvalidD : TestFormat_Op<"optional_invalid_d", [{
+  ($attr^)? attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+// CHECK: error: type directive can only refer to variables within the optional group
+def OptionalInvalidE : TestFormat_Op<"optional_invalid_e", [{
+  (`,` $attr^ type(operands))? attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+// CHECK: error: only one element can be marked as the anchor of an optional group
+def OptionalInvalidF : TestFormat_Op<"optional_invalid_f", [{
+  ($attr^ $attr2^) attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr, OptionalAttr<I64Attr>:$attr2)>;
+// CHECK: error: only optional attributes can be used to anchor an optional group
+def OptionalInvalidG : TestFormat_Op<"optional_invalid_g", [{
+  ($attr^) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+// CHECK: error: only variadic operands can be used within an optional group
+def OptionalInvalidH : TestFormat_Op<"optional_invalid_h", [{
+  ($arg^) attr-dict
+}]>, Arguments<(ins I64:$arg)>;
+// CHECK: error: only variables can be used to anchor an optional group
+def OptionalInvalidI : TestFormat_Op<"optional_invalid_i", [{
+  ($arg type($arg)^) attr-dict
+}]>, Arguments<(ins Variadic<I64>:$arg)>;
+// CHECK: error: only literals, types, and variables can be used within an optional group
+def OptionalInvalidJ : TestFormat_Op<"optional_invalid_j", [{
+  (attr-dict)
+}]>;
+// CHECK: error: expected '?' after optional group
+def OptionalInvalidK : TestFormat_Op<"optional_invalid_k", [{
+  ($arg^)
+}]>, Arguments<(ins Variadic<I64>:$arg)>;
 
 //===----------------------------------------------------------------------===//
 // Variables
