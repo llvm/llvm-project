@@ -30,4 +30,4 @@ class TestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
 
-        self.expect_expr("(new ClassWithOneCtor(1)).value; 1", result_type="int", result_value="1")
+        self.expect_expr("(new ClassWithOneCtor(1))->value; 1", result_type="int", result_value="1")
