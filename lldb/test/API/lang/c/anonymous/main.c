@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 struct anonymous_nest {
   struct {
     struct {
@@ -74,9 +72,9 @@ int main()
   type_z *pz = 0;
   type_z z = {{2}};
 
-  printf("%d\n", processor_nest(&n));
-  printf("%d\n", processor_child(&c));
-  printf("%d\n", processor_grandchild(&g)); // Set breakpoint 2 here.
+  processor_nest(&n);
+  processor_child(&c);
+  processor_grandchild(&g); // Set breakpoint 2 here.
 
   return 0;
 }

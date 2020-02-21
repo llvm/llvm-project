@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "foo.h"
 
 struct bar

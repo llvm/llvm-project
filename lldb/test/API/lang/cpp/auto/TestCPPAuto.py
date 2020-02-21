@@ -34,8 +34,4 @@ class CPPAutoTestCase(TestBase):
                 'Test',
                 '123',
                 '456'])
-        self.expect(
-            'expr auto s = helloworld; s',
-            substrs=[
-                'string',
-                'hello world'])
+        self.expect_expr("auto s = foo; s", result_type="long", result_value="1234")

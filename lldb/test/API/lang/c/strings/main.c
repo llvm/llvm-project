@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
-
 int main()
 {
   const char a[] = "abcde";
   const char *z = "vwxyz";
-  
-  printf("%s %s", a, z); // breakpoint 1
+
+  return *a + *z; // breakpoint 1
 }
