@@ -38,6 +38,7 @@ static DeclarationMatcher getComparisonDecl(GtestCmp Cmp) {
     case GtestCmp::Lt:
       return functionDecl(hasName("::testing::internal::CmpHelperLT"));
   }
+  llvm_unreachable("Unhandled GtestCmp enum");
 }
 
 static llvm::StringRef getAssertMacro(GtestCmp Cmp) {
@@ -55,6 +56,7 @@ static llvm::StringRef getAssertMacro(GtestCmp Cmp) {
     case GtestCmp::Lt:
       return "ASSERT_LT";
   }
+  llvm_unreachable("Unhandled GtestCmp enum");
 }
 
 static llvm::StringRef getExpectMacro(GtestCmp Cmp) {
@@ -72,6 +74,7 @@ static llvm::StringRef getExpectMacro(GtestCmp Cmp) {
     case GtestCmp::Lt:
       return "EXPECT_LT";
   }
+  llvm_unreachable("Unhandled GtestCmp enum");
 }
 
 // In general, AST matchers cannot match calls to macros. However, we can
