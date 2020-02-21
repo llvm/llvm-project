@@ -790,8 +790,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
         attrs.name.GetCString(), GetClangDeclContextContainingDIE(die, nullptr),
         attrs.decl, enumerator_clang_type, attrs.is_scoped_enum);
   } else {
-    enumerator_clang_type =
-        m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());
+    enumerator_clang_type = m_ast.GetEnumerationIntegerType(clang_type);
   }
 
   LinkDeclContextToDIE(TypeSystemClang::GetDeclContextForType(clang_type), die);
