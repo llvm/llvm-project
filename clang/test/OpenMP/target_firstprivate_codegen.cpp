@@ -336,8 +336,9 @@ int foo(int n, double *ptr) {
   }
   // CHECK:  [[PTR_ADDR_REF:%.+]] = load double*, double** [[PTR_ADDR]],
 
+  // CHECK:  [[FP_E_BC:%.+]] = bitcast [[TTII]]* [[FP_E]] to i8*
   // CHECK:  [[E_BC:%.+]] = bitcast [[TTII]]* [[E:%.+]] to i8*
-  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}} bitcast ([[TTII]]* [[FP_E]] to i8*), i8* {{.*}} [[E_BC]], i{{64|32}} 8, i1 false)
+  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}} [[FP_E_BC]], i8* {{.*}} [[E_BC]], i{{64|32}} 8, i1 false)
   // CHECK:  [[BASE_PTR_GEP3_0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP3_0]] to double**
   // CHECK:  store double* [[PTR_ADDR_REF]], double** [[BCAST_TOPTR]],
