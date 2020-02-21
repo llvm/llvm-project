@@ -38,9 +38,9 @@ Which corresponds to the following IR:
 
 ```mlir
 func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
-  %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64>
-  %1 = "toy.transpose"(%0) : (tensor<*xf64>) -> tensor<*xf64>
-  "toy.return"(%1) : (tensor<*xf64>) -> ()
+  %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
+  %1 = toy.transpose(%0 : tensor<*xf64>) to tensor<*xf64>
+  toy.return %1 : tensor<*xf64>
 }
 ```
 
@@ -133,8 +133,8 @@ observe our pattern in action:
 
 ```mlir
 func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
-  %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64>
-  "toy.return"(%arg0) : (tensor<*xf64>) -> ()
+  %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
+  toy.return %arg0 : tensor<*xf64>
 }
 ```
 
@@ -154,7 +154,7 @@ Let's retry now `toyc-ch3 test/transpose_transpose.toy -emit=mlir -opt`:
 
 ```mlir
 func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
-  "toy.return"(%arg0) : (tensor<*xf64>) -> ()
+  toy.return %arg0 : tensor<*xf64>
 }
 ```
 
@@ -229,13 +229,12 @@ def main() {
 ```mlir
 module {
   func @main() {
-    %0 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>}
-                           : () -> tensor<2xf64>
-    %1 = "toy.reshape"(%0) : (tensor<2xf64>) -> tensor<2x1xf64>
-    %2 = "toy.reshape"(%1) : (tensor<2x1xf64>) -> tensor<2x1xf64>
-    %3 = "toy.reshape"(%2) : (tensor<2x1xf64>) -> tensor<2x1xf64>
-    "toy.print"(%3) : (tensor<2x1xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.constant dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+    %1 = toy.reshape(%0 : tensor<2xf64>) to tensor<2x1xf64>
+    %2 = toy.reshape(%1 : tensor<2x1xf64>) to tensor<2x1xf64>
+    %3 = toy.reshape(%2 : tensor<2x1xf64>) to tensor<2x1xf64>
+    toy.print %3 : tensor<2x1xf64>
+    toy.return
   }
 }
 ```
@@ -246,10 +245,9 @@ our pattern in action:
 ```mlir
 module {
   func @main() {
-    %0 = "toy.constant"() {value = dense<[[1.000000e+00], [2.000000e+00]]> \
-                           : tensor<2x1xf64>} : () -> tensor<2x1xf64>
-    "toy.print"(%0) : (tensor<2x1xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.constant dense<[[1.000000e+00], [2.000000e+00]]> : tensor<2x1xf64>
+    toy.print %0 : tensor<2x1xf64>
+    toy.return
   }
 }
 ```
