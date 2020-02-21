@@ -599,9 +599,7 @@ public:
   ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
-                                 const SymbolContext *sc = nullptr) override {
-    return GetTypeName(type);
-  }
+                                 const SymbolContext *sc = nullptr) override;
 
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_or_element_compiler_type) override;

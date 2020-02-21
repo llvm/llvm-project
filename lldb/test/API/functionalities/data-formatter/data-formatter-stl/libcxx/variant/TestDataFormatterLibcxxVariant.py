@@ -51,7 +51,7 @@ class LibcxxVariantDataFormatterTestCase(TestBase):
                                '}'])
 
         self.expect("frame variable v_v1",
-                substrs=['v_v1 =  Active Type = std::__1::variant<int, double, char>  {',
+                substrs=['v_v1 =  Active Type = std::variant<int, double, char>  {',
                                  'Value =  Active Type = int  {',
                                    'Value = 12',
                                  '}',
