@@ -55,20 +55,25 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
   m_being_created = false;
 }
 
-Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
+Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
     : m_being_created(true), m_hardware(source_bp.m_hardware),
       m_target(new_target), m_name_list(source_bp.m_name_list),
       m_options_up(new BreakpointOptions(*source_bp.m_options_up)),
       m_locations(*this),
       m_resolve_indirect_symbols(source_bp.m_resolve_indirect_symbols),
-      m_hit_count(0) {
-  // Now go through and copy the filter & resolver:
-  m_resolver_sp = source_bp.m_resolver_sp->CopyForBreakpoint(*this);
-  m_filter_sp = source_bp.m_filter_sp->CopyForBreakpoint(*this);
-}
+      m_hit_count(0) {}
 
 // Destructor
 Breakpoint::~Breakpoint() = default;
+
+BreakpointSP Breakpoint::CopyFromBreakpoint(Target& new_target,
+    const Breakpoint& bp_to_copy_from) {
+  BreakpointSP bp(new Breakpoint(new_target, bp_to_copy_from));
+  // Now go through and copy the filter & resolver:
+  bp->m_resolver_sp = bp_to_copy_from.m_resolver_sp->CopyForBreakpoint(*bp);
+  bp->m_filter_sp = bp_to_copy_from.m_filter_sp->CopyForBreakpoint(*bp);
+  return bp;
+}
 
 // Serialization
 StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
