@@ -23,6 +23,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
@@ -822,6 +823,26 @@ public:
   ///     The number of processes we are successfully connected to.
   virtual size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                            lldb_private::Status &error);
+
+  /// Gather all of crash informations into a structured data dictionnary.
+  ///
+  /// If the platform have a crashed process with crash information entries,
+  /// gather all the entries into an structured data dictionnary or return a
+  /// nullptr. This dictionnary is generic and extensible, as it contains an
+  /// array for each different type of crash information.
+  ///
+  /// \param[in] target
+  ///     The target running the crashed process.
+  ///
+  /// \return
+  ///     A structured data dictionnary containing at each entry, the crash
+  ///     information type as the entry key and the matching  an array as the
+  ///     entry value. \b nullptr if not implemented or  if the process has no
+  ///     crash information entry. \b error if an error occured.
+  virtual llvm::Expected<StructuredData::DictionarySP>
+  FetchExtendedCrashInformation(lldb_private::Target &target) {
+    return nullptr;
+  }
 
 protected:
   bool m_is_host;
