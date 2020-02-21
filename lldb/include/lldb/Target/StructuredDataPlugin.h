@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef StructuredDataPlugin_h
-#define StructuredDataPlugin_h
+#ifndef LLDB_TARGET_STRUCTUREDDATAPLUGIN_H
+#define LLDB_TARGET_STRUCTUREDDATAPLUGIN_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/StructuredData.h"

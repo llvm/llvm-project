@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_TaskPool_h_
-#define utility_TaskPool_h_
+#ifndef LLDB_HOST_TASKPOOL_H
+#define LLDB_HOST_TASKPOOL_H
 
 #include "llvm/ADT/STLExtras.h"
 #include <functional>
@@ -89,4 +89,4 @@ unsigned GetHardwareConcurrencyHint();
 
 } // namespace lldb_private
 
-#endif // #ifndef utility_TaskPool_h_
+#endif // LLDB_HOST_TASKPOOL_H

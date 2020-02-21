@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Block_h_
-#define liblldb_Block_h_
+#ifndef LLDB_SYMBOL_BLOCK_H
+#define LLDB_SYMBOL_BLOCK_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -381,4 +381,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Block_h_
+#endif // LLDB_SYMBOL_BLOCK_H

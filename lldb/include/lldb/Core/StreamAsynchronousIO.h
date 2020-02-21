@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StreamAsynchronousIO_h_
-#define liblldb_StreamAsynchronousIO_h_
+#ifndef LLDB_CORE_STREAMASYNCHRONOUSIO_H
+#define LLDB_CORE_STREAMASYNCHRONOUSIO_H
 
 #include "lldb/Utility/Stream.h"
 
@@ -37,4 +37,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_StreamAsynchronousIO_h
+#endif // LLDB_CORE_STREAMASYNCHRONOUSIO_H

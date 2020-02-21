@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SourceModule_h_
-#define liblldb_SourceModule_h_
+#ifndef LLDB_SYMBOL_SOURCEMODULE_H
+#define LLDB_SYMBOL_SOURCEMODULE_H
 
 #include "lldb/Utility/ConstString.h"
 #include <vector>

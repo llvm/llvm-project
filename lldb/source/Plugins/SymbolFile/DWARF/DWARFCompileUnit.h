@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFCompileUnit_h_
-#define SymbolFileDWARF_DWARFCompileUnit_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H
 
 #include "DWARFUnit.h"
 #include "llvm/Support/Error.h"
@@ -32,4 +32,4 @@ private:
   friend class DWARFUnit;
 };
 
-#endif // SymbolFileDWARF_DWARFCompileUnit_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H

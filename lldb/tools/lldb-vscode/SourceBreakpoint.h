@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_SOURCEBREAKPOINT_H_
-#define LLDBVSCODE_SOURCEBREAKPOINT_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_SOURCEBREAKPOINT_H
+#define LLDB_TOOLS_LLDB_VSCODE_SOURCEBREAKPOINT_H
 
 #include "llvm/ADT/StringRef.h"
 #include "BreakpointBase.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextCorePOSIX_s390x_h_
-#define liblldb_RegisterContextCorePOSIX_s390x_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -52,4 +52,4 @@ private:
   lldb_private::DataExtractor m_fpr;
 };
 
-#endif // liblldb_RegisterContextCorePOSIX_s390x_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H

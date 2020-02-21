@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Disassembler_h_
-#define liblldb_Disassembler_h_
+#ifndef LLDB_CORE_DISASSEMBLER_H
+#define LLDB_CORE_DISASSEMBLER_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -553,4 +553,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Disassembler_h_
+#endif // LLDB_CORE_DISASSEMBLER_H

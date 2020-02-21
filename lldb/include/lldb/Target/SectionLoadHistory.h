@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SectionLoadHistory_h_
-#define liblldb_SectionLoadHistory_h_
+#ifndef LLDB_TARGET_SECTIONLOADHISTORY_H
+#define LLDB_TARGET_SECTIONLOADHISTORY_H
 
 #include <map>
 #include <mutex>
@@ -80,4 +80,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SectionLoadHistory_h_
+#endif // LLDB_TARGET_SECTIONLOADHISTORY_H

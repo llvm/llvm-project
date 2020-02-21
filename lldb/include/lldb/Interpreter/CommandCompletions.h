@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_CommandCompletions_h_
-#define lldb_CommandCompletions_h_
+#ifndef LLDB_INTERPRETER_COMMANDCOMPLETIONS_H
+#define LLDB_INTERPRETER_COMMANDCOMPLETIONS_H
 
 #include <set>
 
@@ -85,4 +85,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // lldb_CommandCompletions_h_
+#endif // LLDB_INTERPRETER_COMMANDCOMPLETIONS_H

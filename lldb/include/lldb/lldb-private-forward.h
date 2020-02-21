@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_lldb_private_forward_h_
-#define LLDB_lldb_private_forward_h_
+#ifndef LLDB_LLDB_PRIVATE_FORWARD_H
+#define LLDB_LLDB_PRIVATE_FORWARD_H
 
 namespace lldb_private {
 // forward decls.
@@ -18,4 +18,4 @@ class ResumeActionList;
 class UnixSignals;
 }
 
-#endif // #ifndef LLDB_lldb_private_forward_h_
+#endif // LLDB_LLDB_PRIVATE_FORWARD_H

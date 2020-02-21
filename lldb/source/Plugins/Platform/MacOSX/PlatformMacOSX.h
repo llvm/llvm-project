@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformMacOSX_h_
-#define liblldb_PlatformMacOSX_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
 
 #include "PlatformDarwin.h"
 
@@ -80,4 +80,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformMacOSX);
 };
 
-#endif // liblldb_PlatformMacOSX_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H

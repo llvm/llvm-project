@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormatCache_h_
-#define lldb_FormatCache_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATCACHE_H
+#define LLDB_DATAFORMATTERS_FORMATCACHE_H
 
 #include <map>
 #include <mutex>
@@ -71,4 +71,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // lldb_FormatCache_h_
+#endif // LLDB_DATAFORMATTERS_FORMATCACHE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_FunctionCaller_h_
-#define liblldb_FunctionCaller_h_
+#ifndef LLDB_EXPRESSION_FUNCTIONCALLER_H
+#define LLDB_EXPRESSION_FUNCTIONCALLER_H
 
 #include <list>
 #include <memory>
@@ -336,4 +336,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_FunctionCaller_h_
+#endif // LLDB_EXPRESSION_FUNCTIONCALLER_H

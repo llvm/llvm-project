@@ -17,8 +17,8 @@
 // dyld SPI functions to get the same information without reading internal dyld
 // data structures.
 
-#ifndef liblldb_DynamicLoaderMacOSXDYLD_h_
-#define liblldb_DynamicLoaderMacOSXDYLD_h_
+#ifndef LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOSXDYLD_H
+#define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOSXDYLD_H
 
 #include <mutex>
 #include <vector>
@@ -172,4 +172,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOSXDYLD);
 };
 
-#endif // liblldb_DynamicLoaderMacOSXDYLD_h_
+#endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOSXDYLD_H

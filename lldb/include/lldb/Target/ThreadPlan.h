@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlan_h_
-#define liblldb_ThreadPlan_h_
+#ifndef LLDB_TARGET_THREADPLAN_H
+#define LLDB_TARGET_THREADPLAN_H
 
 #include <mutex>
 #include <string>
@@ -652,4 +652,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlan_h_
+#endif // LLDB_TARGET_THREADPLAN_H

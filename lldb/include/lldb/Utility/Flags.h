@@ -116,4 +116,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_Flags_h_
+#endif // LLDB_UTILITY_FLAGS_H

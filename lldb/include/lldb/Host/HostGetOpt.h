@@ -1,3 +1,7 @@
+#ifndef LLDB_HOST_HOSTGETOPT_H
+
+#define LLDB_HOST_HOSTGETOPT_H
+
 //===-- HostGetOpt.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -19,5 +23,7 @@
 #else
 
 #include <lldb/Host/common/GetOptInc.h>
+
+#endif
 
 #endif

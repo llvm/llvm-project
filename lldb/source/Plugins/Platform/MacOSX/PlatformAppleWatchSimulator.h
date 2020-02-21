@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformAppleWatchSimulator_h_
-#define liblldb_PlatformAppleWatchSimulator_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H
 
 #include "PlatformDarwin.h"
 
@@ -83,4 +83,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PlatformAppleWatchSimulator);
 };
 
-#endif // liblldb_PlatformAppleWatchSimulator_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H

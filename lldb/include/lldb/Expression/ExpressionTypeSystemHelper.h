@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ExpressionTypeSystemHelper_h
-#define ExpressionTypeSystemHelper_h
+#ifndef LLDB_EXPRESSION_EXPRESSIONTYPESYSTEMHELPER_H
+#define LLDB_EXPRESSION_EXPRESSIONTYPESYSTEMHELPER_H
 
 #include "llvm/Support/Casting.h"
 
@@ -44,4 +44,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif /* ExpressionTypeSystemHelper_h */
+#endif // LLDB_EXPRESSION_EXPRESSIONTYPESYSTEMHELPER_H

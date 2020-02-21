@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBDebugger_h_
-#define LLDB_SBDebugger_h_
+#ifndef LLDB_API_SBDEBUGGER_H
+#define LLDB_API_SBDEBUGGER_H
 
 #include <stdio.h>
 
@@ -319,4 +319,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBDebugger_h_
+#endif // LLDB_API_SBDEBUGGER_H

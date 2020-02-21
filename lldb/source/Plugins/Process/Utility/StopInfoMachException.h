@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StopInfoMachException_h_
-#define liblldb_StopInfoMachException_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_STOPINFOMACHEXCEPTION_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_STOPINFOMACHEXCEPTION_H
 
 #include <string>
 
@@ -48,4 +48,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_StopInfoMachException_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_STOPINFOMACHEXCEPTION_H

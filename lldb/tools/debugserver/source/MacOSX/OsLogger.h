@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OsLogger_h
-#define OsLogger_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_OSLOGGER_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_OSLOGGER_H
 
 #include "DNBDefs.h"
 
@@ -16,4 +16,4 @@ public:
   static DNBCallbackLog GetLogFunction();
 };
 
-#endif /* OsLogger_h */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_OSLOGGER_H

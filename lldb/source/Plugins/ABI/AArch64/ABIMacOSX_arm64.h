@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABIMacOSX_arm64_h_
-#define liblldb_ABIMacOSX_arm64_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H
+#define LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Utility/ConstString.h"
@@ -96,4 +96,4 @@ private:
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
-#endif // liblldb_ABIMacOSX_arm64_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H

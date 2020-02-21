@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_FormatManager_h_
-#define lldb_FormatManager_h_
+#ifndef LLDB_DATAFORMATTERS_FORMATMANAGER_H
+#define LLDB_DATAFORMATTERS_FORMATMANAGER_H
 
 #include <atomic>
 #include <initializer_list>
@@ -236,4 +236,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_FormatManager_h_
+#endif // LLDB_DATAFORMATTERS_FORMATMANAGER_H

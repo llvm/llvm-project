@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandAlias_h_
-#define liblldb_CommandAlias_h_
+#ifndef LLDB_INTERPRETER_COMMANDALIAS_H
+#define LLDB_INTERPRETER_COMMANDALIAS_H
 
 #include <memory>
 
@@ -81,4 +81,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // liblldb_CommandAlias_h_
+#endif // LLDB_INTERPRETER_COMMANDALIAS_H

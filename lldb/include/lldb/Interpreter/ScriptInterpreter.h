@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ScriptInterpreter_h_
-#define liblldb_ScriptInterpreter_h_
+#ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
+#define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
 #include "lldb/lldb-private.h"
 
@@ -488,4 +488,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_ScriptInterpreter_h_
+#endif // LLDB_INTERPRETER_SCRIPTINTERPRETER_H

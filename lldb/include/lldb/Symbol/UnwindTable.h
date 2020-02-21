@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UnwindTable_h
-#define liblldb_UnwindTable_h
+#ifndef LLDB_SYMBOL_UNWINDTABLE_H
+#define LLDB_SYMBOL_UNWINDTABLE_H
 
 #include <map>
 #include <mutex>
@@ -84,4 +84,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_UnwindTable_h
+#endif // LLDB_SYMBOL_UNWINDTABLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_LLDBUTILS_H_
-#define LLDBVSCODE_LLDBUTILS_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_LLDBUTILS_H
+#define LLDB_TOOLS_LLDB_VSCODE_LLDBUTILS_H
 
 #include "VSCodeForward.h"
 #include "llvm/ADT/ArrayRef.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_UnwindAssembly_h_
-#define utility_UnwindAssembly_h_
+#ifndef LLDB_TARGET_UNWINDASSEMBLY_H
+#define LLDB_TARGET_UNWINDASSEMBLY_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -50,4 +50,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // utility_UnwindAssembly_h_
+#endif // LLDB_TARGET_UNWINDASSEMBLY_H

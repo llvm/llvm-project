@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_lldb_private_types_h_
-#define liblldb_lldb_private_types_h_
+#ifndef LLDB_LLDB_PRIVATE_TYPES_H
+#define LLDB_LLDB_PRIVATE_TYPES_H
 
 #if defined(__cplusplus)
 
@@ -126,4 +126,4 @@ typedef struct type256 { uint64_t x[4]; } type256;
 
 #endif // #if defined(__cplusplus)
 
-#endif // liblldb_lldb_private_types_h_
+#endif // LLDB_LLDB_PRIVATE_TYPES_H

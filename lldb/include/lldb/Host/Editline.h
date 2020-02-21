@@ -28,8 +28,8 @@
 // e) Emoji support is fairly terrible, presumably it doesn't understand
 // composed characters?
 
-#ifndef liblldb_Editline_h_
-#define liblldb_Editline_h_
+#ifndef LLDB_HOST_EDITLINE_H
+#define LLDB_HOST_EDITLINE_H
 #if defined(__cplusplus)
 
 #include "lldb/Host/Config.h"
@@ -368,4 +368,4 @@ private:
 }
 
 #endif // #if defined(__cplusplus)
-#endif // liblldb_Editline_h_
+#endif // LLDB_HOST_EDITLINE_H

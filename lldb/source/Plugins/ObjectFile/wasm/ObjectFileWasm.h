@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
-#define LLDB_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -148,4 +148,4 @@ private:
 
 } // namespace wasm
 } // namespace lldb_private
-#endif // LLDB_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H

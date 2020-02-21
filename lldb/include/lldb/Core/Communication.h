@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Communication_h_
-#define liblldb_Communication_h_
+#ifndef LLDB_CORE_COMMUNICATION_H
+#define LLDB_CORE_COMMUNICATION_H
 
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -364,4 +364,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Communication_h_
+#endif // LLDB_CORE_COMMUNICATION_H

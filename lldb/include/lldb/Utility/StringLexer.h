@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_StringLexer_h_
-#define utility_StringLexer_h_
+#ifndef LLDB_UTILITY_STRINGLEXER_H
+#define LLDB_UTILITY_STRINGLEXER_H
 
 #include <initializer_list>
 #include <string>
@@ -53,4 +53,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // #ifndef utility_StringLexer_h_
+#endif // LLDB_UTILITY_STRINGLEXER_H

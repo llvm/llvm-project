@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObjectQuit_h_
-#define liblldb_CommandObjectQuit_h_
+#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTQUIT_H
+#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTQUIT_H
 
 #include "lldb/Interpreter/CommandObject.h"
 
@@ -29,4 +29,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObjectQuit_h_
+#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTQUIT_H

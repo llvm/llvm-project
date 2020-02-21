@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGIN_ARCHITECTURE_MIPS_H
-#define LLDB_PLUGIN_ARCHITECTURE_MIPS_H
+#ifndef LLDB_SOURCE_PLUGINS_ARCHITECTURE_MIPS_ARCHITECTUREMIPS_H
+#define LLDB_SOURCE_PLUGINS_ARCHITECTURE_MIPS_ARCHITECTUREMIPS_H
 
 #include "lldb/Core/Architecture.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -48,4 +48,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_PLUGIN_ARCHITECTURE_MIPS_H
+#endif // LLDB_SOURCE_PLUGINS_ARCHITECTURE_MIPS_ARCHITECTUREMIPS_H

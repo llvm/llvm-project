@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PseudoTerminal_h__
-#define __PseudoTerminal_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PSEUDOTERMINAL_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_PSEUDOTERMINAL_H
 
 #include <fcntl.h>
 #include <string>
@@ -76,4 +76,4 @@ private:
   PseudoTerminal &operator=(const PseudoTerminal &rhs) = delete;
 };
 
-#endif // #ifndef __PseudoTerminal_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_PSEUDOTERMINAL_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanStepOverBreakpoint_h_
-#define liblldb_ThreadPlanStepOverBreakpoint_h_
+#ifndef LLDB_TARGET_THREADPLANSTEPOVERBREAKPOINT_H
+#define LLDB_TARGET_THREADPLANSTEPOVERBREAKPOINT_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -52,4 +52,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanStepOverBreakpoint_h_
+#endif // LLDB_TARGET_THREADPLANSTEPOVERBREAKPOINT_H

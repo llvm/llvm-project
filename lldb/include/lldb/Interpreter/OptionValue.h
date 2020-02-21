@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValue_h_
-#define liblldb_OptionValue_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUE_H
+#define LLDB_INTERPRETER_OPTIONVALUE_H
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -326,4 +326,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValue_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Timer_h_
-#define liblldb_Timer_h_
+#ifndef LLDB_UTILITY_TIMER_H
+#define LLDB_UTILITY_TIMER_H
 
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
@@ -71,4 +71,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Timer_h_
+#endif // LLDB_UTILITY_TIMER_H
