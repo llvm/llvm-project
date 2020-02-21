@@ -29,16 +29,27 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; FIXME: nocapture & noalias for %alloc2 in %call3
 
 define dso_local i32 @main() {
-; CHECK-LABEL: define {{[^@]+}}@main()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
-; CHECK-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
-; CHECK-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nofree readnone align 536870912 null)
-; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
-; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
-; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
-; CHECK-NEXT:    ret i32 0
+; MODULE-LABEL: define {{[^@]+}}@main()
+; MODULE-NEXT:  entry:
+; MODULE-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
+; MODULE-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
+; MODULE-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
+; MODULE-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nofree readnone align 536870912 undef)
+; MODULE-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) undef)
+; MODULE-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
+; MODULE-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
+; MODULE-NEXT:    ret i32 0
+;
+; CGSCC-LABEL: define {{[^@]+}}@main()
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
+; CGSCC-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
+; CGSCC-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nofree readnone align 536870912 null)
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
+; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
+; CGSCC-NEXT:    ret i32 0
 ;
 entry:
   %alloc1 = alloca i8, align 8

@@ -248,9 +248,9 @@ Argument *IRPosition::getAssociatedArgument() const {
   return nullptr;
 }
 
-static Optional<ConstantInt *>
-getAssumedConstant(Attributor &A, const Value &V, const AbstractAttribute &AA,
-                   bool &UsedAssumedInformation) {
+static Optional<Constant *> getAssumedConstant(Attributor &A, const Value &V,
+                                               const AbstractAttribute &AA,
+                                               bool &UsedAssumedInformation) {
   const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
       AA, IRPosition::value(V), /* TrackDependence */ false);
   Optional<Value *> SimplifiedV = ValueSimplifyAA.getAssumedSimplifiedValue(A);
@@ -264,10 +264,24 @@ getAssumedConstant(Attributor &A, const Value &V, const AbstractAttribute &AA,
     A.recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
-  ConstantInt *CI = dyn_cast_or_null<ConstantInt>(SimplifiedV.getValue());
+  Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
+  if (CI && CI->getType() != V.getType()) {
+    // TODO: Check for a save conversion.
+    return nullptr;
+  }
   if (CI)
     A.recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
   return CI;
+}
+
+static Optional<ConstantInt *>
+getAssumedConstantInt(Attributor &A, const Value &V,
+                      const AbstractAttribute &AA,
+                      bool &UsedAssumedInformation) {
+  Optional<Constant *> C = getAssumedConstant(A, V, AA, UsedAssumedInformation);
+  if (C.hasValue())
+    return dyn_cast_or_null<ConstantInt>(C.getValue());
+  return llvm::None;
 }
 
 /// Get pointer operand of memory accessing instruction. If \p I is
@@ -2919,9 +2933,9 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       return ChangeStatus::UNCHANGED;
 
     bool UsedAssumedInformation = false;
-    Optional<ConstantInt *> CI =
+    Optional<Constant *> C =
         getAssumedConstant(A, V, *this, UsedAssumedInformation);
-    if (CI.hasValue() && CI.getValue())
+    if (C.hasValue() && C.getValue())
       return ChangeStatus::UNCHANGED;
 
     UndefValue &UV = *UndefValue::get(V.getType());
@@ -3307,8 +3321,8 @@ identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
   if (BI.getNumSuccessors() == 1) {
     AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
   } else {
-    Optional<ConstantInt *> CI =
-        getAssumedConstant(A, *BI.getCondition(), AA, UsedAssumedInformation);
+    Optional<ConstantInt *> CI = getAssumedConstantInt(
+        A, *BI.getCondition(), AA, UsedAssumedInformation);
     if (!CI.hasValue()) {
       // No value yet, assume both edges are dead.
     } else if (CI.getValue()) {
@@ -3330,7 +3344,7 @@ identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   bool UsedAssumedInformation = false;
   Optional<ConstantInt *> CI =
-      getAssumedConstant(A, *SI.getCondition(), AA, UsedAssumedInformation);
+      getAssumedConstantInt(A, *SI.getCondition(), AA, UsedAssumedInformation);
   if (!CI.hasValue()) {
     // No value yet, assume all edges are dead.
   } else if (CI.getValue()) {
@@ -7220,11 +7234,11 @@ bool Attributor::checkForAllUses(
   // instead use the `follow` callback argument to look at transitive users,
   // however, that should be clear from the presence of the argument.
   bool UsedAssumedInformation = false;
-  Optional<ConstantInt *> CI =
+  Optional<Constant *> C =
       getAssumedConstant(*this, V, QueryingAA, UsedAssumedInformation);
-  if (CI.hasValue() && CI.getValue()) {
+  if (C.hasValue() && C.getValue()) {
     LLVM_DEBUG(dbgs() << "[Attributor] Value is simplified, uses skipped: " << V
-                      << " -> " << *CI.getValue() << "\n");
+                      << " -> " << *C.getValue() << "\n");
     return true;
   }
 
