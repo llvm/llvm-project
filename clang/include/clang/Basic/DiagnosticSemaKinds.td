@@ -1476,8 +1476,8 @@ def err_throw_abstract_type : Error<
 def err_array_of_abstract_type : Error<"array of abstract class type %0">;
 def err_capture_of_abstract_type : Error<
   "by-copy capture of value of abstract type %0">;
-def err_capture_of_incomplete_type : Error<
-  "by-copy capture of variable %0 with incomplete type %1">;
+def err_capture_of_incomplete_or_sizeless_type : Error<
+  "by-copy capture of variable %0 with %select{incomplete|sizeless}1 type %2">;
 def err_capture_default_non_local : Error<
   "non-local lambda expression cannot have a capture-default">;
 

@@ -499,6 +499,7 @@ void cxx_only(int sel) {
 #if __cplusplus >= 201703L
   auto fn3 = [a(return_int8())] {}; // expected-error {{field has sizeless type '__SVInt8_t'}}
 #endif
+  auto fn4 = [local_int8](svint8_t *ptr) { *ptr = local_int8; }; // expected-error {{by-copy capture of variable 'local_int8' with sizeless type 'svint8_t'}}
 
   for (auto x : local_int8) { // expected-error {{no viable 'begin' function available}}
   }

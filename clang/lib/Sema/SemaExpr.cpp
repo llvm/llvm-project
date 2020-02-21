@@ -16356,9 +16356,10 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
     // Make sure that by-copy captures are of a complete and non-abstract type.
     if (!Invalid && BuildAndDiagnose) {
       if (!CaptureType->isDependentType() &&
-          S.RequireCompleteType(Loc, CaptureType,
-                                diag::err_capture_of_incomplete_type,
-                                Var->getDeclName()))
+          S.RequireCompleteSizedType(
+              Loc, CaptureType,
+              diag::err_capture_of_incomplete_or_sizeless_type,
+              Var->getDeclName()))
         Invalid = true;
       else if (S.RequireNonAbstractType(Loc, CaptureType,
                                         diag::err_capture_of_abstract_type))
