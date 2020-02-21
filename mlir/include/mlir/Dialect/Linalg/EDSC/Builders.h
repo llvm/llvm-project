@@ -15,7 +15,7 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 // TODO(ntv): Needed for SubViewOp::Range, clean this up.
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/EDSC/Intrinsics.h"
