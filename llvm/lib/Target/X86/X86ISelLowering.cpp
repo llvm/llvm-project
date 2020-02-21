@@ -23124,7 +23124,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       X86::CondCode X86Cond;
       std::tie(Value, Overflow) = getX86XALUOOp(X86Cond, LHS.getValue(0), DAG);
 
-      if (CC == ISD::SETEQ == isNullConstant(RHS))
+      if ((CC == ISD::SETEQ) == isNullConstant(RHS))
         X86Cond = X86::GetOppositeBranchCondition(X86Cond);
 
       SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
