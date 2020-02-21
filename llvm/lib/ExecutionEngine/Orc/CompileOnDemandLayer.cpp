@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 
@@ -68,18 +69,18 @@ namespace orc {
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES,
-                                    const ManglingOptions &MO,
+                                    const IRSymbolMapper::ManglingOptions &MO,
                                     ThreadSafeModule TSM, VModuleKey K,
                                     CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(ES, MO, std::move(TSM), std::move(K)),
         Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
-      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
-      SymbolNameToDefinitionMap SymbolToDefinition,
+      ThreadSafeModule TSM, VModuleKey K, SymbolFlagsMap SymbolFlags,
+      SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(std::move(TSM), std::move(K),
-                              std::move(SymbolFlags),
+                              std::move(SymbolFlags), std::move(InitSymbol),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -172,21 +173,23 @@ CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
-        getExecutionSession().createJITDylib(TargetD.getName() + ".impl");
+        getExecutionSession().createBareJITDylib(TargetD.getName() + ".impl");
+    JITDylibSearchOrder NewSearchOrder;
     TargetD.withSearchOrderDo(
         [&](const JITDylibSearchOrder &TargetSearchOrder) {
-          auto NewSearchOrder = TargetSearchOrder;
-          assert(
-              !NewSearchOrder.empty() &&
-              NewSearchOrder.front().first == &TargetD &&
-              NewSearchOrder.front().second ==
-                  JITDylibLookupFlags::MatchAllSymbols &&
-              "TargetD must be at the front of its own search order and match "
-              "non-exported symbol");
-          NewSearchOrder.insert(std::next(NewSearchOrder.begin()),
-                                {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
-          ImplD.setSearchOrder(std::move(NewSearchOrder), false);
+          NewSearchOrder = TargetSearchOrder;
         });
+
+    assert(
+        !NewSearchOrder.empty() && NewSearchOrder.front().first == &TargetD &&
+        NewSearchOrder.front().second == JITDylibLookupFlags::MatchAllSymbols &&
+        "TargetD must be at the front of its own search order and match "
+        "non-exported symbol");
+    NewSearchOrder.insert(std::next(NewSearchOrder.begin()),
+                          {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
+    ImplD.setSearchOrder(NewSearchOrder, false);
+    TargetD.setSearchOrder(std::move(NewSearchOrder), false);
+
     PerDylibResources PDR(ImplD, BuildIndirectStubsManager());
     I = DylibResources.insert(std::make_pair(&TargetD, std::move(PDR))).first;
   }
@@ -251,8 +254,15 @@ void CompileOnDemandLayer::emitPartition(
   auto &ES = getExecutionSession();
   GlobalValueSet RequestedGVs;
   for (auto &Name : R.getRequestedSymbols()) {
-    assert(Defs.count(Name) && "No definition for symbol");
-    RequestedGVs.insert(Defs[Name]);
+    if (Name == R.getInitializerSymbol())
+      TSM.withModuleDo([&](Module &M) {
+        for (auto &GV : getStaticInitGVs(M))
+          RequestedGVs.insert(&GV);
+      });
+    else {
+      assert(Defs.count(Name) && "No definition for symbol");
+      RequestedGVs.insert(Defs[Name]);
+    }
   }
 
   /// Perform partitioning with the context lock held, since the partition
@@ -272,7 +282,8 @@ void CompileOnDemandLayer::emitPartition(
   // If the partition is empty, return the whole module to the symbol table.
   if (GVsToExtract->empty()) {
     R.replace(std::make_unique<PartitioningIRMaterializationUnit>(
-        std::move(TSM), R.getSymbols(), std::move(Defs), *this));
+        std::move(TSM), R.getVModuleKey(), R.getSymbols(),
+        R.getInitializerSymbol(), std::move(Defs), *this));
     return;
   }
 

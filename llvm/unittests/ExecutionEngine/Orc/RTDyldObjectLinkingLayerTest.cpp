@@ -50,7 +50,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
   bool DebugSectionSeen = false;
 
   ExecutionSession ES;
-  auto &JD = ES.createJITDylib("main");
+  auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
 
   RTDyldObjectLinkingLayer ObjLayer(ES, [&DebugSectionSeen]() {
@@ -151,7 +151,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
 
   // Create a simple stack and set the override flags option.
   ExecutionSession ES;
-  auto &JD = ES.createJITDylib("main");
+  auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
       ES, []() { return std::make_unique<SectionMemoryManager>(); });
@@ -218,7 +218,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
 
   // Create a simple stack and set the override flags option.
   ExecutionSession ES;
-  auto &JD = ES.createJITDylib("main");
+  auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
       ES, []() { return std::make_unique<SectionMemoryManager>(); });

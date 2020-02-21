@@ -88,7 +88,8 @@ RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
 void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
                                     std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
-
+  dbgs() << "Emitting via RTDyldObjectLinkingLayer:\n"
+         << R.getSymbols() << "\n";
   // This method launches an asynchronous link step that will fulfill our
   // materialization responsibility. We need to switch R to be heap
   // allocated before that happens so it can live as long as the asynchronous
@@ -228,6 +229,9 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       if (KV.second.isWeak() && !R.getSymbols().count(KV.first))
         Symbols.erase(KV.first);
   }
+
+  if (const auto &InitSym = R.getInitializerSymbol())
+    Symbols[InitSym] = JITEvaluatedSymbol();
 
   if (auto Err = R.notifyResolved(Symbols)) {
     R.failMaterialization();
