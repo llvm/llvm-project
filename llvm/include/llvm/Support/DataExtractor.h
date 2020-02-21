@@ -141,6 +141,62 @@ public:
   ///     a default-initialized StringRef will be returned.
   StringRef getCStrRef(uint64_t *offset_ptr) const;
 
+  /// Extract a fixed length string from \a *OffsetPtr and consume \a Length
+  /// bytes.
+  ///
+  /// Returns a StringRef for the string from the data at the offset
+  /// pointed to by \a OffsetPtr. A fixed length C string will be extracted
+  /// and the \a OffsetPtr will be advanced by \a Length bytes.
+  ///
+  /// \param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// \param[in] Length
+  ///     The length of the fixed length string to extract. If there are not
+  ///     enough bytes in the data to extract the full string, the offset will
+  ///     be left unmodified.
+  ///
+  /// \param[in] TrimChars
+  ///     A set of characters to trim from the end of the string. Fixed length
+  ///     strings are commonly either NULL terminated by one or more zero
+  ///     bytes. Some clients have one or more spaces at the end of the string,
+  ///     but a good default is to trim the NULL characters.
+  ///
+  /// \return
+  ///     A StringRef for the C string value in the data. If the offset
+  ///     pointed to by \a OffsetPtr is out of bounds, or if the
+  ///     offset plus the length of the C string is out of bounds,
+  ///     a default-initialized StringRef will be returned.
+  StringRef getFixedLengthString(uint64_t *OffsetPtr,
+      uint64_t Length, StringRef TrimChars = {"\0", 1}) const;
+
+  /// Extract a fixed number of bytes from the specified offset.
+  ///
+  /// Returns a StringRef for the bytes from the data at the offset
+  /// pointed to by \a OffsetPtr. A fixed length C string will be extracted
+  /// and the \a OffsetPtr will be advanced by \a Length bytes.
+  ///
+  /// \param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// \param[in] Length
+  ///     The number of bytes to extract. If there are not enough bytes in the
+  ///     data to extract all of the bytes, the offset will be left unmodified.
+  ///
+  /// \return
+  ///     A StringRef for the extracted bytes. If the offset pointed to by
+  ///     \a OffsetPtr is out of bounds, or if the offset plus the length
+  ///     is out of bounds, a default-initialized StringRef will be returned.
+  StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length) const;
+
   /// Extract an unsigned integer of size \a byte_size from \a
   /// *offset_ptr.
   ///
