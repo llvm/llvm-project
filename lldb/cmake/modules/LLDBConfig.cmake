@@ -59,6 +59,7 @@ add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" L
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonInterpAndLibs PYTHONINTERPANDLIBS_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 
+option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
@@ -139,20 +140,10 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 if (LLDB_ENABLE_PYTHON)
-  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    set(default_embed_python_home ON)
-  else()
-    set(default_embed_python_home OFF)
-  endif()
-  option(LLDB_EMBED_PYTHON_HOME
-    "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
-    ${default_embed_python_home})
-
   include_directories(${PYTHON_INCLUDE_DIRS})
-  if (LLDB_EMBED_PYTHON_HOME)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" AND NOT LLDB_RELOCATABLE_PYTHON)
     get_filename_component(PYTHON_HOME "${PYTHON_EXECUTABLE}" DIRECTORY)
-    set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
-      "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+    file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
   endif()
 endif()
 
