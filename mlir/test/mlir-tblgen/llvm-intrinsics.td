@@ -15,15 +15,15 @@
 
 // CHECK-LABEL: def LLVM_ptrmask
 // CHECK: LLVM_IntrOp<"ptrmask
-// CHECK: Arguments<(ins
-// CHECK: Results<(outs
-// CHECK: llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-// CHECK:        module, llvm::Intrinsic::ptrmask, {
-// CHECK:        opInst.getResult(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK:        opInst.getOperand(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK:        opInst.getOperand(1).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK: });
-// CHECK:        lookupValues(opInst.getOperands());
+// The result of this intrinsic result is overloadable.
+// CHECK: [0]
+// Both its operands are overloadable.
+// CHECK: [0, 1]
+// It has no additional traits.
+// CHECK: []
+// It has a result.
+// CHECK: 1>
+// CHECK: Arguments<(ins LLVM_Type, LLVM_Type
 
 //---------------------------------------------------------------------------//
 

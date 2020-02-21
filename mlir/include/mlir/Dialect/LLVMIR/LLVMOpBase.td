@@ -75,10 +75,6 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
 class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
     LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
 
-// Compatibility class for LLVM intrinsic operations.
-class LLVM_IntrOp<string mnemonic, list<OpTrait> traits = []> :
-    LLVM_Op<"intr."#mnemonic, traits>;
-
 // Case of the LLVM enum attribute backed by I64Attr with customized string
 // representation that corresponds to what is visible in the textual IR form.
 // The parameters are as follows:
@@ -163,6 +159,14 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   }];
 }
 
+// Base class for LLVM intrinsic operations, should not be used directly. Places
+// the intrinsic into the LLVM dialect and prefixes its name with "intr.".
+class LLVM_IntrOp<string mnem, list<int> overloadedResults,
+                  list<int> overloadedOperands, list<OpTrait> traits,
+                  bit hasResult>
+    : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
+                      overloadedResults, overloadedOperands, traits, hasResult>;
+
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
 //
@@ -179,8 +183,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 // The Op has no results.
 class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             list<OpTrait> traits = []>
-    : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
-                      [], overloadedOperands, traits, 0>;
+    : LLVM_IntrOp<mnem, [], overloadedOperands, traits, 0>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
@@ -191,8 +194,7 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<OpTrait> traits = []>
-    : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
-                      overloadedResults, overloadedOperands, traits, 1>;
+    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1>;
 
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
