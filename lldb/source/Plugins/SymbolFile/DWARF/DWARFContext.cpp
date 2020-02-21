@@ -45,6 +45,11 @@ const DWARFDataExtractor &DWARFContext::getOrLoadCuIndexData() {
                           m_data_debug_cu_index);
 }
 
+const DWARFDataExtractor &DWARFContext::getOrLoadTuIndexData() {
+  return LoadOrGetSection(llvm::None, eSectionTypeDWARFDebugTuIndex,
+                          m_data_debug_tu_index);
+}
+
 const DWARFDataExtractor &DWARFContext::getOrLoadAbbrevData() {
   return LoadOrGetSection(eSectionTypeDWARFDebugAbbrev,
                           eSectionTypeDWARFDebugAbbrevDwo, m_data_debug_abbrev);
@@ -134,6 +139,7 @@ llvm::DWARFContext &DWARFContext::GetAsLLVM() {
 
     AddSection("debug_line_str", getOrLoadLineStrData());
     AddSection("debug_cu_index", getOrLoadCuIndexData());
+    AddSection("debug_tu_index", getOrLoadTuIndexData());
 
     m_llvm_context = llvm::DWARFContext::create(section_map, addr_size);
   }
