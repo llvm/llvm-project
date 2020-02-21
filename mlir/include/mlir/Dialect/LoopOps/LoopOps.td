@@ -149,7 +149,7 @@ def ForOp : Loop_Op<"for",
       return getBody()->getNumArguments() - 1; 
     }
     /// Number of operands controlling the loop: lb, ub, step
-    constexpr unsigned getNumControlOperands() { return 3; }
+    unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() { 
       return getOperation()->getNumOperands() > getNumControlOperands();
