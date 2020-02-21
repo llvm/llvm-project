@@ -16,7 +16,7 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
-    @skipIfDarwinEmbedded
+    @skipIfRemote
     def test_step(self):
         '''
             Tests the stepping in/out/over in threads.
