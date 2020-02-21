@@ -232,12 +232,10 @@ def BranchOp : Std_Op<"br", [Terminator]> {
       ^bb3(%3: tensor<*xf32>):
   }];
 
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let successors = (successor AnySuccessor:$dest);
 
-  let builders = [OpBuilder<
-    "Builder *, OperationState &result, Block *dest,"
-    "ValueRange operands = {}", [{
-      result.addSuccessor(dest, operands);
+  let builders = [OpBuilder<"Builder *, OperationState &result, Block *dest", [{
+    result.addSuccessor(dest, llvm::None);
   }]>];
 
   // BranchOp is fully verified by traits.
@@ -513,16 +511,8 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
          ...
   }];
 
-  let arguments = (ins I1:$condition, Variadic<AnyType>:$branchOperands);
-
-  let builders = [OpBuilder<
-    "Builder *, OperationState &result, Value condition,"
-    "Block *trueDest, ValueRange trueOperands,"
-    "Block *falseDest, ValueRange falseOperands", [{
-      result.addOperands(condition);
-      result.addSuccessor(trueDest, trueOperands);
-      result.addSuccessor(falseDest, falseOperands);
-  }]>];
+  let arguments = (ins I1:$condition);
+  let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
 
   // CondBranchOp is fully verified by traits.
   let verifier = ?;

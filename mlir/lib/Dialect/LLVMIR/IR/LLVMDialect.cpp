@@ -234,15 +234,14 @@ static ParseResult parseStoreOp(OpAsmParser &parser, OperationState &result) {
 static LogicalResult verify(InvokeOp op) {
   if (op.getNumResults() > 1)
     return op.emitOpError("must have 0 or 1 result");
-  if (op.getNumSuccessors() != 2)
-    return op.emitOpError("must have normal and unwind destinations");
 
-  if (op.getSuccessor(1)->empty())
+  Block *unwindDest = op.unwindDest();
+  if (unwindDest->empty())
     return op.emitError(
         "must have at least one operation in unwind destination");
 
   // In unwind destination, first operation must be LandingpadOp
-  if (!isa<LandingpadOp>(op.getSuccessor(1)->front()))
+  if (!isa<LandingpadOp>(unwindDest->front()))
     return op.emitError("first operation in unwind destination should be a "
                         "llvm.landingpad operation");
 

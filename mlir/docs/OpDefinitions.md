@@ -279,6 +279,24 @@ Similar to variadic operands, `Variadic<...>` can also be used for results.
 And similarly, `SameVariadicResultSize` for multiple variadic results in the
 same operation.
 
+### Operation successors
+
+For terminator operations, the successors are specified inside of the
+`dag`-typed `successors`, led by `successor`:
+
+```tablegen
+let successors = (successor
+  <successor-constraint>:$<successor-name>,
+  ...
+);
+```
+
+#### Variadic successors
+
+Similar to the `Variadic` class used for variadic operands and results,
+`VariadicSuccessor<...>` can be used for successors. Variadic successors can
+currently only be specified as the last successor in the successor list.
+
 ### Operation traits and constraints
 
 Traits are operation properties that affect syntax or semantics. MLIR C++

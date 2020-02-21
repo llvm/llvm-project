@@ -431,7 +431,7 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
                      [(IsNotScalar $attr)]>;
 
 def TestBranchOp : TEST_Op<"br", [Terminator]> {
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let successors = (successor AnySuccessor:$target);
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",

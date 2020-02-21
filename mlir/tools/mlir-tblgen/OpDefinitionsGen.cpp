@@ -183,6 +183,9 @@ private:
   // Generates getters for named regions.
   void genNamedRegionGetters();
 
+  // Generates getters for named successors.
+  void genNamedSuccessorGetters();
+
   // Generates builder methods for the operation.
   void genBuilder();
 
@@ -266,6 +269,10 @@ private:
   // The generated code will be attached to `body`.
   void genRegionVerifier(OpMethodBody &body);
 
+  // Generates verify statements for successors in the operation.
+  // The generated code will be attached to `body`.
+  void genSuccessorVerifier(OpMethodBody &body);
+
   // Generates the traits used by the object.
   void genTraits();
 
@@ -302,6 +309,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genNamedOperandGetters();
   genNamedResultGetters();
   genNamedRegionGetters();
+  genNamedSuccessorGetters();
   genAttrGetters();
   genAttrSetters();
   genBuilder();
@@ -576,6 +584,42 @@ void OpEmitter::genNamedRegionGetters() {
       auto &m = opClass.newMethod("Region &", region.name);
       m.body() << formatv("  return this->getOperation()->getRegion({0});", i);
     }
+  }
+}
+
+void OpEmitter::genNamedSuccessorGetters() {
+  unsigned numSuccessors = op.getNumSuccessors();
+  for (unsigned i = 0; i < numSuccessors; ++i) {
+    const NamedSuccessor &successor = op.getSuccessor(i);
+    if (successor.name.empty())
+      continue;
+
+    // Generate the accessors for a variadic successor.
+    if (successor.isVariadic()) {
+      // Generate the getter.
+      auto &m = opClass.newMethod("SuccessorRange", successor.name);
+      m.body() << formatv(
+          "  return {std::next(this->getOperation()->successor_begin(), {0}), "
+          "this->getOperation()->successor_end()};",
+          i);
+      continue;
+    }
+
+    // Generate the block getter.
+    auto &m = opClass.newMethod("Block *", successor.name);
+    m.body() << formatv("  return this->getOperation()->getSuccessor({0});", i);
+
+    // Generate the all-operands getter.
+    auto &operandsMethod = opClass.newMethod(
+        "Operation::operand_range", (successor.name + "Operands").str());
+    operandsMethod.body() << formatv(
+        " return this->getOperation()->getSuccessorOperands({0});", i);
+
+    // Generate the individual-operand getter.
+    auto &operandMethod = opClass.newMethod(
+        "Value", (successor.name + "Operand").str(), "unsigned index");
+    operandMethod.body() << formatv(
+        " return this->getOperation()->getSuccessorOperand({0}, index);", i);
   }
 }
 
@@ -869,8 +913,9 @@ void OpEmitter::genCollectiveParamBuilder() {
   // Generate builder that infers type too.
   // TODO(jpienaar): Subsume this with general checking if type can be infered
   // automatically.
-  // TODO(jpienaar): Expand to handle regions.
-  if (op.getTrait("InferTypeOpInterface::Trait") && op.getNumRegions() == 0)
+  // TODO(jpienaar): Expand to handle regions and successors.
+  if (op.getTrait("InferTypeOpInterface::Trait") && op.getNumRegions() == 0 &&
+      op.getNumSuccessors() == 0)
     genInferedTypeCollectiveParamBuilder();
 }
 
@@ -982,17 +1027,28 @@ void OpEmitter::buildParamList(std::string &paramList,
       ++numAttrs;
     }
   }
+
+  /// Insert parameters for the block and operands for each successor.
+  const char *variadicSuccCode =
+      ", ArrayRef<Block *> {0}, ArrayRef<ValueRange> {0}Operands";
+  const char *succCode = ", Block *{0}, ValueRange {0}Operands";
+  for (const NamedSuccessor &namedSuccessor : op.getSuccessors()) {
+    if (namedSuccessor.isVariadic())
+      paramList += llvm::formatv(variadicSuccCode, namedSuccessor.name).str();
+    else
+      paramList += llvm::formatv(succCode, namedSuccessor.name).str();
+  }
 }
 
 void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
                                                        bool isRawValueAttr) {
-  // Push all operands to the result
+  // Push all operands to the result.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     body << "  " << builderOpState << ".addOperands(" << getArgumentName(op, i)
          << ");\n";
   }
 
-  // Push all attributes to the result
+  // Push all attributes to the result.
   for (const auto &namedAttr : op.getAttributes()) {
     auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr()) {
@@ -1030,10 +1086,23 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
     }
   }
 
-  // Create the correct number of regions
+  // Create the correct number of regions.
   if (int numRegions = op.getNumRegions()) {
     for (int i = 0; i < numRegions; ++i)
       body << "  (void)" << builderOpState << ".addRegion();\n";
+  }
+
+  // Push all successors to the result.
+  for (const NamedSuccessor &namedSuccessor : op.getSuccessors()) {
+    if (namedSuccessor.isVariadic()) {
+      body << formatv("  for (int i = 0, e = {1}.size(); i != e; ++i)\n"
+                      "    {0}.addSuccessor({1}[i], {1}Operands[i]);\n",
+                      builderOpState, namedSuccessor.name);
+      continue;
+    }
+
+    body << formatv("  {0}.addSuccessor({1}, {1}Operands);\n", builderOpState,
+                    namedSuccessor.name);
   }
 }
 
@@ -1228,6 +1297,7 @@ void OpEmitter::genVerifier() {
   }
 
   genRegionVerifier(body);
+  genSuccessorVerifier(body);
 
   if (hasCustomVerify) {
     FmtContext fctx;
@@ -1305,6 +1375,58 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
   }
 }
 
+void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
+  unsigned numSuccessors = op.getNumSuccessors();
+
+  const char *checkSuccessorSizeCode = R"(
+  if (this->getOperation()->getNumSuccessors() {0} {1}) {
+    return emitOpError("has incorrect number of successors: expected{2} {1}"
+                       " but found ")
+             << this->getOperation()->getNumSuccessors();
+  }
+  )";
+
+  // Verify this op has the correct number of successors.
+  unsigned numVariadicSuccessors = op.getNumVariadicSuccessors();
+  if (numVariadicSuccessors == 0) {
+    body << formatv(checkSuccessorSizeCode, "!=", numSuccessors, "");
+  } else if (numVariadicSuccessors != numSuccessors) {
+    body << formatv(checkSuccessorSizeCode, "<",
+                    numSuccessors - numVariadicSuccessors, " at least");
+  }
+
+  // If we have no successors, there is nothing more to do.
+  if (numSuccessors == 0)
+    return;
+
+  body << "{\n";
+  body << "    unsigned index = 0; (void)index;\n";
+
+  for (unsigned i = 0; i < numSuccessors; ++i) {
+    const auto &successor = op.getSuccessor(i);
+    if (successor.constraint.getPredicate().isNull())
+      continue;
+
+    body << "    for (Block *successor : ";
+    body << formatv(successor.isVariadic() ? "{0}()"
+                                           : "ArrayRef<Block *>({0}())",
+                    successor.name);
+    body << ") {\n";
+    auto constraint = tgfmt(successor.constraint.getConditionTemplate(),
+                            &verifyCtx.withSelf("successor"))
+                          .str();
+
+    body << formatv(
+        "      (void)successor;\n"
+        "      if (!({0})) {\n        "
+        "return emitOpError(\"successor #\") << index << \"('{2}') failed to "
+        "verify constraint: {3}\";\n      }\n",
+        constraint, i, successor.name, successor.constraint.getDescription());
+    body << "    }\n";
+  }
+  body << "  }\n";
+}
+
 void OpEmitter::genTraits() {
   int numResults = op.getNumResults();
   int numVariadicResults = op.getNumVariadicResults();
@@ -1342,7 +1464,9 @@ void OpEmitter::genTraits() {
   int numVariadicOperands = op.getNumVariadicOperands();
 
   // Add operand size trait.
-  if (numVariadicOperands != 0) {
+  // Note: Successor operands are also included in the operation's operand list,
+  // so we always need to use VariadicOperands in the presence of successors.
+  if (numVariadicOperands != 0 || op.getNumSuccessors()) {
     if (numOperands == numVariadicOperands)
       opClass.addTrait("OpTrait::VariadicOperands");
     else
