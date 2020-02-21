@@ -36,6 +36,9 @@ def main():
       help='Use more regex for x86 matching to reduce diffs between various subtargets')
   parser.add_argument(
       '--no_x86_scrub_rip', action='store_false', dest='x86_scrub_rip')
+  parser.add_argument(
+      '--no_x86_scrub_mem_shuffle', action='store_true', default=False,
+      help='Reduce scrubbing shuffles with memory operands')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
 
