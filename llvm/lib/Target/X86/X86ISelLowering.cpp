@@ -22526,9 +22526,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isAllOnesConstant(Op1) != (CondCode == X86::COND_E))
         Res = DAG.getNOT(DL, Res, Res.getValueType());
 
-      if (!isNullConstant(Op2))
-        Res = DAG.getNode(ISD::OR, DL, Res.getValueType(), Res, Y);
-      return Res;
+      return DAG.getNode(ISD::OR, DL, Res.getValueType(), Res, Y);
     } else if (!Subtarget.hasCMov() && CondCode == X86::COND_E &&
                Cmp.getOperand(0).getOpcode() == ISD::AND &&
                isOneConstant(Cmp.getOperand(0).getOperand(1))) {
