@@ -33,6 +33,68 @@ using namespace llvm::PatternMatch;
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
 
+/// Compare the relative costs of extracts followed by scalar operation vs.
+/// vector operation followed by extract:
+/// opcode (extelt V0, C), (extelt V1, C) --> extelt (opcode V0, V1), C
+/// Unless the vector op is much more expensive than the scalar op, this
+/// eliminates an extract.
+static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
+                                  unsigned Opcode,
+                                  const TargetTransformInfo &TTI) {
+  assert(Ext0->getOperand(1) == Ext1->getOperand(1) &&
+         isa<ConstantInt>(Ext0->getOperand(1)) &&
+         "Expected same constant extract index");
+
+  Type *ScalarTy = Ext0->getType();
+  Type *VecTy = Ext0->getOperand(0)->getType();
+  int ScalarOpCost, VectorOpCost;
+
+  // Get cost estimates for scalar and vector versions of the operation.
+  bool IsBinOp = Instruction::isBinaryOp(Opcode);
+  if (IsBinOp) {
+    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
+  } else {
+    assert((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
+           "Expected a compare");
+    ScalarOpCost = TTI.getCmpSelInstrCost(Opcode, ScalarTy,
+                                          CmpInst::makeCmpResultType(ScalarTy));
+    VectorOpCost = TTI.getCmpSelInstrCost(Opcode, VecTy,
+                                          CmpInst::makeCmpResultType(VecTy));
+  }
+
+  // Get cost estimate for the extract element. This cost will factor into
+  // both sequences.
+  unsigned ExtIndex = cast<ConstantInt>(Ext0->getOperand(1))->getZExtValue();
+  int ExtractCost = TTI.getVectorInstrCost(Instruction::ExtractElement,
+                                           VecTy, ExtIndex);
+
+  // Extra uses of the extracts mean that we include those costs in the
+  // vector total because those instructions will not be eliminated.
+  int ScalarCost, VectorCost;
+  if (Ext0->getOperand(0) == Ext1->getOperand(0)) {
+    // Handle a special case. If the 2 operands are identical, adjust the
+    // formulas to account for that. The extra use charge allows for either the
+    // CSE'd pattern or an unoptimized form with identical values:
+    // opcode (extelt V, C), (extelt V, C) --> extelt (opcode V, V), C
+    bool HasUseTax = Ext0 == Ext1 ? !Ext0->hasNUses(2)
+                                  : !Ext0->hasOneUse() || !Ext1->hasOneUse();
+    ScalarCost = ExtractCost + ScalarOpCost;
+    VectorCost = VectorOpCost + ExtractCost + HasUseTax * ExtractCost;
+  } else {
+    // Handle the general case. Each extract is actually a different value:
+    // opcode (extelt V0, C), (extelt V1, C) --> extelt (opcode V0, V1), C
+    ScalarCost = 2 * ExtractCost + ScalarOpCost;
+    VectorCost = VectorOpCost + ExtractCost +
+                 !Ext0->hasOneUse() * ExtractCost +
+                 !Ext1->hasOneUse() * ExtractCost;
+  }
+  // TODO: The cost comparison should not differ based on opcode. Either we
+  //       want to be uniformly more or less aggressive in deciding if a vector
+  //       operation should replace the scalar operation.
+  return IsBinOp ? ScalarCost <= VectorCost : ScalarCost < VectorCost;
+}
+
 /// Try to reduce extract element costs by converting scalar compares to vector
 /// compares followed by extract.
 /// cmp (ext0 V0, C0), (ext1 V1, C1)
@@ -40,38 +102,21 @@ static bool foldExtExtCmp(Instruction *Ext0, Value *V0, uint64_t C0,
                           Instruction *Ext1, Value *V1, uint64_t C1,
                           Instruction &I, const TargetTransformInfo &TTI) {
   assert(isa<CmpInst>(&I) && "Expected a compare");
-  Type *ScalarTy = Ext0->getType();
-  Type *VecTy = V0->getType();
-  bool IsFP = ScalarTy->isFloatingPointTy();
-  unsigned CmpOpcode = IsFP ? Instruction::FCmp : Instruction::ICmp;
 
   // TODO: Handle C0 != C1 by shuffling 1 of the operands.
   if (C0 != C1)
     return false;
 
-  // Check if the existing scalar code or the vector alternative is cheaper.
-  // Extra uses of the extracts mean that we include those costs in the
-  // vector total because those instructions will not be eliminated.
-  // ((2 * extract) + scalar cmp) < (vector cmp + extract) ?
-  int ExtractCost =
-      TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, C0);
-  int ScalarCmpCost = TTI.getCmpSelInstrCost(CmpOpcode, ScalarTy, I.getType());
-  int VecCmpCost = TTI.getCmpSelInstrCost(CmpOpcode, VecTy,
-                                          CmpInst::makeCmpResultType(VecTy));
-
-  int ScalarCost = 2 * ExtractCost + ScalarCmpCost;
-  int VecCost = VecCmpCost + ExtractCost +
-                !Ext0->hasOneUse() * ExtractCost +
-                !Ext1->hasOneUse() * ExtractCost;
-  if (ScalarCost < VecCost)
+  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI))
     return false;
 
   // cmp Pred (extelt V0, C), (extelt V1, C) --> extelt (cmp Pred V0, V1), C
   ++NumVecCmp;
   IRBuilder<> Builder(&I);
   CmpInst::Predicate Pred = cast<CmpInst>(&I)->getPredicate();
-  Value *VecCmp = IsFP ? Builder.CreateFCmp(Pred, V0, V1)
-                       : Builder.CreateICmp(Pred, V0, V1);
+  Value *VecCmp =
+      Ext0->getType()->isFloatingPointTy() ? Builder.CreateFCmp(Pred, V0, V1)
+                                           : Builder.CreateICmp(Pred, V0, V1);
   Value *Extract = Builder.CreateExtractElement(VecCmp, Ext0->getOperand(1));
   I.replaceAllUsesWith(Extract);
   return true;
@@ -84,63 +129,27 @@ static bool foldExtExtBinop(Instruction *Ext0, Value *V0, uint64_t C0,
                             Instruction *Ext1, Value *V1, uint64_t C1,
                             Instruction &I, const TargetTransformInfo &TTI) {
   assert(isa<BinaryOperator>(&I) && "Expected a binary operator");
-  Type *ScalarTy = Ext0->getType();
-  Type *VecTy = V0->getType();
-  Instruction::BinaryOps BOpcode = cast<BinaryOperator>(I).getOpcode();
-
-  // Check if using a vector binop would be cheaper.
-  int ScalarBOCost = TTI.getArithmeticInstrCost(BOpcode, ScalarTy);
-  int VecBOCost = TTI.getArithmeticInstrCost(BOpcode, VecTy);
-  int Extract0Cost = TTI.getVectorInstrCost(Instruction::ExtractElement,
-                                            VecTy, C0);
-
-  // Handle a special case - if the extract indexes are the same, the
-  // replacement sequence does not require a shuffle. Unless the vector binop is
-  // much more expensive than the scalar binop, this eliminates an extract.
-  // Extra uses of the extracts mean that we include those costs in the
-  // vector total because those instructions will not be eliminated.
-  if (C0 == C1) {
-    assert(Extract0Cost ==
-               TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, C1) &&
-           "Different costs for same extract?");
-    int ExtractCost = Extract0Cost;
-    if (V0 != V1) {
-      int ScalarCost = ExtractCost + ExtractCost + ScalarBOCost;
-      int VecCost = VecBOCost + ExtractCost +
-                    !Ext0->hasOneUse() * ExtractCost +
-                    !Ext1->hasOneUse() * ExtractCost;
-      if (ScalarCost <= VecCost)
-        return false;
-    } else {
-      // Handle an extra-special case. If the 2 binop operands are identical,
-      // adjust the formulas to account for that:
-      // bo (extelt V, C), (extelt V, C) --> extelt (bo V, V), C
-      // The extra use charge allows for either the CSE'd pattern or an
-      // unoptimized form with identical values.
-      bool HasUseTax = Ext0 == Ext1 ? !Ext0->hasNUses(2)
-                                    : !Ext0->hasOneUse() || !Ext1->hasOneUse();
-      int ScalarCost = ExtractCost + ScalarBOCost;
-      int VecCost = VecBOCost + ExtractCost + HasUseTax * ExtractCost;
-      if (ScalarCost <= VecCost)
-        return false;
-    }
-
-    // bo (extelt X, C), (extelt Y, C) --> extelt (bo X, Y), C
-    ++NumVecBO;
-    IRBuilder<> Builder(&I);
-    Value *NewBO = Builder.CreateBinOp(BOpcode, V0, V1);
-    if (auto *VecBOInst = dyn_cast<Instruction>(NewBO)) {
-      // All IR flags are safe to back-propagate because any potential poison
-      // created in unused vector elements is discarded by the extract.
-      VecBOInst->copyIRFlags(&I);
-    }
-    Value *Extract = Builder.CreateExtractElement(NewBO, Ext0->getOperand(1));
-    I.replaceAllUsesWith(Extract);
-    return true;
-  }
 
   // TODO: Handle C0 != C1 by shuffling 1 of the operands.
-  return false;
+  if (C0 != C1)
+    return false;
+
+  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI))
+    return false;
+
+  // bo (extelt V0, C), (extelt V1, C) --> extelt (bo V0, V1), C
+  ++NumVecBO;
+  IRBuilder<> Builder(&I);
+  Value *NewBO =
+      Builder.CreateBinOp(cast<BinaryOperator>(&I)->getOpcode(), V0, V1);
+  if (auto *VecBOInst = dyn_cast<Instruction>(NewBO)) {
+    // All IR flags are safe to back-propagate because any potential poison
+    // created in unused vector elements is discarded by the extract.
+    VecBOInst->copyIRFlags(&I);
+  }
+  Value *Extract = Builder.CreateExtractElement(NewBO, Ext0->getOperand(1));
+  I.replaceAllUsesWith(Extract);
+  return true;
 }
 
 /// Match an instruction with extracted vector operands.
