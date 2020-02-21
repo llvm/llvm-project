@@ -2063,8 +2063,8 @@ void CodeGenModule::ConstructAttributeList(
   if (const auto *RefTy = RetTy->getAs<ReferenceType>()) {
     QualType PTy = RefTy->getPointeeType();
     if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
-      RetAttrs.addDereferenceableAttr(getContext().getTypeSizeInChars(PTy)
-                                        .getQuantity());
+      RetAttrs.addDereferenceableAttr(
+          getMinimumObjectSize(PTy).getQuantity());
     else if (getContext().getTargetAddressSpace(PTy) == 0 &&
              !CodeGenOpts.NullPointerIsValid)
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
@@ -2173,8 +2173,8 @@ void CodeGenModule::ConstructAttributeList(
     if (const auto *RefTy = ParamType->getAs<ReferenceType>()) {
       QualType PTy = RefTy->getPointeeType();
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
-        Attrs.addDereferenceableAttr(getContext().getTypeSizeInChars(PTy)
-                                       .getQuantity());
+        Attrs.addDereferenceableAttr(
+            getMinimumObjectSize(PTy).getQuantity());
       else if (getContext().getTargetAddressSpace(PTy) == 0 &&
                !CodeGenOpts.NullPointerIsValid)
         Attrs.addAttribute(llvm::Attribute::NonNull);
