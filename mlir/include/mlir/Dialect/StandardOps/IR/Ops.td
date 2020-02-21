@@ -1059,6 +1059,8 @@ def ReturnOp : Std_Op<"return", [Terminator, HasParent<"FuncOp">]> {
   let builders = [OpBuilder<
     "Builder *b, OperationState &result", [{ build(b, result, llvm::None); }]
   >];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,

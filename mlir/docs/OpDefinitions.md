@@ -619,6 +619,43 @@ the variables would be `$callee`  and `$args`.
 Attribute variables are printed with their respective value type, unless that
 value type is buildable. In those cases, the type of the attribute is elided.
 
+#### Optional Groups
+
+In certain situations operations may have "optional" information, e.g.
+attributes or an empty set of variadic operands. In these situtations a section
+of the assembly format can be marked as `optional` based on the presence of this
+information. An optional group is defined by wrapping a set of elements within
+`()` followed by a `?` and has the following requirements:
+
+*   The first element of the group must either be a literal or an operand.
+    -   This is because the first element must be optionally parsable.
+*   Exactly one argument variable within the group must be marked as the anchor
+    of the group.
+    -   The anchor is the element whose presence controls whether the group
+        should be printed/parsed.
+    -   An element is marked as the anchor by adding a trailing `^`.
+    -   The first element is *not* required to be the anchor of the group.
+*   Literals, variables, and type directives are the only valid elements within
+    the group.
+    -   Any attribute variable may be used, but only optional attributes can be
+        marked as the anchor.
+    -   Only variadic, i.e. optional, operand arguments can be used.
+    -   The operands to a type directive must be defined within the optional
+        group.
+
+An example of an operation with an optional group is `std.return`, which has a
+variadic number of operands.
+
+```
+def ReturnOp : ... {
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  // We only print the operands and types if there are a non-zero number
+  // of operands.
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+```
+
 #### Requirements
 
 The format specification has a certain set of requirements that must be adhered
