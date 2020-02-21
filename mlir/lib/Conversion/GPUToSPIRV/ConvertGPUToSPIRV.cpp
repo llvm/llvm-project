@@ -42,14 +42,13 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to erase a loop::TerminatorOp.
-class TerminatorOpConversion final
-    : public SPIRVOpLowering<loop::TerminatorOp> {
+/// Pattern to erase a loop::YieldOp.
+class TerminatorOpConversion final : public SPIRVOpLowering<loop::YieldOp> {
 public:
-  using SPIRVOpLowering<loop::TerminatorOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<loop::YieldOp>::SPIRVOpLowering;
 
   PatternMatchResult
-  matchAndRewrite(loop::TerminatorOp terminatorOp, ArrayRef<Value> operands,
+  matchAndRewrite(loop::YieldOp terminatorOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(terminatorOp);
     return matchSuccess();

@@ -79,7 +79,7 @@ public:
       if (i != e - 1)
         rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
                                 newLineCst);
-      rewriter.create<loop::TerminatorOp>(loc);
+      rewriter.create<loop::YieldOp>(loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
 
