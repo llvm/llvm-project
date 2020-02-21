@@ -5,7 +5,7 @@
 
 # CHECK: error: corrupted .eh_frame: corrupted CIE
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x0E
   .byte 0x00
   .byte 0x00
