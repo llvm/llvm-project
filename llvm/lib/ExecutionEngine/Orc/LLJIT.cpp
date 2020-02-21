@@ -448,7 +448,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
   if (Err)
     return std::move(Err);
 
-  return TSM;
+  return std::move(TSM);
 }
 
 class MachOPlatformSupport : public LLJIT::PlatformSupport {
