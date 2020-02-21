@@ -172,7 +172,7 @@ public:
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
-                      const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
 
@@ -181,7 +181,7 @@ public:
                            lldb_private::VariableList &variables) override;
 
   void FindFunctions(lldb_private::ConstString name,
-                     const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                     const lldb_private::CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
@@ -196,7 +196,7 @@ public:
 
   void
   FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext *parent_decl_ctx,
+            const lldb_private::CompilerDeclContext &parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
@@ -215,7 +215,7 @@ public:
 
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
+      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
 
   bool GetCompileOption(const char *option, std::string &value,
                         lldb_private::CompileUnit *cu = nullptr) override;
@@ -289,7 +289,7 @@ public:
   llvm::Optional<uint64_t> GetDWOId();
 
   static bool
-  DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
+  DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
                    const DWARFDIE &die);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
@@ -340,7 +340,7 @@ protected:
                                lldb_private::DWARFDataExtractor &data);
 
   bool DeclContextMatchesThisSymbolFile(
-      const lldb_private::CompilerDeclContext *decl_ctx);
+      const lldb_private::CompilerDeclContext &decl_ctx);
 
   uint32_t CalculateNumCompileUnits() override;
 
