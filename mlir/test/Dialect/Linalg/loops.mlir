@@ -359,10 +359,9 @@ func @indexed_generic_region(
 
 // -----
 
-
 #broadcast_access = [
   affine_map<(i, j) -> (0)>,
-  affine_map<(i,j) -> (i,j)>
+  affine_map<(i, j) -> (i, j)>
 ]
 
 #trait_broadcast = {
@@ -373,10 +372,10 @@ func @indexed_generic_region(
   library_call = "some_broadcast_external_fn"
 }
 
-func @generic_op_zero_rank(%arg0 : memref<f32>, %arg1:  memref<3x4xf32>)
+func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 {
   linalg.generic #trait_broadcast %arg0, %arg1 {
-    ^bb(%a: f32, %b : f32) :
+    ^bb(%a: f32, %b: f32) :
       linalg.yield %a : f32
   } : memref<f32>, memref<3x4xf32>
   return
@@ -389,3 +388,26 @@ func @generic_op_zero_rank(%arg0 : memref<f32>, %arg1:  memref<3x4xf32>)
 // CHECK:   loop.for %[[j:.*]] = {{.*}}
 // CHECK:     %[[a:.*]] = load %[[ARG0]][]
 // CHECK:     store %[[a]], %[[ARG1]][%[[i]], %[[j]]]
+
+func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
+{
+  linalg.indexed_generic #trait_broadcast %arg0, %arg1 {
+    ^bb(%i: index, %j: index, %a: i32, %b: i32) :
+      %ij = addi %i, %j : index
+      %ij_int = index_cast %ij : index to i32
+      %result = addi %a, %ij_int : i32
+      linalg.yield %result : i32
+  } : memref<i32>, memref<3x4xi32>
+  return
+}
+
+// CHECK-LABEL: @indexed_generic_op_zero_rank
+// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<i32>
+// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<3x4xi32>
+// CHECK: loop.for %[[i:.*]] = {{.*}}
+// CHECK:   loop.for %[[j:.*]] = {{.*}}
+// CHECK:     %[[a:.*]] = load %[[ARG0]][
+// CHECK:     %[[ij:.*]] = addi %[[i]], %[[j]] : index
+// CHECK:     %[[ij_int:.*]] = index_cast %[[ij]] : index to i32
+// CHECK:     %[[result:.*]] = addi %[[a]], %[[ij_int]] : i32
+// CHECK:     store %[[result]], %[[ARG1]][%[[i]], %[[j]]]
