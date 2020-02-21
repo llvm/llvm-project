@@ -57,6 +57,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -79,6 +80,9 @@ STATISTIC(NumFastStores, "Number of stores deleted");
 STATISTIC(NumFastOther, "Number of other instrs removed");
 STATISTIC(NumCompletePartials, "Number of stores dead by later partials");
 STATISTIC(NumModifiedStores, "Number of stores modified");
+
+DEBUG_COUNTER(MemorySSACounter, "dse-memoryssa",
+              "Controls which MemoryDefs are eliminated.");
 
 static cl::opt<bool>
 EnablePartialOverwriteTracking("enable-dse-partial-overwrite-tracking",
@@ -1794,6 +1798,9 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         LLVM_DEBUG(dbgs() << " stop, may throw!\n");
         break;
       }
+
+      if (!DebugCounter::shouldExecute(MemorySSACounter))
+        break;
 
       // Check if NI overwrites SI.
       int64_t InstWriteOffset, DepWriteOffset;
