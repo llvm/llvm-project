@@ -1645,54 +1645,54 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX8-NEXT:    flat_load_ushort v2, v[0:1]
 ; GFX8-NEXT:    s_load_dword s1, s[4:5], 0x0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_lshl_b32 s5, s7, 28
-; GFX8-NEXT:    s_ashr_i64 s[4:5], s[4:5], 60
-; GFX8-NEXT:    s_lshl_b32 s9, s7, 24
-; GFX8-NEXT:    s_lshl_b32 s11, s7, 20
-; GFX8-NEXT:    s_lshl_b32 s5, s1, 28
-; GFX8-NEXT:    s_ashr_i64 s[14:15], s[4:5], 60
-; GFX8-NEXT:    s_lshl_b32 s5, s1, 20
-; GFX8-NEXT:    s_lshl_b32 s13, s1, 24
-; GFX8-NEXT:    s_ashr_i64 s[8:9], s[8:9], 60
-; GFX8-NEXT:    s_ashr_i64 s[10:11], s[10:11], 60
-; GFX8-NEXT:    v_mov_b32_e32 v3, s4
-; GFX8-NEXT:    s_ashr_i64 s[4:5], s[4:5], 60
-; GFX8-NEXT:    v_mov_b32_e32 v4, s10
-; GFX8-NEXT:    s_ashr_i64 s[12:13], s[12:13], 60
-; GFX8-NEXT:    s_lshl_b32 s5, s7, 16
-; GFX8-NEXT:    v_mov_b32_e32 v5, s8
-; GFX8-NEXT:    s_lshl_b32 s9, s1, 16
-; GFX8-NEXT:    s_lshl_b32 s11, s7, 12
-; GFX8-NEXT:    s_ashr_i64 s[16:17], s[4:5], 60
-; GFX8-NEXT:    s_ashr_i64 s[8:9], s[8:9], 60
-; GFX8-NEXT:    v_mul_i32_i24_e32 v4, s4, v4
-; GFX8-NEXT:    s_lshl_b32 s5, s1, 12
-; GFX8-NEXT:    s_lshl_b32 s9, s7, 8
-; GFX8-NEXT:    s_ashr_i64 s[10:11], s[10:11], 60
-; GFX8-NEXT:    v_mov_b32_e32 v6, s16
-; GFX8-NEXT:    s_ashr_i64 s[20:21], s[8:9], 60
-; GFX8-NEXT:    s_lshl_b32 s13, s1, 8
-; GFX8-NEXT:    s_ashr_i64 s[18:19], s[4:5], 60
-; GFX8-NEXT:    s_lshl_b32 s5, s7, 4
-; GFX8-NEXT:    v_mov_b32_e32 v7, s10
-; GFX8-NEXT:    s_lshl_b32 s9, s1, 4
-; GFX8-NEXT:    s_ashr_i64 s[24:25], s[4:5], 60
-; GFX8-NEXT:    s_ashr_i64 s[22:23], s[12:13], 60
-; GFX8-NEXT:    v_mov_b32_e32 v8, s20
+; GFX8-NEXT:    s_lshl_b32 s29, s7, 28
+; GFX8-NEXT:    s_ashr_i64 s[18:19], s[6:7], 60
+; GFX8-NEXT:    s_lshl_b32 s21, s7, 8
+; GFX8-NEXT:    s_lshl_b32 s23, s7, 12
+; GFX8-NEXT:    s_lshl_b32 s17, s1, 28
+; GFX8-NEXT:    s_lshl_b32 s25, s7, 16
+; GFX8-NEXT:    s_lshl_b32 s27, s7, 24
+; GFX8-NEXT:    s_lshl_b32 s19, s7, 4
+; GFX8-NEXT:    s_lshl_b32 s7, s7, 20
+; GFX8-NEXT:    s_ashr_i64 s[4:5], s[0:1], 60
+; GFX8-NEXT:    s_ashr_i64 s[28:29], s[28:29], 60
+; GFX8-NEXT:    s_lshl_b32 s9, s1, 8
+; GFX8-NEXT:    s_lshl_b32 s11, s1, 12
+; GFX8-NEXT:    s_lshl_b32 s13, s1, 16
+; GFX8-NEXT:    s_lshl_b32 s15, s1, 24
+; GFX8-NEXT:    s_lshl_b32 s5, s1, 4
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 20
+; GFX8-NEXT:    s_ashr_i64 s[26:27], s[26:27], 60
 ; GFX8-NEXT:    s_ashr_i64 s[6:7], s[6:7], 60
-; GFX8-NEXT:    s_ashr_i64 s[26:27], s[8:9], 60
-; GFX8-NEXT:    v_mov_b32_e32 v9, s24
+; GFX8-NEXT:    s_ashr_i64 s[16:17], s[16:17], 60
+; GFX8-NEXT:    v_mov_b32_e32 v4, s28
+; GFX8-NEXT:    s_ashr_i64 s[14:15], s[14:15], 60
 ; GFX8-NEXT:    s_ashr_i64 s[0:1], s[0:1], 60
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mad_i32_i24 v2, s14, v3, v2
-; GFX8-NEXT:    v_mad_i32_i24 v2, s12, v5, v2
-; GFX8-NEXT:    v_add_u32_sdwa v2, vcc, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; GFX8-NEXT:    v_mad_i32_i24 v2, s8, v6, v2
-; GFX8-NEXT:    v_mad_i32_i24 v2, s18, v7, v2
-; GFX8-NEXT:    v_mad_i32_i24 v2, s22, v8, v2
-; GFX8-NEXT:    v_mad_i32_i24 v2, s26, v9, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s6
-; GFX8-NEXT:    v_mad_i32_i24 v2, s0, v3, v2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s26
+; GFX8-NEXT:    s_ashr_i64 s[24:25], s[24:25], 60
+; GFX8-NEXT:    v_mul_i32_i24_e32 v3, s0, v3
+; GFX8-NEXT:    s_ashr_i64 s[22:23], s[22:23], 60
+; GFX8-NEXT:    s_ashr_i64 s[12:13], s[12:13], 60
+; GFX8-NEXT:    v_mov_b32_e32 v6, s24
+; GFX8-NEXT:    s_ashr_i64 s[20:21], s[20:21], 60
+; GFX8-NEXT:    s_ashr_i64 s[10:11], s[10:11], 60
+; GFX8-NEXT:    v_mov_b32_e32 v7, s22
+; GFX8-NEXT:    s_ashr_i64 s[32:33], s[18:19], 60
+; GFX8-NEXT:    s_ashr_i64 s[8:9], s[8:9], 60
+; GFX8-NEXT:    v_mov_b32_e32 v8, s20
+; GFX8-NEXT:    s_ashr_i64 s[30:31], s[4:5], 60
+; GFX8-NEXT:    v_mov_b32_e32 v9, s32
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_mad_i32_i24 v2, s16, v4, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s14, v5, v2
+; GFX8-NEXT:    v_add_u32_sdwa v2, vcc, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; GFX8-NEXT:    v_mad_i32_i24 v2, s12, v6, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s10, v7, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s8, v8, v2
+; GFX8-NEXT:    v_mad_i32_i24 v2, s30, v9, v2
+; GFX8-NEXT:    v_mov_b32_e32 v3, s18
+; GFX8-NEXT:    v_mad_i32_i24 v2, s4, v3, v2
 ; GFX8-NEXT:    flat_store_short v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
