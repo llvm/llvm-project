@@ -1276,3 +1276,13 @@ foreach desttype = !listconcat(T.Int16, T.Int32, T.Float) in {
       1, "_n_"#desttype, PNT_2Type, pnt_nx>;
   }
 }
+
+let params = T.All in {
+let pnt = PNT_NType in
+def vbrsrq_n: Intrinsic<Vector, (args Vector:$a, s32:$b),
+                        (IRInt<"vbrsr", [Vector]> $a, $b)>;
+defm vbrsrq : IntrinsicMX<Vector, (args Vector:$a, s32:$b, Predicate:$pred),
+                         (IRInt<"vbrsr_predicated", [Vector, Predicate]>
+                         $inactive, $a, $b, $pred), 1, "_n",
+                         PNT_NType, PNT_NType>;
+}
