@@ -193,6 +193,7 @@ def ParallelOp : Loop_Op<"parallel",
     iterator_range<Block::args_iterator> getInductionVars() {
       return {getBody()->args_begin(), getBody()->args_end()};
     }
+    unsigned getNumLoops() { return step().size(); }
   }];
 }
 
