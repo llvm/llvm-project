@@ -612,7 +612,7 @@ public:
 
 template <typename RangeT>
 inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
-  return lhs.size() == llvm::size(rhs) &&
+  return lhs.size() == static_cast<size_t>(llvm::size(rhs)) &&
          std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
