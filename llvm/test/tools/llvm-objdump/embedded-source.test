@@ -13,6 +13,7 @@
 ; }
 
 ; LINE: main:
+; LINE-NEXT: ; main():
 ; LINE-NEXT: ; {{.*}}embedded-source.c:1
 ; LINE-NEXT: pushq %rbp
 ; LINE: ; {{.*}}embedded-source.c:2

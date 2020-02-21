@@ -553,13 +553,20 @@ protected:
 private:
   bool cacheSource(const DILineInfo& LineInfoFile);
 
+  void printLines(raw_ostream &OS, const DILineInfo &LineInfo,
+                  StringRef Delimiter);
+
+  void printSources(raw_ostream &OS, const DILineInfo &LineInfo,
+                    StringRef ObjectFilename, StringRef Delimiter);
+
 public:
   SourcePrinter() = default;
   SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch)
       : Obj(Obj), WarnedNoDebugInfo(false) {
     symbolize::LLVMSymbolizer::Options SymbolizerOpts;
-    SymbolizerOpts.PrintFunctions = DILineInfoSpecifier::FunctionNameKind::None;
-    SymbolizerOpts.Demangle = false;
+    SymbolizerOpts.PrintFunctions =
+        DILineInfoSpecifier::FunctionNameKind::LinkageName;
+    SymbolizerOpts.Demangle = Demangle;
     SymbolizerOpts.DefaultArch = std::string(DefaultArch);
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
@@ -624,34 +631,57 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
       reportWarning(Warning, ObjectFilename);
       WarnedNoDebugInfo = true;
     }
-    return;
   }
-
-  if (LineInfo.Line == 0 || ((OldLineInfo.Line == LineInfo.Line) &&
-                             (OldLineInfo.FileName == LineInfo.FileName)))
-    return;
 
   if (PrintLines)
-    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
-  if (PrintSource) {
-    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
-      if (!cacheSource(LineInfo))
-        return;
-    auto LineBuffer = LineCache.find(LineInfo.FileName);
-    if (LineBuffer != LineCache.end()) {
-      if (LineInfo.Line > LineBuffer->second.size()) {
-        reportWarning(
-            formatv(
-                "debug info line number {0} exceeds the number of lines in {1}",
-                LineInfo.Line, LineInfo.FileName),
-            ObjectFilename);
-        return;
-      }
-      // Vector begins at 0, line numbers are non-zero
-      OS << Delimiter << LineBuffer->second[LineInfo.Line - 1] << '\n';
-    }
-  }
+    printLines(OS, LineInfo, Delimiter);
+  if (PrintSource)
+    printSources(OS, LineInfo, ObjectFilename, Delimiter);
   OldLineInfo = LineInfo;
+}
+
+void SourcePrinter::printLines(raw_ostream &OS, const DILineInfo &LineInfo,
+                               StringRef Delimiter) {
+  bool PrintFunctionName = LineInfo.FunctionName != DILineInfo::BadString &&
+                           LineInfo.FunctionName != OldLineInfo.FunctionName;
+  if (PrintFunctionName) {
+    OS << Delimiter << LineInfo.FunctionName;
+    // If demangling is successful, FunctionName will end with "()". Print it
+    // only if demangling did not run or was unsuccessful.
+    if (!StringRef(LineInfo.FunctionName).endswith("()"))
+      OS << "()";
+    OS << ":\n";
+  }
+  if (LineInfo.FileName != DILineInfo::BadString && LineInfo.Line != 0 &&
+      (OldLineInfo.Line != LineInfo.Line ||
+       OldLineInfo.FileName != LineInfo.FileName || PrintFunctionName))
+    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
+}
+
+void SourcePrinter::printSources(raw_ostream &OS, const DILineInfo &LineInfo,
+                                 StringRef ObjectFilename,
+                                 StringRef Delimiter) {
+  if (LineInfo.FileName == DILineInfo::BadString || LineInfo.Line == 0 ||
+      (OldLineInfo.Line == LineInfo.Line &&
+       OldLineInfo.FileName == LineInfo.FileName))
+    return;
+
+  if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
+    if (!cacheSource(LineInfo))
+      return;
+  auto LineBuffer = LineCache.find(LineInfo.FileName);
+  if (LineBuffer != LineCache.end()) {
+    if (LineInfo.Line > LineBuffer->second.size()) {
+      reportWarning(
+          formatv(
+              "debug info line number {0} exceeds the number of lines in {1}",
+              LineInfo.Line, LineInfo.FileName),
+          ObjectFilename);
+      return;
+    }
+    // Vector begins at 0, line numbers are non-zero
+    OS << Delimiter << LineBuffer->second[LineInfo.Line - 1] << '\n';
+  }
 }
 
 static bool isAArch64Elf(const ObjectFile *Obj) {
