@@ -119,7 +119,7 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   for (auto &T : DfaTransitions)
     Table.add(T.second.second);
   Table.layout();
-  OS << "std::array<NfaStatePair, " << Table.size() << "> " << Name
+  OS << "constexpr std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
   Table.emit(
       OS,
@@ -143,8 +143,8 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
 
   OS << "// A table of DFA transitions, ordered by {FromDfaState, Action}.\n";
   OS << "// The initial state is 1, not zero.\n";
-  OS << "std::array<" << Name << "Transition, " << DfaTransitions.size() << "> "
-     << Name << "Transitions = {{\n";
+  OS << "const std::array<" << Name << "Transition, "
+     << DfaTransitions.size() << "> " << Name << "Transitions = {{\n";
   for (auto &KV : DfaTransitions) {
     dfa_state_type From = KV.first.first;
     dfa_state_type To = KV.second.first;
