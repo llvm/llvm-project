@@ -1666,17 +1666,13 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
       if (Cmp.isSigned() && (NewAndCst.isNegative() || NewCmpCst.isNegative()))
         return nullptr;
     } else {
-      // For an arithmetic shift right we can do the same, if we ensure
-      // the And doesn't use any bits being shifted in. Normally these would
-      // be turned into lshr by SimplifyDemandedBits, but not if there is an
-      // additional user.
+      // For an arithmetic shift, check that both constants don't use (in a
+      // signed sense) the top bits being shifted out.
       assert(ShiftOpcode == Instruction::AShr && "Unknown shift opcode");
       NewCmpCst = C1.shl(*C3);
       NewAndCst = C2.shl(*C3);
-      AnyCmpCstBitsShiftedOut = NewCmpCst.lshr(*C3) != C1;
-      if (NewAndCst.lshr(*C3) != C2)
-        return nullptr;
-      if (Cmp.isSigned() && (NewAndCst.isNegative() || NewCmpCst.isNegative()))
+      AnyCmpCstBitsShiftedOut = NewCmpCst.ashr(*C3) != C1;
+      if (NewAndCst.ashr(*C3) != C2)
         return nullptr;
     }
 

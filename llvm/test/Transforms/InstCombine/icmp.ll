@@ -1864,9 +1864,8 @@ define i1 @icmp_ashr_and_overshift(i8 %X) {
 
 define i1 @icmp_and_ashr_neg_and_legal(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_and_legal(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 16
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
@@ -1891,9 +1890,8 @@ define i1 @icmp_and_ashr_mixed_and_shiftout(i8 %x) {
 
 define i1 @icmp_and_ashr_neg_cmp_slt_legal(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_cmp_slt_legal(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
@@ -1918,9 +1916,8 @@ define i1 @icmp_and_ashr_neg_cmp_slt_shiftout(i8 %x) {
 
 define i1 @icmp_and_ashr_neg_cmp_eq_legal(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_legal(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ashr = ashr i8 %x, 4
@@ -1931,10 +1928,7 @@ define i1 @icmp_and_ashr_neg_cmp_eq_legal(i8 %x) {
 
 define i1 @icmp_and_ashr_neg_cmp_eq_shiftout(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_shiftout(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -68
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ashr = ashr i8 %x, 4
   %and = and i8 %ashr, -2
@@ -1944,10 +1938,7 @@ define i1 @icmp_and_ashr_neg_cmp_eq_shiftout(i8 %x) {
 
 define i1 @icmp_and_ashr_neg_cmp_ne_shiftout(i8 %x) {
 ; CHECK-LABEL: @icmp_and_ashr_neg_cmp_ne_shiftout(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], -68
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ashr = ashr i8 %x, 4
   %and = and i8 %ashr, -2
