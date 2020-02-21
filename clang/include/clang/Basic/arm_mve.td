@@ -400,6 +400,23 @@ foreach half = [ "b", "t" ] in {
   } // params = [f32], pnt = PNT_None
 } // loop over half = "b", "t"
 
+multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi, IRBuilderBase itof> {
+  defvar FVector = VecOf<FScalar>;
+  defvar IVector = VecOf<IScalar>;
+
+  let params = [IScalar], pnt = PNT_2Type in
+    def : Intrinsic<FVector, (args IVector:$a), (itof $a, FVector)>,
+          NameOverride<"vcvtq_" # FScalar>;
+  let params = [FScalar], pnt = PNT_None in
+    def : Intrinsic<IVector, (args FVector:$a), (ftoi $a, IVector)>,
+          NameOverride<"vcvtq_" # IScalar>;
+}
+
+defm : float_int_conversions<f32, u32, fptoui, uitofp>;
+defm : float_int_conversions<f16, u16, fptoui, uitofp>;
+defm : float_int_conversions<f32, s32, fptosi, sitofp>;
+defm : float_int_conversions<f16, s16, fptosi, sitofp>;
+
 multiclass compare_with_pred<string condname, dag arguments,
                              dag cmp, string suffix> {
   // Make the predicated and unpredicated versions of a single comparison.
