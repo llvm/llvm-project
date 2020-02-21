@@ -34,6 +34,10 @@ public:
     VK_VE_GOTOFF_LO32,
     VK_VE_PLT_HI32,
     VK_VE_PLT_LO32,
+    VK_VE_TLS_GD_HI32,
+    VK_VE_TLS_GD_LO32,
+    VK_VE_TPOFF_HI32,
+    VK_VE_TPOFF_LO32,
   };
 
 private:
