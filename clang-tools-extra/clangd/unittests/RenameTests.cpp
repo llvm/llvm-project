@@ -888,6 +888,23 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
       )cpp",
       },
       {
+          // class templates.
+          R"cpp(
+        template <typename T>
+        class [[Foo]] {};
+        // FIXME: explicit template specilizations are not supported due the
+        // clangd index limitations.
+        template <>
+        class Foo<double> {};
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        void func() {
+          [[F^oo]]<int> foo;
+        }
+      )cpp",
+      },
+      {
           // class methods.
           R"cpp(
         class Foo {
