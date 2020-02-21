@@ -41,3 +41,19 @@ test.format_operand_d_op %i64, %memref : memref<1xf64>
 
 // CHECK: test.format_operand_e_op %[[I64]], %[[MEMREF]] : i64, memref<1xf64>
 test.format_operand_e_op %i64, %memref : i64, memref<1xf64>
+
+"foo.successor_test_region"() ( {
+  ^bb0:
+    // CHECK: test.format_successor_a_op ^bb1 {attr}
+    test.format_successor_a_op ^bb1 {attr}
+
+  ^bb1:
+    // CHECK: test.format_successor_a_op ^bb1, ^bb2 {attr}
+    test.format_successor_a_op ^bb1, ^bb2 {attr}
+
+  ^bb2:
+    // CHECK: test.format_successor_a_op {attr}
+    test.format_successor_a_op {attr}
+
+}) { arg_names = ["i", "j", "k"] } : () -> ()
+

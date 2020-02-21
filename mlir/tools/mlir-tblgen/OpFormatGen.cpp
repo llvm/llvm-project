@@ -49,6 +49,7 @@ public:
     FunctionalTypeDirective,
     OperandsDirective,
     ResultsDirective,
+    SuccessorsDirective,
     TypeDirective,
 
     /// This element is a literal.
@@ -58,6 +59,7 @@ public:
     AttributeVariable,
     OperandVariable,
     ResultVariable,
+    SuccessorVariable,
 
     /// This element is an optional element.
     Optional,
@@ -105,6 +107,10 @@ using OperandVariable =
 /// This class represents a variable that refers to a result.
 using ResultVariable =
     VariableElement<NamedTypeConstraint, Element::Kind::ResultVariable>;
+
+/// This class represents a variable that refers to a successor.
+using SuccessorVariable =
+    VariableElement<NamedSuccessor, Element::Kind::SuccessorVariable>;
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -125,6 +131,11 @@ using OperandsDirective = DirectiveElement<Element::Kind::OperandsDirective>;
 /// This class represents the `results` directive. This directive represents
 /// all of the results of an operation.
 using ResultsDirective = DirectiveElement<Element::Kind::ResultsDirective>;
+
+/// This class represents the `successors` directive. This directive represents
+/// all of the successors of an operation.
+using SuccessorsDirective =
+    DirectiveElement<Element::Kind::SuccessorsDirective>;
 
 /// This class represents the `attr-dict` directive. This directive represents
 /// the attribute dictionary of the operation.
@@ -294,6 +305,8 @@ struct OperationFormat {
   /// Generate the c++ to resolve the types of operands and results during
   /// parsing.
   void genParserTypeResolution(Operator &op, OpMethodBody &body);
+  /// Generate the c++ to resolve successors during parsing.
+  void genParserSuccessorResolution(Operator &op, OpMethodBody &body);
 
   /// Generate the operation printer from this format.
   void genPrinter(Operator &op, OpClass &opClass);
@@ -401,6 +414,51 @@ const char *const functionalTypeParserCode = R"(
     return failure();
   {0}Types = {0}__{1}_functionType.getInputs();
   {1}Types = {0}__{1}_functionType.getResults();
+)";
+
+/// The code snippet used to generate a parser call for a successor list.
+///
+/// {0}: The name for the successor list.
+const char *successorListParserCode = R"(
+  SmallVector<std::pair<Block *, SmallVector<Value, 4>>, 2> {0}Successors;
+  {
+    Block *succ;
+    SmallVector<Value, 4> succOperands;
+    // Parse the first successor.
+    auto firstSucc = parser.parseOptionalSuccessorAndUseList(succ,
+                                                             succOperands);
+    if (firstSucc.hasValue()) {
+      if (failed(*firstSucc))
+        return failure();
+      {0}Successors.emplace_back(succ, succOperands);
+
+      // Parse any trailing successors.
+      while (succeeded(parser.parseOptionalComma())) {
+        succOperands.clear();
+        if (parser.parseSuccessorAndUseList(succ, succOperands))
+          return failure();
+        {0}Successors.emplace_back(succ, succOperands);
+      }
+    }
+  }
+)";
+
+/// The code snippet used to generate a parser call for a successor.
+///
+/// {0}: The name of the successor.
+const char *successorParserCode = R"(
+  Block *{0}Successor = nullptr;
+  SmallVector<Value, 4> {0}Operands;
+  if (parser.parseSuccessorAndUseList({0}Successor, {0}Operands))
+    return failure();
+)";
+
+/// The code snippet used to resolve a list of parsed successors.
+///
+/// {0}: The name of the successor list.
+const char *resolveSuccessorListParserCode = R"(
+  for (auto &succAndArgs : {0}Successors)
+    result.addSuccessor(succAndArgs.first, succAndArgs.second);
 )";
 
 /// Get the name used for the type list for the given type directive operand.
@@ -539,6 +597,10 @@ static void genElementParser(Element *element, OpMethodBody &body,
     bool isVariadic = operand->getVar()->isVariadic();
     body << formatv(isVariadic ? variadicOperandParserCode : operandParserCode,
                     operand->getVar()->name);
+  } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
+    bool isVariadic = successor->getVar()->isVariadic();
+    body << formatv(isVariadic ? successorListParserCode : successorParserCode,
+                    successor->getVar()->name);
 
     /// Directives.
   } else if (auto *attrDict = dyn_cast<AttrDictDirective>(element)) {
@@ -551,6 +613,8 @@ static void genElementParser(Element *element, OpMethodBody &body,
          << "  SmallVector<OpAsmParser::OperandType, 4> allOperands;\n"
          << "  if (parser.parseOperandList(allOperands))\n"
          << "    return failure();\n";
+  } else if (isa<SuccessorsDirective>(element)) {
+    body << llvm::formatv(successorListParserCode, "full");
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     bool isVariadic = false;
     StringRef listName = getTypeListName(dir->getOperand(), isVariadic);
@@ -586,9 +650,10 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   for (auto &element : elements)
     genElementParser(element.get(), body, attrTypeCtx);
 
-  // Generate the code to resolve the operand and result types now that they
-  // have been parsed.
+  // Generate the code to resolve the operand/result types and successors now
+  // that they have been parsed.
   genParserTypeResolution(op, body);
+  genParserSuccessorResolution(op, body);
   body << "  return success();\n";
 }
 
@@ -730,6 +795,28 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   }
 }
 
+void OperationFormat::genParserSuccessorResolution(Operator &op,
+                                                   OpMethodBody &body) {
+  // Check for the case where all successors were parsed.
+  bool hasAllSuccessors = llvm::any_of(
+      elements, [](auto &elt) { return isa<SuccessorsDirective>(elt.get()); });
+  if (hasAllSuccessors) {
+    body << llvm::formatv(resolveSuccessorListParserCode, "full");
+    return;
+  }
+
+  // Otherwise, handle each successor individually.
+  for (const NamedSuccessor &successor : op.getSuccessors()) {
+    if (successor.isVariadic()) {
+      body << llvm::formatv(resolveSuccessorListParserCode, successor.name);
+      continue;
+    }
+
+    body << llvm::formatv("  result.addSuccessor({0}Successor, {0}Operands);\n",
+                          successor.name);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // PrinterGen
 
@@ -790,8 +877,8 @@ static OpMethodBody &genTypeOperandPrinter(Element *arg, OpMethodBody &body) {
 
 /// Generate the code for printing the given element.
 static void genElementPrinter(Element *element, OpMethodBody &body,
-                              OperationFormat &fmt, bool &shouldEmitSpace,
-                              bool &lastWasPunctuation) {
+                              OperationFormat &fmt, Operator &op,
+                              bool &shouldEmitSpace, bool &lastWasPunctuation) {
   if (LiteralElement *literal = dyn_cast<LiteralElement>(element))
     return genLiteralPrinter(literal->getLiteral(), body, shouldEmitSpace,
                              lastWasPunctuation);
@@ -808,7 +895,7 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
 
     // Emit each of the elements.
     for (Element &childElement : optional->getElements())
-      genElementPrinter(&childElement, body, fmt, shouldEmitSpace,
+      genElementPrinter(&childElement, body, fmt, op, shouldEmitSpace,
                         lastWasPunctuation);
     body << "  }\n";
     return;
@@ -847,8 +934,30 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
       body << "  p.printAttribute(" << var->name << "Attr());\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     body << "  p << " << operand->getVar()->name << "();\n";
+  } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
+    const NamedSuccessor *var = successor->getVar();
+    if (var->isVariadic()) {
+      body << "  {\n"
+           << "    auto succRange = " << var->name << "();\n"
+           << "    auto opSuccBegin = getOperation()->successor_begin();\n"
+           << "    int i = succRange.begin() - opSuccBegin;\n"
+           << "    int e = i + succRange.size();\n"
+           << "    interleaveComma(llvm::seq<int>(i, e), p, [&](int i) {\n"
+           << "      p.printSuccessorAndUseList(*this, i);\n"
+           << "    });\n"
+           << "  }\n";
+      return;
+    }
+
+    unsigned index = successor->getVar() - op.successor_begin();
+    body << "  p.printSuccessorAndUseList(*this, " << index << ");\n";
   } else if (isa<OperandsDirective>(element)) {
     body << "  p << getOperation()->getOperands();\n";
+  } else if (isa<SuccessorsDirective>(element)) {
+    body << "  interleaveComma(llvm::seq<int>(0, "
+            "getOperation()->getNumSuccessors()), p, [&](int i) {"
+         << "    p.printSuccessorAndUseList(*this, i);"
+         << "  });\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
@@ -879,7 +988,7 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   // punctuation.
   bool shouldEmitSpace = true, lastWasPunctuation = false;
   for (auto &element : elements)
-    genElementPrinter(element.get(), body, *this, shouldEmitSpace,
+    genElementPrinter(element.get(), body, *this, op, shouldEmitSpace,
                       lastWasPunctuation);
 }
 
@@ -911,6 +1020,7 @@ public:
     kw_functional_type,
     kw_operands,
     kw_results,
+    kw_successors,
     kw_type,
     keyword_end,
 
@@ -1094,6 +1204,7 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("functional-type", Token::kw_functional_type)
           .Case("operands", Token::kw_operands)
           .Case("results", Token::kw_results)
+          .Case("successors", Token::kw_successors)
           .Case("type", Token::kw_type)
           .Default(Token::identifier);
   return Token(kind, str);
@@ -1173,6 +1284,8 @@ private:
                                        llvm::SMLoc loc, bool isTopLevel);
   LogicalResult parseResultsDirective(std::unique_ptr<Element> &element,
                                       llvm::SMLoc loc, bool isTopLevel);
+  LogicalResult parseSuccessorsDirective(std::unique_ptr<Element> &element,
+                                         llvm::SMLoc loc, bool isTopLevel);
   LogicalResult parseTypeDirective(std::unique_ptr<Element> &element, Token tok,
                                    bool isTopLevel);
   LogicalResult parseTypeDirectiveOperand(std::unique_ptr<Element> &element);
@@ -1211,9 +1324,11 @@ private:
   // The following are various bits of format state used for verification
   // during parsing.
   bool hasAllOperands = false, hasAttrDict = false;
+  bool hasAllSuccessors = false;
   llvm::SmallBitVector seenOperandTypes, seenResultTypes;
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedAttribute *> seenAttrs;
+  llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
   llvm::DenseSet<const NamedTypeConstraint *> optionalVariables;
 };
 } // end anonymous namespace
@@ -1312,6 +1427,17 @@ LogicalResult FormatParser::parse() {
     }
     auto it = buildableTypes.insert({*builder, buildableTypes.size()});
     fmt.operandTypes[i].setBuilderIdx(it.first->second);
+  }
+
+  // Check that all of the successors are within the format.
+  if (!hasAllSuccessors) {
+    for (unsigned i = 0, e = op.getNumSuccessors(); i != e; ++i) {
+      const NamedSuccessor &successor = op.getSuccessor(i);
+      if (!seenSuccessors.count(&successor)) {
+        return emitError(loc, "format missing instance of successor #" +
+                                  Twine(i) + "('" + successor.name + "')");
+      }
+    }
   }
   return success();
 }
@@ -1417,7 +1543,17 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
     element = std::make_unique<ResultVariable>(result);
     return success();
   }
-  return emitError(loc, "expected variable to refer to a argument or result");
+  /// Successors.
+  if (const auto *successor = findArg(op.getSuccessors(), name)) {
+    if (!isTopLevel)
+      return emitError(loc, "successors can only be used at the top level");
+    if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
+      return emitError(loc, "successor '" + name + "' is already bound");
+    element = std::make_unique<SuccessorVariable>(successor);
+    return success();
+  }
+  return emitError(
+      loc, "expected variable to refer to a argument, result, or successor");
 }
 
 LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
@@ -1438,6 +1574,8 @@ LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
     return parseOperandsDirective(element, dirTok.getLoc(), isTopLevel);
   case Token::kw_results:
     return parseResultsDirective(element, dirTok.getLoc(), isTopLevel);
+  case Token::kw_successors:
+    return parseSuccessorsDirective(element, dirTok.getLoc(), isTopLevel);
   case Token::kw_type:
     return parseTypeDirective(element, dirTok, isTopLevel);
 
@@ -1621,6 +1759,19 @@ FormatParser::parseResultsDirective(std::unique_ptr<Element> &element,
     return emitError(loc, "'results' directive can not be used as a "
                           "top-level directive");
   element = std::make_unique<ResultsDirective>();
+  return success();
+}
+
+LogicalResult
+FormatParser::parseSuccessorsDirective(std::unique_ptr<Element> &element,
+                                       llvm::SMLoc loc, bool isTopLevel) {
+  if (!isTopLevel)
+    return emitError(loc,
+                     "'successors' is only valid as a top-level directive");
+  if (hasAllSuccessors || !seenSuccessors.empty())
+    return emitError(loc, "'successors' directive creates overlap in format");
+  hasAllSuccessors = true;
+  element = std::make_unique<SuccessorsDirective>();
   return success();
 }
 

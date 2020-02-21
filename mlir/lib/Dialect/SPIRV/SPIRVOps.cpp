@@ -1019,24 +1019,6 @@ void spirv::BitcastOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.BranchOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseBranchOp(OpAsmParser &parser, OperationState &state) {
-  Block *dest;
-  SmallVector<Value, 4> destOperands;
-  if (parser.parseSuccessorAndUseList(dest, destOperands))
-    return failure();
-  state.addSuccessor(dest, destOperands);
-  return success();
-}
-
-static void print(spirv::BranchOp branchOp, OpAsmPrinter &printer) {
-  printer << spirv::BranchOp::getOperationName() << ' ';
-  printer.printSuccessorAndUseList(branchOp.getOperation(), /*index=*/0);
-}
-
-//===----------------------------------------------------------------------===//
 // spv.BranchConditionalOp
 //===----------------------------------------------------------------------===//
 

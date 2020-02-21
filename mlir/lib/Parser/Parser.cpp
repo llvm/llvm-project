@@ -4423,6 +4423,15 @@ public:
     return parser.parseSuccessorAndUseList(dest, operands);
   }
 
+  /// Parse an optional operation successor and its operand list.
+  OptionalParseResult
+  parseOptionalSuccessorAndUseList(Block *&dest,
+                                   SmallVectorImpl<Value> &operands) override {
+    if (parser.getToken().isNot(Token::caret_identifier))
+      return llvm::None;
+    return parseSuccessorAndUseList(dest, operands);
+  }
+
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
