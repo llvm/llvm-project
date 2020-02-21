@@ -2236,7 +2236,10 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   const PhdrEntry *prev;
   auto pageAlign = [&](const PhdrEntry *p) {
     OutputSection *cmd = p->firstSec;
-    if (cmd && !cmd->addrExpr) {
+    if (!cmd)
+      return;
+    cmd->alignExpr = [align = cmd->alignment]() { return align; };
+    if (!cmd->addrExpr) {
       // Prefer advancing to align(dot, maxPageSize) + dot%maxPageSize to avoid
       // padding in the file contents.
       //
