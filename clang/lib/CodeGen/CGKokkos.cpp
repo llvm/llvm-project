@@ -215,17 +215,6 @@ namespace {
   }
 }
 
-// FIXME: This should probably be moved out of the kokkos-centric implementation.  
-llvm::Instruction *CodeGenFunction::EmitSyncRegionStart() {
-  // Start the sync region.  To ensure the syncregion.start call dominates all
-  // uses of the generated token, we insert this call at the alloca insertion
-  // point.
-  llvm::Instruction *SRStart = llvm::CallInst::Create(
-				CGM.getIntrinsic(llvm::Intrinsic::syncregion_start),
-				"syncreg", AllocaInsertPt);
-  return SRStart;
-}
-
 /// \brief Emit a kokkos-centric construct. 
 ///
 /// This is our high-level entry point for lowering kokkos constructs

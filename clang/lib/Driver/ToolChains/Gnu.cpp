@@ -530,8 +530,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addCilktoolRuntime(ToolChain, Args, CmdArgs);
 
   ToolChain.AddTapirRuntimeLibArgs(Args, CmdArgs);
-  if (Args.hasArg(options::OPT_ftapir)) {
-    if (Arg *A = Args.getLastArg(options::OPT_ftapir)) {
+  if (Args.hasArg(options::OPT_ftapir_EQ)) {
+    if (Arg *A = Args.getLastArg(options::OPT_ftapir_EQ)) {
       StringRef Name = A->getValue();
       if (Name == "cilk") 
         CmdArgs.push_back("-lcilkrts");

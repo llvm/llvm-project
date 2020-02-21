@@ -898,8 +898,8 @@ void ToolChain::AddKitsuneLibArgs(const ArgList &Args,
     }
   }
 
-  if (Args.hasArg(options::OPT_ftapir)) {
-    if (Arg *A = Args.getLastArg(options::OPT_ftapir)) {
+  if (Args.hasArg(options::OPT_ftapir_EQ)) {
+    if (Arg *A = Args.getLastArg(options::OPT_ftapir_EQ)) {
       StringRef Name = A->getValue();
       if (Name == "cilk") { 
 	if (KITSUNE_ENABLE_CILKRTS) {

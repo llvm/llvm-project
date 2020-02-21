@@ -3474,20 +3474,20 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
 
   // Check if -ftapir is specified
-  if (Arg *A = Args.getLastArg(OPT_ftapir)){
+  if (Arg *A = Args.getLastArg(OPT_ftapir_EQ)){
     StringRef Name = A->getValue();
     if (Name == "none")
-      LangOpts.Tapir = llvm::TapirTargetType::None;
+      LangOpts.Tapir = TapirTargetID::None;
     else if (Name == "cilk") 
-      LangOpts.Tapir = llvm::TapirTargetType::Cilk;
+      LangOpts.Tapir = TapirTargetID::Cilk;
     else if (Name == "openmp")
-      LangOpts.Tapir = llvm::TapirTargetType::OpenMP;
+      LangOpts.Tapir = TapirTargetID::OpenMP;
     else if (Name == "qthreads")
-      LangOpts.Tapir = llvm::TapirTargetType::Qthreads;
+      LangOpts.Tapir = TapirTargetID::Qthreads;
     else if (Name == "cuda")
-      LangOpts.Tapir = llvm::TapirTargetType::Cuda;
+      LangOpts.Tapir = TapirTargetID::Cuda;
     else if (Name == "serial")
-      LangOpts.Tapir = llvm::TapirTargetType::Serial;
+      LangOpts.Tapir = TapirTargetID::Serial;
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) <<
         Name;

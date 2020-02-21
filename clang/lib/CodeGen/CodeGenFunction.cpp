@@ -2136,6 +2136,79 @@ CodeGenFunction::SanitizerScope::~SanitizerScope() {
   CGF->IsSanitizerScope = false;
 }
 
+void CodeGenFunction::DetachScope::StartLabeledDetach(SyncRegion* SR) {
+  if (!DetachInitialized)
+    InitDetachScope();
+  else
+    RestoreDetachScope();
+
+  // Create the detach
+  CGF.Builder.CreateDetach(DetachedBlock, ContinueBlock,
+                           SR->getSyncRegionStart());
+
+  // Save the old EH state.
+  OldEHResumeBlock = CGF.EHResumeBlock;
+  CGF.EHResumeBlock = nullptr;
+  OldExceptionSlot = CGF.ExceptionSlot;
+  CGF.ExceptionSlot = nullptr;
+  OldEHSelectorSlot = CGF.EHSelectorSlot;
+  CGF.EHSelectorSlot = nullptr;
+
+  // Emit the detached block.
+  CGF.EmitBlock(DetachedBlock);
+
+  CGF.PushSyncRegion();
+
+  // Initialize lifetime intrinsics for the reference temporary.
+  if (RefTmp.isValid()) {
+    switch (RefTmpSD) {
+    case SD_Automatic:
+    case SD_FullExpression:
+      if (auto *Size = CGF.EmitLifetimeStart(
+              CGF.CGM.getDataLayout().getTypeAllocSize(RefTmp.getElementType()),
+              RefTmp.getPointer())) {
+        if (RefTmpSD == SD_Automatic)
+          CGF.pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                                        RefTmp, Size);
+        else
+          CGF.pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                                   RefTmp, Size);
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  DetachStarted = true;
+}
+
+void CodeGenFunction::DetachScope::FinishLabeledDetach(SyncRegion* SR) {
+  assert(DetachStarted &&
+         "Attempted to finish a detach that was not started.");
+
+  CGF.PopSyncRegion();
+
+  // The CFG path into the spawned statement should terminate with a `reattach'.
+  CGF.Builder.CreateReattach(ContinueBlock,
+                             SR->getSyncRegionStart());
+
+  // Restore the alloca insertion point.
+  llvm::Instruction *Ptr = CGF.AllocaInsertPt;
+  CGF.AllocaInsertPt = OldAllocaInsertPt;
+  SavedDetachedAllocaInsertPt = nullptr;
+  Ptr->eraseFromParent();
+
+  // Restore the EH state.
+  EmitIfUsed(CGF, CGF.EHResumeBlock);
+  CGF.EHResumeBlock = OldEHResumeBlock;
+  CGF.ExceptionSlot = OldExceptionSlot;
+  CGF.EHSelectorSlot = OldEHSelectorSlot;
+
+  // Emit the continue block.
+  CGF.EmitBlock(ContinueBlock);
+}
+
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    const llvm::Twine &Name,
                                    llvm::BasicBlock *BB,

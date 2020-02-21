@@ -411,6 +411,14 @@ void StmtPrinter::VisitCilkSpawnExpr(CilkSpawnExpr *Node) {
   PrintExpr(Node->getSpawnedExpr());
 }
 
+void StmtPrinter::VisitSpawnStmt(SpawnStmt *Node) {
+  Indent() << "spawn " << Node->getSyncVar(); 
+  PrintStmt(Node->getSpawnedStmt());
+  OS << ";";
+  if (Policy.IncludeNewlines) OS << "\n";
+}
+
+
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   Indent() << "return";
   if (Node->getRetValue()) {
@@ -2456,6 +2464,11 @@ void StmtPrinter::VisitCilkForStmt(CilkForStmt *Node) {
 
   if (Node->getLoopVarDecl())
     Indent() << "}";
+}
+
+void StmtPrinter::VisitSyncStmt(SyncStmt *Node) {
+  Indent() << "sync " << Node->getSyncVar() << ";"; 
+  if (Policy.IncludeNewlines) OS << "\n";
 }
 
 //===----------------------------------------------------------------------===//

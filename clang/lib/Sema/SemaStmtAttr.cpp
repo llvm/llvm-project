@@ -347,11 +347,6 @@ static Attr *handleKitsuneTargetAttr(Sema &S, Stmt *St,
 				     const ParsedAttr &A,
 				     SourceRange Range)
 {
-  if (! isa<ForallStmt>(St) && ! isa<CXXForallRangeStmt>(St)) {
-    S.Diag(A.getLoc(), diag::err_kitsune_target_attr_unsupported_stmt);
-    return nullptr;
-  }
-
   if (A.getNumArgs() != 1) {
     S.Diag(A.getLoc(), diag::err_kitsune_target_attr_wrong_nargs);
     return nullptr;
@@ -383,11 +378,6 @@ static Attr *handleKitsuneStrategyAttr(Sema &S, Stmt *St,
 				       const ParsedAttr &A,
 				       SourceRange Range) 
 {
-  if (! isa<ForallStmt>(St) || ! isa<CXXForallRangeStmt>(St)) {
-    S.Diag(A.getLoc(), diag::err_kitsune_strategy_attr_unsupported_stmt);
-    return nullptr;
-  }
-
   if (A.getNumArgs() != 1) {
     S.Diag(A.getLoc(), diag::err_kitsune_strategy_attr_wrong_nargs);
     return nullptr;

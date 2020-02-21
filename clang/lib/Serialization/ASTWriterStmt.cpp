@@ -1900,8 +1900,20 @@ void ASTStmtWriter::VisitCilkForStmt(CilkForStmt *S) {
 }
 
 //===----------------------------------------------------------------------===//
-// Microsoft Expressions and Statements.
+void ASTStmtWriter::VisitSpawnStmt(SpawnStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getSpawnLoc());
+  Record.AddStmt(S->getSpawnedStmt());
+  Code = serialization::STMT_SPAWN;
+}
+
+void ASTStmtWriter::VisitSyncStmt(SyncStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getSyncLoc());
+  Code = serialization::STMT_SYNC;
+}
 //===----------------------------------------------------------------------===//
+// Microsoft Expressions and Statements.
 void ASTStmtWriter::VisitMSPropertyRefExpr(MSPropertyRefExpr *E) {
   VisitExpr(E);
   Record.push_back(E->isArrow());

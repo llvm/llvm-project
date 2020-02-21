@@ -538,6 +538,8 @@ namespace clang {
     ExpectedStmt VisitCilkSpawnStmt(CilkSpawnStmt *S);
     ExpectedStmt VisitCilkSyncStmt(CilkSyncStmt *S);
     ExpectedStmt VisitCilkForStmt(CilkForStmt *S);
+    ExpectedStmt VisitSpawnStmt(SpawnStmt *S);
+    ExpectedStmt VisitSyncStmt(SyncStmt *S);
 
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
@@ -6132,11 +6134,31 @@ ExpectedStmt ASTNodeImporter::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
                                                      *ToChildOrErr);
 }
 
+ExpectedStmt ASTNodeImporter::VisitSpawnStmt(SpawnStmt *S) {
+  ExpectedSLoc ToSpawnLocOrErr = import(S->getSpawnLoc());
+  if (!ToSpawnLocOrErr)
+    return ToSpawnLocOrErr.takeError();
+  ExpectedStmt ToChildOrErr = import(S->getSpawnedStmt());
+  if (!ToChildOrErr)
+    return ToChildOrErr.takeError();
+  StringRef SV = S->getSyncVar();
+  return new (Importer.getToContext()) SpawnStmt(*ToSpawnLocOrErr, SV,
+                                                     *ToChildOrErr);
+}
+
 ExpectedStmt ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
   ExpectedSLoc ToSyncLocOrErr = import(S->getSyncLoc());
   if (!ToSyncLocOrErr)
     return ToSyncLocOrErr.takeError();
   return new (Importer.getToContext()) CilkSyncStmt(*ToSyncLocOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSyncStmt(SyncStmt *S) {
+  ExpectedSLoc ToSyncLocOrErr = import(S->getSyncLoc());
+  StringRef SV = S->getSyncVar();
+  if (!ToSyncLocOrErr)
+    return ToSyncLocOrErr.takeError();
+  return new (Importer.getToContext()) SyncStmt(*ToSyncLocOrErr, SV);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {

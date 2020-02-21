@@ -1013,7 +1013,7 @@ public:
       return !VD->isLocalVarDeclOrParm() && CGF.LocalDeclMap.count(VD) > 0;
     }
   };
-
+  
   /// In Cilk, flag indicating whether the current call/invoke is spawned.
   bool IsSpawned = false;
   bool SpawnedCleanup = false;
@@ -1081,6 +1081,8 @@ public:
         CGF.Builder.CreateSync(ContinueBlock, SR);
         CGF.EmitBlock(ContinueBlock);
       }
+    }
+  };
 
   /// The current sync region.
   SyncRegion *CurSyncRegion;
@@ -1088,8 +1090,12 @@ public:
   void PushSyncRegion() { CurSyncRegion = new SyncRegion(*this); }
 
   llvm::Instruction *EmitSyncRegionStart();
+  llvm::Instruction *EmitLabeledSyncRegionStart(const StringRef SV);
 
-  void PopSyncRegion() { delete CurSyncRegion; }
+  void PopSyncRegion() {
+    if (CurSyncRegion)
+      delete CurSyncRegion;
+  }
 
   void EnsureSyncRegion() {
     if (!CurSyncRegion)
@@ -1110,27 +1116,6 @@ public:
       return SR;
     }
   };
-
-  /// The current sync region.
-  SyncRegion *CurSyncRegion = nullptr;
-
-  void PushSyncRegion() {
-    CurSyncRegion = new SyncRegion(*this);
-  }
-
-  llvm::Instruction *EmitSyncRegionStart();
-
-  void PopSyncRegion() {
-    if (CurSyncRegion)
-      delete CurSyncRegion;
-  }
-
-  void EnsureSyncRegion() {
-    if (!CurSyncRegion)
-      PushSyncRegion();
-    if (!CurSyncRegion->getSyncRegionStart())
-      CurSyncRegion->setSyncRegionStart(EmitSyncRegionStart());
-  }
 
   /// Class for handling exceptions thrown from within a detached scope that
   /// should be caught by the parent of that scope.
@@ -1213,6 +1198,9 @@ public:
     void PushSpawnedTaskTerminate();
     void CleanupDetach();
     void FinishDetach();
+
+    void StartLabeledDetach(SyncRegion* SR);
+    void FinishLabeledDetach(SyncRegion* SR);
 
     Address CreateDetachedMemTemp(QualType Ty, StorageDuration SD,
                                   const Twine &Name = "det.tmp");
@@ -3192,6 +3180,9 @@ public:
   void EmitCilkForStmt(const CilkForStmt &S,
                        ArrayRef<const Attr *> Attrs = None);
   LValue EmitCilkSpawnExprLValue(const CilkSpawnExpr *E);
+
+  void EmitSpawnStmt(const SpawnStmt &S);
+  void EmitSyncStmt(const SyncStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);
