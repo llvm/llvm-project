@@ -840,6 +840,46 @@ TEST(Error, HasValueMatcher) {
       "  Actual: failed  (CustomError {0})");
 }
 
+TEST(Error, FailedWithMessageMatcher) {
+  EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                       FailedWithMessage("CustomError {0}"));
+
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(1)),
+                           FailedWithMessage("CustomError {0}")),
+      "Expected: failed with Error whose message has 1 element that is equal "
+      "to \"CustomError {0}\"\n"
+      "  Actual: failed  (CustomError {1})");
+
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(0),
+                           FailedWithMessage("CustomError {0}")),
+      "Expected: failed with Error whose message has 1 element that is equal "
+      "to \"CustomError {0}\"\n"
+      "  Actual: succeeded with value 0");
+
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           FailedWithMessage("CustomError {0}", "CustomError {0}")),
+      "Expected: failed with Error whose message has 2 elements where\n"
+      "element #0 is equal to \"CustomError {0}\",\n"
+      "element #1 is equal to \"CustomError {0}\"\n"
+      "  Actual: failed  (CustomError {0}), which has 1 element");
+
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(
+          Expected<int>(joinErrors(make_error<CustomError>(0),
+                                   make_error<CustomError>(0))),
+          FailedWithMessage("CustomError {0}")),
+      "Expected: failed with Error whose message has 1 element that is equal "
+      "to \"CustomError {0}\"\n"
+      "  Actual: failed  (CustomError {0}; CustomError {0}), which has 2 elements");
+
+  EXPECT_THAT_ERROR(
+      joinErrors(make_error<CustomError>(0), make_error<CustomError>(0)),
+      FailedWithMessageArray(testing::SizeIs(2)));
+}
+
 TEST(Error, C_API) {
   EXPECT_THAT_ERROR(unwrap(wrap(Error::success())), Succeeded())
       << "Failed to round-trip Error success value via C API";
