@@ -182,7 +182,10 @@ def ParallelOp : Loop_Op<"parallel",
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result, "
               "ValueRange lowerBounds, ValueRange upperBounds, "
-              "ValueRange steps">
+              "ValueRange steps">,
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "ValueRange lowerBounds, ValueRange upperBounds, "
+              "ValueRange steps, ArrayRef<Type> resultTypes">
   ];
 
   let extraClassDeclaration = [{
@@ -221,8 +224,8 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
     Example:
 
     ```mlir
-      %zero = constant 0.0 : f32
-      loop.reduce(%zero) {
+      %operand = constant 1.0 : f32
+      loop.reduce(%operand) {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
@@ -230,6 +233,12 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
     ```
 
   }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "Value operand">
+  ];
 
   let arguments = (ins AnyType:$operand);
   let regions = (region SizedRegion<1>:$reductionOperator);
