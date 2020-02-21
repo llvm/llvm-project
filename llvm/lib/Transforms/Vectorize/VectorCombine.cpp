@@ -71,7 +71,7 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
 
   // Extra uses of the extracts mean that we include those costs in the
   // vector total because those instructions will not be eliminated.
-  int ScalarCost, VectorCost;
+  int OldCost, NewCost;
   if (Ext0->getOperand(0) == Ext1->getOperand(0)) {
     // Handle a special case. If the 2 operands are identical, adjust the
     // formulas to account for that. The extra use charge allows for either the
@@ -79,81 +79,70 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
     // opcode (extelt V, C), (extelt V, C) --> extelt (opcode V, V), C
     bool HasUseTax = Ext0 == Ext1 ? !Ext0->hasNUses(2)
                                   : !Ext0->hasOneUse() || !Ext1->hasOneUse();
-    ScalarCost = ExtractCost + ScalarOpCost;
-    VectorCost = VectorOpCost + ExtractCost + HasUseTax * ExtractCost;
+    OldCost = ExtractCost + ScalarOpCost;
+    NewCost = VectorOpCost + ExtractCost + HasUseTax * ExtractCost;
   } else {
     // Handle the general case. Each extract is actually a different value:
     // opcode (extelt V0, C), (extelt V1, C) --> extelt (opcode V0, V1), C
-    ScalarCost = 2 * ExtractCost + ScalarOpCost;
-    VectorCost = VectorOpCost + ExtractCost +
-                 !Ext0->hasOneUse() * ExtractCost +
-                 !Ext1->hasOneUse() * ExtractCost;
+    OldCost = 2 * ExtractCost + ScalarOpCost;
+    NewCost = VectorOpCost + ExtractCost + !Ext0->hasOneUse() * ExtractCost +
+              !Ext1->hasOneUse() * ExtractCost;
   }
   // TODO: The cost comparison should not differ based on opcode. Either we
   //       want to be uniformly more or less aggressive in deciding if a vector
   //       operation should replace the scalar operation.
-  return IsBinOp ? ScalarCost <= VectorCost : ScalarCost < VectorCost;
+  return IsBinOp ? OldCost <= NewCost : OldCost < NewCost;
 }
 
 /// Try to reduce extract element costs by converting scalar compares to vector
 /// compares followed by extract.
-/// cmp (ext0 V0, C0), (ext1 V1, C1)
-static bool foldExtExtCmp(Instruction *Ext0, Value *V0, uint64_t C0,
-                          Instruction *Ext1, Value *V1, uint64_t C1,
+/// cmp (ext0 V0, C), (ext1 V1, C)
+static void foldExtExtCmp(Instruction *Ext0, Instruction *Ext1,
                           Instruction &I, const TargetTransformInfo &TTI) {
   assert(isa<CmpInst>(&I) && "Expected a compare");
-
-  // TODO: Handle C0 != C1 by shuffling 1 of the operands.
-  if (C0 != C1)
-    return false;
-
-  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI))
-    return false;
 
   // cmp Pred (extelt V0, C), (extelt V1, C) --> extelt (cmp Pred V0, V1), C
   ++NumVecCmp;
   IRBuilder<> Builder(&I);
   CmpInst::Predicate Pred = cast<CmpInst>(&I)->getPredicate();
+  Value *V0 = Ext0->getOperand(0), *V1 = Ext1->getOperand(0);
   Value *VecCmp =
       Ext0->getType()->isFloatingPointTy() ? Builder.CreateFCmp(Pred, V0, V1)
                                            : Builder.CreateICmp(Pred, V0, V1);
   Value *Extract = Builder.CreateExtractElement(VecCmp, Ext0->getOperand(1));
   I.replaceAllUsesWith(Extract);
-  return true;
 }
 
 /// Try to reduce extract element costs by converting scalar binops to vector
 /// binops followed by extract.
-/// bo (ext0 V0, C0), (ext1 V1, C1)
-static bool foldExtExtBinop(Instruction *Ext0, Value *V0, uint64_t C0,
-                            Instruction *Ext1, Value *V1, uint64_t C1,
+/// bo (ext0 V0, C), (ext1 V1, C)
+static void foldExtExtBinop(Instruction *Ext0, Instruction *Ext1,
                             Instruction &I, const TargetTransformInfo &TTI) {
   assert(isa<BinaryOperator>(&I) && "Expected a binary operator");
-
-  // TODO: Handle C0 != C1 by shuffling 1 of the operands.
-  if (C0 != C1)
-    return false;
-
-  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI))
-    return false;
 
   // bo (extelt V0, C), (extelt V1, C) --> extelt (bo V0, V1), C
   ++NumVecBO;
   IRBuilder<> Builder(&I);
-  Value *NewBO =
+  Value *V0 = Ext0->getOperand(0), *V1 = Ext1->getOperand(0);
+  Value *VecBO =
       Builder.CreateBinOp(cast<BinaryOperator>(&I)->getOpcode(), V0, V1);
-  if (auto *VecBOInst = dyn_cast<Instruction>(NewBO)) {
-    // All IR flags are safe to back-propagate because any potential poison
-    // created in unused vector elements is discarded by the extract.
+
+  // All IR flags are safe to back-propagate because any potential poison
+  // created in unused vector elements is discarded by the extract.
+  if (auto *VecBOInst = dyn_cast<Instruction>(VecBO))
     VecBOInst->copyIRFlags(&I);
-  }
-  Value *Extract = Builder.CreateExtractElement(NewBO, Ext0->getOperand(1));
+
+  Value *Extract = Builder.CreateExtractElement(VecBO, Ext0->getOperand(1));
   I.replaceAllUsesWith(Extract);
-  return true;
 }
 
 /// Match an instruction with extracted vector operands.
 static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
+  // It is not safe to transform things like div, urem, etc. because we may
+  // create undefined behavior when executing those on unknown vector elements.
+  if (!isSafeToSpeculativelyExecute(&I))
+    return false;
+
   Instruction *Ext0, *Ext1;
   CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   if (!match(&I, m_Cmp(Pred, m_Instruction(Ext0), m_Instruction(Ext1))) &&
@@ -167,15 +156,19 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
       V0->getType() != V1->getType())
     return false;
 
+  // TODO: Handle C0 != C1 by shuffling 1 of the operands.
+  if (C0 != C1)
+    return false;
+
+  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI))
+    return false;
+
   if (Pred != CmpInst::BAD_ICMP_PREDICATE)
-    return foldExtExtCmp(Ext0, V0, C0, Ext1, V1, C1, I, TTI);
+    foldExtExtCmp(Ext0, Ext1, I, TTI);
+  else
+    foldExtExtBinop(Ext0, Ext1, I, TTI);
 
-  // It is not safe to transform things like div, urem, etc. because we may
-  // create undefined behavior when executing those on unknown vector elements.
-  if (isSafeToSpeculativelyExecute(&I))
-    return foldExtExtBinop(Ext0, V0, C0, Ext1, V1, C1, I, TTI);
-
-  return false;
+  return true;
 }
 
 /// This is the entry point for all transforms. Pass manager differences are
