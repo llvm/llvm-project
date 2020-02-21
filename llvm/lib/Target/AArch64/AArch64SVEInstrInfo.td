@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
+
 // Non-faulting loads - node definitions
 //
 def SDT_AArch64_LDNF1 : SDTypeProfile<1, 3, [
@@ -328,6 +330,32 @@ let Predicates = [HasSVE] in {
   def : Pat<(nxv4f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
   def : Pat<(nxv2f32 (AArch64dup (f32 fpimm0))), (DUP_ZI_S 0, 0)>;
   def : Pat<(nxv2f64 (AArch64dup (f64 fpimm0))), (DUP_ZI_D 0, 0)>;
+
+  // Duplicate Int immediate into all vector elements
+  def : Pat<(nxv16i8 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+            (DUP_ZI_B $a, $b)>;
+  def : Pat<(nxv8i16 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+            (DUP_ZI_H $a, $b)>;
+  def : Pat<(nxv4i32 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+            (DUP_ZI_S $a, $b)>;
+  def : Pat<(nxv2i64 (AArch64dup (i64 (SVE8BitLslImm i32:$a, i32:$b)))),
+            (DUP_ZI_D $a, $b)>;
+
+  // Duplicate FP immediate into all vector elements
+  let AddedComplexity = 2 in {
+    def : Pat<(nxv8f16 (AArch64dup fpimm16:$imm8)),
+              (FDUP_ZI_H fpimm16:$imm8)>;
+    def : Pat<(nxv4f16 (AArch64dup fpimm16:$imm8)),
+              (FDUP_ZI_H fpimm16:$imm8)>;
+    def : Pat<(nxv2f16 (AArch64dup fpimm16:$imm8)),
+              (FDUP_ZI_H fpimm16:$imm8)>;
+    def : Pat<(nxv4f32 (AArch64dup fpimm32:$imm8)),
+              (FDUP_ZI_S fpimm32:$imm8)>;
+    def : Pat<(nxv2f32 (AArch64dup fpimm32:$imm8)),
+              (FDUP_ZI_S fpimm32:$imm8)>;
+    def : Pat<(nxv2f64 (AArch64dup fpimm64:$imm8)),
+              (FDUP_ZI_D fpimm64:$imm8)>;
+  }
 
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;

@@ -273,6 +273,8 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
+  bool SelectSVE8BitLslImm(SDValue N, SDValue &Imm, SDValue &Shift);
+
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
 
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
@@ -2916,6 +2918,32 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 
   return true;
+}
+
+bool AArch64DAGToDAGISel::SelectSVE8BitLslImm(SDValue N, SDValue &Base,
+                                                  SDValue &Offset) {
+  auto C = dyn_cast<ConstantSDNode>(N);
+  if (!C)
+    return false;
+
+  auto Ty = N->getValueType(0);
+
+  int64_t Imm = C->getSExtValue();
+  SDLoc DL(N);
+
+  if ((Imm >= -128) && (Imm <= 127)) {
+    Base = CurDAG->getTargetConstant(Imm, DL, Ty);
+    Offset = CurDAG->getTargetConstant(0, DL, Ty);
+    return true;
+  }
+
+  if (((Imm % 256) == 0) && (Imm >= -32768) && (Imm <= 32512)) {
+    Base = CurDAG->getTargetConstant(Imm/256, DL, Ty);
+    Offset = CurDAG->getTargetConstant(8, DL, Ty);
+    return true;
+  }
+
+  return false;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift) {
