@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve,+fullfp16  < %s | FileCheck %s
 
 ;; Splats of legal integer vector types
 
@@ -190,26 +190,23 @@ define <vscale x 2 x double> @splat_nxv2f64(double %val) {
   ret <vscale x 2 x double> %2
 }
 
-; TODO: The f16 constant should be folded into the move.
 define <vscale x 8 x half> @splat_nxv8f16_zero() {
 ; CHECK-LABEL: splat_nxv8f16_zero:
-; CHECK: mov z0.h, h0
+; CHECK: mov z0.h, #0
 ; CHECK-NEXT: ret
   ret <vscale x 8 x half> zeroinitializer
 }
 
-; TODO: The f16 constant should be folded into the move.
 define <vscale x 4 x half> @splat_nxv4f16_zero() {
 ; CHECK-LABEL: splat_nxv4f16_zero:
-; CHECK: mov z0.h, h0
+; CHECK: mov z0.h, #0
 ; CHECK-NEXT: ret
   ret <vscale x 4 x half> zeroinitializer
 }
 
-; TODO: The f16 constant should be folded into the move.
 define <vscale x 2 x half> @splat_nxv2f16_zero() {
 ; CHECK-LABEL: splat_nxv2f16_zero:
-; CHECK: mov z0.h, h0
+; CHECK: mov z0.h, #0
 ; CHECK-NEXT: ret
   ret <vscale x 2 x half> zeroinitializer
 }
