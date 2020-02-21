@@ -12,6 +12,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 
@@ -20,7 +21,7 @@ class DebugNamesDWARFIndex : public DWARFIndex {
 public:
   static llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
   Create(Module &module, DWARFDataExtractor debug_names,
-         DWARFDataExtractor debug_str, DWARFDebugInfo &debug_info);
+         DWARFDataExtractor debug_str, SymbolFileDWARF &dwarf);
 
   void Preload() override { m_fallback.Preload(); }
 
@@ -49,11 +50,11 @@ private:
                        std::unique_ptr<llvm::DWARFDebugNames> debug_names_up,
                        DWARFDataExtractor debug_names_data,
                        DWARFDataExtractor debug_str_data,
-                       DWARFDebugInfo &debug_info)
-      : DWARFIndex(module), m_debug_info(debug_info),
+                       SymbolFileDWARF &dwarf)
+      : DWARFIndex(module), m_debug_info(dwarf.DebugInfo()),
         m_debug_names_data(debug_names_data), m_debug_str_data(debug_str_data),
         m_debug_names_up(std::move(debug_names_up)),
-        m_fallback(module, debug_info, GetUnits(*m_debug_names_up)) {}
+        m_fallback(module, dwarf, GetUnits(*m_debug_names_up)) {}
 
   DWARFDebugInfo &m_debug_info;
 

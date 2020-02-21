@@ -19,14 +19,14 @@ using namespace lldb;
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
-                             DWARFDebugInfo &debug_info) {
+                             SymbolFileDWARF &dwarf) {
   auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVM(),
                                                 debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 
   return std::unique_ptr<DebugNamesDWARFIndex>(new DebugNamesDWARFIndex(
-      module, std::move(index_up), debug_names, debug_str, debug_info));
+      module, std::move(index_up), debug_names, debug_str, dwarf));
 }
 
 llvm::DenseSet<dw_offset_t>
