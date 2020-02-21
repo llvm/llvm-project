@@ -321,7 +321,7 @@ def AMDGPUumed3 : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp,
 
 def AMDGPUfmed3_impl : SDNode<"AMDGPUISD::FMED3", SDTFPTernaryOp, []>;
 
-def AMDGPUfdot2 : SDNode<"AMDGPUISD::FDOT2",
+def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                   SDTypeProfile<1, 4, [SDTCisSameAs<0, 3>, SDTCisSameAs<1, 2>,
                                        SDTCisFP<0>, SDTCisVec<1>,
                                        SDTCisInt<4>]>,
@@ -472,3 +472,7 @@ def AMDGPUbfe_u32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
 def AMDGPUfmul_legacy : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_fmul_legacy node:$src0, node:$src1),
    (AMDGPUfmul_legacy_impl node:$src0, node:$src1)]>;
+
+def AMDGPUfdot2 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$clamp),
+  [(int_amdgcn_fdot2 node:$src0, node:$src1, node:$src2, node:$clamp),
+   (AMDGPUfdot2_impl node:$src0, node:$src1, node:$src2, node:$clamp)]>;
