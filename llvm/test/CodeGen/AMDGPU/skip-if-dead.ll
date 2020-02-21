@@ -433,6 +433,41 @@ export:
   ret void
 }
 
+; CHECK-LABEL: {{^}}complex_loop:
+; CHECK: s_mov_b64 exec, 0
+; The following is an error, since it happens nested inside the loop:
+; CHECK-NEXT: s_cbranch_execnz
+; CHECK-NEXT: ; %bb.{{[0-9]+}}
+; CHECK-NEXT: exp null
+define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
+.entry:
+  %flaga = icmp sgt i32 %cmpa, 0
+  br i1 %flaga, label %.lr.ph, label %._crit_edge
+
+.lr.ph:
+  br label %hdr
+
+hdr:
+  %ctr = phi i32 [ 0, %.lr.ph ], [ %ctr.next, %latch ]
+  %flagb = icmp ugt i32 %ctr, %cmpb
+  br i1 %flagb, label %kill, label %latch
+
+kill:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %latch
+
+latch:
+  %ctr.next = add nuw nsw i32 %ctr, 1
+  %flagc = icmp slt i32 %ctr.next, %cmpc
+  br i1 %flagc, label %hdr, label %._crit_edge
+
+._crit_edge:
+  %tmp = phi i32 [ -1, %.entry ], [ %ctr.next, %latch ]
+  %out = bitcast i32 %tmp to <2 x half>
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> %out, <2 x half> undef, i1 immarg true, i1 immarg true)
+  ret void
+}
+
 declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
