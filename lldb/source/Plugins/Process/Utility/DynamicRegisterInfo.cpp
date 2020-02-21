@@ -742,6 +742,8 @@ const lldb_private::RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(
   for (auto &reg_info : m_regs) {
     // We can use pointer comparison since we used a ConstString to set the
     // "name" member in AddRegister()
+    assert(ConstString(reg_info.name).GetCString() == reg_info.name &&
+           "reg_info.name not from a ConstString?");
     if (reg_info.name == reg_name.GetCString()) {
       return &reg_info;
     }
