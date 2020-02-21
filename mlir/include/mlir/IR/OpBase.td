@@ -310,7 +310,8 @@ class AnyTypeOf<list<Type> allowedTypes, string description = ""> : Type<
 
 // Integer types.
 // Any integer type irrespective of its width.
-def AnyInteger : Type<CPred<"$_self.isa<IntegerType>()">, "integer">;
+def AnySignlessInteger : Type<
+  CPred<"$_self.isSignlessInteger()">, "integer">;
 
 // Index type.
 def Index : Type<CPred<"$_self.isa<IndexType>()">, "index">,
@@ -318,7 +319,7 @@ def Index : Type<CPred<"$_self.isa<IndexType>()">, "index">,
 
 // Integer type of a specific width.
 class I<int width>
-    : Type<CPred<"$_self.isInteger(" # width # ")">,
+    : Type<CPred<"$_self.isSignlessInteger(" # width # ")">,
                   width # "-bit integer">,
       BuildableType<"$_builder.getIntegerType(" # width # ")"> {
   int bitwidth = width;
@@ -586,8 +587,10 @@ def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
 
 // Type constraint for integer-like types: integers, indices, vectors of
 // integers, tensors of integers.
-def IntegerLike : TypeConstraint<Or<[AnyInteger.predicate, Index.predicate,
-        VectorOf<[AnyInteger]>.predicate, TensorOf<[AnyInteger]>.predicate]>,
+def SignlessIntegerLike : TypeConstraint<Or<[
+        AnySignlessInteger.predicate, Index.predicate,
+        VectorOf<[AnySignlessInteger]>.predicate,
+        TensorOf<[AnySignlessInteger]>.predicate]>,
     "integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
@@ -596,8 +599,8 @@ def FloatLike : TypeConstraint<Or<[AnyFloat.predicate,
     "floating-point-like">;
 
 // Type constraint for integer-like or float-like types.
-def IntegerOrFloatLike : TypeConstraint<Or<[IntegerLike.predicate,
-                                            FloatLike.predicate]>,
+def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
+    SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "integer-like or floating-point-like">;
 
 
@@ -725,7 +728,7 @@ class IntegerAttrBase<I attrValType, string descr> :
       attrValType, "IntegerAttr",
       And<[CPred<"$_self.isa<IntegerAttr>()">,
            CPred<"$_self.cast<IntegerAttr>().getType()."
-                 "isInteger(" # attrValType.bitwidth # ")">]>,
+                 "isSignlessInteger(" # attrValType.bitwidth # ")">]>,
       descr> {
   let returnType = [{ APInt }];
 }
@@ -1031,7 +1034,7 @@ def ElementsAttr : ElementsAttrBase<CPred<"$_self.isa<ElementsAttr>()">,
 class IntElementsAttr<int width> : ElementsAttrBase<
   CPred<"$_self.isa<DenseIntElementsAttr>() &&"
       "$_self.cast<DenseIntElementsAttr>().getType()."
-      "getElementType().isInteger(" # width # ")">,
+      "getElementType().isSignlessInteger(" # width # ")">,
   width # "-bit integer elements attribute"> {
 
   let storageType = [{ DenseIntElementsAttr }];

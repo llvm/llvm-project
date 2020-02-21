@@ -45,7 +45,7 @@ struct GPUAllReduceOpLowering : public ConvertToLLVMPattern {
     Value operand = operands.front();
 
     // TODO(csigg): Generalize to other types of accumulation.
-    assert(op->getOperand(0).getType().isIntOrFloat());
+    assert(op->getOperand(0).getType().isSignlessIntOrFloat());
 
     // Create the reduction using an accumulator factory.
     AccumulatorFactory factory =

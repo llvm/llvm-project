@@ -61,6 +61,12 @@ func @missingReturn()
 // CHECK: func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
 func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
 
+// CHECK: func @sint_types(si2, si4) -> (si7, si1023)
+func @sint_types(si2, si4) -> (si7, si1023)
+
+// CHECK: func @uint_types(ui2, ui4) -> (ui7, ui1023)
+func @uint_types(ui2, ui4) -> (ui7, ui1023)
+
 
 // CHECK: func @vectors(vector<1xf32>, vector<2x4xf32>)
 func @vectors(vector<1 x f32>, vector<2x4xf32>)

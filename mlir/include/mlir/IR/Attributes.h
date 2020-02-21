@@ -351,8 +351,16 @@ public:
   static IntegerAttr get(Type type, const APInt &value);
 
   APInt getValue() const;
+  /// Return the integer value as a 64-bit int. The attribute must be a signless
+  /// integer.
   // TODO(jpienaar): Change callers to use getValue instead.
   int64_t getInt() const;
+  /// Return the integer value as a signed 64-bit int. The attribute must be
+  /// a signed integer.
+  int64_t getSInt() const;
+  /// Return the integer value as a unsigned 64-bit int. The attribute must be
+  /// an unsigned integer.
+  uint64_t getUInt() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) {
@@ -688,7 +696,7 @@ public:
     const char *data = reinterpret_cast<const char *>(values.data());
     return getRawIntOrFloat(
         type, ArrayRef<char>(data, values.size() * sizeof(T)), sizeof(T),
-        /*isInt=*/std::numeric_limits<T>::is_integer);
+        std::numeric_limits<T>::is_integer, std::numeric_limits<T>::is_signed);
   }
 
   /// Constructs a dense integer elements attribute from a single element.
@@ -863,7 +871,8 @@ public:
                              std::numeric_limits<T>::is_integer) ||
                             llvm::is_one_of<T, float, double>::value>::type>
   llvm::iterator_range<ElementIterator<T>> getValues() const {
-    assert(isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer));
+    assert(isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer,
+                             std::numeric_limits<T>::is_signed));
     auto rawData = getRawData().data();
     bool splat = isSplat();
     return {ElementIterator<T>(rawData, splat, 0),
@@ -976,12 +985,13 @@ protected:
   /// invariants that the templatized 'get' method cannot.
   static DenseElementsAttr getRawIntOrFloat(ShapedType type,
                                             ArrayRef<char> data,
-                                            int64_t dataEltSize, bool isInt);
+                                            int64_t dataEltSize, bool isInt,
+                                            bool isSigned);
 
-  /// Check the information for a c++ data type, check if this type is valid for
+  /// Check the information for a C++ data type, check if this type is valid for
   /// the current attribute. This method is used to verify specific type
   /// invariants that the templatized 'getValues' method cannot.
-  bool isValidIntOrFloat(int64_t dataEltSize, bool isInt) const;
+  bool isValidIntOrFloat(int64_t dataEltSize, bool isInt, bool isSigned) const;
 };
 
 /// An attribute that represents a reference to a dense float vector or tensor

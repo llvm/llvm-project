@@ -107,7 +107,7 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //     <op>i %0, %1 : i32
 class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     ArithmeticOp<mnemonic, traits>,
-    Arguments<(ins IntegerLike:$lhs, IntegerLike:$rhs)>;
+    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
 
 // Base class for standard arithmetic binary operations on floats, vectors and
 // tensors thereof.  This operation has two operands and returns one result,
@@ -466,8 +466,8 @@ def CmpIOp : Std_Op<"cmpi",
 
   let arguments = (ins
       CmpIPredicateAttr:$predicate,
-      IntegerLike:$lhs,
-      IntegerLike:$rhs
+      SignlessIntegerLike:$lhs,
+      SignlessIntegerLike:$rhs
   );
   let results = (outs BoolLike:$result);
 
@@ -1070,9 +1070,10 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
       %3 = select %2, %0, %1 : i32
   }];
 
-  let arguments = (ins BoolLike:$condition, IntegerOrFloatLike:$true_value,
-                       IntegerOrFloatLike:$false_value);
-  let results = (outs IntegerOrFloatLike:$result);
+  let arguments = (ins BoolLike:$condition,
+                       SignlessIntegerOrFloatLike:$true_value,
+                       SignlessIntegerOrFloatLike:$false_value);
+  let results = (outs SignlessIntegerOrFloatLike:$result);
   let verifier = ?;
 
   let builders = [OpBuilder<
@@ -1109,8 +1110,8 @@ def SignExtendIOp : Std_Op<"sexti",
       %5 = sexti %0 : vector<2 x i32> to vector<2 x i64>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{
@@ -1211,7 +1212,7 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 
   }];
 
-  let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat],
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, AnyFloat],
                                  "integer or float type">:$input);
   let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
 
@@ -1561,8 +1562,8 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
       %5 = trunci %0 : vector<2 x i32> to vector<2 x i16>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{
@@ -1661,8 +1662,8 @@ def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> 
       %5 = zexti %0 : vector<2 x i32> to vector<2 x i64>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{

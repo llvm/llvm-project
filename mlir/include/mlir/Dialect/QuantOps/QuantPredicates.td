@@ -36,7 +36,7 @@ def quant_RealPrimitiveType :
 // A primitive type that can represent a storage value. This is either an
 // integer or quantized type.
 def quant_StoragePrimitiveType :
-    Type<Or<[AnyInteger.predicate, quant_QuantizedType.predicate]>,
+    Type<Or<[AnySignlessInteger.predicate, quant_QuantizedType.predicate]>,
     "quantized storage primitive (integer or quantized type)">;
 
 // A primitive or container of RealPrimitiveType.

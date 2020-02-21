@@ -36,13 +36,53 @@ bool Type::isInteger(unsigned width) {
   return false;
 }
 
-bool Type::isIntOrIndex() { return isa<IndexType>() || isa<IntegerType>(); }
-
-bool Type::isIntOrIndexOrFloat() {
-  return isa<IndexType>() || isa<IntegerType>() || isa<FloatType>();
+bool Type::isSignlessInteger() {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSignless();
+  return false;
 }
 
-bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
+bool Type::isSignlessInteger(unsigned width) {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSignless() && intTy.getWidth() == width;
+  return false;
+}
+
+bool Type::isSignedInteger() {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSigned();
+  return false;
+}
+
+bool Type::isSignedInteger(unsigned width) {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSigned() && intTy.getWidth() == width;
+  return false;
+}
+
+bool Type::isUnsignedInteger() {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isUnsigned();
+  return false;
+}
+
+bool Type::isUnsignedInteger(unsigned width) {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isUnsigned() && intTy.getWidth() == width;
+  return false;
+}
+
+bool Type::isSignlessIntOrIndex() {
+  return isa<IndexType>() || isSignlessInteger();
+}
+
+bool Type::isSignlessIntOrIndexOrFloat() {
+  return isa<IndexType>() || isSignlessInteger() || isa<FloatType>();
+}
+
+bool Type::isSignlessIntOrFloat() {
+  return isSignlessInteger() || isa<FloatType>();
+}
 
 //===----------------------------------------------------------------------===//
 // Integer Type
@@ -52,16 +92,23 @@ bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
 constexpr unsigned IntegerType::kMaxWidth;
 
 /// Verify the construction of an integer type.
-LogicalResult IntegerType::verifyConstructionInvariants(Location loc,
-                                                        unsigned width) {
+LogicalResult
+IntegerType::verifyConstructionInvariants(Location loc, unsigned width,
+                                          SignednessSemantics signedness) {
   if (width > IntegerType::kMaxWidth) {
     return emitError(loc) << "integer bitwidth is limited to "
                           << IntegerType::kMaxWidth << " bits";
   }
+  if (width == 1 && signedness != IntegerType::Signless)
+    return emitOptionalError(loc, "cannot have signedness semantics for i1");
   return success();
 }
 
-unsigned IntegerType::getWidth() const { return getImpl()->width; }
+unsigned IntegerType::getWidth() const { return getImpl()->getWidth(); }
+
+IntegerType::SignednessSemantics IntegerType::getSignedness() const {
+  return getImpl()->getSignedness();
+}
 
 //===----------------------------------------------------------------------===//
 // Float Type
@@ -100,7 +147,7 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
 }
 
 unsigned Type::getIntOrFloatBitWidth() {
-  assert(isIntOrFloat() && "only ints and floats have a bitwidth");
+  assert(isSignlessIntOrFloat() && "only ints and floats have a bitwidth");
   if (auto intType = dyn_cast<IntegerType>()) {
     return intType.getWidth();
   }
@@ -155,7 +202,7 @@ int64_t ShapedType::getSizeInBits() const {
          "cannot get the bit size of an aggregate with a dynamic shape");
 
   auto elementType = getElementType();
-  if (elementType.isIntOrFloat())
+  if (elementType.isSignlessIntOrFloat())
     return elementType.getIntOrFloatBitWidth() * getNumElements();
 
   // Tensors can have vectors and other tensors as elements, other shaped types
@@ -326,7 +373,7 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
   auto *context = elementType.getContext();
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitOptionalError(location, "invalid memref element type"),
            MemRefType();
@@ -404,7 +451,7 @@ LogicalResult
 UnrankedMemRefType::verifyConstructionInvariants(Location loc, Type elementType,
                                                  unsigned memorySpace) {
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitError(loc, "invalid memref element type");
   return success();
@@ -619,7 +666,7 @@ ComplexType ComplexType::getChecked(Type elementType, Location location) {
 /// Verify the construction of an integer type.
 LogicalResult ComplexType::verifyConstructionInvariants(Location loc,
                                                         Type elementType) {
-  if (!elementType.isa<FloatType>() && !elementType.isa<IntegerType>())
+  if (!elementType.isa<FloatType>() && !elementType.isSignlessInteger())
     return emitError(loc, "invalid element type for complex");
   return success();
 }

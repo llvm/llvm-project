@@ -245,16 +245,18 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   /// Index Type.
   impl->indexTy = TypeUniquer::get<IndexType>(this, StandardTypes::Index);
   /// Integer Types.
-  impl->int1Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 1);
-  impl->int8Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 8);
-  impl->int16Ty =
-      TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 16);
-  impl->int32Ty =
-      TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 32);
-  impl->int64Ty =
-      TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 64);
-  impl->int128Ty =
-      TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 128);
+  impl->int1Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 1,
+                                               IntegerType::Signless);
+  impl->int8Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer, 8,
+                                               IntegerType::Signless);
+  impl->int16Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer,
+                                                16, IntegerType::Signless);
+  impl->int32Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer,
+                                                32, IntegerType::Signless);
+  impl->int64Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer,
+                                                64, IntegerType::Signless);
+  impl->int128Ty = TypeUniquer::get<IntegerType>(this, StandardTypes::Integer,
+                                                 128, IntegerType::Signless);
   /// None Type.
   impl->noneType = TypeUniquer::get<NoneType>(this, StandardTypes::None);
 
@@ -489,7 +491,13 @@ IndexType IndexType::get(MLIRContext *context) {
 
 /// Return an existing integer type instance if one is cached within the
 /// context.
-static IntegerType getCachedIntegerType(unsigned width, MLIRContext *context) {
+static IntegerType
+getCachedIntegerType(unsigned width,
+                     IntegerType::SignednessSemantics signedness,
+                     MLIRContext *context) {
+  if (signedness != IntegerType::Signless)
+    return IntegerType();
+
   switch (width) {
   case 1:
     return context->getImpl().int1Ty;
@@ -509,16 +517,28 @@ static IntegerType getCachedIntegerType(unsigned width, MLIRContext *context) {
 }
 
 IntegerType IntegerType::get(unsigned width, MLIRContext *context) {
-  if (auto cached = getCachedIntegerType(width, context))
-    return cached;
-  return Base::get(context, StandardTypes::Integer, width);
+  return get(width, IntegerType::Signless, context);
 }
 
-IntegerType IntegerType::getChecked(unsigned width, MLIRContext *context,
-                                    Location location) {
-  if (auto cached = getCachedIntegerType(width, context))
+IntegerType IntegerType::get(unsigned width,
+                             IntegerType::SignednessSemantics signedness,
+                             MLIRContext *context) {
+  if (auto cached = getCachedIntegerType(width, signedness, context))
     return cached;
-  return Base::getChecked(location, StandardTypes::Integer, width);
+  return Base::get(context, StandardTypes::Integer, width, signedness);
+}
+
+IntegerType IntegerType::getChecked(unsigned width, Location location) {
+  return getChecked(width, IntegerType::Signless, location);
+}
+
+IntegerType IntegerType::getChecked(unsigned width,
+                                    SignednessSemantics signedness,
+                                    Location location) {
+  if (auto cached =
+          getCachedIntegerType(width, signedness, location->getContext()))
+    return cached;
+  return Base::getChecked(location, StandardTypes::Integer, width, signedness);
 }
 
 /// Get an instance of the NoneType.

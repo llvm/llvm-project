@@ -105,7 +105,7 @@ DictionaryAttr spirv::TargetEnvAttr::getResourceLimits() {
 LogicalResult spirv::TargetEnvAttr::verifyConstructionInvariants(
     Location loc, IntegerAttr version, ArrayAttr extensions,
     ArrayAttr capabilities, DictionaryAttr limits) {
-  if (!version.getType().isInteger(32))
+  if (!version.getType().isSignlessInteger(32))
     return emitError(loc, "expected 32-bit integer for version");
 
   if (!llvm::all_of(extensions.getValue(), [](Attribute attr) {

@@ -745,11 +745,16 @@ Syntax:
 
 ```
 // Sized integers like i1, i4, i8, i16, i32.
-integer-type ::= `i` [1-9][0-9]*
+signed-integer-type ::= `si` [1-9][0-9]*
+unsigned-integer-type ::= `ui` [1-9][0-9]*
+signless-integer-type ::= `i` [1-9][0-9]*
+integer-type ::= signed-integer-type |
+                 unsigned-integer-type |
+                 signless-integer-type
 ```
 
-MLIR supports arbitrary precision integer types. Integer types are signless, but
-have a designated width.
+MLIR supports arbitrary precision integer types. Integer types have a designated
+width and may have signedness semantics.
 
 **Rationale:** low precision integers (like `i2`, `i4` etc) are useful for
 low-precision inference chips, and arbitrary precision integers are useful for

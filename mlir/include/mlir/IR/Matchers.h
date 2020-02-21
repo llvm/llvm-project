@@ -93,7 +93,7 @@ struct constant_int_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isIntOrIndex()) {
+    if (type.isSignlessIntOrIndex()) {
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
     }
     if (type.isa<VectorType>() || type.isa<RankedTensorType>()) {

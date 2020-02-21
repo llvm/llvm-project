@@ -273,12 +273,28 @@ IntegerAttr IntegerAttr::get(Type type, int64_t value) {
     return get(type, APInt(64, value));
 
   auto intType = type.cast<IntegerType>();
-  return get(type, APInt(intType.getWidth(), value));
+  return get(type, APInt(intType.getWidth(), value, intType.isSignedInteger()));
 }
 
 APInt IntegerAttr::getValue() const { return getImpl()->getValue(); }
 
-int64_t IntegerAttr::getInt() const { return getValue().getSExtValue(); }
+int64_t IntegerAttr::getInt() const {
+  assert((getImpl()->getType().isIndex() ||
+          getImpl()->getType().isSignlessInteger()) &&
+         "must be signless integer");
+  return getValue().getSExtValue();
+}
+
+int64_t IntegerAttr::getSInt() const {
+  assert(getImpl()->getType().isSignedInteger() && "must be signed integer");
+  return getValue().getSExtValue();
+}
+
+uint64_t IntegerAttr::getUInt() const {
+  assert(getImpl()->getType().isUnsignedInteger() &&
+         "must be unsigned integer");
+  return getValue().getZExtValue();
+}
 
 static LogicalResult verifyIntegerTypeInvariants(Location loc, Type type) {
   if (type.isa<IntegerType>() || type.isa<IndexType>())
@@ -592,7 +608,7 @@ DenseElementsAttr::FloatElementIterator::FloatElementIterator(
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(type.getElementType().isIntOrFloat() &&
+  assert(type.getElementType().isSignlessIntOrFloat() &&
          "expected int or float element type");
   assert(hasSameElementsOrSplat(type, values));
 
@@ -700,19 +716,28 @@ DenseElementsAttr DenseElementsAttr::getRaw(ShapedType type,
                    data, isSplat);
 }
 
-/// Check the information for a c++ data type, check if this type is valid for
+/// Check the information for a C++ data type, check if this type is valid for
 /// the current attribute. This method is used to verify specific type
 /// invariants that the templatized 'getValues' method cannot.
-static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize,
-                              bool isInt) {
+static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
+                              bool isSigned) {
   // Make sure that the data element size is the same as the type element width.
   if (getDenseElementBitwidth(type.getElementType()) !=
       static_cast<size_t>(dataEltSize * CHAR_BIT))
     return false;
 
-  // Check that the element type is valid.
-  return isInt ? type.getElementType().isa<IntegerType>()
-               : type.getElementType().isa<FloatType>();
+  // Check that the element type is either float or integer.
+  if (!isInt)
+    return type.getElementType().isa<FloatType>();
+
+  auto intType = type.getElementType().dyn_cast<IntegerType>();
+  if (!intType)
+    return false;
+
+  // Make sure signedness semantics is consistent.
+  if (intType.isSignless())
+    return true;
+  return intType.isSigned() ? isSigned : !isSigned;
 }
 
 /// Overload of the 'getRaw' method that asserts that the given type is of
@@ -721,8 +746,9 @@ static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize,
 DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                       ArrayRef<char> data,
                                                       int64_t dataEltSize,
-                                                      bool isInt) {
-  assert(::isValidIntOrFloat(type, dataEltSize, isInt));
+                                                      bool isInt,
+                                                      bool isSigned) {
+  assert(::isValidIntOrFloat(type, dataEltSize, isInt, isSigned));
 
   int64_t numElements = data.size() / dataEltSize;
   assert(numElements == 1 || numElements == type.getNumElements());
@@ -731,9 +757,9 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
 
 /// A method used to verify specific type invariants that the templatized 'get'
 /// method cannot.
-bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize,
-                                          bool isInt) const {
-  return ::isValidIntOrFloat(getType(), dataEltSize, isInt);
+bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
+                                          bool isSigned) const {
+  return ::isValidIntOrFloat(getType(), dataEltSize, isInt, isSigned);
 }
 
 /// Returns if this attribute corresponds to a splat, i.e. if all element

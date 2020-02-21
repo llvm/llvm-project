@@ -91,4 +91,4 @@ def OpK : NS_Op<"op_for_AnyTensorOf", []> {
 
 // CHECK-LABEL: OpK::verify
 // CHECK: for (Value v : getODSOperands(0)) {
-// CHECK: if (!(((v.getType().isa<TensorType>())) && (((v.getType().cast<ShapedType>().getElementType().isF32())) || ((v.getType().cast<ShapedType>().getElementType().isInteger(32))))))
+// CHECK: if (!(((v.getType().isa<TensorType>())) && (((v.getType().cast<ShapedType>().getElementType().isF32())) || ((v.getType().cast<ShapedType>().getElementType().isSignlessInteger(32))))))

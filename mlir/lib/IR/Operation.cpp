@@ -792,10 +792,11 @@ static Type getTensorOrVectorElementType(Type type) {
   return type;
 }
 
-LogicalResult OpTrait::impl::verifyOperandsAreIntegerLike(Operation *op) {
+LogicalResult
+OpTrait::impl::verifyOperandsAreSignlessIntegerLike(Operation *op) {
   for (auto opType : op->getOperandTypes()) {
     auto type = getTensorOrVectorElementType(opType);
-    if (!type.isIntOrIndex())
+    if (!type.isSignlessIntOrIndex())
       return op->emitOpError() << "requires an integer or index type";
   }
   return success();
@@ -1006,9 +1007,10 @@ LogicalResult OpTrait::impl::verifyResultsAreFloatLike(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::verifyResultsAreIntegerLike(Operation *op) {
+LogicalResult
+OpTrait::impl::verifyResultsAreSignlessIntegerLike(Operation *op) {
   for (auto resultType : op->getResultTypes())
-    if (!getTensorOrVectorElementType(resultType).isIntOrIndex())
+    if (!getTensorOrVectorElementType(resultType).isSignlessIntOrIndex())
       return op->emitOpError() << "requires an integer or index type";
   return success();
 }
