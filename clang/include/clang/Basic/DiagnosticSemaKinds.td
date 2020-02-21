@@ -5602,7 +5602,8 @@ def err_func_returning_qualified_void : ExtWarn<
 def err_func_returning_array_function : Error<
   "function cannot return %select{array|function}0 type %1">;
 def err_field_declared_as_function : Error<"field %0 declared as a function">;
-def err_field_incomplete : Error<"field has incomplete type %0">;
+def err_field_incomplete_or_sizeless : Error<
+  "field has %select{incomplete|sizeless}0 type %1">;
 def ext_variable_sized_type_in_struct : ExtWarn<
   "field %0 with variable sized type %1 not at the end of a struct or class is"
   " a GNU extension">, InGroup<GNUVariableSizedTypeNotAtEnd>;

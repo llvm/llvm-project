@@ -1629,7 +1629,8 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
   // If the variable being captured has an invalid type, mark the class as
   // invalid as well.
   if (!FieldType->isDependentType()) {
-    if (RequireCompleteType(Loc, FieldType, diag::err_field_incomplete)) {
+    if (RequireCompleteSizedType(Loc, FieldType,
+                                 diag::err_field_incomplete_or_sizeless)) {
       RD->setInvalidDecl();
       Field->setInvalidDecl();
     } else {

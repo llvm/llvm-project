@@ -230,6 +230,20 @@ int vararg_receiver(int count, svint8_t first, ...) {
   return count;
 }
 
+struct sized_struct {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
+union sized_union {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
 #if __STDC_VERSION__ >= 201112L
 void test_generic(void) {
   svint8_t local_int8;

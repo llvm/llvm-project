@@ -5247,8 +5247,8 @@ Decl *Sema::BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
   Chain.push_back(Anon);
 
   RecordDecl *RecordDef = Record->getDefinition();
-  if (RequireCompleteType(Anon->getLocation(), RecTy,
-                          diag::err_field_incomplete) ||
+  if (RequireCompleteSizedType(Anon->getLocation(), RecTy,
+                               diag::err_field_incomplete_or_sizeless) ||
       InjectAnonymousStructOrUnionMembers(*this, S, CurContext, RecordDef,
                                           AS_none, Chain)) {
     Anon->setInvalidDecl();
@@ -16103,8 +16103,9 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
   // C99 6.7.2.1p4 - verify the field type.
   // C++ 9.6p3: A bit-field shall have integral or enumeration type.
   if (!FieldTy->isDependentType() && !FieldTy->isIntegralOrEnumerationType()) {
-    // Handle incomplete types with specific error.
-    if (RequireCompleteType(FieldLoc, FieldTy, diag::err_field_incomplete))
+    // Handle incomplete and sizeless types with a specific error.
+    if (RequireCompleteSizedType(FieldLoc, FieldTy,
+                                 diag::err_field_incomplete_or_sizeless))
       return ExprError();
     if (FieldName)
       return Diag(FieldLoc, diag::err_not_integral_type_bitfield)
@@ -16321,7 +16322,8 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   QualType EltTy = Context.getBaseElementType(T);
   if (!EltTy->isDependentType()) {
-    if (RequireCompleteType(Loc, EltTy, diag::err_field_incomplete)) {
+    if (RequireCompleteSizedType(Loc, EltTy,
+                                 diag::err_field_incomplete_or_sizeless)) {
       // Fields of incomplete type force their record to be invalid.
       Record->setInvalidDecl();
       InvalidDecl = true;
@@ -16865,8 +16867,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // elsewhere, after synthesized ivars are known.
       }
     } else if (!FDTy->isDependentType() &&
-               RequireCompleteType(FD->getLocation(), FD->getType(),
-                                   diag::err_field_incomplete)) {
+               RequireCompleteSizedType(
+                   FD->getLocation(), FD->getType(),
+                   diag::err_field_incomplete_or_sizeless)) {
       // Incomplete type
       FD->setInvalidDecl();
       EnclosingDecl->setInvalidDecl();
@@ -16924,8 +16927,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
           Context, "", UnavailableAttr::IR_ARCFieldWithOwnership,
           FD->getLocation()));
     } else if (getLangOpts().ObjC &&
-               getLangOpts().getGC() != LangOptions::NonGC &&
-               Record && !Record->hasObjectMember()) {
+               getLangOpts().getGC() != LangOptions::NonGC && Record &&
+               !Record->hasObjectMember()) {
       if (FD->getType()->isObjCObjectPointerType() ||
           FD->getType().isObjCGCStrong())
         Record->setHasObjectMember(true);
