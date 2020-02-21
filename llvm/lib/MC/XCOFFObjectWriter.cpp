@@ -343,29 +343,27 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = XSym->getContainingCsect();
 
-    // Handle undefined symbol.
     if (ContainingCsect->getCSectType() == XCOFF::XTY_ER) {
+      // Handle undefined symbol.
       UndefinedCsects.emplace_back(ContainingCsect);
       SectionMap[ContainingCsect] = &UndefinedCsects.back();
-      continue;
+    } else {
+      // If the symbol is the csect itself, we don't need to put the symbol
+      // into csect's Syms.
+      if (XSym == ContainingCsect->getQualNameSymbol())
+        continue;
+
+      assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
+             "Expected containing csect to exist in map");
+      // Lookup the containing csect and add the symbol to it.
+      SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
     }
-
-    // If the symbol is the csect itself, we don't need to put the symbol
-    // into csect's Syms.
-    if (XSym == ContainingCsect->getQualNameSymbol())
-      continue;
-
-    assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
-           "Expected containing csect to exist in map");
-
-    // Lookup the containing csect and add the symbol to it.
-    SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.
     if (nameShouldBeInStringTable(XSym->getName()))
       Strings.add(XSym->getName());
-    }
+  }
 
   Strings.finalize();
   assignAddressesAndIndices(Layout);
