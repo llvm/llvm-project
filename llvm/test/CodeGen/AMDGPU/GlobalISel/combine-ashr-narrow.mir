@@ -14,7 +14,7 @@ body:             |
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[ASHR]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[ASHR]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 32
@@ -35,7 +35,7 @@ body:             |
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[ASHR]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[ASHR]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 32
