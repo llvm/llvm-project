@@ -254,9 +254,22 @@ ELFDumper<ELFT>::dumpSections() {
     }
     case ELF::SHT_STRTAB:
     case ELF::SHT_SYMTAB:
-    case ELF::SHT_DYNSYM:
-      // Do not dump these sections.
+    case ELF::SHT_DYNSYM: {
+      // The contents of these sections are described by other parts of the YAML
+      // file. We still dump them so that their positions in the section header
+      // table are correctly recorded. We only dump allocatable section because
+      // their positions and addresses are important, e.g. for creating program
+      // headers. Some sections, like .symtab or .strtab normally are not
+      // allocatable and do not have virtual addresses. We want to avoid noise
+      // in the YAML output and assume that they are placed at the end.
+      if (Sec.sh_flags & ELF::SHF_ALLOC) {
+        auto S = std::make_unique<ELFYAML::RawContentSection>();
+        if (Error E = dumpCommonSection(&Sec, *S.get()))
+          return std::move(E);
+        Ret.emplace_back(std::move(S));
+      }
       break;
+    }
     case ELF::SHT_SYMTAB_SHNDX: {
       Expected<ELFYAML::SymtabShndxSection *> SecOrErr =
           dumpSymtabShndxSection(&Sec);
