@@ -796,13 +796,7 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
   bool IsError =
       parseDeclareSimdClauses(*this, BS, Simdlen, Uniforms, Aligneds,
                               Alignments, Linears, LinModifiers, Steps);
-  // Need to check for extra tokens.
-  if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-    Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-        << getOpenMPDirectiveName(OMPD_declare_simd);
-    while (Tok.isNot(tok::annot_pragma_openmp_end))
-      ConsumeAnyToken();
-  }
+  skipUntilPragmaOpenMPEnd(OMPD_declare_simd);
   // Skip the last annot_pragma_openmp_end.
   SourceLocation EndLoc = ConsumeAnnotationToken();
   if (IsError)
@@ -1524,6 +1518,18 @@ Parser::DeclGroupPtrTy Parser::ParseOMPDeclareTargetClauses() {
   return Actions.BuildDeclaratorGroup(Decls);
 }
 
+void Parser::skipUntilPragmaOpenMPEnd(OpenMPDirectiveKind DKind) {
+  // The last seen token is annot_pragma_openmp_end - need to check for
+  // extra tokens.
+  if (Tok.is(tok::annot_pragma_openmp_end))
+    return;
+
+  Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+      << getOpenMPDirectiveName(DKind);
+  while (Tok.isNot(tok::annot_pragma_openmp_end))
+    ConsumeAnyToken();
+}
+
 void Parser::ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
                                                SourceLocation DTLoc) {
   if (DKind != OMPD_end_declare_target) {
@@ -1532,11 +1538,7 @@ void Parser::ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
     return;
   }
   ConsumeAnyToken();
-  if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-    Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-        << getOpenMPDirectiveName(OMPD_end_declare_target);
-    SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
-  }
+  skipUntilPragmaOpenMPEnd(OMPD_end_declare_target);
   // Skip the last annot_pragma_openmp_end.
   ConsumeAnyToken();
 }
@@ -1616,13 +1618,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     DeclDirectiveListParserHelper Helper(this, DKind);
     if (!ParseOpenMPSimpleVarList(DKind, Helper,
                                   /*AllowScopeSpecifier=*/true)) {
-      // The last seen token is annot_pragma_openmp_end - need to check for
-      // extra tokens.
-      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(DKind);
-        SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
-      }
+      skipUntilPragmaOpenMPEnd(DKind);
       // Skip the last annot_pragma_openmp_end.
       ConsumeAnnotationToken();
       return Actions.ActOnOpenMPThreadprivateDirective(Loc,
@@ -1661,13 +1657,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
             ConsumeToken();
           Actions.EndOpenMPClause();
         }
-        // The last seen token is annot_pragma_openmp_end - need to check for
-        // extra tokens.
-        if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-          Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-              << getOpenMPDirectiveName(DKind);
-          SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
-        }
+        skipUntilPragmaOpenMPEnd(DKind);
       }
       // Skip the last annot_pragma_openmp_end.
       ConsumeAnnotationToken();
@@ -1720,14 +1710,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_declare_reduction:
     ConsumeToken();
     if (DeclGroupPtrTy Res = ParseOpenMPDeclareReductionDirective(AS)) {
-      // The last seen token is annot_pragma_openmp_end - need to check for
-      // extra tokens.
-      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(OMPD_declare_reduction);
-        while (Tok.isNot(tok::annot_pragma_openmp_end))
-          ConsumeAnyToken();
-      }
+      skipUntilPragmaOpenMPEnd(OMPD_declare_reduction);
       // Skip the last annot_pragma_openmp_end.
       ConsumeAnnotationToken();
       return Res;
@@ -1970,13 +1953,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
     DeclDirectiveListParserHelper Helper(this, DKind);
     if (!ParseOpenMPSimpleVarList(DKind, Helper,
                                   /*AllowScopeSpecifier=*/false)) {
-      // The last seen token is annot_pragma_openmp_end - need to check for
-      // extra tokens.
-      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(DKind);
-        SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
-      }
+      skipUntilPragmaOpenMPEnd(DKind);
       DeclGroupPtrTy Res = Actions.ActOnOpenMPThreadprivateDirective(
           Loc, Helper.getIdentifiers());
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
@@ -2021,13 +1998,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
             ConsumeToken();
           Actions.EndOpenMPClause();
         }
-        // The last seen token is annot_pragma_openmp_end - need to check for
-        // extra tokens.
-        if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-          Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-              << getOpenMPDirectiveName(DKind);
-          SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
-        }
+        skipUntilPragmaOpenMPEnd(DKind);
       }
       DeclGroupPtrTy Res = Actions.ActOnOpenMPAllocateDirective(
           Loc, Helper.getIdentifiers(), Clauses);
@@ -2040,14 +2011,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
     ConsumeToken();
     if (DeclGroupPtrTy Res =
             ParseOpenMPDeclareReductionDirective(/*AS=*/AS_none)) {
-      // The last seen token is annot_pragma_openmp_end - need to check for
-      // extra tokens.
-      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-            << getOpenMPDirectiveName(OMPD_declare_reduction);
-        while (Tok.isNot(tok::annot_pragma_openmp_end))
-          ConsumeAnyToken();
-      }
+      skipUntilPragmaOpenMPEnd(OMPD_declare_reduction);
       ConsumeAnyToken();
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
     } else {
@@ -2521,9 +2485,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     break;
   case OMPC_device_type:
   case OMPC_unknown:
-    Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-        << getOpenMPDirectiveName(DKind);
-    SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+    skipUntilPragmaOpenMPEnd(DKind);
     break;
   case OMPC_threadprivate:
   case OMPC_uniform:
