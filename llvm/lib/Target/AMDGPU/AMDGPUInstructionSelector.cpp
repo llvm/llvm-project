@@ -2114,9 +2114,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
-    if (selectG_AND_OR_XOR(I))
+    if (selectImpl(I, *CoverageInfo))
       return true;
-    return selectImpl(I, *CoverageInfo);
+    return selectG_AND_OR_XOR(I);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
     if (selectImpl(I, *CoverageInfo))
