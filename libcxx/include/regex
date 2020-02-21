@@ -4661,6 +4661,8 @@ basic_regex<_CharT, _Traits>::__test_back_ref(_CharT c)
     unsigned __val = __traits_.value(c, 10);
     if (__val >= 1 && __val <= 9)
     {
+        if (__val > mark_count())
+            __throw_regex_error<regex_constants::error_backref>();
         __push_back_ref(__val);
         return true;
     }
