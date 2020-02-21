@@ -50,6 +50,7 @@ void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestOpaqueLoc();
 void registerTestParallelismDetection();
+void registerTestGpuParallelLoopMappingPass();
 void registerTestVectorConversions();
 void registerTestVectorToLoopsPass();
 void registerVectorizerTestPass();
@@ -103,6 +104,7 @@ void registerTestPasses() {
   registerTestMemRefStrideCalculation();
   registerTestOpaqueLoc();
   registerTestParallelismDetection();
+  registerTestGpuParallelLoopMappingPass();
   registerTestVectorConversions();
   registerTestVectorToLoopsPass();
   registerVectorizerTestPass();
