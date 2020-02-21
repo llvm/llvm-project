@@ -52,6 +52,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
                                                      expected_line))
 
     @skipIfWindows
+    @skipIfRemote
     def test_stackTrace(self):
         '''
             Tests the 'stackTrace' packet and all its variants.
