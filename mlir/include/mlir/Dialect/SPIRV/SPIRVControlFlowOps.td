@@ -41,11 +41,13 @@ def SPV_BranchOp : SPV_Op<"Branch", [InFunctionScope, Terminator]> {
     ```
   }];
 
-  let arguments = (ins
-    Variadic<AnyType>:$block_arguments
-  );
+  let arguments = (ins);
 
   let results = (outs);
+
+  let successors = (successor AnySuccessor:$target);
+
+  let verifier = [{ return success(); }];
 
   let builders = [
     OpBuilder<
@@ -60,12 +62,10 @@ def SPV_BranchOp : SPV_Op<"Branch", [InFunctionScope, Terminator]> {
 
   let extraClassDeclaration = [{
     /// Returns the branch target block.
-    Block *getTarget() { return getOperation()->getSuccessor(0); }
+    Block *getTarget() { return target(); }
 
     /// Returns the block arguments.
-    operand_range getBlockArguments() {
-      return getOperation()->getSuccessorOperands(0);
-    }
+    operand_range getBlockArguments() { return targetOperands(); }
   }];
 
   let autogenSerialization = 0;
@@ -115,11 +115,13 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional",
 
   let arguments = (ins
     SPV_Bool:$condition,
-    Variadic<AnyType>:$branch_arguments,
     OptionalAttr<I32ArrayAttr>:$branch_weights
   );
 
   let results = (outs);
+
+  let successors = (successor AnySuccessor:$trueTarget,
+                               AnySuccessor:$falseTarget);
 
   let builders = [
     OpBuilder<
