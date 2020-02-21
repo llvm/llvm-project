@@ -1,8 +1,13 @@
+//===-- GetOptInc.h ---------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLDB_HOST_COMMON_GETOPTINC_H
-
 #define LLDB_HOST_COMMON_GETOPTINC_H
-
-#pragma once
 
 #include "lldb/lldb-defines.h"
 
@@ -55,4 +60,4 @@ int getopt_long_only(int argc, char *const *argv, const char *optstring,
                      const struct option *longopts, int *longindex);
 #endif
 
-#endif
+#endif // LLDB_HOST_COMMON_GETOPTINC_H

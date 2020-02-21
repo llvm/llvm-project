@@ -1,7 +1,3 @@
-#ifndef LLDB_HOST_HOSTGETOPT_H
-
-#define LLDB_HOST_HOSTGETOPT_H
-
 //===-- HostGetOpt.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,7 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#pragma once
+
+#ifndef LLDB_HOST_HOSTGETOPT_H
+#define LLDB_HOST_HOSTGETOPT_H
 
 #if !defined(_MSC_VER) && !defined(__NetBSD__)
 
@@ -26,4 +24,4 @@
 
 #endif
 
-#endif
+#endif // LLDB_HOST_HOSTGETOPT_H
