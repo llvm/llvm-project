@@ -5528,6 +5528,226 @@ define i1 @test_v1i1_mul(i1 %x, i1 %y) {
   ret i1 %ret
 }
 
+define <1 x i1> @uadd_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
+; KNL-LABEL: uadd_sat_v1i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    korw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: uadd_sat_v1i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    korw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: uadd_sat_v1i1:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: uadd_sat_v1i1:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    korw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512DQ-NEXT:    retq
+;
+; X86-LABEL: uadd_sat_v1i1:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    korw %k1, %k0, %k0
+; X86-NEXT:    kmovd %k0, %eax
+; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+  %z = call <1 x i1> @llvm.uadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+  ret <1 x i1> %z
+}
+declare <1 x i1> @llvm.uadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+
+define <1 x i1> @usub_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
+; KNL-LABEL: usub_sat_v1i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxnorw %k0, %k0, %k2
+; KNL-NEXT:    kxorw %k2, %k1, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: usub_sat_v1i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kxnorw %k0, %k0, %k2
+; SKX-NEXT:    kxorw %k2, %k1, %k1
+; SKX-NEXT:    kandw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: usub_sat_v1i1:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k2
+; AVX512BW-NEXT:    kxorw %k2, %k1, %k1
+; AVX512BW-NEXT:    kandw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: usub_sat_v1i1:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kxnorw %k0, %k0, %k2
+; AVX512DQ-NEXT:    kxorw %k2, %k1, %k1
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512DQ-NEXT:    retq
+;
+; X86-LABEL: usub_sat_v1i1:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kxnorw %k0, %k0, %k2
+; X86-NEXT:    kxorw %k2, %k1, %k1
+; X86-NEXT:    kandw %k1, %k0, %k0
+; X86-NEXT:    kmovd %k0, %eax
+; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+  %z = call <1 x i1> @llvm.usub.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+  ret <1 x i1> %z
+}
+declare <1 x i1> @llvm.usub.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+
+define <1 x i1> @sadd_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
+; KNL-LABEL: sadd_sat_v1i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    korw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: sadd_sat_v1i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    korw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: sadd_sat_v1i1:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: sadd_sat_v1i1:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    korw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512DQ-NEXT:    retq
+;
+; X86-LABEL: sadd_sat_v1i1:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    korw %k1, %k0, %k0
+; X86-NEXT:    kmovd %k0, %eax
+; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+  %z = call <1 x i1> @llvm.sadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+  ret <1 x i1> %z
+}
+declare <1 x i1> @llvm.sadd.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+
+define <1 x i1> @ssub_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
+; KNL-LABEL: ssub_sat_v1i1:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxnorw %k0, %k0, %k2
+; KNL-NEXT:    kxorw %k2, %k1, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ssub_sat_v1i1:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kxnorw %k0, %k0, %k2
+; SKX-NEXT:    kxorw %k2, %k1, %k1
+; SKX-NEXT:    kandw %k1, %k0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: def $al killed $al killed $eax
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: ssub_sat_v1i1:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kxnorw %k0, %k0, %k2
+; AVX512BW-NEXT:    kxorw %k2, %k1, %k1
+; AVX512BW-NEXT:    kandw %k1, %k0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: ssub_sat_v1i1:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kxnorw %k0, %k0, %k2
+; AVX512DQ-NEXT:    kxorw %k2, %k1, %k1
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, %eax
+; AVX512DQ-NEXT:    ## kill: def $al killed $al killed $eax
+; AVX512DQ-NEXT:    retq
+;
+; X86-LABEL: ssub_sat_v1i1:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kxnorw %k0, %k0, %k2
+; X86-NEXT:    kxorw %k2, %k1, %k1
+; X86-NEXT:    kandw %k1, %k0, %k0
+; X86-NEXT:    kmovd %k0, %eax
+; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+  %z = call <1 x i1> @llvm.ssub.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+  ret <1 x i1> %z
+}
+declare <1 x i1> @llvm.ssub.sat.v1i1(<1 x i1> %x, <1 x i1> %y)
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
