@@ -1862,6 +1862,99 @@ define i1 @icmp_ashr_and_overshift(i8 %X) {
   ret i1 %tobool
 }
 
+define i1 @icmp_and_ashr_neg_and_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_and_legal(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, 1
+  ret i1 %cmp
+}
+
+; Negative test.
+define i1 @icmp_and_ashr_mixed_and_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_mixed_and_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[AND]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, 31
+  %cmp = icmp ugt i8 %and, 8
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_slt_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_slt_legal(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], -4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, -4
+  ret i1 %cmp
+}
+
+; Negative test.
+define i1 @icmp_and_ashr_neg_cmp_slt_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_slt_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], -68
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp slt i8 %and, -68
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_eq_legal(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_legal(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp eq i8 %and, -4
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_eq_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_eq_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -68
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp eq i8 %and, -68
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_ashr_neg_cmp_ne_shiftout(i8 %x) {
+; CHECK-LABEL: @icmp_and_ashr_neg_cmp_ne_shiftout(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ASHR]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], -68
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ashr = ashr i8 %x, 4
+  %and = and i8 %ashr, -2
+  %cmp = icmp ne i8 %and, -68
+  ret i1 %cmp
+}
+
 ; PR16244
 define i1 @test71(i8* %x) {
 ; CHECK-LABEL: @test71(
