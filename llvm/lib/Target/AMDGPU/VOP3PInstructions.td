@@ -29,9 +29,14 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
       !con(
         (ins FP16InputMods:$src0_modifiers, VCSrc_f16:$src0,
              FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
-             FP16InputMods:$src2_modifiers, VCSrc_f16:$src2,
-             clampmod:$clamp),
-         !if(UseTiedOutput, (ins VGPR_32:$vdst_in), (ins))),
+             FP16InputMods:$src2_modifiers, VCSrc_f16:$src2),
+         // FIXME: clampmod0 misbehaves with the non-default vdst_in
+         // following it. For now workaround this by requiring clamp
+         // in tied patterns. This should use undef_tied_input, but it
+         // seems underdeveloped and doesns't apply the right register
+         // class constraints.
+         !if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
+                            (ins clampmod0:$clamp))),
          (ins op_sel:$op_sel, op_sel_hi:$op_sel_hi));
 
   let Constraints = !if(UseTiedOutput, "$vdst = $vdst_in", "");
@@ -75,8 +80,8 @@ def V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3_Profile<VOP_V2I16_V2I1
 // The constant will be emitted as a mov, and folded later.
 // TODO: We could directly encode the immediate now
 def : GCNPat<
-  (add (v2i16 (VOP3PMods0 v2i16:$src0, i32:$src0_modifiers, i1:$clamp)), NegSubInlineConstV216:$src1),
-  (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1, $clamp)
+  (add (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)), NegSubInlineConstV216:$src1),
+  (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1)
 >;
 
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
@@ -284,7 +289,7 @@ multiclass DotPats<SDPatternOperator dot_op,
                    VOP3PInst dot_inst> {
   let SubtargetPredicate = dot_inst.SubtargetPredicate in
   def : GCNPat <
-    (dot_op (dot_inst.Pfl.Src0VT (VOP3PMods0 dot_inst.Pfl.Src0VT:$src0, i32:$src0_modifiers)),
+    (dot_op (dot_inst.Pfl.Src0VT (VOP3PMods dot_inst.Pfl.Src0VT:$src0, i32:$src0_modifiers)),
             (dot_inst.Pfl.Src1VT (VOP3PMods dot_inst.Pfl.Src1VT:$src1, i32:$src1_modifiers)),
             (dot_inst.Pfl.Src2VT (VOP3PMods dot_inst.Pfl.Src2VT:$src2, i32:$src2_modifiers)), i1:$clamp),
     (dot_inst $src0_modifiers, $src0, $src1_modifiers, $src1, $src2_modifiers, $src2, (as_i1timm $clamp))>;
