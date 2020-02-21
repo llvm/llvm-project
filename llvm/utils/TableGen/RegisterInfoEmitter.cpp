@@ -182,6 +182,20 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
       OS << "} // end namespace " << Namespace << "\n\n";
   }
 
+  OS << "// Register pressure sets enum.\n";
+  if (!Namespace.empty())
+    OS << "namespace " << Namespace << " {\n";
+  OS << "enum RegisterPressureSets {\n";
+  unsigned NumSets = Bank.getNumRegPressureSets();
+  for (unsigned i = 0; i < NumSets; ++i ) {
+    const RegUnitSet &RegUnits = Bank.getRegSetAt(i);
+    OS << "  " << RegUnits.Name << " = " << i << ",\n";
+  }
+  OS << "};\n";
+  if (!Namespace.empty())
+    OS << "} // end namespace " << Namespace << '\n';
+  OS << '\n';
+
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_ENUM\n\n";
 }

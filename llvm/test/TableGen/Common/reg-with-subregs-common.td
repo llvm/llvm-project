@@ -16,6 +16,9 @@ class Indexes<int N> {
            !listconcat(acc, !if(!lt(cur, N), [cur], [])));
 }
 
+#ifdef USE_NAMESPACE
+  let Namespace = "TestNamespace" in {
+#endif
 foreach Index = 0-31 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
 }
@@ -35,6 +38,9 @@ foreach Size = {2,4,8,16} in {
 foreach Index = 0-255 in {
   def R#Index : Register <"r"#Index>;
 }
+#ifdef USE_NAMESPACE
+}
+#endif
 
 def GPR32 : RegisterClass<"TestTarget", [i32], 32,
                           (add (sequence "R%u", 0, 255))>;
@@ -124,5 +130,11 @@ def GPR1024 : RegisterTuples<[sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7,
                               (decimate (shl GPR32, 31), 1)
                              ]>;
 
+#ifdef USE_NAMESPACE
+  let Namespace = "TestNamespace" in {
+#endif
 def GPR_64 : RegisterClass<"", [v2i32], 64, (add GPR64)>;
 def GPR_1024 : RegisterClass<"", [v32i32], 1024, (add GPR1024)>;
+#ifdef USE_NAMESPACE
+}
+#endif
