@@ -538,15 +538,13 @@ public:
 
   ValueHandle getBase() const { return base; }
 
-  /// Operator overloadings.
+  /// Arithmetic operator overloadings.
   ValueHandle operator+(ValueHandle e);
   ValueHandle operator-(ValueHandle e);
   ValueHandle operator*(ValueHandle e);
   ValueHandle operator/(ValueHandle e);
-  OperationHandle operator+=(ValueHandle e);
-  OperationHandle operator-=(ValueHandle e);
-  OperationHandle operator*=(ValueHandle e);
-  OperationHandle operator/=(ValueHandle e);
+  ValueHandle operator%(ValueHandle e);
+  ValueHandle operator^(ValueHandle e);
   ValueHandle operator+(TemplatedIndexedValue e) {
     return *this + static_cast<ValueHandle>(e);
   }
@@ -559,6 +557,20 @@ public:
   ValueHandle operator/(TemplatedIndexedValue e) {
     return *this / static_cast<ValueHandle>(e);
   }
+  ValueHandle operator%(TemplatedIndexedValue e) {
+    return *this % static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator^(TemplatedIndexedValue e) {
+    return *this ^ static_cast<ValueHandle>(e);
+  }
+
+  /// Assignment-arithmetic operator overloadings.
+  OperationHandle operator+=(ValueHandle e);
+  OperationHandle operator-=(ValueHandle e);
+  OperationHandle operator*=(ValueHandle e);
+  OperationHandle operator/=(ValueHandle e);
+  OperationHandle operator%=(ValueHandle e);
+  OperationHandle operator^=(ValueHandle e);
   OperationHandle operator+=(TemplatedIndexedValue e) {
     return this->operator+=(static_cast<ValueHandle>(e));
   }
@@ -570,6 +582,48 @@ public:
   }
   OperationHandle operator/=(TemplatedIndexedValue e) {
     return this->operator/=(static_cast<ValueHandle>(e));
+  }
+  OperationHandle operator%=(TemplatedIndexedValue e) {
+    return this->operator%=(static_cast<ValueHandle>(e));
+  }
+  OperationHandle operator^=(TemplatedIndexedValue e) {
+    return this->operator^=(static_cast<ValueHandle>(e));
+  }
+
+  /// Logical operator overloadings.
+  ValueHandle operator&&(ValueHandle e);
+  ValueHandle operator||(ValueHandle e);
+  ValueHandle operator&&(TemplatedIndexedValue e) {
+    return *this && static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator||(TemplatedIndexedValue e) {
+    return *this || static_cast<ValueHandle>(e);
+  }
+
+  /// Comparison operator overloadings.
+  ValueHandle operator==(ValueHandle e);
+  ValueHandle operator!=(ValueHandle e);
+  ValueHandle operator<(ValueHandle e);
+  ValueHandle operator<=(ValueHandle e);
+  ValueHandle operator>(ValueHandle e);
+  ValueHandle operator>=(ValueHandle e);
+  ValueHandle operator==(TemplatedIndexedValue e) {
+    return *this == static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator!=(TemplatedIndexedValue e) {
+    return *this != static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator<(TemplatedIndexedValue e) {
+    return *this < static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator<=(TemplatedIndexedValue e) {
+    return *this <= static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator>(TemplatedIndexedValue e) {
+    return *this > static_cast<ValueHandle>(e);
+  }
+  ValueHandle operator>=(TemplatedIndexedValue e) {
+    return *this >= static_cast<ValueHandle>(e);
   }
 
 private:
