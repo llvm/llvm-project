@@ -25,32 +25,30 @@
 # BTIPACSO-NEXT:    10360:              bti     c
 # BTIPACSO-NEXT:                        stp     x16, x30, [sp, #-16]!
 # BTIPACSO-NEXT:                        adrp    x16, #131072
-# BTIPACSO-NEXT:                        ldr     x17, [x16, #1160]
-# BTIPACSO-NEXT:                        add     x16, x16, #1160
+# BTIPACSO-NEXT:                        ldr     x17, [x16, #1136]
+# BTIPACSO-NEXT:                        add     x16, x16, #1136
 # BTIPACSO-NEXT:                        br      x17
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO: 0000000000010380 func3@plt:
 # BTIPACSO-NEXT:    10380:              adrp    x16, #131072
-# BTIPACSO-NEXT:                        ldr     x17, [x16, #1168]
-# BTIPACSO-NEXT:                        add     x16, x16, #1168
-# BTIPACSO-NEXT:                        autia1716
+# BTIPACSO-NEXT:                        ldr     x17, [x16, #1144]
+# BTIPACSO-NEXT:                        add     x16, x16, #1144
 # BTIPACSO-NEXT:                        br      x17
-# BTIPACSO-NEXT:                        nop
 
 # BTIPACPROP:    Properties:    aarch64 feature: BTI, PAC
 
 # BTIPACDYN:   0x0000000070000001 (AARCH64_BTI_PLT)
-# BTIPACDYN:   0x0000000070000003 (AARCH64_PAC_PLT)
+# BTIPACDYN-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
 ## Make an executable with both BTI and PAC properties. Expect:
 ## PLT[0] bti c as first instruction
-## PLT[n] bti n as first instruction, autia1716 before br x17
+## PLT[n] bti n as first instruction
 
 # RUN: ld.lld %t.o %t3btipac.o %t.so -o %t.exe
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
 # RUN: llvm-objdump -d -mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
-# RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYN %s
+# RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYNEX %s
 
 # BTIPACEX: Disassembly of section .text:
 # BTIPACEX: 0000000000210370 func1:
@@ -64,18 +62,20 @@
 # BTIPACEX-NEXT:   210380:              bti     c
 # BTIPACEX-NEXT:                        stp     x16, x30, [sp, #-16]!
 # BTIPACEX-NEXT:                        adrp    x16, #131072
-# BTIPACEX-NEXT:                        ldr     x17, [x16, #1208]
-# BTIPACEX-NEXT:                        add     x16, x16, #1208
+# BTIPACEX-NEXT:                        ldr     x17, [x16, #1192]
+# BTIPACEX-NEXT:                        add     x16, x16, #1192
 # BTIPACEX-NEXT:                        br      x17
 # BTIPACEX-NEXT:                        nop
 # BTIPACEX-NEXT:                        nop
 # BTIPACEX: 00000000002103a0 func2@plt:
 # BTIPACEX-NEXT:   2103a0:              bti     c
 # BTIPACEX-NEXT:                        adrp    x16, #131072
-# BTIPACEX-NEXT:                        ldr     x17, [x16, #1216]
-# BTIPACEX-NEXT:                        add     x16, x16, #1216
-# BTIPACEX-NEXT:                        autia1716
+# BTIPACEX-NEXT:                        ldr     x17, [x16, #1200]
+# BTIPACEX-NEXT:                        add     x16, x16, #1200
 # BTIPACEX-NEXT:                        br      x17
+
+# BTIPACDYNEX:   0x0000000070000001 (AARCH64_BTI_PLT)
+# BTIPACDYNEX-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
 ## Check that combinations of BTI+PAC with 0 properties results in standard PLT
 
@@ -112,14 +112,17 @@
 ## Check that combination of -z pac-plt and -z force-bti warns for the file that
 ## doesn't contain the BTI property, but generates PAC and BTI PLT sequences.
 ## The -z pac-plt doesn't warn as it is not required for correctness.
+## Expect:
+## PLT[0] bti c as first instruction
+## PLT[n] bti n as first instruction, autia1716 before br x17
 
 # RUN: ld.lld %t.o %t3.o %t.so -z pac-plt -z force-bti -o %t.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
 
-# FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: -z force-bti: file does not have BTI property
+# FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
 
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
-# RUN: llvm-objdump -d -mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
-# RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYN %s
+# RUN: llvm-objdump -d -mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX2 %s
+# RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYN2 %s
 .section ".note.gnu.property", "a"
 .long 4
 .long 0x10
@@ -140,3 +143,31 @@ func1:
 .globl func3
 .type func3,%function
   ret
+
+# BTIPACEX2: Disassembly of section .text:
+# BTIPACEX2: 0000000000210370 func1:
+# BTIPACEX2-NEXT:   210370:              bl      #48 <func2@plt>
+# BTIPACEX2-NEXT:                        ret
+# BTIPACEX2-NEXT:                        ret
+# BTIPACEX2: 000000000021037c func3:
+# BTIPACEX2-NEXT:   21037c:              ret
+# BTIPACEX2: Disassembly of section .plt:
+# BTIPACEX2: 0000000000210380 .plt:
+# BTIPACEX2-NEXT:   210380:              bti     c
+# BTIPACEX2-NEXT:                        stp     x16, x30, [sp, #-16]!
+# BTIPACEX2-NEXT:                        adrp    x16, #131072
+# BTIPACEX2-NEXT:                        ldr     x17, [x16, #1208]
+# BTIPACEX2-NEXT:                        add     x16, x16, #1208
+# BTIPACEX2-NEXT:                        br      x17
+# BTIPACEX2-NEXT:                        nop
+# BTIPACEX2-NEXT:                        nop
+# BTIPACEX2: 00000000002103a0 func2@plt:
+# BTIPACEX2-NEXT:   2103a0:              bti     c
+# BTIPACEX2-NEXT:                        adrp    x16, #131072
+# BTIPACEX2-NEXT:                        ldr     x17, [x16, #1216]
+# BTIPACEX2-NEXT:                        add     x16, x16, #1216
+# BTIPACEX2-NEXT:                        autia1716
+# BTIPACEX2-NEXT:                        br      x17
+
+# BTIPACDYN2:        0x0000000070000001 (AARCH64_BTI_PLT)
+# BTIPACDYN2-NEXT:   0x0000000070000003 (AARCH64_PAC_PLT)
