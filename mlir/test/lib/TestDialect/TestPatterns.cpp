@@ -305,8 +305,9 @@ struct TestNonRootReplacement : public RewritePattern {
 namespace {
 struct TestTypeConverter : public TypeConverter {
   using TypeConverter::TypeConverter;
+  TestTypeConverter() { addConversion(convertType); }
 
-  LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) override {
+  static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
     // Drop I16 types.
     if (t.isInteger(16))
       return success();

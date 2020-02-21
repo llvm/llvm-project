@@ -196,15 +196,26 @@ convert types. Several of these hooks are detailed below:
 ```c++
 class TypeConverter {
  public:
-  /// This hook allows for converting a type. This function should return
-  /// failure if no valid conversion exists, success otherwise. If the new set
-  /// of types is empty, the type is removed and any usages of the existing
-  /// value are expected to be removed during conversion.
-  virtual LogicalResult convertType(Type t, SmallVectorImpl<Type> &results);
-
-  /// This hook simplifies defining 1-1 type conversions. This function returns
-  /// the type to convert to on success, and a null type on failure.
-  virtual Type convertType(Type t);
+  /// Register a conversion function. A conversion function must be convertible
+  /// to any of the following forms(where `T` is a class derived from `Type`:
+  ///   * Optional<Type>(T)
+  ///     - This form represents a 1-1 type conversion. It should return nullptr
+  ///       or `llvm::None` to signify failure. If `llvm::None` is returned, the
+  ///       converter is allowed to try another conversion function to perform
+  ///       the conversion.
+  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
+  ///     - This form represents a 1-N type conversion. It should return
+  ///       `failure` or `llvm::None` to signify a failed conversion. If the new
+  ///       set of types is empty, the type is removed and any usages of the
+  ///       existing value are expected to be removed during conversion. If
+  ///       `llvm::None` is returned, the converter is allowed to try another
+  ///       conversion function to perform the conversion.
+  ///
+  /// When attempting to convert a type, e.g. via `convertType`, the
+  /// `TypeConverter` will invoke each of the converters starting with the one
+  /// most recently registered.
+  template <typename ConversionFnT>
+  void addConversion(ConversionFnT &&callback);
 
   /// This hook allows for materializing a conversion from a set of types into
   /// one result type by generating a cast operation of some kind. The generated

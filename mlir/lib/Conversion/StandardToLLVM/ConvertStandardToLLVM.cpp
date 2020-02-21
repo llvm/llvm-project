@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-
 #include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -130,6 +129,19 @@ LLVMTypeConverter::LLVMTypeConverter(
       customizations(customs) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   module = &llvmDialect->getLLVMModule();
+
+  // Register conversions for the standard types.
+  addConversion([&](FloatType type) { return convertFloatType(type); });
+  addConversion([&](FunctionType type) { return convertFunctionType(type); });
+  addConversion([&](IndexType type) { return convertIndexType(type); });
+  addConversion([&](IntegerType type) { return convertIntegerType(type); });
+  addConversion([&](MemRefType type) { return convertMemRefType(type); });
+  addConversion(
+      [&](UnrankedMemRefType type) { return convertUnrankedMemRefType(type); });
+  addConversion([&](VectorType type) { return convertVectorType(type); });
+
+  // LLVMType is legal, so add a pass-through conversion.
+  addConversion([](LLVM::LLVMType type) { return type; });
 }
 
 /// Get the LLVM context.
@@ -357,22 +369,6 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
   for (int i = shape.size() - 2; i >= 0; --i)
     vectorType = LLVM::LLVMType::getArrayTy(vectorType, shape[i]);
   return vectorType;
-}
-
-// Dispatch based on the actual type.  Return null type on error.
-Type LLVMTypeConverter::convertStandardType(Type t) {
-  return TypeSwitch<Type, Type>(t)
-      .Case([&](FloatType type) { return convertFloatType(type); })
-      .Case([&](FunctionType type) { return convertFunctionType(type); })
-      .Case([&](IndexType type) { return convertIndexType(type); })
-      .Case([&](IntegerType type) { return convertIntegerType(type); })
-      .Case([&](MemRefType type) { return convertMemRefType(type); })
-      .Case([&](UnrankedMemRefType type) {
-        return convertUnrankedMemRefType(type);
-      })
-      .Case([&](VectorType type) { return convertVectorType(type); })
-      .Case([](LLVM::LLVMType type) { return type; })
-      .Default([](Type) { return Type(); });
 }
 
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
@@ -2657,9 +2653,6 @@ void mlir::populateStdToLLVMBarePtrConversionPatterns(
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatters(converter, patterns, useAlloca);
 }
-
-// Convert types using the stored LLVM IR module.
-Type LLVMTypeConverter::convertType(Type t) { return convertStandardType(t); }
 
 // Create an LLVM IR structure type if there is more than one result.
 Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
