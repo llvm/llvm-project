@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -3985,6 +3986,24 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(*II, Src);
     }
 
+    break;
+  }
+  case Intrinsic::hexagon_V6_vandvrt:
+  case Intrinsic::hexagon_V6_vandvrt_128B: {
+    // Simplify Q -> V -> Q conversion.
+    if (auto Op0 = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
+      Intrinsic::ID ID0 = Op0->getIntrinsicID();
+      if (ID0 != Intrinsic::hexagon_V6_vandqrt &&
+          ID0 != Intrinsic::hexagon_V6_vandqrt_128B)
+        break;
+      Value *Bytes = Op0->getArgOperand(1), *Mask = II->getArgOperand(1);
+      uint64_t Bytes1 = computeKnownBits(Bytes, 0, Op0).One.getZExtValue();
+      uint64_t Mask1 = computeKnownBits(Mask, 0, II).One.getZExtValue();
+      // Check if every byte has common bits in Bytes and Mask.
+      uint64_t C = Bytes1 & Mask1;
+      if ((C & 0xFF) && (C & 0xFF00) && (C & 0xFF0000) && (C & 0xFF000000))
+        return replaceInstUsesWith(*II, Op0->getArgOperand(0));
+    }
     break;
   }
   case Intrinsic::stackrestore: {
