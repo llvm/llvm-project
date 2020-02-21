@@ -2341,15 +2341,62 @@ public:
 /// Categories were originally inspired by dynamic languages such as Common
 /// Lisp and Smalltalk.  More traditional class-based languages (C++, Java)
 /// don't support this level of dynamism, which is both powerful and dangerous.
-class ObjCCategoryDecl : public ObjCContainerDecl {
+class ObjCCategoryDecl : public ObjCContainerDecl,
+                         public Redeclarable<ObjCCategoryDecl> {
+  friend class ASTContext;
+  friend class ASTReader;
+
   /// Interface belonging to this category
   ObjCInterfaceDecl *ClassInterface;
 
   /// The type parameters associated with this category, if any.
   ObjCTypeParamList *TypeParamList = nullptr;
 
-  /// referenced protocols in this category.
-  ObjCProtocolList ReferencedProtocols;
+  struct DefinitionData {
+    /// The definition of this class, for quick access from any
+    /// declaration.
+    ObjCCategoryDecl *Definition = nullptr;
+
+    /// Indicates that the contents of this Objective-C category will be
+    /// completed by the external AST source when required.
+    mutable unsigned ExternallyCompleted : 1;
+
+    /// Tracks whether a ODR hash has been computed for this category.
+    unsigned HasODRHash : 1;
+
+    /// referenced protocols in this category.
+    ObjCProtocolList ReferencedProtocols;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
+  };
+
+  DefinitionData &data() const {
+    assert(Data.getPointer() && "Declaration has no definition!");
+    return *Data.getPointer();
+  }
+
+  /// Allocate the definition data for this class.
+  void allocateDefinitionData();
+
+  using redeclarable_base = Redeclarable<ObjCCategoryDecl>;
+
+  ObjCCategoryDecl *getNextRedeclarationImpl() override {
+    return getNextRedeclaration();
+  }
+
+  ObjCCategoryDecl *getPreviousDeclImpl() override { return getPreviousDecl(); }
+
+  ObjCCategoryDecl *getMostRecentDeclImpl() override {
+    return getMostRecentDecl();
+  }
+
+  /// Contains a pointer to the data associated with this class,
+  /// which will be NULL if this class has not yet been defined.
+  ///
+  /// The bit indicates when we don't need to check for out-of-date
+  /// declarations. It will be set unless modules are enabled.
+  llvm::PointerIntPair<DefinitionData *, 1, bool> Data;
 
   /// Next category belonging to this class.
   /// FIXME: this should not be a singly-linked list.  Move storage elsewhere.
@@ -2362,12 +2409,16 @@ class ObjCCategoryDecl : public ObjCContainerDecl {
   SourceLocation IvarLBraceLoc;
   SourceLocation IvarRBraceLoc;
 
-  ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
+  ObjCCategoryDecl(const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
                    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
                    IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
-                   ObjCTypeParamList *typeParamList,
+                   ObjCCategoryDecl *PrevDecl, ObjCTypeParamList *typeParamList,
                    SourceLocation IvarLBraceLoc = SourceLocation(),
                    SourceLocation IvarRBraceLoc = SourceLocation());
+
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool Hash = true);
 
   void anchor() override;
 
@@ -2375,15 +2426,13 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ObjCCategoryDecl *Create(ASTContext &C, DeclContext *DC,
-                                  SourceLocation AtLoc,
-                                  SourceLocation ClassNameLoc,
-                                  SourceLocation CategoryNameLoc,
-                                  IdentifierInfo *Id,
-                                  ObjCInterfaceDecl *IDecl,
-                                  ObjCTypeParamList *typeParamList,
-                                  SourceLocation IvarLBraceLoc=SourceLocation(),
-                                  SourceLocation IvarRBraceLoc=SourceLocation());
+  static ObjCCategoryDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+         SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+         IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+         ObjCCategoryDecl *PrevDecl, ObjCTypeParamList *typeParamList,
+         SourceLocation IvarLBraceLoc = SourceLocation(),
+         SourceLocation IvarRBraceLoc = SourceLocation());
   static ObjCCategoryDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   ObjCInterfaceDecl *getClassInterface() { return ClassInterface; }
@@ -2407,11 +2456,12 @@ public:
   /// implements.
   void setProtocolList(ObjCProtocolDecl *const*List, unsigned Num,
                        const SourceLocation *Locs, ASTContext &C) {
-    ReferencedProtocols.set(List, Num, Locs, C);
+    data().ReferencedProtocols.set(List, Num, Locs, C);
   }
 
   const ObjCProtocolList &getReferencedProtocols() const {
-    return ReferencedProtocols;
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols;
   }
 
   using protocol_iterator = ObjCProtocolList::iterator;
@@ -2422,11 +2472,18 @@ public:
   }
 
   protocol_iterator protocol_begin() const {
-    return ReferencedProtocols.begin();
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols.begin();
   }
 
-  protocol_iterator protocol_end() const { return ReferencedProtocols.end(); }
-  unsigned protocol_size() const { return ReferencedProtocols.size(); }
+  protocol_iterator protocol_end() const {
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols.end();
+  }
+  unsigned protocol_size() const {
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols.size();
+  }
 
   using protocol_loc_iterator = ObjCProtocolList::loc_iterator;
   using protocol_loc_range = llvm::iterator_range<protocol_loc_iterator>;
@@ -2436,11 +2493,13 @@ public:
   }
 
   protocol_loc_iterator protocol_loc_begin() const {
-    return ReferencedProtocols.loc_begin();
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols.loc_begin();
   }
 
   protocol_loc_iterator protocol_loc_end() const {
-    return ReferencedProtocols.loc_end();
+    assert(hasDefinition() && "Category must always have a definition");
+    return data().ReferencedProtocols.loc_end();
   }
 
   ObjCCategoryDecl *getNextClassCategory() const { return NextClassCategory; }
@@ -2484,6 +2543,47 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCCategory; }
+
+  /// Starts the definition of this Objective-C category.
+  void startDefinition();
+
+  using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::getPreviousDecl;
+  using redeclarable_base::isFirstDecl;
+  using redeclarable_base::redecls;
+  using redeclarable_base::redecls_begin;
+  using redeclarable_base::redecls_end;
+
+  /// Retrieves the canonical declaration of this Objective-C class.
+  ObjCCategoryDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const ObjCCategoryDecl *getCanonicalDecl() const { return getFirstDecl(); }
+
+  /// Determine whether this class has been defined.
+  bool hasDefinition() const {
+    // If the name of this class is out-of-date, bring it up-to-date, which
+    // might bring in a definition.
+    // Note: a null value indicates that we don't have a definition and that
+    // modules are enabled.
+    if (!Data.getOpaqueValue())
+      getMostRecentDecl();
+
+    return Data.getPointer();
+  }
+
+  /// Retrieve the definition of this category/extension.
+  ObjCCategoryDecl *getDefinition() {
+    assert(hasDefinition() && "Category must always have a definition");
+    return Data.getPointer()->Definition;
+  }
+
+  /// Retrieve the definition of this category/extension.
+  const ObjCCategoryDecl *getDefinition() const {
+    assert(hasDefinition() && "Category must always have a definition");
+    return Data.getPointer()->Definition;
+  }
+
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
 };
 
 class ObjCImplDecl : public ObjCContainerDecl {

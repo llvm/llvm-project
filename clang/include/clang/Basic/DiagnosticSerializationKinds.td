@@ -200,7 +200,7 @@ def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "instance variable}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
-  "%q0 has different definitions in different modules; first difference is "
+  "%0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{"
   "static assert with condition|"

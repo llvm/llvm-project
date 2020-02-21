@@ -352,6 +352,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::TypeAliasTemplate:
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
+  case Decl::ObjCCategory:
   case Decl::Empty:
     return true;
 
@@ -372,7 +373,6 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Using:
   case Decl::UsingPack:
   case Decl::ObjCMethod:
-  case Decl::ObjCCategory:
   case Decl::ObjCCategoryImpl:
   case Decl::ObjCImplementation:
   case Decl::ObjCProperty:

@@ -2068,32 +2068,37 @@ void ObjCProtocolDecl::setHasODRHash(bool Hash) {
 
 void ObjCCategoryDecl::anchor() {}
 
-ObjCCategoryDecl::ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
-                                   SourceLocation ClassNameLoc,
-                                   SourceLocation CategoryNameLoc,
-                                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
-                                   ObjCTypeParamList *typeParamList,
-                                   SourceLocation IvarLBraceLoc,
-                                   SourceLocation IvarRBraceLoc)
+ObjCCategoryDecl::ObjCCategoryDecl(
+    const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+    IdentifierInfo *Id, ObjCInterfaceDecl *IDecl, ObjCCategoryDecl *PrevDecl,
+    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
+    SourceLocation IvarRBraceLoc)
     : ObjCContainerDecl(ObjCCategory, DC, Id, ClassNameLoc, AtLoc),
-      ClassInterface(IDecl), CategoryNameLoc(CategoryNameLoc),
-      IvarLBraceLoc(IvarLBraceLoc), IvarRBraceLoc(IvarRBraceLoc) {
+      redeclarable_base(C), ClassInterface(IDecl),
+      CategoryNameLoc(CategoryNameLoc), IvarLBraceLoc(IvarLBraceLoc),
+      IvarRBraceLoc(IvarRBraceLoc) {
+  setPreviousDecl(PrevDecl);
+
+  // Copy the 'data' pointer over.
+  if (PrevDecl)
+    Data = PrevDecl->Data;
+
   setTypeParamList(typeParamList);
+  // allocateDefinitionData();
 }
 
-ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
-                                           SourceLocation AtLoc,
-                                           SourceLocation ClassNameLoc,
-                                           SourceLocation CategoryNameLoc,
-                                           IdentifierInfo *Id,
-                                           ObjCInterfaceDecl *IDecl,
-                                           ObjCTypeParamList *typeParamList,
-                                           SourceLocation IvarLBraceLoc,
-                                           SourceLocation IvarRBraceLoc) {
-  auto *CatDecl =
-      new (C, DC) ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id,
-                                   IDecl, typeParamList, IvarLBraceLoc,
-                                   IvarRBraceLoc);
+ObjCCategoryDecl *ObjCCategoryDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+    IdentifierInfo *Id, ObjCInterfaceDecl *IDecl, ObjCCategoryDecl *PrevDecl,
+    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
+    SourceLocation IvarRBraceLoc) {
+  auto *CatDecl = new (C, DC)
+      ObjCCategoryDecl(C, DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id, IDecl,
+                       PrevDecl, typeParamList, IvarLBraceLoc, IvarRBraceLoc);
+  CatDecl->Data.setInt(!C.getLangOpts().Modules);
+
   if (IDecl) {
     // Link this category into its class's category list.
     CatDecl->NextClassCategory = IDecl->getCategoryListRaw();
@@ -2109,9 +2114,11 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
 
 ObjCCategoryDecl *ObjCCategoryDecl::CreateDeserialized(ASTContext &C,
                                                        unsigned ID) {
-  return new (C, ID) ObjCCategoryDecl(nullptr, SourceLocation(),
-                                      SourceLocation(), SourceLocation(),
-                                      nullptr, nullptr, nullptr);
+  auto *Result = new (C, ID)
+      ObjCCategoryDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                       SourceLocation(), nullptr, nullptr, nullptr, nullptr);
+  Result->Data.setInt(!C.getLangOpts().Modules);
+  return Result;
 }
 
 ObjCCategoryImplDecl *ObjCCategoryDecl::getImplementation() const {
@@ -2130,6 +2137,47 @@ void ObjCCategoryDecl::setTypeParamList(ObjCTypeParamList *TPL) {
   // Set the declaration context of each of the type parameters.
   for (auto *typeParam : *TypeParamList)
     typeParam->setDeclContext(this);
+}
+
+void ObjCCategoryDecl::allocateDefinitionData() {
+  assert(!hasDefinition() && "ObjC category already has a definition");
+  Data.setPointer(new (getASTContext()) DefinitionData());
+  Data.getPointer()->Definition = this;
+}
+
+unsigned ObjCCategoryDecl::getODRHash() {
+  assert(hasDefinition() && "ODRHash only for records with definitions");
+
+  // Previously calculated hash is stored in DefinitionData.
+  if (hasODRHash())
+    return data().ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  class ODRHash Hash;
+  Hash.AddObjCCategoryDecl(getDefinition());
+  setHasODRHash();
+  data().ODRHash = Hash.CalculateHash();
+
+  return data().ODRHash;
+}
+
+void ObjCCategoryDecl::setHasODRHash(bool Hash) {
+  assert(hasDefinition() && "Cannot set ODRHash without definition");
+  data().HasODRHash = Hash;
+}
+
+bool ObjCCategoryDecl::hasODRHash() const {
+  if (!hasDefinition())
+    return false;
+  return data().HasODRHash;
+}
+
+void ObjCCategoryDecl::startDefinition() {
+  allocateDefinitionData();
+
+  // Update all of the declarations with a pointer to the definition.
+  for (auto *RD : redecls())
+    RD->Data = this->Data;
 }
 
 //===----------------------------------------------------------------------===//

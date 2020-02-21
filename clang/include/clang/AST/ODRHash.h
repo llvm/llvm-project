@@ -72,6 +72,10 @@ public:
   // method compares more information than the AddDecl class.
   void AddObjCMethodDecl(const ObjCMethodDecl *Method);
 
+  // Use this for ODR checking ObjC interfaces. This
+  // method compares more information than the AddDecl class.
+  void AddObjCCategoryDecl(const ObjCCategoryDecl *Cat);
+
   // Use this for ODR checking functions between modules.  This method compares
   // more information than the AddDecl class.  SkipBody will process the
   // hash as if the function has no body.
