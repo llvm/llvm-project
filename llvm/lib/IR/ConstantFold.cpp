@@ -1116,8 +1116,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return C1;
       // undef << X -> 0
       return Constant::getNullValue(C1->getType());
-    case Instruction::FAdd:
     case Instruction::FSub:
+      // -0.0 - undef --> undef (consistent with "fneg undef")
+      if (match(C1, m_NegZeroFP()) && isa<UndefValue>(C2))
+        return C2;
+      LLVM_FALLTHROUGH;
+    case Instruction::FAdd:
     case Instruction::FMul:
     case Instruction::FDiv:
     case Instruction::FRem:
