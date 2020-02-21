@@ -583,25 +583,35 @@ The format is comprised of three components:
 A directive is a type of builtin function, with an optional set of arguments.
 The available directives are as follows:
 
-* `attr-dict`
-  -  Represents the attribute dictionary of the operation.
+*   `attr-dict`
 
-* `functional-type` ( inputs , results )
-  -  Formats the `inputs` and `results` arguments as a
-     [function type](LangRef.md#function-type).
-  -  The constraints on `inputs` and `results` are the same as the `input` of
-     the `type` directive.
+    -   Represents the attribute dictionary of the operation.
 
-* `operands`
-  -  Represents all of the operands of an operation.
+*   `attr-dict-with-keyword`
 
-* `results`
-  -  Represents all of the results of an operation.
+    -   Represents the attribute dictionary of the operation, but prefixes the
+        dictionary with an `attributes` keyword.
 
-* `type` ( input )
-  - Represents the type of the given input.
-  - `input` must be either an operand or result [variable](#variables), the
-    `operands` directive, or the `results` directive.
+*   `functional-type` ( inputs , results )
+
+    -   Formats the `inputs` and `results` arguments as a
+        [function type](LangRef.md#function-type).
+    -   The constraints on `inputs` and `results` are the same as the `input` of
+        the `type` directive.
+
+*   `operands`
+
+    -   Represents all of the operands of an operation.
+
+*   `results`
+
+    -   Represents all of the results of an operation.
+
+*   `type` ( input )
+
+    -   Represents the type of the given input.
+    -   `input` must be either an operand or result [variable](#variables), the
+        `operands` directive, or the `results` directive.
 
 #### Literals
 

@@ -118,10 +118,6 @@ public:
   DirectiveElement() : Element(type){};
   static bool classof(const Element *ele) { return ele->getKind() == type; }
 };
-/// This class represents the `attr-dict` directive. This directive represents
-/// the attribute dictionary of the operation.
-using AttrDictDirective = DirectiveElement<Element::Kind::AttrDictDirective>;
-
 /// This class represents the `operands` directive. This directive represents
 /// all of the operands of an operation.
 using OperandsDirective = DirectiveElement<Element::Kind::OperandsDirective>;
@@ -130,10 +126,23 @@ using OperandsDirective = DirectiveElement<Element::Kind::OperandsDirective>;
 /// all of the results of an operation.
 using ResultsDirective = DirectiveElement<Element::Kind::ResultsDirective>;
 
+/// This class represents the `attr-dict` directive. This directive represents
+/// the attribute dictionary of the operation.
+class AttrDictDirective
+    : public DirectiveElement<Element::Kind::AttrDictDirective> {
+public:
+  explicit AttrDictDirective(bool withKeyword) : withKeyword(withKeyword) {}
+  bool isWithKeyword() const { return withKeyword; }
+
+private:
+  /// If the dictionary should be printed with the 'attributes' keyword.
+  bool withKeyword;
+};
+
 /// This class represents the `functional-type` directive. This directive takes
 /// two arguments and formats them, respectively, as the inputs and results of a
 /// FunctionType.
-struct FunctionalTypeDirective
+class FunctionalTypeDirective
     : public DirectiveElement<Element::Kind::FunctionalTypeDirective> {
 public:
   FunctionalTypeDirective(std::unique_ptr<Element> inputs,
@@ -148,7 +157,7 @@ private:
 };
 
 /// This class represents the `type` directive.
-struct TypeDirective : public DirectiveElement<Element::Kind::TypeDirective> {
+class TypeDirective : public DirectiveElement<Element::Kind::TypeDirective> {
 public:
   TypeDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
   Element *getOperand() const { return operand.get(); }
@@ -532,8 +541,10 @@ static void genElementParser(Element *element, OpMethodBody &body,
                     operand->getVar()->name);
 
     /// Directives.
-  } else if (isa<AttrDictDirective>(element)) {
-    body << "  if (parser.parseOptionalAttrDict(result.attributes))\n"
+  } else if (auto *attrDict = dyn_cast<AttrDictDirective>(element)) {
+    body << "  if (parser.parseOptionalAttrDict"
+         << (attrDict->isWithKeyword() ? "WithKeyword" : "")
+         << "(result.attributes))\n"
          << "    return failure();\n";
   } else if (isa<OperandsDirective>(element)) {
     body << "  llvm::SMLoc allOperandLoc = parser.getCurrentLocation();\n"
@@ -723,14 +734,16 @@ void OperationFormat::genParserTypeResolution(Operator &op,
 // PrinterGen
 
 /// Generate the printer for the 'attr-dict' directive.
-static void genAttrDictPrinter(OperationFormat &fmt, OpMethodBody &body) {
+static void genAttrDictPrinter(OperationFormat &fmt, OpMethodBody &body,
+                               bool withKeyword) {
   // Collect all of the attributes used in the format, these will be elided.
   SmallVector<const NamedAttribute *, 1> usedAttributes;
   for (auto &it : fmt.elements)
     if (auto *attr = dyn_cast<AttributeVariable>(it.get()))
       usedAttributes.push_back(attr->getVar());
 
-  body << "  p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{";
+  body << "  p.printOptionalAttrDict" << (withKeyword ? "WithKeyword" : "")
+       << "(getAttrs(), /*elidedAttrs=*/{";
   interleaveComma(usedAttributes, body, [&](const NamedAttribute *attr) {
     body << "\"" << attr->name << "\"";
   });
@@ -802,8 +815,8 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
   }
 
   // Emit the attribute dictionary.
-  if (isa<AttrDictDirective>(element)) {
-    genAttrDictPrinter(fmt, body);
+  if (auto *attrDict = dyn_cast<AttrDictDirective>(element)) {
+    genAttrDictPrinter(fmt, body, attrDict->isWithKeyword());
     lastWasPunctuation = false;
     return;
   }
@@ -894,6 +907,7 @@ public:
     // Keywords.
     keyword_start,
     kw_attr_dict,
+    kw_attr_dict_w_keyword,
     kw_functional_type,
     kw_operands,
     kw_results,
@@ -1073,13 +1087,15 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
 
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
-  Token::Kind kind = llvm::StringSwitch<Token::Kind>(str)
-                         .Case("attr-dict", Token::kw_attr_dict)
-                         .Case("functional-type", Token::kw_functional_type)
-                         .Case("operands", Token::kw_operands)
-                         .Case("results", Token::kw_results)
-                         .Case("type", Token::kw_type)
-                         .Default(Token::identifier);
+  Token::Kind kind =
+      llvm::StringSwitch<Token::Kind>(str)
+          .Case("attr-dict", Token::kw_attr_dict)
+          .Case("attr-dict-with-keyword", Token::kw_attr_dict_w_keyword)
+          .Case("functional-type", Token::kw_functional_type)
+          .Case("operands", Token::kw_operands)
+          .Case("results", Token::kw_results)
+          .Case("type", Token::kw_type)
+          .Default(Token::identifier);
   return Token(kind, str);
 }
 
@@ -1149,7 +1165,8 @@ private:
 
   /// Parse the various different directives.
   LogicalResult parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, bool isTopLevel);
+                                       llvm::SMLoc loc, bool isTopLevel,
+                                       bool withKeyword);
   LogicalResult parseFunctionalTypeDirective(std::unique_ptr<Element> &element,
                                              Token tok, bool isTopLevel);
   LogicalResult parseOperandsDirective(std::unique_ptr<Element> &element,
@@ -1410,7 +1427,11 @@ LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
 
   switch (dirTok.getKind()) {
   case Token::kw_attr_dict:
-    return parseAttrDictDirective(element, dirTok.getLoc(), isTopLevel);
+    return parseAttrDictDirective(element, dirTok.getLoc(), isTopLevel,
+                                  /*withKeyword=*/false);
+  case Token::kw_attr_dict_w_keyword:
+    return parseAttrDictDirective(element, dirTok.getLoc(), isTopLevel,
+                                  /*withKeyword=*/true);
   case Token::kw_functional_type:
     return parseFunctionalTypeDirective(element, dirTok, isTopLevel);
   case Token::kw_operands:
@@ -1549,7 +1570,8 @@ LogicalResult FormatParser::parseOptionalChildElement(
 
 LogicalResult
 FormatParser::parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, bool isTopLevel) {
+                                     llvm::SMLoc loc, bool isTopLevel,
+                                     bool withKeyword) {
   if (!isTopLevel)
     return emitError(loc, "'attr-dict' directive can only be used as a "
                           "top-level directive");
@@ -1557,7 +1579,7 @@ FormatParser::parseAttrDictDirective(std::unique_ptr<Element> &element,
     return emitError(loc, "'attr-dict' directive has already been seen");
 
   hasAttrDict = true;
-  element = std::make_unique<AttrDictDirective>();
+  element = std::make_unique<AttrDictDirective>(withKeyword);
   return success();
 }
 
