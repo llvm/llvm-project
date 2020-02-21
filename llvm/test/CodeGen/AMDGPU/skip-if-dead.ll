@@ -12,7 +12,11 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
+; CHECK-NEXT: s_cbranch_execnz BB1_2
 ; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: exp null off, off, off, off done vm
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB1_2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -23,9 +27,15 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB2_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK:      BB2_2:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB2_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB2_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -36,7 +46,10 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB3_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB3_2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -48,9 +61,15 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_same:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB4_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB4_2:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB4_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB4_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -59,12 +78,19 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   ret void
 }
 
+; FIXME: Ideally only one early-exit would be emitted
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB5_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB5_2:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v1
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB5_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB5_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
   %cmp.x = fcmp olt float %x, 0.0
@@ -119,14 +145,12 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 ; CHECK: v_nop_e64
 
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
-; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: ; %bb.2:
-; CHECK-NEXT: exp null off, off, off, off done vm
-; CHECK-NEXT: s_endpgm
 
-; CHECK-NEXT: {{^}}[[SPLIT_BB]]:
-; CHECK-NEXT: s_endpgm
-define amdgpu_ps void @test_kill_control_flow(i32 inreg %arg) #0 {
+; TODO: We could do an early-exit here (the branch above is uniform!)
+; CHECK-NOT: exp null
+
+; CHECK: v_mov_b32_e32 v0, 1.0
+define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 entry:
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %bb, label %exit
@@ -149,7 +173,7 @@ bb:
   br label %exit
 
 exit:
-  ret void
+  ret float 1.0
 }
 
 ; CHECK-LABEL: {{^}}test_kill_control_flow_remainder:
@@ -171,13 +195,10 @@ exit:
 ; CHECK: v_mov_b32_e64 v8, -1
 ; CHECK: ;;#ASMEND
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
-; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; %bb.2:
-; CHECK-NEXT: exp null off, off, off, off done vm
-; CHECK-NEXT: s_endpgm
+; TODO: We could do an early-exit here (the branch above is uniform!)
+; CHECK-NOT: exp null
 
-; CHECK-NEXT: {{^}}[[SPLIT_BB]]:
 ; CHECK: buffer_store_dword v8
 ; CHECK: v_mov_b32_e64 v9, -2
 
@@ -435,10 +456,7 @@ export:
 
 ; CHECK-LABEL: {{^}}complex_loop:
 ; CHECK: s_mov_b64 exec, 0
-; The following is an error, since it happens nested inside the loop:
-; CHECK-NEXT: s_cbranch_execnz
-; CHECK-NEXT: ; %bb.{{[0-9]+}}
-; CHECK-NEXT: exp null
+; CHECK-NOT: exp null
 define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 .entry:
   %flaga = icmp sgt i32 %cmpa, 0
