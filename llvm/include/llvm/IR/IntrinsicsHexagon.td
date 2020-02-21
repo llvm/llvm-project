@@ -253,8 +253,16 @@ Hexagon_v32i32_v32i32v16i32i64_rtt_Intrinsic<"HEXAGON_V6_vrmpyub_rtt_acc">;
 def int_hexagon_V6_vrmpyub_rtt_acc_128B :
 Hexagon_v64i32_v64i32v32i32i64_rtt_Intrinsic<"HEXAGON_V6_vrmpyub_rtt_acc_128B">;
 
+// HVX Vector predicate casts.
+// These intrinsics do not emit (nor do they correspond to) any instructions,
+// they are no-ops.
 
-//
+def int_hexagon_V6_pred_typecast :
+Hexagon_NonGCC_Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+
+def int_hexagon_V6_pred_typecast_128B :
+Hexagon_NonGCC_Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+
 // Masked vector stores
 //
 
