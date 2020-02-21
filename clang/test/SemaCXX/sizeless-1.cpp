@@ -1,0 +1,469 @@
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
+
+namespace std {
+struct type_info;
+}
+
+typedef __SVInt8_t svint8_t;
+typedef __SVInt16_t svint16_t;
+
+svint8_t *global_int8_ptr;
+extern svint8_t *extern_int8_ptr;
+static svint8_t *static_int8_ptr;
+
+typedef svint8_t int8_typedef;
+typedef svint8_t *int8_ptr_typedef;
+
+void pass_int8(svint8_t); // expected-note {{no known conversion}}
+
+svint8_t return_int8();
+
+typedef svint8_t vec_int8_a __attribute__((vector_size(64)));    // expected-error {{invalid vector element type}}
+typedef svint8_t vec_int8_b __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type}}
+
+void dump(const volatile void *);
+
+void overf(svint8_t);
+void overf(svint16_t);
+
+void overf8(svint8_t); // expected-note + {{not viable}}
+void overf8(int);      // expected-note + {{not viable}}
+
+void overf16(svint16_t); // expected-note + {{not viable}}
+void overf16(int);       // expected-note + {{not viable}}
+
+void varargs(int, ...);
+
+void unused() {
+  svint8_t unused_int8; // expected-warning {{unused}}
+}
+
+struct incomplete_struct *incomplete_ptr;
+
+void func(int sel) {
+  svint8_t local_int8;
+  svint16_t local_int16;
+
+  // Using pointers to sizeless data isn't wrong here, but because the
+  // type is incomplete, it doesn't provide any alignment guarantees.
+  _Static_assert(__atomic_is_lock_free(1, &local_int8) == __atomic_is_lock_free(1, incomplete_ptr), "");
+  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static_assert expression is not an integral constant expression}}
+  _Static_assert(__atomic_always_lock_free(1, &local_int8) == __atomic_always_lock_free(1, incomplete_ptr), "");
+
+  local_int8; // expected-warning {{expression result unused}}
+
+  (void)local_int8;
+
+  local_int8, 0; // expected-warning + {{expression result unused}}
+
+  0, local_int8; // expected-warning + {{expression result unused}}
+
+  svint8_t init_int8 = local_int8;
+  svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
+
+#if __cplusplus >= 201103L
+  int empty_brace_init_int = {};
+#else
+  int empty_brace_init_int = {}; // expected-error {{scalar initializer cannot be empty}}
+#endif
+
+  const svint8_t const_int8 = local_int8; // expected-note {{declared const here}}
+  const svint8_t uninit_const_int8;       // expected-error {{default initialization of an object of const type 'const svint8_t'}}
+
+  volatile svint8_t volatile_int8;
+
+  const volatile svint8_t const_volatile_int8 = local_int8; // expected-note {{declared const here}}
+  const volatile svint8_t uninit_const_volatile_int8;       // expected-error {{default initialization of an object of const type 'const volatile svint8_t'}}
+
+  __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}
+
+  bool test_int8 = init_int8; // expected-error {{cannot initialize a variable of type 'bool' with an lvalue of type 'svint8_t'}}
+
+  int int_int8 = init_int8; // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type 'svint8_t'}}
+
+  init_int8 = local_int8;
+  init_int8 = local_int16; // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
+  init_int8 = sel;         // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'int'}}
+
+  sel = local_int8; // expected-error {{assigning to 'int' from incompatible type 'svint8_t'}}
+
+  local_int8 = (svint8_t)local_int8;
+  local_int8 = (const svint8_t)local_int8;
+  local_int8 = (svint8_t)local_int16; // expected-error {{C-style cast from 'svint16_t' (aka '__SVInt16_t') to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  local_int8 = (svint8_t)0;           // expected-error {{C-style cast from 'int' to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  sel = (int)local_int8;              // expected-error {{C-style cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
+
+  init_int8 = local_int8;
+  init_int8 = const_int8;
+  init_int8 = volatile_int8;
+  init_int8 = const_volatile_int8;
+
+  const_int8 = local_int8; // expected-error {{cannot assign to variable 'const_int8' with const-qualified type 'const svint8_t'}}
+
+  volatile_int8 = local_int8;
+  volatile_int8 = const_int8;
+  volatile_int8 = volatile_int8;
+  volatile_int8 = const_volatile_int8;
+
+  const_volatile_int8 = local_int8; // expected-error {{cannot assign to variable 'const_volatile_int8' with const-qualified type 'const volatile svint8_t'}}
+
+  init_int8 = sel ? init_int8 : local_int8;
+  init_int8 = sel ? init_int8 : const_int8;
+  init_int8 = sel ? volatile_int8 : const_int8;
+  init_int8 = sel ? volatile_int8 : const_volatile_int8;
+
+  pass_int8(local_int8);
+  pass_int8(local_int16); // expected-error {{no matching function}}
+
+  local_int8 = return_int8();
+  local_int16 = return_int8(); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
+
+  dump(&local_int8);
+  dump(&const_int8);
+  dump(&volatile_int8);
+  dump(&const_volatile_int8);
+
+  *&local_int8 = local_int8;
+  *&const_int8 = local_int8; // expected-error {{read-only variable is not assignable}}
+  *&volatile_int8 = local_int8;
+  *&const_volatile_int8 = local_int8; // expected-error {{read-only variable is not assignable}}
+
+  overf(local_int8);
+  overf(local_int16);
+
+  overf8(local_int8);
+  overf8(local_int16); // expected-error {{no matching function}}
+
+  overf16(local_int8); // expected-error {{no matching function}}
+  overf16(local_int16);
+
+  varargs(1, local_int8, local_int16);
+
+  +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
+  ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
+  init_int8++;      // expected-error {{cannot increment value of type 'svint8_t'}}
+  -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
+  --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
+  init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
+  ~init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
+  !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
+  *init_int8;       // expected-error {{indirection requires pointer operand}}
+  __real init_int8; // expected-error {{invalid type 'svint8_t'}}
+  __imag init_int8; // expected-error {{invalid type 'svint8_t'}}
+
+  local_int8 + init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 - init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 *init_int8;   // expected-error {{invalid operands to binary expression}}
+  local_int8 / init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 % init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 &init_int8;   // expected-error {{invalid operands to binary expression}}
+  local_int8 | init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 ^ init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 < init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 <= init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 == init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 != init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 >= init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 > init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
+  local_int8 || init_int8; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
+
+  local_int8 += init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 -= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 *= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 /= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 %= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 &= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 |= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 ^= init_int8;  // expected-error {{invalid operands to binary expression}}
+  local_int8 <<= init_int8; // expected-error {{invalid operands to binary expression}}
+  local_int8 >>= init_int8; // expected-error {{invalid operands to binary expression}}
+
+  local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 * 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 / 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 % 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 << 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 >> 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 == 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 != 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 >= 0; // expected-error {{invalid operands to binary expression}}
+  local_int8 > 0;  // expected-error {{invalid operands to binary expression}}
+  local_int8 && 0; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
+  local_int8 || 0; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
+
+  if (local_int8) { // expected-error {{not contextually convertible to 'bool'}}
+  }
+  while (local_int8) { // expected-error {{not contextually convertible to 'bool'}}
+  }
+  do {
+  } while (local_int8); // expected-error {{not contextually convertible to 'bool'}}
+  switch (local_int8) { // expected-error {{statement requires expression of integer type}}
+  default:;
+  }
+}
+
+int vararg_receiver(int count, svint8_t first, ...) {
+  __builtin_va_list va;
+
+  __builtin_va_start(va, first);
+  __builtin_va_end(va);
+  return count;
+}
+
+void pass_int8_ref(svint8_t &); // expected-note {{not viable}}
+
+svint8_t &return_int8_ref();
+#if __cplusplus >= 201103L
+svint8_t &&return_int8_rvalue_ref();
+#endif
+
+template <typename T>
+struct s_ptr_template {
+  s_ptr_template();
+  s_ptr_template(T, svint8_t = svint8_t());
+  s_ptr_template(const s_ptr_template &, svint8_t = svint8_t());
+  T *y;
+};
+
+struct widget {
+  widget(s_ptr_template<int>);
+  svint8_t operator[](int);
+};
+
+template <typename T>
+struct wrapper_iterator {
+  T operator++();
+  T operator*() const;
+  bool operator!=(const wrapper_iterator &) const;
+};
+
+template <typename T>
+struct wrapper {
+  wrapper();
+  operator T() const;
+  wrapper_iterator<T> begin() const;
+  wrapper_iterator<T> end() const;
+};
+
+#if __cplusplus >= 201103L
+struct explicit_conv {
+  explicit operator svint8_t() const; // expected-note {{explicit conversion function is not a candidate}}
+};
+#endif
+
+struct constructible_from_sizeless {
+  constructible_from_sizeless(svint8_t);
+};
+
+void with_default(svint8_t = svint8_t());
+
+#if __cplusplus >= 201103L
+constexpr int ce_taking_int8(svint8_t) { return 1; } // expected-error {{constexpr function's 1st parameter type 'svint8_t' (aka '__SVInt8_t') is not a literal type}}
+#endif
+
+template <typename T>
+void template_fn_direct(T) {}
+template <typename T>
+void template_fn_ref(T &) {}
+template <typename T>
+void template_fn_const_ref(const T &) {}
+#if __cplusplus >= 201103L
+template <typename T>
+void template_fn_rvalue_ref(T &&) {}
+#endif
+
+void cxx_only(int sel) {
+  svint8_t local_int8;
+  svint16_t local_int16;
+
+  pass_int8_ref(local_int8);
+  pass_int8_ref(local_int16); // expected-error {{no matching function}}
+
+  local_int8 = return_int8_ref();
+  local_int16 = return_int8_ref(); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
+  return_int8_ref() = local_int8;
+  return_int8_ref() = local_int16; // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
+
+#if __cplusplus >= 201103L
+  local_int8 = return_int8_rvalue_ref();
+  local_int16 = return_int8_rvalue_ref(); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
+
+  return_int8_rvalue_ref() = local_int8;  // expected-error {{expression is not assignable}}
+  return_int8_rvalue_ref() = local_int16; // expected-error {{expression is not assignable}}
+#endif
+
+  local_int8 = static_cast<svint8_t>(local_int8);
+  local_int8 = static_cast<svint8_t>(local_int16);  // expected-error {{static_cast from 'svint16_t' (aka '__SVInt16_t') to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  local_int8 = static_cast<svint8_t>(0);            // expected-error {{static_cast from 'int' to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  local_int16 = static_cast<svint16_t>(local_int8); // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'svint16_t' (aka '__SVInt16_t') is not allowed}}
+  sel = static_cast<int>(local_int8);               // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
+
+  local_int8.~__SVInt8_t(); // expected-error {{object expression of non-scalar type 'svint8_t' (aka '__SVInt8_t') cannot be used in a pseudo-destructor expression}}
+
+  (void)svint8_t();
+
+  local_int8 = svint8_t();
+  local_int8 = svint16_t(); // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
+
+  s_ptr_template<int> st_ptr_int;
+  s_ptr_template<svint8_t> st_ptr_svint8;
+
+  widget w(1);
+  local_int8 = w[1];
+
+  local_int8 = static_cast<svint8_t>(wrapper<svint8_t>());
+  local_int16 = static_cast<svint8_t>(wrapper<svint8_t>()); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
+
+  local_int8 = wrapper<svint8_t>();
+  local_int16 = wrapper<svint8_t>(); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'wrapper<svint8_t>'}}
+
+  svint8_t &ref_int8 = local_int8;
+  ref_int8 = ref_int8; // expected-warning {{explicitly assigning value of variable of type 'svint8_t' (aka '__SVInt8_t') to itself}}
+  ref_int8 = local_int8;
+  local_int8 = ref_int8;
+
+#if __cplusplus >= 201103L
+  svint8_t wrapper_init_int8{wrapper<svint8_t>()};
+  svint8_t &ref_init_int8{local_int8};
+
+  template_fn_direct<svint8_t>({wrapper<svint8_t>()});
+#endif
+
+  template_fn_direct(local_int8);
+  template_fn_ref(local_int8);
+  template_fn_const_ref(local_int8);
+#if __cplusplus >= 201103L
+  template_fn_rvalue_ref(local_int8);
+#endif
+
+#if __cplusplus >= 201103L
+  constexpr svint8_t ce_int8_a = wrapper<svint8_t>(); // expected-error {{constexpr variable cannot have non-literal type 'const svint8_t'}}
+#endif
+
+  (void)typeid(__SVInt8_t);
+  (void)typeid(__SVInt8_t *);
+  (void)typeid(local_int8);
+  (void)typeid(ref_int8);
+  (void)typeid(static_int8_ptr);
+
+  _Static_assert(__is_trivially_destructible(svint8_t), "");
+  _Static_assert(!__is_nothrow_assignable(svint8_t, svint8_t), "");
+  _Static_assert(__is_nothrow_assignable(svint8_t &, svint8_t), "");
+  _Static_assert(!__is_nothrow_assignable(svint8_t &, svint16_t), "");
+  _Static_assert(__is_constructible(svint8_t), "");
+  _Static_assert(__is_constructible(svint8_t, svint8_t), "");
+  _Static_assert(!__is_constructible(svint8_t, svint8_t, svint8_t), "");
+  _Static_assert(!__is_constructible(svint8_t, svint16_t), "");
+  _Static_assert(__is_nothrow_constructible(svint8_t), "");
+  _Static_assert(__is_nothrow_constructible(svint8_t, svint8_t), "");
+  _Static_assert(!__is_nothrow_constructible(svint8_t, svint16_t), "");
+  _Static_assert(!__is_assignable(svint8_t, svint8_t), "");
+  _Static_assert(__is_assignable(svint8_t &, svint8_t), "");
+  _Static_assert(!__is_assignable(svint8_t &, svint16_t), "");
+  _Static_assert(!__has_virtual_destructor(svint8_t), "");
+  _Static_assert(!__is_abstract(svint8_t), "");
+  _Static_assert(!__is_aggregate(svint8_t), "");
+  _Static_assert(!__is_base_of(svint8_t, svint8_t), "");
+  _Static_assert(!__is_class(svint8_t), "");
+  _Static_assert(__is_convertible_to(svint8_t, svint8_t), "");
+  _Static_assert(!__is_convertible_to(svint8_t, svint16_t), "");
+  _Static_assert(!__is_empty(svint8_t), "");
+  _Static_assert(!__is_enum(svint8_t), "");
+  _Static_assert(!__is_final(svint8_t), "");
+  _Static_assert(!__is_literal(svint8_t), "");
+  _Static_assert(!__is_polymorphic(svint8_t), "");
+  _Static_assert(__is_object(svint8_t), "");
+  _Static_assert(!__is_arithmetic(svint8_t), "");
+  _Static_assert(!__is_floating_point(svint8_t), "");
+  _Static_assert(!__is_integral(svint8_t), "");
+  _Static_assert(!__is_void(svint8_t), "");
+  _Static_assert(!__is_array(svint8_t), "");
+  _Static_assert(!__is_function(svint8_t), "");
+  _Static_assert(!__is_reference(svint8_t), "");
+  _Static_assert(__is_reference(svint8_t &), "");
+  _Static_assert(__is_reference(const svint8_t &), "");
+  _Static_assert(!__is_lvalue_reference(svint8_t), "");
+  _Static_assert(__is_lvalue_reference(svint8_t &), "");
+#if __cplusplus >= 201103L
+  _Static_assert(!__is_lvalue_reference(svint8_t &&), "");
+#endif
+  _Static_assert(!__is_rvalue_reference(svint8_t), "");
+  _Static_assert(!__is_rvalue_reference(svint8_t &), "");
+#if __cplusplus >= 201103L
+  _Static_assert(__is_rvalue_reference(svint8_t &&), "");
+#endif
+  _Static_assert(!__is_fundamental(svint8_t), "");
+  _Static_assert(__is_object(svint8_t), "");
+  _Static_assert(!__is_scalar(svint8_t), "");
+  _Static_assert(!__is_compound(svint8_t), "");
+  _Static_assert(!__is_pointer(svint8_t), "");
+  _Static_assert(__is_pointer(svint8_t *), "");
+  _Static_assert(!__is_member_object_pointer(svint8_t), "");
+  _Static_assert(!__is_member_function_pointer(svint8_t), "");
+  _Static_assert(!__is_member_pointer(svint8_t), "");
+  _Static_assert(!__is_const(svint8_t), "");
+  _Static_assert(__is_const(const svint8_t), "");
+  _Static_assert(__is_const(const volatile svint8_t), "");
+  _Static_assert(!__is_volatile(svint8_t), "");
+  _Static_assert(__is_volatile(volatile svint8_t), "");
+  _Static_assert(__is_volatile(const volatile svint8_t), "");
+  _Static_assert(!__is_standard_layout(svint8_t), "");
+  // At present these types are opaque and don't have the properties
+  // implied by their name.
+  _Static_assert(!__is_signed(svint8_t), "");
+  _Static_assert(!__is_unsigned(svint8_t), "");
+
+#if __cplusplus >= 201103L
+  auto auto_int8 = local_int8;
+  auto auto_int16 = local_int16;
+#if __cplusplus >= 201703L
+  auto [auto_int8_a] = local_int8; // expected-error {{cannot decompose non-class, non-array type '__SVInt8_t'}}
+#endif
+#endif
+
+  s_ptr_template<int> y;
+  s_ptr_template<int> &x = y;
+
+  constructible_from_sizeless cfs1(local_int8);
+  constructible_from_sizeless cfs2 = local_int8;
+#if __cplusplus >= 201103L
+  constructible_from_sizeless cfs3{local_int8};
+#endif
+
+#if __cplusplus >= 201103L
+  local_int8 = ([]() { return svint8_t(); })();
+  local_int8 = ([]() -> svint8_t { return svint8_t(); })();
+  auto fn1 = [&local_int8](svint8_t x) { local_int8 = x; };
+  auto fn2 = [&local_int8](svint8_t *ptr) { *ptr = local_int8; };
+
+  for (auto x : local_int8) { // expected-error {{no viable 'begin' function available}}
+  }
+  for (auto x : wrapper<svint8_t>()) {
+    (void)x;
+  }
+  for (const svint8_t &x : wrapper<svint8_t>()) { // expected-warning {{loop variable 'x' binds to a temporary value produced by a range of type 'wrapper<svint8_t>'}} expected-note {{use non-reference type}}
+    (void)x;
+  }
+  // This warning is bogus and will be removed by a later patch.
+  // The point is to show that it's being removed for the right reasons.
+  for (const svint8_t x : wrapper<const svint8_t &>()) { // expected-warning {{loop variable 'x' creates a copy from type 'const svint8_t'}} expected-note {{use reference type}}
+    (void)x;
+  }
+#endif
+}
+
+#if __cplusplus >= 201103L
+svint8_t ret_bad_conv() { return explicit_conv(); } // expected-error {{no viable conversion from returned value of type 'explicit_conv' to function return type 'svint8_t'}}
+#endif
