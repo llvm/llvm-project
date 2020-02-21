@@ -577,3 +577,14 @@
 // RUN:   | FileCheck -check-prefix=CHECK082 %s
 // CHECK082-NOT:      -march=
 // CHECK082-NOT:      -mcpu=
+// -----------------------------------------------------------------------------
+// Passing --sysroot
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=/hexagon \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK083 %s
+// CHECK083:          "-isysroot" "/hexagon"
+// CHECK083:          "-internal-externc-isystem" "/hexagon/include"
