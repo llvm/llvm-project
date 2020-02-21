@@ -178,6 +178,7 @@ namespace {
     MachineLoop &ML;
     MachineLoopInfo &MLI;
     ReachingDefAnalysis &RDA;
+    const TargetRegisterInfo &TRI;
     MachineFunction *MF = nullptr;
     MachineInstr *InsertPt = nullptr;
     MachineInstr *Start = nullptr;
@@ -192,7 +193,8 @@ namespace {
     bool CannotTailPredicate = false;
 
     LowOverheadLoop(MachineLoop &ML, MachineLoopInfo &MLI,
-                    ReachingDefAnalysis &RDA) : ML(ML), MLI(MLI), RDA(RDA) {
+                    ReachingDefAnalysis &RDA, const TargetRegisterInfo &TRI)
+      : ML(ML), MLI(MLI), RDA(RDA), TRI(TRI) {
       MF = ML.getHeader()->getParent();
     }
 
@@ -212,7 +214,14 @@ namespace {
              !CannotTailPredicate && ML.getNumBlocks() == 1;
     }
 
+    // Check that the predication in the loop will be equivalent once we
+    // perform the conversion. Also ensure that we can provide the number
+    // of elements to the loop start instruction.
     bool ValidateTailPredicate(MachineInstr *StartInsertPt);
+
+    // Check that any values available outside of the loop will be the same
+    // after tail predication conversion.
+    bool ValidateLiveOuts() const;
 
     // Is it safe to define LR with DLS/WLS?
     // LR can be defined if it is the operand to start, because it's the same
@@ -373,6 +382,9 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     }
   }
 
+  if (!ValidateLiveOuts())
+    return false;
+
   // For tail predication, we need to provide the number of elements, instead
   // of the iteration count, to the loop start instruction. The number of
   // elements is provided to the vctp instruction, so we need to check that
@@ -493,6 +505,41 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
       ToRemove.insert(ElementChain.begin(), ElementChain.end());
     }
   }
+  return true;
+}
+
+bool LowOverheadLoop::ValidateLiveOuts() const {
+  // Collect Q-regs that are live in the exit blocks. We don't collect scalars
+  // because they won't be affected by lane predication.
+  const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
+  SmallSet<Register, 2> LiveOuts;
+  SmallVector<MachineBasicBlock*, 2> ExitBlocks;
+  ML.getExitBlocks(ExitBlocks);
+  for (auto *MBB : ExitBlocks)
+    for (const MachineBasicBlock::RegisterMaskPair &RegMask : MBB->liveins())
+      if (QPRs->contains(RegMask.PhysReg))
+        LiveOuts.insert(RegMask.PhysReg);
+
+  // Collect the instructions in the loop body that define the live-out values.
+  SmallPtrSet<MachineInstr*, 2> LiveMIs;
+  MachineBasicBlock *MBB = ML.getHeader();
+  for (auto Reg : LiveOuts)
+    if (auto *MI = RDA.getLocalLiveOutMIDef(MBB, Reg))
+      LiveMIs.insert(MI);
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Found loop live-outs:\n";
+             for (auto *MI : LiveMIs)
+               dbgs() << " - " << *MI);
+  // We've already validated that any VPT predication within the loop will be
+  // equivalent when we perform the predication transformation; so we know that
+  // any VPT predicated instruction is predicated upon VCTP. Any live-out
+  // instruction needs to be predicated, so check this here.
+  for (auto *MI : LiveMIs) {
+    int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
+    if (PIdx == -1 || MI->getOperand(PIdx+1).getReg() != ARM::VPR)
+      return false;
+  }
+
   return true;
 }
 
@@ -619,7 +666,8 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     return false;
   }
 
-  // Ensure that all memory operations are predicated.
+  // If the instruction is already explicitly predicated, then the conversion
+  // will be fine, but ensure that all memory operations are predicated.
   return !IsUse && MI->mayLoadOrStore() ? false : true;
 }
 
@@ -682,7 +730,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return nullptr;
   };
 
-  LowOverheadLoop LoLoop(*ML, *MLI, *RDA);
+  LowOverheadLoop LoLoop(*ML, *MLI, *RDA, *TRI);
   // Search the preheader for the start intrinsic.
   // FIXME: I don't see why we shouldn't be supporting multiple predecessors
   // with potentially multiple set.loop.iterations, so we need to enable this.
