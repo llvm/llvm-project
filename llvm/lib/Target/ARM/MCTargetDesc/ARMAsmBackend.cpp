@@ -1277,6 +1277,35 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   return CompactUnwindEncoding | ((FloatRegCount - 1) << 8);
 }
 
+static MachO::CPUSubTypeARM getMachOSubTypeFromArch(StringRef Arch) {
+  ARM::ArchKind AK = ARM::parseArch(Arch);
+  switch (AK) {
+  default:
+    return MachO::CPU_SUBTYPE_ARM_V7;
+  case ARM::ArchKind::ARMV4T:
+    return MachO::CPU_SUBTYPE_ARM_V4T;
+  case ARM::ArchKind::ARMV5T:
+  case ARM::ArchKind::ARMV5TE:
+  case ARM::ArchKind::ARMV5TEJ:
+    return MachO::CPU_SUBTYPE_ARM_V5;
+  case ARM::ArchKind::ARMV6:
+  case ARM::ArchKind::ARMV6K:
+    return MachO::CPU_SUBTYPE_ARM_V6;
+  case ARM::ArchKind::ARMV7A:
+    return MachO::CPU_SUBTYPE_ARM_V7;
+  case ARM::ArchKind::ARMV7S:
+    return MachO::CPU_SUBTYPE_ARM_V7S;
+  case ARM::ArchKind::ARMV7K:
+    return MachO::CPU_SUBTYPE_ARM_V7K;
+  case ARM::ArchKind::ARMV6M:
+    return MachO::CPU_SUBTYPE_ARM_V6M;
+  case ARM::ArchKind::ARMV7M:
+    return MachO::CPU_SUBTYPE_ARM_V7M;
+  case ARM::ArchKind::ARMV7EM:
+    return MachO::CPU_SUBTYPE_ARM_V7EM;
+  }
+}
+
 static MCAsmBackend *createARMAsmBackend(const Target &T,
                                          const MCSubtargetInfo &STI,
                                          const MCRegisterInfo &MRI,
@@ -1286,8 +1315,10 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
   switch (TheTriple.getObjectFormat()) {
   default:
     llvm_unreachable("unsupported object format");
-  case Triple::MachO:
-    return new ARMAsmBackendDarwin(T, STI, MRI);
+  case Triple::MachO: {
+    MachO::CPUSubTypeARM CS = getMachOSubTypeFromArch(TheTriple.getArchName());
+    return new ARMAsmBackendDarwin(T, STI, MRI, CS);
+  }
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
     return new ARMAsmBackendWinCOFF(T, STI);
