@@ -33,8 +33,10 @@ static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
   auto elementsType = mlir::RankedTensorType::get({2, 3}, integerType);
   auto elementsAttr =
       mlir::DenseIntElementsAttr::get(elementsType, {1, 2, 3, 4, 5, 6});
+  auto optionalAttr = nullptr;
 
-  return test::TestStruct::get(integerAttr, floatAttr, elementsAttr, context);
+  return test::TestStruct::get(integerAttr, floatAttr, elementsAttr,
+                               optionalAttr, context);
 }
 
 // Validates that test::TestStruct::classof correctly identifies a valid
@@ -157,6 +159,12 @@ TEST(StructsGenTest, GetElements) {
   for (const auto &valIndexIt : llvm::enumerate(denseAttr.getIntValues())) {
     EXPECT_EQ(valIndexIt.value(), valIndexIt.index() + 1);
   }
+}
+
+TEST(StructsGenTest, EmptyOptional) {
+  mlir::MLIRContext context;
+  auto structAttr = getTestStruct(&context);
+  EXPECT_EQ(structAttr.sample_optional_integer(), nullptr);
 }
 
 } // namespace mlir
