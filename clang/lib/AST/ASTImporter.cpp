@@ -8479,6 +8479,15 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
       if (!ToIncludeLoc)
         return ToIncludeLoc.takeError();
 
+      // Every FileID that is not the main FileID needs to have a valid include
+      // location so that the include chain points to the main FileID. When
+      // importing the main FileID (which has no include location), we need to
+      // create a fake include location in the main file to keep this property
+      // intact.
+      SourceLocation ToIncludeLocOrFakeLoc = *ToIncludeLoc;
+      if (FromID == FromSM.getMainFileID())
+        ToIncludeLocOrFakeLoc = ToSM.getLocForStartOfFile(ToSM.getMainFileID());
+
       if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
         // FIXME: We probably want to use getVirtualFile(), so we don't hit the
         // disk again
@@ -8490,7 +8499,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
         // point to a valid file and we get no Entry here. In this case try with
         // the memory buffer below.
         if (Entry)
-          ToID = ToSM.createFileID(*Entry, *ToIncludeLoc,
+          ToID = ToSM.createFileID(*Entry, ToIncludeLocOrFakeLoc,
                                    FromSLoc.getFile().getFileCharacteristic());
       }
     }
