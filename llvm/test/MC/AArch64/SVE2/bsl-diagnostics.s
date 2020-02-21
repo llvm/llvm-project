@@ -4,19 +4,19 @@
 // ------------------------------------------------------------------------- //
 // Invalid element width
 
-bsl z0.b, z0.b, z1.b, z2.b
+bsl z0.b, z0.b, z1.s, z2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: bsl z0.b, z0.b, z1.b, z2.b
+// CHECK-NEXT: bsl z0.b, z0.b, z1.s, z2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-bsl z0.h, z0.h, z1.h, z2.h
+bsl z0.h, z0.h, z1.h, z2.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: bsl z0.h, z0.h, z1.h, z2.h
+// CHECK-NEXT: bsl z0.h, z0.h, z1.h, z2.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-bsl z0.s, z0.s, z1.s, z2.s
+bsl z0.d, z0.d, z1.s, z2.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: bsl z0.s, z0.s, z1.s, z2.s
+// CHECK-NEXT: bsl z0.d, z0.d, z1.s, z2.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

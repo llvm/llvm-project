@@ -1771,12 +1771,12 @@ let Predicates = [HasSVE2] in {
   defm FMLSLT_ZZZ_SHH : sve2_fp_mla_long<0b11, "fmlslt", int_aarch64_sve_fmlslt>;
 
   // SVE2 bitwise ternary operations
-  defm EOR3_ZZZZ_D  : sve2_int_bitwise_ternary_op<0b000, "eor3">;
-  defm BCAX_ZZZZ_D  : sve2_int_bitwise_ternary_op<0b010, "bcax">;
-  def BSL_ZZZZ_D    : sve2_int_bitwise_ternary_op_d<0b001, "bsl">;
-  def BSL1N_ZZZZ_D  : sve2_int_bitwise_ternary_op_d<0b011, "bsl1n">;
-  def BSL2N_ZZZZ_D  : sve2_int_bitwise_ternary_op_d<0b101, "bsl2n">;
-  def NBSL_ZZZZ_D   : sve2_int_bitwise_ternary_op_d<0b111, "nbsl">;
+  defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  int_aarch64_sve_eor3>;
+  defm BCAX_ZZZZ  : sve2_int_bitwise_ternary_op<0b010, "bcax",  int_aarch64_sve_bcax>;
+  defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   int_aarch64_sve_bsl>;
+  defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;
+  defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", int_aarch64_sve_bsl2n>;
+  defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar">;
