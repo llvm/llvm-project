@@ -1,4 +1,4 @@
-# RUN: llvm-mc --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
+# RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
 # RUN: not llvm-dwp %t.dwo -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: {{.*}}: unit type DW_UT_split_compile type not found in debug_info header. Unexpected unit type 0x12 found
