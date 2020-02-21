@@ -128,6 +128,9 @@ def fptoui: IRBuilder<"CreateFPToUI">;
 def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
   let special_params = [IRBuilderIntParam<1, "unsigned">];
 }
+def unzip: CGHelperFn<"VectorUnzip"> {
+  let special_params = [IRBuilderIntParam<1, "bool">];
+}
 
 // Helper for making boolean flags in IR
 def i1: IRBuilderBase {
