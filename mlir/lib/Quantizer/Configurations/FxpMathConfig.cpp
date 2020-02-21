@@ -17,7 +17,7 @@
 #include "mlir/Dialect/FxpMathOps/FxpMathOps.h"
 #include "mlir/Dialect/QuantOps/QuantOps.h"
 #include "mlir/Dialect/QuantOps/QuantTypes.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Quantizer/Support/ConstraintAnalysisGraph.h"
