@@ -22,7 +22,7 @@ void SymbolTable::removeSymbols(
       std::end(Symbols));
 }
 
-void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
+void Object::removeSections(function_ref<bool(const std::unique_ptr<Section> &)> ToRemove) {
   for (LoadCommand &LC : LoadCommands)
     LC.Sections.erase(std::remove_if(std::begin(LC.Sections),
                                      std::end(LC.Sections), ToRemove),
@@ -52,7 +52,7 @@ LoadCommand &Object::addSegment(StringRef SegName) {
     constructSegment(LC.MachOLoadCommand.segment_command_data,
                      MachO::LC_SEGMENT, SegName);
 
-  LoadCommands.push_back(LC);
+  LoadCommands.push_back(std::move(LC));
   return LoadCommands.back();
 }
 
