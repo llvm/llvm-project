@@ -591,3 +591,89 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
   %tmp3 = zext <16 x i16> %tmp2 to <16 x i64>
   ret <16 x i64> %tmp3
 }
+
+define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
+; X86-AVX512F-LABEL: vselect_v1i1:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    pushl %esi
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX512F-NEXT:    movzbl (%edx), %esi
+; X86-AVX512F-NEXT:    kmovw %esi, %k0
+; X86-AVX512F-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512F-NEXT:    kmovw %ecx, %k1
+; X86-AVX512F-NEXT:    movzbl (%eax), %eax
+; X86-AVX512F-NEXT:    kmovw %eax, %k2
+; X86-AVX512F-NEXT:    kandw %k2, %k0, %k0
+; X86-AVX512F-NEXT:    kxnorw %k0, %k0, %k3
+; X86-AVX512F-NEXT:    kxorw %k3, %k2, %k2
+; X86-AVX512F-NEXT:    kandw %k2, %k1, %k1
+; X86-AVX512F-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512F-NEXT:    kmovw %k0, %eax
+; X86-AVX512F-NEXT:    movb %al, (%edx)
+; X86-AVX512F-NEXT:    popl %esi
+; X86-AVX512F-NEXT:    retl
+;
+; X64-AVX512F-LABEL: vselect_v1i1:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k0
+; X64-AVX512F-NEXT:    movzbl (%rdx), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k1
+; X64-AVX512F-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k2
+; X64-AVX512F-NEXT:    kandw %k2, %k0, %k0
+; X64-AVX512F-NEXT:    kxnorw %k0, %k0, %k3
+; X64-AVX512F-NEXT:    kxorw %k3, %k2, %k2
+; X64-AVX512F-NEXT:    kandw %k2, %k1, %k1
+; X64-AVX512F-NEXT:    korw %k1, %k0, %k0
+; X64-AVX512F-NEXT:    kmovw %k0, %eax
+; X64-AVX512F-NEXT:    movb %al, (%rsi)
+; X64-AVX512F-NEXT:    retq
+;
+; X86-AVX512BW-LABEL: vselect_v1i1:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    pushl %esi
+; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX512BW-NEXT:    movzbl (%edx), %esi
+; X86-AVX512BW-NEXT:    kmovd %esi, %k0
+; X86-AVX512BW-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
+; X86-AVX512BW-NEXT:    movzbl (%eax), %eax
+; X86-AVX512BW-NEXT:    kmovd %eax, %k2
+; X86-AVX512BW-NEXT:    kandw %k2, %k0, %k0
+; X86-AVX512BW-NEXT:    kxnorw %k0, %k0, %k3
+; X86-AVX512BW-NEXT:    kxorw %k3, %k2, %k2
+; X86-AVX512BW-NEXT:    kandw %k2, %k1, %k1
+; X86-AVX512BW-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512BW-NEXT:    kmovd %k0, %eax
+; X86-AVX512BW-NEXT:    movb %al, (%edx)
+; X86-AVX512BW-NEXT:    popl %esi
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: vselect_v1i1:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k0
+; X64-AVX512BW-NEXT:    movzbl (%rdx), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k1
+; X64-AVX512BW-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k2
+; X64-AVX512BW-NEXT:    kandw %k2, %k0, %k0
+; X64-AVX512BW-NEXT:    kxnorw %k0, %k0, %k3
+; X64-AVX512BW-NEXT:    kxorw %k3, %k2, %k2
+; X64-AVX512BW-NEXT:    kandw %k2, %k1, %k1
+; X64-AVX512BW-NEXT:    korw %k1, %k0, %k0
+; X64-AVX512BW-NEXT:    kmovd %k0, %eax
+; X64-AVX512BW-NEXT:    movb %al, (%rsi)
+; X64-AVX512BW-NEXT:    retq
+  %a = load <1 x i1>, <1 x i1>* %x
+  %b = load <1 x i1>, <1 x i1>* %y
+  %b2 = load <1 x i1>, <1 x i1>* %w
+  %c = select <1 x i1> %b2, <1 x i1> %a, <1 x i1> %b
+  store <1 x i1> %c, <1 x i1>* %x
+  ret void
+}
