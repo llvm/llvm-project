@@ -1422,6 +1422,22 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::GLD1S_SXTW_SCALED: return "AArch64ISD::GLD1S_SXTW_SCALED";
   case AArch64ISD::GLD1S_UXTW_SCALED: return "AArch64ISD::GLD1S_UXTW_SCALED";
   case AArch64ISD::GLD1S_IMM:         return "AArch64ISD::GLD1S_IMM";
+  case AArch64ISD::GLDFF1:            return "AArch64ISD::GLDFF1";
+  case AArch64ISD::GLDFF1_SCALED:     return "AArch64ISD::GLDFF1_SCALED";
+  case AArch64ISD::GLDFF1_SXTW:       return "AArch64ISD::GLDFF1_SXTW";
+  case AArch64ISD::GLDFF1_UXTW:       return "AArch64ISD::GLDFF1_UXTW";
+  case AArch64ISD::GLDFF1_SXTW_SCALED:return "AArch64ISD::GLDFF1_SXTW_SCALED";
+  case AArch64ISD::GLDFF1_UXTW_SCALED:return "AArch64ISD::GLDFF1_UXTW_SCALED";
+  case AArch64ISD::GLDFF1_IMM:        return "AArch64ISD::GLDFF1_IMM";
+  case AArch64ISD::GLDFF1S:           return "AArch64ISD::GLDFF1S";
+  case AArch64ISD::GLDFF1S_SCALED:    return "AArch64ISD::GLDFF1S_SCALED";
+  case AArch64ISD::GLDFF1S_SXTW:      return "AArch64ISD::GLDFF1S_SXTW";
+  case AArch64ISD::GLDFF1S_UXTW:      return "AArch64ISD::GLDFF1S_UXTW";
+  case AArch64ISD::GLDFF1S_SXTW_SCALED:
+    return "AArch64ISD::GLDFF1S_SXTW_SCALED";
+  case AArch64ISD::GLDFF1S_UXTW_SCALED:
+    return "AArch64ISD::GLDFF1S_UXTW_SCALED";
+  case AArch64ISD::GLDFF1S_IMM:       return "AArch64ISD::GLDFF1S_IMM";
   case AArch64ISD::SST1:              return "AArch64ISD::SST1";
   case AArch64ISD::SST1_SCALED:       return "AArch64ISD::SST1_SCALED";
   case AArch64ISD::SST1_SXTW:         return "AArch64ISD::SST1_SXTW";
@@ -10434,6 +10450,13 @@ static SDValue performSVEAndCombine(SDNode *N,
   case AArch64ISD::GLD1_UXTW:
   case AArch64ISD::GLD1_UXTW_SCALED:
   case AArch64ISD::GLD1_IMM:
+  case AArch64ISD::GLDFF1:
+  case AArch64ISD::GLDFF1_SCALED:
+  case AArch64ISD::GLDFF1_SXTW:
+  case AArch64ISD::GLDFF1_SXTW_SCALED:
+  case AArch64ISD::GLDFF1_UXTW:
+  case AArch64ISD::GLDFF1_UXTW_SCALED:
+  case AArch64ISD::GLDFF1_IMM:
     MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
     break;
   default:
@@ -12707,13 +12730,13 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
 
-  // GLD1_IMM requires that the offset is an immediate that is:
+  // GLD{FF}1_IMM requires that the offset is an immediate that is:
   //    * a multiple of #SizeInBytes,
   //    * in the range [0, 31 x #SizeInBytes],
   // where #SizeInBytes is the size in bytes of the loaded items. For
   // immediates outside that range and non-immediate scalar offsets use GLD1 or
   // GLD1_UXTW instead.
-  if (Opcode == AArch64ISD::GLD1_IMM) {
+  if (Opcode == AArch64ISD::GLD1_IMM || Opcode == AArch64ISD::GLDFF1_IMM) {
     uint64_t MaxIndex = 31;
     uint64_t RetElSize = RetElVT.getStoreSize().getKnownMinSize();
 
@@ -12722,9 +12745,11 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
         OffsetConst->getZExtValue() > MaxIndex * RetElSize ||
         OffsetConst->getZExtValue() % RetElSize) {
       if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
-        Opcode = AArch64ISD::GLD1_UXTW;
+        Opcode = (Opcode == AArch64ISD::GLD1_IMM) ? AArch64ISD::GLD1_UXTW
+                                                  : AArch64ISD::GLDFF1_UXTW;
       else
-        Opcode = AArch64ISD::GLD1;
+        Opcode = (Opcode == AArch64ISD::GLD1_IMM) ? AArch64ISD::GLD1
+                                                  : AArch64ISD::GLDFF1;
 
       std::swap(Base, Offset);
     }
@@ -12812,6 +12837,27 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     break;
   case AArch64ISD::GLD1_IMM:
     NewOpc = AArch64ISD::GLD1S_IMM;
+    break;
+  case AArch64ISD::GLDFF1:
+    NewOpc = AArch64ISD::GLDFF1S;
+    break;
+  case AArch64ISD::GLDFF1_SCALED:
+    NewOpc = AArch64ISD::GLDFF1S_SCALED;
+    break;
+  case AArch64ISD::GLDFF1_SXTW:
+    NewOpc = AArch64ISD::GLDFF1S_SXTW;
+    break;
+  case AArch64ISD::GLDFF1_SXTW_SCALED:
+    NewOpc = AArch64ISD::GLDFF1S_SXTW_SCALED;
+    break;
+  case AArch64ISD::GLDFF1_UXTW:
+    NewOpc = AArch64ISD::GLDFF1S_UXTW;
+    break;
+  case AArch64ISD::GLDFF1_UXTW_SCALED:
+    NewOpc = AArch64ISD::GLDFF1S_UXTW_SCALED;
+    break;
+  case AArch64ISD::GLDFF1_IMM:
+    NewOpc = AArch64ISD::GLDFF1S_IMM;
     break;
   default:
     return SDValue();
@@ -12950,6 +12996,24 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_IMM);
+    case Intrinsic::aarch64_sve_ldff1_gather:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1);
+    case Intrinsic::aarch64_sve_ldff1_gather_index:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SCALED);
+    case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SXTW,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_UXTW,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_UXTW_SCALED,
+                                      /*OnlyPackedOffsets=*/false);
+    case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_IMM);
     case Intrinsic::aarch64_sve_st1_scatter:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1);
     case Intrinsic::aarch64_sve_st1_scatter_index:
