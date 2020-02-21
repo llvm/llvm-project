@@ -92,7 +92,7 @@ ValueHandle operator>=(ValueHandle lhs, ValueHandle rhs);
 
 } // namespace op
 
-/// Operator overloadings.
+/// Arithmetic operator overloadings.
 template <typename Load, typename Store>
 ValueHandle TemplatedIndexedValue<Load, Store>::operator+(ValueHandle e) {
   using op::operator+;
@@ -113,7 +113,18 @@ ValueHandle TemplatedIndexedValue<Load, Store>::operator/(ValueHandle e) {
   using op::operator/;
   return static_cast<ValueHandle>(*this) / e;
 }
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator%(ValueHandle e) {
+  using op::operator%;
+  return static_cast<ValueHandle>(*this) % e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator^(ValueHandle e) {
+  using op::operator^;
+  return static_cast<ValueHandle>(*this) ^ e;
+}
 
+/// Assignment-arithmetic operator overloadings.
 template <typename Load, typename Store>
 OperationHandle TemplatedIndexedValue<Load, Store>::operator+=(ValueHandle e) {
   using op::operator+;
@@ -133,6 +144,60 @@ template <typename Load, typename Store>
 OperationHandle TemplatedIndexedValue<Load, Store>::operator/=(ValueHandle e) {
   using op::operator/;
   return Store(*this / e, getBase(), {indices.begin(), indices.end()});
+}
+template <typename Load, typename Store>
+OperationHandle TemplatedIndexedValue<Load, Store>::operator%=(ValueHandle e) {
+  using op::operator%;
+  return Store(*this % e, getBase(), {indices.begin(), indices.end()});
+}
+template <typename Load, typename Store>
+OperationHandle TemplatedIndexedValue<Load, Store>::operator^=(ValueHandle e) {
+  using op::operator^;
+  return Store(*this ^ e, getBase(), {indices.begin(), indices.end()});
+}
+
+/// Logical operator overloadings.
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator&&(ValueHandle e) {
+  using op::operator&&;
+  return static_cast<ValueHandle>(*this) && e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator||(ValueHandle e) {
+  using op::operator||;
+  return static_cast<ValueHandle>(*this) || e;
+}
+
+/// Comparison operator overloadings.
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator==(ValueHandle e) {
+  using op::operator==;
+  return static_cast<ValueHandle>(*this) == e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator!=(ValueHandle e) {
+  using op::operator!=;
+  return static_cast<ValueHandle>(*this) != e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator<(ValueHandle e) {
+  using op::operator<;
+  return static_cast<ValueHandle>(*this) < e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator<=(ValueHandle e) {
+  using op::operator<=;
+  return static_cast<ValueHandle>(*this) <= e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator>(ValueHandle e) {
+  using op::operator>;
+  return static_cast<ValueHandle>(*this) > e;
+}
+template <typename Load, typename Store>
+ValueHandle TemplatedIndexedValue<Load, Store>::operator>=(ValueHandle e) {
+  using op::operator>=;
+  return static_cast<ValueHandle>(*this) >= e;
 }
 
 } // namespace edsc
