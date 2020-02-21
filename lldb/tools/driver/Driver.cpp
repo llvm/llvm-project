@@ -805,9 +805,11 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
     }
     return 0;
   }
+
   // BEGIN SWIFT
   bool capture = true; // input_args.hasArg(OPT_capture);
   // END SWIFT
+  bool auto_generate = input_args.hasArg(OPT_auto_generate);
   auto *capture_path = input_args.getLastArg(OPT_capture_path);
 
   // BEGIN SWIFT
@@ -817,6 +819,11 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
     capture = true;
   }
   // END SWIFT
+
+  if (auto_generate && !capture) {
+    WithColor::warning()
+        << "-reproducer-auto-generate specified without -capture\n";
+  }
 
   if (capture || capture_path) {
     if (capture_path) {
@@ -833,6 +840,8 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
         return 1;
       }
     }
+    if (auto_generate)
+      SBReproducer::SetAutoGenerate(true);
   }
 
   return llvm::None;

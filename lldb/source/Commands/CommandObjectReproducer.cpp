@@ -258,6 +258,18 @@ protected:
       result.GetOutputStream() << "Reproducer is off.\n";
     }
 
+    if (r.IsCapturing() || r.IsReplaying()) {
+      result.GetOutputStream()
+          << "Path: " << r.GetReproducerPath().GetPath() << '\n';
+    }
+
+    // Auto generate is hidden unless enabled because this is mostly for
+    // development and testing.
+    if (Generator *g = r.GetGenerator()) {
+      if (g->IsAutoGenerate())
+        result.GetOutputStream() << "Auto generate: on\n";
+    }
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();
   }

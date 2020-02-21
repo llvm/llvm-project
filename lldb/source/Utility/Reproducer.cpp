@@ -18,6 +18,15 @@ using namespace lldb_private::repro;
 using namespace llvm;
 using namespace llvm::yaml;
 
+static llvm::Optional<bool> GetEnv(const char *var) {
+  std::string val = llvm::StringRef(getenv(var)).lower();
+  if (val == "0" || val == "off")
+    return false;
+  if (val == "1" || val == "on")
+    return true;
+  return {};
+}
+
 Reproducer &Reproducer::Instance() { return *InstanceImpl(); }
 
 llvm::Error Reproducer::Initialize(ReproducerMode mode,
@@ -27,12 +36,12 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
 
   // The environment can override the capture mode.
   if (mode != ReproducerMode::Replay) {
-    std::string env =
-        llvm::StringRef(getenv("LLDB_CAPTURE_REPRODUCER")).lower();
-    if (env == "0" || env == "off")
-      mode = ReproducerMode::Off;
-    else if (env == "1" || env == "on")
-      mode = ReproducerMode::Capture;
+    if (llvm::Optional<bool> override = GetEnv("LLDB_CAPTURE_REPRODUCER")) {
+      if (*override)
+        mode = ReproducerMode::Capture;
+      else
+        mode = ReproducerMode::Off;
+    }
   }
 
   switch (mode) {
@@ -158,8 +167,12 @@ Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
 }
 
 Generator::~Generator() {
-  if (!m_done)
-    Discard();
+  if (!m_done) {
+    if (m_auto_generate)
+      Keep();
+    else
+      Discard();
+  }
 }
 
 ProviderBase *Generator::Register(std::unique_ptr<ProviderBase> provider) {
@@ -189,6 +202,10 @@ void Generator::Discard() {
 
   llvm::sys::fs::remove_directories(m_root.GetPath());
 }
+
+void Generator::SetAutoGenerate(bool b) { m_auto_generate = b; }
+
+bool Generator::IsAutoGenerate() const { return m_auto_generate; }
 
 const FileSpec &Generator::GetRoot() const { return m_root; }
 

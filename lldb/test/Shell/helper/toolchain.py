@@ -18,6 +18,10 @@ def _disallow(config, execName):
                                warning.format(execName)))
 
 
+def _get_lldb_init_path(config):
+    return os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
+
+
 def use_lldb_substitutions(config):
     # Set up substitutions for primary tools.  These tools must come from config.lldb_tools_dir
     # which is basically the build output directory.  We do not want to find these in path or
@@ -38,7 +42,7 @@ def use_lldb_substitutions(config):
     if config.llvm_libs_dir:
         build_script_args.append('--libs-dir={0}'.format(config.llvm_libs_dir))
 
-    lldb_init = os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
+    lldb_init = _get_lldb_init_path(config)
 
     primary_tools = [
         ToolSubst('%lldb',
@@ -172,3 +176,17 @@ def use_support_substitutions(config):
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)
 
     _disallow(config, 'clang')
+
+def use_lldb_repro_substitutions(config, mode):
+    lldb_init = _get_lldb_init_path(config)
+    substitutions = [
+        ToolSubst(
+            '%lldb',
+            command=FindTool('lldb-repro'),
+            extra_args=[mode, '--no-lldbinit', '-S', lldb_init]),
+        ToolSubst(
+            '%lldb-init',
+            command=FindTool('lldb-repro'),
+            extra_args=[mode, '-S', lldb_init]),
+    ]
+    llvm_config.add_tool_substitutions(substitutions)
