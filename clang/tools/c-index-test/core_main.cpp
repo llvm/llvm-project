@@ -872,10 +872,9 @@ bool deconstructPathAndRange(StringRef input,
                              std::string &filepath,
                              Optional<unsigned> &lineStart,
                              unsigned &lineCount) {
-  StringRef path, range;
-  std::tie(path, range) = input.split(':');
-  StringRef start, end;
-  std::tie(start, end) = range.split(':');
+  StringRef path, start, end;
+  std::tie(path, end) = input.rsplit(':');
+  std::tie(path, start) = path.rsplit(':');
   filepath = std::string(path);
   lineCount = 0;
   if (start.empty())

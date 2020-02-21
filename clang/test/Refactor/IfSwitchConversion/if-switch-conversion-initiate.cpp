@@ -564,3 +564,5 @@ void parenImpCastsLHSEquivalence(int x) {
 }
 
 // RUN: clang-refactor-test initiate -action if-switch-conversion -location-agnostic -at=%s:561:3 %s | FileCheck --check-prefix=CHECK-YES %s
+
+// UNSUPPORTED: system-windows

@@ -11,17 +11,17 @@ int main() {
 // CHECK: is-system: 0
 // CHECK: has-main: 0
 // CHECK: main-path: {{$}}
-// CHECK: out-file: {{.*}}/print-units-with-pch.c.tmp.h.pch
+// CHECK: out-file: {{.*}}{{/|\\}}print-units-with-pch.c.tmp.h.pch
 // CHECK: DEPEND START
-// CHECK: Record | user | {{.*}}/Inputs/head.h | head.h
+// CHECK: Record | user | {{.*}}{{/|\\}}Inputs{{/|\\}}head.h | head.h
 // CHECK: DEPEND END (1)
 
 // CHECK: print-units-with-pch.c.tmp.o
 // CHECK: is-system: 0
 // CHECK: has-main: 1
-// CHECK: main-path: {{.*}}/print-units-with-pch.c
-// CHECK: out-file: {{.*}}/print-units-with-pch.c.tmp.o
+// CHECK: main-path: {{.*}}{{/|\\}}print-units-with-pch.c
+// CHECK: out-file: {{.*}}{{/|\\}}print-units-with-pch.c.tmp.o
 // CHECK: DEPEND START
-// CHECK: Unit | user | {{.*}}/print-units-with-pch.c.tmp.h.pch | print-units-with-pch.c.tmp.h.pch
-// CHECK: Record | user | {{.*}}/print-units-with-pch.c | print-units-with-pch.c
+// CHECK: Unit | user | {{.*}}{{/|\\}}print-units-with-pch.c.tmp.h.pch | print-units-with-pch.c.tmp.h.pch
+// CHECK: Record | user | {{.*}}{{/|\\}}print-units-with-pch.c | print-units-with-pch.c
 // CHECK: DEPEND END (2)

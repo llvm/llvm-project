@@ -151,3 +151,5 @@ void TemplateExtraction<T1, T2, x>::method() {
 }
 
 // RUN: clang-refactor-test perform -action extract-method -selected=template-method %s | FileCheck --check-prefix=CHECK4 %s
+
+// UNSUPPORTED: system-windows
