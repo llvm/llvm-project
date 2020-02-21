@@ -5,10 +5,10 @@
 # RUN: %lldb %t -o "target variable A" -b | FileCheck %s
 # RUN: lldb-test symbols %t | FileCheck %s --check-prefix=SYMBOLS
 
-# CHECK: (int) A = 0
-# CHECK: (int) A = 1
-# CHECK: (int) A = 2
-# CHECK: (int) A = 3
+# CHECK: (INT0) A = 0
+# CHECK: (INT1) A = 1
+# CHECK: (INT2) A = 2
+# CHECK: (INT3) A = 3
 
 # SYMBOLS:      Compile units:
 # SYMBOLS-NEXT: CompileUnit{0x00000000}, language = "unknown", file = '0.c'
@@ -64,6 +64,15 @@ A\I:
 # This deliberately excludes compile unit 4 to check test the case of a missing
 # split unit.
 .irpc I,0123
+        .section        .debug_str.dwo,"e",@progbits
+.Lstr\I:
+        .byte   'I', 'N', 'T', '0'+\I, 0
+
+        .section        .debug_str_offsets.dwo,"e",@progbits
+.Lstr_offsets\I:
+        .long   .Lstr\I-.debug_str.dwo
+.Lstr_offsets_end\I:
+
         .section        .debug_abbrev.dwo,"e",@progbits
 .Labbrev\I:
         .byte   \I*10+1                 # Abbreviation Code
@@ -90,11 +99,20 @@ A\I:
         .byte   36                      # DW_TAG_base_type
         .byte   0                       # DW_CHILDREN_no
         .byte   3                       # DW_AT_name
-        .byte   14                      # DW_FORM_string
+        .byte   8                       # DW_FORM_string
         .byte   62                      # DW_AT_encoding
         .byte   11                      # DW_FORM_data1
         .byte   11                      # DW_AT_byte_size
         .byte   11                      # DW_FORM_data1
+        .byte   0                       # EOM(1)
+        .byte   0                       # EOM(2)
+        .byte   \I*10+4                 # Abbreviation Code
+        .byte   22                      # DW_TAG_typedef
+        .byte   0                       # DW_CHILDREN_no
+        .byte   3                       # DW_AT_name
+        .uleb128 0x1f02                 # DW_FORM_GNU_str_index
+        .byte   73                      # DW_AT_type
+        .byte   19                      # DW_FORM_ref4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   0                       # EOM(3)
@@ -112,10 +130,14 @@ A\I:
         .byte   '0'+\I, '.', 'c', 0     # DW_AT_name
         .byte   \I*10+2                 # Abbrev DW_TAG_variable
         .asciz  "A"                     # DW_AT_name
-        .long   .Ltype\I-.Lcu_begin\I   # DW_AT_type
+        .long   .Ltypedef\I-.Lcu_begin\I# DW_AT_type
         .byte   2                       # DW_AT_location
         .byte   0xfb                    # DW_OP_GNU_addr_index
         .byte   \I
+.Ltypedef\I:
+        .byte   \I*10+4                 # Abbrev DW_TAG_typedef
+        .byte   0                       # DW_AT_name
+        .long   .Ltype\I-.Lcu_begin\I   # DW_AT_type
 .Ltype\I:
         .byte   \I*10+3                 # Abbrev DW_TAG_base_type
         .asciz  "int"                   # DW_AT_name
@@ -128,22 +150,26 @@ A\I:
         .section        .debug_cu_index,"e",@progbits
         .short  2                       # DWARF version number
         .short  0                       # Reserved
-        .long   2                       # Section count
+        .long   3                       # Section count
         .long   4                       # Unit count
         .long   8                       # Slot count
 
         .quad   0, 1, 2, 3, 0, 0, 0, 0  # Hash table
         .long   1, 2, 3, 4, 0, 0, 0, 0  # Index table
 
-        .long   1, 3                    # DW_SECT_INFO, DW_SECT_ABBREV
+        .long   1                       # DW_SECT_INFO
+        .long   3                       # DW_SECT_ABBREV
+        .long   6                       # DW_SECT_STR_OFFSETS
 
 .irpc I,0123
         .long .Lcu_begin\I-.debug_info.dwo
         .long .Labbrev\I-.debug_abbrev.dwo
+        .long .Lstr_offsets\I-.debug_str_offsets.dwo
 .endr
 .irpc I,0123
         .long .Ldebug_info_end\I-.Lcu_begin\I
         .long .Labbrev_end\I-.Labbrev\I
+        .long .Lstr_offsets_end\I-.Lstr_offsets\I
 .endr
 
 .endif
