@@ -271,6 +271,8 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+  /// Returns the vector element size (B, H, S or D) of an SVE opcode.
+  uint64_t getElementSizeForOpcode(unsigned Opc) const;
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
@@ -295,6 +297,8 @@ protected:
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
 private:
+  unsigned getInstBundleLength(const MachineInstr &MI) const;
+
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -381,7 +385,8 @@ static inline bool isIndirectBranchOpcode(int Opc) {
 
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
-#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 1-bit
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bit
+#define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7) // 2-bits
 // }
 
 namespace AArch64 {
@@ -396,13 +401,31 @@ enum ElementSizeType {
 };
 
 enum DestructiveInstType {
-  DestructiveInstTypeMask = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
-  NotDestructive          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
-  DestructiveOther        = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  DestructiveInstTypeMask       = TSFLAG_DESTRUCTIVE_INST_TYPE(0xf),
+  NotDestructive                = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
+  DestructiveOther              = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  DestructiveUnary              = TSFLAG_DESTRUCTIVE_INST_TYPE(0x2),
+  DestructiveBinaryImm          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x3),
+  DestructiveBinaryShImmUnpred  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x4),
+  DestructiveBinary             = TSFLAG_DESTRUCTIVE_INST_TYPE(0x5),
+  DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
+  DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
+  DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
+};
+
+enum FalseLaneType {
+  FalseLanesMask  = TSFLAG_FALSE_LANE_TYPE(0x3),
+  FalseLanesZero  = TSFLAG_FALSE_LANE_TYPE(0x1),
+  FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
 
 #undef TSFLAG_ELEMENT_SIZE_TYPE
 #undef TSFLAG_DESTRUCTIVE_INST_TYPE
+#undef TSFLAG_FALSE_LANE_TYPE
+
+int getSVEPseudoMap(uint16_t Opcode);
+int getSVERevInstr(uint16_t Opcode);
+int getSVEOrigInstr(uint16_t Opcode);
 }
 
 } // end namespace llvm
