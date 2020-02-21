@@ -260,11 +260,13 @@ static bool isStride64(unsigned Opc) {
 
 bool SIInstrInfo::getMemOperandsWithOffset(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI)
+    const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
   unsigned Opc = LdSt.getOpcode();
+  OffsetIsScalable = false;
   const MachineOperand *BaseOp, *OffsetOp;
 
   if (isDS(LdSt)) {
@@ -2610,8 +2612,9 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                                const MachineInstr &MIb) const {
   SmallVector<const MachineOperand *, 4> BaseOps0, BaseOps1;
   int64_t Offset0, Offset1;
-  if (!getMemOperandsWithOffset(MIa, BaseOps0, Offset0, &RI) ||
-      !getMemOperandsWithOffset(MIb, BaseOps1, Offset1, &RI))
+  bool Offset0IsScalable, Offset1IsScalable;
+  if (!getMemOperandsWithOffset(MIa, BaseOps0, Offset0, Offset0IsScalable, &RI) ||
+      !getMemOperandsWithOffset(MIb, BaseOps1, Offset1, Offset1IsScalable, &RI))
     return false;
 
   if (!memOpsHaveSameBaseOperands(BaseOps0, BaseOps1))

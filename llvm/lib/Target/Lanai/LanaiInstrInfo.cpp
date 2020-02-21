@@ -797,7 +797,7 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
 
 bool LanaiInstrInfo::getMemOperandsWithOffset(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -812,6 +812,7 @@ bool LanaiInstrInfo::getMemOperandsWithOffset(
   case Lanai::LDBz_RI:
     const MachineOperand *BaseOp;
     unsigned Width;
+    OffsetIsScalable = false;
     if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
       return false;
     BaseOps.push_back(BaseOp);
