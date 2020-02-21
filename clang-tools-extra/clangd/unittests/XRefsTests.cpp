@@ -954,6 +954,12 @@ TEST(FindReferences, WithinAST) {
        class [[Fo^o]] {};
        void func([[Foo]]<int>);
       )cpp",
+
+      R"cpp(
+       template <typename T>
+       class [[Foo]] {};
+       void func([[Fo^o]]<int>);
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
