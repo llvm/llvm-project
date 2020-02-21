@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_KNOWNBITSINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_KNOWNBITSINFO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Register.h"
@@ -32,6 +33,8 @@ class GISelKnownBits : public GISelChangeObserver {
   const TargetLowering &TL;
   const DataLayout &DL;
   unsigned MaxDepth;
+  /// Cache maintained during a computeKnownBits request.
+  SmallDenseMap<Register, KnownBits, 16> ComputeKnownBitsCache;
 
 public:
   GISelKnownBits(MachineFunction &MF, unsigned MaxDepth = 6);
