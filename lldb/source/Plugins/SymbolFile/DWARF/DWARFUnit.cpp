@@ -474,10 +474,17 @@ DWARFUnit::GetLocationTable(const DataExtractor &data) const {
   return std::make_unique<llvm::DWARFDebugLoc>(llvm_data);
 }
 
-const DWARFDataExtractor &DWARFUnit::GetLocationData() const {
+DWARFDataExtractor DWARFUnit::GetLocationData() const {
   DWARFContext &Ctx = GetSymbolFileDWARF().GetDWARFContext();
-  return GetVersion() >= 5 ? Ctx.getOrLoadLocListsData()
-                           : Ctx.getOrLoadLocData();
+  const DWARFDataExtractor &data =
+      GetVersion() >= 5 ? Ctx.getOrLoadLocListsData() : Ctx.getOrLoadLocData();
+  if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
+    if (const auto *contribution = entry->getOffset(llvm::DW_SECT_LOC))
+      return DWARFDataExtractor(data, contribution->Offset,
+                                contribution->Length);
+    return DWARFDataExtractor();
+  }
+  return data;
 }
 
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {

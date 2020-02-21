@@ -255,7 +255,7 @@ public:
   std::unique_ptr<llvm::DWARFLocationTable>
   GetLocationTable(const lldb_private::DataExtractor &data) const;
 
-  const lldb_private::DWARFDataExtractor &GetLocationData() const;
+  lldb_private::DWARFDataExtractor GetLocationData() const;
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
