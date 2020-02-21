@@ -2,7 +2,7 @@
 
 ; Verify the call site info. If the call site info is not
 ; in the valid state, an assert should be triggered.
-; RUN: llc < %s -stop-after=machineverifier
+; RUN: llc < %s -debug-entry-values -stop-after=machineverifier
 
 ; REQUIRES: asserts
 ; RUN: llc -mcpu=haswell < %s -O2 2>&1 | FileCheck %s
