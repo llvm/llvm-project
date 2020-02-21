@@ -13,32 +13,10 @@ class UniqueTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number inside main.cpp.
-        self.line = line_number(
-            "main.cpp",
-            "// Set breakpoint here to verify that std::vector 'longs' and 'shorts' have unique types.")
-
     def test(self):
         """Test for unique types of std::vector<long> and std::vector<short>."""
         self.build()
-
-        compiler = self.getCompiler()
-        compiler_basename = os.path.basename(compiler)
-
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("main.cpp"))
 
         # Do a "frame variable --show-types longs" and verify "long" is in each
         # line of output.
