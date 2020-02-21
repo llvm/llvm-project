@@ -310,6 +310,16 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"class Foo", Rel::TemplatePattern});
 
   Code = R"cpp(
+    template<typename T> class Foo {};
+    // The "Foo<int>" SpecializationDecl is incomplete, there is no
+    // instantiation happening.
+    void func([[Foo<int>]] *);
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc",
+               {"class Foo", Rel::TemplatePattern},
+               {"template<> class Foo<int>", Rel::TemplateInstantiation});
+
+  Code = R"cpp(
     // Explicit specialization.
     template<int x> class Foo{};
     template<> class Foo<42>{};
