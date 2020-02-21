@@ -40,7 +40,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ItaniumABILanguageRuntime)
+LLDB_PLUGIN_DEFINE_ADV(ItaniumABILanguageRuntime, CXXItaniumABI)
 
 static const char *vtable_demangled_prefix = "vtable for ";
 
