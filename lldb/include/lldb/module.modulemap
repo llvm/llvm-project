@@ -55,6 +55,11 @@ module lldb_Host {
   module Time { header "Host/Time.h" export * }
   module XML { header "Host/XML.h" export * }
 
+  module common {
+    umbrella "Host/common"
+    module * { export * }
+  }
+
   export *
 }
 
