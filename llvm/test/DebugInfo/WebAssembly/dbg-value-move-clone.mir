@@ -4,14 +4,14 @@
 # CHECK: bb.0:
 # CHECK: %[[REG1:[0-9]+]]:i32 = CONST_I32 0,
 # CHECK-NEXT: DBG_VALUE %[[REG1]],
-# CHECK-NEXT: CALL_VOID @foo, %[[REG1]],
+# CHECK-NEXT: CALL @foo, %[[REG1]],
 # CHECK: bb.1:
 # CHECK: %[[REG2:[0-9]+]]:i32 = CONST_I32 0,
 # CHECK-NEXT: DBG_VALUE %[[REG2]],
-# CHECK-NEXT: CALL_VOID @foo, %[[REG2]],
+# CHECK-NEXT: CALL @foo, %[[REG2]],
 # CHECK: %[[REG3:[0-9]+]]:i32 = CONST_I32 0,
 # CHECK-NEXT: DBG_VALUE %[[REG3]],
-# CHECK-NEXT: CALL_VOID @foo, %[[REG3]],
+# CHECK-NEXT: CALL @foo, %[[REG3]],
 
 --- |
   target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -55,11 +55,11 @@ body: |
     %0:i64 = ARGUMENT_i64 0, implicit $arguments
     %1:i32 = CONST_I32 0, implicit-def dead $arguments
     DBG_VALUE %1:i32, $noreg, !10, !DIExpression(), debug-location !13; <unknown>:357:12 line no:357
-    CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CALL @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
 
   bb.1:
-    CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
-    CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CALL @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CALL @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     RETURN implicit-def dead $arguments
 
 ...

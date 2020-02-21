@@ -24,7 +24,7 @@ declare void @foo3()
 ; CHECK:      call        .Lhas_i32_arg_bitcast.2{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_ret_bitcast{{$}}
-; CHECK-NEXT: i32.call     $drop=, has_i32_ret
+; CHECK-NEXT: call        $drop=, has_i32_ret
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0
 ; CHECK-NEXT: call        .Lfoo0_bitcast, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, 0
@@ -32,7 +32,7 @@ declare void @foo3()
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, 0
 ; CHECK-NEXT: call        .Lfoo0_bitcast, $pop[[L2]]{{$}}
 ; CHECK-NEXT: call        foo0
-; CHECK-NEXT: i32.call    $drop=, .Lfoo1_bitcast{{$}}
+; CHECK-NEXT: call        $drop=, .Lfoo1_bitcast{{$}}
 ; CHECK-NEXT: call        foo2{{$}}
 ; CHECK-NEXT: call        foo1{{$}}
 ; CHECK-NEXT: call        foo3{{$}}
@@ -126,7 +126,7 @@ define void @test_store() {
 ; CHECK-NEXT: .functype test_load () -> (i32){{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.load    $push[[L1:[0-9]+]]=, global_func($pop[[L0]]){{$}}
-; CHECK-NEXT: i32.call_indirect $push{{[0-9]+}}=, $pop[[L1]]{{$}}
+; CHECK-NEXT: call_indirect $push{{[0-9]+}}=, $pop[[L1]]{{$}}
 define i32 @test_load() {
   %1 = load i32 ()*, i32 ()** bitcast (void ()** @global_func to i32 ()**)
   %2 = call i32 %1()

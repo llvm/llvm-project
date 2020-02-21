@@ -441,30 +441,6 @@ inline bool isTee(unsigned Opc) {
 
 inline bool isCallDirect(unsigned Opc) {
   switch (Opc) {
-  case WebAssembly::CALL_VOID:
-  case WebAssembly::CALL_VOID_S:
-  case WebAssembly::CALL_i32:
-  case WebAssembly::CALL_i32_S:
-  case WebAssembly::CALL_i64:
-  case WebAssembly::CALL_i64_S:
-  case WebAssembly::CALL_f32:
-  case WebAssembly::CALL_f32_S:
-  case WebAssembly::CALL_f64:
-  case WebAssembly::CALL_f64_S:
-  case WebAssembly::CALL_v16i8:
-  case WebAssembly::CALL_v16i8_S:
-  case WebAssembly::CALL_v8i16:
-  case WebAssembly::CALL_v8i16_S:
-  case WebAssembly::CALL_v4i32:
-  case WebAssembly::CALL_v4i32_S:
-  case WebAssembly::CALL_v2i64:
-  case WebAssembly::CALL_v2i64_S:
-  case WebAssembly::CALL_v4f32:
-  case WebAssembly::CALL_v4f32_S:
-  case WebAssembly::CALL_v2f64:
-  case WebAssembly::CALL_v2f64_S:
-  case WebAssembly::CALL_exnref:
-  case WebAssembly::CALL_exnref_S:
   case WebAssembly::CALL:
   case WebAssembly::CALL_S:
   case WebAssembly::RET_CALL:
@@ -477,30 +453,6 @@ inline bool isCallDirect(unsigned Opc) {
 
 inline bool isCallIndirect(unsigned Opc) {
   switch (Opc) {
-  case WebAssembly::CALL_INDIRECT_VOID:
-  case WebAssembly::CALL_INDIRECT_VOID_S:
-  case WebAssembly::CALL_INDIRECT_i32:
-  case WebAssembly::CALL_INDIRECT_i32_S:
-  case WebAssembly::CALL_INDIRECT_i64:
-  case WebAssembly::CALL_INDIRECT_i64_S:
-  case WebAssembly::CALL_INDIRECT_f32:
-  case WebAssembly::CALL_INDIRECT_f32_S:
-  case WebAssembly::CALL_INDIRECT_f64:
-  case WebAssembly::CALL_INDIRECT_f64_S:
-  case WebAssembly::CALL_INDIRECT_v16i8:
-  case WebAssembly::CALL_INDIRECT_v16i8_S:
-  case WebAssembly::CALL_INDIRECT_v8i16:
-  case WebAssembly::CALL_INDIRECT_v8i16_S:
-  case WebAssembly::CALL_INDIRECT_v4i32:
-  case WebAssembly::CALL_INDIRECT_v4i32_S:
-  case WebAssembly::CALL_INDIRECT_v2i64:
-  case WebAssembly::CALL_INDIRECT_v2i64_S:
-  case WebAssembly::CALL_INDIRECT_v4f32:
-  case WebAssembly::CALL_INDIRECT_v4f32_S:
-  case WebAssembly::CALL_INDIRECT_v2f64:
-  case WebAssembly::CALL_INDIRECT_v2f64_S:
-  case WebAssembly::CALL_INDIRECT_exnref:
-  case WebAssembly::CALL_INDIRECT_exnref_S:
   case WebAssembly::CALL_INDIRECT:
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT:
