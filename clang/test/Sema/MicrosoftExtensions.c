@@ -99,7 +99,7 @@ void pointer_to_integral_type_conv(char* ptr) {
    sh = (short)ptr; // expected-warning{{cast to smaller integer type 'short' from 'char *' is a Microsoft extension}}
 
    // This is valid ISO C.
-   _Bool b = (_Bool)ptr; // expected-warning{{cast to smaller integer type '_Bool' from 'char *' is a Microsoft extension}}
+   _Bool b = (_Bool)ptr;
 }
 
 typedef struct {
