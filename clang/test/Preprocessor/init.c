@@ -6198,7 +6198,7 @@
 // X86_64:#define __WINT_WIDTH__ 32
 // X86_64:#define __amd64 1
 // X86_64:#define __amd64__ 1
-// X86_64:#define __code_model_small_ 1
+// X86_64:#define __code_model_small__ 1
 // X86_64:#define __x86_64 1
 // X86_64:#define __x86_64__ 1
 //
@@ -6210,7 +6210,7 @@
 // X86_64H:#define __x86_64h__ 1
 //
 // RUN: %clang -xc - -E -dM -mcmodel=medium --target=i386-unknown-linux < /dev/null | FileCheck -match-full-lines -check-prefix X86_MEDIUM %s
-// X86_MEDIUM:#define __code_model_medium_ 1
+// X86_MEDIUM:#define __code_model_medium__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
