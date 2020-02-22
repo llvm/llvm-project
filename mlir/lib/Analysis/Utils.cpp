@@ -16,7 +16,7 @@
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/AffineOps/AffineValueMap.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -314,7 +314,7 @@ static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 
   unsigned sizeInBits;
-  if (elementType.isIntOrFloat()) {
+  if (elementType.isSignlessIntOrFloat()) {
     sizeInBits = elementType.getIntOrFloatBitWidth();
   } else {
     auto vectorType = elementType.cast<VectorType>();
@@ -358,7 +358,7 @@ Optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
   if (!memRefType.hasStaticShape())
     return None;
   auto elementType = memRefType.getElementType();
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>())
+  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>())
     return None;
 
   uint64_t sizeInBytes = getMemRefEltSizeInBytes(memRefType);

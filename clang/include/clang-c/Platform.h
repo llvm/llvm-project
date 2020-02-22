@@ -18,20 +18,14 @@
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
-/* Windows DLL import/export. */
-#ifdef _WIN32
-  #ifdef CINDEX_EXPORTS
-    #ifdef _CINDEX_LIB_
-      #define CINDEX_LINKAGE __declspec(dllexport)
-    #else
-      #define CINDEX_LINKAGE __declspec(dllimport)
-    #endif
+/* MSVC DLL import/export. */
+#ifdef _MSC_VER
+  #ifdef _CINDEX_LIB_
+    #define CINDEX_LINKAGE __declspec(dllexport)
+  #else
+    #define CINDEX_LINKAGE __declspec(dllimport)
   #endif
-#elif defined(CINDEX_EXPORTS)
-  #define CINDEX_LINKAGE __attribute__((visibility("default")))
-#endif
-
-#ifndef CINDEX_LINKAGE
+#else
   #define CINDEX_LINKAGE
 #endif
 

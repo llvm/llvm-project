@@ -1449,8 +1449,8 @@ bool CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
 
     if (ShiftVal == HalfSize) {
       // (G_ASHR i64:x, 32) ->
-      //   G_MERGE_VALUES lo_32(x), (G_ASHR hi_32(x), 31)
-      Builder.buildMerge(DstReg, { Unmerge.getReg(0), Hi });
+      //   G_MERGE_VALUES hi_32(x), (G_ASHR hi_32(x), 31)
+      Builder.buildMerge(DstReg, { Unmerge.getReg(1), Hi });
     } else if (ShiftVal == Size - 1) {
       // Don't need a second shift.
       // (G_ASHR i64:x, 63) ->

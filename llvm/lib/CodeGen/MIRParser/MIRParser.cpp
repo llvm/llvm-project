@@ -381,11 +381,11 @@ bool MIRParserImpl::initializeCallSiteInfo(
       CSInfo.emplace_back(Reg, ArgRegPair.ArgNo);
     }
 
-    if (TM.Options.ShouldEmitDebugEntryValues())
+    if (TM.Options.EnableDebugEntryValues)
       MF.addCallArgsForwardingRegs(&*CallI, std::move(CSInfo));
   }
 
-  if (YamlMF.CallSitesInfo.size() && !TM.Options.ShouldEmitDebugEntryValues())
+  if (YamlMF.CallSitesInfo.size() && !TM.Options.EnableDebugEntryValues)
     return error(Twine("Call site info provided but not used"));
   return false;
 }

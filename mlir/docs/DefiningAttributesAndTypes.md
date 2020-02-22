@@ -194,42 +194,34 @@ public:
   /// This method is used to get an instance of the 'ComplexType'. This method
   /// asserts that all of the construction invariants were satisfied. To
   /// gracefully handle failed construction, getChecked should be used instead.
-  static ComplexType get(MLIRContext *context, unsigned param, Type type) {
+  static ComplexType get(unsigned param, Type type) {
     // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
     // of this type. All parameters to the storage class are passed after the
     // type kind.
-    return Base::get(context, MyTypes::Complex, param, type);
+    return Base::get(type.getContext(), MyTypes::Complex, param, type);
   }
 
   /// This method is used to get an instance of the 'ComplexType', defined at
   /// the given location. If any of the construction invariants are invalid,
   /// errors are emitted with the provided location and a null type is returned.
   /// Note: This method is completely optional.
-  static ComplexType getChecked(MLIRContext *context, unsigned param, Type type,
-                                Location location) {
+  static ComplexType getChecked(unsigned param, Type type, Location location) {
     // Call into a helper 'getChecked' method in 'TypeBase' to get a uniqued
     // instance of this type. All parameters to the storage class are passed
     // after the type kind.
-    return Base::getChecked(location, context, MyTypes::Complex, param, type);
+    return Base::getChecked(location, MyTypes::Complex, param, type);
   }
 
   /// This method is used to verify the construction invariants passed into the
   /// 'get' and 'getChecked' methods. Note: This method is completely optional.
   static LogicalResult verifyConstructionInvariants(
-      llvm::Optional<Location> loc, MLIRContext *context, unsigned param,
-      Type type) {
+      Location loc, unsigned param, Type type) {
     // Our type only allows non-zero parameters.
-    if (param == 0) {
-      if (loc)
-        context->emitError(loc) << "non-zero parameter passed to 'ComplexType'";
-      return failure();
-    }
+    if (param == 0)
+      return emitError(loc) << "non-zero parameter passed to 'ComplexType'";
     // Our type also expects an integer type.
-    if (!type.isa<IntegerType>()) {
-      if (loc)
-        context->emitError(loc) << "non integer-type passed to 'ComplexType'";
-      return failure();
-    }
+    if (!type.isa<IntegerType>())
+      return emitError(loc) << "non integer-type passed to 'ComplexType'";
     return success();
   }
 

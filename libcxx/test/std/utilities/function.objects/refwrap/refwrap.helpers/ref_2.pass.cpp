@@ -24,6 +24,11 @@ bool is5 ( int i ) { return i == 5; }
 template <typename T>
 bool call_pred ( T pred ) { return pred(5); }
 
+namespace adl {
+  struct A {};
+  void ref(A) {}
+}
+
 int main(int, char**)
 {
     {
@@ -32,6 +37,13 @@ int main(int, char**)
     std::reference_wrapper<int> r2 = std::ref(r1);
     assert(&r2.get() == &i);
     }
+    {
+    adl::A a;
+    std::reference_wrapper<adl::A> a1 = std::ref(a);
+    std::reference_wrapper<adl::A> a2 = std::ref(a1);
+    assert(&a2.get() == &a);
+    }
+
     {
     unary_counting_predicate<bool(*)(int), int> cp(is5);
     assert(!cp(6));

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone                             < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -fast-isel -fast-isel-abort=1 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-darwin -debug-entry-values -enable-misched=0 -mcpu=cyclone                             < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-darwin -debug-entry-values -enable-misched=0 -mcpu=cyclone -fast-isel -fast-isel-abort=1 < %s | FileCheck %s
 
 ; Trivial patchpoint codegen
 ;

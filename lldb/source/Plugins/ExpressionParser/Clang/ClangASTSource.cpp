@@ -750,100 +750,11 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   if (!context.m_found.type) {
     // Try the modules next.
-
-    do {
-      if (ClangModulesDeclVendor *modules_decl_vendor =
-              m_target->GetClangModulesDeclVendor()) {
-        bool append = false;
-        uint32_t max_matches = 1;
-        std::vector<clang::NamedDecl *> decls;
-
-        if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
-          break;
-
-        if (log) {
-          LLDB_LOG(log,
-                   "  CAS::FEVD[{0}] Matching entity found for \"{1}\" in "
-                   "the modules",
-                   current_id, name);
-        }
-
-        clang::NamedDecl *const decl_from_modules = decls[0];
-
-        if (llvm::isa<clang::TypeDecl>(decl_from_modules) ||
-            llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
-            llvm::isa<clang::EnumConstantDecl>(decl_from_modules)) {
-          clang::Decl *copied_decl = CopyDecl(decl_from_modules);
-          clang::NamedDecl *copied_named_decl =
-              copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
-
-          if (!copied_named_decl) {
-            LLDB_LOG(
-                log,
-                "  CAS::FEVD[{0}] - Couldn't export a type from the modules",
-                current_id);
-
-            break;
-          }
-
-          context.AddNamedDecl(copied_named_decl);
-
-          context.m_found.type = true;
-        }
-      }
-    } while (false);
+    FindDeclInModules(context, name, current_id);
   }
 
   if (!context.m_found.type) {
-    do {
-      // Couldn't find any types elsewhere.  Try the Objective-C runtime if
-      // one exists.
-
-      lldb::ProcessSP process(m_target->GetProcessSP());
-
-      if (!process)
-        break;
-
-      ObjCLanguageRuntime *language_runtime(
-          ObjCLanguageRuntime::Get(*process));
-
-      if (!language_runtime)
-        break;
-
-      DeclVendor *decl_vendor = language_runtime->GetDeclVendor();
-
-      if (!decl_vendor)
-        break;
-
-      bool append = false;
-      uint32_t max_matches = 1;
-      std::vector<clang::NamedDecl *> decls;
-
-      auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
-      if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
-        break;
-
-      if (log) {
-        LLDB_LOG(
-            log,
-            "  CAS::FEVD[{0}] Matching type found for \"{0}\" in the runtime",
-            current_id, name);
-      }
-
-      clang::Decl *copied_decl = CopyDecl(decls[0]);
-      clang::NamedDecl *copied_named_decl =
-          copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
-
-      if (!copied_named_decl) {
-        LLDB_LOG(log,
-                 "  CAS::FEVD[{0}] - Couldn't export a type from the runtime",
-                 current_id);
-
-        break;
-      }
-
-      context.AddNamedDecl(copied_named_decl);
-    } while (false);
+    FindDeclInObjCRuntime(context, name, current_id);
   }
 }
 
@@ -977,6 +888,100 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
   }
 
   return true;
+}
+
+void ClangASTSource::FindDeclInModules(NameSearchContext &context,
+                                       ConstString name, unsigned current_id) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  ClangModulesDeclVendor *modules_decl_vendor =
+      m_target->GetClangModulesDeclVendor();
+  if (!modules_decl_vendor)
+    return;
+
+  bool append = false;
+  uint32_t max_matches = 1;
+  std::vector<clang::NamedDecl *> decls;
+
+  if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
+    return;
+
+  if (log) {
+    LLDB_LOG(log,
+             "  CAS::FEVD[{0}] Matching entity found for \"{1}\" in "
+             "the modules",
+             current_id, name);
+  }
+
+  clang::NamedDecl *const decl_from_modules = decls[0];
+
+  if (llvm::isa<clang::TypeDecl>(decl_from_modules) ||
+      llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
+      llvm::isa<clang::EnumConstantDecl>(decl_from_modules)) {
+    clang::Decl *copied_decl = CopyDecl(decl_from_modules);
+    clang::NamedDecl *copied_named_decl =
+        copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
+
+    if (!copied_named_decl) {
+      LLDB_LOG(log,
+               "  CAS::FEVD[{0}] - Couldn't export a type from the modules",
+               current_id);
+
+      return;
+    }
+
+    context.AddNamedDecl(copied_named_decl);
+
+    context.m_found.type = true;
+  }
+}
+
+void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
+                                           ConstString name,
+                                           unsigned current_id) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  lldb::ProcessSP process(m_target->GetProcessSP());
+
+  if (!process)
+    return;
+
+  ObjCLanguageRuntime *language_runtime(ObjCLanguageRuntime::Get(*process));
+
+  if (!language_runtime)
+    return;
+
+  DeclVendor *decl_vendor = language_runtime->GetDeclVendor();
+
+  if (!decl_vendor)
+    return;
+
+  bool append = false;
+  uint32_t max_matches = 1;
+  std::vector<clang::NamedDecl *> decls;
+
+  auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+  if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
+    return;
+
+  if (log) {
+    LLDB_LOG(log,
+             "  CAS::FEVD[{0}] Matching type found for \"{0}\" in the runtime",
+             current_id, name);
+  }
+
+  clang::Decl *copied_decl = CopyDecl(decls[0]);
+  clang::NamedDecl *copied_named_decl =
+      copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
+
+  if (!copied_named_decl) {
+    LLDB_LOG(log, "  CAS::FEVD[{0}] - Couldn't export a type from the runtime",
+             current_id);
+
+    return;
+  }
+
+  context.AddNamedDecl(copied_named_decl);
 }
 
 void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {

@@ -66,7 +66,7 @@ public:
             static_cast<double>(uniformType.getStorageTypeMax()),
             uniformType.getStorageTypeIntegralWidth(), uniformType.isSigned()) {
     assert(uniformType.getExpressedType().isa<FloatType>());
-    assert(uniformType.getStorageType().isa<IntegerType>());
+    assert(uniformType.getStorageType().isSignlessInteger());
   }
 
   UniformQuantizedValueConverter(double scale, double zeroPoint,
@@ -182,7 +182,7 @@ public:
         isSigned(uniformType.isSigned()),
         quantizationDim(uniformType.getQuantizedDimension()) {
     assert(uniformType.getExpressedType().isa<FloatType>());
-    assert(uniformType.getStorageType().isa<IntegerType>());
+    assert(uniformType.getStorageType().isSignlessInteger());
     assert(scales.size() == zeroPoints.size());
   }
 

@@ -1004,7 +1004,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     Instruction *QueryInst, const PHITransAddr &Pointer,
     const MemoryLocation &Loc, bool isLoad, BasicBlock *StartBB,
     SmallVectorImpl<NonLocalDepResult> &Result,
-    DenseMap<BasicBlock *, Value *> &Visited, bool SkipFirstBlock) {
+    DenseMap<BasicBlock *, Value *> &Visited, bool SkipFirstBlock,
+    bool IsIncomplete) {
   // Look up the cached info for Pointer.
   ValueIsLoadPair CacheKey(Pointer.getAddr(), isLoad);
 
@@ -1048,12 +1049,16 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
           if (Instruction *Inst = Entry.getResult().getInst())
             RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
         CacheInfo->NonLocalDeps.clear();
+        // The cache is cleared (in the above line) so we will have lost
+        // information about blocks we have already visited. We therefore must
+        // assume that the cache information is incomplete.
+        IsIncomplete = true;
       } else {
         // This query's Size is less than the cached one. Conservatively restart
         // the query using the greater size.
         return getNonLocalPointerDepFromBB(
             QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
-            StartBB, Result, Visited, SkipFirstBlock);
+            StartBB, Result, Visited, SkipFirstBlock, IsIncomplete);
       }
     }
 
@@ -1068,11 +1073,15 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
           if (Instruction *Inst = Entry.getResult().getInst())
             RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
         CacheInfo->NonLocalDeps.clear();
+        // The cache is cleared (in the above line) so we will have lost
+        // information about blocks we have already visited. We therefore must
+        // assume that the cache information is incomplete.
+        IsIncomplete = true;
       }
       if (Loc.AATags)
         return getNonLocalPointerDepFromBB(
             QueryInst, Pointer, Loc.getWithoutAATags(), isLoad, StartBB, Result,
-            Visited, SkipFirstBlock);
+            Visited, SkipFirstBlock, IsIncomplete);
     }
   }
 
@@ -1080,7 +1089,11 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
   // If we have valid cached information for exactly the block we are
   // investigating, just return it with no recomputation.
-  if (CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
+  // Don't use cached information for invariant loads since it is valid for
+  // non-invariant loads only.
+  //
+  if (!IsIncomplete &&
+      CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
     // We have a fully cached result for this query then we can just return the
     // cached results and populate the visited set.  However, we have to verify
     // that we don't already have conflicting results for these blocks.  Check
@@ -1117,10 +1130,10 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   }
 
   // Otherwise, either this is a new block, a block with an invalid cache
-  // pointer or one that we're about to invalidate by putting more info into it
-  // than its valid cache info.  If empty, the result will be valid cache info,
-  // otherwise it isn't.
-  if (Cache->empty())
+  // pointer or one that we're about to invalidate by putting more info into
+  // it than its valid cache info.  If empty and not explicitly indicated as
+  // incomplete, the result will be valid cache info, otherwise it isn't.
+  if (!IsIncomplete && Cache->empty())
     CacheInfo->Pair = BBSkipFirstBlockPair(StartBB, SkipFirstBlock);
   else
     CacheInfo->Pair = BBSkipFirstBlockPair();

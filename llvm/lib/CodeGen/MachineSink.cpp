@@ -91,7 +91,7 @@ namespace {
     MachineDominatorTree *DT;      // Machine dominator tree
     MachinePostDominatorTree *PDT; // Machine post dominator tree
     MachineLoopInfo *LI;
-    const MachineBlockFrequencyInfo *MBFI;
+    MachineBlockFrequencyInfo *MBFI;
     const MachineBranchProbabilityInfo *MBPI;
     AliasAnalysis *AA;
 
@@ -351,6 +351,11 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
                           << printMBBReference(*Pair.first) << " -- "
                           << printMBBReference(*NewSucc) << " -- "
                           << printMBBReference(*Pair.second) << '\n');
+        if (MBFI) {
+          auto NewSuccFreq = MBFI->getBlockFreq(Pair.first) *
+                             MBPI->getEdgeProbability(Pair.first, NewSucc);
+          MBFI->setBlockFreq(NewSucc, NewSuccFreq.getFrequency());
+        }
         MadeChange = true;
         ++NumSplit;
       } else

@@ -309,9 +309,6 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
 
   // AArch64 supports default outlining behaviour.
   setSupportsDefaultOutlining(true);
-
-  // AArch64 supports the debug entry values.
-  setSupportsDebugEntryValues(true);
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -647,4 +644,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+
+  // SVE bundles move prefixes with destructive operations.
+  addPass(createUnpackMachineBundles(nullptr));
 }

@@ -678,9 +678,10 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
 
 bool IRPosition::hasAttr(ArrayRef<Attribute::AttrKind> AKs,
                          bool IgnoreSubsumingPositions) const {
+  SmallVector<Attribute, 4> Attrs;
   for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
     for (Attribute::AttrKind AK : AKs)
-      if (EquivIRP.getAttr(AK).getKindAsEnum() == AK)
+      if (EquivIRP.getAttrsFromIRAttr(AK, Attrs))
         return true;
     // The first position returned by the SubsumingPositionIterator is
     // always the position itself. If we ignore subsuming positions we
@@ -695,11 +696,8 @@ void IRPosition::getAttrs(ArrayRef<Attribute::AttrKind> AKs,
                           SmallVectorImpl<Attribute> &Attrs,
                           bool IgnoreSubsumingPositions) const {
   for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
-    for (Attribute::AttrKind AK : AKs) {
-      const Attribute &Attr = EquivIRP.getAttr(AK);
-      if (Attr.getKindAsEnum() == AK)
-        Attrs.push_back(Attr);
-    }
+    for (Attribute::AttrKind AK : AKs)
+      EquivIRP.getAttrsFromIRAttr(AK, Attrs);
     // The first position returned by the SubsumingPositionIterator is
     // always the position itself. If we ignore subsuming positions we
     // are done after the first iteration.
@@ -707,6 +705,24 @@ void IRPosition::getAttrs(ArrayRef<Attribute::AttrKind> AKs,
       break;
   }
 }
+
+bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
+                                    SmallVectorImpl<Attribute> &Attrs) const {
+  if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
+    return false;
+
+  AttributeList AttrList;
+  if (ImmutableCallSite ICS = ImmutableCallSite(&getAnchorValue()))
+    AttrList = ICS.getAttributes();
+  else
+    AttrList = getAssociatedFunction()->getAttributes();
+
+  bool HasAttr = AttrList.hasAttribute(getAttrIdx(), AK);
+  if (HasAttr)
+    Attrs.push_back(AttrList.getAttribute(getAttrIdx(), AK));
+  return HasAttr;
+}
+
 
 void IRPosition::verify() {
   switch (KindOrArgNo) {
@@ -819,6 +835,11 @@ struct AAComposeTwoGenericDeduction
     : public F<AAType, G<AAType, Base, StateType>, StateType> {
   AAComposeTwoGenericDeduction(const IRPosition &IRP)
       : F<AAType, G<AAType, Base, StateType>, StateType>(IRP) {}
+
+  void initialize(Attributor &A) override {
+    F<AAType, G<AAType, Base, StateType>, StateType>::initialize(A);
+    G<AAType, Base, StateType>::initialize(A);
+  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -4606,9 +4627,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     Value &V = getAssociatedValue();
     if (V.getType()->isPointerTy() &&
         V.getType()->getPointerElementType()->isFunctionTy() &&
-        !A.isModulePass() &&
-        A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(
-            *getAnchorScope()))
+        !A.isModulePass())
       indicatePessimisticFixpoint();
   }
 
@@ -4735,7 +4754,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    AAValueSimplifyImpl::initialize(A);
+    // FIXME: This might have exposed a SCC iterator update bug in the old PM.
+    //        Needs investigation.
+    // AAValueSimplifyImpl::initialize(A);
     Value &V = getAnchorValue();
 
     // TODO: add other stuffs

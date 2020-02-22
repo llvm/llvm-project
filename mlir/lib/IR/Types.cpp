@@ -59,7 +59,7 @@ OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
 
 OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
                                   MLIRContext *context, Location location) {
-  return Base::getChecked(location, context, Kind::Opaque, dialect, typeData);
+  return Base::getChecked(location, Kind::Opaque, dialect, typeData);
 }
 
 /// Returns the dialect namespace of the opaque type.
@@ -71,11 +71,10 @@ Identifier OpaqueType::getDialectNamespace() const {
 StringRef OpaqueType::getTypeData() const { return getImpl()->typeData; }
 
 /// Verify the construction of an opaque type.
-LogicalResult OpaqueType::verifyConstructionInvariants(Optional<Location> loc,
-                                                       MLIRContext *context,
+LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
                                                        Identifier dialect,
                                                        StringRef typeData) {
   if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitOptionalError(loc, "invalid dialect namespace '", dialect, "'");
+    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
   return success();
 }

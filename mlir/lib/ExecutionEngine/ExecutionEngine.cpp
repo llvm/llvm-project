@@ -216,6 +216,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   if (!expectedModule)
     return expectedModule.takeError();
   std::unique_ptr<Module> deserModule = std::move(*expectedModule);
+  auto dataLayout = deserModule->getDataLayout();
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
@@ -231,15 +232,6 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
               reinterpret_cast<uintptr_t>(object.getData().data()));
           engine->gdbListener->notifyObjectLoaded(key, object, objectInfo);
         });
-    auto dataLayout = deserModule->getDataLayout();
-    llvm::orc::JITDylib *mainJD = session.getJITDylibByName("<main>");
-    if (!mainJD)
-      mainJD = &session.createBareJITDylib("<main>");
-
-    // Resolve symbols that are statically linked in the current process.
-    mainJD->addGenerator(
-        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-            dataLayout.getGlobalPrefix())));
 
     // Resolve symbols from shared libraries.
     for (auto libPath : sharedLibPaths) {
@@ -290,6 +282,12 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
         [&](llvm::Module &module) { return transformer(&module); }));
   cantFail(jit->addIRModule(std::move(tsm)));
   engine->jit = std::move(jit);
+
+  // Resolve symbols that are statically linked in the current process.
+  llvm::orc::JITDylib &mainJD = engine->jit->getMainJITDylib();
+  mainJD.addGenerator(
+      cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          dataLayout.getGlobalPrefix())));
 
   return std::move(engine);
 }

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-linux-gnu -run-pass if-converter %s -o -| FileCheck %s
+# RUN: llc -mtriple=arm-linux-gnu -debug-entry-values -run-pass if-converter %s -o -| FileCheck %s
 
 # Vefify that the call site info will be updated after the optimization.
 # This test case would previously trigger an assertion when
@@ -19,7 +19,8 @@
 #
 # With slight change of MIR - substitution of BL instruction with BL_pred 
 # in order to trigger optimization.
-# clang -target arm-linux-gnu -g -O2 %s -stop-before=if-convert
+# clang -target arm-linux-gnu -g -O2 -Xclang -femit-debug-entry-values 
+#       %s -stop-before=if-convert
 #
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:

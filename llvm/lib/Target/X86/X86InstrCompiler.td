@@ -531,10 +531,13 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
 
   defm _RFP80 : CMOVrr_PSEUDO<RFP80, f80>;
 
-  let Predicates = [NoAVX512] in {
+  let Predicates = [HasMMX] in
+    defm _VR64   : CMOVrr_PSEUDO<VR64, x86mmx>;
+
+  let Predicates = [HasSSE1,NoAVX512] in
     defm _FR32   : CMOVrr_PSEUDO<FR32, f32>;
+  let Predicates = [HasSSE2,NoAVX512] in
     defm _FR64   : CMOVrr_PSEUDO<FR64, f64>;
-  }
   let Predicates = [HasAVX512] in {
     defm _FR32X  : CMOVrr_PSEUDO<FR32X, f32>;
     defm _FR64X  : CMOVrr_PSEUDO<FR64X, f64>;
@@ -548,6 +551,7 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
     defm _VR256X : CMOVrr_PSEUDO<VR256X, v4i64>;
   }
   defm _VR512  : CMOVrr_PSEUDO<VR512, v8i64>;
+  defm _VK1    : CMOVrr_PSEUDO<VK1,  v1i1>;
   defm _VK2    : CMOVrr_PSEUDO<VK2,  v2i1>;
   defm _VK4    : CMOVrr_PSEUDO<VK4,  v4i1>;
   defm _VK8    : CMOVrr_PSEUDO<VK8,  v8i1>;

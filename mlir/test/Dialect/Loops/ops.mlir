@@ -90,6 +90,134 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //  CHECK-NEXT:         loop.reduce.return %[[RES]] : f32
 //  CHECK-NEXT:       } : f32
-//  CHECK-NEXT:       "loop.terminator"() : () -> ()
+//  CHECK-NEXT:       loop.yield
 //  CHECK-NEXT:     } : f32
-//  CHECK-NEXT:     "loop.terminator"() : () -> ()
+//  CHECK-NEXT:     loop.yield
+
+func @parallel_explicit_yield(
+    %arg0: index, %arg1: index, %arg2: index) {
+  loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    loop.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @parallel_explicit_yield(
+//  CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]:
+//  CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
+//  CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
+//  CHECK-NEXT: loop.parallel (%{{.*}}) = (%[[ARG0]]) to (%[[ARG1]]) step (%[[ARG2]])
+//  CHECK-NEXT: loop.yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: return
+//  CHECK-NEXT: }
+
+func @std_if_yield(%arg0: i1, %arg1: f32)
+{
+  %x, %y = loop.if %arg0 -> (f32, f32) {
+    %0 = addf %arg1, %arg1 : f32
+    %1 = subf %arg1, %arg1 : f32
+    loop.yield %0, %1 : f32, f32
+  } else {
+    %0 = subf %arg1, %arg1 : f32
+    %1 = addf %arg1, %arg1 : f32
+    loop.yield %0, %1 : f32, f32
+  }
+  return
+}
+// CHECK-LABEL: func @std_if_yield(
+//  CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]:
+//  CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
+//  CHECK-NEXT: %{{.*}}:2 = loop.if %[[ARG0]] -> (f32, f32) {
+//  CHECK-NEXT: %[[T1:.*]] = addf %[[ARG1]], %[[ARG1]]
+//  CHECK-NEXT: %[[T2:.*]] = subf %[[ARG1]], %[[ARG1]]
+//  CHECK-NEXT: loop.yield %[[T1]], %[[T2]] : f32, f32
+//  CHECK-NEXT: } else {
+//  CHECK-NEXT: %[[T3:.*]] = subf %[[ARG1]], %[[ARG1]]
+//  CHECK-NEXT: %[[T4:.*]] = addf %[[ARG1]], %[[ARG1]]
+//  CHECK-NEXT: loop.yield %[[T3]], %[[T4]] : f32, f32
+//  CHECK-NEXT: }
+
+func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %result = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0) -> (f32) {
+    %sn = addf %si, %si : f32
+    loop.yield %sn : f32
+  }
+  return
+}
+// CHECK-LABEL: func @std_for_yield(
+// CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]:
+// CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
+// CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
+// CHECK-NEXT: %[[INIT:.*]] = constant
+// CHECK-NEXT: %{{.*}} = loop.for %{{.*}} = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
+// CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
+// CHECK-NEXT: %[[NEXT:.*]] = addf %[[ITER]], %[[ITER]] : f32
+// CHECK-NEXT: loop.yield %[[NEXT]] : f32
+// CHECK-NEXT: }
+
+
+func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1 : i32
+  %u0 = constant 1.0 : f32
+  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32, f32) {
+    %sn = addf %si, %si : f32
+    %tn = addi %ti, %ti : i32
+    %un = subf %ui, %ui : f32
+    loop.yield %sn, %tn, %un : f32, i32, f32
+  }
+  return
+}
+// CHECK-LABEL: func @std_for_yield_multi(
+// CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]:
+// CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
+// CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
+// CHECK-NEXT: %[[INIT1:.*]] = constant
+// CHECK-NEXT: %[[INIT2:.*]] = constant
+// CHECK-NEXT: %[[INIT3:.*]] = constant
+// CHECK-NEXT: %{{.*}}:3 = loop.for %{{.*}} = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
+// CHECK-SAME: iter_args(%[[ITER1:.*]] = %[[INIT1]], %[[ITER2:.*]] = %[[INIT2]], %[[ITER3:.*]] = %[[INIT3]]) -> (f32, i32, f32) {
+// CHECK-NEXT: %[[NEXT1:.*]] = addf %[[ITER1]], %[[ITER1]] : f32
+// CHECK-NEXT: %[[NEXT2:.*]] = addi %[[ITER2]], %[[ITER2]] : i32
+// CHECK-NEXT: %[[NEXT3:.*]] = subf %[[ITER3]], %[[ITER3]] : f32
+// CHECK-NEXT: loop.yield %[[NEXT1]], %[[NEXT2]], %[[NEXT3]] : f32, i32, f32
+
+
+func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+  %sum_0 = constant 0.0 : f32
+  %c0 = constant 0.0 : f32
+  %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
+	  %t = load %buffer[%iv] : memref<1024xf32>
+	  %cond = cmpf "ugt", %t, %c0 : f32
+	  %sum_next = loop.if %cond -> (f32) {
+	    %new_sum = addf %sum_iter, %t : f32
+      loop.yield %new_sum : f32
+	  } else {
+  		loop.yield %sum_iter : f32
+	  }
+    loop.yield %sum_next : f32
+  }
+  return %sum : f32
+}
+// CHECK-LABEL: func @conditional_reduce(
+//  CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]
+//  CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]
+//  CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]
+//  CHECK-SAME: %[[ARG3:[A-Za-z0-9]+]]
+//  CHECK-NEXT: %[[INIT:.*]] = constant
+//  CHECK-NEXT: %[[ZERO:.*]] = constant
+//  CHECK-NEXT: %[[RESULT:.*]] = loop.for %[[IV:.*]] = %[[ARG1]] to %[[ARG2]] step %[[ARG3]]
+//  CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
+//  CHECK-NEXT: %[[T:.*]] = load %[[ARG0]][%[[IV]]]
+//  CHECK-NEXT: %[[COND:.*]] = cmpf "ugt", %[[T]], %[[ZERO]]
+//  CHECK-NEXT: %[[IFRES:.*]] = loop.if %[[COND]] -> (f32) {
+//  CHECK-NEXT: %[[THENRES:.*]] = addf %[[ITER]], %[[T]]
+//  CHECK-NEXT: loop.yield %[[THENRES]] : f32
+//  CHECK-NEXT: } else {
+//  CHECK-NEXT: loop.yield %[[ITER]] : f32
+//  CHECK-NEXT: }
+//  CHECK-NEXT: loop.yield %[[IFRES]] : f32
+//  CHECK-NEXT: }
+//  CHECK-NEXT: return %[[RESULT]]

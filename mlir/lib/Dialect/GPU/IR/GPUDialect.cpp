@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -158,7 +158,7 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
     return shuffleOp.emitOpError()
            << "requires the same type for value operand and result";
   }
-  if (!type.isIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
+  if (!type.isSignlessIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
     return shuffleOp.emitOpError()
            << "requires value operand type to be f32 or i32";
   }

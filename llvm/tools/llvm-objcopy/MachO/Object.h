@@ -89,7 +89,7 @@ struct LoadCommand {
   // though the contents of the sections are stored separately. The struct
   // Section describes only sections' metadata and where to find the
   // corresponding content inside the binary.
-  std::vector<Section> Sections;
+  std::vector<std::unique_ptr<Section>> Sections;
 
   // Returns the segment name if the load command is a segment command.
   Optional<StringRef> getSegmentName() const;
@@ -292,7 +292,7 @@ struct Object {
 
   Object() : NewSectionsContents(Alloc) {}
 
-  void removeSections(function_ref<bool(const Section &)> ToRemove);
+  void removeSections(function_ref<bool(const std::unique_ptr<Section> &)> ToRemove);
   void addLoadCommand(LoadCommand LC);
 
   /// Creates a new segment load command in the object and returns a reference

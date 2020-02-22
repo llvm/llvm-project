@@ -128,6 +128,36 @@ public:
 private:
   Optional<testing::Matcher<InfoT &>> Matcher;
 };
+
+class ErrorMessageMatches
+    : public testing::MatcherInterface<const ErrorHolder &> {
+public:
+  explicit ErrorMessageMatches(
+      testing::Matcher<std::vector<std::string>> Matcher)
+      : Matcher(std::move(Matcher)) {}
+
+  bool MatchAndExplain(const ErrorHolder &Holder,
+                       testing::MatchResultListener *listener) const override {
+    std::vector<std::string> Messages;
+    for (const std::shared_ptr<ErrorInfoBase> &Info: Holder.Infos)
+      Messages.push_back(Info->message());
+
+    return Matcher.MatchAndExplain(Messages, listener);
+  }
+
+  void DescribeTo(std::ostream *OS) const override {
+    *OS << "failed with Error whose message ";
+    Matcher.DescribeTo(OS);
+  }
+
+  void DescribeNegationTo(std::ostream *OS) const override {
+    *OS << "failed with an Error whose message ";
+    Matcher.DescribeNegationTo(OS);
+  }
+
+private:
+  testing::Matcher<std::vector<std::string>> Matcher;
+};
 } // namespace detail
 
 #define EXPECT_THAT_ERROR(Err, Matcher)                                        \
@@ -152,6 +182,18 @@ template <typename InfoT, typename M>
 testing::Matcher<const detail::ErrorHolder &> Failed(M Matcher) {
   return MakeMatcher(new detail::ErrorMatchesMono<InfoT>(
       testing::SafeMatcherCast<InfoT &>(Matcher)));
+}
+
+template <typename... M>
+testing::Matcher<const detail::ErrorHolder &> FailedWithMessage(M... Matcher) {
+  static_assert(sizeof...(M) > 0, "");
+  return MakeMatcher(
+      new detail::ErrorMessageMatches(testing::ElementsAre(Matcher...)));
+}
+
+template <typename M>
+testing::Matcher<const detail::ErrorHolder &> FailedWithMessageArray(M Matcher) {
+  return MakeMatcher(new detail::ErrorMessageMatches(Matcher));
 }
 
 template <typename M>

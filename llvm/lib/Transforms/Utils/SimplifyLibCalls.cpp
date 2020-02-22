@@ -3040,7 +3040,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   }
 }
 
-Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
+Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
@@ -3049,11 +3049,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
-  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+
+  IRBuilderBase::OperandBundlesGuard Guard(Builder);
+  Builder.setDefaultOperandBundles(OpBundles);
 
   // Command-line parameter overrides instruction attribute.
   // This can't be moved to optimizeFloatingPointLibCall() because it may be
@@ -3093,7 +3095,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   }
 
   // Also try to simplify calls to fortified library functions.
-  if (Value *SimplifiedFortifiedCI = FortifiedSimplifier.optimizeCall(CI)) {
+  if (Value *SimplifiedFortifiedCI =
+          FortifiedSimplifier.optimizeCall(CI, Builder)) {
     // Try to further simplify the result.
     CallInst *SimplifiedCI = dyn_cast<CallInst>(SimplifiedFortifiedCI);
     if (SimplifiedCI && SimplifiedCI->getCalledFunction()) {
@@ -3101,10 +3104,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       // their uses analyzed.
       replaceAllUsesWith(CI, SimplifiedCI);
 
-      // Use an IR Builder from SimplifiedCI if available instead of CI
-      // to guarantee we reach all uses we might replace later on.
-      IRBuilder<> TmpBuilder(SimplifiedCI);
-      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, TmpBuilder)) {
+      // Set insertion point to SimplifiedCI to guarantee we reach all uses
+      // we might replace later on.
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(SimplifiedCI);
+      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, Builder)) {
         // If we were able to further simplify, remove the now redundant call.
         substituteInParent(SimplifiedCI, V);
         return V;
@@ -3469,7 +3473,8 @@ Value *FortifiedLibCallSimplifier::optimizeVSPrintfChk(CallInst *CI,
   return nullptr;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
+Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
+                                                IRBuilderBase &Builder) {
   // FIXME: We shouldn't be changing "nobuiltin" or TLI unavailable calls here.
   // Some clang users checked for _chk libcall availability using:
   //   __has_builtin(__builtin___memcpy_chk)
@@ -3485,11 +3490,13 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
-  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+
+  IRBuilderBase::OperandBundlesGuard Guard(Builder);
+  Builder.setDefaultOperandBundles(OpBundles);
 
   // First, check that this is a known library functions and that the prototype
   // is correct.

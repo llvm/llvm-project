@@ -279,6 +279,24 @@ Similar to variadic operands, `Variadic<...>` can also be used for results.
 And similarly, `SameVariadicResultSize` for multiple variadic results in the
 same operation.
 
+### Operation successors
+
+For terminator operations, the successors are specified inside of the
+`dag`-typed `successors`, led by `successor`:
+
+```tablegen
+let successors = (successor
+  <successor-constraint>:$<successor-name>,
+  ...
+);
+```
+
+#### Variadic successors
+
+Similar to the `Variadic` class used for variadic operands and results,
+`VariadicSuccessor<...>` can be used for successors. Variadic successors can
+currently only be specified as the last successor in the successor list.
+
 ### Operation traits and constraints
 
 Traits are operation properties that affect syntax or semantics. MLIR C++
@@ -583,25 +601,39 @@ The format is comprised of three components:
 A directive is a type of builtin function, with an optional set of arguments.
 The available directives are as follows:
 
-* `attr-dict`
-  -  Represents the attribute dictionary of the operation.
+*   `attr-dict`
 
-* `functional-type` ( inputs , results )
-  -  Formats the `inputs` and `results` arguments as a
-     [function type](LangRef.md#function-type).
-  -  The constraints on `inputs` and `results` are the same as the `input` of
-     the `type` directive.
+    -   Represents the attribute dictionary of the operation.
 
-* `operands`
-  -  Represents all of the operands of an operation.
+*   `attr-dict-with-keyword`
 
-* `results`
-  -  Represents all of the results of an operation.
+    -   Represents the attribute dictionary of the operation, but prefixes the
+        dictionary with an `attributes` keyword.
 
-* `type` ( input )
-  - Represents the type of the given input.
-  - `input` must be either an operand or result [variable](#variables), the
-    `operands` directive, or the `results` directive.
+*   `functional-type` ( inputs , results )
+
+    -   Formats the `inputs` and `results` arguments as a
+        [function type](LangRef.md#function-type).
+    -   The constraints on `inputs` and `results` are the same as the `input` of
+        the `type` directive.
+
+*   `operands`
+
+    -   Represents all of the operands of an operation.
+
+*   `results`
+
+    -   Represents all of the results of an operation.
+
+*   `successors`
+
+    -   Represents all of the successors of an operation.
+
+*   `type` ( input )
+
+    -   Represents the type of the given input.
+    -   `input` must be either an operand or result [variable](#variables), the
+        `operands` directive, or the `results` directive.
 
 #### Literals
 
@@ -613,11 +645,48 @@ The following are the set of valid punctuation:
 #### Variables
 
 A variable is an entity that has been registered on the operation itself, i.e.
-an argument(attribute or operand), result, etc. In the `CallOp` example above,
-the variables would be `$callee`  and `$args`.
+an argument(attribute or operand), result, successor, etc. In the `CallOp`
+example above, the variables would be `$callee` and `$args`.
 
 Attribute variables are printed with their respective value type, unless that
 value type is buildable. In those cases, the type of the attribute is elided.
+
+#### Optional Groups
+
+In certain situations operations may have "optional" information, e.g.
+attributes or an empty set of variadic operands. In these situtations a section
+of the assembly format can be marked as `optional` based on the presence of this
+information. An optional group is defined by wrapping a set of elements within
+`()` followed by a `?` and has the following requirements:
+
+*   The first element of the group must either be a literal or an operand.
+    -   This is because the first element must be optionally parsable.
+*   Exactly one argument variable within the group must be marked as the anchor
+    of the group.
+    -   The anchor is the element whose presence controls whether the group
+        should be printed/parsed.
+    -   An element is marked as the anchor by adding a trailing `^`.
+    -   The first element is *not* required to be the anchor of the group.
+*   Literals, variables, and type directives are the only valid elements within
+    the group.
+    -   Any attribute variable may be used, but only optional attributes can be
+        marked as the anchor.
+    -   Only variadic, i.e. optional, operand arguments can be used.
+    -   The operands to a type directive must be defined within the optional
+        group.
+
+An example of an operation with an optional group is `std.return`, which has a
+variadic number of operands.
+
+```
+def ReturnOp : ... {
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  // We only print the operands and types if there are a non-zero number
+  // of operands.
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+```
 
 #### Requirements
 

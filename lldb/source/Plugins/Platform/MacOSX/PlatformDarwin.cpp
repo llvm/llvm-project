@@ -19,6 +19,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/XML.h"
@@ -1499,6 +1500,129 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   }
 
   return std::make_tuple(version, build);
+}
+
+llvm::Expected<StructuredData::DictionarySP>
+PlatformDarwin::FetchExtendedCrashInformation(lldb_private::Target &target) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(target);
+
+  if (!annotations || !annotations->GetSize()) {
+    LLDB_LOG(log, "Couldn't extract crash information annotations");
+    return nullptr;
+  }
+
+  StructuredData::DictionarySP extended_crash_info =
+      std::make_shared<StructuredData::Dictionary>();
+
+  extended_crash_info->AddItem("crash-info annotations", annotations);
+
+  return extended_crash_info;
+}
+
+StructuredData::ArraySP
+PlatformDarwin::ExtractCrashInfoAnnotations(Target &target) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  ConstString section_name("__crash_info");
+  ProcessSP process_sp = target.GetProcessSP();
+  StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
+
+  for (ModuleSP module : target.GetImages().Modules()) {
+    SectionList *sections = module->GetSectionList();
+
+    std::string module_name = module->GetSpecificationDescription();
+
+    // The DYDL module is skipped since it's always loaded when running the
+    // binary.
+    if (module_name == "/usr/lib/dyld")
+      continue;
+
+    if (!sections) {
+      LLDB_LOG(log, "Module {0} doesn't have any section!", module_name);
+      continue;
+    }
+
+    SectionSP crash_info = sections->FindSectionByName(section_name);
+    if (!crash_info) {
+      LLDB_LOG(log, "Module {0} doesn't have section {1}!", module_name,
+               section_name);
+      continue;
+    }
+
+    addr_t load_addr = crash_info->GetLoadBaseAddress(&target);
+
+    if (load_addr == LLDB_INVALID_ADDRESS) {
+      LLDB_LOG(log, "Module {0} has an invalid '{1}' section load address: {2}",
+               module_name, section_name, load_addr);
+      continue;
+    }
+
+    Status error;
+    CrashInfoAnnotations annotations;
+    size_t expected_size = sizeof(CrashInfoAnnotations);
+    size_t bytes_read = process_sp->ReadMemoryFromInferior(
+        load_addr, &annotations, expected_size, error);
+
+    if (expected_size != bytes_read || error.Fail()) {
+      LLDB_LOG(log, "Failed to read {0} section from memory in module {1}: {2}",
+               section_name, module_name, error);
+      continue;
+    }
+
+    // initial support added for version 5
+    if (annotations.version < 5) {
+      LLDB_LOG(log,
+               "Annotation version lower than 5 unsupported! Module {0} has "
+               "version {1} instead.",
+               module_name, annotations.version);
+      continue;
+    }
+
+    if (!annotations.message) {
+      LLDB_LOG(log, "No message available for module {0}.", module_name);
+      continue;
+    }
+
+    std::string message;
+    bytes_read =
+        process_sp->ReadCStringFromMemory(annotations.message, message, error);
+
+    if (message.empty() || bytes_read != message.size() || error.Fail()) {
+      LLDB_LOG(log, "Failed to read the message from memory in module {0}: {1}",
+               module_name, error);
+      continue;
+    }
+
+    // Remove trailing newline from message
+    if (message.back() == '\n')
+      message.pop_back();
+
+    if (!annotations.message2)
+      LLDB_LOG(log, "No message2 available for module {0}.", module_name);
+
+    std::string message2;
+    bytes_read = process_sp->ReadCStringFromMemory(annotations.message2,
+                                                   message2, error);
+
+    if (!message2.empty() && bytes_read == message2.size() && error.Success())
+      if (message2.back() == '\n')
+        message2.pop_back();
+
+    StructuredData::DictionarySP entry_sp =
+        std::make_shared<StructuredData::Dictionary>();
+
+    entry_sp->AddStringItem("image", module->GetFileSpec().GetPath(false));
+    entry_sp->AddStringItem("uuid", module->GetUUID().GetAsString());
+    entry_sp->AddStringItem("message", message);
+    entry_sp->AddStringItem("message2", message2);
+    entry_sp->AddIntegerItem("abort-cause", annotations.abort_cause);
+
+    array_sp->AddItem(entry_sp);
+  }
+
+  return array_sp;
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(

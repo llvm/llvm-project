@@ -138,7 +138,7 @@ std::unique_ptr<Sema> CompilerInstance::takeSema() {
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::getASTReader() const {
   return TheASTReader;
 }
-void CompilerInstance::setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader) {
+void CompilerInstance::setASTReader(IntrusiveRefCntPtr<ASTReader> Reader) {
   assert(ModuleCache.get() == &Reader->getModuleManager().getModuleCache() &&
          "Expected ASTReader to use the same PCM cache");
   TheASTReader = std::move(Reader);
@@ -379,7 +379,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   const PreprocessorOptions &PPOpts = getPreprocessorOpts();
 
-  // The module manager holds a reference to the old preprocessor (if any).
+  // The AST reader holds a reference to the old preprocessor (if any).
   TheASTReader.reset();
 
   // Create the Preprocessor.

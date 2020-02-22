@@ -59,25 +59,25 @@ template <> Section constructSection(MachO::section_64 Sec) {
 
 // TODO: get rid of reportError and make MachOReader return Expected<> instead.
 template <typename SectionType, typename SegmentType>
-std::vector<Section>
+std::vector<std::unique_ptr<Section>>
 extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
                 const object::MachOObjectFile &MachOObj,
                 size_t &NextSectionIndex) {
   auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
   const SectionType *Curr =
       reinterpret_cast<const SectionType *>(LoadCmd.Ptr + sizeof(SegmentType));
-  std::vector<Section> Sections;
+  std::vector<std::unique_ptr<Section>> Sections;
   for (; reinterpret_cast<const void *>(Curr) < End; Curr++) {
     if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost) {
       SectionType Sec;
       memcpy((void *)&Sec, Curr, sizeof(SectionType));
       MachO::swapStruct(Sec);
-      Sections.push_back(constructSection(Sec));
+      Sections.push_back(std::make_unique<Section>(constructSection(Sec)));
     } else {
-      Sections.push_back(constructSection(*Curr));
+      Sections.push_back(std::make_unique<Section>(constructSection(*Curr)));
     }
 
-    Section &S = Sections.back();
+    Section &S = *Sections.back();
 
     Expected<object::SectionRef> SecRef =
         MachOObj.getSection(NextSectionIndex++);
@@ -201,9 +201,9 @@ void MachOReader::readSymbolTable(Object &O) const {
 }
 
 void MachOReader::setSymbolInRelocationInfo(Object &O) const {
-  for (auto &LC : O.LoadCommands)
-    for (auto &Sec : LC.Sections)
-      for (auto &Reloc : Sec.Relocations)
+  for (LoadCommand &LC : O.LoadCommands)
+    for (std::unique_ptr<Section> &Sec : LC.Sections)
+      for (auto &Reloc : Sec->Relocations)
         if (!Reloc.Scattered) {
           auto *Info = reinterpret_cast<MachO::relocation_info *>(&Reloc.Info);
           Reloc.Symbol = O.SymTable.getSymbolByIndex(Info->r_symbolnum);

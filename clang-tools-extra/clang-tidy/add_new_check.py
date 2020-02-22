@@ -221,7 +221,7 @@ def add_release_notes(module_path, module, check_name):
 
   lineMatcher = re.compile('New checks')
   nextSectionMatcher = re.compile('New check aliases')
-  checkerMatcher = re.compile('- New :doc:`(.*)')
+  checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
   with open(filename, 'w') as f:
@@ -234,10 +234,10 @@ def add_release_notes(module_path, module, check_name):
       if not note_added:
         match = lineMatcher.match(line)
         match_next = nextSectionMatcher.match(line)
-        match_checker = checkerMatcher.match(line)
-        if match_checker:
-          last_checker = match_checker.group(1)
-          if last_checker > check_name_dashes:
+        match_check = checkMatcher.match(line)
+        if match_check:
+          last_check = match_check.group(1)
+          if last_check > check_name_dashes:
             add_note_here = True
 
         if match_next:

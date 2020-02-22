@@ -342,7 +342,7 @@ def Vector_ExtractElementOp :
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "$_self.cast<ShapedType>().getElementType()">]>,
-    Arguments<(ins AnyVector:$vector, AnyInteger:$position)>,
+    Arguments<(ins AnyVector:$vector, AnySignlessInteger:$position)>,
     Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
@@ -362,6 +362,10 @@ def Vector_ExtractElementOp :
     VectorType getVectorType() {
       return vector().getType().cast<VectorType>();
     }
+  }];
+
+  let assemblyFormat = [{
+    $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
   }];
 }
 
@@ -487,7 +491,8 @@ def Vector_InsertElementOp :
                     "result", "source",
                     "$_self.cast<ShapedType>().getElementType()">,
      AllTypesMatch<["dest", "result"]>]>,
-     Arguments<(ins AnyType:$source, AnyVector:$dest, AnyInteger:$position)>,
+     Arguments<(ins AnyType:$source, AnyVector:$dest,
+                    AnySignlessInteger:$position)>,
      Results<(outs AnyVector:$result)> {
   let summary = "insertelement operation";
   let description = [{
@@ -510,6 +515,11 @@ def Vector_InsertElementOp :
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
     }
+  }];
+
+  let assemblyFormat = [{
+    $source `,` $dest `[` $position `:` type($position) `]` attr-dict `:`
+    type($result)
   }];
 }
 

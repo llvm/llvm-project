@@ -320,6 +320,10 @@ public:
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
   std::vector<InsertCommand> insertCommands;
+
+  // Sections whose addresses are not equal to their addrExpr values.
+  std::vector<std::pair<const OutputSection *, uint64_t>>
+      changedSectionAddresses;
 };
 
 extern LinkerScript *script;

@@ -1451,7 +1451,7 @@ LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (resultType.isa<IntegerType>() || resultType.isa<FloatType>() ||
+  if (resultType.isSignlessInteger() || resultType.isa<FloatType>() ||
       resultType.isa<VectorType>()) {
     auto attr = opBuilder.getZeroAttr(resultType);
     // For normal constants, we just record the attribute (and its type) for
@@ -2202,7 +2202,7 @@ LogicalResult Deserializer::processBitcast(ArrayRef<uint32_t> words) {
            << wordIndex << " of " << words.size() << " processed";
   }
   if (resultTypes[0] == operands[0].getType() &&
-      resultTypes[0].isa<IntegerType>()) {
+      resultTypes[0].isSignlessInteger()) {
     // TODO(b/130356985): This check is added to ignore error in Op verification
     // due to both signed and unsigned integers mapping to the same
     // type. Without this check this method is same as what is auto-generated.

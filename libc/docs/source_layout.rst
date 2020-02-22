@@ -7,6 +7,7 @@ directories::
    + libc
         - cmake
         - docs
+        - fuzzing
         - include
         - lib
         - loader
@@ -30,6 +31,13 @@ The ``docs`` directory
 
 The ``docs`` directory contains design docs and also informative documents like
 this document on source layout.
+
+The ``fuzzing`` directory
+----------------------
+
+This directory contains fuzzing tests for the various components of llvm-libc. The
+directory structure within this directory mirrors the directory structure of the
+top-level ``libc`` directory itself. For more details, see :doc:`fuzzing`.
 
 The ``include`` directory
 -------------------------
@@ -62,7 +70,7 @@ The ``src`` directory
 This directory contains the implementations of the llvm-libc entrypoints. It is
 further organized as follows:
 
-1. There is a toplevel CMakeLists.txt file.
+1. There is a top-level CMakeLists.txt file.
 2. For every public header file provided by llvm-libc, there exists a
    corresponding directory in the ``src`` directory. The name of the directory
    is same as the base name of the header file. For example, the directory

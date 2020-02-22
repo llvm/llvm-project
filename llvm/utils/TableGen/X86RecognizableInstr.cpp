@@ -459,6 +459,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
 
   switch (Form) {
   default: llvm_unreachable("Unhandled form");
+  case X86Local::PrefixByte:
+    return;
   case X86Local::RawFrmSrc:
     HANDLE_OPERAND(relocation);
     return;
@@ -749,6 +751,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::RawFrmImm8:
   case X86Local::RawFrmImm16:
   case X86Local::AddCCFrm:
+  case X86Local::PrefixByte:
     filter = std::make_unique<DumbFilter>();
     break;
   case X86Local::MRMDestReg:

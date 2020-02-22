@@ -5,6 +5,7 @@
 
 ; Prologue.
 ; LINE:      source_lines_test:
+; LINE-NEXT: ; source_lines_test():
 ; LINE-NEXT: ; {{.*}}source-lines.cl:1
 ; Kernel.
 ; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x777

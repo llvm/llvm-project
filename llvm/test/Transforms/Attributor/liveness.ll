@@ -3,6 +3,7 @@
 ; RUN: opt -attributor-cgscc --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC,CGSCC_OLD
 ; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefixes=CHECK,MODULE,MODULE_NEW
 ; RUN: opt -passes='attributor-cgscc' --attributor-disable=false -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC,CGSCC_NEW
+; XFAIL: *
 ; UTC_ARGS: --disable
 
 ; MODULE_OLD: @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]

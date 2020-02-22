@@ -15,6 +15,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 
+#include <condition_variable>
 #if LLVM_ENABLE_THREADS
 #include <future>
 #endif

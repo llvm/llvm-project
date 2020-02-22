@@ -46,10 +46,8 @@ struct OpaqueTypeStorage;
 ///        current type. Used for isa/dyn_cast casting functionality.
 ///
 ///  * Optional:
-///    - static LogicalResult verifyConstructionInvariants(
-///                                               Optional<Location> loc,
-///                                               MLIRContext *context,
-///                                               Args... args)
+///    - static LogicalResult verifyConstructionInvariants(Location loc,
+///                                                        Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
 ///        methods to ensure that the arguments passed in are valid to construct
 ///        a type instance with.
@@ -148,17 +146,27 @@ public:
 
   /// Return true if this is an integer type with the specified width.
   bool isInteger(unsigned width);
+  /// Return true if this is a signless integer type (with the specified width).
+  bool isSignlessInteger();
+  bool isSignlessInteger(unsigned width);
+  /// Return true if this is a signed integer type (with the specified width).
+  bool isSignedInteger();
+  bool isSignedInteger(unsigned width);
+  /// Return true if this is an unsigned integer type (with the specified
+  /// width).
+  bool isUnsignedInteger();
+  bool isUnsignedInteger(unsigned width);
 
   /// Return the bit width of an integer or a float type, assert failure on
   /// other types.
   unsigned getIntOrFloatBitWidth();
 
-  /// Return true if this is an integer or index type.
-  bool isIntOrIndex();
-  /// Return true if this is an integer, index, or float type.
-  bool isIntOrIndexOrFloat();
-  /// Return true of this is an integer or a float type.
-  bool isIntOrFloat();
+  /// Return true if this is a signless integer or index type.
+  bool isSignlessIntOrIndex();
+  /// Return true if this is a signless integer, index, or float type.
+  bool isSignlessIntOrIndexOrFloat();
+  /// Return true of this is a signless integer or a float type.
+  bool isSignlessIntOrFloat();
 
   /// Print the current type.
   void print(raw_ostream &os);
@@ -238,8 +246,7 @@ public:
   StringRef getTypeData() const;
 
   /// Verify the construction of an opaque type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef typeData);
 

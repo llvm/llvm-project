@@ -377,6 +377,99 @@ static void AppendHexValue(StreamString &response, const uint8_t *buf,
   }
 }
 
+static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
+  switch (reg_info.encoding) {
+  case eEncodingUint:
+    return "uint";
+  case eEncodingSint:
+    return "sint";
+  case eEncodingIEEE754:
+    return "ieee754";
+  case eEncodingVector:
+    return "vector";
+  default:
+    return "";
+  }
+}
+
+static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
+  switch (reg_info.format) {
+  case eFormatBinary:
+    return "binary";
+  case eFormatDecimal:
+    return "decimal";
+  case eFormatHex:
+    return "hex";
+  case eFormatFloat:
+    return "float";
+  case eFormatVectorOfSInt8:
+    return "vector-sint8";
+  case eFormatVectorOfUInt8:
+    return "vector-uint8";
+  case eFormatVectorOfSInt16:
+    return "vector-sint16";
+  case eFormatVectorOfUInt16:
+    return "vector-uint16";
+  case eFormatVectorOfSInt32:
+    return "vector-sint32";
+  case eFormatVectorOfUInt32:
+    return "vector-uint32";
+  case eFormatVectorOfFloat32:
+    return "vector-float32";
+  case eFormatVectorOfUInt64:
+    return "vector-uint64";
+  case eFormatVectorOfUInt128:
+    return "vector-uint128";
+  default:
+    return "";
+  };
+}
+
+static llvm::StringRef GetKindGenericOrEmpty(const RegisterInfo &reg_info) {
+  switch (reg_info.kinds[RegisterKind::eRegisterKindGeneric]) {
+  case LLDB_REGNUM_GENERIC_PC:
+    return "pc";
+  case LLDB_REGNUM_GENERIC_SP:
+    return "sp";
+  case LLDB_REGNUM_GENERIC_FP:
+    return "fp";
+  case LLDB_REGNUM_GENERIC_RA:
+    return "ra";
+  case LLDB_REGNUM_GENERIC_FLAGS:
+    return "flags";
+  case LLDB_REGNUM_GENERIC_ARG1:
+    return "arg1";
+  case LLDB_REGNUM_GENERIC_ARG2:
+    return "arg2";
+  case LLDB_REGNUM_GENERIC_ARG3:
+    return "arg3";
+  case LLDB_REGNUM_GENERIC_ARG4:
+    return "arg4";
+  case LLDB_REGNUM_GENERIC_ARG5:
+    return "arg5";
+  case LLDB_REGNUM_GENERIC_ARG6:
+    return "arg6";
+  case LLDB_REGNUM_GENERIC_ARG7:
+    return "arg7";
+  case LLDB_REGNUM_GENERIC_ARG8:
+    return "arg8";
+  default:
+    return "";
+  }
+}
+
+static void CollectRegNums(const uint32_t *reg_num, StreamString &response,
+                           bool usehex) {
+  for (int i = 0; *reg_num != LLDB_INVALID_REGNUM; ++reg_num, ++i) {
+    if (i > 0)
+      response.PutChar(',');
+    if (usehex)
+      response.Printf("%" PRIx32, *reg_num);
+    else
+      response.Printf("%" PRIu32, *reg_num);
+  }
+}
+
 static void WriteRegisterValueInHexFixedWidth(
     StreamString &response, NativeRegisterContext &reg_ctx,
     const RegisterInfo &reg_info, const RegisterValue *reg_value_p,
@@ -1699,74 +1792,18 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   response.Printf("bitsize:%" PRIu32 ";offset:%" PRIu32 ";",
                   reg_info->byte_size * 8, reg_info->byte_offset);
 
-  switch (reg_info->encoding) {
-  case eEncodingUint:
-    response.PutCString("encoding:uint;");
-    break;
-  case eEncodingSint:
-    response.PutCString("encoding:sint;");
-    break;
-  case eEncodingIEEE754:
-    response.PutCString("encoding:ieee754;");
-    break;
-  case eEncodingVector:
-    response.PutCString("encoding:vector;");
-    break;
-  default:
-    break;
-  }
+  llvm::StringRef encoding = GetEncodingNameOrEmpty(*reg_info);
+  if (!encoding.empty())
+    response << "encoding:" << encoding << ';';
 
-  switch (reg_info->format) {
-  case eFormatBinary:
-    response.PutCString("format:binary;");
-    break;
-  case eFormatDecimal:
-    response.PutCString("format:decimal;");
-    break;
-  case eFormatHex:
-    response.PutCString("format:hex;");
-    break;
-  case eFormatFloat:
-    response.PutCString("format:float;");
-    break;
-  case eFormatVectorOfSInt8:
-    response.PutCString("format:vector-sint8;");
-    break;
-  case eFormatVectorOfUInt8:
-    response.PutCString("format:vector-uint8;");
-    break;
-  case eFormatVectorOfSInt16:
-    response.PutCString("format:vector-sint16;");
-    break;
-  case eFormatVectorOfUInt16:
-    response.PutCString("format:vector-uint16;");
-    break;
-  case eFormatVectorOfSInt32:
-    response.PutCString("format:vector-sint32;");
-    break;
-  case eFormatVectorOfUInt32:
-    response.PutCString("format:vector-uint32;");
-    break;
-  case eFormatVectorOfFloat32:
-    response.PutCString("format:vector-float32;");
-    break;
-  case eFormatVectorOfUInt64:
-    response.PutCString("format:vector-uint64;");
-    break;
-  case eFormatVectorOfUInt128:
-    response.PutCString("format:vector-uint128;");
-    break;
-  default:
-    break;
-  };
+  llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
+  if (!format.empty())
+    response << "format:" << format << ';';
 
   const char *const register_set_name =
       reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
-  if (register_set_name) {
-    response.PutCString("set:");
-    response.PutCString(register_set_name);
-    response.PutChar(';');
-  }
+  if (register_set_name)
+    response << "set:" << register_set_name << ';';
 
   if (reg_info->kinds[RegisterKind::eRegisterKindEHFrame] !=
       LLDB_INVALID_REGNUM)
@@ -1777,71 +1814,19 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     response.Printf("dwarf:%" PRIu32 ";",
                     reg_info->kinds[RegisterKind::eRegisterKindDWARF]);
 
-  switch (reg_info->kinds[RegisterKind::eRegisterKindGeneric]) {
-  case LLDB_REGNUM_GENERIC_PC:
-    response.PutCString("generic:pc;");
-    break;
-  case LLDB_REGNUM_GENERIC_SP:
-    response.PutCString("generic:sp;");
-    break;
-  case LLDB_REGNUM_GENERIC_FP:
-    response.PutCString("generic:fp;");
-    break;
-  case LLDB_REGNUM_GENERIC_RA:
-    response.PutCString("generic:ra;");
-    break;
-  case LLDB_REGNUM_GENERIC_FLAGS:
-    response.PutCString("generic:flags;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG1:
-    response.PutCString("generic:arg1;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG2:
-    response.PutCString("generic:arg2;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG3:
-    response.PutCString("generic:arg3;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG4:
-    response.PutCString("generic:arg4;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG5:
-    response.PutCString("generic:arg5;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG6:
-    response.PutCString("generic:arg6;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG7:
-    response.PutCString("generic:arg7;");
-    break;
-  case LLDB_REGNUM_GENERIC_ARG8:
-    response.PutCString("generic:arg8;");
-    break;
-  default:
-    break;
-  }
+  llvm::StringRef kind_generic = GetKindGenericOrEmpty(*reg_info);
+  if (!kind_generic.empty())
+    response << "generic:" << kind_generic << ';';
 
   if (reg_info->value_regs && reg_info->value_regs[0] != LLDB_INVALID_REGNUM) {
     response.PutCString("container-regs:");
-    int i = 0;
-    for (const uint32_t *reg_num = reg_info->value_regs;
-         *reg_num != LLDB_INVALID_REGNUM; ++reg_num, ++i) {
-      if (i > 0)
-        response.PutChar(',');
-      response.Printf("%" PRIx32, *reg_num);
-    }
+    CollectRegNums(reg_info->value_regs, response, true);
     response.PutChar(';');
   }
 
   if (reg_info->invalidate_regs && reg_info->invalidate_regs[0]) {
     response.PutCString("invalidate-regs:");
-    int i = 0;
-    for (const uint32_t *reg_num = reg_info->invalidate_regs;
-         *reg_num != LLDB_INVALID_REGNUM; ++reg_num, ++i) {
-      if (i > 0)
-        response.PutChar(',');
-      response.Printf("%" PRIx32, *reg_num);
-    }
+    CollectRegNums(reg_info->invalidate_regs, response, true);
     response.PutChar(';');
   }
 
@@ -2751,16 +2736,118 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
-                                                 llvm::StringRef annex) {
-  if (object == "auxv") {
-    // Make sure we have a valid process.
-    if (!m_debugged_process_up ||
-        (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID)) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "No process available");
+GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
+  // Ensure we have a thread.
+  NativeThreadProtocol *thread = m_debugged_process_up->GetThreadAtIndex(0);
+  if (!thread)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No thread available");
+
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_THREAD));
+  // Get the register context for the first thread.
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
+
+  StreamString response;
+
+  response.Printf("<?xml version=\"1.0\"?>");
+  response.Printf("<target version=\"1.0\">");
+
+  response.Printf("<architecture>%s</architecture>",
+                  m_debugged_process_up->GetArchitecture()
+                      .GetTriple()
+                      .getArchName()
+                      .str()
+                      .c_str());
+
+  response.Printf("<feature>");
+
+  const int registers_count = reg_context.GetUserRegisterCount();
+  for (int reg_index = 0; reg_index < registers_count; reg_index++) {
+    const RegisterInfo *reg_info =
+        reg_context.GetRegisterInfoAtIndex(reg_index);
+
+    if (!reg_info) {
+      LLDB_LOGF(log,
+                "%s failed to get register info for register index %" PRIu32,
+                "target.xml", reg_index);
+      continue;
     }
 
+    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" offset=\"%" PRIu32
+                    "\" regnum=\"%d\" ",
+                    reg_info->name, reg_info->byte_size * 8,
+                    reg_info->byte_offset, reg_index);
+
+    if (reg_info->alt_name && reg_info->alt_name[0])
+      response.Printf("altname=\"%s\" ", reg_info->alt_name);
+
+    llvm::StringRef encoding = GetEncodingNameOrEmpty(*reg_info);
+    if (!encoding.empty())
+      response << "encoding=\"" << encoding << "\" ";
+
+    llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
+    if (!format.empty())
+      response << "format=\"" << format << "\" ";
+
+    const char *const register_set_name =
+        reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
+    if (register_set_name)
+      response << "group=\"" << register_set_name << "\" ";
+
+    if (reg_info->kinds[RegisterKind::eRegisterKindEHFrame] !=
+        LLDB_INVALID_REGNUM)
+      response.Printf("ehframe_regnum=\"%" PRIu32 "\" ",
+                      reg_info->kinds[RegisterKind::eRegisterKindEHFrame]);
+
+    if (reg_info->kinds[RegisterKind::eRegisterKindDWARF] !=
+        LLDB_INVALID_REGNUM)
+      response.Printf("dwarf_regnum=\"%" PRIu32 "\" ",
+                      reg_info->kinds[RegisterKind::eRegisterKindDWARF]);
+
+    llvm::StringRef kind_generic = GetKindGenericOrEmpty(*reg_info);
+    if (!kind_generic.empty())
+      response << "generic=\"" << kind_generic << "\" ";
+
+    if (reg_info->value_regs &&
+        reg_info->value_regs[0] != LLDB_INVALID_REGNUM) {
+      response.PutCString("value_regnums=\"");
+      CollectRegNums(reg_info->value_regs, response, false);
+      response.Printf("\" ");
+    }
+
+    if (reg_info->invalidate_regs && reg_info->invalidate_regs[0]) {
+      response.PutCString("invalidate_regnums=\"");
+      CollectRegNums(reg_info->invalidate_regs, response, false);
+      response.Printf("\" ");
+    }
+
+    if (reg_info->dynamic_size_dwarf_expr_bytes) {
+      const size_t dwarf_opcode_len = reg_info->dynamic_size_dwarf_len;
+      response.PutCString("dynamic_size_dwarf_expr_bytes=\"");
+      for (uint32_t i = 0; i < dwarf_opcode_len; ++i)
+        response.PutHex8(reg_info->dynamic_size_dwarf_expr_bytes[i]);
+      response.Printf("\" ");
+    }
+
+    response.Printf("/>");
+  }
+
+  response.Printf("</feature>");
+  response.Printf("</target>");
+  return MemoryBuffer::getMemBufferCopy(response.GetString(), "target.xml");
+}
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
+                                                 llvm::StringRef annex) {
+  // Make sure we have a valid process.
+  if (!m_debugged_process_up ||
+      (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No process available");
+  }
+
+  if (object == "auxv") {
     // Grab the auxv data.
     auto buffer_or_error = m_debugged_process_up->GetAuxvData();
     if (!buffer_or_error)
@@ -2785,6 +2872,9 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     response.Printf("</library-list-svr4>");
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
+
+  if (object == "features" && annex == "target.xml")
+    return BuildTargetXml();
 
   return llvm::make_error<PacketUnimplementedError>(
       "Xfer object not supported");

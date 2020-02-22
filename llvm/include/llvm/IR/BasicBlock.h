@@ -455,17 +455,37 @@ public:
   /// Renumber instructions and mark the ordering as valid.
   void renumberInstructions();
 
-  /// Returns false if the instruction ordering is incorrect in an debug build.
-  /// Always returns true when assertions are disabled. The method does not
-  /// assert internally so that we get better location info.
+  /// Asserts that instruction order numbers are marked invalid, or that they
+  /// are in ascending order. This is constant time if the ordering is invalid,
+  /// and linear in the number of instructions if the ordering is valid. Callers
+  /// should be careful not to call this in ways that make common operations
+  /// O(n^2). For example, it takes O(n) time to assign order numbers to
+  /// instructions, so the order should be validated no more than once after
+  /// each ordering to ensure that transforms have the same algorithmic
+  /// complexity when asserts are enabled as when they are disabled.
   void validateInstrOrdering() const;
 
 private:
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__ibmxl__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+  BEGIN_TWO_BYTE_PACK()
   /// Bitfield to help interpret the bits in Value::SubclassData.
   struct BasicBlockBits {
     unsigned short BlockAddressRefCount : 15;
     unsigned short InstrOrderValid : 1;
   };
+  END_TWO_BYTE_PACK()
+
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
 
   /// Safely reinterpret the subclass data bits to a more useful form.
   BasicBlockBits getBasicBlockBits() const {

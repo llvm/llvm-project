@@ -526,7 +526,7 @@ void BasicBlock::renumberInstructions() {
 
 #ifndef NDEBUG
 /// In asserts builds, this checks the numbering. In non-asserts builds, it
-/// is defined as an inline function returning true in BasicBlock.h.
+/// is defined as a no-op inline function in BasicBlock.h.
 void BasicBlock::validateInstrOrdering() const {
   if (!isInstrOrderValid())
     return;

@@ -804,8 +804,6 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
 
     // Update LoopInfo.
     NewLoop->addBasicBlockToLoop(NewBB, *LI);
-    if (BB == CurLoop->getHeader())
-      NewLoop->moveToHeader(NewBB);
 
     // Add DominatorTree node. After seeing all blocks, update to correct
     // IDom.
@@ -815,6 +813,11 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
   }
 
   for (BasicBlock *BB : OrigLoop->getBlocks()) {
+    // Update loop headers.
+    Loop *CurLoop = LI->getLoopFor(BB);
+    if (BB == CurLoop->getHeader())
+      LMap[CurLoop]->moveToHeader(cast<BasicBlock>(VMap[BB]));
+
     // Update DominatorTree.
     BasicBlock *IDomBB = DT->getNode(BB)->getIDom()->getBlock();
     DT->changeImmediateDominator(cast<BasicBlock>(VMap[BB]),

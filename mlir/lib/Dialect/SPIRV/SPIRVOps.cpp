@@ -392,11 +392,11 @@ static unsigned getBitWidth(Type type) {
     // TODO: Make sure not caller relies on the actual pointer width value.
     return 64;
   }
-  if (type.isIntOrFloat()) {
+  if (type.isSignlessIntOrFloat()) {
     return type.getIntOrFloatBitWidth();
   }
   if (auto vectorType = type.dyn_cast<VectorType>()) {
-    assert(vectorType.getElementType().isIntOrFloat());
+    assert(vectorType.getElementType().isSignlessIntOrFloat());
     return vectorType.getNumElements() *
            vectorType.getElementType().getIntOrFloatBitWidth();
   }
@@ -537,7 +537,7 @@ static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
 static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   auto ptrType = op->getOperand(0).getType().cast<spirv::PointerType>();
   auto elementType = ptrType.getPointeeType();
-  if (!elementType.isa<IntegerType>())
+  if (!elementType.isSignlessInteger())
     return op->emitOpError(
                "pointer operand must point to an integer value, found ")
            << elementType;
@@ -1019,32 +1019,6 @@ void spirv::BitcastOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.BranchOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseBranchOp(OpAsmParser &parser, OperationState &state) {
-  Block *dest;
-  SmallVector<Value, 4> destOperands;
-  if (parser.parseSuccessorAndUseList(dest, destOperands))
-    return failure();
-  state.addSuccessor(dest, destOperands);
-  return success();
-}
-
-static void print(spirv::BranchOp branchOp, OpAsmPrinter &printer) {
-  printer << spirv::BranchOp::getOperationName() << ' ';
-  printer.printSuccessorAndUseList(branchOp.getOperation(), /*index=*/0);
-}
-
-static LogicalResult verify(spirv::BranchOp branchOp) {
-  auto *op = branchOp.getOperation();
-  if (op->getNumSuccessors() != 1)
-    branchOp.emitOpError("must have exactly one successor");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spv.BranchConditionalOp
 //===----------------------------------------------------------------------===//
 
@@ -1114,10 +1088,6 @@ static void print(spirv::BranchConditionalOp branchOp, OpAsmPrinter &printer) {
 }
 
 static LogicalResult verify(spirv::BranchConditionalOp branchOp) {
-  auto *op = branchOp.getOperation();
-  if (op->getNumSuccessors() != 2)
-    return branchOp.emitOpError("must have exactly two successors");
-
   if (auto weights = branchOp.branch_weights()) {
     if (weights->getValue().size() != 2) {
       return branchOp.emitOpError("must have exactly two branch weights");
@@ -1382,7 +1352,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
       numElements *= t.getNumElements();
       opElemType = t.getElementType();
     }
-    if (!opElemType.isIntOrFloat()) {
+    if (!opElemType.isSignlessIntOrFloat()) {
       return constOp.emitOpError("only support nested array result type");
     }
 

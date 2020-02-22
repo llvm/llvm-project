@@ -43,6 +43,37 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return M;
 }
 
+TEST(DominatorTree, PHIs) {
+  StringRef ModuleString = R"(
+      define void @f() {
+      bb1:
+        br label %bb1
+      bb2:
+        %a = phi i32 [0, %bb1], [1, %bb2]
+        %b = phi i32 [2, %bb1], [%a, %bb2]
+        br label %bb2
+      };
+  )";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(*M, "f",
+                 [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+                   auto FI = F.begin();
+                   ++FI;
+                   BasicBlock *BB2 = &*FI;
+                   auto BI = BB2->begin();
+                   Instruction *PhiA = &*BI++;
+                   Instruction *PhiB = &*BI;
+
+                   // Phis are thought to execute "instantly, together".
+                   EXPECT_TRUE(DT->dominates(PhiA, PhiB));
+                   EXPECT_TRUE(DT->dominates(PhiB, PhiA));
+                 });
+}
+
 TEST(DominatorTree, Unreachable) {
   StringRef ModuleString =
       "declare i32 @g()\n"

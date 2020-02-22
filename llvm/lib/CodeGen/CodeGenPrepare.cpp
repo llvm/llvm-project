@@ -2044,7 +2044,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   // to fortified library functions (e.g. __memcpy_chk) that have the default
   // "don't know" as the objectsize.  Anything else should be left alone.
   FortifiedLibCallSimplifier Simplifier(TLInfo, true);
-  if (Value *V = Simplifier.optimizeCall(CI)) {
+  IRBuilder<> Builder(CI);
+  if (Value *V = Simplifier.optimizeCall(CI, Builder)) {
     CI->replaceAllUsesWith(V);
     CI->eraseFromParent();
     return true;

@@ -107,7 +107,7 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //     <op>i %0, %1 : i32
 class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     ArithmeticOp<mnemonic, traits>,
-    Arguments<(ins IntegerLike:$lhs, IntegerLike:$rhs)>;
+    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
 
 // Base class for standard arithmetic binary operations on floats, vectors and
 // tensors thereof.  This operation has two operands and returns one result,
@@ -232,12 +232,10 @@ def BranchOp : Std_Op<"br", [Terminator]> {
       ^bb3(%3: tensor<*xf32>):
   }];
 
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let successors = (successor AnySuccessor:$dest);
 
-  let builders = [OpBuilder<
-    "Builder *, OperationState &result, Block *dest,"
-    "ValueRange operands = {}", [{
-      result.addSuccessor(dest, operands);
+  let builders = [OpBuilder<"Builder *, OperationState &result, Block *dest", [{
+    result.addSuccessor(dest, llvm::None);
   }]>];
 
   // BranchOp is fully verified by traits.
@@ -252,6 +250,7 @@ def BranchOp : Std_Op<"br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$dest attr-dict";
 }
 
 def CallOp : Std_Op<"call", [CallOpInterface]> {
@@ -357,6 +356,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
 
   let verifier = ?;
   let hasCanonicalizer = 1;
+
+  let assemblyFormat = "$callee `(` $operands `)` attr-dict `:` type($callee)";
 }
 
 def CeilFOp : FloatUnaryOp<"ceilf"> {
@@ -466,8 +467,8 @@ def CmpIOp : Std_Op<"cmpi",
 
   let arguments = (ins
       CmpIPredicateAttr:$predicate,
-      IntegerLike:$lhs,
-      IntegerLike:$rhs
+      SignlessIntegerLike:$lhs,
+      SignlessIntegerLike:$rhs
   );
   let results = (outs BoolLike:$result);
 
@@ -490,6 +491,8 @@ def CmpIOp : Std_Op<"cmpi",
   let verifier = [{ return success(); }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
 def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
@@ -509,16 +512,8 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
          ...
   }];
 
-  let arguments = (ins I1:$condition, Variadic<AnyType>:$branchOperands);
-
-  let builders = [OpBuilder<
-    "Builder *, OperationState &result, Value condition,"
-    "Block *trueDest, ValueRange trueOperands,"
-    "Block *falseDest, ValueRange falseOperands", [{
-      result.addOperands(condition);
-      result.addSuccessor(trueDest, trueOperands);
-      result.addSuccessor(falseDest, falseOperands);
-  }]>];
+  let arguments = (ins I1:$condition);
+  let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
 
   // CondBranchOp is fully verified by traits.
   let verifier = ?;
@@ -608,6 +603,7 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$condition `,` successors attr-dict";
 }
 
 def ConstantOp : Std_Op<"constant",
@@ -761,6 +757,10 @@ def ExtractElementOp : Std_Op<"extract_element",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $aggregate `[` $indices `]` attr-dict `:` type($aggregate)
+  }];
 }
 
 def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
@@ -853,6 +853,8 @@ def LoadOp : Std_Op<"load",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
 }
 
 def LogOp : FloatUnaryOp<"log"> {
@@ -1049,6 +1051,8 @@ def ReturnOp : Std_Op<"return", [Terminator, HasParent<"FuncOp">]> {
   let builders = [OpBuilder<
     "Builder *b, OperationState &result", [{ build(b, result, llvm::None); }]
   >];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
@@ -1070,9 +1074,10 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
       %3 = select %2, %0, %1 : i32
   }];
 
-  let arguments = (ins BoolLike:$condition, IntegerOrFloatLike:$true_value,
-                       IntegerOrFloatLike:$false_value);
-  let results = (outs IntegerOrFloatLike:$result);
+  let arguments = (ins BoolLike:$condition,
+                       SignlessIntegerOrFloatLike:$true_value,
+                       SignlessIntegerOrFloatLike:$false_value);
+  let results = (outs SignlessIntegerOrFloatLike:$result);
   let verifier = ?;
 
   let builders = [OpBuilder<
@@ -1089,6 +1094,10 @@ def SelectOp : Std_Op<"select", [NoSideEffect, SameOperandsAndResultShape,
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $condition `,` $true_value `,` $false_value attr-dict `:` type($result)
+  }];
 }
 
 def SignExtendIOp : Std_Op<"sexti",
@@ -1109,8 +1118,8 @@ def SignExtendIOp : Std_Op<"sexti",
       %5 = sexti %0 : vector<2 x i32> to vector<2 x i64>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{
@@ -1211,7 +1220,7 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 
   }];
 
-  let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat],
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, AnyFloat],
                                  "integer or float type">:$input);
   let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
 
@@ -1221,6 +1230,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
                   [{ build(builder, result, aggregateType, element); }]>];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 }
 
 def StoreOp : Std_Op<"store",
@@ -1263,6 +1274,10 @@ def StoreOp : Std_Op<"store",
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = [{
+    $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
+  }];
 }
 
 def SubFOp : FloatArithmeticOp<"subf"> {
@@ -1516,11 +1531,12 @@ def TensorLoadOp : Std_Op<"tensor_load",
       result.addTypes(resultType);
   }]>];
 
-
   let extraClassDeclaration = [{
     /// The result of a tensor_load is always a tensor.
     TensorType getType() { return getResult().getType().cast<TensorType>(); }
   }];
+
+  let assemblyFormat = "$memref attr-dict `:` type($memref)";
 }
 
 def TensorStoreOp : Std_Op<"tensor_store",
@@ -1544,6 +1560,8 @@ def TensorStoreOp : Std_Op<"tensor_store",
   let arguments = (ins AnyTensor:$tensor, AnyMemRef:$memref);
   // TensorStoreOp is fully verified by traits.
   let verifier = ?;
+
+  let assemblyFormat = "$tensor `,` $memref attr-dict `:` type($memref)";
 }
 
 def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
@@ -1561,8 +1579,8 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
       %5 = trunci %0 : vector<2 x i32> to vector<2 x i16>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{
@@ -1661,8 +1679,8 @@ def ZeroExtendIOp : Std_Op<"zexti", [NoSideEffect, SameOperandsAndResultShape]> 
       %5 = zexti %0 : vector<2 x i32> to vector<2 x i64>
   }];
 
-  let arguments = (ins IntegerLike:$value);
-  let results = (outs IntegerLike);
+  let arguments = (ins SignlessIntegerLike:$value);
+  let results = (outs SignlessIntegerLike);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, Value value, Type destType", [{

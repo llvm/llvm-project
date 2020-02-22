@@ -70,6 +70,7 @@ public:
 
   IntegerType getI1Type();
   IntegerType getIntegerType(unsigned width);
+  IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(ArrayRef<Type> inputs, ArrayRef<Type> results);
   TupleType getTupleType(ArrayRef<Type> elementTypes);
   NoneType getNoneType();
@@ -110,6 +111,10 @@ public:
   IntegerAttr getI16IntegerAttr(int16_t value);
   IntegerAttr getI32IntegerAttr(int32_t value);
   IntegerAttr getI64IntegerAttr(int64_t value);
+
+  /// Signed and unsigned integer attribute getters.
+  IntegerAttr getSI32IntegerAttr(int32_t value);
+  IntegerAttr getUI32IntegerAttr(uint32_t value);
 
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
 

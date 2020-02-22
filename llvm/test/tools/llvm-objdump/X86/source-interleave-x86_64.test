@@ -10,6 +10,7 @@
 # RUN: FileCheck --check-prefix=SOURCE --strict-whitespace %s < %t2
 
 # LINES: main:
+# LINES-NEXT: ; main():
 # LINES-NEXT: ; {{[ -\(\)_A-Za-z0-9.\\/:]+}}source-interleave-x86_64.c:6
 
 # SOURCE: main:

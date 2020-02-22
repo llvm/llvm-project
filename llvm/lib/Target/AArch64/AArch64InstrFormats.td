@@ -22,13 +22,27 @@ def NormalFrm   : Format<1>; // Do we need any others?
 
 // Enum describing whether an instruction is
 // destructive in its first source operand.
-class DestructiveInstTypeEnum<bits<1> val> {
-  bits<1> Value = val;
+class DestructiveInstTypeEnum<bits<4> val> {
+  bits<4> Value = val;
 }
-def NotDestructive       : DestructiveInstTypeEnum<0>;
+def NotDestructive                : DestructiveInstTypeEnum<0>;
 // Destructive in its first operand and can be MOVPRFX'd, but has no other
 // special properties.
-def DestructiveOther     : DestructiveInstTypeEnum<1>;
+def DestructiveOther              : DestructiveInstTypeEnum<1>;
+def DestructiveUnary              : DestructiveInstTypeEnum<2>;
+def DestructiveBinaryImm          : DestructiveInstTypeEnum<3>;
+def DestructiveBinaryShImmUnpred  : DestructiveInstTypeEnum<4>;
+def DestructiveBinary             : DestructiveInstTypeEnum<5>;
+def DestructiveBinaryComm         : DestructiveInstTypeEnum<6>;
+def DestructiveBinaryCommWithRev  : DestructiveInstTypeEnum<7>;
+def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
+
+class FalseLanesEnum<bits<2> val> {
+  bits<2> Value = val;
+}
+def FalseLanesNone  : FalseLanesEnum<0>;
+def FalseLanesZero  : FalseLanesEnum<1>;
+def FalseLanesUndef : FalseLanesEnum<2>;
 
 // AArch64 Instruction Format
 class AArch64Inst<Format f, string cstr> : Instruction {
@@ -46,10 +60,12 @@ class AArch64Inst<Format f, string cstr> : Instruction {
   bits<2> Form    = F.Value;
 
   // Defaults
+  FalseLanesEnum FalseLanes = FalseLanesNone;
   DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
   ElementSizeEnum ElementSize = ElementSizeNone;
 
-  let TSFlags{3} = DestructiveInstType.Value;
+  let TSFlags{8-7} = FalseLanes.Value;
+  let TSFlags{6-3} = DestructiveInstType.Value;
   let TSFlags{2-0} = ElementSize.Value;
 
   let Pattern     = [];
