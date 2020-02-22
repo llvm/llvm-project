@@ -229,8 +229,8 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
       Lookup->Tag->getKey() != AttrName)
     return false;
   if (IsOn) {
-    if (Lookup->End - Lookup->Begin < BOIE_WasOn)
-      return false;
+    assert((Lookup->End - Lookup->Begin > BOIE_WasOn) &&
+           "missing argument of attribute");
     while (true) {
       if (Lookup == Assume.bundle_op_info_end() ||
           Lookup->Tag->getKey() != AttrName)
