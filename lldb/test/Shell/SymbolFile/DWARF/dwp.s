@@ -232,7 +232,7 @@ F\I:
 .Ldebug_info_end\I:
 .endr
 
-        .section        .debug_cu_index,"e",@progbits
+        .section        .debug_cu_index,"",@progbits
         .short  2                       # DWARF version number
         .short  0                       # Reserved
         .long   4                       # Section count
