@@ -88,8 +88,8 @@ APInt GISelKnownBits::getKnownZeroes(Register R) {
 
 APInt GISelKnownBits::getKnownOnes(Register R) { return getKnownBits(R).One; }
 
-static void dumpResult(const MachineInstr &MI, const KnownBits &Known,
-                       unsigned Depth) {
+LLVM_ATTRIBUTE_UNUSED static void
+dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
   dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
          << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"
          << (Known.Zero | Known.One).toString(16, false) << "\n"
