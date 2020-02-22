@@ -37,12 +37,12 @@ subroutine CheckRepeat
   DATA myName%age / digits(myAge) * 35 /
 end
 
-subroutine CheckValue
-  use m1
-  !C883
-  !ERROR: Derived type 'persn' not found
-  DATA myname / persn(2, 'Abcd Efgh') /
-  !C884
-  !ERROR: Structure constructor in data value must be a constant expression
-  DATA myname / person(myAge, 'Abcd Ijkl') /
-end
+!subroutine CheckValue
+!  use m1
+!  !C883
+!  !ERROR: Derived type 'persn' not found
+!  DATA myname / persn(2, 'Abcd Efgh') /
+!  !C884
+!  !ERROR: Structure constructor in data value must be a constant expression
+!  DATA myname / person(myAge, 'Abcd Ijkl') /
+!end
