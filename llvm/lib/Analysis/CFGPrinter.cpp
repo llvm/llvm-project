@@ -17,11 +17,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include <algorithm>
+
 using namespace llvm;
 
 static cl::opt<std::string> CFGFuncName(
@@ -32,6 +35,12 @@ static cl::opt<std::string> CFGFuncName(
 static cl::opt<std::string> CFGDotFilenamePrefix(
     "cfg-dot-filename-prefix", cl::Hidden,
     cl::desc("The prefix used for the CFG dot file names."));
+
+static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
+            cl::init(false));
+
+static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
+            cl::init(false));
 
 namespace {
   struct CFGViewerLegacyPass : public FunctionPass {
@@ -200,3 +209,30 @@ FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass () {
   return new CFGOnlyPrinterLegacyPass();
 }
 
+void DOTGraphTraits<const Function *>::computeHiddenNodes(const Function *F) {
+  auto evaluateBB = [&](const BasicBlock *Node) {
+    if (succ_begin(Node) == succ_end(Node)) {
+      const Instruction *TI = Node->getTerminator();
+      isHiddenBasicBlock[Node] =
+        (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||
+        (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
+      return;
+    }
+    isHiddenBasicBlock[Node] = std::all_of(
+        succ_begin(Node), succ_end(Node),
+        [this](const BasicBlock *BB) { return isHiddenBasicBlock[BB]; });
+  };
+  /// The post order traversal iteration is done to know the status of
+  /// isHiddenBasicBlock for all the successors on the current BB.
+  for_each(po_begin(&F->getEntryBlock()), po_end(&F->getEntryBlock()),
+           evaluateBB);
+}
+
+bool DOTGraphTraits<const Function *>::isNodeHidden(const BasicBlock *Node) {
+  // If both restricting flags are false, all nodes are displayed.
+  if (!HideUnreachablePaths && !HideDeoptimizePaths)
+    return false;
+  if (isHiddenBasicBlock.find(Node) == isHiddenBasicBlock.end())
+    computeHiddenNodes(Node->getParent());
+  return isHiddenBasicBlock[Node];
+}
