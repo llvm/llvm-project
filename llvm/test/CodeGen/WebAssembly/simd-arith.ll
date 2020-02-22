@@ -160,15 +160,15 @@ define <16 x i8> @shl_const_v16i8(<16 x i8> %v) {
 ; CHECK-LABEL: shl_vec_v16i8:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shl_vec_v16i8 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shl $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]
 ; SIMD128-NEXT: i8x16.splat $push[[M3:[0-9]+]]=, $pop[[M2]]
 ; Skip 14 lanes
-; SIMD128:      i8x16.extract_lane_s $push[[L4:[0-9]+]]=, $0, 15{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L5:[0-9]+]]=, $1, 15{{$}}
+; SIMD128:      i8x16.extract_lane_u $push[[L4:[0-9]+]]=, $0, 15{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L5:[0-9]+]]=, $1, 15{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shl $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
@@ -197,14 +197,14 @@ define <16 x i8> @shr_s_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shr_s_vec_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shr_s $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]
 ; SIMD128-NEXT: i8x16.splat $push[[M3:[0-9]+]]=, $pop[[M2]]
 ; Skip 14 lanes
 ; SIMD128:      i8x16.extract_lane_s $push[[L4:[0-9]+]]=, $0, 15{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L5:[0-9]+]]=, $1, 15{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L5:[0-9]+]]=, $1, 15{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shr_s $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
@@ -233,14 +233,14 @@ define <16 x i8> @shr_u_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shr_u_vec_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]
 ; SIMD128-NEXT: i8x16.splat $push[[M3:[0-9]+]]=, $pop[[M2]]
 ; Skip 14 lanes
 ; SIMD128:      i8x16.extract_lane_u $push[[L4:[0-9]+]]=, $0, 15{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_s $push[[L5:[0-9]+]]=, $1, 15{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L5:[0-9]+]]=, $1, 15{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
@@ -470,15 +470,15 @@ define <8 x i16> @shl_const_v8i16(<8 x i16> %v) {
 ; CHECK-LABEL: shl_vec_v8i16:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shl_vec_v8i16 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shl $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]{{$}}
 ; SIMD128-NEXT: i16x8.splat $push[[M3:[0-9]+]]=, $pop[[M2]]{{$}}
 ; Skip 6 lanes
-; SIMD128:      i16x8.extract_lane_s $push[[L4:[0-9]+]]=, $0, 7{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L5:[0-9]+]]=, $1, 7{{$}}
+; SIMD128:      i16x8.extract_lane_u $push[[L4:[0-9]+]]=, $0, 7{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L5:[0-9]+]]=, $1, 7{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shl $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
@@ -506,14 +506,14 @@ define <8 x i16> @shr_s_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shr_s_vec_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i16x8.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shr_s $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]{{$}}
 ; SIMD128-NEXT: i16x8.splat $push[[M3:[0-9]+]]=, $pop[[M2]]{{$}}
 ; Skip 6 lanes
 ; SIMD128:      i16x8.extract_lane_s $push[[L4:[0-9]+]]=, $0, 7{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L5:[0-9]+]]=, $1, 7{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L5:[0-9]+]]=, $1, 7{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shr_s $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
@@ -541,14 +541,14 @@ define <8 x i16> @shr_u_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shr_u_vec_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i16x8.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
 ; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M1:[0-9]+]]=, $pop[[L1]], $pop[[M0]]{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[M2:[0-9]+]]=, $pop[[L0]], $pop[[M1]]{{$}}
 ; SIMD128-NEXT: i16x8.splat $push[[M3:[0-9]+]]=, $pop[[M2]]{{$}}
 ; Skip 6 lanes
 ; SIMD128:      i16x8.extract_lane_u $push[[L4:[0-9]+]]=, $0, 7{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_s $push[[L5:[0-9]+]]=, $1, 7{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L5:[0-9]+]]=, $1, 7{{$}}
 ; SIMD128-NEXT: i32.const $push[[M4:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i32.and $push[[M5:[0-9]+]]=, $pop[[L5]], $pop[[M4]]{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[M6:[0-9]+]]=, $pop[[L4]], $pop[[M5]]{{$}}
