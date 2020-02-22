@@ -66,6 +66,17 @@ namespace {
 using BlockVector = SmallVector<MachineBasicBlock *, 4>;
 using BlockSet = SmallPtrSet<MachineBasicBlock *, 4>;
 
+static BlockVector getSortedEntries(const BlockSet &Entries) {
+  BlockVector SortedEntries(Entries.begin(), Entries.end());
+  llvm::sort(SortedEntries,
+             [](const MachineBasicBlock *A, const MachineBasicBlock *B) {
+               auto ANum = A->getNumber();
+               auto BNum = B->getNumber();
+               return ANum < BNum;
+             });
+  return SortedEntries;
+}
+
 // Calculates reachability in a region. Ignores branches to blocks outside of
 // the region, and ignores branches to the region entry (for the case where
 // the region is the inner part of a loop).
@@ -241,7 +252,6 @@ public:
 bool WebAssemblyFixIrreducibleControlFlow::processRegion(
     MachineBasicBlock *Entry, BlockSet &Blocks, MachineFunction &MF) {
   bool Changed = false;
-
   // Remove irreducibility before processing child loops, which may take
   // multiple iterations.
   while (true) {
@@ -249,11 +259,17 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 
     bool FoundIrreducibility = false;
 
-    for (auto *LoopEntry : Graph.getLoopEntries()) {
+    for (auto *LoopEntry : getSortedEntries(Graph.getLoopEntries())) {
       // Find mutual entries - all entries which can reach this one, and
       // are reached by it (that always includes LoopEntry itself). All mutual
       // entries must be in the same loop, so if we have more than one, then we
       // have irreducible control flow.
+      //
+      // (Note that we need to sort the entries here, as otherwise the order can
+      // matter: being mutual is a symmetric relationship, and each set of
+      // mutuals will be handled properly no matter which we see first. However,
+      // there can be multiple disjoint sets of mutuals, and which we process
+      // first changes the output.)
       //
       // Note that irreducibility may involve inner loops, e.g. imagine A
       // starts one loop, and it has B inside it which starts an inner loop.
@@ -325,13 +341,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   assert(Entries.size() >= 2);
 
   // Sort the entries to ensure a deterministic build.
-  BlockVector SortedEntries(Entries.begin(), Entries.end());
-  llvm::sort(SortedEntries,
-             [&](const MachineBasicBlock *A, const MachineBasicBlock *B) {
-               auto ANum = A->getNumber();
-               auto BNum = B->getNumber();
-               return ANum < BNum;
-             });
+  BlockVector SortedEntries = getSortedEntries(Entries);
 
 #ifndef NDEBUG
   for (auto Block : SortedEntries)
