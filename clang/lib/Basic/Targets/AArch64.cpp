@@ -194,6 +194,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__LP64__");
   }
 
+  std::string CodeModel = getTargetOpts().CodeModel;
+  if (CodeModel == "default")
+    CodeModel = "small";
+  for (char &c : CodeModel)
+    c = toupper(c);
+  Builder.defineMacro("__AARCH64_CMODEL_" + CodeModel + "__");
+
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
   Builder.defineMacro("__ARM_ARCH", "8");

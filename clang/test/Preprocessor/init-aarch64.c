@@ -7,8 +7,10 @@
 
 // AARCH64: #define _LP64 1
 // AARCH64_BE-NEXT: #define __AARCH64EB__ 1
+// AARCH64_BE-NEXT: #define __AARCH64_CMODEL_SMALL__ 1
 // AARCH64_BE-NEXT: #define __AARCH_BIG_ENDIAN 1
 // AARCH64_LE-NEXT: #define __AARCH64EL__ 1
+// AARCH64_LE-NEXT: #define __AARCH64_CMODEL_SMALL__ 1
 // AARCH64-NEXT: #define __ARM_64BIT_STATE 1
 // AARCH64-NEXT: #define __ARM_ACLE 200
 // AARCH64-NEXT: #define __ARM_ALIGN_MAX_STACK_PWR 4
@@ -689,3 +691,11 @@
 // AARCH64-MSVC: #define __WINT_TYPE__ unsigned short
 // AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
+
+// RUN: %clang_cc1 -triple=aarch64 -E -dM -mcmodel=small -xc /dev/null | FileCheck --check-prefix=CMODEL_SMALL %s
+// RUN: %clang_cc1 -triple=aarch64 -E -dM -mcmodel=tiny -xc /dev/null | FileCheck --check-prefix=CMODEL_TINY %s
+// RUN: %clang_cc1 -triple=aarch64 -E -dM -mcmodel=large -xc /dev/null | FileCheck --check-prefix=CMODEL_LARGE %s
+
+// CMODEL_TINY: #define __AARCH64_CMODEL_TINY__ 1
+// CMODEL_SMALL: #define __AARCH64_CMODEL_SMALL__ 1
+// CMODEL_LARGE: #define __AARCH64_CMODEL_LARGE__ 1
