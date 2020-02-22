@@ -75,6 +75,10 @@ Improvements to Clang's diagnostics
   warning now offers fixits. Excluding -Wrange-loop-bind-reference it is now
   part of -Wall. To reduce the number of false positives the diagnostic is
   disabled in macros and template instantiations.
+- -Wmisleading-indentation has been added. This warning is similar to the GCC
+  warning of the same name. It warns about statements that are indented as if
+  they were part of a if/else/for/while statement but are not semantically
+  part of that if/else/for/while.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
