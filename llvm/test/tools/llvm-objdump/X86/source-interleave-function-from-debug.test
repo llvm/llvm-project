@@ -9,7 +9,7 @@
 
 ; CHECK:      0000000000000000 foo:
 ; CHECK-NEXT: ; foo():
-; CHECK-NEXT: ; /tmp/src.cc:1
+; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:1
 ; CHECK-NEXT:        0: b8 05 00 00 00                movl    $5, %eax
 ; CHECK-NEXT:        5: c3                            retq
 
@@ -18,7 +18,7 @@
 ; CHECK-DEMANGLE:         0000000000000010 xyz::bar():
 ; CHECK-DEMANGLE-NEXT:    ; xyz::bar():
 
-; CHECK-NEXT: ; /tmp/src.cc:3
+; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
 ; CHECK-NEXT:       10: b8 0a 00 00 00                movl    $10, %eax
 ; CHECK-NEXT:       15: c3                            retq
 
@@ -27,7 +27,7 @@
 ; CHECK-DEMANGLE:         0000000000000020 xyz::baz():
 ; CHECK-DEMANGLE-NEXT:    ; xyz::baz():
 
-; CHECK-NEXT: ; /tmp/src.cc:3
+; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
 ; CHECK-NEXT:       20: b8 14 00 00 00                movl    $20, %eax
 ; CHECK-NEXT:       25: c3                            retq
 
@@ -39,17 +39,17 @@
 
 ; STRIPPED:      0000000000000000 .text:
 ; STRIPPED-NEXT: ; Function1():
-; STRIPPED-NEXT: ; /tmp/src.cc:1
+; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:1
 ; STRIPPED-NEXT:        0: b8 05 00 00 00                movl    $5, %eax
 ; STRIPPED-NEXT:        5: c3                            retq
 
 ; STRIPPED:      ; xyz::bar():
-; STRIPPED-NEXT: ; /tmp/src.cc:3
+; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
 ; STRIPPED-NEXT:       10: b8 0a 00 00 00                movl    $10, %eax
 ; STRIPPED-NEXT:       15: c3                            retq
 
 ; STRIPPED:      ; xyz::baz():
-; STRIPPED-NEXT: ; /tmp/src.cc:3
+; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
 ; STRIPPED-NEXT:       20: b8 14 00 00 00                movl    $20, %eax
 ; STRIPPED-NEXT:       25: c3                            retq
 
