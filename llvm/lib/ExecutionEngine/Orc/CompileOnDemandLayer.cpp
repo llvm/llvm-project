@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -294,21 +297,44 @@ void CompileOnDemandLayer::emitPartition(
   //
   // FIXME: We apply this promotion once per partitioning. It's safe, but
   // overkill.
-
   auto ExtractedTSM =
       TSM.withModuleDo([&](Module &M) -> Expected<ThreadSafeModule> {
         auto PromotedGlobals = PromoteSymbols(M);
         if (!PromotedGlobals.empty()) {
+
           MangleAndInterner Mangle(ES, M.getDataLayout());
           SymbolFlagsMap SymbolFlags;
-          for (auto &GV : PromotedGlobals)
-            SymbolFlags[Mangle(GV->getName())] =
-                JITSymbolFlags::fromGlobalValue(*GV);
+          IRSymbolMapper::add(ES, *getManglingOptions(),
+                              PromotedGlobals, SymbolFlags);
+
           if (auto Err = R.defineMaterializing(SymbolFlags))
             return std::move(Err);
         }
 
         expandPartition(*GVsToExtract);
+
+        // Submodule name is given by hashing the names of the globals.
+        std::string SubModuleName;
+        {
+          std::vector<const GlobalValue*> HashGVs;
+          HashGVs.reserve(GVsToExtract->size());
+          for (auto *GV : *GVsToExtract)
+            HashGVs.push_back(GV);
+          llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
+              return LHS->getName() < RHS->getName();
+            });
+          hash_code HC(0);
+          for (auto *GV : HashGVs) {
+            assert(GV->hasName() && "All GVs to extract should be named by now");
+            auto GVName = GV->getName();
+            HC = hash_combine(HC, hash_combine_range(GVName.begin(), GVName.end()));
+          }
+          raw_string_ostream(SubModuleName)
+            << ".submodule."
+            << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
+                       static_cast<size_t>(HC))
+            << ".ll";
+        }
 
         // Extract the requested partiton (plus any necessary aliases) and
         // put the rest back into the impl dylib.
@@ -316,7 +342,7 @@ void CompileOnDemandLayer::emitPartition(
           return GVsToExtract->count(&GV);
         };
 
-        return extractSubModule(TSM, ".submodule", ShouldExtract);
+        return extractSubModule(TSM, SubModuleName , ShouldExtract);
       });
 
   if (!ExtractedTSM) {
