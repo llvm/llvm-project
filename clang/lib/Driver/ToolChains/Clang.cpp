@@ -4672,8 +4672,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   (void)Args.hasArg(options::OPT_mtune_EQ);
 
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-    CmdArgs.push_back("-mcode-model");
-    CmdArgs.push_back(A->getValue());
+    StringRef CM = A->getValue();
+    if (CM == "small" || CM == "kernel" || CM == "medium" || CM == "large" ||
+        CM == "tiny")
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << CM << A->getOption().getName();
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {

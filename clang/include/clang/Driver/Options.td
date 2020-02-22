@@ -2201,7 +2201,7 @@ def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-versio
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption]>;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[DriverOption]>;
-def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>;
+def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>, Flags<[CC1Option]>;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>, Flags<[DriverOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
            "12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)">;
