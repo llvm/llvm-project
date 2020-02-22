@@ -107,12 +107,16 @@ private:
 /// llvm.global_ctors.
 class GlobalCtorDtorScraper {
 public:
-  GlobalCtorDtorScraper(GenericLLVMIRPlatformSupport &PS) : PS(PS) {}
+
+  GlobalCtorDtorScraper(GenericLLVMIRPlatformSupport &PS,
+                        StringRef InitFunctionPrefix)
+    : PS(PS), InitFunctionPrefix(InitFunctionPrefix) {}
   Expected<ThreadSafeModule> operator()(ThreadSafeModule TSM,
                                         MaterializationResponsibility &R);
 
 private:
   GenericLLVMIRPlatformSupport &PS;
+  StringRef InitFunctionPrefix;
 };
 
 /// Generic IR Platform Support
@@ -125,12 +129,14 @@ public:
   // GenericLLVMIRPlatform &P) : P(P) {
   GenericLLVMIRPlatformSupport(LLJIT &J) : J(J) {
 
+    MangleAndInterner Mangle(getExecutionSession(), J.getDataLayout());
+    InitFunctionPrefix = Mangle("__orc_init_func.");
+
     getExecutionSession().setPlatform(
         std::make_unique<GenericLLVMIRPlatform>(*this));
 
-    setInitTransform(J, GlobalCtorDtorScraper(*this));
+    setInitTransform(J, GlobalCtorDtorScraper(*this, *InitFunctionPrefix));
 
-    MangleAndInterner Mangle(getExecutionSession(), J.getDataLayout());
     SymbolMap StdInterposes;
 
     StdInterposes[Mangle("__lljit.platform_support_instance")] =
@@ -169,6 +175,18 @@ public:
     std::lock_guard<std::mutex> Lock(PlatformSupportMutex);
     if (auto &InitSym = MU.getInitializerSymbol())
       InitSymbols[&JD].add(InitSym);
+    else {
+      // If there's no identified init symbol attached, but there is a symbol
+      // with the GenericIRPlatform::InitFunctionPrefix, then treat that as
+      // an init function. Add the symbol to both the InitSymbols map (which
+      // will trigger a lookup to materialize the module) and the InitFunctions
+      // map (which holds the names of the symbols to execute).
+      for (auto &KV : MU.getSymbols())
+        if ((*KV.first).startswith(*InitFunctionPrefix)) {
+          InitSymbols[&JD].add(KV.first);
+          InitFunctions[&JD].add(KV.first);
+        }
+    }
     return Error::success();
   }
 
@@ -387,6 +405,7 @@ private:
 
   std::mutex PlatformSupportMutex;
   LLJIT &J;
+  SymbolStringPtr InitFunctionPrefix;
   DenseMap<JITDylib *, SymbolLookupSet> InitSymbols;
   DenseMap<JITDylib *, SymbolLookupSet> InitFunctions;
   DenseMap<JITDylib *, SymbolLookupSet> DeInitFunctions;
@@ -415,7 +434,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
 
     std::string InitFunctionName;
     raw_string_ostream(InitFunctionName)
-        << "__orc_init." << M.getModuleIdentifier();
+        << InitFunctionPrefix << M.getModuleIdentifier();
 
     MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
     auto InternedName = Mangle(InitFunctionName);
