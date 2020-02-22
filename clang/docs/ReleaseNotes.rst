@@ -151,6 +151,12 @@ New Compiler Flags
   `-mcmodel=small` and `-mcmodel=medium` respectively. Preprocessor definitions
   for `__riscv_cmodel_medlow` and `__riscv_cmodel_medany` have been corrected.
 
+- ``-fmacro-prefix-map=OLD=NEW`` substitutes directory prefix ``OLD`` for
+  ``NEW`` in predefined preprocessor macros such as ``__FILE__``. This helps
+  with reproducible builds that are location independent. The new
+  ``-ffile-prefix-map`` option is equivalent to specifying both
+  ``-fdebug-prefix-map`` and ``-fmacro-prefix-map``.
+
 Deprecated Compiler Flags
 -------------------------
 
