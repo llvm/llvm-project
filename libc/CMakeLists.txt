@@ -32,3 +32,4 @@ add_subdirectory(utils)
 # of the other directories.
 add_subdirectory(lib)
 add_subdirectory(test)
+add_subdirectory(fuzzing)
