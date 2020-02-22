@@ -1684,7 +1684,7 @@ LogicalResult FormatParser::parseOptionalChildElement(
       })
       // Only optional-like(i.e. variadic) operands can be within an optional
       // group.
-      .Case<OperandVariable>([&](auto *ele) {
+      .Case<OperandVariable>([&](OperandVariable *ele) {
         if (!ele->getVar()->isVariadic())
           return emitError(childLoc, "only variadic operands can be used within"
                                      " an optional group");
@@ -1694,13 +1694,13 @@ LogicalResult FormatParser::parseOptionalChildElement(
       // Literals and type directives may be used, but they can't anchor the
       // group.
       .Case<LiteralElement, TypeDirective, FunctionalTypeDirective>(
-          [&](auto *) {
+          [&](Element *) {
             if (isAnchor)
               return emitError(childLoc, "only variables can be used to anchor "
                                          "an optional group");
             return success();
           })
-      .Default([&](auto *) {
+      .Default([&](Element *) {
         return emitError(childLoc, "only literals, types, and variables can be "
                                    "used within an optional group");
       });
