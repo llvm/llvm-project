@@ -15,7 +15,7 @@ namespace __llvm_libc {
 
 int LLVM_LIBC_ENTRYPOINT(raise)(int sig) {
   __llvm_libc::Sigset sigset;
-  int got = __llvm_libc::block_all_signals(sigset);
+  __llvm_libc::block_all_signals(sigset);
   long pid = __llvm_libc::syscall(SYS_getpid);
   long tid = __llvm_libc::syscall(SYS_gettid);
   int ret = __llvm_libc::syscall(SYS_tgkill, pid, tid, sig);
