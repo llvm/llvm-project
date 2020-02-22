@@ -20,6 +20,14 @@ Sections:
     Address:         0x00000000004000B0
     AddressAlign:    0x0000000000000010
     Size:            0x42
+  - Name:            .dynsym
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
 Symbols:         
 DynamicSymbols:  
 ProgramHeaders:
