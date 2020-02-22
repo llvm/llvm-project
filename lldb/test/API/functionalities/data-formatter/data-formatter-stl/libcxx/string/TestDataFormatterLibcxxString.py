@@ -116,7 +116,9 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
         ])
 
-        if is_64_bit:
+        # The test assumes that std::string is in its cap-size-data layout.
+        is_alternate_layout = ('arm' in self.getArchitecture()) and self.platformIsDarwin()
+        if is_64_bit and not is_alternate_layout:
             self.expect("frame variable garbage1", substrs=['garbage1 = Summary Unavailable'])
             self.expect("frame variable garbage2", substrs=['garbage2 = Summary Unavailable'])
             self.expect("frame variable garbage3", substrs=['garbage3 = Summary Unavailable'])
