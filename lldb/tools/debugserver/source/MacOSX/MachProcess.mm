@@ -25,11 +25,13 @@
 #include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <uuid/uuid.h>
 
 #include <algorithm>
+#include <chrono>
 #include <map>
 
 #import <Foundation/Foundation.h>
@@ -485,6 +487,7 @@ MachProcess::MachProcess()
       m_stdio_mutex(PTHREAD_MUTEX_RECURSIVE), m_stdout_data(),
       m_profile_enabled(false), m_profile_interval_usec(0), m_profile_thread(0),
       m_profile_data_mutex(PTHREAD_MUTEX_RECURSIVE), m_profile_data(),
+      m_profile_events(0, eMachProcessProfileCancel),
       m_thread_actions(), m_exception_messages(),
       m_exception_messages_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
       m_activities(), m_state(eStateUnloaded),
@@ -1294,10 +1297,7 @@ void MachProcess::Clear(bool detaching) {
     m_exception_messages.clear();
   }
   m_activities.Clear();
-  if (m_profile_thread) {
-    pthread_join(m_profile_thread, NULL);
-    m_profile_thread = NULL;
-  }
+  StopProfileThread();
 }
 
 bool MachProcess::StartSTDIOThread() {
@@ -1316,9 +1316,17 @@ void MachProcess::SetEnableAsyncProfiling(bool enable, uint64_t interval_usec,
   if (m_profile_enabled && (m_profile_thread == NULL)) {
     StartProfileThread();
   } else if (!m_profile_enabled && m_profile_thread) {
-    pthread_join(m_profile_thread, NULL);
-    m_profile_thread = NULL;
+    StopProfileThread();
   }
+}
+
+void MachProcess::StopProfileThread() {
+  if (m_profile_thread == NULL)
+    return;
+  m_profile_events.SetEvents(eMachProcessProfileCancel);
+  pthread_join(m_profile_thread, NULL);
+  m_profile_thread = NULL;
+  m_profile_events.ResetEvents(eMachProcessProfileCancel);
 }
 
 bool MachProcess::StartProfileThread() {
@@ -2513,10 +2521,20 @@ void *MachProcess::ProfileThread(void *arg) {
       // Done. Get out of this thread.
       break;
     }
-
-    // A simple way to set up the profile interval. We can also use select() or
-    // dispatch timer source if necessary.
-    usleep(proc->ProfileInterval());
+    timespec ts;
+    {
+      using namespace std::chrono;
+      std::chrono::microseconds dur(proc->ProfileInterval());
+      const auto dur_secs = duration_cast<seconds>(dur);
+      const auto dur_usecs = dur % std::chrono::seconds(1);
+      DNBTimer::OffsetTimeOfDay(&ts, dur_secs.count(), 
+                                dur_usecs.count());
+    }
+    uint32_t bits_set = 
+        proc->m_profile_events.WaitForSetEvents(eMachProcessProfileCancel, &ts);
+    // If we got bits back, we were told to exit.  Do so.
+    if (bits_set & eMachProcessProfileCancel)
+      break;
   }
   return NULL;
 }
