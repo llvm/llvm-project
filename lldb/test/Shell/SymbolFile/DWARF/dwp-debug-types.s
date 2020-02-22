@@ -203,9 +203,9 @@ A\I:
 .endr
 .endmacro
 
-        .section        .debug_cu_index,"e",@progbits
+        .section        .debug_cu_index,"",@progbits
         index 1, .debug_info.dwo, .Lcu_begin, .Ldebug_info_end
 
-        .section        .debug_tu_index,"e",@progbits
+        .section        .debug_tu_index,"",@progbits
         index 2, .debug_types.dwo, .Ltu_begin, .Ltype_info_end
 .endif
