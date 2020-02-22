@@ -105,7 +105,7 @@ F\I:
 # This deliberately excludes compile unit 4 to check test the case of a missing
 # split unit.
 .irpc I,0123
-        .section        .debug_str.dwo,"e",@progbits
+        .section        .debug_str.dwo,"MSe",@progbits,1
 .Lstr\I:
         .byte   'I', 'N', 'T', '0'+\I, 0
 
