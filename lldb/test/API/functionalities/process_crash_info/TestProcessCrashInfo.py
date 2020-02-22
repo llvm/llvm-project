@@ -1,0 +1,97 @@
+"""
+Test lldb process crash info.
+"""
+
+import os
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+class PlatformProcessCrashInfoTestCase(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
+    def setUp(self):
+        TestBase.setUp(self)
+        self.runCmd("settings set auto-confirm true")
+        self.source = "main.c"
+        self.line = 3
+
+    def tearDown(self):
+        self.runCmd("settings clear auto-confirm")
+        TestBase.tearDown(self)
+
+    @skipUnlessDarwin
+    def test_cli(self):
+        """Test that `process status --verbose` fetches the extended crash
+        information dictionnary from the command-line properly."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.expect("file " + exe,
+                    patterns=["Current executable set to .*a.out"])
+
+        self.expect('process launch',
+                    patterns=["Process .* launched: .*a.out"])
+
+        self.expect('process status --verbose',
+                    patterns=["\"message\".*pointer being freed was not allocated"])
+
+
+    @skipUnlessDarwin
+    def test_api(self):
+        """Test that lldb can fetch a crashed process' extended crash information
+        dictionnary from the api properly."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        target.LaunchSimple(None, None, os.getcwd())
+
+        stream = lldb.SBStream()
+        self.assertTrue(stream)
+
+        crash_info = target.GetExtendedCrashInformation()
+
+        error = crash_info.GetAsJSON(stream)
+
+        self.assertTrue(error.Success())
+
+        self.assertTrue(crash_info.IsValid())
+
+        self.assertIn("pointer being freed was not allocated", stream.GetData())
+
+    @skipUnlessDarwin
+    def test_before_launch(self):
+        """Test that lldb doesn't fetch the extended crash information
+        dictionnary from if the process wasn't launched yet."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        stream = lldb.SBStream()
+        self.assertTrue(stream)
+
+        crash_info = target.GetExtendedCrashInformation()
+
+        error = crash_info.GetAsJSON(stream)
+        self.assertFalse(error.Success())
+        self.assertIn("No structured data.", error.GetCString())
+
+    @skipUnlessDarwin
+    def test_on_sane_process(self):
+        """Test that lldb doesn't fetch the extended crash information
+        dictionnary from a 'sane' stopped process."""
+        self.build()
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source),
+                                        self.line)
+
+        stream = lldb.SBStream()
+        self.assertTrue(stream)
+
+        crash_info = target.GetExtendedCrashInformation()
+
+        error = crash_info.GetAsJSON(stream)
+        self.assertFalse(error.Success())
+        self.assertIn("No structured data.", error.GetCString())
