@@ -502,7 +502,8 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
   S.Type = Shdr->sh_type;
   if (Shdr->sh_flags)
     S.Flags = static_cast<ELFYAML::ELF_SHF>(Shdr->sh_flags);
-  S.Address = Shdr->sh_addr;
+  if (Shdr->sh_addr)
+    S.Address = static_cast<uint64_t>(Shdr->sh_addr);
   S.AddressAlign = Shdr->sh_addralign;
   if (Shdr->sh_entsize)
     S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
