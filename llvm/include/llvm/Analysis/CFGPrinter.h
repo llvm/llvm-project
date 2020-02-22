@@ -53,6 +53,9 @@ public:
 template<>
 struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
 
+  // Cache for is hidden property
+  llvm::DenseMap <const BasicBlock *, bool> isHiddenBasicBlock;
+
   DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const Function *F) {
@@ -173,6 +176,8 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
     // profile count (due to scaling).
     return ("label=\"W:" + Twine(Weight->getZExtValue()) + "\"").str();
   }
+  bool isNodeHidden(const BasicBlock *Node);
+  void computeHiddenNodes(const Function *F);
 };
 } // End llvm namespace
 
