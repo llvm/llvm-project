@@ -8566,7 +8566,7 @@ let Predicates = [HasDQI, HasVLX] in {
 
 let Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass avx512_cvtph2ps<X86VectorVTInfo _dest, X86VectorVTInfo _src,
-                           X86MemOperand x86memop, PatFrag ld_frag,
+                           X86MemOperand x86memop, dag ld_dag,
                            X86FoldableSchedWrite sched> {
   defm rr : AVX512_maskable_split<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst),
                             (ins _src.RC:$src), "vcvtph2ps", "$src", "$src",
@@ -8575,8 +8575,8 @@ multiclass avx512_cvtph2ps<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                             T8PD, Sched<[sched]>;
   defm rm : AVX512_maskable_split<0x13, MRMSrcMem, _dest, (outs _dest.RC:$dst),
                             (ins x86memop:$src), "vcvtph2ps", "$src", "$src",
-                            (X86any_cvtph2ps (_src.VT (ld_frag addr:$src))),
-                            (X86cvtph2ps (_src.VT (ld_frag addr:$src)))>,
+                            (X86any_cvtph2ps (_src.VT ld_dag)),
+                            (X86cvtph2ps (_src.VT ld_dag))>,
                             T8PD, Sched<[sched.Folded]>;
 }
 
@@ -8591,22 +8591,21 @@ multiclass avx512_cvtph2ps_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,
 }
 
 let Predicates = [HasAVX512] in
-  defm VCVTPH2PSZ : avx512_cvtph2ps<v16f32_info, v16i16x_info, f256mem, load,
-                                    WriteCvtPH2PSZ>,
+  defm VCVTPH2PSZ : avx512_cvtph2ps<v16f32_info, v16i16x_info, f256mem,
+                                    (load addr:$src), WriteCvtPH2PSZ>,
                     avx512_cvtph2ps_sae<v16f32_info, v16i16x_info, WriteCvtPH2PSZ>,
                     EVEX, EVEX_V512, EVEX_CD8<32, CD8VH>;
 
 let Predicates = [HasVLX] in {
   defm VCVTPH2PSZ256 : avx512_cvtph2ps<v8f32x_info, v8i16x_info, f128mem,
-                       load, WriteCvtPH2PSY>, EVEX, EVEX_V256,
+                       (load addr:$src), WriteCvtPH2PSY>, EVEX, EVEX_V256,
                        EVEX_CD8<32, CD8VH>;
   defm VCVTPH2PSZ128 : avx512_cvtph2ps<v4f32x_info, v8i16x_info, f64mem,
-                       load, WriteCvtPH2PS>, EVEX, EVEX_V128,
+                       (bitconvert (v2i64 (X86vzload64 addr:$src))),
+                       WriteCvtPH2PS>, EVEX, EVEX_V128,
                        EVEX_CD8<32, CD8VH>;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
-  def : Pat<(v4f32 (X86any_cvtph2ps (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
-            (VCVTPH2PSZ128rm addr:$src)>;
   def : Pat<(v4f32 (X86any_cvtph2ps (v8i16 (bitconvert
               (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
             (VCVTPH2PSZ128rm addr:$src)>;

@@ -43728,6 +43728,26 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
     if (TLI.SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
                                        DCI))
       return SDValue(N, 0);
+
+    if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
+      LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+      // Unless the load is volatile or atomic.
+      if (LN->isSimple()) {
+        SDLoc dl(N);
+        SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue VZLoad =
+            DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops, MVT::i64,
+                                    LN->getPointerInfo(),
+                                    LN->getAlignment(),
+                                    LN->getMemOperand()->getFlags());
+        SDValue Convert = DAG.getNode(N->getOpcode(), dl, MVT::v4f32,
+                                      DAG.getBitcast(MVT::v8i16, VZLoad));
+        DCI.CombineTo(N, Convert);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+        return SDValue(N, 0);
+      }
+    }
   }
 
   return SDValue();
