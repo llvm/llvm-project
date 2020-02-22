@@ -1007,6 +1007,16 @@ struct are_base_of<T, U, Ts...> {
 //     Extra additions for arrays
 //===----------------------------------------------------------------------===//
 
+// We have a copy here so that LLVM behaves the same when using different
+// standard libraries.
+template <class Iterator, class RNG>
+void shuffle(Iterator first, Iterator last, RNG &&g) {
+  // It would be better to use a std::uniform_int_distribution,
+  // but that would be stdlib dependent.
+  for (auto size = last - first; size > 1; ++first, (void)--size)
+    std::iter_swap(first, first + g() % size);
+}
+
 /// Find the length of an array.
 template <class T, std::size_t N>
 constexpr inline size_t array_lengthof(T (&)[N]) {

@@ -21,12 +21,12 @@
 # CHECK:      Hex dump of section '.init_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
 # ORDERED-SAME: 000102 03040506 0708090a 0b
-# SHUFFLED-NOT: 000102 03040506 0708090a 0b
+# SHUFFLED-SAME: 04000b 06010a08 09070203 05
 
 # CHECK:      Hex dump of section '.fini_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
-# ORDERED-SAME: 000102 03040506 0708090a 0b
-# SHUFFLED-NOT: 000102 03040506 0708090a 0b
+# ORDERED-SAME:  000102 03040506 0708090a 0b
+# SHUFFLED-SAME: 090401 070b0003 080a0605 02
 
 ## With a SECTIONS command, SHT_INIT_ARRAY prirotities are ignored.
 ## All .init_array* are shuffled together.
@@ -40,11 +40,8 @@
 
 # CHECK2:       Hex dump of section '.init_array'
 # ORDERED2-NEXT:  0x{{[0-9a-f]+}} 00010203 04050607 08090a0b ff
-# SHUFFLED2-NOT:  0x{{[0-9a-f]+}} 00010203 04050607 08090a0b ff
+# SHUFFLED2-NEXT: 0x{{[0-9a-f]+}} 04000b06 010a0809 07ff0203 05
 
-## std::shuffle have different implementations.
-## When the number of input sections are large, it is almost guaranteed
-## to have an unordered result with --shuffle-sections=.
 .irp i,0,1,2,3,4,5,6,7,8,9,10,11
   .section .init,"ax",@progbits,unique,\i
   .byte \i
