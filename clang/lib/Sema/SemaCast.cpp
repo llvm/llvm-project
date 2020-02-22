@@ -2764,7 +2764,8 @@ void CastOperation::CheckCStyleCast() {
     }
 
     if ((Self.Context.getTypeSize(SrcType) >
-         Self.Context.getTypeSize(DestType))) {
+         Self.Context.getTypeSize(DestType)) &&
+        !DestType->isBooleanType()) {
       // C 6.3.2.3p6: Any pointer type may be converted to an integer type.
       // Except as previously specified, the result is implementation-defined.
       // If the result cannot be represented in the integer type, the behavior
