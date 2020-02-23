@@ -62,18 +62,6 @@ SystemZFrameLowering::SystemZFrameLowering()
     RegSpillOffsets[SpillOffsetTable[I].Reg] = SpillOffsetTable[I].Offset;
 }
 
-static bool usePackedStack(MachineFunction &MF) {
-  bool HasPackedStackAttr = MF.getFunction().hasFnAttribute("packed-stack");
-  bool IsVarArg = MF.getFunction().isVarArg();
-  bool CallConv = MF.getFunction().getCallingConv() != CallingConv::GHC;
-  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
-  bool FramAddressTaken = MF.getFrameInfo().isFrameAddressTaken();
-  if (HasPackedStackAttr && BackChain)
-    report_fatal_error("packed-stack with backchain is currently unsupported.");
-  return HasPackedStackAttr && !IsVarArg && CallConv && !BackChain &&
-         !FramAddressTaken;
-}
-
 bool SystemZFrameLowering::
 assignCalleeSavedSpillSlots(MachineFunction &MF,
                             const TargetRegisterInfo *TRI,
@@ -87,71 +75,44 @@ assignCalleeSavedSpillSlots(MachineFunction &MF,
   unsigned LowGPR = 0;
   unsigned HighGPR = SystemZ::R15D;
   int StartSPOffset = SystemZMC::CallFrameSize;
-  int CurrOffset;
-  if (!usePackedStack(MF)) {
-    for (auto &CS : CSI) {
-      unsigned Reg = CS.getReg();
-      int Offset = RegSpillOffsets[Reg];
-      if (Offset) {
-        if (SystemZ::GR64BitRegClass.contains(Reg) && StartSPOffset > Offset) {
-          LowGPR = Reg;
-          StartSPOffset = Offset;
-        }
-        Offset -= SystemZMC::CallFrameSize;
-        int FrameIdx = MFFrame.CreateFixedSpillStackObject(8, Offset);
-        CS.setFrameIdx(FrameIdx);
-      } else
-        CS.setFrameIdx(INT32_MAX);
-    }
-
-    // Save the range of call-saved registers, for use by the
-    // prologue/epilogue inserters.
-    ZFI->setRestoreGPRRegs(LowGPR, HighGPR, StartSPOffset);
-    if (IsVarArg) {
-      // Also save the GPR varargs, if any.  R6D is call-saved, so would
-      // already be included, but we also need to handle the call-clobbered
-      // argument registers.
-      unsigned FirstGPR = ZFI->getVarArgsFirstGPR();
-      if (FirstGPR < SystemZ::NumArgGPRs) {
-        unsigned Reg = SystemZ::ArgGPRs[FirstGPR];
-        int Offset = RegSpillOffsets[Reg];
-        if (StartSPOffset > Offset) {
-          LowGPR = Reg; StartSPOffset = Offset;
-        }
+  for (auto &CS : CSI) {
+    unsigned Reg = CS.getReg();
+    int Offset = getRegSpillOffset(MF, Reg);
+    if (Offset) {
+      if (SystemZ::GR64BitRegClass.contains(Reg) && StartSPOffset > Offset) {
+        LowGPR = Reg;
+        StartSPOffset = Offset;
       }
-    }
-    ZFI->setSpillGPRRegs(LowGPR, HighGPR, StartSPOffset);
-
-    CurrOffset = -SystemZMC::CallFrameSize;
-  } else {
-    // Packed stack: put all the GPRs at the top of the Register save area.
-    uint32_t LowGR64Num = UINT32_MAX;
-    for (auto &CS : CSI) {
-      unsigned Reg = CS.getReg();
-      if (SystemZ::GR64BitRegClass.contains(Reg)) {
-        unsigned GR64Num = SystemZMC::getFirstReg(Reg);
-        int Offset = -8 * (15 - GR64Num + 1);
-        if (LowGR64Num > GR64Num) {
-          LowGR64Num = GR64Num;
-          StartSPOffset = SystemZMC::CallFrameSize + Offset;
-        }
-        int FrameIdx = MFFrame.CreateFixedSpillStackObject(8, Offset);
-        CS.setFrameIdx(FrameIdx);
-      } else
-        CS.setFrameIdx(INT32_MAX);
-    }
-    if (LowGR64Num < UINT32_MAX)
-      LowGPR = SystemZMC::GR64Regs[LowGR64Num];
-
-    // Save the range of call-saved registers, for use by the
-    // prologue/epilogue inserters.
-    ZFI->setRestoreGPRRegs(LowGPR, HighGPR, StartSPOffset);
-    ZFI->setSpillGPRRegs(LowGPR, HighGPR, StartSPOffset);
-
-    CurrOffset = LowGPR ? -(SystemZMC::CallFrameSize - StartSPOffset) : 0;
+      Offset -= SystemZMC::CallFrameSize;
+      int FrameIdx = MFFrame.CreateFixedSpillStackObject(8, Offset);
+      CS.setFrameIdx(FrameIdx);
+    } else
+      CS.setFrameIdx(INT32_MAX);
   }
 
+  // Save the range of call-saved registers, for use by the
+  // prologue/epilogue inserters.
+  ZFI->setRestoreGPRRegs(LowGPR, HighGPR, StartSPOffset);
+  if (IsVarArg) {
+    // Also save the GPR varargs, if any.  R6D is call-saved, so would
+    // already be included, but we also need to handle the call-clobbered
+    // argument registers.
+    unsigned FirstGPR = ZFI->getVarArgsFirstGPR();
+    if (FirstGPR < SystemZ::NumArgGPRs) {
+      unsigned Reg = SystemZ::ArgGPRs[FirstGPR];
+      int Offset = getRegSpillOffset(MF, Reg);
+      if (StartSPOffset > Offset) {
+        LowGPR = Reg; StartSPOffset = Offset;
+      }
+    }
+  }
+  ZFI->setSpillGPRRegs(LowGPR, HighGPR, StartSPOffset);
+
   // Create fixed stack objects for the remaining registers.
+  int CurrOffset = -SystemZMC::CallFrameSize;
+  if (usePackedStack(MF))
+    CurrOffset += StartSPOffset;
+
   for (auto &CS : CSI) {
     if (CS.getFrameIdx() != INT32_MAX)
       continue;
@@ -511,10 +472,13 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
         .addCFIIndex(CFIIndex);
     SPOffsetFromCFA += Delta;
 
-    if (StoreBackchain)
+    if (StoreBackchain) {
+      // The back chain is stored topmost with packed-stack.
+      int Offset = usePackedStack(MF) ? SystemZMC::CallFrameSize - 8 : 0;
       BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::STG))
-        .addReg(SystemZ::R1D, RegState::Kill).addReg(SystemZ::R15D).addImm(0)
-        .addReg(0);
+        .addReg(SystemZ::R1D, RegState::Kill).addReg(SystemZ::R15D)
+        .addImm(Offset).addReg(0);
+    }
   }
 
   if (HasFP) {
@@ -662,14 +626,43 @@ eliminateCallFramePseudoInstr(MachineFunction &MF,
   }
 }
 
+unsigned SystemZFrameLowering::getRegSpillOffset(MachineFunction &MF,
+                                                 unsigned Reg) const {
+  bool IsVarArg = MF.getFunction().isVarArg();
+  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
+  bool SoftFloat = MF.getSubtarget<SystemZSubtarget>().hasSoftFloat();
+  unsigned Offset = RegSpillOffsets[Reg];
+  if (usePackedStack(MF) && !(IsVarArg && !SoftFloat)) {
+    if (SystemZ::GR64BitRegClass.contains(Reg))
+      // Put all GPRs at the top of the Register save area with packed
+      // stack. Make room for the backchain if needed.
+      Offset += BackChain ? 24 : 32;
+    else
+      Offset = 0;
+  }
+  return Offset;
+}
+
 int SystemZFrameLowering::
 getOrCreateFramePointerSaveIndex(MachineFunction &MF) const {
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   int FI = ZFI->getFramePointerSaveIndex();
   if (!FI) {
     MachineFrameInfo &MFFrame = MF.getFrameInfo();
-    FI = MFFrame.CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
+    // The back chain is stored topmost with packed-stack.
+    int Offset = usePackedStack(MF) ? -8 : -SystemZMC::CallFrameSize;
+    FI = MFFrame.CreateFixedObject(8, Offset, false);
     ZFI->setFramePointerSaveIndex(FI);
   }
   return FI;
+}
+
+bool SystemZFrameLowering::usePackedStack(MachineFunction &MF) const {
+  bool HasPackedStackAttr = MF.getFunction().hasFnAttribute("packed-stack");
+  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
+  bool SoftFloat = MF.getSubtarget<SystemZSubtarget>().hasSoftFloat();
+  if (HasPackedStackAttr && BackChain && !SoftFloat)
+    report_fatal_error("packed-stack + backchain + hard-float is unsupported.");
+  bool CallConv = MF.getFunction().getCallingConv() != CallingConv::GHC;
+  return HasPackedStackAttr && CallConv;
 }
