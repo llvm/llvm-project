@@ -63,33 +63,12 @@ std::pair<unsigned, unsigned> rangeOrPoint(const Annotations &A) {
           cantFail(positionToOffset(A.code(), SelectionRng.end))};
 }
 
-// Prepare and apply the specified tweak based on the selection in Input.
-// Returns None if and only if prepare() failed.
-llvm::Optional<llvm::Expected<Tweak::Effect>>
-applyTweak(ParsedAST &AST, const Annotations &Input, StringRef TweakID,
-           const SymbolIndex *Index) {
-  auto Range = rangeOrPoint(Input);
-  llvm::Optional<llvm::Expected<Tweak::Effect>> Result;
-  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Range.first,
-                            Range.second, [&](SelectionTree ST) {
-                              Tweak::Selection S(Index, AST, Range.first,
-                                                 Range.second, std::move(ST));
-                              if (auto T = prepareTweak(TweakID, S)) {
-                                Result = (*T)->apply(S);
-                                return true;
-                              } else {
-                                llvm::consumeError(T.takeError());
-                                return false;
-                              }
-                            });
-  return Result;
-}
-
 MATCHER_P7(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles, Index,
            FileName,
            (TweakID + (negation ? " is unavailable" : " is available")).str()) {
   std::string WrappedCode = wrap(Ctx, arg);
   Annotations Input(WrappedCode);
+  auto Selection = rangeOrPoint(Input);
   TestTU TU;
   TU.Filename = std::string(FileName);
   TU.HeaderCode = Header;
@@ -97,11 +76,12 @@ MATCHER_P7(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles, Index,
   TU.ExtraArgs = ExtraArgs;
   TU.AdditionalFiles = std::move(ExtraFiles);
   ParsedAST AST = TU.build();
-  auto Result = applyTweak(AST, Input, TweakID, Index);
-  // We only care if prepare() succeeded, but must handle Errors.
-  if (Result && !*Result)
-    consumeError(Result->takeError());
-  return Result.hasValue();
+  Tweak::Selection S(Index, AST, Selection.first, Selection.second);
+  auto PrepareResult = prepareTweak(TweakID, S);
+  if (PrepareResult)
+    return true;
+  llvm::consumeError(PrepareResult.takeError());
+  return false;
 }
 
 } // namespace
@@ -110,6 +90,8 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
                              llvm::StringMap<std::string> *EditedFiles) const {
   std::string WrappedCode = wrap(Context, MarkedCode);
   Annotations Input(WrappedCode);
+  auto Selection = rangeOrPoint(Input);
+
   TestTU TU;
   TU.Filename = std::string(FileName);
   TU.HeaderCode = Header;
@@ -117,20 +99,23 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
   TU.Code = std::string(Input.code());
   TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
+  Tweak::Selection S(Index.get(), AST, Selection.first, Selection.second);
 
-  auto Result = applyTweak(AST, Input, TweakID, Index.get());
-  if (!Result)
+  auto T = prepareTweak(TweakID, S);
+  if (!T) {
+    llvm::consumeError(T.takeError());
     return "unavailable";
-  if (!*Result)
-    return "fail: " + llvm::toString(Result->takeError());
-  const auto &Effect = **Result;
-  if ((*Result)->ShowMessage)
-    return "message:\n" + *Effect.ShowMessage;
-  if (Effect.ApplyEdits.empty())
+  }
+  llvm::Expected<Tweak::Effect> Result = (*T)->apply(S);
+  if (!Result)
+    return "fail: " + llvm::toString(Result.takeError());
+  if (Result->ShowMessage)
+    return "message:\n" + *Result->ShowMessage;
+  if (Result->ApplyEdits.empty())
     return "no effect";
 
   std::string EditedMainFile;
-  for (auto &It : Effect.ApplyEdits) {
+  for (auto &It : Result->ApplyEdits) {
     auto NewText = It.second.apply();
     if (!NewText)
       return "bad edits: " + llvm::toString(NewText.takeError());

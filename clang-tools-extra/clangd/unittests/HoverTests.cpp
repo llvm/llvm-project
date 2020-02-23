@@ -654,7 +654,7 @@ TEST(Hover, NoHover) {
             }
           )cpp",
       R"cpp(// Template auto parameter. Nothing (Not useful).
-            template<a^uto T>
+            template<^auto T>
             void func() {
             }
             void foo() {

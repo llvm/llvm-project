@@ -1966,7 +1966,7 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   // Basic check for function body and signature.
   EXPECT_AVAILABLE(R"cpp(
     class Bar {
-      [[void [[f^o^o^]]() [[{ return; }]]]]
+      [[void [[f^o^o]]() [[{ return; }]]]]
     };
 
     void foo();
