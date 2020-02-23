@@ -89,20 +89,20 @@ define float @fmul_fneg_extra_use(float %x) {
 
 define <4 x double> @fmul_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %r
 }
 
 define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
   %r = fneg <4 x double> %m
   ret <4 x double> %r
 }
@@ -277,20 +277,20 @@ define float @fdiv_op0_constant_fneg_extra_use(float %x) {
 
 define <4 x double> @fdiv_op0_constant_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
 
 define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fneg <4 x double> %d
   ret <4 x double> %r
 }
