@@ -1519,101 +1519,14 @@ namespace llvm {
                              const TargetLibraryInfo *libInfo);
   } // end namespace X86
 
-  // Base class for all X86 non-masked store operations.
-  class X86StoreSDNode : public MemSDNode {
-  public:
-    X86StoreSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
-                   SDVTList VTs, EVT MemVT,
-                   MachineMemOperand *MMO)
-      :MemSDNode(Opcode, Order, dl, VTs, MemVT, MMO) {}
-    const SDValue &getValue() const { return getOperand(1); }
-    const SDValue &getBasePtr() const { return getOperand(2); }
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VTRUNCSTORES ||
-        N->getOpcode() == X86ISD::VTRUNCSTOREUS;
-    }
-  };
-
-  // Base class for all X86 masked store operations.
-  // The class has the same order of operands as MaskedStoreSDNode for
-  // convenience.
-  class X86MaskedStoreSDNode : public MemSDNode {
-  public:
-    X86MaskedStoreSDNode(unsigned Opcode, unsigned Order,
-                         const DebugLoc &dl, SDVTList VTs, EVT MemVT,
-                         MachineMemOperand *MMO)
-      : MemSDNode(Opcode, Order, dl, VTs, MemVT, MMO) {}
-
-    const SDValue &getValue()   const { return getOperand(1); }
-    const SDValue &getBasePtr() const { return getOperand(2); }
-    const SDValue &getMask()    const { return getOperand(3); }
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VMTRUNCSTORES ||
-        N->getOpcode() == X86ISD::VMTRUNCSTOREUS;
-    }
-  };
-
-  // X86 Truncating Store with Signed saturation.
-  class TruncSStoreSDNode : public X86StoreSDNode {
-  public:
-    TruncSStoreSDNode(unsigned Order, const DebugLoc &dl,
-                        SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
-      : X86StoreSDNode(X86ISD::VTRUNCSTORES, Order, dl, VTs, MemVT, MMO) {}
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VTRUNCSTORES;
-    }
-  };
-
-  // X86 Truncating Store with Unsigned saturation.
-  class TruncUSStoreSDNode : public X86StoreSDNode {
-  public:
-    TruncUSStoreSDNode(unsigned Order, const DebugLoc &dl,
-                      SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
-      : X86StoreSDNode(X86ISD::VTRUNCSTOREUS, Order, dl, VTs, MemVT, MMO) {}
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VTRUNCSTOREUS;
-    }
-  };
-
-  // X86 Truncating Masked Store with Signed saturation.
-  class MaskedTruncSStoreSDNode : public X86MaskedStoreSDNode {
-  public:
-    MaskedTruncSStoreSDNode(unsigned Order,
-                         const DebugLoc &dl, SDVTList VTs, EVT MemVT,
-                         MachineMemOperand *MMO)
-      : X86MaskedStoreSDNode(X86ISD::VMTRUNCSTORES, Order, dl, VTs, MemVT, MMO) {}
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VMTRUNCSTORES;
-    }
-  };
-
-  // X86 Truncating Masked Store with Unsigned saturation.
-  class MaskedTruncUSStoreSDNode : public X86MaskedStoreSDNode {
-  public:
-    MaskedTruncUSStoreSDNode(unsigned Order,
-                            const DebugLoc &dl, SDVTList VTs, EVT MemVT,
-                            MachineMemOperand *MMO)
-      : X86MaskedStoreSDNode(X86ISD::VMTRUNCSTOREUS, Order, dl, VTs, MemVT, MMO) {}
-
-    static bool classof(const SDNode *N) {
-      return N->getOpcode() == X86ISD::VMTRUNCSTOREUS;
-    }
-  };
-
   // X86 specific Gather/Scatter nodes.
   // The class has the same order of operands as MaskedGatherScatterSDNode for
   // convenience.
-  class X86MaskedGatherScatterSDNode : public MemSDNode {
+  class X86MaskedGatherScatterSDNode : public MemIntrinsicSDNode {
   public:
-    X86MaskedGatherScatterSDNode(unsigned Opc, unsigned Order,
-                                 const DebugLoc &dl, SDVTList VTs, EVT MemVT,
-                                 MachineMemOperand *MMO)
-        : MemSDNode(Opc, Order, dl, VTs, MemVT, MMO) {}
+    // This is a intended as a utility and should never be directly created.
+    X86MaskedGatherScatterSDNode() = delete;
+    ~X86MaskedGatherScatterSDNode() = delete;
 
     const SDValue &getBasePtr() const { return getOperand(3); }
     const SDValue &getIndex()   const { return getOperand(4); }
@@ -1628,11 +1541,6 @@ namespace llvm {
 
   class X86MaskedGatherSDNode : public X86MaskedGatherScatterSDNode {
   public:
-    X86MaskedGatherSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                          EVT MemVT, MachineMemOperand *MMO)
-        : X86MaskedGatherScatterSDNode(X86ISD::MGATHER, Order, dl, VTs, MemVT,
-                                       MMO) {}
-
     const SDValue &getPassThru() const { return getOperand(1); }
 
     static bool classof(const SDNode *N) {
@@ -1642,11 +1550,6 @@ namespace llvm {
 
   class X86MaskedScatterSDNode : public X86MaskedGatherScatterSDNode {
   public:
-    X86MaskedScatterSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                           EVT MemVT, MachineMemOperand *MMO)
-        : X86MaskedGatherScatterSDNode(X86ISD::MSCATTER, Order, dl, VTs, MemVT,
-                                       MMO) {}
-
     const SDValue &getValue() const { return getOperand(1); }
 
     static bool classof(const SDNode *N) {
