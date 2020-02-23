@@ -537,12 +537,9 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       llvm::consumeError(Offset.takeError());
       return llvm::None;
     }
-    // Editors send the position on the left of the hovered character.
-    // So our selection tree should be biased right. (Tested with VSCode).
-    SelectionTree ST = SelectionTree::createRight(
-        AST.getASTContext(), AST.getTokens(), *Offset, *Offset);
+    SelectionTree Selection(AST.getASTContext(), AST.getTokens(), *Offset);
     std::vector<const Decl *> Result;
-    if (const SelectionTree::Node *N = ST.commonAncestor()) {
+    if (const SelectionTree::Node *N = Selection.commonAncestor()) {
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
       if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), Index);

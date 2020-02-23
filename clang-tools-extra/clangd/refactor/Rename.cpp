@@ -81,8 +81,7 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   unsigned Offset =
       AST.getSourceManager().getDecomposedSpellingLoc(TokenStartLoc).second;
 
-  SelectionTree Selection = SelectionTree::createRight(
-      AST.getASTContext(), AST.getTokens(), Offset, Offset);
+  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
   const SelectionTree::Node *SelectedNode = Selection.commonAncestor();
   if (!SelectedNode)
     return {};

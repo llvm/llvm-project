@@ -39,8 +39,7 @@ llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
   }
 
   // Get node under the cursor.
-  SelectionTree ST = SelectionTree::createRight(
-      AST.getASTContext(), AST.getTokens(), *Offset, *Offset);
+  SelectionTree ST(AST.getASTContext(), AST.getTokens(), *Offset);
   for (const auto *Node = ST.commonAncestor(); Node != nullptr;
        Node = Node->Parent) {
     if (const Decl *D = Node->ASTNode.get<Decl>()) {
