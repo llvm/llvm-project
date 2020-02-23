@@ -1113,7 +1113,8 @@ public:
   /// it (unless StopBeforeMatch is specified).  Because we cannot guarantee
   /// that the token will ever occur, this skips to the next token, or to some
   /// likely good stopping point.  If Flags has StopAtSemi flag, skipping will
-  /// stop at a ';' character.
+  /// stop at a ';' character. Balances (), [], and {} delimiter tokens while
+  /// skipping.
   ///
   /// If SkipUntil finds the specified token, it returns true, otherwise it
   /// returns false.
