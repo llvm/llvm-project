@@ -27518,14 +27518,14 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
-// TODO: In 32-bit mode, use FISTP when X87 is available?
 bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
 
   bool NoImplicitFloatOps =
       SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE1())
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
+      (Subtarget.hasSSE1() || Subtarget.hasX87()))
     return false;
 
   return needsCmpXchgNb(MemType);
@@ -28286,28 +28286,52 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   if (VT == MVT::i64 && !IsTypeLegal) {
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
     // is enabled.
-    // FIXME: Use fist with X87.
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
             Attribute::NoImplicitFloat);
-    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-        Subtarget.hasSSE1()) {
-      SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
-                                     Node->getOperand(2));
-      MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
-      SclToVec = DAG.getBitcast(StVT, SclToVec);
-      SDVTList Tys = DAG.getVTList(MVT::Other);
-      SDValue Ops[] = { Node->getChain(), SclToVec, Node->getBasePtr() };
-      SDValue Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys,
-                                              Ops, MVT::i64,
-                                              Node->getMemOperand());
+    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
+      SDValue Chain;
+      if (Subtarget.hasSSE1()) {
+        SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
+                                       Node->getOperand(2));
+        MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
+        SclToVec = DAG.getBitcast(StVT, SclToVec);
+        SDVTList Tys = DAG.getVTList(MVT::Other);
+        SDValue Ops[] = {Node->getChain(), SclToVec, Node->getBasePtr()};
+        Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys, Ops,
+                                        MVT::i64, Node->getMemOperand());
+      } else if (Subtarget.hasX87()) {
+        // First load this into an 80-bit X87 register using a stack temporary.
+        // This will put the whole integer into the significand.
+        SDValue StackPtr = DAG.CreateStackTemporary(MVT::i64);
+        int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+        Chain =
+            DAG.getStore(Node->getChain(), dl, Node->getOperand(2), StackPtr,
+                         MPI, /*Align*/ 0, MachineMemOperand::MOStore);
+        SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
+        SDValue LdOps[] = {Chain, StackPtr};
+        SDValue Value =
+            DAG.getMemIntrinsicNode(X86ISD::FILD, dl, Tys, LdOps, MVT::i64, MPI,
+                                    /*Align*/ 0, MachineMemOperand::MOLoad);
+        Chain = Value.getValue(1);
 
-      // If this is a sequentially consistent store, also emit an appropriate
-      // barrier.
-      if (IsSeqCst)
-        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
+        // Now use an FIST to do the atomic store.
+        SDValue StoreOps[] = {Chain, Value, Node->getBasePtr()};
+        Chain =
+            DAG.getMemIntrinsicNode(X86ISD::FIST, dl, DAG.getVTList(MVT::Other),
+                                    StoreOps, MVT::i64, Node->getMemOperand());
+      }
 
-      return Chain;
+      if (Chain) {
+        // If this is a sequentially consistent store, also emit an appropriate
+        // barrier.
+        if (IsSeqCst)
+          Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
+
+        return Chain;
+      }
     }
   }
 

@@ -16,27 +16,24 @@ define void @test1(i64* %ptr, i64 %val1) {
 ;
 ; NOSSE-LABEL: test1:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    pushl %ebx
+; NOSSE-NEXT:    pushl %ebp
 ; NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 12
-; NOSSE-NEXT:    .cfi_offset %esi, -12
-; NOSSE-NEXT:    .cfi_offset %ebx, -8
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; NOSSE-NEXT:    movl (%esi), %eax
-; NOSSE-NEXT:    movl 4(%esi), %edx
-; NOSSE-NEXT:    .p2align 4, 0x90
-; NOSSE-NEXT:  .LBB0_1: # %atomicrmw.start
-; NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; NOSSE-NEXT:    lock cmpxchg8b (%esi)
-; NOSSE-NEXT:    jne .LBB0_1
-; NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
-; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; NOSSE-NEXT:    .cfi_offset %ebp, -8
+; NOSSE-NEXT:    movl %esp, %ebp
+; NOSSE-NEXT:    .cfi_def_cfa_register %ebp
+; NOSSE-NEXT:    andl $-8, %esp
+; NOSSE-NEXT:    subl $8, %esp
+; NOSSE-NEXT:    movl 8(%ebp), %eax
+; NOSSE-NEXT:    movl 12(%ebp), %ecx
+; NOSSE-NEXT:    movl 16(%ebp), %edx
+; NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movl %ecx, (%esp)
+; NOSSE-NEXT:    fildll (%esp)
+; NOSSE-NEXT:    fistpll (%eax)
+; NOSSE-NEXT:    lock orl $0, (%esp)
+; NOSSE-NEXT:    movl %ebp, %esp
+; NOSSE-NEXT:    popl %ebp
+; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
   store atomic i64 %val1, i64* %ptr seq_cst, align 8
   ret void
