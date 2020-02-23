@@ -27514,7 +27514,6 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
-// TODO: In 32-bit mode, use MOVLPS when SSE1 is available?
 // TODO: In 32-bit mode, use FISTP when X87 is available?
 bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
@@ -27522,7 +27521,7 @@ bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   bool NoImplicitFloatOps =
       SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2())
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE1())
     return false;
 
   return needsCmpXchgNb(MemType);
@@ -28281,16 +28280,18 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
     return Op;
 
   if (VT == MVT::i64 && !IsTypeLegal) {
-    // For illegal i64 atomic_stores, we can try to use MOVQ if SSE2 is enabled.
-    // FIXME: Use movlps with SSE1.
+    // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
+    // is enabled.
     // FIXME: Use fist with X87.
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
             Attribute::NoImplicitFloat);
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-        Subtarget.hasSSE2()) {
+        Subtarget.hasSSE1()) {
       SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
                                      Node->getOperand(2));
+      MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
+      SclToVec = DAG.getBitcast(StVT, SclToVec);
       SDVTList Tys = DAG.getVTList(MVT::Other);
       SDValue Ops[] = { Node->getChain(), SclToVec, Node->getBasePtr() };
       SDValue Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys,
@@ -42370,6 +42371,28 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineVEXTRACT_STORE(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const X86Subtarget &Subtarget) {
+  auto *St = cast<MemIntrinsicSDNode>(N);
+
+  SDValue StoredVal = N->getOperand(1);
+  MVT VT = StoredVal.getSimpleValueType();
+  EVT MemVT = St->getMemoryVT();
+
+  // Figure out which elements we demand.
+  unsigned StElts = MemVT.getSizeInBits() / VT.getScalarSizeInBits();
+  APInt DemandedElts = APInt::getLowBitsSet(VT.getVectorNumElements(), StElts);
+
+  APInt KnownUndef, KnownZero;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedVectorElts(StoredVal, DemandedElts, KnownUndef,
+                                     KnownZero, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 /// Return 'true' if this vector operation is "horizontal"
 /// and return the operands for the horizontal operation in LHS and RHS.  A
 /// horizontal operation performs the binary operation on successive elements
@@ -46751,6 +46774,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
   case ISD::MSTORE:         return combineMaskedStore(N, DAG, DCI, Subtarget);
+  case X86ISD::VEXTRACT_STORE:
+    return combineVEXTRACT_STORE(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
   case ISD::STRICT_SINT_TO_FP:
     return combineSIntToFP(N, DAG, DCI, Subtarget);
