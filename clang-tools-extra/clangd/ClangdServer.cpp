@@ -414,7 +414,7 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST) {
         return false;
       });
   assert(!Result.empty() && "Expected at least one SelectionTree");
-  return Result;
+  return std::move(Result);
 }
 
 void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
