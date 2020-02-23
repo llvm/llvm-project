@@ -248,7 +248,6 @@ end:
 ; We cannot eliminate the store in for.header, as the location is not overwritten
 ; in for.body and read afterwards.
 define void @loop_multiple_def_uses_mayalias_write(i32* %p, i32* %q) {
-
 ; CHECK-LABEL: @loop_multiple_def_uses_mayalias_write(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
