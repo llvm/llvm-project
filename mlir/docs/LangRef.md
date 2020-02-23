@@ -187,7 +187,7 @@ keywords may be added to future versions of MLIR without danger of collision
 with existing identifiers.
 
 The scope of SSA values is defined based on the standard definition of
-[dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)). Argument
+[dominance](https://en.wikipedia.org/wiki/Dominator_(graph_theory)). Argument
 identifiers in mapping functions are in scope for the mapping body. Function
 identifiers and mapping identifiers are visible across the entire module.
 
