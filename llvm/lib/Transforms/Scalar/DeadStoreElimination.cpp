@@ -1455,6 +1455,10 @@ struct DSEState {
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
 
+  /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
+  /// basic block.
+  DenseMap<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI)
       : F(F), AA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI) {}
@@ -1684,6 +1688,9 @@ struct DSEState {
         Updater.removeMemoryAccess(MA);
       }
 
+      auto I = IOLs.find(DeadInst->getParent());
+      if (I != IOLs.end())
+        I->second.erase(DeadInst);
       // Remove its operands
       for (Use &O : DeadInst->operands())
         if (Instruction *OpI = dyn_cast<Instruction>(O)) {
@@ -1804,7 +1811,10 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
       // Check if NI overwrites SI.
       int64_t InstWriteOffset, DepWriteOffset;
-      InstOverlapIntervalsTy IOL;
+      auto Iter = State.IOLs.insert(
+          std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
+              NI->getParent(), InstOverlapIntervalsTy()));
+      auto &IOL = Iter.first->second;
       OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
                                        InstWriteOffset, NI, IOL, AA, &F);
 
@@ -1818,6 +1828,10 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         Current = NextDef;
     }
   }
+
+  if (EnablePartialOverwriteTracking)
+    for (auto &KV : State.IOLs)
+      MadeChange |= removePartiallyOverlappedStores(&AA, DL, KV.second);
 
   return MadeChange;
 }
