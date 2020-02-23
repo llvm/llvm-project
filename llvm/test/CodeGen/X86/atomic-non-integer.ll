@@ -77,26 +77,16 @@ define void @store_double(double* %fptr, double %v) {
 ;
 ; X86-NOSSE-LABEL: store_double:
 ; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %ebx
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    pushl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 12
-; X86-NOSSE-NEXT:    .cfi_offset %esi, -12
-; X86-NOSSE-NEXT:    .cfi_offset %ebx, -8
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl (%esi), %eax
-; X86-NOSSE-NEXT:    movl 4(%esi), %edx
-; X86-NOSSE-NEXT:    .p2align 4, 0x90
-; X86-NOSSE-NEXT:  .LBB2_1: # %atomicrmw.start
-; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)
-; X86-NOSSE-NEXT:    jne .LBB2_1
-; X86-NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NOSSE-NEXT:    popl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    popl %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %ecx, (%esp)
+; X86-NOSSE-NEXT:    fildll (%esp)
+; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOSSE-NEXT:    retl
 ;
@@ -576,26 +566,17 @@ define void @store_double_seq_cst(double* %fptr, double %v) {
 ;
 ; X86-NOSSE-LABEL: store_double_seq_cst:
 ; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %ebx
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    pushl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 12
-; X86-NOSSE-NEXT:    .cfi_offset %esi, -12
-; X86-NOSSE-NEXT:    .cfi_offset %ebx, -8
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl (%esi), %eax
-; X86-NOSSE-NEXT:    movl 4(%esi), %edx
-; X86-NOSSE-NEXT:    .p2align 4, 0x90
-; X86-NOSSE-NEXT:  .LBB9_1: # %atomicrmw.start
-; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)
-; X86-NOSSE-NEXT:    jne .LBB9_1
-; X86-NOSSE-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NOSSE-NEXT:    popl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    popl %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %ecx, (%esp)
+; X86-NOSSE-NEXT:    fildll (%esp)
+; X86-NOSSE-NEXT:    fistpll (%eax)
+; X86-NOSSE-NEXT:    lock orl $0, (%esp)
+; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOSSE-NEXT:    retl
 ;
