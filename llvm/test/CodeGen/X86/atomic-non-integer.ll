@@ -272,17 +272,16 @@ define float @load_float(float* %fptr) {
 define double @load_double(double* %fptr) {
 ; X86-SSE1-LABEL: load_double:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    subl $20, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE1-NEXT:    subl $12, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    fildll (%eax)
-; X86-SSE1-NEXT:    fistpll {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movl %eax, (%esp)
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
-; X86-SSE1-NEXT:    addl $20, %esp
+; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl
 ;
@@ -660,17 +659,16 @@ define float @load_float_seq_cst(float* %fptr) {
 define double @load_double_seq_cst(double* %fptr) {
 ; X86-SSE1-LABEL: load_double_seq_cst:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    subl $20, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE1-NEXT:    subl $12, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    fildll (%eax)
-; X86-SSE1-NEXT:    fistpll {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movl %eax, (%esp)
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
-; X86-SSE1-NEXT:    addl $20, %esp
+; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl
 ;

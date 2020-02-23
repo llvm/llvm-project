@@ -27544,7 +27544,7 @@ X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
       LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      (Subtarget.hasSSE2() || Subtarget.hasX87()))
+      (Subtarget.hasSSE1() || Subtarget.hasX87()))
     return AtomicExpansionKind::None;
 
   return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
@@ -29667,15 +29667,27 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
             Attribute::NoImplicitFloat);
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       auto *Node = cast<AtomicSDNode>(N);
-      if (Subtarget.hasSSE2()) {
-        // Use a VZEXT_LOAD which will be selected as MOVQ. Then extract the
-        // lower 64-bits.
-        SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+      if (Subtarget.hasSSE1()) {
+        // Use a VZEXT_LOAD which will be selected as MOVQ or XORPS+MOVLPS.
+        // Then extract the lower 64-bits.
+        MVT LdVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
+        SDVTList Tys = DAG.getVTList(LdVT, MVT::Other);
         SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
         SDValue Ld = DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
                                              MVT::i64, Node->getMemOperand());
-        SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+        if (Subtarget.hasSSE2()) {
+          SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                    DAG.getIntPtrConstant(0, dl));
+          Results.push_back(Res);
+          Results.push_back(Ld.getValue(1));
+          return;
+        }
+        // We use an alternative sequence for SSE1 that extracts as v2f32 and
+        // then casts to i64. This avoids a 128-bit stack temporary being
+        // created by type legalization if we were to cast v4f32->v2i64.
+        SDValue Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2f32, Ld,
                                   DAG.getIntPtrConstant(0, dl));
+        Res = DAG.getBitcast(MVT::i64, Res);
         Results.push_back(Res);
         Results.push_back(Ld.getValue(1));
         return;
