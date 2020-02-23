@@ -29,6 +29,14 @@
 //   - we determine which low-level nodes are partly or completely covered
 //     by the selection.
 //   - we expose a tree of the selected nodes and their lexical parents.
+//
+// Sadly LSP specifies locations as being between characters, and this causes
+// some ambiguities we cannot cleanly resolve:
+//   lhs+rhs  // targeting '+' or 'lhs'?
+//      ^     // in GUI editors, double-clicking 'lhs' yields this position!
+//
+// The best we can do in these cases is try both, which leads to the awkward
+// SelectionTree::createEach() API.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SELECTION_H
@@ -64,16 +72,32 @@ namespace clangd {
 // point back into the AST it was constructed with.
 class SelectionTree {
 public:
-  // Creates a selection tree at the given byte offset in the main file.
-  // This is approximately equivalent to a range of one character.
-  // (Usually, the character to the right of Offset, sometimes to the left).
-  SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
-                unsigned Offset);
-  // Creates a selection tree for the given range in the main file.
-  // The range includes bytes [Start, End).
-  // If Start == End, uses the same heuristics as SelectionTree(AST, Start).
-  SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
-                unsigned Start, unsigned End);
+  // Create selection trees for the given range, and pass them to Func.
+  //
+  // There may be multiple possible selection trees:
+  // - if the range is empty and borders two tokens, a tree for the right token
+  //   and a tree for the left token will be yielded.
+  // - Func should return true on success (stop) and false on failure (continue)
+  //
+  // Always yields at least one tree. If no tokens are touched, it is empty.
+  static bool createEach(ASTContext &AST, const syntax::TokenBuffer &Tokens,
+                         unsigned Begin, unsigned End,
+                         llvm::function_ref<bool(SelectionTree)> Func);
+
+  // Create a selection tree for the given range.
+  //
+  // Where ambiguous (range is empty and borders two tokens), prefer the token
+  // on the right.
+  static SelectionTree createRight(ASTContext &AST,
+                                   const syntax::TokenBuffer &Tokens,
+                                   unsigned Begin, unsigned End);
+
+  // Copies are no good - contain pointers to other nodes.
+  SelectionTree(const SelectionTree &) = delete;
+  SelectionTree &operator=(const SelectionTree &) = delete;
+  // Moves are OK though - internal storage is pointer-stable when moved.
+  SelectionTree(SelectionTree &&) = default;
+  SelectionTree &operator=(SelectionTree &&) = default;
 
   // Describes to what extent an AST node is covered by the selection.
   enum Selection : unsigned char {
@@ -121,6 +145,11 @@ public:
   const Node &root() const { return *Root; }
 
 private:
+  // Creates a selection tree for the given range in the main file.
+  // The range includes bytes [Start, End).
+  SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
+                unsigned Start, unsigned End);
+
   std::deque<Node> Nodes; // Stable-pointer storage.
   const Node *Root;
   clang::PrintingPolicy PrintPolicy;

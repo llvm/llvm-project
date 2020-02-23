@@ -46,10 +46,10 @@ void validateRegistry() {
 } // namespace
 
 Tweak::Selection::Selection(const SymbolIndex *Index, ParsedAST &AST,
-                            unsigned RangeBegin, unsigned RangeEnd)
+                            unsigned RangeBegin, unsigned RangeEnd,
+                            SelectionTree ASTSelection)
     : Index(Index), AST(&AST), SelectionBegin(RangeBegin),
-      SelectionEnd(RangeEnd),
-      ASTSelection(AST.getASTContext(), AST.getTokens(), RangeBegin, RangeEnd) {
+      SelectionEnd(RangeEnd), ASTSelection(std::move(ASTSelection)) {
   auto &SM = AST.getSourceManager();
   Code = SM.getBufferData(SM.getMainFileID());
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);

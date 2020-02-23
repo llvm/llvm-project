@@ -19,20 +19,26 @@ namespace clangd {
 namespace {
 using ::testing::UnorderedElementsAreArray;
 
+// Create a selection tree corresponding to a point or pair of points.
+// This uses the precisely-defined createRight semantics. The fuzzier
+// createEach is tested separately.
 SelectionTree makeSelectionTree(const StringRef MarkedCode, ParsedAST &AST) {
   Annotations Test(MarkedCode);
   switch (Test.points().size()) {
-  case 1: // Point selection.
-    return SelectionTree(AST.getASTContext(), AST.getTokens(),
-                         cantFail(positionToOffset(Test.code(), Test.point())));
+  case 1: { // Point selection.
+    unsigned Offset = cantFail(positionToOffset(Test.code(), Test.point()));
+    return SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                      Offset, Offset);
+  }
   case 2: // Range selection.
-    return SelectionTree(
+    return SelectionTree::createRight(
         AST.getASTContext(), AST.getTokens(),
         cantFail(positionToOffset(Test.code(), Test.points()[0])),
         cantFail(positionToOffset(Test.code(), Test.points()[1])));
   default:
     ADD_FAILURE() << "Expected 1-2 points for selection.\n" << MarkedCode;
-    return SelectionTree(AST.getASTContext(), AST.getTokens(), 0u, 0u);
+    return SelectionTree::createRight(AST.getASTContext(), AST.getTokens(), 0u,
+                                      0u);
   }
 }
 
@@ -552,6 +558,61 @@ TEST(SelectionTest, Implicit) {
       << "Didn't unwrap " << nodeKind(&Str->Parent->Parent->ignoreImplicit());
 
   EXPECT_EQ("CXXConstructExpr", nodeKind(&Str->outerImplicit()));
+}
+
+TEST(SelectionTest, CreateAll) {
+  llvm::Annotations Test("int$unique^ a=1$ambiguous^+1; $empty^");
+  auto AST = TestTU::withCode(Test.code()).build();
+  unsigned Seen = 0;
+  SelectionTree::createEach(
+      AST.getASTContext(), AST.getTokens(), Test.point("ambiguous"),
+      Test.point("ambiguous"), [&](SelectionTree T) {
+        // Expect to see the right-biased tree first.
+        if (Seen == 0)
+          EXPECT_EQ("BinaryOperator", nodeKind(T.commonAncestor()));
+        else if (Seen == 1)
+          EXPECT_EQ("IntegerLiteral", nodeKind(T.commonAncestor()));
+        ++Seen;
+        return false;
+      });
+  EXPECT_EQ(2u, Seen);
+
+  Seen = 0;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(),
+                            Test.point("ambiguous"), Test.point("ambiguous"),
+                            [&](SelectionTree T) {
+                              ++Seen;
+                              return true;
+                            });
+  EXPECT_EQ(1u, Seen) << "Return true --> stop iterating";
+
+  Seen = 0;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(),
+                            Test.point("unique"), Test.point("unique"),
+                            [&](SelectionTree T) {
+                              ++Seen;
+                              return false;
+                            });
+  EXPECT_EQ(1u, Seen) << "no ambiguity --> only one tree";
+
+  Seen = 0;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(),
+                            Test.point("empty"), Test.point("empty"),
+                            [&](SelectionTree T) {
+                              EXPECT_FALSE(T.commonAncestor());
+                              ++Seen;
+                              return false;
+                            });
+  EXPECT_EQ(1u, Seen) << "empty tree still created";
+
+  Seen = 0;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(),
+                            Test.point("unique"), Test.point("ambiguous"),
+                            [&](SelectionTree T) {
+                              ++Seen;
+                              return false;
+                            });
+  EXPECT_EQ(1u, Seen) << "one tree for nontrivial selection";
 }
 
 } // namespace
