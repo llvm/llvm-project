@@ -42126,8 +42126,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   SDValue Mask = Mst->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI))
+    if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
+      DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
     if (SDValue NewMask =
             TLI.SimplifyMultipleUseDemandedBits(Mask, DemandedBits, DAG))
       return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
@@ -42391,8 +42393,10 @@ static SDValue combineVEXTRACT_STORE(SDNode *N, SelectionDAG &DAG,
   APInt KnownUndef, KnownZero;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedVectorElts(StoredVal, DemandedElts, KnownUndef,
-                                     KnownZero, DCI))
+                                     KnownZero, DCI)) {
+    DCI.AddToWorklist(N);
     return SDValue(N, 0);
+  }
 
   return SDValue();
 }
@@ -43738,8 +43742,10 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   // BT ignores high bits in the bit index operand.
   unsigned BitWidth = N1.getValueSizeInBits();
   APInt DemandedMask = APInt::getLowBitsSet(BitWidth, Log2_32(BitWidth));
-  if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(N1, DemandedMask, DCI))
+  if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(N1, DemandedMask, DCI)) {
+    DCI.AddToWorklist(N);
     return SDValue(N, 0);
+  }
 
   return SDValue();
 }
@@ -43753,8 +43759,10 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedElts = APInt::getLowBitsSet(8, 4);
     if (TLI.SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
-                                       DCI))
+                                       DCI)) {
+      DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
 
     if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
       LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
@@ -44655,8 +44663,10 @@ static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
   if (Mask.getScalarValueSizeInBits() != 1) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
+    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
+      DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
   }
 
   return SDValue();
@@ -44745,8 +44755,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   if (Mask.getScalarValueSizeInBits() != 1) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
+    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
+      DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
   }
 
   return SDValue();
