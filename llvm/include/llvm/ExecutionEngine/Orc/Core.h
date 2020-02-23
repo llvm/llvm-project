@@ -424,6 +424,44 @@ private:
   SymbolNameSet Symbols;
 };
 
+/// Errors of this type should be returned if a module fails to include
+/// definitions that are claimed by the module's associated
+/// MaterializationResponsibility. If this error is returned it is indicative of
+/// a broken transformation / compiler / object cache.
+class MissingSymbolDefinitions : public ErrorInfo<MissingSymbolDefinitions> {
+public:
+  static char ID;
+
+  MissingSymbolDefinitions(std::string ModuleName, SymbolNameVector Symbols)
+    : ModuleName(std::move(ModuleName)), Symbols(std::move(Symbols)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const std::string &getModuleName() const { return ModuleName; }
+  const SymbolNameVector &getSymbols() const { return Symbols; }
+private:
+  std::string ModuleName;
+  SymbolNameVector Symbols;
+};
+
+/// Errors of this type should be returned if a module contains definitions for
+/// symbols that are not claimed by the module's associated
+/// MaterializationResponsibility. If this error is returned it is indicative of
+/// a broken transformation / compiler / object cache.
+class UnexpectedSymbolDefinitions : public ErrorInfo<UnexpectedSymbolDefinitions> {
+public:
+  static char ID;
+
+  UnexpectedSymbolDefinitions(std::string ModuleName, SymbolNameVector Symbols)
+    : ModuleName(std::move(ModuleName)), Symbols(std::move(Symbols)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const std::string &getModuleName() const { return ModuleName; }
+  const SymbolNameVector &getSymbols() const { return Symbols; }
+private:
+  std::string ModuleName;
+  SymbolNameVector Symbols;
+};
+
 /// Tracks responsibility for materialization, and mediates interactions between
 /// MaterializationUnits and JDs.
 ///

@@ -13,7 +13,7 @@
 # GNU-VERNEED-NAME-NEXT:   000:   0 (*local*)       2 ()
 
 # GNU-VERNEED-NAME:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 4 (.dynstr)
+# GNU-VERNEED-NAME-NEXT:  Addr: 0000000000200214  Offset: 0x000044  Link: 4 (.dynstr)
 # GNU-VERNEED-NAME-NEXT:   0x0000: Version: 1  File: somefile  Cnt: 1
 # GNU-VERNEED-NAME-NEXT:   0x0010:   Name:   Flags: none  Version: 2
 
@@ -89,7 +89,7 @@ DynamicSymbols:
 # GNU-NOLINK-NEXT: warning: '[[FILE]]': invalid string table linked to SHT_GNU_verneed section with index 2: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 # GNU-NOLINK-NEXT:   000:   0 (*local*) 2 (<corrupt>)
 # GNU-NOLINK:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-NOLINK-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 0 ()
+# GNU-NOLINK-NEXT:  Addr: 0000000000000004  Offset: 0x000044  Link: 0 ()
 # GNU-NOLINK-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 9>  Cnt: 1
 # GNU-NOLINK-NEXT:   0x0010:   Name: <corrupt>  Flags: none Version: 2
 
@@ -231,7 +231,7 @@ DynamicSymbols: []
 # LLVM-OFFSET-EQ-NEXT: ]
 
 # GNU-OFFSET-EQ:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-OFFSET-EQ-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 1 (.mystrtab)
+# GNU-OFFSET-EQ-NEXT:  Addr: 0000000000000004  Offset: 0x000044  Link: 1 (.mystrtab)
 # GNU-OFFSET-EQ-NEXT:   0x0000: Version: 1  File: <corrupt vn_file: 1>  Cnt: 1
 # GNU-OFFSET-EQ-NEXT:   0x0010:   Name: <corrupt>  Flags: none  Version: 0
 
@@ -562,7 +562,7 @@ DynamicSymbols:
 # GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
 # GNU-CUSTOM-DYNSTR-NEXT:   000:   0 (*local*)       2 (bcdefghij)
 # GNU-CUSTOM-DYNSTR:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000000  Offset: 0x000044  Link: 3 (.custom.dynstr)
+# GNU-CUSTOM-DYNSTR-NEXT:  Addr: 0000000000000004  Offset: 0x000044  Link: 3 (.custom.dynstr)
 # GNU-CUSTOM-DYNSTR-NEXT:   0x0000: Version: 1  File: j  Cnt: 1
 # GNU-CUSTOM-DYNSTR-NEXT:   0x0010:   Name: bcdefghij  Flags: none  Version: 2
 

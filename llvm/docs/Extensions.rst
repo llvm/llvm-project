@@ -503,7 +503,7 @@ in the following fashion:
   sub.w sp, sp, r4
 
 However, this has the limitation of 32 MiB (±16MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcode-model=large`` to allow a 4GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 4GiB
 range via a slight deviation.  It will generate an indirect jump as follows:
 
 .. code-block:: gas
@@ -544,7 +544,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcode-model=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

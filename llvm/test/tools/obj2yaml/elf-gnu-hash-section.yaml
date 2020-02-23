@@ -45,6 +45,7 @@ Sections:
 # INVALID-NEXT: - Name:        .gnu.hash.empty
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Flags:       [ SHF_ALLOC ]
+# INVALID-NEXT:   Address:     0x000000000000000F
 # INVALID-NEXT:   Header:
 # INVALID-NEXT:     SymNdx:      0x00000000
 # INVALID-NEXT:     Shift2:      0x00000000

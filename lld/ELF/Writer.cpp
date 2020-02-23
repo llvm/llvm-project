@@ -1218,7 +1218,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
     prio = curPrio++;
   uint32_t seed = *config->shuffleSectionSeed;
   std::mt19937 g(seed ? seed : std::random_device()());
-  std::shuffle(priorities.begin(), priorities.end(), g);
+  llvm::shuffle(priorities.begin(), priorities.end(), g);
   int prioIndex = 0;
   for (InputSectionBase *sec : inputSections) {
     if (order.try_emplace(sec, priorities[prioIndex]).second)

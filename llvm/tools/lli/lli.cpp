@@ -274,6 +274,7 @@ public:
       SmallString<128> dir(sys::path::parent_path(CacheName));
       sys::fs::create_directories(Twine(dir));
     }
+
     std::error_code EC;
     raw_fd_ostream outfile(CacheName, EC, sys::fs::OF_None);
     outfile.write(Obj.getBufferStart(), Obj.getBufferSize());
@@ -306,14 +307,16 @@ private:
     size_t PrefixLength = Prefix.length();
     if (ModID.substr(0, PrefixLength) != Prefix)
       return false;
-        std::string CacheSubdir = ModID.substr(PrefixLength);
+
+    std::string CacheSubdir = ModID.substr(PrefixLength);
 #if defined(_WIN32)
-        // Transform "X:\foo" => "/X\foo" for convenience.
-        if (isalpha(CacheSubdir[0]) && CacheSubdir[1] == ':') {
-          CacheSubdir[1] = CacheSubdir[0];
-          CacheSubdir[0] = '/';
-        }
+    // Transform "X:\foo" => "/X\foo" for convenience.
+    if (isalpha(CacheSubdir[0]) && CacheSubdir[1] == ':') {
+      CacheSubdir[1] = CacheSubdir[0];
+      CacheSubdir[0] = '/';
+    }
 #endif
+
     CacheName = CacheDir + CacheSubdir;
     size_t pos = CacheName.rfind('.');
     CacheName.replace(pos, CacheName.length() - pos, ".o");
@@ -777,29 +780,55 @@ Error loadDylibs() {
 
 static void exitOnLazyCallThroughFailure() { exit(1); }
 
+Expected<orc::ThreadSafeModule>
+loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
+  SMDiagnostic Err;
+  auto M = parseIRFile(Path, Err, *TSCtx.getContext());
+  if (!M) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream ErrMsgStream(ErrMsg);
+      Err.print("lli", ErrMsgStream);
+    }
+    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+  }
+
+  if (EnableCacheManager)
+    M->setModuleIdentifier("file:" + M->getModuleIdentifier());
+
+  return orc::ThreadSafeModule(std::move(M), std::move(TSCtx));
+}
+
 int runOrcLazyJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
   orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
-  SMDiagnostic Err;
-  auto MainModule = parseIRFile(InputFile, Err, *TSCtx.getContext());
-  if (!MainModule)
-    reportError(Err, ProgName);
+  auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
-  Triple TT(MainModule->getTargetTriple());
+  // Get TargetTriple and DataLayout from the main module if they're explicitly
+  // set.
+  Optional<Triple> TT;
+  Optional<DataLayout> DL;
+  MainModule.withModuleDo([&](Module &M) {
+      if (!M.getTargetTriple().empty())
+        TT = Triple(M.getTargetTriple());
+      if (!M.getDataLayout().isDefault())
+        DL = M.getDataLayout();
+    });
+
   orc::LLLazyJITBuilder Builder;
 
   Builder.setJITTargetMachineBuilder(
-      MainModule->getTargetTriple().empty()
-          ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
-          : orc::JITTargetMachineBuilder(TT));
+      TT ? orc::JITTargetMachineBuilder(*TT)
+         : ExitOnErr(orc::JITTargetMachineBuilder::detectHost()));
+
+  TT = Builder.getJITTargetMachineBuilder()->getTargetTriple();
+  if (DL)
+    Builder.setDataLayout(DL);
 
   if (!MArch.empty())
     Builder.getJITTargetMachineBuilder()->getTargetTriple().setArchName(MArch);
-
-  if (!MainModule->getDataLayout().isDefault())
-    Builder.setDataLayout(MainModule->getDataLayout());
 
   Builder.getJITTargetMachineBuilder()
       ->setCPU(getCPUStr())
@@ -815,11 +844,34 @@ int runOrcLazyJIT(const char *ProgName) {
       pointerToJITTargetAddress(exitOnLazyCallThroughFailure));
   Builder.setNumCompileThreads(LazyJITCompileThreads);
 
+  // If the object cache is enabled then set a custom compile function
+  // creator to use the cache.
+  std::unique_ptr<LLIObjectCache> CacheManager;
+  if (EnableCacheManager) {
+
+    CacheManager = std::make_unique<LLIObjectCache>(ObjectCacheDir);
+
+    Builder.setCompileFunctionCreator(
+      [&](orc::JITTargetMachineBuilder JTMB)
+            -> Expected<std::unique_ptr<orc::IRCompileLayer::IRCompiler>> {
+        if (LazyJITCompileThreads > 0)
+          return std::make_unique<orc::ConcurrentIRCompiler>(std::move(JTMB),
+                                                        CacheManager.get());
+
+        auto TM = JTMB.createTargetMachine();
+        if (!TM)
+          return TM.takeError();
+
+        return std::make_unique<orc::TMOwningSimpleCompiler>(std::move(*TM),
+                                                        CacheManager.get());
+      });
+  }
+
   // Set up LLJIT platform.
   {
     LLJITPlatform P = Platform;
     if (P == LLJITPlatform::DetectHost) {
-      if (TT.isOSBinFormatMachO())
+      if (TT->isOSBinFormatMachO())
         P = LLJITPlatform::MachO;
       else
         P = LLJITPlatform::GenericIR;
@@ -871,8 +923,7 @@ int runOrcLazyJIT(const char *ProgName) {
             })));
 
   // Add the main module.
-  ExitOnErr(
-      J->addLazyIRModule(orc::ThreadSafeModule(std::move(MainModule), TSCtx)));
+  ExitOnErr(J->addLazyIRModule(std::move(MainModule)));
 
   // Create JITDylibs and add any extra modules.
   {
@@ -894,16 +945,13 @@ int runOrcLazyJIT(const char *ProgName) {
 
     for (auto EMItr = ExtraModules.begin(), EMEnd = ExtraModules.end();
          EMItr != EMEnd; ++EMItr) {
-      auto M = parseIRFile(*EMItr, Err, *TSCtx.getContext());
-      if (!M)
-        reportError(Err, ProgName);
+      auto M = ExitOnErr(loadModule(*EMItr, TSCtx));
 
       auto EMIdx = ExtraModules.getPosition(EMItr - ExtraModules.begin());
       assert(EMIdx != 0 && "ExtraModule should have index > 0");
       auto JDItr = std::prev(IdxToDylib.lower_bound(EMIdx));
       auto &JD = *JDItr->second;
-      ExitOnErr(
-          J->addLazyIRModule(JD, orc::ThreadSafeModule(std::move(M), TSCtx)));
+      ExitOnErr(J->addLazyIRModule(JD, std::move(M)));
     }
 
     for (auto EAItr = ExtraArchives.begin(), EAEnd = ExtraArchives.end();

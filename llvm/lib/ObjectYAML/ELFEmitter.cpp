@@ -128,6 +128,7 @@ template <class ELFT> class ELFState {
   NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
+  uint64_t LocationCounter = 0;
   bool HasError = false;
   yaml::ErrorHandler ErrHandler;
   void reportError(const Twine &Msg);
@@ -217,6 +218,8 @@ template <class ELFT> class ELFState {
   void writeFill(ELFYAML::Fill &Fill, ContiguousBlobAccumulator &CBA);
 
   ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
+
+  void assignSectionAddress(Elf_Shdr &SHeader, ELFYAML::Section *YAMLSec);
 
 public:
   static bool writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
@@ -390,6 +393,8 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
   else
     return false;
 
+  LocationCounter += Header.sh_size;
+
   // Override section fields if requested.
   overrideFields<ELFT>(YAMLSec, Header);
   return true;
@@ -413,6 +418,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
     if (auto S = dyn_cast<ELFYAML::Fill>(D.get())) {
       writeFill(*S, CBA);
+      LocationCounter += S->Size;
       continue;
     }
 
@@ -438,8 +444,9 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
-    SHeader.sh_addr = Sec->Address;
     SHeader.sh_addralign = Sec->AddressAlign;
+
+    assignSectionAddress(SHeader, Sec);
 
     if (!Sec->Link.empty())
       SHeader.sh_link = toSectionIndex(Sec->Link, Sec->Name);
@@ -500,9 +507,32 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       llvm_unreachable("Unknown section type");
     }
 
+    LocationCounter += SHeader.sh_size;
+
     // Override section fields if requested.
     overrideFields<ELFT>(Sec, SHeader);
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::assignSectionAddress(Elf_Shdr &SHeader,
+                                          ELFYAML::Section *YAMLSec) {
+  if (YAMLSec && YAMLSec->Address) {
+    SHeader.sh_addr = *YAMLSec->Address;
+    LocationCounter = *YAMLSec->Address;
+    return;
+  }
+
+  // sh_addr represents the address in the memory image of a process. Sections
+  // in a relocatable object file or non-allocatable sections do not need
+  // sh_addr assignment.
+  if (Doc.Header.Type.value == ELF::ET_REL ||
+      !(SHeader.sh_flags & ELF::SHF_ALLOC))
+    return;
+
+  LocationCounter =
+      alignTo(LocationCounter, SHeader.sh_addralign ? SHeader.sh_addralign : 1);
+  SHeader.sh_addr = LocationCounter;
 }
 
 static size_t findFirstNonGlobal(ArrayRef<ELFYAML::Symbol> Symbols) {
@@ -629,7 +659,8 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
                            ? (uint64_t)(*YAMLSec->EntSize)
                            : sizeof(Elf_Sym);
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 8;
-  SHeader.sh_addr = YAMLSec ? (uint64_t)YAMLSec->Address : 0;
+
+  assignSectionAddress(SHeader, YAMLSec);
 
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
@@ -678,8 +709,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 
   // If the section is explicitly described in the YAML
   // then we want to use its section address.
-  if (YAMLSec)
-    SHeader.sh_addr = YAMLSec->Address;
+  assignSectionAddress(SHeader, YAMLSec);
 }
 
 template <class ELFT> void ELFState<ELFT>::reportError(const Twine &Msg) {
