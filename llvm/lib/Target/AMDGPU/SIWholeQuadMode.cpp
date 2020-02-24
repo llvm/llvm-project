@@ -68,11 +68,13 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -156,6 +158,8 @@ private:
   const GCNSubtarget *ST;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  MachineDominatorTree *MDT;
+  MachinePostDominatorTree *PDT;
 
   DenseMap<const MachineInstr *, InstrInfo> Instructions;
   DenseMap<MachineBasicBlock *, BlockInfo> Blocks;
@@ -169,6 +173,7 @@ private:
   SmallVector<MachineInstr *, 4> LowerToMovInstrs;
   SmallVector<MachineInstr *, 4> LowerToCopyInstrs;
   SmallVector<MachineInstr *, 4> DemoteInstrs;
+  SmallSet<MachineInstr *, 32> NeedsDemoteCleanup;
 
   bool HasWaterfalls;
 
@@ -221,9 +226,13 @@ private:
                           MachineInstr &MI,
                           unsigned LiveMaskReg,
                           bool isWQM);
-  bool lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
+  MachineInstr *lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
                    unsigned LiveMaskIn, unsigned LiveMaskOut,
                    bool isWQM);
+  MachineInstr *insertDemoteCleanup(MachineBasicBlock &MBB,
+                                    MachineInstr *MI,
+                                    MachineBasicBlock::iterator *Before,
+                                    unsigned LiveMask);
 
 public:
   static char ID;
@@ -237,6 +246,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachinePostDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -248,6 +259,8 @@ char SIWholeQuadMode::ID = 0;
 INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                     false)
 
@@ -367,6 +380,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   for (auto BI = RPOT.begin(), BE = RPOT.end(); BI != BE; ++BI) {
     MachineBasicBlock &MBB = **BI;
     BlockInfo &BBI = Blocks[&MBB];
+    bool HasDemoteInBlock = false;
 
     for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
       MachineInstr &MI = *II;
@@ -428,7 +442,36 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         if (Opcode == AMDGPU::SI_PS_LIVE || Opcode == AMDGPU::SI_WQM_HELPER) {
           LiveMaskQueries.push_back(&MI);
         } else if (Opcode == AMDGPU::SI_DEMOTE_I1) {
+          // Only perform a demote dominance test once per block
+          if (!HasDemoteInBlock) {
+            SmallVector<MachineInstr *, 4> ControlFlowInstrs;
+            bool DominatesAllReachable = true;
+
+            // Simultaneously check if this demote is in control flow
+            // (dominates all blocks) and find all control flow ends
+            // which post dominate this block.
+            for (MachineBasicBlock *Other : depth_first(&MBB)) {
+              if (DominatesAllReachable && !MDT->dominates(&MBB, Other))
+                DominatesAllReachable = false;
+              if (PDT->dominates(Other, &MBB)) {
+                auto FirstMI = Other->getFirstNonPHI();
+                if ((FirstMI != Other->end()) &&
+                    (FirstMI->getOpcode() == AMDGPU::SI_END_CF)) {
+                  ControlFlowInstrs.push_back(&*FirstMI);
+                }
+              }
+            }
+
+            if (!DominatesAllReachable) {
+              // Demote is in control flow hence we must mark all control
+              // flow end instructions requiring clean up.
+              for (MachineInstr *CF : ControlFlowInstrs)
+                NeedsDemoteCleanup.insert(CF);
+            }
+          }
+
           DemoteInstrs.push_back(&MI);
+          HasDemoteInBlock = true;
         } else if (isWaterfallStart(MI.getOpcode())) {
           HasWaterfalls = true;
         } else if (WQMOutputs) {
@@ -908,9 +951,34 @@ void SIWholeQuadMode::lowerLiveMaskQuery(MachineBasicBlock &MBB,
   MBB.remove(&MI);
 }
 
+MachineInstr *SIWholeQuadMode::insertDemoteCleanup(MachineBasicBlock &MBB,
+                                  MachineInstr *MI,
+                                  MachineBasicBlock::iterator *Before,
+                                  unsigned LiveMask) {
+  const DebugLoc &DL = DebugLoc();
+  const unsigned TermOp = ST->isWave32() ?
+    AMDGPU::SI_DEMOTE_CLEANUP_B32_TERMINATOR :
+    AMDGPU::SI_DEMOTE_CLEANUP_B64_TERMINATOR;
+  const unsigned WQMOp = ST->isWave32() ?
+    AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64;
+  unsigned LiveMaskWQM = MRI->createVirtualRegister(TRI->getBoolRC());
+
+  MachineInstr *LiveMaskMI =
+    BuildMI(MBB, MI ? *MI : *Before, DL, TII->get(WQMOp), LiveMaskWQM)
+      .addReg(LiveMask);
+  MachineInstr *NewTerm =
+    BuildMI(MBB, MI ? *MI : *Before, DL, TII->get(TermOp))
+      .addReg(LiveMaskWQM);
+
+  LIS->InsertMachineInstrInMaps(*LiveMaskMI);
+  LIS->InsertMachineInstrInMaps(*NewTerm);
+
+  return NewTerm;
+}
+
 // Lower an instruction which demotes lanes to helpers by adding
 // appropriate live mask manipulation.  Note this is also applied to kills.
-bool SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
+MachineInstr *SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
                                   unsigned LiveMaskIn, unsigned LiveMaskOut,
                                   bool isWQM) {
   const unsigned Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
@@ -921,7 +989,6 @@ bool SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstr *NewMI = nullptr;
-  bool NeedSplit = false;
 
   const MachineOperand &Op = MI.getOperand(0);
   int64_t KillVal = MI.getOperand(1).getImm();
@@ -943,22 +1010,26 @@ bool SIWholeQuadMode::lowerDemote(MachineBasicBlock &MBB, MachineInstr &MI,
       .add(Op);
   }
 
-  if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
-    if (isWQM) {
-      // Inside WQM demotes are replaced with live mask manipulation
-      LIS->RemoveMachineInstrFromMaps(MI);
-      MBB.remove(&MI);
-    } else {
-      // Outside WQM demotes become kills terminating the block
-      NeedSplit = true;
-    }
-  }
-
   if (NewMI) {
     LIS->InsertMachineInstrInMaps(*NewMI);
   }
 
-  return NeedSplit;
+  if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
+    if (isWQM) {
+      // Inside WQM demotes are replaced with live mask manipulation
+      // and a terminator which is later lowered to remove unused helpers
+      MachineInstr *NewTerm = insertDemoteCleanup(MBB, &MI, nullptr, LiveMaskOut);
+      LIS->RemoveMachineInstrFromMaps(MI);
+      MBB.remove(&MI);
+      return NewTerm;
+    } else {
+      // Outside WQM demotes become kills terminating the block
+      MI.setDesc(TII->get(AMDGPU::SI_KILL_I1_TERMINATOR));
+      return &MI;
+    }
+  }
+
+  return nullptr;
 }
 
 bool SIWholeQuadMode::canSplitBlockAt(MachineBasicBlock *BB,
@@ -1011,7 +1082,8 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
 
   // Only split the block if the split point is not
   // already the end of the block.
-  if (SplitPoint != BB->getFirstTerminator()) {
+  if ((SplitPoint != BB->getFirstTerminator()) &&
+      (SplitPoint != BB->end())) {
     MachineFunction *MF = BB->getParent();
     SplitBB = MF->CreateMachineBasicBlock(BB->getBasicBlock());
 
@@ -1032,10 +1104,6 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     break;
   case AMDGPU::S_AND_B64:
     TermMI->setDesc(TII->get(AMDGPU::S_AND_B64_term));
-    break;
-  case AMDGPU::SI_DEMOTE_I1:
-    // We come here for demotes in Exact mode, which we can just turn into kills.
-    TermMI->setDesc(TII->get(AMDGPU::SI_KILL_I1_TERMINATOR));
     break;
   default:
     if (BB->getFirstTerminator() == BB->end()) {
@@ -1087,13 +1155,19 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
       lowerLiveMaskQuery(MBB, MI, LiveMaskReg, State == StateWQM);
       break;
     case AMDGPU::SI_DEMOTE_I1: {
-      bool NeedSplit = lowerDemote(MBB, MI, LiveMaskReg,
+      MachineInstr *SplitPoint = lowerDemote(MBB, MI, LiveMaskReg,
                                    LiveMaskRegs[&MI],
                                    State == StateWQM);
-      if (NeedSplit)
-        SplitPoints.push_back(&MI);
+      if (SplitPoint)
+        SplitPoints.push_back(SplitPoint);
       break;
     }
+    case AMDGPU::SI_END_CF:
+      if ((State == StateWQM) && NeedsDemoteCleanup.count(&MI)) {
+        MachineInstr *NewTerm = insertDemoteCleanup(MBB, nullptr, &Next, LiveMaskReg);
+        SplitPoints.push_back(NewTerm);
+      }
+      break;
     default:
       break;
     }
@@ -1322,6 +1396,7 @@ bool SIWholeQuadMode::lowerDemoteInstrs() {
   bool Changed = false;
   for (MachineInstr *MI : DemoteInstrs) {
     MachineBasicBlock *MBB = MI->getParent();
+    MI->setDesc(TII->get(AMDGPU::SI_KILL_I1_TERMINATOR));
     splitBlock(MBB, MI);
     Changed = true;
   }
@@ -1385,6 +1460,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervals>();
+  MDT = &getAnalysis<MachineDominatorTree>();
+  PDT = &getAnalysis<MachinePostDominatorTree>();
 
   const char GlobalFlags = analyzeFunction(MF);
   const bool NeedsLiveMask =

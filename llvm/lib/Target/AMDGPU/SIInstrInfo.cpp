@@ -2074,6 +2074,8 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_ELSE:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
+    case AMDGPU::SI_DEMOTE_CLEANUP_B32_TERMINATOR:
+    case AMDGPU::SI_DEMOTE_CLEANUP_B64_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
       return true;
     default:
@@ -6354,6 +6356,8 @@ bool SIInstrInfo::isKillTerminator(unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
   case AMDGPU::SI_KILL_I1_TERMINATOR:
+  case AMDGPU::SI_DEMOTE_CLEANUP_B32_TERMINATOR:
+  case AMDGPU::SI_DEMOTE_CLEANUP_B64_TERMINATOR:
     return true;
   default:
     return false;

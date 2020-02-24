@@ -382,11 +382,18 @@ def SI_WQM_HELPER : PseudoInstSI <
 
 let Defs = [EXEC] in {
 // Demote: Turn a pixel shader thread into a helper lane.
-// Threads may exit entirely after demote if their quad has been reduced to
-// contain only helper lanes. (TODO: implement this)
 def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)> {
 }
-
+// Demote clean up terminators are added to indicate points where the execmask
+// can be cleaned using the specified livemask.
+// This allows the early termination of threads if their quad has become only
+// helper lanes as a result of demotes.
+def SI_DEMOTE_CLEANUP_B32_TERMINATOR : SPseudoInstSI <(outs), (ins SSrc_b32:$livemask)> {
+  let isTerminator = 1;
+}
+def SI_DEMOTE_CLEANUP_B64_TERMINATOR : SPseudoInstSI <(outs), (ins SSrc_b64:$livemask)> {
+  let isTerminator = 1;
+}
 } // End Defs = [EXEC]
 
 } // End Uses = [EXEC]
