@@ -649,3 +649,9 @@ void LLVMAddCoroElidePass(LLVMPassManagerRef PM) {
 void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createCoroCleanupLegacyPass());
 }
+
+void
+LLVMPassManagerBuilderAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef PMB) {
+  PassManagerBuilder *Builder = unwrap(PMB);
+  addCoroutinePassesToExtensionPoints(*Builder);
+}
