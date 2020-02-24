@@ -318,7 +318,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:       SectionLen: 12
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 0
+; SYM-NEXT:       SymbolAlignmentLog2: 2
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
 ; SYM-NEXT:       StabInfoIndex: 0x0
