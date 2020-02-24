@@ -68,7 +68,15 @@ static MachO::CPUSubTypePowerPC getPowerPCSubType(const Triple &T) {
   return MachO::CPU_SUBTYPE_POWERPC_ALL;
 }
 
+static Error unsupported(const char *Str, const Triple &T) {
+  return createStringError(std::errc::invalid_argument,
+                           "Unsupported triple for mach-o cpu %s: %s", Str,
+                           T.str().c_str());
+}
+
 Expected<uint32_t> MachO::getCPUType(const Triple &T) {
+  if (!T.isOSBinFormatMachO())
+    return unsupported("type", T);
   if (T.isX86() && T.isArch32Bit())
     return MachO::CPU_TYPE_X86;
   if (T.isX86() && T.isArch64Bit())
@@ -83,11 +91,12 @@ Expected<uint32_t> MachO::getCPUType(const Triple &T) {
     return MachO::CPU_TYPE_POWERPC;
   if (T.getArch() == Triple::ppc64)
     return MachO::CPU_TYPE_POWERPC64;
-  return createStringError(std::errc::invalid_argument,
-                           "Unsupported triple for mach-o cpu type.");
+  return unsupported("type", T);
 }
 
 Expected<uint32_t> MachO::getCPUSubType(const Triple &T) {
+  if (!T.isOSBinFormatMachO())
+    return unsupported("subtype", T);
   if (T.isX86())
     return getX86SubType(T);
   if (T.isARM() || T.isThumb())
@@ -96,6 +105,5 @@ Expected<uint32_t> MachO::getCPUSubType(const Triple &T) {
     return getARM64SubType(T);
   if (T.getArch() == Triple::ppc || T.getArch() == Triple::ppc64)
     return getPowerPCSubType(T);
-  return createStringError(std::errc::invalid_argument,
-                           "Unsupported triple for mach-o cpu subtype.");
+  return unsupported("subtype", T);
 }
