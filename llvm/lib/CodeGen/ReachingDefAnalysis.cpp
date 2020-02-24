@@ -472,6 +472,32 @@ ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
   return true;
 }
 
+void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
+                                                     InstSet &Dead) const {
+  Dead.insert(MI);
+  auto IsDead = [this](MachineInstr *Def, int PhysReg) {
+    unsigned LiveDefs = 0;
+    for (auto &MO : Def->defs())
+      if (!MO.isDead())
+        ++LiveDefs;
+
+    if (LiveDefs > 1)
+      return false;
+
+    SmallPtrSet<MachineInstr*, 4> Uses;
+    getGlobalUses(Def, PhysReg, Uses);
+    return Uses.size() == 1;
+  };
+
+  for (auto &MO : MI->uses()) {
+    if (!MO.isReg() || MO.getReg() == 0 || !MO.isKill())
+      continue;
+    if (MachineInstr *Def = getReachingMIDef(MI, MO.getReg()))
+      if (IsDead(Def, MO.getReg()))
+        collectLocalKilledOperands(Def, Dead);
+  }
+}
+
 bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI,
                                            int PhysReg) const {
   SmallPtrSet<MachineInstr*, 1> Ignore;
