@@ -104,6 +104,54 @@ define i48 @i48_func_void() #0 {
   ret i48 %val
 }
 
+; GCN-LABEL: {{^}}i48_zeroext_func_void:
+; GCN: buffer_load_dword v0, off
+; GCN-NEXT: buffer_load_ushort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define zeroext i48 @i48_zeroext_func_void() #0 {
+  %val = load i48, i48 addrspace(1)* undef, align 8
+  ret i48 %val
+}
+
+; GCN-LABEL: {{^}}i48_signext_func_void:
+; GCN: buffer_load_dword v0, off
+; GCN-NEXT: buffer_load_sshort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define signext i48 @i48_signext_func_void() #0 {
+  %val = load i48, i48 addrspace(1)* undef, align 8
+  ret i48 %val
+}
+
+; GCN-LABEL: {{^}}i63_func_void:
+; GCN: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define i63 @i63_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
+; GCN-LABEL: {{^}}i63_zeroext_func_void:
+; GCN: s_waitcnt
+; GCN-NEXT: v_and_b32_e32 v1, 0x7fffffff, v1
+; GCN-NEXT: s_setpc_b64
+define zeroext i63 @i63_zeroext_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
+; GCN-LABEL: {{^}}i63_signext_func_void:
+; GCN: s_waitcnt
+; CI-NEXT:	v_lshl_b64 v[0:1], v[0:1], 1
+; CI-NEXT: v_ashr_i64 v[0:1], v[0:1], 1
+
+; GFX89-NEXT:	v_lshlrev_b64 v[0:1], 1, v[0:1]
+; GFX89-NEXT: v_ashrrev_i64 v[0:1], 1, v[0:1]
+
+; GCN-NEXT: s_setpc_b64
+define signext i63 @i63_signext_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
 ; GCN-LABEL: {{^}}i64_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
