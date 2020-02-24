@@ -139,24 +139,24 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
-  ; CHECK:   frame-setup tPUSH 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r6, -12
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r5, -16
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -20
-  ; CHECK:   renamable $r7 = tLDRspi $sp, 10, 14, $noreg :: (load 4 from %fixed-stack.5)
-  ; CHECK:   renamable $r12 = t2MOVi 0, 14, $noreg, $noreg
+  ; CHECK:   renamable $r7 = tLDRspi $sp, 10, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.5)
+  ; CHECK:   renamable $r12 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $lr = MVE_WLSTP_32 killed renamable $r7, %bb.3
   ; CHECK: bb.1.for.body.lr.ph:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
-  ; CHECK:   $r5, $r12 = t2LDRDi8 $sp, 32, 14, $noreg :: (load 4 from %fixed-stack.3), (load 4 from %fixed-stack.4, align 8)
-  ; CHECK:   renamable $r4 = tLDRspi $sp, 5, 14, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   $r5, $r12 = t2LDRDi8 $sp, 32, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.3), (load 4 from %fixed-stack.4, align 8)
+  ; CHECK:   renamable $r4 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
   ; CHECK:   renamable $q0 = MVE_VDUP32 killed renamable $r12, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r5, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $r12 = t2MOVi 0, 14, $noreg, $noreg
+  ; CHECK:   renamable $r12 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK: bb.2.for.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3, $r4, $r12
@@ -172,8 +172,8 @@ body:             |
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.for.cond.cleanup:
   ; CHECK:   liveins: $r12
-  ; CHECK:   $r0 = tMOVr killed $r12, 14, $noreg
-  ; CHECK:   tPOP_RET 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, implicit killed $r0
+  ; CHECK:   $r0 = tMOVr killed $r12, 14 /* CC::al */, $noreg
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $lr
