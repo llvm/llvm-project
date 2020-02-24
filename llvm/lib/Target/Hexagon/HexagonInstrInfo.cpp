@@ -4485,7 +4485,7 @@ uint64_t HexagonInstrInfo::getType(const MachineInstr &MI) const {
   return (F >> HexagonII::TypePos) & HexagonII::TypeMask;
 }
 
-unsigned HexagonInstrInfo::getUnits(const MachineInstr &MI) const {
+InstrStage::FuncUnits HexagonInstrInfo::getUnits(const MachineInstr &MI) const {
   const InstrItineraryData &II = *Subtarget.getInstrItineraryData();
   const InstrStage &IS = *II.beginStage(MI.getDesc().getSchedClass());
 

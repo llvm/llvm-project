@@ -465,7 +465,7 @@ public:
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
-  unsigned getUnits(const MachineInstr &MI) const;
+  InstrStage::FuncUnits getUnits(const MachineInstr &MI) const;
 
   MachineBasicBlock::instr_iterator expandVGatherPseudo(MachineInstr &MI) const;
 
