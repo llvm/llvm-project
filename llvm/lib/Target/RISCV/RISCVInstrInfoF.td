@@ -60,8 +60,7 @@ class FPFMASDynFrmAlias<FPFMAS_rrr_frm Inst, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPALUS_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs FPR32:$rd),
-              (ins FPR32:$rs1, FPR32:$rs2), opcodestr, "$rd, $rs1, $rs2">,
-      Sched<[WriteFALU32, ReadFALU32, ReadFALU32]>;
+              (ins FPR32:$rs1, FPR32:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPALUS_rr_frm<bits<7> funct7, string opcodestr>
@@ -106,7 +105,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def FLW : RVInstI<0b010, OPC_LOAD_FP, (outs FPR32:$rd),
                   (ins GPR:$rs1, simm12:$imm12),
                    "flw", "$rd, ${imm12}(${rs1})">,
-          Sched<[WriteFLD32, ReadMemBase]>;
+          Sched<[WriteFLD32, ReadFMemBase]>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
@@ -115,7 +114,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def FSW : RVInstS<0b010, OPC_STORE_FP, (outs),
                   (ins FPR32:$rs2, GPR:$rs1, simm12:$imm12),
                    "fsw", "$rs2, ${imm12}(${rs1})">,
-          Sched<[WriteFST32, ReadStoreData, ReadMemBase]>;
+          Sched<[WriteFST32, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_S  : FPFMAS_rrr_frm<OPC_MADD, "fmadd.s">,
                Sched<[WriteFMulAdd32, ReadFMulAdd32, ReadFMulAdd32, ReadFMulAdd32]>;
@@ -149,11 +148,16 @@ def FSQRT_S : FPUnaryOp_r_frm<0b0101100, FPR32, FPR32, "fsqrt.s">,
 }
 def         : FPUnaryOpDynFrmAlias<FSQRT_S, "fsqrt.s", FPR32, FPR32>;
 
-def FSGNJ_S  : FPALUS_rr<0b0010000, 0b000, "fsgnj.s">;
-def FSGNJN_S : FPALUS_rr<0b0010000, 0b001, "fsgnjn.s">;
-def FSGNJX_S : FPALUS_rr<0b0010000, 0b010, "fsgnjx.s">;
-def FMIN_S   : FPALUS_rr<0b0010100, 0b000, "fmin.s">;
-def FMAX_S   : FPALUS_rr<0b0010100, 0b001, "fmax.s">;
+def FSGNJ_S  : FPALUS_rr<0b0010000, 0b000, "fsgnj.s">,
+               Sched<[WriteFSGNJ32, ReadFSGNJ32, ReadFSGNJ32]>;
+def FSGNJN_S : FPALUS_rr<0b0010000, 0b001, "fsgnjn.s">,
+               Sched<[WriteFSGNJ32, ReadFSGNJ32, ReadFSGNJ32]>;
+def FSGNJX_S : FPALUS_rr<0b0010000, 0b010, "fsgnjx.s">,
+               Sched<[WriteFSGNJ32, ReadFSGNJ32, ReadFSGNJ32]>;
+def FMIN_S   : FPALUS_rr<0b0010100, 0b000, "fmin.s">,
+               Sched<[WriteFMinMax32, ReadFMinMax32, ReadFMinMax32]>;
+def FMAX_S   : FPALUS_rr<0b0010100, 0b001, "fmax.s">,
+               Sched<[WriteFMinMax32, ReadFMinMax32, ReadFMinMax32]>;
 
 def FCVT_W_S : FPUnaryOp_r_frm<0b1100000, GPR, FPR32, "fcvt.w.s">,
                Sched<[WriteFCvtF32ToI32, ReadFCvtF32ToI32]> {
