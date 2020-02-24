@@ -34133,7 +34133,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
     Res = DAG.getBitcast(MaskVT, V1);
     unsigned AndOpcode =
-        FloatDomain ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
+        MaskVT.isFloatingPoint() ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
     Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);
     return DAG.getBitcast(RootVT, Res);
   }
