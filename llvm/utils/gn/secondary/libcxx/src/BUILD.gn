@@ -115,6 +115,8 @@ config("cxx_config") {
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
+  "atomic.cpp",
+  "barrier.cpp",
   "bind.cpp",
   "charconv.cpp",
   "chrono.cpp",
