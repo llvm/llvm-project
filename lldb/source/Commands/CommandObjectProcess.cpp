@@ -1283,7 +1283,7 @@ protected:
       }
 
       auto expected_crash_info =
-          platform_sp->FetchExtendedCrashInformation(process->GetTarget());
+          platform_sp->FetchExtendedCrashInformation(*process);
 
       if (!expected_crash_info) {
         result.AppendError(llvm::toString(expected_crash_info.takeError()));

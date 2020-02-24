@@ -18,6 +18,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -1010,6 +1011,30 @@ bool SBProcess::GetDescription(SBStream &description) {
   return true;
 }
 
+SBStructuredData SBProcess::GetExtendedCrashInformation() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBStructuredData, SBProcess,
+                             GetExtendedCrashInformation);
+  SBStructuredData data;
+  ProcessSP process_sp(GetSP());
+  if (!process_sp)
+    return LLDB_RECORD_RESULT(data);
+
+  PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+
+  if (!platform_sp)
+    return LLDB_RECORD_RESULT(data);
+
+  auto expected_data =
+      platform_sp->FetchExtendedCrashInformation(*process_sp.get());
+
+  if (!expected_data)
+    return LLDB_RECORD_RESULT(data);
+
+  StructuredData::ObjectSP fetched_data = *expected_data;
+  data.m_impl_up->SetObjectSP(fetched_data);
+  return LLDB_RECORD_RESULT(data);
+}
+
 uint32_t
 SBProcess::GetNumSupportedHardwareWatchpoints(lldb::SBError &sb_error) const {
   LLDB_RECORD_METHOD_CONST(uint32_t, SBProcess,
@@ -1385,6 +1410,8 @@ void RegisterMethods<SBProcess>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::addr_t, SBProcess, ReadPointerFromMemory,
                        (lldb::addr_t, lldb::SBError &));
   LLDB_REGISTER_METHOD(bool, SBProcess, GetDescription, (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBStructuredData, SBProcess,
+                       GetExtendedCrashInformation, ());
   LLDB_REGISTER_METHOD_CONST(uint32_t, SBProcess,
                              GetNumSupportedHardwareWatchpoints,
                              (lldb::SBError &));

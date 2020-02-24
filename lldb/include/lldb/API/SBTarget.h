@@ -819,8 +819,6 @@ public:
 
   void SetLaunchInfo(const lldb::SBLaunchInfo &launch_info);
 
-  SBStructuredData GetExtendedCrashInformation();
-
 protected:
   friend class SBAddress;
   friend class SBBlock;

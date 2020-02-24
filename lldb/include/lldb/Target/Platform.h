@@ -831,8 +831,8 @@ public:
   /// nullptr. This dictionnary is generic and extensible, as it contains an
   /// array for each different type of crash information.
   ///
-  /// \param[in] target
-  ///     The target running the crashed process.
+  /// \param[in] process
+  ///     The crashed process.
   ///
   /// \return
   ///     A structured data dictionnary containing at each entry, the crash
@@ -840,7 +840,7 @@ public:
   ///     entry value. \b nullptr if not implemented or  if the process has no
   ///     crash information entry. \b error if an error occured.
   virtual llvm::Expected<StructuredData::DictionarySP>
-  FetchExtendedCrashInformation(lldb_private::Target &target) {
+  FetchExtendedCrashInformation(lldb_private::Process &process) {
     return nullptr;
   }
 

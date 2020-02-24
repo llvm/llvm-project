@@ -1503,10 +1503,10 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
 }
 
 llvm::Expected<StructuredData::DictionarySP>
-PlatformDarwin::FetchExtendedCrashInformation(lldb_private::Target &target) {
+PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-  StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(target);
+  StructuredData::ArraySP annotations = ExtractCrashInfoAnnotations(process);
 
   if (!annotations || !annotations->GetSize()) {
     LLDB_LOG(log, "Couldn't extract crash information annotations");
@@ -1522,11 +1522,11 @@ PlatformDarwin::FetchExtendedCrashInformation(lldb_private::Target &target) {
 }
 
 StructuredData::ArraySP
-PlatformDarwin::ExtractCrashInfoAnnotations(Target &target) {
+PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   ConstString section_name("__crash_info");
-  ProcessSP process_sp = target.GetProcessSP();
+  Target &target = process.GetTarget();
   StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
 
   for (ModuleSP module : target.GetImages().Modules()) {
@@ -1562,8 +1562,8 @@ PlatformDarwin::ExtractCrashInfoAnnotations(Target &target) {
     Status error;
     CrashInfoAnnotations annotations;
     size_t expected_size = sizeof(CrashInfoAnnotations);
-    size_t bytes_read = process_sp->ReadMemoryFromInferior(
-        load_addr, &annotations, expected_size, error);
+    size_t bytes_read = process.ReadMemoryFromInferior(load_addr, &annotations,
+                                                       expected_size, error);
 
     if (expected_size != bytes_read || error.Fail()) {
       LLDB_LOG(log, "Failed to read {0} section from memory in module {1}: {2}",
@@ -1587,7 +1587,7 @@ PlatformDarwin::ExtractCrashInfoAnnotations(Target &target) {
 
     std::string message;
     bytes_read =
-        process_sp->ReadCStringFromMemory(annotations.message, message, error);
+        process.ReadCStringFromMemory(annotations.message, message, error);
 
     if (message.empty() || bytes_read != message.size() || error.Fail()) {
       LLDB_LOG(log, "Failed to read the message from memory in module {0}: {1}",
@@ -1603,8 +1603,8 @@ PlatformDarwin::ExtractCrashInfoAnnotations(Target &target) {
       LLDB_LOG(log, "No message2 available for module {0}.", module_name);
 
     std::string message2;
-    bytes_read = process_sp->ReadCStringFromMemory(annotations.message2,
-                                                   message2, error);
+    bytes_read =
+        process.ReadCStringFromMemory(annotations.message2, message2, error);
 
     if (!message2.empty() && bytes_read == message2.size() && error.Success())
       if (message2.back() == '\n')
