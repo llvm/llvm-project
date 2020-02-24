@@ -470,6 +470,42 @@ def G_SMULH : GenericInstruction {
 }
 
 //------------------------------------------------------------------------------
+// Saturating ops
+//------------------------------------------------------------------------------
+
+// Generic saturating unsigned addition.
+def G_UADDSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic saturating signed addition.
+def G_SADDSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic saturating unsigned subtraction.
+def G_USUBSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating signed subtraction.
+def G_SSUBSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+//------------------------------------------------------------------------------
 // Floating Point Unary Ops.
 //------------------------------------------------------------------------------
 
