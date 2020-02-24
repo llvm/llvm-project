@@ -153,10 +153,6 @@ public:
   /// base pointer.
   unsigned getBasePointerSaveOffset() const;
 
-  /// getCRSaveOffset - Return the previous frame offset to save the
-  /// CR register.
-  unsigned getCRSaveOffset() const { return CRSaveOffset; }
-
   /// getLinkageSize - Return the size of the PowerPC ABI linkage area.
   ///
   unsigned getLinkageSize() const { return LinkageSize; }
