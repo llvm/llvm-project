@@ -1,6 +1,8 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t/macho_reloc.o %s
-# RUN: llvm-jitlink -noexec -define-abs external_data=0xdeadbeef -define-abs external_func=0xcafef00d -check=%s %t/macho_reloc.o
+# RUN: llvm-jitlink -noexec -define-abs external_data=0xffffffffdeadbeef \
+# RUN:    -define-abs external_func=0xffffffffcafef00d \
+# RUN:    -define-abs lowaddr_symbol=0x1000 -check=%s %t/macho_reloc.o
 
         .section        __TEXT,__text,regular,pure_instructions
 
@@ -170,11 +172,11 @@ named_func_addr_quad:
 # Check X86_64_RELOC_UNSIGNED / long / extern handling by putting the address of
 # an external function (defined to reside in the low 4Gb) into a long symbol.
 #
-# jitlink-check: *{4}named_func_addr_long = external_func
-        .globl  named_func_addr_long
+# jitlink-check: *{4}named_lowaddr_symbol_long = lowaddr_symbol
+        .globl  named_lowaddr_symbol_long
         .p2align  2
-named_func_addr_long:
-        .long   external_func
+named_lowaddr_symbol_long:
+        .long   lowaddr_symbol
 
 # Check X86_64_RELOC_UNSIGNED / quad / non-extern handling by putting the
 # address of a local anonymous function into a quad symbol.
