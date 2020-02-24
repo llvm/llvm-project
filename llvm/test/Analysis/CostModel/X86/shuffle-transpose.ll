@@ -10,7 +10,7 @@
 ;
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,BTVER2
 
 ;
 ; Verify the cost model for transpose shuffles.
@@ -34,12 +34,6 @@ define void @test_vXf64(<2 x double> %a128, <2 x double> %b128, <4 x double> %a2
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V512 = shufflevector <8 x double> %a512, <8 x double> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; BTVER2-LABEL: 'test_vXf64'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V128 = shufflevector <2 x double> %a128, <2 x double> %b128, <2 x i32> <i32 0, i32 2>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V512 = shufflevector <8 x double> %a512, <8 x double> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V128 = shufflevector <2 x double> %a128, <2 x double> %b128, <2 x i32> <i32 0, i32 2>
   %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -65,12 +59,6 @@ define void @test_vXi64(<2 x i64> %a128, <2 x i64> %b128, <4 x i64> %a256, <4 x 
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V512 = shufflevector <8 x i64> %a512, <8 x i64> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; BTVER2-LABEL: 'test_vXi64'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V128 = shufflevector <2 x i64> %a128, <2 x i64> %b128, <2 x i32> <i32 0, i32 2>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V512 = shufflevector <8 x i64> %a512, <8 x i64> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V128 = shufflevector <2 x i64> %a128, <2 x i64> %b128, <2 x i32> <i32 0, i32 2>
   %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>

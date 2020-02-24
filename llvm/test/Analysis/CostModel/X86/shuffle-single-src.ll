@@ -11,7 +11,7 @@
 ;
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,BTVER2
 
 ;
 ; Verify the cost model for 1 src shuffles
@@ -358,12 +358,6 @@ define void @identity_vXf32(<4 x float> %a128, <4 x float> %b128, <8 x float> %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 undef>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
-;
-; BTVER2-LABEL: 'identity_vXf32'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 undef>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
   %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
