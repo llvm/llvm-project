@@ -523,6 +523,16 @@ private:
   }
   bool canCallMismatchedFunctionType() const override { return false; }
 };
+
+class XLCXXABI final : public ItaniumCXXABI {
+public:
+  explicit XLCXXABI(CodeGen::CodeGenModule &CGM)
+      : ItaniumCXXABI(CGM) {}
+
+  void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
+                          llvm::FunctionCallee dtor,
+                          llvm::Constant *addr) override;
+};
 }
 
 CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
@@ -552,6 +562,9 @@ CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
 
   case TargetCXXABI::WebAssembly:
     return new WebAssemblyCXXABI(CGM);
+
+  case TargetCXXABI::XL:
+    return new XLCXXABI(CGM);
 
   case TargetCXXABI::GenericItanium:
     if (CGM.getContext().getTargetInfo().getTriple().getArch()
@@ -4649,4 +4662,12 @@ void WebAssemblyCXXABI::emitBeginCatch(CodeGenFunction &CGF,
     CGF.EHStack.pushCleanup<CatchRetScope>(
         NormalCleanup, cast<llvm::CatchPadInst>(CGF.CurrentFuncletPad));
   ItaniumCXXABI::emitBeginCatch(CGF, C);
+}
+
+/// Register a global destructor as best as we know how.
+void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
+                                  llvm::FunctionCallee dtor,
+                                  llvm::Constant *addr) {
+  llvm::report_fatal_error("Static initialization has not been implemented on"
+                           " XL ABI yet.");
 }
