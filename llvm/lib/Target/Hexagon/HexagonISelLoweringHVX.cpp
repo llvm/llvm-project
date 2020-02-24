@@ -1437,17 +1437,12 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
   return T7;
 }
 
-SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  auto *N = Op.getNode();
-  EVT VT = N->getValueType(0);
+// This function does the computation needed to bitcast a vector of predicate
+// register to a vector of integers.
+SDValue
+HexagonTargetLowering::HvxVecPredBitcastComputation(SDValue Op,
+                                                    SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
-  SDValue Q0 = N->getOperand(0);
-  EVT VTOp = Q0.getNode()->getValueType(0);
-  if (!(VT == MVT::i64 || VT == MVT::i32) ||
-      !(VTOp == MVT::v64i1 || VTOp == MVT::v32i1)) {
-    return Op;
-  }
   MVT VecTy;
   int Length;
   if (Subtarget.useHVX64BOps()) {
@@ -1463,7 +1458,7 @@ SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
   SDValue InstrC8421 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C8421, DAG);
   // v0 = vand(q0,r0)
   SDValue Vand =
-      getInstr(Hexagon::V6_vandqrt, dl, VecTy, {Q0, InstrC8421}, DAG);
+      getInstr(Hexagon::V6_vandqrt, dl, VecTy, {Op, InstrC8421}, DAG);
 
   // Or the bytes in each word into a single byte: that will form packs
   // of 4 bits of the output.
@@ -1548,6 +1543,22 @@ SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
   SDValue Vror2 = getInstr(Hexagon::V6_vror, dl, VecTy, {Vor3, InstrC4}, DAG);
   // v0 = vor(v0,v1)
   SDValue Vor4 = getInstr(Hexagon::V6_vor, dl, VecTy, {Vor3, Vror2}, DAG);
+  return Vor4;
+}
+
+SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  auto *N = Op.getNode();
+  EVT VT = N->getValueType(0);
+  const SDLoc &dl(Op);
+  SDValue Q0 = N->getOperand(0);
+  EVT VTOp = Q0.getNode()->getValueType(0);
+  if (!(VT == MVT::i64 || VT == MVT::i32) ||
+      !(VTOp == MVT::v64i1 || VTOp == MVT::v32i1))
+    return Op;
+
+  SDValue Vor4 = HvxVecPredBitcastComputation(Q0, DAG);
+
   // The output is v.w[8]:v.w[0]
   // r3 = #0
   SDValue C0 = DAG.getTargetConstant(0, dl, MVT::i32);
@@ -1565,6 +1576,53 @@ SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
     Res = getInstr(Hexagon::A2_combinew, dl, MVT::i64, {Vextract, Res}, DAG);
   }
   return Res;
+}
+
+SDValue HexagonTargetLowering::LowerHvxStore(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  auto *N = Op.getNode();
+  const SDLoc &dl(Op);
+  SDValue Q0 = N->getOperand(1);
+  EVT VTOp = Q0.getNode()->getValueType(0);
+  if (Op.getOpcode() != ISD::STORE || VTOp != MVT::v128i1)
+    return Op;
+  SDValue Vor4 = HvxVecPredBitcastComputation(Q0, DAG);
+  // The output is v.w[8]:v.w[0]
+  // r3 = #0
+  SDValue C0 = DAG.getTargetConstant(0, dl, MVT::i32);
+  SDValue InstrC0 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C0, DAG);
+  // r0 = vextract(v0,r3)
+  SDValue Vextract0 =
+      getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC0}, DAG);
+  // r3 = #32
+  SDValue C32 = DAG.getTargetConstant(32, dl, MVT::i32);
+  SDValue InstrC32 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C32, DAG);
+  // r1 = vextract(v0,r3)
+  SDValue Vextract1 =
+      getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC32}, DAG);
+  SDValue Combine0 =
+      getInstr(Hexagon::A2_combinew, dl, MVT::i64, {Vextract1, Vextract0}, DAG);
+  // r3 = #64
+  SDValue C64 = DAG.getTargetConstant(64, dl, MVT::i32);
+  SDValue InstrC64 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C64, DAG);
+  // r0 = vextract(v0,r3)
+  SDValue Vextract2 =
+      getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC64}, DAG);
+  // r3 = #96
+  SDValue C96 = DAG.getTargetConstant(96, dl, MVT::i32);
+  SDValue InstrC96 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C96, DAG);
+  // r1 = vextract(v0,r3)
+  SDValue Vextract3 =
+      getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC96}, DAG);
+  SDValue Combine1 =
+      getInstr(Hexagon::A2_combinew, dl, MVT::i64, {Vextract3, Vextract2}, DAG);
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  SDValue C8 = DAG.getTargetConstant(8, dl, MVT::i32);
+  const SDValue Ops1[] = {ST->getBasePtr(), C8, Combine1, ST->getChain()};
+  SDValue Store1 = getInstr(Hexagon::S2_storerd_io, dl, MVT::Other, Ops1, DAG);
+  const SDValue Ops0[] = {ST->getBasePtr(), C0, Combine0, Store1};
+  SDValue Store0 = getInstr(Hexagon::S2_storerd_io, dl, MVT::Other, Ops0, DAG);
+  return Store0;
 }
 
 SDValue
@@ -1740,6 +1798,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETCC:
     case ISD::INTRINSIC_VOID:          return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
+    case ISD::STORE:                   return LowerHvxStore(Op, DAG);
     // Unaligned loads will be handled by the default lowering.
     case ISD::LOAD:                    return SDValue();
   }
