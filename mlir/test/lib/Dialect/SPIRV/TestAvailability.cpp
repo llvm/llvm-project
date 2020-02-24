@@ -75,9 +75,12 @@ void PrintOpAvailability::runOnFunction() {
   });
 }
 
-static PassRegistration<PrintOpAvailability>
-    printOpAvailabilityPass("test-spirv-op-availability",
-                            "Test SPIR-V op availability");
+namespace mlir {
+void registerPrintOpAvailabilityPass() {
+  PassRegistration<PrintOpAvailability> printOpAvailabilityPass(
+      "test-spirv-op-availability", "Test SPIR-V op availability");
+}
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Converting target environment pass
