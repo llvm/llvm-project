@@ -282,14 +282,9 @@ protected:
   ///
   /// \param[in] namespace_decl
   ///     If valid and module is non-NULL, the parent namespace.
-  ///
-  /// \param[in] current_id
-  ///     The ID for the current FindExternalVisibleDecls invocation,
-  ///     for logging purposes.
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
-                                CompilerDeclContext &namespace_decl,
-                                unsigned int current_id);
+                                CompilerDeclContext &namespace_decl);
 
   /// Find all Objective-C methods matching a given selector.
   ///
@@ -356,13 +351,11 @@ public:
 
 protected:
   bool FindObjCMethodDeclsWithOrigin(
-      unsigned int current_id, NameSearchContext &context,
+      NameSearchContext &context,
       clang::ObjCInterfaceDecl *original_interface_decl, const char *log_info);
 
-  void FindDeclInModules(NameSearchContext &context, ConstString name,
-                         unsigned current_id);
-  void FindDeclInObjCRuntime(NameSearchContext &context, ConstString name,
-                             unsigned current_id);
+  void FindDeclInModules(NameSearchContext &context, ConstString name);
+  void FindDeclInObjCRuntime(NameSearchContext &context, ConstString name);
 
   friend struct NameSearchContext;
 
