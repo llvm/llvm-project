@@ -91,14 +91,14 @@ using __barrier_phase_t = uint8_t;
 
 class __barrier_algorithm_base;
 
-_LIBCPP_EXPORTED_FROM_ABI
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI
 __barrier_algorithm_base* __construct_barrier_algorithm_base(ptrdiff_t& __expected);
 
-_LIBCPP_EXPORTED_FROM_ABI
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI
 bool __arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier,
                                      __barrier_phase_t __old_phase);
 
-_LIBCPP_EXPORTED_FROM_ABI
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI
 void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier);
 
 template<class _CompletionF>
