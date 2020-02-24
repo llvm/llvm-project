@@ -313,11 +313,6 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
       OUTPUT_NAME   "c++experimental"
   )
   cxx_add_common_build_flags(cxx_experimental)
-  # Overwrite the previously-set Standard flag with -std=c++14 if supported
-  check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
-    target_compile_options(cxx_experimental PRIVATE "-std=c++14")
-  endif()
 endif()
 
 
