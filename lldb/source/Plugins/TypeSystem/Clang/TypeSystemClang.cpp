@@ -3520,7 +3520,7 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
 
 ConstString
 TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type,
-                                    const SymbolContext *sc = nullptr) {
+                                    const SymbolContext *sc) {
   if (!type)
     return ConstString();
 
