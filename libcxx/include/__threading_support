@@ -507,7 +507,7 @@ bool __libcpp_timed_backoff_policy::operator()(chrono::nanoseconds __elapsed) co
     return false;
 }
 
-static constexpr int __libcpp_polling_count = 64;
+static _LIBCPP_CONSTEXPR const int __libcpp_polling_count = 64;
 
 template<class _Fn, class _BFn>
 bool __libcpp_thread_poll_with_backoff(_Fn && __f, _BFn && __bf, chrono::nanoseconds __max_elapsed)
