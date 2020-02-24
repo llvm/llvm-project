@@ -1092,6 +1092,8 @@ private:
                                    struct ObjCInterfaceDecl::DefinitionData *>;
   using ProtoDataPointers = std::pair<ObjCProtocolDecl *,
                                    struct ObjCProtocolDecl::DefinitionData *>;
+  using CatDataPointers =
+      std::pair<ObjCCategoryDecl *, struct ObjCCategoryDecl::DefinitionData *>;
 
   /// Record definitions in which we found an ODR violation.
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
@@ -1118,6 +1120,11 @@ private:
   llvm::SmallDenseMap<ObjCProtocolDecl *, llvm::SmallVector<ProtoDataPointers, 2>,
                       2>
       PendingObjCProtocolOdrMergeFailures;
+
+  /// ObjCCategoryDecl in which we found an ODR violation.
+  llvm::SmallDenseMap<ObjCCategoryDecl *, llvm::SmallVector<CatDataPointers, 2>,
+                      2>
+      PendingObjCCategoryOdrMergeFailures;
 
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;

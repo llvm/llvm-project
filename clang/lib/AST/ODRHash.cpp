@@ -504,6 +504,30 @@ void ODRHash::AddSubDecl(const Decl *D) {
   ODRDeclVisitor(ID, *this).Visit(D);
 }
 
+void ODRHash::AddObjCCategoryDecl(const ObjCCategoryDecl *Cat) {
+  // Nothing to compute for extensions, there can be as many as
+  // wanted and ODR checking doesn't apply.
+  if (Cat->IsClassExtension())
+    return;
+
+  AddDecl(Cat);
+
+  // Trigger ODR computation for methods (if not yet computed)
+  for (auto *M : Cat->methods())
+    reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Cat->decls())
+    if (isWhitelistedDecl(SubDecl, Cat))
+      Decls.push_back(SubDecl);
+
+  ID.AddInteger(Decls.size());
+  for (auto *SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
 void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
   AddDecl(IF);
 

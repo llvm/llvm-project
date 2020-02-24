@@ -832,12 +832,14 @@ void ASTDeclWriter::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
+  VisitRedeclarable(D);
   VisitObjCContainerDecl(D);
   Record.AddSourceLocation(D->getCategoryNameLoc());
   Record.AddSourceLocation(D->getIvarLBraceLoc());
   Record.AddSourceLocation(D->getIvarRBraceLoc());
   Record.AddDeclRef(D->getClassInterface());
   AddObjCTypeParamList(D->TypeParamList);
+  Record.push_back(D->getODRHash());
   Record.push_back(D->protocol_size());
   for (const auto *I : D->protocols())
     Record.AddDeclRef(I);

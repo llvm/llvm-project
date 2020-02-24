@@ -1200,6 +1200,9 @@ DeclContext *DeclContext::getPrimaryContext() {
     return this;
 
   case Decl::ObjCCategory:
+    if (auto *OCD = dyn_cast<ObjCCategoryDecl>(this))
+      if (auto *Def = OCD->getDefinition())
+        return Def;
     return this;
 
   case Decl::ObjCImplementation:

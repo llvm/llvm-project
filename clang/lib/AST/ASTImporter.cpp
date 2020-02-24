@@ -4194,15 +4194,14 @@ ExpectedDecl ASTNodeImporter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
     else
       return Imp.takeError();
 
-    if (GetImportedOrCreateDecl(ToCategory, D, Importer.getToContext(), DC,
-                                ToAtStartLoc, Loc,
-                                ToCategoryNameLoc,
-                                Name.getAsIdentifierInfo(), ToInterface,
-                                /*TypeParamList=*/nullptr,
-                                ToIvarLBraceLoc,
-                                ToIvarRBraceLoc))
+    if (GetImportedOrCreateDecl(
+            ToCategory, D, Importer.getToContext(), DC, ToAtStartLoc, Loc,
+            ToCategoryNameLoc, Name.getAsIdentifierInfo(), ToInterface,
+            /*PrevDecl=*/nullptr,
+            /*TypeParamList=*/nullptr, ToIvarLBraceLoc, ToIvarRBraceLoc))
       return ToCategory;
 
+    ToCategory->startDefinition();
     ToCategory->setLexicalDeclContext(LexicalDC);
     LexicalDC->addDeclInternal(ToCategory);
     // Import the type parameter list after MapImported, to avoid
