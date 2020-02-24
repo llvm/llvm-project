@@ -79,7 +79,7 @@ def ForOp : Loop_Op<"for",
       %sum_0 = constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
       %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
-	      %t = load %buffer[%iv] : memref<1024xf32>
+        %t = load %buffer[%iv] : memref<1024xf32>
         %sum_next = addf %sum_iter, %t : f32
         // Yield current iteration sum to next iteration %sum_iter or to %sum if final iteration.
         loop.yield %sum_next : f32
@@ -100,14 +100,14 @@ def ForOp : Loop_Op<"for",
       %sum_0 = constant 0.0 : f32
       %c0 = constant 0.0 : f32
       %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
-    	  %t = load %buffer[%iv] : memref<1024xf32>
-    	  %cond = cmpf "ugt", %t, %c0 : f32
-    	  %sum_next = loop.if %cond -> (f32) {
-	        %new_sum = addf %sum_iter, %t : f32
+        %t = load %buffer[%iv] : memref<1024xf32>
+        %cond = cmpf "ugt", %t, %c0 : f32
+        %sum_next = loop.if %cond -> (f32) {
+          %new_sum = addf %sum_iter, %t : f32
           loop.yield %new_sum : f32
-	      } else {
-      		loop.yield %sum_iter : f32
-	      }
+        } else {
+          loop.yield %sum_iter : f32
+        }
         loop.yield %sum_next : f32
       }
       return %sum : f32
