@@ -3,23 +3,19 @@
 
 ## Show that a bad length stops parsing of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_reserved_length.s -filetype=obj -o %t-reserved.o
-# RUN: llvm-dwarfdump -debug-line %t-reserved.o 2> %t-reserved.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL
-# RUN: FileCheck %s --input-file=%t-reserved.err --check-prefix=RESERVED
-# RUN: llvm-dwarfdump -debug-line %t-reserved.o -verbose 2> %t-reserved-verbose.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL
-# RUN: FileCheck %s --input-file=%t-reserved-verbose.err --check-prefix=RESERVED
+# RUN: llvm-dwarfdump -debug-line %t-reserved.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
+# RUN: llvm-dwarfdump -debug-line %t-reserved.o -verbose 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
 
 ## We only produce warnings for malformed tables after the specified unit if
 ## parsing can continue.
-# RUN: llvm-dwarfdump -debug-line=0 %t-reserved.o 2> %t-reserved-off-first.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER
-# RUN: FileCheck %s --input-file=%t-reserved-off-first.err --check-prefix=RESERVED
+# RUN: llvm-dwarfdump -debug-line=0 %t-reserved.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER,RESERVED
 
 ## Stop looking for the specified unit, if a fatally-bad prologue is detected.
-# RUN: llvm-dwarfdump -debug-line=0x4b %t-reserved.o 2> %t-reserved-off-last.err \
-# RUN:   | FileCheck %s --check-prefixes=NOFIRST,NOLATER
-# RUN: FileCheck %s --input-file=%t-reserved-off-last.err --check-prefix=RESERVED
+# RUN: llvm-dwarfdump -debug-line=0x4b %t-reserved.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=NOFIRST,NOLATER,RESERVED
 
 ## Show that non-fatal errors do not prevent parsing the rest of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_malformed.s -filetype=obj -o %t-malformed.o
@@ -49,8 +45,9 @@
 
 ## For fatal issues, the following table(s) should not be dumped:
 # FATAL:      debug_line[0x00000048]
-# FATAL-NEXT: Line table prologue
-# FATAL-NEXT: total_length: 0xfffffffe
+# RESERVED-NOT: prologue
+# RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
+# RESERVED-NOT: prologue
 # FATAL-NOT:  debug_line
 
 ## For non-fatal issues, the table data should be dumped:
@@ -58,16 +55,21 @@
 ## Version 0 table.
 # NONFATAL:      debug_line[0x00000048]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL-NOT:  Address
+# NONFATAL-NEXT:    total_length: 0x00000002
+# NONFATAL-NEXT:         version: 0
+# NONFATAL-NOT: prologue_length
 
 ## Version 1 table.
 # NONFATAL:      debug_line[0x0000004e]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL-NOT:  Address
+# NONFATAL-NEXT:    total_length: 0x00000002
+# NONFATAL-NEXT:         version: 1
+# NONFATAL-NOT: prologue_length
 
 ## Malformed directory format with no path component.
 # NONFATAL:      debug_line[0x00000054]
 # NONFATAL-NEXT: Line table prologue
+# NONFATAL:      prologue_length: 0x00000013
 # NONFATAL-NOT:  include_directories
 # NONFATAL-NOT:  file_names
 # NONFATAL:      0x8877665544332211 {{.*}} end_sequence
@@ -96,12 +98,14 @@
 ## Extended opcode with incorrect length versus expected.
 # NONFATAL:      debug_line[0x00000111]
 # NONFATAL-NEXT: Line table prologue
+# NONFATAL:      prologue_length: 0x00000030
 # NONFATAL: 0x00000000abbadaba {{.*}} end_sequence
 # NONFATAL: 0x00000000babb1e45 {{.*}} 10 is_stmt prologue_end end_sequence{{$}}
 
 ## No end of sequence.
 # NONFATAL:      debug_line[0x0000016c]
 # NONFATAL-NEXT: Line table prologue
+# NONFATAL:      prologue_length: 0x00000030
 # NONFATAL:      0x00000000deadfade {{.*}} is_stmt
 # NONFATAL-NOT:  end_sequence
 
@@ -191,8 +195,6 @@
 
 # LAST:          debug_line[0x000003c9]
 # LAST:          0x00000000cafebabe {{.*}} end_sequence
-
-# RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
 
 # ALL-NOT:  warning:
 # ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0
