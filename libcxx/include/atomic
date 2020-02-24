@@ -547,8 +547,10 @@ void atomic_signal_fence(memory_order m) noexcept;
 */
 
 #include <__config>
+#include <__threading_support>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 #include <version>
 
@@ -628,6 +630,11 @@ typedef enum memory_order {
 } memory_order;
 
 #endif // _LIBCPP_STD_VER > 17
+
+template <typename _Tp> _LIBCPP_INLINE_VISIBILITY
+bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
+    return memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+}
 
 static_assert((is_same<underlying_type<memory_order>::type, __memory_order_underlying_t>::value),
   "unexpected underlying type for std::memory_order");
@@ -1218,9 +1225,9 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(volatile __cxx_atomic_lock_impl<_Tp>* __a,
                                           _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  _Tp temp;
-  __cxx_atomic_assign_volatile(temp, __a->__a_value);
-  bool __ret = temp == *__expected;
+  _Tp __temp;
+  __cxx_atomic_assign_volatile(__temp, __a->__a_value);
+  bool __ret = __temp == *__expected;
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1247,9 +1254,9 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(volatile __cxx_atomic_lock_impl<_Tp>* __a,
                                         _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  _Tp temp;
-  __cxx_atomic_assign_volatile(temp, __a->__a_value);
-  bool __ret = temp == *__expected;
+  _Tp __temp;
+  __cxx_atomic_assign_volatile(__temp, __a->__a_value);
+  bool __ret = __temp == *__expected;
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1452,6 +1459,73 @@ struct __cxx_atomic_impl : public _Base {
     : _Base(value) {}
 };
 
+#ifdef __linux__
+    using __cxx_contention_t = int32_t;
+#else
+    using __cxx_contention_t = int64_t;
+#endif //__linux__
+
+#if _LIBCPP_STD_VER >= 11
+
+using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
+
+#ifndef _LIBCPP_HAS_NO_PLATFORM_WAIT
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile*, __cxx_contention_t);
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*);
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t);
+
+template <class _Atp, class _Fn>
+_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
+{
+    auto const __libcpp_atomic_wait_backoff = [=](chrono::nanoseconds __elapsed) -> bool {
+        if(__elapsed > chrono::microseconds(64))
+        {
+            auto const __monitor = __libcpp_atomic_monitor(__a);
+            if(__test_fn())
+                return true;
+            __libcpp_atomic_wait(__a, __monitor);
+        }
+        else if(__elapsed > chrono::microseconds(4))
+            __libcpp_thread_yield();
+        else
+            ; // poll
+        return false;
+    };
+    return __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_atomic_wait_backoff);
+}
+
+#else // _LIBCPP_HAS_NO_PLATFORM_WAIT
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) { }
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) { }
+template <class _Atp, class _Fn>
+_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
+{
+    return __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
+}
+
+#endif // _LIBCPP_HAS_NO_PLATFORM_WAIT
+
+template <class _Atp, class _Tp>
+_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
+{
+    auto const __test_fn = [=]() -> bool {
+        return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__a, __order), __val);
+    };
+    return __cxx_atomic_wait(__a, __test_fn);
+}
+
+#endif //_LIBCPP_STD_VER >= 11
+
 // general atomic<T>
 
 template <class _Tp, bool = is_integral<_Tp>::value && !is_same<_Tp, bool>::value>
@@ -1532,6 +1606,19 @@ struct __atomic_base  // false
                                  memory_order __m = memory_order_seq_cst) _NOEXCEPT
         {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
 
+    _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+        {__cxx_atomic_wait(&__a_, __v, __m);}
+    _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+        {__cxx_atomic_wait(&__a_, __v, __m);}
+    _LIBCPP_INLINE_VISIBILITY void notify_one() volatile _NOEXCEPT
+        {__cxx_atomic_notify_one(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY void notify_one() _NOEXCEPT
+        {__cxx_atomic_notify_one(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY void notify_all() volatile _NOEXCEPT
+        {__cxx_atomic_notify_all(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
+        {__cxx_atomic_notify_all(&__a_);}
+
     _LIBCPP_INLINE_VISIBILITY
     __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
 
@@ -1544,8 +1631,11 @@ struct __atomic_base  // false
     __atomic_base& operator=(const __atomic_base&) volatile = delete;
 #else
 private:
+    _LIBCPP_INLINE_VISIBILITY
     __atomic_base(const __atomic_base&);
+    _LIBCPP_INLINE_VISIBILITY
     __atomic_base& operator=(const __atomic_base&);
+    _LIBCPP_INLINE_VISIBILITY
     __atomic_base& operator=(const __atomic_base&) volatile;
 #endif
 };
@@ -1643,6 +1733,7 @@ struct atomic
     : public __atomic_base<_Tp>
 {
     typedef __atomic_base<_Tp> __base;
+    typedef _Tp value_type;
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
     _LIBCPP_INLINE_VISIBILITY
@@ -1663,6 +1754,7 @@ struct atomic<_Tp*>
     : public __atomic_base<_Tp*>
 {
     typedef __atomic_base<_Tp*> __base;
+    typedef _Tp* value_type;
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
     _LIBCPP_INLINE_VISIBILITY
@@ -1945,6 +2037,76 @@ atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, _Tp* __e,
   _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
     return __o->compare_exchange_strong(*__e, __d, __s, __f);
+}
+
+// atomic_wait
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_wait(const volatile atomic<_Tp>* __o,
+                 typename atomic<_Tp>::value_type __v) _NOEXCEPT
+{
+    return __o->wait(__v);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_wait(const atomic<_Tp>* __o,
+                 typename atomic<_Tp>::value_type __v) _NOEXCEPT
+{
+    return __o->wait(__v);
+}
+
+// atomic_wait_explicit
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_wait_explicit(const volatile atomic<_Tp>* __o,
+                          typename atomic<_Tp>::value_type __v,
+                          memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
+{
+    return __o->wait(__v, __m);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_wait_explicit(const atomic<_Tp>* __o,
+                          typename atomic<_Tp>::value_type __v,
+                          memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
+{
+    return __o->wait(__v, __m);
+}
+
+// atomic_notify_one
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT
+{
+    __o->notify_one();
+}
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
+{
+    __o->notify_one();
+}
+
+// atomic_notify_one
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT
+{
+    __o->notify_all();
+}
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT
+{
+    __o->notify_all();
 }
 
 // atomic_fetch_add
@@ -2280,6 +2442,13 @@ typedef struct atomic_flag
     __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE> __a_;
 
     _LIBCPP_INLINE_VISIBILITY
+    bool test(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+        {return _LIBCPP_ATOMIC_FLAG_TYPE(true) == __cxx_atomic_load(&__a_, __m);}
+    _LIBCPP_INLINE_VISIBILITY
+    bool test(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+        {return _LIBCPP_ATOMIC_FLAG_TYPE(true) == __cxx_atomic_load(&__a_, __m);}
+
+    _LIBCPP_INLINE_VISIBILITY
     bool test_and_set(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
         {return __cxx_atomic_exchange(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(true), __m);}
     _LIBCPP_INLINE_VISIBILITY
@@ -2293,6 +2462,25 @@ typedef struct atomic_flag
         {__cxx_atomic_store(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(false), __m);}
 
     _LIBCPP_INLINE_VISIBILITY
+    void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+        {__cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);}
+    _LIBCPP_INLINE_VISIBILITY
+    void wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+        {__cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);}
+    _LIBCPP_INLINE_VISIBILITY
+    void notify_one() volatile _NOEXCEPT
+        {__cxx_atomic_notify_one(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY
+    void notify_one() _NOEXCEPT
+        {__cxx_atomic_notify_one(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY
+    void notify_all() volatile _NOEXCEPT
+        {__cxx_atomic_notify_all(&__a_);}
+    _LIBCPP_INLINE_VISIBILITY
+    void notify_all() _NOEXCEPT
+        {__cxx_atomic_notify_all(&__a_);}
+
+    _LIBCPP_INLINE_VISIBILITY
     atomic_flag() _NOEXCEPT _LIBCPP_DEFAULT
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
@@ -2304,11 +2492,43 @@ typedef struct atomic_flag
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
 #else
 private:
+    _LIBCPP_INLINE_VISIBILITY
     atomic_flag(const atomic_flag&);
+    _LIBCPP_INLINE_VISIBILITY
     atomic_flag& operator=(const atomic_flag&);
+    _LIBCPP_INLINE_VISIBILITY
     atomic_flag& operator=(const atomic_flag&) volatile;
 #endif
 } atomic_flag;
+
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+atomic_flag_test(const volatile atomic_flag* __o) _NOEXCEPT
+{
+    return __o->test();
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+atomic_flag_test(const atomic_flag* __o) _NOEXCEPT
+{
+    return __o->test();
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+atomic_flag_test_explicit(const volatile atomic_flag* __o, memory_order __m) _NOEXCEPT
+{
+    return __o->test(__m);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+atomic_flag_test_explicit(const atomic_flag* __o, memory_order __m) _NOEXCEPT
+{
+    return __o->test(__m);
+}
 
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -2364,6 +2584,64 @@ void
 atomic_flag_clear_explicit(atomic_flag* __o, memory_order __m) _NOEXCEPT
 {
     __o->clear(__m);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT
+{
+    __o->wait(__v);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT
+{
+    __o->wait(__v);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_wait_explicit(const volatile atomic_flag* __o,
+                          bool __v, memory_order __m) _NOEXCEPT
+{
+    __o->wait(__v, __m);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_wait_explicit(const atomic_flag* __o,
+                          bool __v, memory_order __m) _NOEXCEPT
+{
+    __o->wait(__v, __m);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT
+{
+    __o->notify_one();
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT
+{
+    __o->notify_one();
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT
+{
+    __o->notify_all();
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+void
+atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT
+{
+    __o->notify_all();
 }
 
 // fences
@@ -2433,6 +2711,33 @@ typedef atomic<size_t>    atomic_size_t;
 typedef atomic<ptrdiff_t> atomic_ptrdiff_t;
 typedef atomic<intmax_t>  atomic_intmax_t;
 typedef atomic<uintmax_t> atomic_uintmax_t;
+
+// atomic_*_lock_free : prefer the contention type most highly, then the largest lock-free type
+
+#ifdef __cpp_lib_atomic_is_always_lock_free
+# define _LIBCPP_CONTENTION_LOCK_FREE __atomic_always_lock_free(sizeof(__cxx_contention_t), 0)
+#else
+# define _LIBCPP_CONTENTION_LOCK_FREE false
+#endif
+
+#if ATOMIC_LLONG_LOCK_FREE == 2
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, long long>::type          __libcpp_signed_lock_free;
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned long long>::type __libcpp_unsigned_lock_free;
+#elif ATOMIC_INT_LOCK_FREE == 2
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, int>::type                __libcpp_signed_lock_free;
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned int>::type       __libcpp_unsigned_lock_free;
+#elif ATOMIC_SHORT_LOCK_FREE == 2
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, short>::type              __libcpp_signed_lock_free;
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned short>::type     __libcpp_unsigned_lock_free;
+#elif ATOMIC_CHAR_LOCK_FREE == 2
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>::type               __libcpp_signed_lock_free;
+typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>::type      __libcpp_unsigned_lock_free;
+#else
+    // No signed/unsigned lock-free types
+#endif
+
+typedef atomic<__libcpp_signed_lock_free> atomic_signed_lock_free;
+typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(__v) {__v}

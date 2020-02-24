@@ -4,6 +4,8 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
+  atomic.cpp
+  barrier.cpp
   bind.cpp
   charconv.cpp
   chrono.cpp

@@ -231,6 +231,10 @@ module std [system] {
     header "atomic"
     export *
   }
+  module barrier {
+    header "barrier"
+    export *
+  }
   module bit {
     header "bit"
     export *
@@ -334,6 +338,10 @@ module std [system] {
     header "iterator"
     export *
   }
+  module latch {
+    header "latch"
+    export *
+  }
   module limits {
     header "limits"
     export *
@@ -398,6 +406,10 @@ module std [system] {
   }
   module scoped_allocator {
     header "scoped_allocator"
+    export *
+  }
+  module semaphore {
+    header "semaphore"
     export *
   }
   module set {

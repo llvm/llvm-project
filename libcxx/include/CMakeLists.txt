@@ -25,6 +25,7 @@ set(files
   any
   array
   atomic
+  barrier
   bit
   bitset
   cassert
@@ -103,6 +104,7 @@ set(files
   iostream
   istream
   iterator
+  latch
   limits
   limits.h
   list
@@ -122,6 +124,7 @@ set(files
   ratio
   regex
   scoped_allocator
+  semaphore
   set
   setjmp.h
   shared_mutex
