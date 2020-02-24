@@ -249,3 +249,29 @@ define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
   %r = add i8 %e0, %e1
   ret i8 %r
 }
+
+define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: @ext5_ext0_add(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 5
+  %e1 = extractelement <16 x i8> %y, i32 0
+  %r = sub i8 %e0, %e1
+  ret i8 %r
+}
+
+define i8 @ext5_ext6_add(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: @ext5_ext6_add(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 6
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[E0]], [[E1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %e0 = extractelement <16 x i8> %x, i32 5
+  %e1 = extractelement <16 x i8> %y, i32 6
+  %r = and i8 %e0, %e1
+  ret i8 %r
+}
