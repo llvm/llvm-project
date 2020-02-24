@@ -24763,8 +24763,9 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
 
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
@@ -24800,8 +24801,9 @@ static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
   MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
 
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
@@ -24830,8 +24832,9 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
 
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale};
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-      VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MSCATTER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return Res.getValue(1);
 }
 
@@ -24991,13 +24994,11 @@ static SDValue
 EmitTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl, SDValue Val,
                 SDValue Ptr, EVT MemVT, MachineMemOperand *MMO,
                 SelectionDAG &DAG) {
-
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Undef = DAG.getUNDEF(Ptr.getValueType());
   SDValue Ops[] = { Chain, Val, Ptr, Undef };
-  return SignedSat ?
-    DAG.getTargetMemSDNode<TruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
-    DAG.getTargetMemSDNode<TruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+  unsigned Opc = SignedSat ? X86ISD::VTRUNCSTORES : X86ISD::VTRUNCSTOREUS;
+  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
 }
 
 /// Emit Masked Truncating Store with signed or unsigned saturation.
@@ -25005,12 +25006,10 @@ static SDValue
 EmitMaskedTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl,
                       SDValue Val, SDValue Ptr, SDValue Mask, EVT MemVT,
                       MachineMemOperand *MMO, SelectionDAG &DAG) {
-
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = { Chain, Val, Ptr, Mask };
-  return SignedSat ?
-    DAG.getTargetMemSDNode<MaskedTruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
-    DAG.getTargetMemSDNode<MaskedTruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+  unsigned Opc = SignedSat ? X86ISD::VMTRUNCSTORES : X86ISD::VMTRUNCSTOREUS;
+  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
@@ -27518,14 +27517,14 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   return false;
 }
 
-// TODO: In 32-bit mode, use FISTP when X87 is available?
 bool X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
 
   bool NoImplicitFloatOps =
       SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE1())
+      !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
+      (Subtarget.hasSSE1() || Subtarget.hasX87()))
     return false;
 
   return needsCmpXchgNb(MemType);
@@ -27544,7 +27543,7 @@ X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
       LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
   if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      (Subtarget.hasSSE2() || Subtarget.hasX87()))
+      (Subtarget.hasSSE1() || Subtarget.hasX87()))
     return AtomicExpansionKind::None;
 
   return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
@@ -28286,28 +28285,52 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   if (VT == MVT::i64 && !IsTypeLegal) {
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
     // is enabled.
-    // FIXME: Use fist with X87.
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
             Attribute::NoImplicitFloat);
-    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-        Subtarget.hasSSE1()) {
-      SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
-                                     Node->getOperand(2));
-      MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
-      SclToVec = DAG.getBitcast(StVT, SclToVec);
-      SDVTList Tys = DAG.getVTList(MVT::Other);
-      SDValue Ops[] = { Node->getChain(), SclToVec, Node->getBasePtr() };
-      SDValue Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys,
-                                              Ops, MVT::i64,
-                                              Node->getMemOperand());
+    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
+      SDValue Chain;
+      if (Subtarget.hasSSE1()) {
+        SDValue SclToVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64,
+                                       Node->getOperand(2));
+        MVT StVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
+        SclToVec = DAG.getBitcast(StVT, SclToVec);
+        SDVTList Tys = DAG.getVTList(MVT::Other);
+        SDValue Ops[] = {Node->getChain(), SclToVec, Node->getBasePtr()};
+        Chain = DAG.getMemIntrinsicNode(X86ISD::VEXTRACT_STORE, dl, Tys, Ops,
+                                        MVT::i64, Node->getMemOperand());
+      } else if (Subtarget.hasX87()) {
+        // First load this into an 80-bit X87 register using a stack temporary.
+        // This will put the whole integer into the significand.
+        SDValue StackPtr = DAG.CreateStackTemporary(MVT::i64);
+        int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+        Chain =
+            DAG.getStore(Node->getChain(), dl, Node->getOperand(2), StackPtr,
+                         MPI, /*Align*/ 0, MachineMemOperand::MOStore);
+        SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
+        SDValue LdOps[] = {Chain, StackPtr};
+        SDValue Value =
+            DAG.getMemIntrinsicNode(X86ISD::FILD, dl, Tys, LdOps, MVT::i64, MPI,
+                                    /*Align*/ 0, MachineMemOperand::MOLoad);
+        Chain = Value.getValue(1);
 
-      // If this is a sequentially consistent store, also emit an appropriate
-      // barrier.
-      if (IsSeqCst)
-        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
+        // Now use an FIST to do the atomic store.
+        SDValue StoreOps[] = {Chain, Value, Node->getBasePtr()};
+        Chain =
+            DAG.getMemIntrinsicNode(X86ISD::FIST, dl, DAG.getVTList(MVT::Other),
+                                    StoreOps, MVT::i64, Node->getMemOperand());
+      }
 
-      return Chain;
+      if (Chain) {
+        // If this is a sequentially consistent store, also emit an appropriate
+        // barrier.
+        if (IsSeqCst)
+          Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
+
+        return Chain;
+      }
     }
   }
 
@@ -28481,8 +28504,8 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
       Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Src, DAG.getUNDEF(VT));
       SDVTList VTs = DAG.getVTList(MVT::v2i1, MVT::Other);
       SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-      SDValue NewScatter = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-          VTs, Ops, dl, N->getMemoryVT(), N->getMemOperand());
+      SDValue NewScatter = DAG.getMemIntrinsicNode(
+          X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
       return SDValue(NewScatter.getNode(), 1);
     }
     return SDValue();
@@ -28516,8 +28539,8 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
 
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-  SDValue NewScatter = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-      VTs, Ops, dl, N->getMemoryVT(), N->getMemOperand());
+  SDValue NewScatter = DAG.getMemIntrinsicNode(
+      X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
   return SDValue(NewScatter.getNode(), 1);
 }
 
@@ -28672,9 +28695,9 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
 
   SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     N->getScale() };
-  SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      DAG.getVTList(VT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
-      N->getMemOperand());
+  SDValue NewGather = DAG.getMemIntrinsicNode(
+      X86ISD::MGATHER, dl, DAG.getVTList(VT, MaskVT, MVT::Other), Ops,
+      N->getMemoryVT(), N->getMemOperand());
   SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OrigVT,
                                 NewGather, DAG.getIntPtrConstant(0, dl));
   return DAG.getMergeValues({Extract, NewGather.getValue(2)}, dl);
@@ -29643,15 +29666,27 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
             Attribute::NoImplicitFloat);
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       auto *Node = cast<AtomicSDNode>(N);
-      if (Subtarget.hasSSE2()) {
-        // Use a VZEXT_LOAD which will be selected as MOVQ. Then extract the
-        // lower 64-bits.
-        SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+      if (Subtarget.hasSSE1()) {
+        // Use a VZEXT_LOAD which will be selected as MOVQ or XORPS+MOVLPS.
+        // Then extract the lower 64-bits.
+        MVT LdVT = Subtarget.hasSSE2() ? MVT::v2i64 : MVT::v4f32;
+        SDVTList Tys = DAG.getVTList(LdVT, MVT::Other);
         SDValue Ops[] = { Node->getChain(), Node->getBasePtr() };
         SDValue Ld = DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
                                              MVT::i64, Node->getMemOperand());
-        SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+        if (Subtarget.hasSSE2()) {
+          SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                    DAG.getIntPtrConstant(0, dl));
+          Results.push_back(Res);
+          Results.push_back(Ld.getValue(1));
+          return;
+        }
+        // We use an alternative sequence for SSE1 that extracts as v2f32 and
+        // then casts to i64. This avoids a 128-bit stack temporary being
+        // created by type legalization if we were to cast v4f32->v2i64.
+        SDValue Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2f32, Ld,
                                   DAG.getIntPtrConstant(0, dl));
+        Res = DAG.getBitcast(MVT::i64, Res);
         Results.push_back(Res);
         Results.push_back(Ld.getValue(1));
         return;
@@ -29776,9 +29811,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
       SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
                         Gather->getBasePtr(), Index, Gather->getScale() };
-      SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-        DAG.getVTList(WideVT, Mask.getValueType(), MVT::Other), Ops, dl,
-        Gather->getMemoryVT(), Gather->getMemOperand());
+      SDValue Res = DAG.getMemIntrinsicNode(
+          X86ISD::MGATHER, dl,
+          DAG.getVTList(WideVT, Mask.getValueType(), MVT::Other), Ops,
+          Gather->getMemoryVT(), Gather->getMemOperand());
       Results.push_back(Res);
       Results.push_back(Res.getValue(2));
       return;
