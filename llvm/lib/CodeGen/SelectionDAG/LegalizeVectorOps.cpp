@@ -142,7 +142,7 @@ class VectorLegalizer {
   void ExpandUADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandSADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandMULO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandFixedPointDiv(SDNode *Node);
+  void ExpandFixedPointDiv(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   SDValue ExpandStrictFPOp(SDNode *Node);
   void ExpandStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
@@ -463,7 +463,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
   case ISD::SDIVFIX:
-  case ISD::UDIVFIX: {
+  case ISD::SDIVFIXSAT:
+  case ISD::UDIVFIX:
+  case ISD::UDIVFIXSAT: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
                                               Node->getValueType(0), Scale);
@@ -968,8 +970,11 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
-    Results.push_back(ExpandFixedPointDiv(Node));
+    ExpandFixedPointDiv(Node, Results);
     return;
+  case ISD::SDIVFIXSAT:
+  case ISD::UDIVFIXSAT:
+    break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -1454,12 +1459,12 @@ void VectorLegalizer::ExpandMULO(SDNode *Node,
   Results.push_back(Overflow);
 }
 
-SDValue VectorLegalizer::ExpandFixedPointDiv(SDNode *Node) {
+void VectorLegalizer::ExpandFixedPointDiv(SDNode *Node,
+                                          SmallVectorImpl<SDValue> &Results) {
   SDNode *N = Node;
   if (SDValue Expanded = TLI.expandFixedPointDiv(N->getOpcode(), SDLoc(N),
           N->getOperand(0), N->getOperand(1), N->getConstantOperandVal(2), DAG))
-    return Expanded;
-  return DAG.UnrollVectorOp(N);
+    Results.push_back(Expanded);
 }
 
 void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,

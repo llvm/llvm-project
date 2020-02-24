@@ -7332,12 +7332,13 @@ SDValue
 TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
                                     SDValue LHS, SDValue RHS,
                                     unsigned Scale, SelectionDAG &DAG) const {
-  assert((Opcode == ISD::SDIVFIX ||
-          Opcode == ISD::UDIVFIX) &&
+  assert((Opcode == ISD::SDIVFIX || Opcode == ISD::SDIVFIXSAT ||
+          Opcode == ISD::UDIVFIX || Opcode == ISD::UDIVFIXSAT) &&
          "Expected a fixed point division opcode");
 
   EVT VT = LHS.getValueType();
-  bool Signed = Opcode == ISD::SDIVFIX;
+  bool Signed = Opcode == ISD::SDIVFIX || Opcode == ISD::SDIVFIXSAT;
+  bool Saturating = Opcode == ISD::SDIVFIXSAT || Opcode == ISD::UDIVFIXSAT;
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
   // If there is enough room in the type to upscale the LHS or downscale the
@@ -7349,7 +7350,15 @@ TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
                             : DAG.computeKnownBits(LHS).countMinLeadingZeros();
   unsigned RHSTrail = DAG.computeKnownBits(RHS).countMinTrailingZeros();
 
-  if (LHSLead + RHSTrail < Scale)
+  // For signed saturating operations, we need to be able to detect true integer
+  // division overflow; that is, when you have MIN / -EPS. However, this
+  // is undefined behavior and if we emit divisions that could take such
+  // values it may cause undesired behavior (arithmetic exceptions on x86, for
+  // example).
+  // Avoid this by requiring an extra bit so that we never get this case.
+  // FIXME: This is a bit unfortunate as it means that for an 8-bit 7-scale
+  // signed saturating division, we need to emit a whopping 32-bit division.
+  if (LHSLead + RHSTrail < Scale + (unsigned)(Saturating && Signed))
     return SDValue();
 
   unsigned LHSShift = std::min(LHSLead, Scale);
@@ -7402,8 +7411,6 @@ TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
   } else
     Quot = DAG.getNode(ISD::UDIV, dl, VT,
                        LHS, RHS);
-
-  // TODO: Saturation.
 
   return Quot;
 }
