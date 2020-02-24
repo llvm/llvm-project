@@ -14,3 +14,5 @@
 // +build !byollvm
 
 package llvm
+
+var _ run_build_sh
