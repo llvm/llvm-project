@@ -197,7 +197,7 @@ void FormatManager::GetPossibleMatches(
     if (valobj.GetFrameSP())
       sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
 
-    ConstString display_type_name(compiler_type.GetTypeName(sc));
+    ConstString display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
       entries.push_back({display_type_name, reason, did_strip_ptr,
                          did_strip_ref, did_strip_typedef});

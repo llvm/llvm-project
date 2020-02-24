@@ -56,6 +56,8 @@ using lldb_private::formatters::AddSummary;
 using lldb_private::formatters::swift::DictionaryConfig;
 using lldb_private::formatters::swift::SetConfig;
 
+LLDB_PLUGIN_DEFINE(SwiftLanguage)
+
 void SwiftLanguage::Initialize() {
   static ConstString g_SwiftSharedStringClass("_TtCs21__SharedStringStorage");
   static ConstString g_SwiftStringStorageClass("_TtCs15__StringStorage");

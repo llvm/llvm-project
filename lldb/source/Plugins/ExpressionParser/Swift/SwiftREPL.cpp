@@ -267,6 +267,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   return repl_sp;
 }
 
+LLDB_PLUGIN_DEFINE_ADV(SwiftREPL, ExpressionParserSwift)
+
 void SwiftREPL::Initialize() {
   LanguageSet swift;
   swift.Insert(lldb::eLanguageTypeSwift);

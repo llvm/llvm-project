@@ -41,6 +41,8 @@ SwiftRuntimeReporting::CreateInstance(const lldb::ProcessSP &process_sp) {
   return InstrumentationRuntimeSP(new SwiftRuntimeReporting(process_sp));
 }
 
+LLDB_PLUGIN_DEFINE_ADV(SwiftRuntimeReporting, InstrumentationRuntimeSwiftRuntimeReporting)
+
 void SwiftRuntimeReporting::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
