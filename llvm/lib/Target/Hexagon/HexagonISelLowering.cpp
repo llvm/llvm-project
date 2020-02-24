@@ -1694,6 +1694,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Custom-lower bitcasts from i8 to v8i1.
   setOperationAction(ISD::BITCAST,        MVT::i8,    Custom);
+  setOperationAction(ISD::BITCAST,        MVT::i32,   Custom);
+  setOperationAction(ISD::BITCAST,        MVT::i64,   Custom);
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
   setOperationAction(ISD::VSELECT,        MVT::v4i8,  Custom);
   setOperationAction(ISD::VSELECT,        MVT::v2i16, Custom);
@@ -2266,13 +2268,16 @@ HexagonTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   // Handle conversion from i8 to v8i1.
-  if (ResTy == MVT::v8i1) {
-    SDValue Sc = DAG.getBitcast(tyScalar(InpTy), InpV);
-    SDValue Ext = DAG.getZExtOrTrunc(Sc, dl, MVT::i32);
-    return getInstr(Hexagon::C2_tfrrp, dl, ResTy, Ext, DAG);
+  if (InpTy == MVT::i8) {
+    if (ResTy == MVT::v8i1) {
+      SDValue Sc = DAG.getBitcast(tyScalar(InpTy), InpV);
+      SDValue Ext = DAG.getZExtOrTrunc(Sc, dl, MVT::i32);
+      return getInstr(Hexagon::C2_tfrrp, dl, ResTy, Ext, DAG);
+    }
+    return SDValue();
   }
 
-  return SDValue();
+  return Op;
 }
 
 bool
