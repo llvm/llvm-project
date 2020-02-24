@@ -186,21 +186,8 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
     ConsumeToken();
 
     // Skip attributes.
-    while (Tok.isOneOf(tok::l_square, tok::kw___attribute, tok::kw___declspec,
-                       tok::kw_alignas)) {
-      if (Tok.is(tok::l_square)) {
-        ConsumeBracket();
-        if (!SkipUntil(tok::r_square))
-          return TPResult::Error;
-      } else {
-        ConsumeToken();
-        if (Tok.isNot(tok::l_paren))
-          return TPResult::Error;
-        ConsumeParen();
-        if (!SkipUntil(tok::r_paren))
-          return TPResult::Error;
-      }
-    }
+    if (!TrySkipAttributes())
+      return TPResult::Error;
 
     if (TryAnnotateOptionalCXXScopeToken())
       return TPResult::Error;
@@ -781,6 +768,32 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   return CAK_NotAttributeSpecifier;
 }
 
+bool Parser::TrySkipAttributes() {
+  while (Tok.isOneOf(tok::l_square, tok::kw___attribute, tok::kw___declspec,
+                     tok::kw_alignas)) {
+    if (Tok.is(tok::l_square)) {
+      ConsumeBracket();
+      if (Tok.isNot(tok::l_square))
+        return false;
+      ConsumeBracket();
+      if (!SkipUntil(tok::r_square) || Tok.isNot(tok::r_square))
+        return false;
+      // Note that explicitly checking for `[[` and `]]` allows to fail as
+      // expected in the case of the Objective-C message send syntax.
+      ConsumeBracket();
+    } else {
+      ConsumeToken();
+      if (Tok.isNot(tok::l_paren))
+        return false;
+      ConsumeParen();
+      if (!SkipUntil(tok::r_paren))
+        return false;
+    }
+  }
+
+  return true;
+}
+
 Parser::TPResult Parser::TryParsePtrOperatorSeq() {
   while (true) {
     if (TryAnnotateOptionalCXXScopeToken(true))
@@ -790,9 +803,14 @@ Parser::TPResult Parser::TryParsePtrOperatorSeq() {
         (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::star))) {
       // ptr-operator
       ConsumeAnyToken();
+
+      // Skip attributes.
+      if (!TrySkipAttributes())
+        return TPResult::Error;
+
       while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict,
                          tok::kw__Nonnull, tok::kw__Nullable,
-                         tok::kw__Null_unspecified))
+                         tok::kw__Null_unspecified, tok::kw__Atomic))
         ConsumeToken();
     } else {
       return TPResult::True;
