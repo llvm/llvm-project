@@ -86,7 +86,7 @@ public:
   };
 
   llvm::Expected<lldb_private::StructuredData::DictionarySP>
-  FetchExtendedCrashInformation(lldb_private::Target &target) override;
+  FetchExtendedCrashInformation(lldb_private::Process &process) override;
 
 protected:
   struct CrashInfoAnnotations {
@@ -107,15 +107,15 @@ protected:
   /// extract the section to gather the messages annotations and the abort
   /// cause.
   ///
-  /// \param[in] target
-  ///     The target running the crashed process.
+  /// \param[in] process
+  ///     The crashed process.
   ///
   /// \return
   ///     A  structured data array containing at each entry in each entry, the
   ///     module spec, its UUID, the crash messages and the abort cause.
   ///     \b nullptr if process has no crash information annotations.
   lldb_private::StructuredData::ArraySP
-  ExtractCrashInfoAnnotations(lldb_private::Target &target);
+  ExtractCrashInfoAnnotations(lldb_private::Process &process);
 
   void ReadLibdispatchOffsetsAddress(lldb_private::Process *process);
 
