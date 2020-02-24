@@ -82,7 +82,7 @@ public:
     __atomic_semaphore_base(ptrdiff_t __count) : __a(__count)
     {
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void release(ptrdiff_t __update = 1)
     {
         if(0 < __a.fetch_add(__update, memory_order_release))
@@ -92,7 +92,7 @@ public:
         else
             __a.notify_one();
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void acquire()
     {
         auto const __test_fn = [=]() -> bool {
@@ -102,7 +102,7 @@ public:
         __cxx_atomic_wait(&__a.__a_, __test_fn);
     }
     template <class Rep, class Period>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_for(chrono::duration<Rep, Period> const& __rel_time)
     {
         auto const __test_fn = [=]() -> bool {
@@ -193,29 +193,29 @@ public:
     counting_semaphore(const counting_semaphore&) = delete;
     counting_semaphore& operator=(const counting_semaphore&) = delete;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void release(ptrdiff_t __update = 1)
     {
         __semaphore.release(__update);
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void acquire()
     {
         __semaphore.acquire();
     }
     template<class Rep, class Period>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_for(chrono::duration<Rep, Period> const& __rel_time)
     {
         return __semaphore.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire()
     {
         return try_acquire_for(chrono::nanoseconds::zero());
     }
     template <class Clock, class Duration>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_until(chrono::time_point<Clock, Duration> const& __abs_time)
     {
         auto const current = Clock::now();
