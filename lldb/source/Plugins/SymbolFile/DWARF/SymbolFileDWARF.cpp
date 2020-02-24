@@ -464,9 +464,9 @@ void SymbolFileDWARF::InitializeObject() {
     LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
     if (debug_names.GetByteSize() > 0) {
       llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
-          DebugNamesDWARFIndex::Create(
-              *GetObjectFile()->GetModule(), debug_names,
-              m_context.getOrLoadStrData(), DebugInfo());
+          DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
+                                       debug_names,
+                                       m_context.getOrLoadStrData(), *this);
       if (index_or) {
         m_index = std::move(*index_or);
         return;
@@ -476,8 +476,8 @@ void SymbolFileDWARF::InitializeObject() {
     }
   }
 
-  m_index = std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(),
-                                                DebugInfo());
+  m_index =
+      std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(), *this);
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
@@ -1563,9 +1563,8 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (!dwo_name)
     return nullptr;
 
-  FindDwpSymbolFile();
-  if (m_dwp_symfile)
-    return m_dwp_symfile;
+  if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
+    return dwp_sp;
 
   FileSpec dwo_file(dwo_name);
   FileSystem::Instance().Resolve(dwo_file);
@@ -3959,7 +3958,7 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   return m_debug_map_symfile;
 }
 
-void SymbolFileDWARF::FindDwpSymbolFile() {
+const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
@@ -3982,6 +3981,7 @@ void SymbolFileDWARF::FindDwpSymbolFile() {
           std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x3fffffff);
     }
   });
+  return m_dwp_symfile;
 }
 
 llvm::Expected<TypeSystem &> SymbolFileDWARF::GetTypeSystem(DWARFUnit &unit) {
