@@ -8,6 +8,8 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbtest
+
 
 class PlatformProcessCrashInfoTestCase(TestBase):
 
@@ -17,7 +19,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         TestBase.setUp(self)
         self.runCmd("settings set auto-confirm true")
         self.source = "main.c"
-        self.line = 3
+        self.line = line_number(self.source, '// break here')
 
     def tearDown(self):
         self.runCmd("settings clear auto-confirm")
@@ -52,7 +54,10 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         stream = lldb.SBStream()
         self.assertTrue(stream)
 
-        crash_info = target.GetExtendedCrashInformation()
+        process = target.GetProcess()
+        self.assertTrue(process)
+
+        crash_info = process.GetExtendedCrashInformation()
 
         error = crash_info.GetAsJSON(stream)
 
@@ -62,24 +67,6 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.assertIn("pointer being freed was not allocated", stream.GetData())
 
-    @skipUnlessDarwin
-    def test_before_launch(self):
-        """Test that lldb doesn't fetch the extended crash information
-        dictionnary from if the process wasn't launched yet."""
-        self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-
-        stream = lldb.SBStream()
-        self.assertTrue(stream)
-
-        crash_info = target.GetExtendedCrashInformation()
-
-        error = crash_info.GetAsJSON(stream)
-        self.assertFalse(error.Success())
-        self.assertIn("No structured data.", error.GetCString())
-
-    @skipUnlessDarwin
     def test_on_sane_process(self):
         """Test that lldb doesn't fetch the extended crash information
         dictionnary from a 'sane' stopped process."""
@@ -90,7 +77,10 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         stream = lldb.SBStream()
         self.assertTrue(stream)
 
-        crash_info = target.GetExtendedCrashInformation()
+        process = target.GetProcess()
+        self.assertTrue(process)
+
+        crash_info = process.GetExtendedCrashInformation()
 
         error = crash_info.GetAsJSON(stream)
         self.assertFalse(error.Success())
