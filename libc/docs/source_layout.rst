@@ -13,9 +13,7 @@ directories::
         - loader
         - src
         - test
-        + utils
-            - build_scripts
-            - testing
+        - utils
         - www
 
 Each of these directories is explained in detail below.
@@ -87,17 +85,15 @@ toplevel ``libc`` directory itself. A test for, say the ``mmap`` function, lives
 in the directory ``test/src/sys/mman/`` as implementation of ``mmap`` lives in
 ``src/sys/mman``.
 
+The `utils` directory
+---------------------
+
+This directory contains utilities used by other parts of the llvm-libc system.
+See the `README` files, in the sub-directories within this directory, to learn
+about the various utilities.
+
 The ``www`` directory
 ---------------------
 
 The ``www`` directory contains the HTML content of libc.llvm.org
 
-The ``utils/build_scripts`` directory
--------------------------------------
-
-This directory contains scripts which support the build system, tooling etc.
-
-The ``utils/testing`` directory
--------------------------------
-
-This directory contains testing infrastructure.
