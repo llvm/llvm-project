@@ -232,6 +232,7 @@ module std [system] {
     export *
   }
   module barrier {
+    requires cplusplus14
     header "barrier"
     export *
   }
@@ -339,6 +340,7 @@ module std [system] {
     export *
   }
   module latch {
+    requires cplusplus14
     header "latch"
     export *
   }
@@ -409,6 +411,7 @@ module std [system] {
     export *
   }
   module semaphore {
+    requires cplusplus14
     header "semaphore"
     export *
   }
