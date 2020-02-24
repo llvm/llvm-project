@@ -5444,6 +5444,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       else if (IndexVT == MVT::v8i64 && NumElts == 8 && EltSize == 64)
         Opc = IsFP ? X86::VGATHERQPDZrm : X86::VPGATHERQQZrm;
     } else {
+      assert(EVT(MaskVT) == EVT(ValueVT).changeVectorElementTypeToInteger() &&
+             "Unexpected mask VT!");
       if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 32)
         Opc = IsFP ? X86::VGATHERDPSrm : X86::VPGATHERDDrm;
       else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 32)
