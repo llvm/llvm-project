@@ -1437,6 +1437,136 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
   return T7;
 }
 
+SDValue HexagonTargetLowering::LowerHvxBitcast(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  auto *N = Op.getNode();
+  EVT VT = N->getValueType(0);
+  const SDLoc &dl(Op);
+  SDValue Q0 = N->getOperand(0);
+  EVT VTOp = Q0.getNode()->getValueType(0);
+  if (!(VT == MVT::i64 || VT == MVT::i32) ||
+      !(VTOp == MVT::v64i1 || VTOp == MVT::v32i1)) {
+    return Op;
+  }
+  MVT VecTy;
+  int Length;
+  if (Subtarget.useHVX64BOps()) {
+    VecTy = MVT::getVectorVT(MVT::i32, 16);
+    Length = 2;
+  }
+  if (Subtarget.useHVX128BOps()) {
+    VecTy = MVT::getVectorVT(MVT::i32, 32);
+    Length = 4;
+  }
+  // r0 = ##0x08040201 // Pre-rotated bits per 4 consecutive bytes.
+  SDValue C8421 = DAG.getTargetConstant(0x08040201, dl, MVT::i32);
+  SDValue InstrC8421 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C8421, DAG);
+  // v0 = vand(q0,r0)
+  SDValue Vand =
+      getInstr(Hexagon::V6_vandqrt, dl, VecTy, {Q0, InstrC8421}, DAG);
+
+  // Or the bytes in each word into a single byte: that will form packs
+  // of 4 bits of the output.
+  // v1 = valign(v0,v0,#2)
+  SDValue C2 = DAG.getTargetConstant(2, dl, MVT::i32);
+  SDValue Valign =
+      getInstr(Hexagon::V6_valignbi, dl, VecTy, {Vand, Vand, C2}, DAG);
+  // v0 = vor(v0,v1)
+  SDValue Vor = getInstr(Hexagon::V6_vor, dl, VecTy, {Vand, Valign}, DAG);
+  // v1 = valign(v0,v0,#1)
+  SDValue C1 = DAG.getTargetConstant(1, dl, MVT::i32);
+  SDValue Valign1 =
+      getInstr(Hexagon::V6_valignbi, dl, VecTy, {Vor, Vor, C1}, DAG);
+  // v0 = vor(v0,v1)
+  SDValue Vor1 = getInstr(Hexagon::V6_vor, dl, VecTy, {Vor, Valign1}, DAG);
+
+  // Clear all the bytes per word except the lowest one.
+  // r0 = #0xff
+  SDValue Cff = DAG.getTargetConstant(0xff, dl, MVT::i32);
+  SDValue InstrCff = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, Cff, DAG);
+  // v1 = vsplat(r0)
+  SDValue Vsplat = getInstr(Hexagon::V6_lvsplatw, dl, VecTy, InstrCff, DAG);
+  // v0 = vand(v0,v1)
+  SDValue Vand1 = getInstr(Hexagon::V6_vand, dl, VecTy, {Vor1, Vsplat}, DAG);
+
+  // Shift each word left by its index to position the 4-bit packs for oring.
+  // The words 0..8 and 16..31 need to be ored to form the 64-bit output.
+  // r0 = ##.Lshifts
+  // .Lshifts:
+  // .word 0
+  // .word 4
+  // .word 8
+  // .word 12
+  // .word 16
+  // .word 20
+  // .word 24
+  // .word 28
+  // .word 0
+  // .word 4
+  // .word 8
+  // .word 12
+  // .word 16
+  // .word 20
+  // .word 24
+  // .word 28
+  // v1 = vmem(r0+#0)
+  SmallVector<SDValue, 32> Elems;
+  for (int i = 0; i < Length; ++i) {
+    Elems.push_back(DAG.getConstant(0, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(4, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(8, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(12, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(16, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(20, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(24, dl, MVT::i32));
+    Elems.push_back(DAG.getConstant(28, dl, MVT::i32));
+  }
+
+  SDValue BV = DAG.getBuildVector(VecTy, dl, Elems);
+  // v0.w = vasl(v0.w,v1.w)
+  SDValue Vasl = getInstr(Hexagon::V6_vaslwv, dl, VecTy, {Vand1, BV}, DAG);
+
+  // 3 rounds of oring.
+  // r0 = #16 // HwLen/4
+  SDValue C16 = DAG.getTargetConstant(16, dl, MVT::i32);
+  SDValue InstrC16 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C16, DAG);
+  // v1 = vror(v0,r0)
+  SDValue Vror = getInstr(Hexagon::V6_vror, dl, VecTy, {Vasl, InstrC16}, DAG);
+  // v0 = vor(v0,v1)
+  SDValue Vor2 = getInstr(Hexagon::V6_vor, dl, VecTy, {Vasl, Vror}, DAG);
+  // r0 = #8 // HwLen/8
+  SDValue C8 = DAG.getTargetConstant(8, dl, MVT::i32);
+  SDValue InstrC8 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C8, DAG);
+  // v1 = vror(v0,r0)
+  SDValue Vror1 = getInstr(Hexagon::V6_vror, dl, VecTy, {Vor2, InstrC8}, DAG);
+  // v0 = vor(v0,v1)
+  SDValue Vor3 = getInstr(Hexagon::V6_vor, dl, VecTy, {Vor2, Vror1}, DAG);
+  // r0 = #4 // HwLen/16
+  SDValue C4 = DAG.getTargetConstant(4, dl, MVT::i32);
+  SDValue InstrC4 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C4, DAG);
+  // v1 = vror(v0,r0)
+  SDValue Vror2 = getInstr(Hexagon::V6_vror, dl, VecTy, {Vor3, InstrC4}, DAG);
+  // v0 = vor(v0,v1)
+  SDValue Vor4 = getInstr(Hexagon::V6_vor, dl, VecTy, {Vor3, Vror2}, DAG);
+  // The output is v.w[8]:v.w[0]
+  // r3 = #0
+  SDValue C0 = DAG.getTargetConstant(0, dl, MVT::i32);
+  SDValue InstrC0 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C0, DAG);
+  // r0 = vextract(v0,r3)
+  SDValue Res =
+      getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC0}, DAG);
+  if (VT == MVT::i64) {
+    // r3 = #32
+    SDValue C32 = DAG.getTargetConstant(32, dl, MVT::i32);
+    SDValue InstrC32 = getInstr(Hexagon::A2_tfrsi, dl, MVT::i32, C32, DAG);
+    // r1 = vextract(v0,r3)
+    SDValue Vextract =
+        getInstr(Hexagon::V6_extractw, dl, MVT::i32, {Vor4, InstrC32}, DAG);
+    Res = getInstr(Hexagon::A2_combinew, dl, MVT::i64, {Vextract, Res}, DAG);
+  }
+  return Res;
+}
+
 SDValue
 HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
   // Sign- and zero-extends are legal.
@@ -1595,7 +1725,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::INSERT_VECTOR_ELT:       return LowerHvxInsertElement(Op, DAG);
     case ISD::EXTRACT_SUBVECTOR:       return LowerHvxExtractSubvector(Op, DAG);
     case ISD::EXTRACT_VECTOR_ELT:      return LowerHvxExtractElement(Op, DAG);
-
+    case ISD::BITCAST:                 return LowerHvxBitcast(Op, DAG);
     case ISD::ANY_EXTEND:              return LowerHvxAnyExt(Op, DAG);
     case ISD::SIGN_EXTEND:             return LowerHvxSignExt(Op, DAG);
     case ISD::ZERO_EXTEND:             return LowerHvxZeroExt(Op, DAG);
