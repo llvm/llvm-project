@@ -1256,6 +1256,7 @@ func (bb BasicBlock) MoveAfter(pos BasicBlock)  { C.LLVMMoveBasicBlockAfter(bb.C
 
 // Operations on instructions
 func (v Value) EraseFromParentAsInstruction()      { C.LLVMInstructionEraseFromParent(v.C) }
+func (v Value) RemoveFromParentAsInstruction()     { C.LLVMInstructionRemoveFromParent(v.C) }
 func (v Value) InstructionParent() (bb BasicBlock) { bb.C = C.LLVMGetInstructionParent(v.C); return }
 func (v Value) InstructionDebugLoc() (md Metadata) { md.C = C.LLVMInstructionGetDebugLoc(v.C); return }
 func (v Value) InstructionSetDebugLoc(md Metadata) { C.LLVMInstructionSetDebugLoc(v.C, md.C) }
