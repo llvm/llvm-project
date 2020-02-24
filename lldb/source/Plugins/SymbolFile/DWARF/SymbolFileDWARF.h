@@ -292,6 +292,8 @@ public:
 
   lldb_private::DWARFContext &GetDWARFContext() { return m_context; }
 
+  const std::shared_ptr<SymbolFileDWARFDwo> &GetDwpSymbolFile();
+
   lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
 
   static llvm::Expected<lldb_private::TypeSystem &>
