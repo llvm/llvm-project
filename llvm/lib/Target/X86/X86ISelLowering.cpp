@@ -24763,8 +24763,9 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
 
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
@@ -24800,8 +24801,9 @@ static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
   MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
 
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
@@ -24830,8 +24832,9 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
 
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale};
-  SDValue Res = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-      VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  SDValue Res =
+      DAG.getMemIntrinsicNode(X86ISD::MSCATTER, dl, VTs, Ops,
+                              MemIntr->getMemoryVT(), MemIntr->getMemOperand());
   return Res.getValue(1);
 }
 
@@ -24991,13 +24994,11 @@ static SDValue
 EmitTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl, SDValue Val,
                 SDValue Ptr, EVT MemVT, MachineMemOperand *MMO,
                 SelectionDAG &DAG) {
-
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Undef = DAG.getUNDEF(Ptr.getValueType());
   SDValue Ops[] = { Chain, Val, Ptr, Undef };
-  return SignedSat ?
-    DAG.getTargetMemSDNode<TruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
-    DAG.getTargetMemSDNode<TruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+  unsigned Opc = SignedSat ? X86ISD::VTRUNCSTORES : X86ISD::VTRUNCSTOREUS;
+  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
 }
 
 /// Emit Masked Truncating Store with signed or unsigned saturation.
@@ -25005,12 +25006,10 @@ static SDValue
 EmitMaskedTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl,
                       SDValue Val, SDValue Ptr, SDValue Mask, EVT MemVT,
                       MachineMemOperand *MMO, SelectionDAG &DAG) {
-
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = { Chain, Val, Ptr, Mask };
-  return SignedSat ?
-    DAG.getTargetMemSDNode<MaskedTruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
-    DAG.getTargetMemSDNode<MaskedTruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+  unsigned Opc = SignedSat ? X86ISD::VMTRUNCSTORES : X86ISD::VMTRUNCSTOREUS;
+  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
@@ -28505,8 +28504,8 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
       Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Src, DAG.getUNDEF(VT));
       SDVTList VTs = DAG.getVTList(MVT::v2i1, MVT::Other);
       SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-      SDValue NewScatter = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-          VTs, Ops, dl, N->getMemoryVT(), N->getMemOperand());
+      SDValue NewScatter = DAG.getMemIntrinsicNode(
+          X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
       return SDValue(NewScatter.getNode(), 1);
     }
     return SDValue();
@@ -28540,8 +28539,8 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
 
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-  SDValue NewScatter = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
-      VTs, Ops, dl, N->getMemoryVT(), N->getMemOperand());
+  SDValue NewScatter = DAG.getMemIntrinsicNode(
+      X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
   return SDValue(NewScatter.getNode(), 1);
 }
 
@@ -28696,9 +28695,9 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
 
   SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     N->getScale() };
-  SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      DAG.getVTList(VT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
-      N->getMemOperand());
+  SDValue NewGather = DAG.getMemIntrinsicNode(
+      X86ISD::MGATHER, dl, DAG.getVTList(VT, MaskVT, MVT::Other), Ops,
+      N->getMemoryVT(), N->getMemOperand());
   SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OrigVT,
                                 NewGather, DAG.getIntPtrConstant(0, dl));
   return DAG.getMergeValues({Extract, NewGather.getValue(2)}, dl);
@@ -29812,9 +29811,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
       SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
                         Gather->getBasePtr(), Index, Gather->getScale() };
-      SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-        DAG.getVTList(WideVT, Mask.getValueType(), MVT::Other), Ops, dl,
-        Gather->getMemoryVT(), Gather->getMemOperand());
+      SDValue Res = DAG.getMemIntrinsicNode(
+          X86ISD::MGATHER, dl,
+          DAG.getVTList(WideVT, Mask.getValueType(), MVT::Other), Ops,
+          Gather->getMemoryVT(), Gather->getMemOperand());
       Results.push_back(Res);
       Results.push_back(Res.getValue(2));
       return;

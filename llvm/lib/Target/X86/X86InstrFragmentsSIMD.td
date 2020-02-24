@@ -1205,60 +1205,60 @@ def X86MTruncUSStore : SDNode<"X86ISD::VMTRUNCSTOREUS",  SDTX86MaskedStore,
 
 def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncSStore node:$val, node:$ptr), [{
-  return cast<TruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
 def truncstore_us_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncUSStore node:$val, node:$ptr), [{
-  return cast<TruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
 def truncstore_s_vi16 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncSStore node:$val, node:$ptr), [{
-  return cast<TruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
 }]>;
 
 def truncstore_us_vi16 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncUSStore node:$val, node:$ptr), [{
-  return cast<TruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
 }]>;
 
 def truncstore_s_vi32 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncSStore node:$val, node:$ptr), [{
-  return cast<TruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
 
 def truncstore_us_vi32 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncUSStore node:$val, node:$ptr), [{
-  return cast<TruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
 
 def masked_truncstore_s_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                      (X86MTruncSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
 def masked_truncstore_us_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
 def masked_truncstore_s_vi16 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
 }]>;
 
 def masked_truncstore_us_vi16 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
 }]>;
 
 def masked_truncstore_s_vi32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
 
 def masked_truncstore_us_vi32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
-  return cast<MaskedTruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
