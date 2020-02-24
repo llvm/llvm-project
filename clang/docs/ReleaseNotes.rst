@@ -175,6 +175,10 @@ Modified Compiler Flags
     between vector types.
     Synonym: ``-fno-lax-vector-conversions``.
 
+- ``-debug-info-kind`` now has an option ``-debug-info-kind=constructor``,
+  which is one level below ``-debug-info-kind=limited``. This option causes
+  debug info for classes to be emitted only when a constructor is emitted.
+
 New Pragmas in Clang
 --------------------
 
