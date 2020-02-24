@@ -156,25 +156,6 @@ namespace {
 
       BBInfo() = default;
 
-      // Add register to vregsPassed if it belongs there. Return true if
-      // anything changed.
-      bool addPassed(unsigned Reg) {
-        if (!Register::isVirtualRegister(Reg))
-          return false;
-        if (regsKilled.count(Reg) || regsLiveOut.count(Reg))
-          return false;
-        return vregsPassed.insert(Reg).second;
-      }
-
-      // Same for a full set.
-      bool addPassed(const RegSet &RS) {
-        bool changed = false;
-        for (RegSet::const_iterator I = RS.begin(), E = RS.end(); I != E; ++I)
-          if (addPassed(*I))
-            changed = true;
-        return changed;
-      }
-
       // Add register to vregsRequired if it belongs there. Return true if
       // anything changed.
       bool addRequired(unsigned Reg) {
@@ -2144,6 +2125,109 @@ MachineVerifier::visitMachineBasicBlockAfter(const MachineBasicBlock *MBB) {
   }
 }
 
+namespace {
+// This implements a set of registers that serves as a filter: can filter other
+// sets by passing through elements not in the filter and blocking those that
+// are. Any filter implicitly includes the full set of physical registers upon
+// creation, thus filtering them all out. The filter itself as a set only grows,
+// and needs to be as efficient as possible.
+struct VRegFilter {
+  // Add elements to the filter itself. \pre Input set \p FromRegSet must have
+  // no duplicates. Both virtual and physical registers are fine.
+  template <typename RegSetT> void add(const RegSetT &FromRegSet) {
+    SmallVector<unsigned, 0> VRegsBuffer;
+    filterAndAdd(FromRegSet, VRegsBuffer);
+  }
+  // Filter \p FromRegSet through the filter and append passed elements into \p
+  // ToVRegs. All elements appended are then added to the filter itself.
+  // \returns true if anything changed.
+  template <typename RegSetT>
+  bool filterAndAdd(const RegSetT &FromRegSet,
+                    SmallVectorImpl<unsigned> &ToVRegs) {
+    unsigned SparseUniverse = Sparse.size();
+    unsigned NewSparseUniverse = SparseUniverse;
+    unsigned NewDenseSize = Dense.size();
+    size_t Begin = ToVRegs.size();
+    for (unsigned Reg : FromRegSet) {
+      if (!Register::isVirtualRegister(Reg))
+        continue;
+      unsigned Index = Register::virtReg2Index(Reg);
+      if (Index < SparseUniverseMax) {
+        if (Index < SparseUniverse && Sparse.test(Index))
+          continue;
+        NewSparseUniverse = std::max(NewSparseUniverse, Index + 1);
+      } else {
+        if (Dense.count(Reg))
+          continue;
+        ++NewDenseSize;
+      }
+      ToVRegs.push_back(Reg);
+    }
+    size_t End = ToVRegs.size();
+    if (Begin == End)
+      return false;
+    // Reserving space in sets once performs better than doing so continuously
+    // and pays easily for double look-ups (even in Dense with SparseUniverseMax
+    // tuned all the way down) and double iteration (the second one is over a
+    // SmallVector, which is a lot cheaper compared to DenseSet or BitVector).
+    Sparse.resize(NewSparseUniverse);
+    Dense.reserve(NewDenseSize);
+    for (unsigned I = Begin; I < End; ++I) {
+      unsigned Reg = ToVRegs[I];
+      unsigned Index = Register::virtReg2Index(Reg);
+      if (Index < SparseUniverseMax)
+        Sparse.set(Index);
+      else
+        Dense.insert(Reg);
+    }
+    return true;
+  }
+
+private:
+  static constexpr unsigned SparseUniverseMax = 10 * 1024 * 8;
+  // VRegs indexed within SparseUniverseMax are tracked by Sparse, those beyound
+  // are tracked by Dense. The only purpose of the threashold and the Dense set
+  // is to have a reasonably growing memory usage in pathological cases (large
+  // number of very sparse VRegFilter instances live at the same time). In
+  // practice even in the worst-by-execution time cases having all elements
+  // tracked by Sparse (very large SparseUniverseMax scenario) tends to be more
+  // space efficient than if tracked by Dense. The threashold is set to keep the
+  // worst-case memory usage within 2x of figures determined empirically for
+  // "all Dense" scenario in such worst-by-execution-time cases.
+  BitVector Sparse;
+  DenseSet<unsigned> Dense;
+};
+
+// Implements both a transfer function and a (binary, in-place) join operator
+// for a dataflow over register sets with set union join and filtering transfer
+// (out_b = in_b \ filter_b). filter_b is expected to be set-up ahead of time.
+// Maintains out_b as its state, allowing for O(n) iteration over it at any
+// time, where n is the size of the set (as opposed to O(U) where U is the
+// universe). filter_b implicitly contains all physical registers at all times.
+class FilteringVRegSet {
+  VRegFilter Filter;
+  SmallVector<unsigned, 0> VRegs;
+
+public:
+  // Set-up the filter_b. \pre Input register set \p RS must have no duplicates.
+  // Both virtual and physical registers are fine.
+  template <typename RegSetT> void addToFilter(const RegSetT &RS) {
+    Filter.add(RS);
+  }
+  // Passes \p RS through the filter_b (transfer function) and adds what's left
+  // to itself (out_b).
+  template <typename RegSetT> bool add(const RegSetT &RS) {
+    // Double-duty the Filter: to maintain VRegs a set (and the join operation
+    // a set union) just add everything being added here to the Filter as well.
+    return Filter.filterAndAdd(RS, VRegs);
+  }
+  using const_iterator = decltype(VRegs)::const_iterator;
+  const_iterator begin() const { return VRegs.begin(); }
+  const_iterator end() const { return VRegs.end(); }
+  size_t size() const { return VRegs.size(); }
+};
+} // namespace
+
 // Calculate the largest possible vregsPassed sets. These are the registers that
 // can pass through an MBB live, but may not be live every time. It is assumed
 // that all vregsPassed sets are empty before the call.
@@ -2157,22 +2241,28 @@ void MachineVerifier::calcRegsPassed() {
     // ReversePostOrderTraversal doesn't handle empty functions.
     return;
   }
+  std::vector<FilteringVRegSet> VRegsPassedSets(MF->size());
   for (const MachineBasicBlock *MBB :
        ReversePostOrderTraversal<const MachineFunction *>(MF)) {
     // Careful with the evaluation order, fetch next number before allocating.
     unsigned Number = RPONumbers.size();
     RPONumbers[MBB] = Number;
+    // Set-up the transfer functions for all blocks.
+    const BBInfo &MInfo = MBBInfoMap[MBB];
+    VRegsPassedSets[Number].addToFilter(MInfo.regsKilled);
+    VRegsPassedSets[Number].addToFilter(MInfo.regsLiveOut);
   }
   // First push live-out regs to successors' vregsPassed. Remember the MBBs that
   // have any vregsPassed.
   for (const MachineBasicBlock &MBB : *MF) {
-    BBInfo &MInfo = MBBInfoMap[&MBB];
+    const BBInfo &MInfo = MBBInfoMap[&MBB];
     if (!MInfo.reachable)
       continue;
     for (const MachineBasicBlock *Succ : MBB.successors()) {
-      BBInfo &SInfo = MBBInfoMap[Succ];
-      if (SInfo.addPassed(MInfo.regsLiveOut))
-        RPOWorklist.emplace(RPONumbers[Succ], Succ);
+      unsigned SuccNumber = RPONumbers[Succ];
+      FilteringVRegSet &SuccSet = VRegsPassedSets[SuccNumber];
+      if (SuccSet.add(MInfo.regsLiveOut))
+        RPOWorklist.emplace(SuccNumber, Succ);
     }
   }
 
@@ -2181,14 +2271,24 @@ void MachineVerifier::calcRegsPassed() {
     auto Next = RPOWorklist.begin();
     const MachineBasicBlock *MBB = Next->second;
     RPOWorklist.erase(Next);
-    BBInfo &MInfo = MBBInfoMap[MBB];
+    FilteringVRegSet &MSet = VRegsPassedSets[RPONumbers[MBB]];
     for (const MachineBasicBlock *Succ : MBB->successors()) {
       if (Succ == MBB)
         continue;
-      BBInfo &SInfo = MBBInfoMap[Succ];
-      if (SInfo.addPassed(MInfo.vregsPassed))
-        RPOWorklist.emplace(RPONumbers[Succ], Succ);
+      unsigned SuccNumber = RPONumbers[Succ];
+      FilteringVRegSet &SuccSet = VRegsPassedSets[SuccNumber];
+      if (SuccSet.add(MSet))
+        RPOWorklist.emplace(SuccNumber, Succ);
     }
+  }
+  // Copy the results back to BBInfos.
+  for (const MachineBasicBlock &MBB : *MF) {
+    BBInfo &MInfo = MBBInfoMap[&MBB];
+    if (!MInfo.reachable)
+      continue;
+    const FilteringVRegSet &MSet = VRegsPassedSets[RPONumbers[&MBB]];
+    MInfo.vregsPassed.reserve(MSet.size());
+    MInfo.vregsPassed.insert(MSet.begin(), MSet.end());
   }
 }
 
