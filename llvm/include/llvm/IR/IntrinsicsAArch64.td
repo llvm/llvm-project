@@ -961,6 +961,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorElementType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_DUPQ_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_EXPA_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMVectorOfBitcastsToInt<0>],
@@ -1474,6 +1480,7 @@ def int_aarch64_sve_clasta_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_clastb    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_clastb_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_compact   : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_dupq_lane : AdvSIMD_SVE_DUPQ_Intrinsic;
 def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_lastb     : AdvSIMD_SVE_Reduce_Intrinsic;
