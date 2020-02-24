@@ -2423,7 +2423,7 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     MVT MScalarTy = LT.second.getScalarType();
     if (ST->isSLM())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
-        return LT.first * Entry->Cost;
+        return Entry->Cost;
   }
 
   // Add to the base cost if we know that the extracted element of a vector is
