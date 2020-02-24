@@ -280,6 +280,8 @@ Changes to LLDB
 
 * Improved support for using classes with bit-field members in the expression evaluator.
 
+* Greatly improved support for DWARF v5.
+
 External Open Source Projects Using LLVM 10
 ===========================================
 
