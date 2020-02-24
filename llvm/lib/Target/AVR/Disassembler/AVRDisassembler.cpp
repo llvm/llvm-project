@@ -57,18 +57,41 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRDisassembler() {
                                          createAVRDisassembler);
 }
 
+static const uint16_t GPRDecoderTable[] = {
+  AVR::R0, AVR::R1, AVR::R2, AVR::R3,
+  AVR::R4, AVR::R5, AVR::R6, AVR::R7,
+  AVR::R8, AVR::R9, AVR::R10, AVR::R11,
+  AVR::R12, AVR::R13, AVR::R14, AVR::R15,
+  AVR::R16, AVR::R17, AVR::R18, AVR::R19,
+  AVR::R20, AVR::R21, AVR::R22, AVR::R23,
+  AVR::R24, AVR::R25, AVR::R26, AVR::R27,
+  AVR::R28, AVR::R29, AVR::R30, AVR::R31,
+};
+
 static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address, const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned Register = GPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address, const void *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  unsigned Register = GPRDecoderTable[RegNo+16];
+  Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodePTRREGSRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address, const void *Decoder) {
+  // Note: this function must be defined but does not seem to be called.
+  assert(false && "unimplemented: PTRREGS register class");
   return MCDisassembler::Success;
 }
 
