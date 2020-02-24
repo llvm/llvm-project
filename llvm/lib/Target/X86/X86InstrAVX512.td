@@ -9726,54 +9726,49 @@ def: Pat<(v16i8 (trunc (loadv16i16 addr:$src))),
 
 // FIXME: Improve scheduling of gather/scatter instructions.
 multiclass avx512_gather<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
-                         X86MemOperand memop, PatFrag GatherNode,
-                         RegisterClass MaskRC = _.KRCWM> {
+                         X86MemOperand memop, RegisterClass MaskRC = _.KRCWM> {
   let Constraints = "@earlyclobber $dst, $src1 = $dst, $mask = $mask_wb",
-      ExeDomain = _.ExeDomain in
+      ExeDomain = _.ExeDomain, mayLoad = 1, hasSideEffects = 0 in
   def rm  : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst, MaskRC:$mask_wb),
             (ins _.RC:$src1, MaskRC:$mask, memop:$src2),
             !strconcat(OpcodeStr#_.Suffix,
             "\t{$src2, ${dst} {${mask}}|${dst} {${mask}}, $src2}"),
-            [(set _.RC:$dst, MaskRC:$mask_wb,
-              (GatherNode  (_.VT _.RC:$src1), MaskRC:$mask,
-                     vectoraddr:$src2))]>, EVEX, EVEX_K,
-             EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteLoad]>;
+            []>, EVEX, EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteLoad]>;
 }
 
 multiclass avx512_gather_q_pd<bits<8> dopc, bits<8> qopc,
                         AVX512VLVectorVTInfo _, string OpcodeStr, string SUFF> {
   defm NAME##D##SUFF##Z: avx512_gather<dopc, OpcodeStr##"d", _.info512,
-                                      vy512xmem, mgatherv8i32>, EVEX_V512, VEX_W;
+                                      vy512xmem>, EVEX_V512, VEX_W;
   defm NAME##Q##SUFF##Z: avx512_gather<qopc, OpcodeStr##"q", _.info512,
-                                      vz512mem,  mgatherv8i64>, EVEX_V512, VEX_W;
+                                      vz512mem>, EVEX_V512, VEX_W;
 let Predicates = [HasVLX] in {
   defm NAME##D##SUFF##Z256: avx512_gather<dopc, OpcodeStr##"d", _.info256,
-                              vx256xmem, mgatherv4i32>, EVEX_V256, VEX_W;
+                              vx256xmem>, EVEX_V256, VEX_W;
   defm NAME##Q##SUFF##Z256: avx512_gather<qopc, OpcodeStr##"q", _.info256,
-                              vy256xmem, mgatherv4i64>, EVEX_V256, VEX_W;
+                              vy256xmem>, EVEX_V256, VEX_W;
   defm NAME##D##SUFF##Z128: avx512_gather<dopc, OpcodeStr##"d", _.info128,
-                              vx128xmem, mgatherv4i32>, EVEX_V128, VEX_W;
+                              vx128xmem>, EVEX_V128, VEX_W;
   defm NAME##Q##SUFF##Z128: avx512_gather<qopc, OpcodeStr##"q", _.info128,
-                              vx128xmem, mgatherv2i64>, EVEX_V128, VEX_W;
+                              vx128xmem>, EVEX_V128, VEX_W;
 }
 }
 
 multiclass avx512_gather_d_ps<bits<8> dopc, bits<8> qopc,
                        AVX512VLVectorVTInfo _, string OpcodeStr, string SUFF> {
-  defm NAME##D##SUFF##Z: avx512_gather<dopc, OpcodeStr##"d", _.info512, vz512mem,
-                                       mgatherv16i32>, EVEX_V512;
-  defm NAME##Q##SUFF##Z: avx512_gather<qopc, OpcodeStr##"q", _.info256, vz256mem,
-                                       mgatherv8i64>, EVEX_V512;
+  defm NAME##D##SUFF##Z: avx512_gather<dopc, OpcodeStr##"d", _.info512, vz512mem>,
+                                       EVEX_V512;
+  defm NAME##Q##SUFF##Z: avx512_gather<qopc, OpcodeStr##"q", _.info256, vz256mem>,
+                                       EVEX_V512;
 let Predicates = [HasVLX] in {
   defm NAME##D##SUFF##Z256: avx512_gather<dopc, OpcodeStr##"d", _.info256,
-                                          vy256xmem, mgatherv8i32>, EVEX_V256;
+                                          vy256xmem>, EVEX_V256;
   defm NAME##Q##SUFF##Z256: avx512_gather<qopc, OpcodeStr##"q", _.info128,
-                                          vy128xmem, mgatherv4i64>, EVEX_V256;
+                                          vy128xmem>, EVEX_V256;
   defm NAME##D##SUFF##Z128: avx512_gather<dopc, OpcodeStr##"d", _.info128,
-                                          vx128xmem, mgatherv4i32>, EVEX_V128;
+                                          vx128xmem>, EVEX_V128;
   defm NAME##Q##SUFF##Z128: avx512_gather<qopc, OpcodeStr##"q", _.info128,
-                                          vx64xmem, mgatherv2i64, VK2WM>,
-                                          EVEX_V128;
+                                          vx64xmem, VK2WM>, EVEX_V128;
 }
 }
 
@@ -9785,55 +9780,52 @@ defm VPGATHER : avx512_gather_q_pd<0x90, 0x91, avx512vl_i64_info, "vpgather", "Q
                 avx512_gather_d_ps<0x90, 0x91, avx512vl_i32_info, "vpgather", "D">;
 
 multiclass avx512_scatter<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
-                          X86MemOperand memop, PatFrag ScatterNode,
-                          RegisterClass MaskRC = _.KRCWM> {
+                          X86MemOperand memop, RegisterClass MaskRC = _.KRCWM> {
 
-let mayStore = 1, Constraints = "$mask = $mask_wb", ExeDomain = _.ExeDomain in
+let mayStore = 1, Constraints = "$mask = $mask_wb", ExeDomain = _.ExeDomain, 
+    hasSideEffects = 0 in
 
   def mr  : AVX5128I<opc, MRMDestMem, (outs MaskRC:$mask_wb),
             (ins memop:$dst, MaskRC:$mask, _.RC:$src),
             !strconcat(OpcodeStr#_.Suffix,
             "\t{$src, ${dst} {${mask}}|${dst} {${mask}}, $src}"),
-            [(set MaskRC:$mask_wb, (ScatterNode (_.VT _.RC:$src),
-                                    MaskRC:$mask,  vectoraddr:$dst))]>,
-            EVEX, EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>,
+            []>, EVEX, EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>,
             Sched<[WriteStore]>;
 }
 
 multiclass avx512_scatter_q_pd<bits<8> dopc, bits<8> qopc,
                         AVX512VLVectorVTInfo _, string OpcodeStr, string SUFF> {
   defm NAME##D##SUFF##Z: avx512_scatter<dopc, OpcodeStr##"d", _.info512,
-                                      vy512xmem, mscatterv8i32>, EVEX_V512, VEX_W;
+                                      vy512xmem>, EVEX_V512, VEX_W;
   defm NAME##Q##SUFF##Z: avx512_scatter<qopc, OpcodeStr##"q", _.info512,
-                                      vz512mem,  mscatterv8i64>, EVEX_V512, VEX_W;
+                                      vz512mem>, EVEX_V512, VEX_W;
 let Predicates = [HasVLX] in {
   defm NAME##D##SUFF##Z256: avx512_scatter<dopc, OpcodeStr##"d", _.info256,
-                              vx256xmem, mscatterv4i32>, EVEX_V256, VEX_W;
+                              vx256xmem>, EVEX_V256, VEX_W;
   defm NAME##Q##SUFF##Z256: avx512_scatter<qopc, OpcodeStr##"q", _.info256,
-                              vy256xmem, mscatterv4i64>, EVEX_V256, VEX_W;
+                              vy256xmem>, EVEX_V256, VEX_W;
   defm NAME##D##SUFF##Z128: avx512_scatter<dopc, OpcodeStr##"d", _.info128,
-                              vx128xmem, mscatterv4i32>, EVEX_V128, VEX_W;
+                              vx128xmem>, EVEX_V128, VEX_W;
   defm NAME##Q##SUFF##Z128: avx512_scatter<qopc, OpcodeStr##"q", _.info128,
-                              vx128xmem, mscatterv2i64>, EVEX_V128, VEX_W;
+                              vx128xmem>, EVEX_V128, VEX_W;
 }
 }
 
 multiclass avx512_scatter_d_ps<bits<8> dopc, bits<8> qopc,
                        AVX512VLVectorVTInfo _, string OpcodeStr, string SUFF> {
-  defm NAME##D##SUFF##Z: avx512_scatter<dopc, OpcodeStr##"d", _.info512, vz512mem,
-                                       mscatterv16i32>, EVEX_V512;
-  defm NAME##Q##SUFF##Z: avx512_scatter<qopc, OpcodeStr##"q", _.info256, vz256mem,
-                                       mscatterv8i64>, EVEX_V512;
+  defm NAME##D##SUFF##Z: avx512_scatter<dopc, OpcodeStr##"d", _.info512, vz512mem>,
+                                       EVEX_V512;
+  defm NAME##Q##SUFF##Z: avx512_scatter<qopc, OpcodeStr##"q", _.info256, vz256mem>,
+                                       EVEX_V512;
 let Predicates = [HasVLX] in {
   defm NAME##D##SUFF##Z256: avx512_scatter<dopc, OpcodeStr##"d", _.info256,
-                                          vy256xmem, mscatterv8i32>, EVEX_V256;
+                                          vy256xmem>, EVEX_V256;
   defm NAME##Q##SUFF##Z256: avx512_scatter<qopc, OpcodeStr##"q", _.info128,
-                                          vy128xmem, mscatterv4i64>, EVEX_V256;
+                                          vy128xmem>, EVEX_V256;
   defm NAME##D##SUFF##Z128: avx512_scatter<dopc, OpcodeStr##"d", _.info128,
-                                          vx128xmem, mscatterv4i32>, EVEX_V128;
+                                          vx128xmem>, EVEX_V128;
   defm NAME##Q##SUFF##Z128: avx512_scatter<qopc, OpcodeStr##"q", _.info128,
-                                          vx64xmem, mscatterv2i64, VK2WM>,
-                                          EVEX_V128;
+                                          vx64xmem, VK2WM>, EVEX_V128;
 }
 }
 

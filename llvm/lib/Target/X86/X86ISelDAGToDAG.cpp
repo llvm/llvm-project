@@ -5394,6 +5394,161 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
+    break;
+  }
+  case X86ISD::MGATHER: {
+    auto *Mgt = cast<X86MaskedGatherSDNode>(Node);
+    SDValue IndexOp = Mgt->getIndex();
+    SDValue Mask = Mgt->getMask();
+    MVT IndexVT = IndexOp.getSimpleValueType();
+    MVT ValueVT = Node->getSimpleValueType(0);
+    MVT MaskVT = Mask.getSimpleValueType();
+
+    // This is just to prevent crashes if the nodes are malformed somehow. We're
+    // otherwise only doing loose type checking in here based on type what
+    // a type constraint would say just like table based isel.
+    if (!ValueVT.isVector() || !MaskVT.isVector())
+      break;
+
+    unsigned NumElts = ValueVT.getVectorNumElements();
+    MVT ValueSVT = ValueVT.getVectorElementType();
+
+    bool IsFP = ValueSVT.isFloatingPoint();
+    unsigned EltSize = ValueSVT.getSizeInBits();
+
+    unsigned Opc = 0;
+    bool AVX512Gather = MaskVT.getVectorElementType() == MVT::i1;
+    if (AVX512Gather) {
+      if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERDPSZ128rm : X86::VPGATHERDDZ128rm;
+      else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERDPSZ256rm : X86::VPGATHERDDZ256rm;
+      else if (IndexVT == MVT::v16i32 && NumElts == 16 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERDPSZrm : X86::VPGATHERDDZrm;
+      else if (IndexVT == MVT::v4i32 && NumElts == 2 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERDPDZ128rm : X86::VPGATHERDQZ128rm;
+      else if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERDPDZ256rm : X86::VPGATHERDQZ256rm;
+      else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERDPDZrm : X86::VPGATHERDQZrm;
+      else if (IndexVT == MVT::v2i64 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERQPSZ128rm : X86::VPGATHERQDZ128rm;
+      else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERQPSZ256rm : X86::VPGATHERQDZ256rm;
+      else if (IndexVT == MVT::v8i64 && NumElts == 8 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERQPSZrm : X86::VPGATHERQDZrm;
+      else if (IndexVT == MVT::v2i64 && NumElts == 2 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERQPDZ128rm : X86::VPGATHERQQZ128rm;
+      else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERQPDZ256rm : X86::VPGATHERQQZ256rm;
+      else if (IndexVT == MVT::v8i64 && NumElts == 8 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERQPDZrm : X86::VPGATHERQQZrm;
+    } else {
+      if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERDPSrm : X86::VPGATHERDDrm;
+      else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERDPSYrm : X86::VPGATHERDDYrm;
+      else if (IndexVT == MVT::v4i32 && NumElts == 2 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERDPDrm : X86::VPGATHERDQrm;
+      else if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERDPDYrm : X86::VPGATHERDQYrm;
+      else if (IndexVT == MVT::v2i64 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERQPSrm : X86::VPGATHERQDrm;
+      else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 32)
+        Opc = IsFP ? X86::VGATHERQPSYrm : X86::VPGATHERQDYrm;
+      else if (IndexVT == MVT::v2i64 && NumElts == 2 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERQPDrm : X86::VPGATHERQQrm;
+      else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 64)
+        Opc = IsFP ? X86::VGATHERQPDYrm : X86::VPGATHERQQYrm;
+    }
+
+    if (!Opc)
+      break;
+
+    SDValue BasePtr = Mgt->getBasePtr();
+    SDValue Base, Scale, Index, Disp, Segment;
+    if (!selectVectorAddr(Node, BasePtr, Base, Scale, Index, Disp, Segment))
+      break;
+
+    SDValue PassThru = Mgt->getPassThru();
+    SDValue Chain = Mgt->getChain();
+    SDVTList VTs = Mgt->getVTList();
+
+    MachineSDNode *NewNode;
+    if (AVX512Gather) {
+      SDValue Ops[] = {PassThru, Mask, Base,    Scale,
+                       Index,    Disp, Segment, Chain};
+      NewNode = CurDAG->getMachineNode(Opc, SDLoc(dl), VTs, Ops);
+    } else {
+      SDValue Ops[] = {PassThru, Base,    Scale, Index,
+                       Disp,     Segment, Mask,  Chain};
+      NewNode = CurDAG->getMachineNode(Opc, SDLoc(dl), VTs, Ops);
+    }
+    CurDAG->setNodeMemRefs(NewNode, {Mgt->getMemOperand()});
+    ReplaceNode(Node, NewNode);
+    return;
+  }
+  case X86ISD::MSCATTER: {
+    auto *Sc = cast<X86MaskedScatterSDNode>(Node);
+    SDValue Value = Sc->getValue();
+    SDValue IndexOp = Sc->getIndex();
+    MVT IndexVT = IndexOp.getSimpleValueType();
+    MVT ValueVT = Value.getSimpleValueType();
+
+    // This is just to prevent crashes if the nodes are malformed somehow. We're
+    // otherwise only doing loose type checking in here based on type what
+    // a type constraint would say just like table based isel.
+    if (!ValueVT.isVector())
+      break;
+
+    unsigned NumElts = ValueVT.getVectorNumElements();
+    MVT ValueSVT = ValueVT.getVectorElementType();
+
+    bool IsFP = ValueSVT.isFloatingPoint();
+    unsigned EltSize = ValueSVT.getSizeInBits();
+
+    unsigned Opc;
+    if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERDPSZ128mr : X86::VPSCATTERDDZ128mr;
+    else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERDPSZ256mr : X86::VPSCATTERDDZ256mr;
+    else if (IndexVT == MVT::v16i32 && NumElts == 16 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERDPSZmr : X86::VPSCATTERDDZmr;
+    else if (IndexVT == MVT::v4i32 && NumElts == 2 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERDPDZ128mr : X86::VPSCATTERDQZ128mr;
+    else if (IndexVT == MVT::v4i32 && NumElts == 4 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERDPDZ256mr : X86::VPSCATTERDQZ256mr;
+    else if (IndexVT == MVT::v8i32 && NumElts == 8 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERDPDZmr : X86::VPSCATTERDQZmr;
+    else if (IndexVT == MVT::v2i64 && NumElts == 4 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERQPSZ128mr : X86::VPSCATTERQDZ128mr;
+    else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERQPSZ256mr : X86::VPSCATTERQDZ256mr;
+    else if (IndexVT == MVT::v8i64 && NumElts == 8 && EltSize == 32)
+      Opc = IsFP ? X86::VSCATTERQPSZmr : X86::VPSCATTERQDZmr;
+    else if (IndexVT == MVT::v2i64 && NumElts == 2 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERQPDZ128mr : X86::VPSCATTERQQZ128mr;
+    else if (IndexVT == MVT::v4i64 && NumElts == 4 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERQPDZ256mr : X86::VPSCATTERQQZ256mr;
+    else if (IndexVT == MVT::v8i64 && NumElts == 8 && EltSize == 64)
+      Opc = IsFP ? X86::VSCATTERQPDZmr : X86::VPSCATTERQQZmr;
+    else
+      break;
+
+    SDValue BasePtr = Sc->getBasePtr();
+    SDValue Base, Scale, Index, Disp, Segment;
+    if (!selectVectorAddr(Node, BasePtr, Base, Scale, Index, Disp, Segment))
+      break;
+
+    SDValue Mask = Sc->getMask();
+    SDValue Chain = Sc->getChain();
+    SDVTList VTs = Sc->getVTList();
+    SDValue Ops[] = {Base, Scale, Index, Disp, Segment, Mask, Value, Chain};
+
+    MachineSDNode *NewNode = CurDAG->getMachineNode(Opc, SDLoc(dl), VTs, Ops);
+    CurDAG->setNodeMemRefs(NewNode, {Sc->getMemOperand()});
+    ReplaceNode(Node, NewNode);
+    return;
   }
   }
 
