@@ -126,6 +126,7 @@ add_lldb_test_dependency(
   lli
   llvm-config
   llvm-dwarfdump
+  llvm-dwp
   llvm-nm
   llvm-mc
   llvm-objcopy

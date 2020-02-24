@@ -149,7 +149,7 @@ def use_support_substitutions(config):
         config.available_features.add('lld')
 
 
-    support_tools = ['yaml2obj', 'obj2yaml', 'llvm-pdbutil',
+    support_tools = ['yaml2obj', 'obj2yaml', 'llvm-dwp', 'llvm-pdbutil',
                      'llvm-mc', 'llvm-readobj', 'llvm-objdump',
                      'llvm-objcopy', 'lli']
     additional_tool_dirs += [config.lldb_tools_dir, config.llvm_tools_dir]

@@ -3880,7 +3880,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
     module_spec.GetSymbolFileSpec() =
-        FileSpec(m_objfile_sp->GetFileSpec().GetPath() + ".dwp");
+        FileSpec(m_objfile_sp->GetModule()->GetFileSpec().GetPath() + ".dwp");
 
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
