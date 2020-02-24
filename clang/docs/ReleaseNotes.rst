@@ -299,7 +299,25 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- ...
+New features for OpenMP 5.0 were implemented. Use ``-fopenmp-version=50`` option to activate support for OpenMP 5.0.
+
+- Added support for ``device_type`` clause in declare target directive.
+- Non-static and non-ordered loops are nonmonotonic by default.
+- Teams-based directives can be used as a standalone directive.
+- Added support for collapsing of non-rectangular loops.
+- Added support for range-based loops.
+- Added support for collapsing of imperfectly nested loops.
+- Added support for ``master taskloop``, ``parallel master taskloop``, ``master taskloop simd`` and ``parallel master taskloop simd`` directives.
+- Added support for ``if`` clauses in simd-based directives.
+- Added support for unified shared memory for NVPTX target.
+- Added support for nested atomic and simd directives are allowed in sims-based directives.
+- Added support for non temporal clauses in sims-based directives.
+- Added basic support for conditional lastprivate variables
+
+Other improvements:
+
+- Added basic analysis for use of the uninitialized variables in clauses.
+- Bug fixes.
 
 CUDA Support in Clang
 ---------------------
