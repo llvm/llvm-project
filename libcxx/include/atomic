@@ -1482,9 +1482,11 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t);
 
 template <class _Atp, class _Fn>
-_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
-{
-    auto const __libcpp_atomic_wait_backoff = [=](chrono::nanoseconds __elapsed) -> bool {
+struct __libcpp_atomic_wait_backoff_impl {
+    _Atp* __a;
+    _Fn __test_fn;
+    _LIBCPP_INLINE_VISIBILITY bool operator()(chrono::nanoseconds __elapsed) const
+    {
         if(__elapsed > chrono::microseconds(64))
         {
             auto const __monitor = __libcpp_atomic_monitor(__a);
@@ -1497,8 +1499,14 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
         else
             ; // poll
         return false;
-    };
-    return __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_atomic_wait_backoff);
+    }
+};
+
+template <class _Atp, class _Fn>
+_LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
+{
+    __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
+    return __libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
 #else // _LIBCPP_HAS_NO_PLATFORM_WAIT
@@ -1516,11 +1524,20 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 #endif // _LIBCPP_HAS_NO_PLATFORM_WAIT
 
 template <class _Atp, class _Tp>
+struct __cxx_atomic_wait_test_fn_impl {
+    _Atp* __a;
+    _Tp __val;
+    memory_order __order;
+    _LIBCPP_INLINE_VISIBILITY bool operator()() const
+    {
+        return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__a, __order), __val);
+    }
+};
+
+template <class _Atp, class _Tp>
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
 {
-    auto const __test_fn = [=]() -> bool {
-        return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__a, __order), __val);
-    };
+    __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
     return __cxx_atomic_wait(__a, __test_fn);
 }
 
