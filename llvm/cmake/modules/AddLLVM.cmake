@@ -859,14 +859,25 @@ endmacro(add_llvm_executable name)
 #
 #   If NO_MODULE is specified, when option LLVM_${name_upper}_LINK_INTO_TOOLS is set to OFF,
 #   only an object library is built, and no module is built. This is specific to the Polly use case.
+#
+#   The SUBPROJECT argument contains the LLVM project the plugin belongs
+#   to. If set, the plugin will link statically by default it if the 
+#   project was enabled.
 function(add_llvm_pass_plugin name)
   cmake_parse_arguments(ARG
-    "NO_MODULE" "" ""
+    "NO_MODULE" "SUBPROJECT" ""
     ${ARGN})
 
   string(TOUPPER ${name} name_upper)
 
-  option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" OFF)
+  # Enable the plugin by default if it was explicitly enabled by the user.
+  # Note: If was set to "all", LLVM's CMakeLists.txt replaces it with a
+  # list of all projects, counting as explicitly enabled.
+  set(link_into_tools_default OFF)
+  if (ARG_SUBPROJECT AND LLVM_TOOL_${name_upper}_BUILD)
+    set(link_into_tools_default ON)
+  endif()
+  option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" ${link_into_tools_default})
 
   if(LLVM_${name_upper}_LINK_INTO_TOOLS)
     list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
