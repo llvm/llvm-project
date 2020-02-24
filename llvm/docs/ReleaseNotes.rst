@@ -123,10 +123,19 @@ Changes to building LLVM
 
 ...
 
+Changes to the AArch64 Backend
+------------------------------
+
+- Added support for Cortex-A65, Cortex-A65AE, Neoverse E1 and Neoverse N1 cores.
+- With a few more bugs fixed in the LLVM 10 release, clang-cl can now target windows-on-Arm well, demonstrated by building complex pieces of software such as Chromium and the Electron framework.
+- Support for -fpatchable-function-entry was added.
+
 Changes to the ARM Backend
 --------------------------
 
- During this release ...
+- Optimized Armv8.1-M code generation, including generating Low Overhead Loops.
+- Added auto-vectorization for the Armv8.1-M MVE vector extension.
+- Support was added for inline asm constraints s,j,x,N,O.
 
 
 Changes to the MIPS Target
