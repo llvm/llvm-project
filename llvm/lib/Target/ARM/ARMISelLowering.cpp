@@ -15323,6 +15323,9 @@ bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
       return false;
   }
 
+  if (Subtarget->hasMVEIntegerOps())
+    return true;
+
   // Don't create a loadext if we can fold the extension into a wide/long
   // instruction.
   // If there's more than one user instruction, the loadext is desirable no
