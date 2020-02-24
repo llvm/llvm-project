@@ -572,8 +572,20 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
                                     ArrayRef<Register> Regs,
                                     LLT LLTy,
                                     LLT PartLLT) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   if (!LLTy.isVector() && !PartLLT.isVector()) {
-    B.buildMerge(OrigRegs[0], Regs);
+    assert(OrigRegs.size() == 1);
+    LLT OrigTy = MRI.getType(OrigRegs[0]);
+
+    unsigned SrcSize = PartLLT.getSizeInBits() * Regs.size();
+    if (SrcSize == OrigTy.getSizeInBits())
+      B.buildMerge(OrigRegs[0], Regs);
+    else {
+      auto Widened = B.buildMerge(LLT::scalar(SrcSize), Regs);
+      B.buildTrunc(OrigRegs[0], Widened);
+    }
+
     return;
   }
 
@@ -583,8 +595,6 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
     mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
     return;
   }
-
-  MachineRegisterInfo &MRI = *B.getMRI();
 
   assert(LLTy.isVector() && !PartLLT.isVector());
 
