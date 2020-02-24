@@ -287,6 +287,10 @@ public:
 
   uint32_t GetDisassemblyLineCount() const;
 
+  llvm::StringRef GetStopShowLineMarkerAnsiPrefix() const;
+
+  llvm::StringRef GetStopShowLineMarkerAnsiSuffix() const;
+
   bool GetAutoOneLineSummaries() const;
 
   bool GetAutoIndent() const;
