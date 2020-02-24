@@ -99,7 +99,6 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("fma4.vfmadd.s") || // Added in 7.0
       Name.startswith("fma.vfmadd.") || // Added in 7.0
       Name.startswith("fma.vfmsub.") || // Added in 7.0
-      Name.startswith("fma.vfmaddsub.") || // Added in 7.0
       Name.startswith("fma.vfmsubadd.") || // Added in 7.0
       Name.startswith("fma.vfnmadd.") || // Added in 7.0
       Name.startswith("fma.vfnmsub.") || // Added in 7.0
@@ -3212,28 +3211,26 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                   CI->getArgOperand(0);
 
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
-    } else if (IsX86 && (Name.startswith("fma.vfmaddsub.p") ||
-                         Name.startswith("fma.vfmsubadd.p"))) {
-      bool IsSubAdd = Name[7] == 's';
-      int NumElts = CI->getType()->getVectorNumElements();
+    } else if (IsX86 &&  Name.startswith("fma.vfmsubadd.p")) {
+      unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
+      unsigned EltWidth = CI->getType()->getScalarSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && EltWidth == 32)
+        IID = Intrinsic::x86_fma_vfmaddsub_ps;
+      else if (VecWidth == 256 && EltWidth == 32)
+        IID = Intrinsic::x86_fma_vfmaddsub_ps_256;
+      else if (VecWidth == 128 && EltWidth == 64)
+        IID = Intrinsic::x86_fma_vfmaddsub_pd;
+      else if (VecWidth == 256 && EltWidth == 64)
+        IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
+      else
+        llvm_unreachable("Unexpected intrinsic");
 
       Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
                        CI->getArgOperand(2) };
-
-      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::fma,
-                                                Ops[0]->getType());
-      Value *Odd = Builder.CreateCall(FMA, Ops);
       Ops[2] = Builder.CreateFNeg(Ops[2]);
-      Value *Even = Builder.CreateCall(FMA, Ops);
-
-      if (IsSubAdd)
-        std::swap(Even, Odd);
-
-      SmallVector<uint32_t, 32> Idxs(NumElts);
-      for (int i = 0; i != NumElts; ++i)
-        Idxs[i] = i + (i % 2) * NumElts;
-
-      Rep = Builder.CreateShuffleVector(Even, Odd, Idxs);
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               Ops);
     } else if (IsX86 && (Name.startswith("avx512.mask.vfmaddsub.p") ||
                          Name.startswith("avx512.mask3.vfmaddsub.p") ||
                          Name.startswith("avx512.maskz.vfmaddsub.p") ||
@@ -3243,9 +3240,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Drop the "avx512.mask." to make it easier.
       Name = Name.drop_front(IsMask3 || IsMaskZ ? 13 : 12);
       bool IsSubAdd = Name[3] == 's';
-      if (CI->getNumArgOperands() == 5 &&
-          (!isa<ConstantInt>(CI->getArgOperand(4)) ||
-           cast<ConstantInt>(CI->getArgOperand(4))->getZExtValue() != 4)) {
+      if (CI->getNumArgOperands() == 5) {
         Intrinsic::ID IID;
         // Check the character before ".512" in string.
         if (Name[Name.size()-5] == 's')
