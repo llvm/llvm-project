@@ -355,7 +355,7 @@ function(add_libc_unittest target_name)
     ${LIBC_UNITTEST_DEPENDS}
   )
 
-  target_link_libraries(${target_name} PRIVATE LibcUnitTest)
+  target_link_libraries(${target_name} PRIVATE LibcUnitTest libc_test_utils)
 
   add_custom_command(
     TARGET ${target_name}
