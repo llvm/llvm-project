@@ -495,6 +495,24 @@ bool ARMBaseInstrInfo::isPredicated(const MachineInstr &MI) const {
   return PIdx != -1 && MI.getOperand(PIdx).getImm() != ARMCC::AL;
 }
 
+std::string ARMBaseInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                      const MachineOperand &Op,
+                                                      unsigned OpIdx) const {
+  // Only support immediates for now.
+  if (Op.getType() != MachineOperand::MO_Immediate)
+    return std::string();
+
+  // And print its corresponding condition code if the immediate is a
+  // predicate.
+  int FirstPredOp = MI.findFirstPredOperandIdx();
+  if (FirstPredOp != (int) OpIdx)
+    return std::string();
+
+  std::string CC = "CC::";
+  CC += ARMCondCodeToString((ARMCC::CondCodes)Op.getImm());
+  return CC;
+}
+
 bool ARMBaseInstrInfo::PredicateInstruction(
     MachineInstr &MI, ArrayRef<MachineOperand> Pred) const {
   unsigned Opc = MI.getOpcode();

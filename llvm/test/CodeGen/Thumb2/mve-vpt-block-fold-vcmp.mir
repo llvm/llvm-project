@@ -98,15 +98,15 @@ body:             |
 
     ; CHECK-LABEL: name: foo
     ; CHECK: liveins: $q0, $r0, $r1, $r2, $lr
-    ; CHECK: $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+    ; CHECK: $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ; CHECK: frame-setup CFI_INSTRUCTION offset $lr, -4
     ; CHECK: frame-setup CFI_INSTRUCTION offset $r7, -8
-    ; CHECK: $r7 = frame-setup tMOVr killed $sp, 14, $noreg
+    ; CHECK: $r7 = frame-setup tMOVr killed $sp, 14 /* CC::al */, $noreg
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_register $r7
-    ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14, $noreg :: (load 4 from %fixed-stack.2)
-    ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14, $noreg :: (load 4 from %fixed-stack.1)
-    ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14, $noreg :: (load 4 from %fixed-stack.0)
+    ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.2)
+    ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.1)
+    ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0)
     ; CHECK: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr {
     ; CHECK:   MVE_VPTv4f32r 1, renamable $q0, $zr, 10, implicit-def $vpr
     ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr :: (load 16 from %ir.src, align 4)
@@ -119,7 +119,7 @@ body:             |
     ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr :: (load 16 from %ir.src3, align 4)
     ; CHECK:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr :: (store 16 into %ir.dest3, align 4)
     ; CHECK: }
-    ; CHECK: $sp = t2LDMIA_RET $sp, 14, $noreg, def $r7, def $pc, implicit $q0
+    ; CHECK: $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc, implicit $q0
     $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4

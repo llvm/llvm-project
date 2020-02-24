@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=thumbv7--linux-android -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s --check-prefix=CHECK-MERGE
 #CHECK-MERGE: foo
 name:            foo
-# CHECK-MERGE: VSTMDIA $r4, 14, $noreg,  $d15,  $d16,  $d17,  $d18,  $d19,  $d20,  $d21,  $d22,  $d23,  $d24,  $d25,  $d26,  $d27,  $d28,  $d29,  $d30
-# CHECK-MERGE-NEXT: VSTRD  $d31, $r4, 32, 14, $noreg :: (store 8)
-# CHECK-MERGE:     VSTMDIA killed $r0, 14, $noreg,  $d4,  $d5,  $d6,  $d7,  $d8,  $d9,  $d10,  $d11,  $d12,  $d13,  $d14
+# CHECK-MERGE: VSTMDIA $r4, 14 /* CC::al */, $noreg,  $d15,  $d16,  $d17,  $d18,  $d19,  $d20,  $d21,  $d22,  $d23,  $d24,  $d25,  $d26,  $d27,  $d28,  $d29,  $d30
+# CHECK-MERGE-NEXT: VSTRD  $d31, $r4, 32, 14 /* CC::al */, $noreg :: (store 8)
+# CHECK-MERGE:     VSTMDIA killed $r0, 14 /* CC::al */, $noreg,  $d4,  $d5,  $d6,  $d7,  $d8,  $d9,  $d10,  $d11,  $d12,  $d13,  $d14
 body:             |
   bb.0:
     VSTRD  $d15, $r4, 0, 14, $noreg :: (store 8)

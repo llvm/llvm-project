@@ -80,7 +80,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
-  ; CHECK:   frame-setup tPUSH 14, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -89,11 +89,11 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $lr, $r0, $r1
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-  ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14, $noreg
+  ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.for.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r3
-  ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed $r3, 1, 14, $noreg
+  ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed $r3, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1, renamable $q1 = MVE_VLDRBU16_post killed renamable $r1, 8, 0, $noreg :: (load 8 from %ir.input_2_cast, align 1)
   ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRBU16_post killed renamable $r0, 8, 0, $noreg :: (load 8 from %ir.input_1_cast, align 1)
   ; CHECK:   renamable $q1 = MVE_VADDi16 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
@@ -102,11 +102,11 @@ body:             |
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
   ; CHECK:   renamable $r0 = MVE_VADDVu16no_acc killed renamable $q0, 0, $noreg
-  ; CHECK:   tPOP_RET 14, $noreg, def $r7, def $pc, implicit killed $r0
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   ; CHECK: bb.4.for.cond.cleanup:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14, $noreg
-  ; CHECK:   tBX_RET 14, $noreg, implicit killed $r0
+  ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.4(0x40000000)
     liveins: $r0, $r1, $r2, $lr, $r7
