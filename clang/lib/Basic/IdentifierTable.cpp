@@ -27,7 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/Tapir.h"
 #include <cassert>
-#include "llvm/Transforms/Tapir/TapirTypes.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
