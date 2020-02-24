@@ -1505,6 +1505,14 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   EVT LoMemVT, HiMemVT;
   std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
+  if (!LoMemVT.isByteSized() || !HiMemVT.isByteSized()) {
+    SDValue Value, NewChain;
+    std::tie(Value, NewChain) = TLI.scalarizeVectorLoad(LD, DAG);
+    std::tie(Lo, Hi) = DAG.SplitVector(Value, dl);
+    ReplaceValueWith(SDValue(LD, 1), NewChain);
+    return;
+  }
+
   Lo = DAG.getLoad(ISD::UNINDEXED, ExtType, LoVT, dl, Ch, Ptr, Offset,
                    LD->getPointerInfo(), LoMemVT, Alignment, MMOFlags, AAInfo);
 
@@ -3666,6 +3674,20 @@ SDValue DAGTypeLegalizer::WidenVecRes_INSERT_VECTOR_ELT(SDNode *N) {
 SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   ISD::LoadExtType ExtType = LD->getExtensionType();
+
+  // A vector must always be stored in memory as-is, i.e. without any padding
+  // between the elements, since various code depend on it, e.g. in the
+  // handling of a bitcast of a vector type to int, which may be done with a
+  // vector store followed by an integer load. A vector that does not have
+  // elements that are byte-sized must therefore be stored as an integer
+  // built out of the extracted vector elements.
+  if (!LD->getMemoryVT().isByteSized()) {
+    SDValue Value, NewChain;
+    std::tie(Value, NewChain) = TLI.scalarizeVectorLoad(LD, DAG);
+    ReplaceValueWith(SDValue(LD, 0), Value);
+    ReplaceValueWith(SDValue(LD, 1), NewChain);
+    return SDValue();
+  }
 
   SDValue Result;
   SmallVector<SDValue, 16> LdChain;  // Chain for the series of load
