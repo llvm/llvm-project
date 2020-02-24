@@ -22,7 +22,7 @@ let Definition = "debugger" in {
     Desc<"If true all confirmation prompts will receive their default reply.">;
   def DisassemblyFormat: Property<"disassembly-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${function.changed}\\\\n{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${current-pc-arrow} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
+    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${function.changed}\\\\n{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${ansi.fg.yellow}${current-pc-arrow}${ansi.normal} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
     Desc<"The default disassembly format string to use when disassembling instruction sequences.">;
   def FrameFormat: Property<"frame-format", "FormatEntity">,
     Global,
