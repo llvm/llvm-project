@@ -1917,12 +1917,12 @@ let Predicates = [HasSVE2] in {
 
 let Predicates = [HasSVE2AES] in {
   // SVE2 crypto destructive binary operations
-  def AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8>;
-  def AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8>;
+  defm AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
+  defm AESD_ZZZ_B : sve2_crypto_des_bin_op<0b01, "aesd", ZPR8, int_aarch64_sve_aesd, nxv16i8>;
 
   // SVE2 crypto unary operations
-  def AESMC_ZZ_B  : sve2_crypto_unary_op<0b0, "aesmc">;
-  def AESIMC_ZZ_B : sve2_crypto_unary_op<0b1, "aesimc">;
+  defm AESMC_ZZ_B  : sve2_crypto_unary_op<0b0, "aesmc",  int_aarch64_sve_aesmc>;
+  defm AESIMC_ZZ_B : sve2_crypto_unary_op<0b1, "aesimc", int_aarch64_sve_aesimc>;
 
   // PMULLB and PMULLT instructions which operate with 64-bit source and
   // 128-bit destination elements are enabled with crypto extensions, similar
@@ -1933,14 +1933,14 @@ let Predicates = [HasSVE2AES] in {
 
 let Predicates = [HasSVE2SM4] in {
   // SVE2 crypto constructive binary operations
-  def SM4EKEY_ZZZ_S : sve2_crypto_cons_bin_op<0b0, "sm4ekey", ZPR32>;
+  defm SM4EKEY_ZZZ_S : sve2_crypto_cons_bin_op<0b0, "sm4ekey", ZPR32, int_aarch64_sve_sm4ekey, nxv4i32>;
   // SVE2 crypto destructive binary operations
-  def SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32>;
+  defm SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32, int_aarch64_sve_sm4e, nxv4i32>;
 }
 
 let Predicates = [HasSVE2SHA3] in {
   // SVE2 crypto constructive binary operations
-  def RAX1_ZZZ_D : sve2_crypto_cons_bin_op<0b1, "rax1",    ZPR64>;
+  defm RAX1_ZZZ_D : sve2_crypto_cons_bin_op<0b1, "rax1", ZPR64, int_aarch64_sve_rax1, nxv2i64>;
 }
 
 let Predicates = [HasSVE2BitPerm] in {
