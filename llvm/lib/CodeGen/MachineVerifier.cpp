@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2126,34 +2127,46 @@ MachineVerifier::visitMachineBasicBlockAfter(const MachineBasicBlock *MBB) {
 // can pass through an MBB live, but may not be live every time. It is assumed
 // that all vregsPassed sets are empty before the call.
 void MachineVerifier::calcRegsPassed() {
+  // This is a forward dataflow, doing it in RPO. A standard map serves as a
+  // priority (sorting by RPO number) queue, deduplicating worklist, and an RPO
+  // number to MBB mapping all at once.
+  std::map<unsigned, const MachineBasicBlock *> RPOWorklist;
+  DenseMap<const MachineBasicBlock *, unsigned> RPONumbers;
+  if (MF->empty()) {
+    // ReversePostOrderTraversal doesn't handle empty functions.
+    return;
+  }
+  for (const MachineBasicBlock *MBB :
+       ReversePostOrderTraversal<const MachineFunction *>(MF)) {
+    // Careful with the evaluation order, fetch next number before allocating.
+    unsigned Number = RPONumbers.size();
+    RPONumbers[MBB] = Number;
+  }
   // First push live-out regs to successors' vregsPassed. Remember the MBBs that
   // have any vregsPassed.
-  SmallPtrSet<const MachineBasicBlock*, 8> todo;
-  for (const auto &MBB : *MF) {
+  for (const MachineBasicBlock &MBB : *MF) {
     BBInfo &MInfo = MBBInfoMap[&MBB];
     if (!MInfo.reachable)
       continue;
-    for (MachineBasicBlock::const_succ_iterator SuI = MBB.succ_begin(),
-           SuE = MBB.succ_end(); SuI != SuE; ++SuI) {
-      BBInfo &SInfo = MBBInfoMap[*SuI];
+    for (const MachineBasicBlock *Succ : MBB.successors()) {
+      BBInfo &SInfo = MBBInfoMap[Succ];
       if (SInfo.addPassed(MInfo.regsLiveOut))
-        todo.insert(*SuI);
+        RPOWorklist.emplace(RPONumbers[Succ], Succ);
     }
   }
 
-  // Iteratively push vregsPassed to successors. This will converge to the same
-  // final state regardless of DenseSet iteration order.
-  while (!todo.empty()) {
-    const MachineBasicBlock *MBB = *todo.begin();
-    todo.erase(MBB);
+  // Iteratively push vregsPassed to successors.
+  while (!RPOWorklist.empty()) {
+    auto Next = RPOWorklist.begin();
+    const MachineBasicBlock *MBB = Next->second;
+    RPOWorklist.erase(Next);
     BBInfo &MInfo = MBBInfoMap[MBB];
-    for (MachineBasicBlock::const_succ_iterator SuI = MBB->succ_begin(),
-           SuE = MBB->succ_end(); SuI != SuE; ++SuI) {
-      if (*SuI == MBB)
+    for (const MachineBasicBlock *Succ : MBB->successors()) {
+      if (Succ == MBB)
         continue;
-      BBInfo &SInfo = MBBInfoMap[*SuI];
+      BBInfo &SInfo = MBBInfoMap[Succ];
       if (SInfo.addPassed(MInfo.vregsPassed))
-        todo.insert(*SuI);
+        RPOWorklist.emplace(RPONumbers[Succ], Succ);
     }
   }
 }
