@@ -3631,7 +3631,8 @@ static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
 #endif
 
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
-  scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE));
+  scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE,
+                      SD.getNextID()));
 
   buildStmts(R);
 
