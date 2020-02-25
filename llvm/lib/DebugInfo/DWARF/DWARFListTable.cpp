@@ -18,25 +18,15 @@ using namespace llvm;
 Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
                                     uint64_t *OffsetPtr) {
   HeaderOffset = *OffsetPtr;
-  // Read and verify the length field.
-  if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, sizeof(uint32_t)))
-    return createStringError(errc::invalid_argument,
-                       "section is not large enough to contain a "
-                       "%s table length at offset 0x%" PRIx64,
-                       SectionName.data(), *OffsetPtr);
-  Format = dwarf::DwarfFormat::DWARF32;
-  uint8_t OffsetByteSize = 4;
-  HeaderData.Length = Data.getRelocatedValue(4, OffsetPtr);
-  if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64) {
-    Format = dwarf::DwarfFormat::DWARF64;
-    OffsetByteSize = 8;
-    HeaderData.Length = Data.getU64(OffsetPtr);
-  } else if (HeaderData.Length >= dwarf::DW_LENGTH_lo_reserved) {
-    return createStringError(errc::invalid_argument,
-        "%s table at offset 0x%" PRIx64
-        " has unsupported reserved unit length of value 0x%8.8" PRIx64,
-        SectionName.data(), HeaderOffset, HeaderData.Length);
-  }
+  Error Err = Error::success();
+
+  std::tie(HeaderData.Length, Format) = Data.getInitialLength(OffsetPtr, &Err);
+  if (Err)
+    return createStringError(
+        errc::invalid_argument, "parsing %s table at offset 0x%" PRIx64 ": %s",
+        SectionName.data(), HeaderOffset, toString(std::move(Err)).c_str());
+
+  uint8_t OffsetByteSize = Format == dwarf::DWARF64 ? 8 : 4;
   uint64_t FullLength =
       HeaderData.Length + dwarf::getUnitLengthFieldByteSize(Format);
   assert(FullLength == length());
