@@ -323,7 +323,7 @@ static std::string getFilename(InputFile *file) {
     return "";
   if (file->archiveName.empty())
     return std::string(file->getName());
-  return (file->archiveName + "(" + file->getName() + ")").str();
+  return (file->archiveName + ':' + file->getName()).str();
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
