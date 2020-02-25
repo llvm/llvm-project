@@ -814,10 +814,11 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
   ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-  ; CHECK:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[EXTRACT]](<3 x s16>), [[DEF]](p1) :: (store 6 into `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[UV]](<3 x s16>), [[DEF1]](p1) :: (store 6 into `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK:   S_SETPC_B64_return [[COPY3]]
   store <3 x i16> %arg0, <3 x i16> addrspace(1)* undef
@@ -848,10 +849,11 @@ define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>)
-  ; CHECK:   [[EXTRACT:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[EXTRACT]](<5 x s16>), [[DEF]](p1) :: (store 10 into `<5 x i16> addrspace(1)* undef`, align 16, addrspace 1)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<5 x s16>), [[UV1:%[0-9]+]]:_(<5 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s16>)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[UV]](<5 x s16>), [[DEF1]](p1) :: (store 10 into `<5 x i16> addrspace(1)* undef`, align 16, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   store <5 x i16> %arg0, <5 x i16> addrspace(1)* undef
@@ -895,6 +897,58 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
   ; CHECK:   S_SETPC_B64_return [[COPY9]]
   store <16 x i16> %arg0, <16 x i16> addrspace(1)* undef
+  ret void
+}
+
+; <2 x i16> pieces that start spilling to the stack.
+; FIXME: load of 2 would be sufficient for last piece
+define void @void_func_v65i16(<65 x i16> %arg0) #0 {
+  ; CHECK-LABEL: name: void_func_v65i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr4
+  ; CHECK:   [[COPY5:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr5
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr6
+  ; CHECK:   [[COPY7:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr7
+  ; CHECK:   [[COPY8:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr8
+  ; CHECK:   [[COPY9:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr9
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr10
+  ; CHECK:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr11
+  ; CHECK:   [[COPY12:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr12
+  ; CHECK:   [[COPY13:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr13
+  ; CHECK:   [[COPY14:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr14
+  ; CHECK:   [[COPY15:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr15
+  ; CHECK:   [[COPY16:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr16
+  ; CHECK:   [[COPY17:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr17
+  ; CHECK:   [[COPY18:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr18
+  ; CHECK:   [[COPY19:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr19
+  ; CHECK:   [[COPY20:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr20
+  ; CHECK:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr21
+  ; CHECK:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr22
+  ; CHECK:   [[COPY23:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr23
+  ; CHECK:   [[COPY24:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr24
+  ; CHECK:   [[COPY25:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr25
+  ; CHECK:   [[COPY26:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr26
+  ; CHECK:   [[COPY27:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr27
+  ; CHECK:   [[COPY28:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr28
+  ; CHECK:   [[COPY29:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr29
+  ; CHECK:   [[COPY30:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr30
+  ; CHECK:   [[COPY31:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>), [[COPY8]](<2 x s16>), [[COPY9]](<2 x s16>), [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[COPY12]](<2 x s16>), [[COPY13]](<2 x s16>), [[COPY14]](<2 x s16>), [[COPY15]](<2 x s16>), [[COPY16]](<2 x s16>), [[COPY17]](<2 x s16>), [[COPY18]](<2 x s16>), [[COPY19]](<2 x s16>), [[COPY20]](<2 x s16>), [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[COPY23]](<2 x s16>), [[COPY24]](<2 x s16>), [[COPY25]](<2 x s16>), [[COPY26]](<2 x s16>), [[COPY27]](<2 x s16>), [[COPY28]](<2 x s16>), [[COPY29]](<2 x s16>), [[COPY30]](<2 x s16>), [[COPY31]](<2 x s16>), [[LOAD]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<65 x s16>), [[UV1:%[0-9]+]]:_(<65 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<130 x s16>)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[UV]](<65 x s16>), [[DEF1]](p1) :: (store 130 into `<65 x i16> addrspace(1)* undef`, align 256, addrspace 1)
+  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
+  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  store <65 x i16> %arg0, <65 x i16> addrspace(1)* undef
   ret void
 }
 
@@ -1191,10 +1245,11 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
   ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-  ; CHECK:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[EXTRACT]](<3 x s16>), [[DEF]](p1) :: (store 6 into `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[UV]](<3 x s16>), [[DEF1]](p1) :: (store 6 into `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK:   S_SETPC_B64_return [[COPY3]]
   store <3 x half> %arg0, <3 x half> addrspace(1)* undef

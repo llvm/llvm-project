@@ -105,15 +105,16 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; UNPACKED:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; UNPACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-  ; UNPACKED:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+  ; UNPACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; UNPACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+  ; UNPACKED:   [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
   ; UNPACKED:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
   ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
@@ -137,9 +138,10 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; PACKED:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; PACKED:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[EXTRACT]](<3 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; PACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[UV]](<3 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
