@@ -801,8 +801,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
-  RD->setHasODRHash(true);
-  RD->ODRHash = Record.readInt();
+  RD->setODRHash(Record.readInt());
 
   // C++ applies ODR checking in VisitCXXRecordDecl instead. Note that
   // structural equivalence is the usual way to check for ODR-like semantics
