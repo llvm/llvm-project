@@ -270,6 +270,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
 LLDB_PLUGIN_DEFINE_ADV(SwiftREPL, ExpressionParserSwift)
 
 void SwiftREPL::Initialize() {
+  SwiftASTContext::Initialize();
   LanguageSet swift;
   swift.Insert(lldb::eLanguageTypeSwift);
   PluginManager::RegisterPlugin(ConstString("swift"), "The Swift REPL",
@@ -278,6 +279,7 @@ void SwiftREPL::Initialize() {
 
 void SwiftREPL::Terminate() {
   PluginManager::UnregisterPlugin(&CreateInstance);
+  SwiftASTContext::Terminate();
 }
 
 SwiftREPL::SwiftREPL(Target &target)
