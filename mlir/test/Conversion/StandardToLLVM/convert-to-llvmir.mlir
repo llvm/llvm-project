@@ -486,6 +486,18 @@ func @fpext(%arg0 : f16, %arg1 : f32) {
 }
 
 // Checking conversion of integer types to floating point.
+// CHECK-LABEL: @fpext
+func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x half>"> to !llvm<"<2 x float>">
+  %0 = fpext %arg0: vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x half>"> to !llvm<"<2 x double>">
+  %1 = fpext %arg0: vector<2xf16> to vector<2xf64>
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x float>"> to !llvm<"<2 x double>">
+  %2 = fpext %arg1: vector<2xf32> to vector<2xf64>
+  return
+}
+
+// Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func @fptrunc(%arg0 : f32, %arg1 : f64) {
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.float to !llvm.half
@@ -494,6 +506,18 @@ func @fptrunc(%arg0 : f32, %arg1 : f64) {
   %1 = fptrunc %arg1: f64 to f16
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.double to !llvm.float
   %2 = fptrunc %arg1: f64 to f32
+  return
+}
+
+// Checking conversion of integer types to floating point.
+// CHECK-LABEL: @fptrunc
+func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x float>"> to !llvm<"<2 x half>">
+  %0 = fptrunc %arg0: vector<2xf32> to vector<2xf16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x double>"> to !llvm<"<2 x half>">
+  %1 = fptrunc %arg1: vector<2xf64> to vector<2xf16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x double>"> to !llvm<"<2 x float>">
+  %2 = fptrunc %arg1: vector<2xf64> to vector<2xf32>
   return
 }
 
