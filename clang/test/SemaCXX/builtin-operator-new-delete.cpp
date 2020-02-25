@@ -75,7 +75,7 @@ void test_typo_in_args() {
 
 void test_arg_types() {
   __builtin_operator_new(NP);                      // expected-error {{no matching function for call to 'operator new'}}
-  __builtin_operator_new(NP, std::align_val_t(0)); // expected-error {{no matching function for call to 'operator new'}}}
+  __builtin_operator_new(NP, std::align_val_t(0)); // expected-error {{no matching function for call to 'operator new'}}
 }
 void test_return_type() {
   int w = __builtin_operator_new(42);        // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'void *'}}

@@ -2306,8 +2306,13 @@ public:
   ///    allocation function. [...]
   ///
   /// If this function is an aligned allocation/deallocation function, return
-  /// true through IsAligned.
-  bool isReplaceableGlobalAllocationFunction(bool *IsAligned = nullptr) const;
+  /// the parameter number of the requested alignment through AlignmentParam.
+  ///
+  /// If this function is an allocation/deallocation function that takes
+  /// the `std::nothrow_t` tag, return true through IsNothrow,
+  bool isReplaceableGlobalAllocationFunction(
+      Optional<unsigned> *AlignmentParam = nullptr,
+      bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
   bool isInlineBuiltinDeclaration() const;

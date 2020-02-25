@@ -9,9 +9,11 @@ typedef __typeof__(sizeof(int)) size_t;
 
 void *operator new(size_t size) throw() {
   return nullptr;
+  // expected-warning@-1 {{null returned from function that requires a non-null return value}}
 }
 void *operator new[](size_t size) throw() {
   return nullptr;
+  // expected-warning@-1 {{null returned from function that requires a non-null return value}}
 }
 
 struct S {
