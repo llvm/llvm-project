@@ -551,8 +551,6 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
                context.m_decl_context->getDeclKindName());
   }
 
-  context.m_namespace_map = std::make_shared<ClangASTImporter::NamespaceMap>();
-
   if (isa<NamespaceDecl>(context.m_decl_context)) {
     LookupInNamespace(context);
   } else if (isa<ObjCInterfaceDecl>(context.m_decl_context)) {
