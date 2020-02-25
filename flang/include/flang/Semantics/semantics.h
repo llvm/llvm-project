@@ -80,6 +80,7 @@ public:
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
   bool warnOnNonstandardUsage() const { return warnOnNonstandardUsage_; }
   bool warningsAreErrors() const { return warningsAreErrors_; }
+  bool debugModuleWriter() const { return debugModuleWriter_; }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
   Scope &globalScope() { return globalScope_; }
   parser::Messages &messages() { return messages_; }
@@ -109,6 +110,11 @@ public:
   }
   SemanticsContext &set_warningsAreErrors(bool x) {
     warningsAreErrors_ = x;
+    return *this;
+  }
+
+  SemanticsContext &set_debugModuleWriter(bool x) {
+    debugModuleWriter_ = x;
     return *this;
   }
 
@@ -175,6 +181,7 @@ private:
   std::string moduleFileSuffix_{".mod"};
   bool warnOnNonstandardUsage_{false};
   bool warningsAreErrors_{false};
+  bool debugModuleWriter_{false};
   const evaluate::IntrinsicProcTable intrinsics_;
   Scope globalScope_;
   parser::Messages messages_;
@@ -190,8 +197,9 @@ private:
 class Semantics {
 public:
   explicit Semantics(SemanticsContext &context, parser::Program &program,
-      parser::CookedSource &cooked)
+      parser::CookedSource &cooked, bool debugModuleWriter = false)
     : context_{context}, program_{program}, cooked_{cooked} {
+    context.set_debugModuleWriter(debugModuleWriter);
     context.globalScope().AddSourceRange(parser::CharBlock{cooked.data()});
   }
 

@@ -45,6 +45,7 @@ add_library(FortranSemantics
 target_link_libraries(FortranSemantics
   FortranCommon
   FortranEvaluate
+  LLVMSupport
 )
 
 install (TARGETS FortranSemantics

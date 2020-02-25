@@ -15,16 +15,14 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cerrno>
 #include <fstream>
 #include <ostream>
 #include <set>
 #include <string_view>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <vector>
 
 namespace Fortran::semantics {
@@ -62,10 +60,10 @@ static std::ostream &PutAttrs(std::ostream &, Attrs,
 static std::ostream &PutAttr(std::ostream &, Attr);
 static std::ostream &PutType(std::ostream &, const DeclTypeSpec &);
 static std::ostream &PutLower(std::ostream &, const std::string &);
-static int WriteFile(const std::string &, const std::string &);
+static std::error_code WriteFile(
+    const std::string &, const std::string &, bool = true);
 static bool FileContentsMatch(
     const std::string &, const std::string &, const std::string &);
-static std::size_t GetFileSize(const std::string &);
 static std::string CheckSum(const std::string_view &);
 
 // Collect symbols needed for a subprogram interface
@@ -135,9 +133,10 @@ void ModFileWriter::Write(const Symbol &symbol) {
   auto path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
   PutSymbols(DEREF(symbol.scope()));
-  if (int error{WriteFile(path, GetAsString(symbol))}) {
-    context_.Say(symbol.name(), "Error writing %s: %s"_err_en_US, path,
-        std::strerror(error));
+  if (std::error_code error{
+          WriteFile(path, GetAsString(symbol), context_.debugModuleWriter())}) {
+    context_.Say(
+        symbol.name(), "Error writing %s: %s"_err_en_US, path, error.message());
   }
 }
 
@@ -618,53 +617,67 @@ std::ostream &PutLower(std::ostream &os, const std::string &str) {
 }
 
 struct Temp {
-  Temp() = delete;
+  Temp(llvm::sys::fs::file_t fd, std::string path) : fd{fd}, path{path} {}
+  Temp(Temp &&t) : fd{std::exchange(t.fd, -1)}, path{std::move(t.path)} {}
   ~Temp() {
-    close(fd);
-    unlink(path.c_str());
+    if (fd >= 0) {
+      llvm::sys::fs::closeFile(fd);
+      llvm::sys::fs::remove(path.c_str());
+    }
   }
-  int fd;
+  llvm::sys::fs::file_t fd;
   std::string path;
 };
 
 // Create a temp file in the same directory and with the same suffix as path.
 // Return an open file descriptor and its path.
-static Temp MkTemp(const std::string &path) {
+static llvm::ErrorOr<Temp> MkTemp(const std::string &path) {
   auto length{path.length()};
   auto dot{path.find_last_of("./")};
-  std::string suffix{dot < length && path[dot] == '.' ? path.substr(dot) : ""};
+  std::string suffix{
+      dot < length && path[dot] == '.' ? path.substr(dot + 1) : ""};
   CHECK(length > suffix.length() &&
       path.substr(length - suffix.length()) == suffix);
-  auto tempPath{path.substr(0, length - suffix.length()) + "XXXXXX" + suffix};
-  int fd{mkstemps(&tempPath[0], suffix.length())};
-  auto mask{umask(0777)};
-  umask(mask);
-  chmod(tempPath.c_str(), 0666 & ~mask);  // temp is created with mode 0600
-  return Temp{fd, tempPath};
+  auto prefix{path.substr(0, length - suffix.length())};
+  llvm::sys::fs::file_t fd;
+  llvm::SmallString<16> tempPath;
+  if (std::error_code err{llvm::sys::fs::createUniqueFile(
+          prefix + "%%%%%%" + suffix, fd, tempPath)}) {
+    return err;
+  }
+  return Temp{fd, tempPath.c_str()};
 }
 
 // Write the module file at path, prepending header. If an error occurs,
 // return errno, otherwise 0.
-static int WriteFile(const std::string &path, const std::string &contents) {
+static std::error_code WriteFile(
+    const std::string &path, const std::string &contents, bool debug) {
   auto header{std::string{ModHeader::bom} + ModHeader::magic +
       CheckSum(contents) + ModHeader::terminator};
+  if (debug) {
+    llvm::dbgs() << "Processing module " << path << ": ";
+  }
   if (FileContentsMatch(path, header, contents)) {
-    return 0;
+    if (debug) {
+      llvm::dbgs() << "module unchanged, not writing\n";
+    }
+    return {};
   }
-  Temp temp{MkTemp(path)};
-  if (temp.fd < 0) {
-    return errno;
+  llvm::ErrorOr<Temp> temp{MkTemp(path)};
+  if (!temp) {
+    return temp.getError();
   }
-  if (write(temp.fd, header.c_str(), header.size()) !=
-          static_cast<ssize_t>(header.size()) ||
-      write(temp.fd, contents.c_str(), contents.size()) !=
-          static_cast<ssize_t>(contents.size())) {
-    return errno;
+  llvm::raw_fd_ostream writer(temp->fd, /*shouldClose=*/false);
+  writer << header;
+  writer << contents;
+  writer.flush();
+  if (writer.has_error()) {
+    return writer.error();
   }
-  if (std::rename(temp.path.c_str(), path.c_str()) == -1) {
-    return errno;
+  if (debug) {
+    llvm::dbgs() << "module written\n";
   }
-  return 0;
+  return llvm::sys::fs::rename(temp->path, path);
 }
 
 // Return true if the stream matches what we would write for the mod file.
@@ -672,34 +685,21 @@ static bool FileContentsMatch(const std::string &path,
     const std::string &header, const std::string &contents) {
   std::size_t hsize{header.size()};
   std::size_t csize{contents.size()};
-  if (GetFileSize(path) != hsize + csize) {
+  auto buf_or{llvm::MemoryBuffer::getFile(path)};
+  if (!buf_or) {
     return false;
   }
-  int fd{open(path.c_str(), O_RDONLY)};
-  if (fd < 0) {
+  auto buf = std::move(buf_or.get());
+  if (buf->getBufferSize() != hsize + csize) {
     return false;
   }
-  constexpr std::size_t bufSize{4096};
-  std::string buffer(bufSize, '\0');
-  if (read(fd, &buffer[0], hsize) != static_cast<ssize_t>(hsize) ||
-      std::memcmp(&buffer[0], &header[0], hsize) != 0) {
-    close(fd);
-    return false;  // header doesn't match
+  if (!std::equal(header.begin(), header.end(), buf->getBufferStart(),
+          buf->getBufferStart() + hsize)) {
+    return false;
   }
-  for (auto remaining{csize};;) {
-    auto bytes{std::min(bufSize, remaining)};
-    auto got{read(fd, &buffer[0], bytes)};
-    if (got != static_cast<ssize_t>(bytes) ||
-        std::memcmp(&buffer[0], &contents[csize - remaining], bytes) != 0) {
-      close(fd);
-      return false;
-    }
-    if (bytes == 0 && remaining == 0) {
-      close(fd);
-      return true;
-    }
-    remaining -= bytes;
-  }
+
+  return std::equal(contents.begin(), contents.end(),
+      buf->getBufferStart() + hsize, buf->getBufferEnd());
 }
 
 // Compute a simple hash of the contents of a module file and
@@ -727,15 +727,6 @@ static bool VerifyHeader(const char *content, std::size_t len) {
   std::string_view expectSum{sv.substr(ModHeader::magicLen, ModHeader::sumLen)};
   std::string actualSum{CheckSum(sv.substr(ModHeader::len))};
   return expectSum == actualSum;
-}
-
-static std::size_t GetFileSize(const std::string &path) {
-  struct stat statbuf;
-  if (stat(path.c_str(), &statbuf) == 0) {
-    return static_cast<std::size_t>(statbuf.st_size);
-  } else {
-    return 0;
-  }
 }
 
 Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {

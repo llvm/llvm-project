@@ -98,6 +98,7 @@ struct DriverOptions {
   bool dumpSymbols{false};
   bool debugResolveNames{false};
   bool debugNoSemantics{false};
+  bool debugModuleWriter{false};
   bool measureTree{false};
   bool unparseTypedExprsToPGF90{false};
   std::vector<std::string> pgf90Args;
@@ -251,8 +252,8 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   if (!driver.debugNoSemantics || driver.debugResolveNames ||
       driver.dumpSymbols || driver.dumpUnparseWithSymbols ||
       driver.getDefinition || driver.getSymbolsSources) {
-    Fortran::semantics::Semantics semantics{
-        semanticsContext, parseTree, parsing.cooked()};
+    Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
+        parsing.cooked(), driver.debugModuleWriter};
     semantics.Perform();
     semantics.EmitMessages(std::cerr);
     if (driver.dumpSymbols) {
@@ -493,6 +494,8 @@ int main(int argc, char *const argv[]) {
       driver.dumpSymbols = true;
     } else if (arg == "-fdebug-resolve-names") {
       driver.debugResolveNames = true;
+    } else if (arg == "-fdebug-module-writer") {
+      driver.debugModuleWriter = true;
     } else if (arg == "-fdebug-measure-parse-tree") {
       driver.measureTree = true;
     } else if (arg == "-fdebug-instrumented-parse") {
