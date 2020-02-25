@@ -542,6 +542,11 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
     if (!Loc)
       return true;
 
+    // Anonymous parameters of an inheriting constructor are live for the entire
+    // duration of the constructor.
+    if (isa<CXXInheritedCtorInitExpr>(Loc))
+      return true;
+
     if (LCtx->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, VR->getDecl()))
       return true;
 

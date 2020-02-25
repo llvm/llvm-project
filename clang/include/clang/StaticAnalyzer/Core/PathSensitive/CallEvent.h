@@ -63,6 +63,9 @@ enum CallEventKind {
   CE_BEG_CXX_INSTANCE_CALLS = CE_CXXMember,
   CE_END_CXX_INSTANCE_CALLS = CE_CXXDestructor,
   CE_CXXConstructor,
+  CE_CXXInheritedConstructor,
+  CE_BEG_CXX_CONSTRUCTOR_CALLS = CE_CXXConstructor,
+  CE_END_CXX_CONSTRUCTOR_CALLS = CE_CXXInheritedConstructor,
   CE_CXXAllocator,
   CE_BEG_FUNCTION_CALLS = CE_Function,
   CE_END_FUNCTION_CALLS = CE_CXXAllocator,
@@ -818,10 +821,38 @@ public:
   }
 };
 
+/// Represents any constructor invocation. This includes regular constructors
+/// and inherited constructors.
+class AnyCXXConstructorCall : public AnyFunctionCall {
+protected:
+  AnyCXXConstructorCall(const Expr *E, const MemRegion *Target,
+                        ProgramStateRef St, const LocationContext *LCtx)
+      : AnyFunctionCall(E, St, LCtx) {
+    assert(E && (isa<CXXConstructExpr>(E) || isa<CXXInheritedCtorInitExpr>(E)));
+    // Target may be null when the region is unknown.
+    Data = Target;
+  }
+
+  void getExtraInvalidatedValues(ValueList &Values,
+         RegionAndSymbolInvalidationTraits *ETraits) const override;
+
+  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+                                    BindingsTy &Bindings) const override;
+
+public:
+  /// Returns the value of the implicit 'this' object.
+  SVal getCXXThisVal() const;
+
+  static bool classof(const CallEvent *Call) {
+    return Call->getKind() >= CE_BEG_CXX_CONSTRUCTOR_CALLS &&
+           Call->getKind() <= CE_END_CXX_CONSTRUCTOR_CALLS;
+  }
+};
+
 /// Represents a call to a C++ constructor.
 ///
 /// Example: \c T(1)
-class CXXConstructorCall : public AnyFunctionCall {
+class CXXConstructorCall : public AnyCXXConstructorCall {
   friend class CallEventManager;
 
 protected:
@@ -834,16 +865,11 @@ protected:
   /// \param LCtx The location context at this point in the program.
   CXXConstructorCall(const CXXConstructExpr *CE, const MemRegion *Target,
                      ProgramStateRef St, const LocationContext *LCtx)
-      : AnyFunctionCall(CE, St, LCtx) {
-    Data = Target;
-  }
+      : AnyCXXConstructorCall(CE, Target, St, LCtx) {}
 
   CXXConstructorCall(const CXXConstructorCall &Other) = default;
 
   void cloneTo(void *Dest) const override { new (Dest) CXXConstructorCall(*this); }
-
-  void getExtraInvalidatedValues(ValueList &Values,
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
 
 public:
   virtual const CXXConstructExpr *getOriginExpr() const {
@@ -860,16 +886,70 @@ public:
     return getOriginExpr()->getArg(Index);
   }
 
-  /// Returns the value of the implicit 'this' object.
-  SVal getCXXThisVal() const;
-
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
-                                    BindingsTy &Bindings) const override;
-
   Kind getKind() const override { return CE_CXXConstructor; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXConstructor;
+  }
+};
+
+/// Represents a call to a C++ inherited constructor.
+///
+/// Example: \c class T : public S { using S::S; }; T(1);
+class CXXInheritedConstructorCall : public AnyCXXConstructorCall {
+  friend class CallEventManager;
+
+protected:
+  CXXInheritedConstructorCall(const CXXInheritedCtorInitExpr *CE,
+                              const MemRegion *Target, ProgramStateRef St,
+                              const LocationContext *LCtx)
+      : AnyCXXConstructorCall(CE, Target, St, LCtx) {}
+
+  CXXInheritedConstructorCall(const CXXInheritedConstructorCall &Other) =
+      default;
+
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXInheritedConstructorCall(*this);
+  }
+
+public:
+  virtual const CXXInheritedCtorInitExpr *getOriginExpr() const {
+    return cast<CXXInheritedCtorInitExpr>(AnyFunctionCall::getOriginExpr());
+  }
+
+  const CXXConstructorDecl *getDecl() const override {
+    return getOriginExpr()->getConstructor();
+  }
+
+  /// Obtain the stack frame of the inheriting constructor. Argument expressions
+  /// can be found on the call site of that stack frame.
+  const StackFrameContext *getInheritingStackFrame() const;
+
+  /// Obtain the CXXConstructExpr for the sub-class that inherited the current
+  /// constructor (possibly indirectly). It's the statement that contains
+  /// argument expressions.
+  const CXXConstructExpr *getInheritingConstructor() const {
+    return cast<CXXConstructExpr>(getInheritingStackFrame()->getCallSite());
+  }
+
+  unsigned getNumArgs() const override {
+    return getInheritingConstructor()->getNumArgs();
+  }
+
+  const Expr *getArgExpr(unsigned Index) const override {
+    return getInheritingConstructor()->getArg(Index);
+  }
+
+  virtual SVal getArgSVal(unsigned Index) const override {
+    return getState()->getSVal(
+        getArgExpr(Index),
+        getInheritingStackFrame()->getParent()->getStackFrame());
+  }
+
+  Kind getKind() const override { return CE_CXXInheritedConstructor; }
+
+  static bool classof(const CallEvent *CA) {
+    return CA->getKind() == CE_CXXInheritedConstructor;
   }
 };
 
@@ -1230,6 +1310,13 @@ public:
   getCXXConstructorCall(const CXXConstructExpr *E, const MemRegion *Target,
                         ProgramStateRef State, const LocationContext *LCtx) {
     return create<CXXConstructorCall>(E, Target, State, LCtx);
+  }
+
+  CallEventRef<CXXInheritedConstructorCall>
+  getCXXInheritedConstructorCall(const CXXInheritedCtorInitExpr *E,
+                                 const MemRegion *Target, ProgramStateRef State,
+                                 const LocationContext *LCtx) {
+    return create<CXXInheritedConstructorCall>(E, Target, State, LCtx);
   }
 
   CallEventRef<CXXDestructorCall>
