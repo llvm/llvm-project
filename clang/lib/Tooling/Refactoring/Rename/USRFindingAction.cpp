@@ -126,12 +126,14 @@ private:
     addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
   }
 
-  void addUSRsOfCtorDtors(const CXXRecordDecl *RecordDecl) {
-    RecordDecl = RecordDecl->getDefinition();
+  void addUSRsOfCtorDtors(const CXXRecordDecl *RD) {
+    const auto* RecordDecl = RD->getDefinition();
 
     // Skip if the CXXRecordDecl doesn't have definition.
-    if (!RecordDecl)
+    if (!RecordDecl) {
+      USRSet.insert(getUSRForDecl(RD));
       return;
+    }
 
     for (const auto *CtorDecl : RecordDecl->ctors())
       USRSet.insert(getUSRForDecl(CtorDecl));
