@@ -19,11 +19,13 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
-  class TargetTransformInfo;
+  extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are safe to speculate anywhere their operands are
@@ -177,11 +179,13 @@ namespace llvm {
     /// At is an optional parameter which specifies point in code where user is
     /// going to expand this expression. Sometimes this knowledge can lead to a
     /// more accurate cost estimation.
-    bool isHighCostExpansion(const SCEV *Expr, Loop *L,
+    bool isHighCostExpansion(const SCEV *Expr, Loop *L, unsigned Budget,
                              const TargetTransformInfo *TTI,
                              const Instruction *At = nullptr) {
       SmallPtrSet<const SCEV *, 8> Processed;
-      return isHighCostExpansionHelper(Expr, L, At, TTI, Processed);
+      int BudgetRemaining = Budget * TargetTransformInfo::TCC_Basic;
+      return isHighCostExpansionHelper(Expr, L, At, BudgetRemaining, TTI,
+                                       Processed);
     }
 
     /// This method returns the canonical induction variable of the specified
@@ -324,7 +328,7 @@ namespace llvm {
 
     /// Recursive helper function for isHighCostExpansion.
     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
-                                   const Instruction *At,
+                                   const Instruction *At, int &BudgetRemaining,
                                    const TargetTransformInfo *TTI,
                                    SmallPtrSetImpl<const SCEV *> &Processed);
 
