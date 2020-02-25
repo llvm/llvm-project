@@ -12,7 +12,7 @@ import tempfile
 import time
 
 from dex.utils.Exceptions import Error
-
+from dex.utils.Warning import warn
 
 class WorkingDirectory(object):
     def __init__(self, context, *args, **kwargs):
@@ -35,12 +35,12 @@ class WorkingDirectory(object):
                 self.path))
             return
 
-        exception = AssertionError('should never be raised')
         for _ in range(100):
             try:
                 shutil.rmtree(self.path)
                 return
-            except OSError as e:
-                exception = e
+            except OSError:
                 time.sleep(0.1)
-        raise Error(exception)
+
+        warn(self.context, '"{}" left in place (couldn\'t delete)\n'.format(self.path))
+        return
