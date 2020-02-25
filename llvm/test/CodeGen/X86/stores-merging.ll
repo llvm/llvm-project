@@ -219,3 +219,26 @@ define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #
   ret void
 }
 
+; These are miscompiles - we should store '1', not '-1'.
+; https://bugs.llvm.org/show_bug.cgi?id=43446
+define void @pr43446_0(i64 %x) {
+; CHECK-LABEL: pr43446_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $-1, (%rdi)
+; CHECK-NEXT:    retq
+  %a = inttoptr i64 %x to i8*
+  store i8 -2, i8* %a, align 1
+  %b = inttoptr i64 %x to i1*
+  store i1 true, i1* %b, align 1
+  ret void
+}
+define void @pr43446_1(i8* %a) {
+; CHECK-LABEL: pr43446_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $-1, (%rdi)
+; CHECK-NEXT:    retq
+  store i8 -2, i8* %a, align 1
+  %b = bitcast i8* %a to i1*
+  store i1 true, i1* %b, align 1
+  ret void
+}
