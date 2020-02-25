@@ -889,24 +889,22 @@ void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
                                Params);
 }
 
-SVal CXXConstructorCall::getCXXThisVal() const {
+SVal AnyCXXConstructorCall::getCXXThisVal() const {
   if (Data)
     return loc::MemRegionVal(static_cast<const MemRegion *>(Data));
   return UnknownVal();
 }
 
-void CXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
+void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
                            RegionAndSymbolInvalidationTraits *ETraits) const {
-  if (Data) {
-    loc::MemRegionVal MV(static_cast<const MemRegion *>(Data));
-    if (SymbolRef Sym = MV.getAsSymbol(true))
-      ETraits->setTrait(Sym,
-                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
-    Values.push_back(MV);
-  }
+  SVal V = getCXXThisVal();
+  if (SymbolRef Sym = V.getAsSymbol(true))
+    ETraits->setTrait(Sym,
+                      RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+  Values.push_back(V);
 }
 
-void CXXConstructorCall::getInitialStackFrameContents(
+void AnyCXXConstructorCall::getInitialStackFrameContents(
                                              const StackFrameContext *CalleeCtx,
                                              BindingsTy &Bindings) const {
   AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
@@ -918,6 +916,14 @@ void CXXConstructorCall::getInitialStackFrameContents(
     Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   }
+}
+
+const StackFrameContext *
+CXXInheritedConstructorCall::getInheritingStackFrame() const {
+  const StackFrameContext *SFC = getLocationContext()->getStackFrame();
+  while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
+    SFC = SFC->getParent()->getStackFrame();
+  return SFC;
 }
 
 SVal CXXDestructorCall::getCXXThisVal() const {
@@ -1392,17 +1398,20 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
       return Out;
 
-    // All other cases are handled by getCall.
-    assert(isa<CXXConstructExpr>(CallSite) &&
-           "This is not an inlineable statement");
-
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
     const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
     Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
     SVal ThisVal = State->getSVal(ThisPtr);
 
-    return getCXXConstructorCall(cast<CXXConstructExpr>(CallSite),
-                                 ThisVal.getAsRegion(), State, CallerCtx);
+    if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx);
+    else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
+      return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
+                                            CallerCtx);
+    else {
+      // All other cases are handled by getCall.
+      llvm_unreachable("This is not an inlineable statement");
+    }
   }
 
   // Fall back to the CFG. The only thing we haven't handled yet is

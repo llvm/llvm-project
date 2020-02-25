@@ -663,6 +663,7 @@ RetainSummaryManager::getSummary(AnyCall C,
   switch (C.getKind()) {
   case AnyCall::Function:
   case AnyCall::Constructor:
+  case AnyCall::InheritedConstructor:
   case AnyCall::Allocator:
   case AnyCall::Deallocator:
     Summ = getFunctionSummary(cast_or_null<FunctionDecl>(C.getDecl()));
