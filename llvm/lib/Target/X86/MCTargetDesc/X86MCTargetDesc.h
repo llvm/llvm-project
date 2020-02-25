@@ -125,10 +125,6 @@ MCRegister getX86SubSuperRegisterOrZero(MCRegister, unsigned,
 
 } // End llvm namespace
 
-// Some Unix systems define an FSCALE macro in sys/param.h. This macro somehow
-// gets pulled into this header when -fmodules is enabled, preventing us from
-// textually including X86GenInstrInfo.inc.
-#undef FSCALE
 
 // Defines symbolic names for X86 registers.  This defines a mapping from
 // register name to register number.
