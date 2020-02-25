@@ -1039,6 +1039,30 @@ func @invalid_memref_cast() {
 
 // -----
 
+func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
+  // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
+  %x = atomic_rmw "addf" %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
+  return
+}
+
+// -----
+
+func @atomic_rmw_expects_float(%I: memref<16x10xi32>, %i : index, %val : i32) {
+  // expected-error@+1 {{expects a floating-point type}}
+  %x = atomic_rmw "addf" %val, %I[%i, %i] : (i32, memref<16x10xi32>) -> i32
+  return
+}
+
+// -----
+
+func @atomic_rmw_expects_int(%I: memref<16x10xf32>, %i : index, %val : f32) {
+  // expected-error@+1 {{expects an integer type}}
+  %x = atomic_rmw "addi" %val, %I[%i, %i] : (f32, memref<16x10xf32>) -> f32
+  return
+}
+
+// -----
+
 // alignment is not power of 2.
 func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{alignment must be power of 2}}

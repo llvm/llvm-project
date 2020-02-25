@@ -135,7 +135,8 @@ static void printStandardCastOp(Operation *op, OpAsmPrinter &p) {
 }
 
 /// A custom cast operation verifier.
-template <typename T> static LogicalResult verifyCastOp(T op) {
+template <typename T>
+static LogicalResult verifyCastOp(T op) {
   auto opType = op.getOperand().getType();
   auto resType = op.getType();
   if (!T::areCastCompatible(opType, resType))
@@ -2612,6 +2613,41 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() > fb.getWidth();
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AtomicRMWOp op) {
+  if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
+    return op.emitOpError(
+        "expects the number of subscripts to be equal to memref rank");
+  switch (op.kind()) {
+  case AtomicRMWKind::addf:
+  case AtomicRMWKind::maxf:
+  case AtomicRMWKind::minf:
+  case AtomicRMWKind::mulf:
+    if (!op.value().getType().isa<FloatType>())
+      return op.emitOpError()
+             << "with kind '" << stringifyAtomicRMWKind(op.kind())
+             << "' expects a floating-point type";
+    break;
+  case AtomicRMWKind::addi:
+  case AtomicRMWKind::maxs:
+  case AtomicRMWKind::maxu:
+  case AtomicRMWKind::mins:
+  case AtomicRMWKind::minu:
+  case AtomicRMWKind::muli:
+    if (!op.value().getType().isa<IntegerType>())
+      return op.emitOpError()
+             << "with kind '" << stringifyAtomicRMWKind(op.kind())
+             << "' expects an integer type";
+    break;
+  default:
+    break;
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
