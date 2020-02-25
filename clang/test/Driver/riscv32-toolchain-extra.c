@@ -19,6 +19,7 @@
 // RUN: ln -s %S/Inputs/basic_riscv32_nogcc_tree/bin/riscv32-unknown-elf-ld %T/testroot-riscv32-baremetal-nogcc/bin/riscv32-unknown-elf-ld
 // RUN: ln -s %S/Inputs/basic_riscv32_nogcc_tree/riscv32-unknown-elf %T/testroot-riscv32-baremetal-nogcc/riscv32-unknown-elf
 // RUN: %T/testroot-riscv32-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    --gcc-toolchain=%T/testroot-riscv32-baremetal-nogcc/invalid \
 // RUN:    -target riscv32-unknown-elf --rtlib=platform 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
