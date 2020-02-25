@@ -2138,6 +2138,10 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction *At, int &BudgetRemaining,
     const TargetTransformInfo *TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
+  // Was the cost of expansion of this expression already accounted for?
+  if (!Processed.insert(S).second)
+    return false; // We have already accounted for this expression.
+
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
   if (At && getRelatedExistingExpansion(S, At, L))
@@ -2159,8 +2163,6 @@ bool SCEVExpander::isHighCostExpansionHelper(
                                      L, At, BudgetRemaining, TTI, Processed);
   }
 
-  if (!Processed.insert(S).second)
-    return false;
 
   if (auto *UDivExpr = dyn_cast<SCEVUDivExpr>(S)) {
     // If the divisor is a power of two and the SCEV type fits in a native
