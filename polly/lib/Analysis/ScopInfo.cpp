@@ -1692,25 +1692,12 @@ isl::set Scop::getDomainConditions(BasicBlock *BB) const {
   return getDomainConditions(BBR->getEntry());
 }
 
-int Scop::NextScopID = 0;
-
-std::string Scop::CurrentFunc;
-
-int Scop::getNextID(std::string ParentFunc) {
-  if (ParentFunc != CurrentFunc) {
-    CurrentFunc = ParentFunc;
-    NextScopID = 0;
-  }
-  return NextScopID++;
-}
-
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            DominatorTree &DT, ScopDetection::DetectionContext &DC,
-           OptimizationRemarkEmitter &ORE)
+           OptimizationRemarkEmitter &ORE, int ID)
     : IslCtx(isl_ctx_alloc(), isl_ctx_free), SE(&ScalarEvolution), DT(&DT),
       R(R), name(None), HasSingleExitEdge(R.getExitingBlock()), DC(DC),
-      ORE(ORE), Affinator(this, LI),
-      ID(getNextID((*R.getEntry()->getParent()).getName().str())) {
+      ORE(ORE), Affinator(this, LI), ID(ID) {
   if (IslOnErrorAbort)
     isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
   buildContext();
