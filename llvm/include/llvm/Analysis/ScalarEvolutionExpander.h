@@ -176,18 +176,19 @@ namespace llvm {
     /// Return true for expressions that can't be evaluated at runtime
     /// within given \b Budget.
     ///
-    /// At is an optional parameter which specifies point in code where user is
-    /// going to expand this expression. Sometimes this knowledge can lead to a
-    /// more accurate cost estimation.
+    /// At is a parameter which specifies point in code where user is going to
+    /// expand this expression. Sometimes this knowledge can lead to
+    /// a less pessimistic cost estimation.
     bool isHighCostExpansion(const SCEV *Expr, Loop *L, unsigned Budget,
                              const TargetTransformInfo *TTI,
-                             const Instruction *At = nullptr) {
+                             const Instruction *At) {
       assert(TTI && "This function requires TTI to be provided.");
+      assert(At && "This function requires At instruction to be provided.");
       if (!TTI)      // In assert-less builds, avoid crashing
         return true; // by always claiming to be high-cost.
       SmallPtrSet<const SCEV *, 8> Processed;
       int BudgetRemaining = Budget * TargetTransformInfo::TCC_Basic;
-      return isHighCostExpansionHelper(Expr, L, At, BudgetRemaining, *TTI,
+      return isHighCostExpansionHelper(Expr, L, *At, BudgetRemaining, *TTI,
                                        Processed);
     }
 
@@ -331,7 +332,7 @@ namespace llvm {
 
     /// Recursive helper function for isHighCostExpansion.
     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
-                                   const Instruction *At, int &BudgetRemaining,
+                                   const Instruction &At, int &BudgetRemaining,
                                    const TargetTransformInfo &TTI,
                                    SmallPtrSetImpl<const SCEV *> &Processed);
 
