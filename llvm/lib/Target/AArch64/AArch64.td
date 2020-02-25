@@ -101,7 +101,7 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
     "true", "Enable v8.2 data Cache Clean to Point of Persistence" >;
 
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
-  "Enable Scalable Vector Extension (SVE) instructions">;
+  "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
 
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
   "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
