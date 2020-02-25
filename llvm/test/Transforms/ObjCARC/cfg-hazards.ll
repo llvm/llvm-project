@@ -430,6 +430,48 @@ exit:
   ret void
 }
 
+; The retain call in the entry block shouldn't be moved to the loop body.
+
+; CHECK: define void @test14(i8* %[[VAL0:.*]],
+; CHECK: %[[V1:.*]] = tail call i8* @llvm.objc.retain(i8* %[[VAL0]])
+; CHECK: %[[CMP:.*]] = icmp eq i8* %[[VAL0]], null
+; CHECK: br i1 %[[CMP]], label %{{.*}}, label %{{.*}}
+
+define void @test14(i8* %val0, i8 %val1) {
+entry:
+  %v1 = tail call i8* @llvm.objc.retain(i8* %val0)
+  %cmp = icmp eq i8* %val0, null
+  br i1 %cmp, label %if.end27, label %if.then
+
+if.then:
+  %tobool = icmp eq i8 %val1, 1
+  br label %for.body
+
+for.cond:
+  %cmp6 = icmp eq i8 %val1, 2
+  br i1 %cmp6, label %for.body, label %for.end.loopexit
+
+for.body:
+  call void @callee()
+  %tobool9 = icmp eq i8 %val1, 0
+  br i1 %tobool9, label %for.cond, label %if.then10
+
+if.then10:
+  br label %for.end
+
+for.end.loopexit:
+  br label %for.end
+
+for.end:
+  call void @callee()
+  call void @use_pointer(i8* %v1)
+  br label %if.end27
+
+if.end27:
+  call void @llvm.objc.release(i8* %v1) #0, !clang.imprecise_release !0
+  ret void
+}
+
 ; CHECK: attributes [[NUW]] = { nounwind }
 
 !0 = !{}
