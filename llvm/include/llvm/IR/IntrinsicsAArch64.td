@@ -1692,6 +1692,18 @@ def int_aarch64_sve_ptest_first : AdvSIMD_SVE_PTEST_Intrinsic;
 def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic;
 
 //
+// Reinterpreting data
+//
+
+def int_aarch64_sve_convert_from_svbool : Intrinsic<[llvm_anyvector_ty],
+                                                    [llvm_nxv16i1_ty],
+                                                    [IntrNoMem]>;
+
+def int_aarch64_sve_convert_to_svbool : Intrinsic<[llvm_nxv16i1_ty],
+                                                  [llvm_anyvector_ty],
+                                                  [IntrNoMem]>;
+
+//
 // Gather loads: scalar base + vector offsets
 //
 
