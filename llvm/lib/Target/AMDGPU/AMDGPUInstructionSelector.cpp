@@ -2479,7 +2479,10 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   unsigned Mods = 0;
   MachineInstr *MI = MRI.getVRegDef(Src);
 
-  if (MI && MI->getOpcode() == AMDGPU::G_FNEG) {
+  if (MI && MI->getOpcode() == AMDGPU::G_FNEG &&
+      // It's possible to see an f32 fneg here, but unlikely.
+      // TODO: Treat f32 fneg as only high bit.
+      MRI.getType(Src) == LLT::vector(2, 16)) {
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
     Src = MI->getOperand(1).getReg();
     MI = MRI.getVRegDef(Src);
