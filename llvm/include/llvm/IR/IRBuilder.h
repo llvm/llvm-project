@@ -296,6 +296,10 @@ public:
       I->addAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
   }
 
+  void setDefaultOperandBundles(ArrayRef<OperandBundleDef> OpBundles) {
+    DefaultOperandBundles = OpBundles;
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
@@ -341,6 +345,25 @@ public:
       Builder.DefaultFPMathTag = FPMathTag;
     }
   };
+
+  // RAII object that stores the current default operand bundles and restores
+  // them when the object is destroyed.
+  class OperandBundlesGuard {
+    IRBuilderBase &Builder;
+    ArrayRef<OperandBundleDef> DefaultOperandBundles;
+
+  public:
+    OperandBundlesGuard(IRBuilderBase &B)
+        : Builder(B), DefaultOperandBundles(B.DefaultOperandBundles) {}
+
+    OperandBundlesGuard(const OperandBundlesGuard &) = delete;
+    OperandBundlesGuard &operator=(const OperandBundlesGuard &) = delete;
+
+    ~OperandBundlesGuard() {
+      Builder.DefaultOperandBundles = DefaultOperandBundles;
+    }
+  };
+
 
   //===--------------------------------------------------------------------===//
   // Miscellaneous creation methods.

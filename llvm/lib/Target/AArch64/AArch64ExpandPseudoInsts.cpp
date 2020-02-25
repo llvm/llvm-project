@@ -68,6 +68,8 @@ private:
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
 
+  bool expand_DestructiveOp(MachineInstr &MI, MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI);
   bool expandCMP_SWAP(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                       unsigned LdarOp, unsigned StlrOp, unsigned CmpOp,
                       unsigned ExtendImm, unsigned ZeroReg,
@@ -344,6 +346,176 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   return true;
 }
 
+/// \brief Expand Pseudos to Instructions with destructive operands.
+///
+/// This mechanism uses MOVPRFX instructions for zeroing the false lanes
+/// or for fixing relaxed register allocation conditions to comply with
+/// the instructions register constraints. The latter case may be cheaper
+/// than setting the register constraints in the register allocator,
+/// since that will insert regular MOV instructions rather than MOVPRFX.
+///
+/// Example (after register allocation):
+///
+///   FSUB_ZPZZ_ZERO_B Z0, Pg, Z1, Z0
+///
+/// * The Pseudo FSUB_ZPZZ_ZERO_B maps to FSUB_ZPmZ_B.
+/// * We cannot map directly to FSUB_ZPmZ_B because the register
+///   constraints of the instruction are not met.
+/// * Also the _ZERO specifies the false lanes need to be zeroed.
+///
+/// We first try to see if the destructive operand == result operand,
+/// if not, we try to swap the operands, e.g.
+///
+///   FSUB_ZPmZ_B  Z0, Pg/m, Z0, Z1
+///
+/// But because FSUB_ZPmZ is not commutative, this is semantically
+/// different, so we need a reverse instruction:
+///
+///   FSUBR_ZPmZ_B  Z0, Pg/m, Z0, Z1
+///
+/// Then we implement the zeroing of the false lanes of Z0 by adding
+/// a zeroing MOVPRFX instruction:
+///
+///   MOVPRFX_ZPzZ_B Z0, Pg/z, Z0
+///   FSUBR_ZPmZ_B   Z0, Pg/m, Z0, Z1
+///
+/// Note that this can only be done for _ZERO or _UNDEF variants where
+/// we can guarantee the false lanes to be zeroed (by implementing this)
+/// or that they are undef (don't care / not used), otherwise the
+/// swapping of operands is illegal because the operation is not
+/// (or cannot be emulated to be) fully commutative.
+bool AArch64ExpandPseudo::expand_DestructiveOp(
+                            MachineInstr &MI,
+                            MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI) {
+  unsigned Opcode = AArch64::getSVEPseudoMap(MI.getOpcode());
+  uint64_t DType = TII->get(Opcode).TSFlags & AArch64::DestructiveInstTypeMask;
+  uint64_t FalseLanes = MI.getDesc().TSFlags & AArch64::FalseLanesMask;
+  bool FalseZero = FalseLanes == AArch64::FalseLanesZero;
+
+  unsigned DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+
+  if (DType == AArch64::DestructiveBinary)
+    assert(DstReg != MI.getOperand(3).getReg());
+
+  bool UseRev = false;
+  unsigned PredIdx, DOPIdx, SrcIdx;
+  switch (DType) {
+  case AArch64::DestructiveBinaryComm:
+  case AArch64::DestructiveBinaryCommWithRev:
+    if (DstReg == MI.getOperand(3).getReg()) {
+      // FSUB Zd, Pg, Zs1, Zd  ==> FSUBR   Zd, Pg/m, Zd, Zs1
+      std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 3, 2);
+      UseRev = true;
+      break;
+    }
+    LLVM_FALLTHROUGH;
+  case AArch64::DestructiveBinary:
+    std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
+   break;
+  default:
+    llvm_unreachable("Unsupported Destructive Operand type");
+  }
+
+#ifndef NDEBUG
+  // MOVPRFX can only be used if the destination operand
+  // is the destructive operand, not as any other operand,
+  // so the Destructive Operand must be unique.
+  bool DOPRegIsUnique = false;
+  switch (DType) {
+  case AArch64::DestructiveBinaryComm:
+  case AArch64::DestructiveBinaryCommWithRev:
+    DOPRegIsUnique =
+      DstReg != MI.getOperand(DOPIdx).getReg() ||
+      MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
+    break;
+  }
+
+  assert (DOPRegIsUnique && "The destructive operand should be unique");
+#endif
+
+  // Resolve the reverse opcode
+  if (UseRev) {
+    if (AArch64::getSVERevInstr(Opcode) != -1)
+      Opcode = AArch64::getSVERevInstr(Opcode);
+    else if (AArch64::getSVEOrigInstr(Opcode) != -1)
+      Opcode = AArch64::getSVEOrigInstr(Opcode);
+  }
+
+  // Get the right MOVPRFX
+  uint64_t ElementSize = TII->getElementSizeForOpcode(Opcode);
+  unsigned MovPrfx, MovPrfxZero;
+  switch (ElementSize) {
+  case AArch64::ElementSizeNone:
+  case AArch64::ElementSizeB:
+    MovPrfx = AArch64::MOVPRFX_ZZ;
+    MovPrfxZero = AArch64::MOVPRFX_ZPzZ_B;
+    break;
+  case AArch64::ElementSizeH:
+    MovPrfx = AArch64::MOVPRFX_ZZ;
+    MovPrfxZero = AArch64::MOVPRFX_ZPzZ_H;
+    break;
+  case AArch64::ElementSizeS:
+    MovPrfx = AArch64::MOVPRFX_ZZ;
+    MovPrfxZero = AArch64::MOVPRFX_ZPzZ_S;
+    break;
+  case AArch64::ElementSizeD:
+    MovPrfx = AArch64::MOVPRFX_ZZ;
+    MovPrfxZero = AArch64::MOVPRFX_ZPzZ_D;
+    break;
+  default:
+    llvm_unreachable("Unsupported ElementSize");
+  }
+
+  //
+  // Create the destructive operation (if required)
+  //
+  MachineInstrBuilder PRFX, DOP;
+  if (FalseZero) {
+    assert(ElementSize != AArch64::ElementSizeNone &&
+           "This instruction is unpredicated");
+
+    // Merge source operand into destination register
+    PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfxZero))
+               .addReg(DstReg, RegState::Define)
+               .addReg(MI.getOperand(PredIdx).getReg())
+               .addReg(MI.getOperand(DOPIdx).getReg());
+
+    // After the movprfx, the destructive operand is same as Dst
+    DOPIdx = 0;
+  } else if (DstReg != MI.getOperand(DOPIdx).getReg()) {
+    PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
+               .addReg(DstReg, RegState::Define)
+               .addReg(MI.getOperand(DOPIdx).getReg());
+    DOPIdx = 0;
+  }
+
+  //
+  // Create the destructive operation
+  //
+  DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
+    .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+
+  switch (DType) {
+  case AArch64::DestructiveBinaryComm:
+  case AArch64::DestructiveBinaryCommWithRev:
+    DOP.add(MI.getOperand(PredIdx))
+       .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+       .add(MI.getOperand(SrcIdx));
+    break;
+  }
+
+  if (PRFX) {
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
+    transferImpOps(MI, PRFX, DOP);
+  } else
+    transferImpOps(MI, DOP, DOP);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64ExpandPseudo::expandSetTagLoop(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
@@ -425,6 +597,17 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
+
+  // Check if we can expand the destructive op
+  int OrigInstr = AArch64::getSVEPseudoMap(MI.getOpcode());
+  if (OrigInstr != -1) {
+    auto &Orig = TII->get(OrigInstr);
+    if ((Orig.TSFlags & AArch64::DestructiveInstTypeMask)
+           != AArch64::NotDestructive) {
+      return expand_DestructiveOp(MI, MBB, MBBI);
+    }
+  }
+
   switch (Opcode) {
   default:
     break;

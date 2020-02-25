@@ -13,7 +13,7 @@
 #ifndef MLIR_CONVERSION_STANDARDTOSPIRV_TD
 #define MLIR_CONVERSION_STANDARDTOSPIRV_TD
 
-include "mlir/Dialect/StandardOps/Ops.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "mlir/Dialect/SPIRV/SPIRVOps.td"
 
 class BinaryOpPattern<Type type, Op src, Op tgt> :

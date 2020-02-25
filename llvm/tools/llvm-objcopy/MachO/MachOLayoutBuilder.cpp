@@ -17,7 +17,7 @@ namespace macho {
 
 uint32_t MachOLayoutBuilder::computeSizeOfCmds() const {
   uint32_t Size = 0;
-  for (const auto &LC : O.LoadCommands) {
+  for (const LoadCommand &LC : O.LoadCommands) {
     const MachO::macho_load_command &MLC = LC.MachOLoadCommand;
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {
@@ -107,7 +107,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
   const bool IsObjectFile =
       O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
   uint64_t Offset = IsObjectFile ? (HeaderSize + O.Header.SizeOfCmds) : 0;
-  for (auto &LC : O.LoadCommands) {
+  for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     StringRef Segname;
     uint64_t SegmentVmAddr;
@@ -142,27 +142,27 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     uint64_t SegOffset = Offset;
     uint64_t SegFileSize = 0;
     uint64_t VMSize = 0;
-    for (auto &Sec : LC.Sections) {
+    for (std::unique_ptr<Section> &Sec : LC.Sections) {
       if (IsObjectFile) {
-        if (Sec.isVirtualSection()) {
-          Sec.Offset = 0;
+        if (Sec->isVirtualSection()) {
+          Sec->Offset = 0;
         } else {
           uint64_t PaddingSize =
-              offsetToAlignment(SegFileSize, Align(1ull << Sec.Align));
-          Sec.Offset = SegOffset + SegFileSize + PaddingSize;
-          Sec.Size = Sec.Content.size();
-          SegFileSize += PaddingSize + Sec.Size;
+              offsetToAlignment(SegFileSize, Align(1ull << Sec->Align));
+          Sec->Offset = SegOffset + SegFileSize + PaddingSize;
+          Sec->Size = Sec->Content.size();
+          SegFileSize += PaddingSize + Sec->Size;
         }
-        VMSize = std::max(VMSize, Sec.Addr + Sec.Size);
+        VMSize = std::max(VMSize, Sec->Addr + Sec->Size);
       } else {
-        if (Sec.isVirtualSection()) {
-          Sec.Offset = 0;
-          VMSize += Sec.Size;
+        if (Sec->isVirtualSection()) {
+          Sec->Offset = 0;
+          VMSize += Sec->Size;
         } else {
-          uint32_t SectOffset = Sec.Addr - SegmentVmAddr;
-          Sec.Offset = SegOffset + SectOffset;
-          Sec.Size = Sec.Content.size();
-          SegFileSize = std::max(SegFileSize, SectOffset + Sec.Size);
+          uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
+          Sec->Offset = SegOffset + SectOffset;
+          Sec->Size = Sec->Content.size();
+          SegFileSize = std::max(SegFileSize, SectOffset + Sec->Size);
           VMSize = std::max(VMSize, SegFileSize);
         }
       }
@@ -204,11 +204,11 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
 }
 
 uint64_t MachOLayoutBuilder::layoutRelocations(uint64_t Offset) {
-  for (auto &LC : O.LoadCommands)
-    for (auto &Sec : LC.Sections) {
-      Sec.RelOff = Sec.Relocations.empty() ? 0 : Offset;
-      Sec.NReloc = Sec.Relocations.size();
-      Offset += sizeof(MachO::any_relocation_info) * Sec.NReloc;
+  for (LoadCommand &LC : O.LoadCommands)
+    for (std::unique_ptr<Section> &Sec : LC.Sections) {
+      Sec->RelOff = Sec->Relocations.empty() ? 0 : Offset;
+      Sec->NReloc = Sec->Relocations.size();
+      Offset += sizeof(MachO::any_relocation_info) * Sec->NReloc;
     }
 
   return Offset;
@@ -260,7 +260,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     }
   }
 
-  for (auto &LC : O.LoadCommands) {
+  for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {

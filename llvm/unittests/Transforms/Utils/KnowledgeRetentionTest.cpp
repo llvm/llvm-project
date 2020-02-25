@@ -51,8 +51,9 @@ void AssertMatchesExactlyAttributes(CallInst *Assume, Value *WasOn,
 #include "llvm/IR/Attributes.inc"
        }) {
     bool ShouldHaveAttr = Reg.match(Attr, &Matches) && Matches[0] == Attr;
-    if (ShouldHaveAttr != hasAttributeInAssume(*Assume, WasOn, Attr))
+    if (ShouldHaveAttr != hasAttributeInAssume(*Assume, WasOn, Attr)) {
       ASSERT_TRUE(false);
+    }
   }
 }
 
@@ -71,10 +72,12 @@ void AssertHasTheRightValue(CallInst *Assume, Value *WasOn,
                                         AssumeQuery::Lowest);
   bool ResultHigh = hasAttributeInAssume(*Assume, WasOn, Kind, &ArgValHigh,
                                          AssumeQuery::Highest);
-  if (ResultLow != ResultHigh)
+  if (ResultLow != ResultHigh || ResultHigh == false) {
     ASSERT_TRUE(false);
-  if (ArgValLow != Value || ArgValLow != ArgValHigh)
-    ASSERT_EQ(ArgValLow, Value);
+  }
+  if (ArgValLow != Value || ArgValLow != ArgValHigh) {
+    ASSERT_TRUE(false);
+  }
 }
 
 TEST(AssumeQueryAPI, Basic) {

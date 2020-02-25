@@ -41,8 +41,12 @@
 #include <thread>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "JSONUtils.h"
@@ -64,6 +68,33 @@ constexpr const char *dev_null_path = "/dev/null";
 using namespace lldb_vscode;
 
 namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Options.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Options.inc"
+#undef PREFIX
+
+static const llvm::opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {PREFIX,      NAME,      HELPTEXT,                                           \
+   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
+   PARAM,       FLAGS,     OPT_##GROUP,                                        \
+   OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Options.inc"
+#undef OPTION
+};
+class LLDBVSCodeOptTable : public llvm::opt::OptTable {
+public:
+  LLDBVSCodeOptTable() : OptTable(InfoTable, true) {}
+};
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
@@ -2719,31 +2750,69 @@ const std::map<std::string, RequestCallback> &GetRequestHandlers() {
 
 } // anonymous namespace
 
+static void printHelp(LLDBVSCodeOptTable &table, llvm::StringRef tool_name) {
+  std::string usage_str = tool_name.str() + "options";
+  table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB VSCode", false);
+
+  std::string examples = R"___(
+EXAMPLES:
+  The debug adapter can be started in two modes.
+
+  Running lldb-vscode without any arguments will start communicating with the
+  parent over stdio. Passing a port number causes lldb-vscode to start listening
+  for connections on that port.
+
+    lldb-vscode -p <port>
+
+  Passing --wait-for-debugger will pause the process at startup and wait for a
+  debugger to attach to the process.
+
+    lldb-vscode -g
+  )___";
+  llvm::outs() << examples;
+}
+
 int main(int argc, char *argv[]) {
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
 
-  if (argc == 2) {
-    const char *arg = argv[1];
+  int portno = -1;
+
+  LLDBVSCodeOptTable T;
+  unsigned MAI, MAC;
+  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
+
+  if (input_args.hasArg(OPT_help)) {
+    printHelp(T, llvm::sys::path::filename(argv[0]));
+    return 0;
+  }
+
+  if (auto *arg = input_args.getLastArg(OPT_port)) {
+    auto optarg = arg->getValue();
+    char *remainder;
+    portno = strtol(optarg, &remainder, 0);
+    if (remainder == optarg || *remainder != '\0') {
+      fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
+      exit(1);
+    }
+  }
+
 #if !defined(_WIN32)
-    if (strcmp(arg, "-g") == 0) {
-      printf("Paused waiting for debugger to attach (pid = %i)...\n", getpid());
-      pause();
-    } else {
-#else
-    {
+  if (input_args.hasArg(OPT_wait_for_debugger)) {
+    printf("Paused waiting for debugger to attach (pid = %i)...\n", getpid());
+    pause();
+  }
 #endif
-      int portno = atoi(arg);
-      printf("Listening on port %i...\n", portno);
-      SOCKET socket_fd = AcceptConnection(portno);
-      if (socket_fd >= 0) {
-        g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
-        g_vsc.output.descriptor =
-            StreamDescriptor::from_socket(socket_fd, false);
-      } else {
-        exit(1);
-      }
+  if (portno != -1) {
+    printf("Listening on port %i...\n", portno);
+    SOCKET socket_fd = AcceptConnection(portno);
+    if (socket_fd >= 0) {
+      g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
+      g_vsc.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
+    } else {
+      exit(1);
     }
   } else {
     g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);

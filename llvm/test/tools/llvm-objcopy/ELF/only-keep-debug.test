@@ -193,9 +193,9 @@ ProgramHeaders:
 
 # CHECK3:      [Nr] Name          Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK3:      [ 1] .dynsym       NOBITS   0000000000000000 000040 000018 18   A  2   1 1024
-# CHECK3-NEXT: [ 2] .dynstr       NOBITS   0000000000000000 000040 000001 00   A  0   0  0
-# CHECK3-NEXT: [ 3] .symtab       NOBITS   0000000000000000 000040 000018 18   A  4   1  0
-# CHECK3-NEXT: [ 4] .strtab       NOBITS   0000000000000000 000040 000001 00   A  0   0  0
+# CHECK3-NEXT: [ 2] .dynstr       NOBITS   0000000000000018 000040 000001 00   A  0   0  0
+# CHECK3-NEXT: [ 3] .symtab       NOBITS   0000000000000019 000040 000018 18   A  4   1  0
+# CHECK3-NEXT: [ 4] .strtab       NOBITS   0000000000000031 000040 000001 00   A  0   0  0
 # CHECK3-NEXT: [ 5] .shstrtab     STRTAB   0000000000000000 000040 00002b 00      0   0  1
 
 --- !ELF

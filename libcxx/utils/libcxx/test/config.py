@@ -418,7 +418,7 @@ class Configuration(object):
         # Configure the availability feature. Availability is only enabled
         # with libc++, because other standard libraries do not provide
         # availability markup.
-        if self.use_deployment and self.cxx_stdlib_under_test == 'libc++':
+        if self.use_deployment and self.cxx_stdlib_under_test == 'libc++' and self.use_system_cxx_lib:
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 

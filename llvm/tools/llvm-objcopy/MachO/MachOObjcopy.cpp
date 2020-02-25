@@ -18,21 +18,21 @@ namespace objcopy {
 namespace macho {
 
 using namespace object;
-using SectionPred = std::function<bool(const Section &Sec)>;
+using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
 
 static void removeSections(const CopyConfig &Config, Object &Obj) {
-  SectionPred RemovePred = [](const Section &) { return false; };
+  SectionPred RemovePred = [](const std::unique_ptr<Section> &) { return false; };
 
   if (!Config.ToRemove.empty()) {
-    RemovePred = [&Config, RemovePred](const Section &Sec) {
-      return Config.ToRemove.matches(Sec.CanonicalName);
+    RemovePred = [&Config, RemovePred](const std::unique_ptr<Section> &Sec) {
+      return Config.ToRemove.matches(Sec->CanonicalName);
     };
   }
 
   if (Config.StripAll || Config.StripDebug) {
     // Remove all debug sections.
-    RemovePred = [RemovePred](const Section &Sec) {
-      if (Sec.Segname == "__DWARF")
+    RemovePred = [RemovePred](const std::unique_ptr<Section> &Sec) {
+      if (Sec->Segname == "__DWARF")
         return true;
 
       return RemovePred(Sec);
@@ -41,8 +41,8 @@ static void removeSections(const CopyConfig &Config, Object &Obj) {
 
   if (!Config.OnlySection.empty()) {
     // Overwrite RemovePred because --only-section takes priority.
-    RemovePred = [&Config](const Section &Sec) {
-      return !Config.OnlySection.matches(Sec.CanonicalName);
+    RemovePred = [&Config](const std::unique_ptr<Section> &Sec) {
+      return !Config.OnlySection.matches(Sec->CanonicalName);
     };
   }
 
@@ -87,14 +87,14 @@ static LoadCommand buildRPathLoadCommand(StringRef Path) {
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands)
-    for (Section &Sec : LC.Sections) {
-      if (Sec.CanonicalName == SecName) {
+    for (const std::unique_ptr<Section> &Sec : LC.Sections) {
+      if (Sec->CanonicalName == SecName) {
         Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-            FileOutputBuffer::create(Filename, Sec.Content.size());
+            FileOutputBuffer::create(Filename, Sec->Content.size());
         if (!BufferOrErr)
           return BufferOrErr.takeError();
         std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
-        llvm::copy(Sec.Content, Buf->getBufferStart());
+        llvm::copy(Sec->Content, Buf->getBufferStart());
 
         if (Error E = Buf->commit())
           return E;
@@ -122,7 +122,7 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands) {
     Optional<StringRef> SegName = LC.getSegmentName();
     if (SegName && SegName == TargetSegName) {
-      LC.Sections.push_back(Sec);
+      LC.Sections.push_back(std::make_unique<Section>(Sec));
       return Error::success();
     }
   }
@@ -130,7 +130,7 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   // There's no segment named TargetSegName. Create a new load command and
   // Insert a new section into it.
   LoadCommand &NewSegment = Obj.addSegment(TargetSegName);
-  NewSegment.Sections.push_back(Sec);
+  NewSegment.Sections.push_back(std::make_unique<Section>(Sec));
   return Error::success();
 }
 
@@ -187,8 +187,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   if (Config.StripAll)
     for (LoadCommand &LC : Obj.LoadCommands)
-      for (Section &Sec : LC.Sections)
-        Sec.Relocations.clear();
+      for (std::unique_ptr<Section> &Sec : LC.Sections)
+        Sec->Relocations.clear();
 
   for (const StringRef &Flag : Config.DumpSection) {
     std::pair<StringRef, StringRef> SecPair = Flag.split("=");

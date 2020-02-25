@@ -8,7 +8,7 @@
 #ifndef MLIR_DIALECT_STANDARDOPS_EDSC_BUILDERS_H_
 #define MLIR_DIALECT_STANDARDOPS_EDSC_BUILDERS_H_
 
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"

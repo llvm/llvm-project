@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARDOPS_OPS_H
-#define MLIR_DIALECT_STANDARDOPS_OPS_H
+#ifndef MLIR_DIALECT_STANDARDOPS_IR_OPS_H
+#define MLIR_DIALECT_STANDARDOPS_IR_OPS_H
 
 #include "mlir/Analysis/CallInterfaces.h"
 #include "mlir/IR/Builders.h"
@@ -21,7 +21,7 @@
 #include "mlir/IR/StandardTypes.h"
 
 // Pull in all enum type definitions and utility function declarations.
-#include "mlir/Dialect/StandardOps/OpsEnums.h.inc"
+#include "mlir/Dialect/StandardOps/IR/OpsEnums.h.inc"
 
 namespace mlir {
 class AffineMap;
@@ -72,7 +72,7 @@ enum class CmpFPredicate {
 };
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/StandardOps/Ops.h.inc"
+#include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
 
 /// This is a refinement of the "constant" op for the case where it is
 /// returning a float value of FloatType.
@@ -339,4 +339,4 @@ raw_ostream &operator<<(raw_ostream &os, SubViewOp::Range &range);
 
 } // end namespace mlir
 
-#endif // MLIR_DIALECT_STANDARDOPS_OPS_H
+#endif // MLIR_DIALECT_IR_STANDARDOPS_IR_OPS_H

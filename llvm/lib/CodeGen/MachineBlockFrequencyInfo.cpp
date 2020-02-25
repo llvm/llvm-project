@@ -247,6 +247,12 @@ MachineBlockFrequencyInfo::isIrrLoopHeader(const MachineBasicBlock *MBB) {
   return MBFI->isIrrLoopHeader(MBB);
 }
 
+void MachineBlockFrequencyInfo::setBlockFreq(const MachineBasicBlock *MBB,
+                                             uint64_t Freq) {
+  assert(MBFI && "Expected analysis to be available");
+  MBFI->setBlockFreq(MBB, Freq);
+}
+
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
   return MBFI ? MBFI->getFunction() : nullptr;
 }

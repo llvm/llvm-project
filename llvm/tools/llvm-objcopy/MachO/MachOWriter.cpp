@@ -110,12 +110,12 @@ size_t MachOWriter::totalSize() const {
   }
 
   // Otherwise, use the last section / reloction.
-  for (const auto &LC : O.LoadCommands)
-    for (const auto &S : LC.Sections) {
-      Ends.push_back(S.Offset + S.Size);
-      if (S.RelOff)
-        Ends.push_back(S.RelOff +
-                       S.NReloc * sizeof(MachO::any_relocation_info));
+  for (const LoadCommand &LC : O.LoadCommands)
+    for (const std::unique_ptr<Section> &S : LC.Sections) {
+      Ends.push_back(S->Offset + S->Size);
+      if (S->RelOff)
+        Ends.push_back(S->RelOff +
+                       S->NReloc * sizeof(MachO::any_relocation_info));
     }
 
   if (!Ends.empty())
@@ -147,7 +147,7 @@ void MachOWriter::writeHeader() {
 
 void MachOWriter::writeLoadCommands() {
   uint8_t *Begin = B.getBufferStart() + headerSize();
-  for (const auto &LC : O.LoadCommands) {
+  for (const LoadCommand &LC : O.LoadCommands) {
     // Construct a load command.
     MachO::macho_load_command MLC = LC.MachOLoadCommand;
     switch (MLC.load_command_data.cmd) {
@@ -157,8 +157,8 @@ void MachOWriter::writeLoadCommands() {
       memcpy(Begin, &MLC.segment_command_data, sizeof(MachO::segment_command));
       Begin += sizeof(MachO::segment_command);
 
-      for (const auto &Sec : LC.Sections)
-        writeSectionInLoadCommand<MachO::section>(Sec, Begin);
+      for (const std::unique_ptr<Section> &Sec : LC.Sections)
+        writeSectionInLoadCommand<MachO::section>(*Sec, Begin);
       continue;
     case MachO::LC_SEGMENT_64:
       if (IsLittleEndian != sys::IsLittleEndianHost)
@@ -167,8 +167,8 @@ void MachOWriter::writeLoadCommands() {
              sizeof(MachO::segment_command_64));
       Begin += sizeof(MachO::segment_command_64);
 
-      for (const auto &Sec : LC.Sections)
-        writeSectionInLoadCommand<MachO::section_64>(Sec, Begin);
+      for (const std::unique_ptr<Section> &Sec : LC.Sections)
+        writeSectionInLoadCommand<MachO::section_64>(*Sec, Begin);
       continue;
     }
 
@@ -229,17 +229,17 @@ void MachOWriter::writeSectionInLoadCommand(const Section &Sec, uint8_t *&Out) {
 }
 
 void MachOWriter::writeSections() {
-  for (const auto &LC : O.LoadCommands)
-    for (const auto &Sec : LC.Sections) {
-      if (Sec.isVirtualSection())
+  for (const LoadCommand &LC : O.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections) {
+      if (Sec->isVirtualSection())
         continue;
 
-      assert(Sec.Offset && "Section offset can not be zero");
-      assert((Sec.Size == Sec.Content.size()) && "Incorrect section size");
-      memcpy(B.getBufferStart() + Sec.Offset, Sec.Content.data(),
-             Sec.Content.size());
-      for (size_t Index = 0; Index < Sec.Relocations.size(); ++Index) {
-        auto RelocInfo = Sec.Relocations[Index];
+      assert(Sec->Offset && "Section offset can not be zero");
+      assert((Sec->Size == Sec->Content.size()) && "Incorrect section size");
+      memcpy(B.getBufferStart() + Sec->Offset, Sec->Content.data(),
+             Sec->Content.size());
+      for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
+        auto RelocInfo = Sec->Relocations[Index];
         if (!RelocInfo.Scattered) {
           auto *Info =
               reinterpret_cast<MachO::relocation_info *>(&RelocInfo.Info);
@@ -249,7 +249,7 @@ void MachOWriter::writeSections() {
         if (IsLittleEndian != sys::IsLittleEndianHost)
           MachO::swapStruct(
               reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));
-        memcpy(B.getBufferStart() + Sec.RelOff +
+        memcpy(B.getBufferStart() + Sec->RelOff +
                    Index * sizeof(MachO::any_relocation_info),
                &RelocInfo.Info, sizeof(RelocInfo.Info));
       }

@@ -170,9 +170,8 @@ LogicalResult VulkanRuntime::run() {
   vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
 
   // Submit command buffer into the queue.
-  if (failed(submitCommandBuffersToQueue())) {
+  if (failed(submitCommandBuffersToQueue()))
     return failure();
-  }
 
   RETURN_ON_VULKAN_ERROR(vkQueueWaitIdle(queue), "vkQueueWaitIdle");
   return success();

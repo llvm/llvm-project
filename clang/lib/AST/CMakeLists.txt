@@ -55,7 +55,6 @@ add_clang_library(clangAST
   ExternalASTSource.cpp
   FormatString.cpp
   InheritViz.cpp
-  Interp/Block.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/ByteCodeExprGen.cpp
   Interp/ByteCodeGenError.cpp
@@ -67,6 +66,7 @@ add_clang_library(clangAST
   Interp/Frame.cpp
   Interp/Function.cpp
   Interp/Interp.cpp
+  Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp
   Interp/InterpStack.cpp
   Interp/InterpState.cpp

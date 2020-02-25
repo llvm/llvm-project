@@ -67,8 +67,8 @@ define float @f32_one_step_2(float %x) #1 {
 ; BDVER2-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
 ; BDVER2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; BDVER2-NEXT:    vmulss %xmm2, %xmm1, %xmm3
-; BDVER2-NEXT:    vfmsubss %xmm2, %xmm3, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddss %xmm3, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubss {{.*#+}} xmm0 = (xmm0 * xmm3) - xmm2
+; BDVER2-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: f32_one_step_2:
@@ -163,8 +163,8 @@ define float @f32_one_step_2_divs(float %x) #1 {
 ; BDVER2-LABEL: f32_one_step_2_divs:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; BDVER2-NEXT:    vfmsubss {{.*}}(%rip), %xmm1, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddss %xmm1, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubss {{.*#+}} xmm0 = (xmm0 * xmm1) - mem
+; BDVER2-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm1
 ; BDVER2-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
 ; BDVER2-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; BDVER2-NEXT:    retq
@@ -278,12 +278,12 @@ define float @f32_two_step_2(float %x) #2 {
 ; BDVER2-LABEL: f32_two_step_2:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; BDVER2-NEXT:    vfmsubss {{.*}}(%rip), %xmm1, %xmm0, %xmm2
+; BDVER2-NEXT:    vfmsubss {{.*#+}} xmm2 = (xmm0 * xmm1) - mem
 ; BDVER2-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; BDVER2-NEXT:    vfnmaddss %xmm1, %xmm2, %xmm1, %xmm1
+; BDVER2-NEXT:    vfnmaddss {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm1
 ; BDVER2-NEXT:    vmulss %xmm4, %xmm1, %xmm3
-; BDVER2-NEXT:    vfmsubss %xmm4, %xmm3, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddss %xmm3, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubss {{.*#+}} xmm0 = (xmm0 * xmm3) - xmm4
+; BDVER2-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: f32_two_step_2:
@@ -400,8 +400,8 @@ define <4 x float> @v4f32_one_step2(<4 x float> %x) #1 {
 ; BDVER2-NEXT:    vrcpps %xmm0, %xmm1
 ; BDVER2-NEXT:    vmovaps {{.*#+}} xmm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; BDVER2-NEXT:    vmulps %xmm2, %xmm1, %xmm3
-; BDVER2-NEXT:    vfmsubps %xmm2, %xmm3, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddps %xmm3, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} xmm0 = (xmm0 * xmm3) - xmm2
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v4f32_one_step2:
@@ -496,8 +496,8 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ; BDVER2-LABEL: v4f32_one_step_2_divs:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %xmm0, %xmm1
-; BDVER2-NEXT:    vfmsubps {{.*}}(%rip), %xmm1, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddps %xmm1, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} xmm0 = (xmm0 * xmm1) - mem
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm1
 ; BDVER2-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1
 ; BDVER2-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; BDVER2-NEXT:    retq
@@ -622,12 +622,12 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ; BDVER2-LABEL: v4f32_two_step2:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %xmm0, %xmm1
-; BDVER2-NEXT:    vfmsubps {{.*}}(%rip), %xmm1, %xmm0, %xmm2
+; BDVER2-NEXT:    vfmsubps {{.*#+}} xmm2 = (xmm0 * xmm1) - mem
 ; BDVER2-NEXT:    vmovaps {{.*#+}} xmm4 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
-; BDVER2-NEXT:    vfnmaddps %xmm1, %xmm2, %xmm1, %xmm1
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm1
 ; BDVER2-NEXT:    vmulps %xmm4, %xmm1, %xmm3
-; BDVER2-NEXT:    vfmsubps %xmm4, %xmm3, %xmm0, %xmm0
-; BDVER2-NEXT:    vfnmaddps %xmm3, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} xmm0 = (xmm0 * xmm3) - xmm4
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v4f32_two_step2:
@@ -753,8 +753,8 @@ define <8 x float> @v8f32_one_step2(<8 x float> %x) #1 {
 ; BDVER2-NEXT:    vrcpps %ymm0, %ymm1
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0]
 ; BDVER2-NEXT:    vmulps %ymm2, %ymm1, %ymm3
-; BDVER2-NEXT:    vfmsubps %ymm2, %ymm3, %ymm0, %ymm0
-; BDVER2-NEXT:    vfnmaddps %ymm3, %ymm0, %ymm1, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm3) - ymm2
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v8f32_one_step2:
@@ -858,8 +858,8 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ; BDVER2-LABEL: v8f32_one_step_2_divs:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %ymm0, %ymm1
-; BDVER2-NEXT:    vfmsubps {{.*}}(%rip), %ymm1, %ymm0, %ymm0
-; BDVER2-NEXT:    vfnmaddps %ymm1, %ymm0, %ymm1, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm1) - mem
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm1
 ; BDVER2-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1
 ; BDVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; BDVER2-NEXT:    retq
@@ -999,12 +999,12 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ; BDVER2-LABEL: v8f32_two_step2:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %ymm0, %ymm1
-; BDVER2-NEXT:    vfmsubps {{.*}}(%rip), %ymm1, %ymm0, %ymm2
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm2 = (ymm0 * ymm1) - mem
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm4 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0]
-; BDVER2-NEXT:    vfnmaddps %ymm1, %ymm2, %ymm1, %ymm1
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm1 * ymm2) + ymm1
 ; BDVER2-NEXT:    vmulps %ymm4, %ymm1, %ymm3
-; BDVER2-NEXT:    vfmsubps %ymm4, %ymm3, %ymm0, %ymm0
-; BDVER2-NEXT:    vfnmaddps %ymm3, %ymm0, %ymm1, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm3) - ymm4
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm3
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v8f32_two_step2:
@@ -1194,12 +1194,12 @@ define <16 x float> @v16f32_one_step2(<16 x float> %x) #1 {
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0]
 ; BDVER2-NEXT:    vrcpps %ymm1, %ymm5
 ; BDVER2-NEXT:    vmulps %ymm3, %ymm2, %ymm4
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm4, %ymm0, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm4) - ymm3
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [9.0E+0,1.0E+1,1.1E+1,1.2E+1,1.3E+1,1.4E+1,1.5E+1,1.6E+1]
-; BDVER2-NEXT:    vfnmaddps %ymm4, %ymm0, %ymm2, %ymm0
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm2 * ymm0) + ymm4
 ; BDVER2-NEXT:    vmulps %ymm3, %ymm5, %ymm4
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm4, %ymm1, %ymm1
-; BDVER2-NEXT:    vfnmaddps %ymm4, %ymm1, %ymm5, %ymm1
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm4) - ymm3
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm5 * ymm1) + ymm4
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v16f32_one_step2:
@@ -1361,12 +1361,12 @@ define <16 x float> @v16f32_one_step_2_divs(<16 x float> %x) #1 {
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %ymm0, %ymm2
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm2, %ymm0, %ymm0
-; BDVER2-NEXT:    vfnmaddps %ymm2, %ymm0, %ymm2, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm3
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm2 * ymm0) + ymm2
 ; BDVER2-NEXT:    vrcpps %ymm1, %ymm2
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm2, %ymm1, %ymm1
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm2) - ymm3
 ; BDVER2-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm3
-; BDVER2-NEXT:    vfnmaddps %ymm2, %ymm1, %ymm2, %ymm1
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm2 * ymm1) + ymm2
 ; BDVER2-NEXT:    vmulps {{.*}}(%rip), %ymm1, %ymm2
 ; BDVER2-NEXT:    vmulps %ymm0, %ymm3, %ymm0
 ; BDVER2-NEXT:    vmulps %ymm1, %ymm2, %ymm1
@@ -1573,19 +1573,19 @@ define <16 x float> @v16f32_two_step2(<16 x float> %x) #2 {
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpps %ymm0, %ymm2
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm2, %ymm0, %ymm4
-; BDVER2-NEXT:    vfnmaddps %ymm2, %ymm4, %ymm2, %ymm2
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm4 = (ymm0 * ymm2) - ymm3
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm2 = -(ymm2 * ymm4) + ymm2
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm4 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0]
 ; BDVER2-NEXT:    vmulps %ymm4, %ymm2, %ymm5
-; BDVER2-NEXT:    vfmsubps %ymm4, %ymm5, %ymm0, %ymm0
-; BDVER2-NEXT:    vfnmaddps %ymm5, %ymm0, %ymm2, %ymm0
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm5) - ymm4
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm2 * ymm0) + ymm5
 ; BDVER2-NEXT:    vrcpps %ymm1, %ymm2
 ; BDVER2-NEXT:    vmovaps {{.*#+}} ymm5 = [9.0E+0,1.0E+1,1.1E+1,1.2E+1,1.3E+1,1.4E+1,1.5E+1,1.6E+1]
-; BDVER2-NEXT:    vfmsubps %ymm3, %ymm2, %ymm1, %ymm3
-; BDVER2-NEXT:    vfnmaddps %ymm2, %ymm3, %ymm2, %ymm2
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm3 = (ymm1 * ymm2) - ymm3
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm2 = -(ymm2 * ymm3) + ymm2
 ; BDVER2-NEXT:    vmulps %ymm5, %ymm2, %ymm4
-; BDVER2-NEXT:    vfmsubps %ymm5, %ymm4, %ymm1, %ymm1
-; BDVER2-NEXT:    vfnmaddps %ymm4, %ymm1, %ymm2, %ymm1
+; BDVER2-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm4) - ymm5
+; BDVER2-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm2 * ymm1) + ymm4
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: v16f32_two_step2:

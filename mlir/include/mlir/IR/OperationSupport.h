@@ -294,6 +294,11 @@ public:
   void addTypes(ArrayRef<Type> newTypes) {
     types.append(newTypes.begin(), newTypes.end());
   }
+  template <typename RangeT>
+  std::enable_if_t<!std::is_convertible<RangeT, ArrayRef<Type>>::value>
+  addTypes(RangeT &&newTypes) {
+    types.append(newTypes.begin(), newTypes.end());
+  }
 
   /// Add an attribute with the specified name.
   void addAttribute(StringRef name, Attribute attr) {

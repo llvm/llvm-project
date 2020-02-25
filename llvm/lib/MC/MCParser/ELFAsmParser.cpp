@@ -634,20 +634,29 @@ EndStmt:
       }
   }
 
-  MCSection *ELFSection = getContext().getELFSection(
+  MCSectionELF *Section = getContext().getELFSection(
       SectionName, Type, Flags, Size, GroupName, UniqueID, LinkedToSym);
-  getStreamer().SwitchSection(ELFSection, Subsection);
+  getStreamer().SwitchSection(Section, Subsection);
+  if (Section->getType() != Type)
+    Error(loc, "changed section type for " + SectionName + ", expected: 0x" +
+                   utohexstr(Section->getType()));
+  if (Section->getFlags() != Flags)
+    Error(loc, "changed section flags for " + SectionName + ", expected: 0x" +
+                   utohexstr(Section->getFlags()));
+  if (Section->getEntrySize() != Size)
+    Error(loc, "changed section entsize for " + SectionName +
+                   ", expected: " + Twine(Section->getEntrySize()));
 
   if (getContext().getGenDwarfForAssembly()) {
-    bool InsertResult = getContext().addGenDwarfSection(ELFSection);
+    bool InsertResult = getContext().addGenDwarfSection(Section);
     if (InsertResult) {
       if (getContext().getDwarfVersion() <= 2)
         Warning(loc, "DWARF2 only supports one section per compilation unit");
 
-      if (!ELFSection->getBeginSymbol()) {
+      if (!Section->getBeginSymbol()) {
         MCSymbol *SectionStartSymbol = getContext().createTempSymbol();
         getStreamer().emitLabel(SectionStartSymbol);
-        ELFSection->setBeginSymbol(SectionStartSymbol);
+        Section->setBeginSymbol(SectionStartSymbol);
       }
     }
   }

@@ -1310,7 +1310,7 @@ foreach desttype = !listconcat(T.Int16, T.Int32, T.Float) in {
   }
 }
 
-let params = T.All in {
+let params = T.Usual in {
 let pnt = PNT_NType in
 def vbrsrq_n: Intrinsic<Vector, (args Vector:$a, s32:$b),
                         (IRInt<"vbrsr", [Vector]> $a, $b)>;

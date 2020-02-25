@@ -151,7 +151,7 @@ void testCDouble(CDouble v) {
 }
 
 void testVoidPtr(VoidPtr v) {
-  (void) (Bool) v; // expected-warning{{cast to smaller integer type 'Bool' (aka '_Bool') from 'VoidPtr' (aka 'void *')}}
+  (void)(Bool) v;
   (void) (Int) v; // expected-warning{{cast to smaller integer type 'Int' (aka 'int') from 'VoidPtr' (aka 'void *')}}
   (void) (Long) v;
   (void) (VoidPtr) v;
@@ -160,12 +160,12 @@ void testVoidPtr(VoidPtr v) {
   // from other -Wpointer-to-int-cast warnings.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvoid-pointer-to-int-cast"
-  (void) (Bool) v; // no-warning
+  (void)(Int) v; // no-warning
 #pragma clang diagnostic pop
 }
 
 void testCharPtr(CharPtr v) {
-  (void) (Bool) v; // expected-warning{{cast to smaller integer type 'Bool' (aka '_Bool') from 'CharPtr' (aka 'char *')}}
+  (void)(Bool) v;
   (void) (Int) v; // expected-warning{{cast to smaller integer type 'Int' (aka 'int') from 'CharPtr' (aka 'char *')}}
   (void) (Long) v;
   (void) (VoidPtr) v;
@@ -174,7 +174,7 @@ void testCharPtr(CharPtr v) {
   // from other -Wpointer-to-int-cast warnings.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvoid-pointer-to-int-cast"
-  (void) (Bool) v; // expected-warning{{cast to smaller integer type 'Bool' (aka '_Bool') from 'CharPtr' (aka 'char *')}}
+  (void)(Int) v; // expected-warning{{cast to smaller integer type 'Int' (aka 'int') from 'CharPtr' (aka 'char *')}}
 #pragma clang diagnostic pop
 }
 

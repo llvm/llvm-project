@@ -391,9 +391,57 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     }
   }
 
-  if (Ty->isVectorTy()) {
-    assert(ST->hasVector() &&
-           "getArithmeticInstrCost() called with vector type.");
+  if (!Ty->isVectorTy()) {
+    // These FP operations are supported with a dedicated instruction for
+    // float, double and fp128 (base implementation assumes float generally
+    // costs 2).
+    if (Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+        Opcode == Instruction::FMul || Opcode == Instruction::FDiv)
+      return 1;
+
+    // There is no native support for FRem.
+    if (Opcode == Instruction::FRem)
+      return LIBCALL_COST;
+
+    // Give discount for some combined logical operations if supported.
+    if (Args.size() == 2 && ST->hasMiscellaneousExtensions3()) {
+      if (Opcode == Instruction::Xor) {
+        for (const Value *A : Args) {
+          if (const Instruction *I = dyn_cast<Instruction>(A))
+            if (I->hasOneUse() &&
+                (I->getOpcode() == Instruction::And ||
+                 I->getOpcode() == Instruction::Or ||
+                 I->getOpcode() == Instruction::Xor))
+              return 0;
+        }
+      }
+      else if (Opcode == Instruction::Or || Opcode == Instruction::And) {
+        for (const Value *A : Args) {
+          if (const Instruction *I = dyn_cast<Instruction>(A))
+            if (I->hasOneUse() && I->getOpcode() == Instruction::Xor)
+              return 0;
+        }
+      }
+    }
+
+    // Or requires one instruction, although it has custom handling for i64.
+    if (Opcode == Instruction::Or)
+      return 1;
+
+    if (Opcode == Instruction::Xor && ScalarBits == 1) {
+      if (ST->hasLoadStoreOnCond2())
+        return 5; // 2 * (li 0; loc 1); xor
+      return 7; // 2 * ipm sequences ; xor ; shift ; compare
+    }
+
+    if (DivRemConstPow2)
+      return (SignedDivRem ? SDivPow2Cost : 1);
+    if (DivRemConst)
+      return DivMulSeqCost;
+    if (SignedDivRem || UnsignedDivRem)
+      return DivInstrCost;
+  }
+  else if (ST->hasVector()) {
     unsigned VF = Ty->getVectorNumElements();
     unsigned NumVectors = getNumVectorRegs(Ty);
 
@@ -454,56 +502,6 @@ int SystemZTTIImpl::getArithmeticInstrCost(
       return Cost;
     }
   }
-  else {  // Scalar:
-    // These FP operations are supported with a dedicated instruction for
-    // float, double and fp128 (base implementation assumes float generally
-    // costs 2).
-    if (Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
-        Opcode == Instruction::FMul || Opcode == Instruction::FDiv)
-      return 1;
-
-    // There is no native support for FRem.
-    if (Opcode == Instruction::FRem)
-      return LIBCALL_COST;
-
-    // Give discount for some combined logical operations if supported.
-    if (Args.size() == 2 && ST->hasMiscellaneousExtensions3()) {
-      if (Opcode == Instruction::Xor) {
-        for (const Value *A : Args) {
-          if (const Instruction *I = dyn_cast<Instruction>(A))
-            if (I->hasOneUse() &&
-                (I->getOpcode() == Instruction::And ||
-                 I->getOpcode() == Instruction::Or ||
-                 I->getOpcode() == Instruction::Xor))
-              return 0;
-        }
-      }
-      else if (Opcode == Instruction::Or || Opcode == Instruction::And) {
-        for (const Value *A : Args) {
-          if (const Instruction *I = dyn_cast<Instruction>(A))
-            if (I->hasOneUse() && I->getOpcode() == Instruction::Xor)
-              return 0;
-        }
-      }
-    }
-
-    // Or requires one instruction, although it has custom handling for i64.
-    if (Opcode == Instruction::Or)
-      return 1;
-
-    if (Opcode == Instruction::Xor && ScalarBits == 1) {
-      if (ST->hasLoadStoreOnCond2())
-        return 5; // 2 * (li 0; loc 1); xor
-      return 7; // 2 * ipm sequences ; xor ; shift ; compare
-    }
-
-    if (DivRemConstPow2)
-      return (SignedDivRem ? SDivPow2Cost : 1);
-    if (DivRemConst)
-      return DivMulSeqCost;
-    if (SignedDivRem || UnsignedDivRem)
-      return DivInstrCost;
-  }
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
@@ -513,35 +511,36 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                    Type *SubTp) {
   assert (Tp->isVectorTy());
-  assert (ST->hasVector() && "getShuffleCost() called.");
-  unsigned NumVectors = getNumVectorRegs(Tp);
+  if (ST->hasVector()) {
+    unsigned NumVectors = getNumVectorRegs(Tp);
 
-  // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
+    // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
 
-  // FP128 values are always in scalar registers, so there is no work
-  // involved with a shuffle, except for broadcast. In that case register
-  // moves are done with a single instruction per element.
-  if (Tp->getScalarType()->isFP128Ty())
-    return (Kind == TargetTransformInfo::SK_Broadcast ? NumVectors - 1 : 0);
+    // FP128 values are always in scalar registers, so there is no work
+    // involved with a shuffle, except for broadcast. In that case register
+    // moves are done with a single instruction per element.
+    if (Tp->getScalarType()->isFP128Ty())
+      return (Kind == TargetTransformInfo::SK_Broadcast ? NumVectors - 1 : 0);
 
-  switch (Kind) {
-  case  TargetTransformInfo::SK_ExtractSubvector:
-    // ExtractSubvector Index indicates start offset.
+    switch (Kind) {
+    case  TargetTransformInfo::SK_ExtractSubvector:
+      // ExtractSubvector Index indicates start offset.
 
-    // Extracting a subvector from first index is a noop.
-    return (Index == 0 ? 0 : NumVectors);
+      // Extracting a subvector from first index is a noop.
+      return (Index == 0 ? 0 : NumVectors);
 
-  case TargetTransformInfo::SK_Broadcast:
-    // Loop vectorizer calls here to figure out the extra cost of
-    // broadcasting a loaded value to all elements of a vector. Since vlrep
-    // loads and replicates with a single instruction, adjust the returned
-    // value.
-    return NumVectors - 1;
+    case TargetTransformInfo::SK_Broadcast:
+      // Loop vectorizer calls here to figure out the extra cost of
+      // broadcasting a loaded value to all elements of a vector. Since vlrep
+      // loads and replicates with a single instruction, adjust the returned
+      // value.
+      return NumVectors - 1;
 
-  default:
+    default:
 
-    // SystemZ supports single instruction permutation / replication.
-    return NumVectors;
+      // SystemZ supports single instruction permutation / replication.
+      return NumVectors;
+    }
   }
 
   return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
@@ -672,8 +671,36 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   unsigned DstScalarBits = Dst->getScalarSizeInBits();
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
 
-  if (Src->isVectorTy()) {
-    assert (ST->hasVector() && "getCastInstrCost() called with vector type.");
+  if (!Src->isVectorTy()) {
+    assert (!Dst->isVectorTy());
+
+    if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP) {
+      if (SrcScalarBits >= 32 ||
+          (I != nullptr && isa<LoadInst>(I->getOperand(0))))
+        return 1;
+      return SrcScalarBits > 1 ? 2 /*i8/i16 extend*/ : 5 /*branch seq.*/;
+    }
+
+    if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
+        Src->isIntegerTy(1)) {
+      if (ST->hasLoadStoreOnCond2())
+        return 2; // li 0; loc 1
+
+      // This should be extension of a compare i1 result, which is done with
+      // ipm and a varying sequence of instructions.
+      unsigned Cost = 0;
+      if (Opcode == Instruction::SExt)
+        Cost = (DstScalarBits < 64 ? 3 : 4);
+      if (Opcode == Instruction::ZExt)
+        Cost = 3;
+      Type *CmpOpTy = ((I != nullptr) ? getCmpOpsType(I) : nullptr);
+      if (CmpOpTy != nullptr && CmpOpTy->isFloatingPointTy())
+        // If operands of an fp-type was compared, this costs +1.
+        Cost++;
+      return Cost;
+    }
+  }
+  else if (ST->hasVector()) {
     assert (Dst->isVectorTy());
     unsigned VF = Src->getVectorNumElements();
     unsigned NumDstVectors = getNumVectorRegs(Dst);
@@ -759,35 +786,6 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       return VF + getScalarizationOverhead(Src, false, true);
     }
   }
-  else { // Scalar
-    assert (!Dst->isVectorTy());
-
-    if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP) {
-      if (SrcScalarBits >= 32 ||
-          (I != nullptr && isa<LoadInst>(I->getOperand(0))))
-        return 1;
-      return SrcScalarBits > 1 ? 2 /*i8/i16 extend*/ : 5 /*branch seq.*/;
-    }
-
-    if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
-        Src->isIntegerTy(1)) {
-      if (ST->hasLoadStoreOnCond2())
-        return 2; // li 0; loc 1
-
-      // This should be extension of a compare i1 result, which is done with
-      // ipm and a varying sequence of instructions.
-      unsigned Cost = 0;
-      if (Opcode == Instruction::SExt)
-        Cost = (DstScalarBits < 64 ? 3 : 4);
-      if (Opcode == Instruction::ZExt)
-        Cost = 3;
-      Type *CmpOpTy = ((I != nullptr) ? getCmpOpsType(I) : nullptr);
-      if (CmpOpTy != nullptr && CmpOpTy->isFloatingPointTy())
-        // If operands of an fp-type was compared, this costs +1.
-        Cost++;
-      return Cost;
-    }
-  }
 
   return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
 }
@@ -806,8 +804,31 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
 
 int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                        Type *CondTy, const Instruction *I) {
-  if (ValTy->isVectorTy()) {
-    assert (ST->hasVector() && "getCmpSelInstrCost() called with vector type.");
+  if (!ValTy->isVectorTy()) {
+    switch (Opcode) {
+    case Instruction::ICmp: {
+      // A loaded value compared with 0 with multiple users becomes Load and
+      // Test. The load is then not foldable, so return 0 cost for the ICmp.
+      unsigned ScalarBits = ValTy->getScalarSizeInBits();
+      if (I != nullptr && ScalarBits >= 32)
+        if (LoadInst *Ld = dyn_cast<LoadInst>(I->getOperand(0)))
+          if (const ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1)))
+            if (!Ld->hasOneUse() && Ld->getParent() == I->getParent() &&
+                C->getZExtValue() == 0)
+              return 0;
+
+      unsigned Cost = 1;
+      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
+        Cost += (I != nullptr ? getOperandsExtensionCost(I) : 2);
+      return Cost;
+    }
+    case Instruction::Select:
+      if (ValTy->isFloatingPointTy())
+        return 4; // No load on condition for FP - costs a conditional jump.
+      return 1; // Load On Condition / Select Register.
+    }
+  }
+  else if (ST->hasVector()) {
     unsigned VF = ValTy->getVectorNumElements();
 
     // Called with a compare instruction.
@@ -854,30 +875,6 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
           getVectorBitmaskConversionCost(CmpOpTy, ValTy);
 
       return getNumVectorRegs(ValTy) /*vsel*/ + PackCost;
-    }
-  }
-  else { // Scalar
-    switch (Opcode) {
-    case Instruction::ICmp: {
-      // A loaded value compared with 0 with multiple users becomes Load and
-      // Test. The load is then not foldable, so return 0 cost for the ICmp.
-      unsigned ScalarBits = ValTy->getScalarSizeInBits();
-      if (I != nullptr && ScalarBits >= 32)
-        if (LoadInst *Ld = dyn_cast<LoadInst>(I->getOperand(0)))
-          if (const ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1)))
-            if (!Ld->hasOneUse() && Ld->getParent() == I->getParent() &&
-                C->getZExtValue() == 0)
-              return 0;
-
-      unsigned Cost = 1;
-      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
-        Cost += (I != nullptr ? getOperandsExtensionCost(I) : 2);
-      return Cost;
-    }
-    case Instruction::Select:
-      if (ValTy->isFloatingPointTy())
-        return 4; // No load on condition for FP - costs a conditional jump.
-      return 1; // Load On Condition / Select Register.
     }
   }
 

@@ -608,6 +608,10 @@ namespace X86II {
     /// in the lower 4 bits of the opcode.
     AddCCFrm = 9,
 
+    /// PrefixByte - This form is used for instructions that represent a prefix
+    /// byte like data16 or rep.
+    PrefixByte = 10,
+
     /// MRM[0-7][rm] - These forms are used to represent instructions that use
     /// a Mod/RM byte, and use the middle field to hold extended opcode
     /// information.  In the intel manual these are represented as /0, /1, ...
@@ -927,6 +931,11 @@ namespace X86II {
     NOTRACK = 1ULL << NoTrackShift
   };
 
+  /// \returns true if the instruction with given opcode is a prefix.
+  inline bool isPrefix(uint64_t TSFlags) {
+    return (TSFlags & X86II::FormMask) == PrefixByte;
+  }
+
   /// \returns the "base" X86 opcode for the specified machine
   /// instruction.
   inline uint8_t getBaseOpcodeFor(uint64_t TSFlags) {
@@ -1055,6 +1064,7 @@ namespace X86II {
     case X86II::RawFrmDst:
     case X86II::RawFrmDstSrc:
     case X86II::AddCCFrm:
+    case X86II::PrefixByte:
       return -1;
     case X86II::MRMDestMem:
       return 0;

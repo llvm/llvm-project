@@ -14,7 +14,7 @@
 #ifndef TEST_VECTOR_TRANSFORMS_PATTERNS
 #define TEST_VECTOR_TRANSFORMS_PATTERNS
 
-include "mlir/Dialect/StandardOps/Ops.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "mlir/Dialect/VectorOps/VectorOps.td"
 include "mlir/Dialect/VectorOps/VectorTransformPatterns.td"
 

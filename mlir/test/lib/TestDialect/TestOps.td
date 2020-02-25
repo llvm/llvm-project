@@ -431,7 +431,7 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
                      [(IsNotScalar $attr)]>;
 
 def TestBranchOp : TEST_Op<"br", [Terminator]> {
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let successors = (successor AnySuccessor:$target);
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
@@ -1089,6 +1089,12 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+// Test that we elide attributes that are within the syntax.
+def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
+  let arguments = (ins I64Attr:$attr);
+  let assemblyFormat = "attr-dict-with-keyword";
+}
+
 // Test that we don't need to provide types in the format if they are buildable.
 def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
   let arguments = (ins I64:$buildable);
@@ -1132,5 +1138,10 @@ def FormatOperandDOp : FormatOperandBase<"format_operand_d_op", [{
 def FormatOperandEOp : FormatOperandBase<"format_operand_e_op", [{
   $buildable `,` $operand `:` type($buildable) `,` type($operand) attr-dict
 }]>;
+
+def FormatSuccessorAOp : TEST_Op<"format_successor_a_op", [Terminator]> {
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
+  let assemblyFormat = "$targets attr-dict";
+}
 
 #endif // TEST_OPS

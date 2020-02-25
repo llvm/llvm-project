@@ -18,16 +18,16 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX8: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX8: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def dead $scc
+    ; GFX8: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def $scc
     ; GFX8: S_ENDPGM 0, implicit [[S_OR_B32_1]]
     ; GFX9-LABEL: name: or_s32_sgpr_sgpr_sgpr
     ; GFX9: liveins: $sgpr0, $sgpr1, $sgpr2
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX9: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX9: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def dead $scc
+    ; GFX9: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX9: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def $scc
     ; GFX9: S_ENDPGM 0, implicit [[S_OR_B32_1]]
     ; GFX10-LABEL: name: or_s32_sgpr_sgpr_sgpr
     ; GFX10: liveins: $sgpr0, $sgpr1, $sgpr2
@@ -35,8 +35,8 @@ body: |
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX10: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX10: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def dead $scc
+    ; GFX10: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX10: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def $scc
     ; GFX10: S_ENDPGM 0, implicit [[S_OR_B32_1]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1

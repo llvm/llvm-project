@@ -517,12 +517,7 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
 }
 ```
 
-Above we introduce several of the concepts for defining operations in the ODS
-framework, but there are many more that we haven't had a chance to: regions,
-variadic operands, etc. Check out the
-[full specification](../../OpDefinitions.md) for more details.
-
-## Complete Toy Example
+#### Specifying a Custom Assembly Format
 
 At this point we can generate our "Toy IR". A simplified version of the previous
 example:
@@ -561,6 +556,185 @@ module {
     %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
     "toy.print"(%5) : (tensor<*xf64>) -> () loc("test/codegen.toy":13:3)
     "toy.return"() : () -> () loc("test/codegen.toy":8:1)
+  } loc("test/codegen.toy":8:1)
+} loc("test/codegen.toy":0:0)
+```
+
+One thing to notice here is that all of our Toy operations are printed using the
+generic assembly format. This format is the one shown when breaking down
+`toy.transpose` at the beginning of this chapter. MLIR allows for operations to
+define their own custom assembly format, either
+[declaratively](../../OpDefinitions.md#declarative-assembly-format) or
+imperatively via C++. Defining a custom assembly format allows for tailoring the
+generated IR into something a bit more readable by removing a lot of the fluff
+that is required by the generic format. Let's walk through an example of an
+operation format that we would like to simplify.
+
+##### `toy.print`
+
+The current form of `toy.print` is a little verbose. There are a lot of
+additional characters that we would like to strip away. Let's begin by thinking
+of what a good format of `toy.print` would be, and see how we can implement it.
+Looking at the basics of `toy.print` we get:
+
+```mlir
+toy.print %5 : tensor<*xf64> loc(...)
+```
+
+Here we have stripped much of the format down to the bare essentials, and it has
+become much more readable. To provide a custom assembly format, an operation can
+either override the `parser` and `printer` fields for a C++ format, or the
+`assemblyFormat` field for the declarative format. Let's look at the C++ variant
+first, as this is what the declarative format maps to internally.
+
+```tablegen
+/// Consider a stripped definition of `toy.print` here.
+def PrintOp : Toy_Op<"print"> {
+  let arguments = (ins F64Tensor:$input);
+
+  // Divert the printer and parser to static functions in our .cpp
+  // file that correspond to 'print' and 'printPrintOp'. 'printer' and 'parser'
+  // here correspond to an instance of a 'OpAsmParser' and 'OpAsmPrinter'. More
+  // details on these classes is shown below.
+  let printer = [{ return ::print(printer, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+```
+
+A C++ implementation for the printer and parser is shown below:
+
+```c++
+/// The 'OpAsmPrinter' class is a stream that will allows for formatting
+/// strings, attributes, operands, types, etc.
+static void print(mlir::OpAsmPrinter &printer, PrintOp op) {
+  printer << "toy.print " << op.input();
+  printer.printOptionalAttrDict(op.getAttrs());
+  printer << " : " << op.input().getType();
+}
+
+/// The 'OpAsmPrinter' class provides a collection of methods for parsing
+/// various punctuation, as well as attributes, operands, types, etc. Each of
+/// these methods returns a `ParseResult`. This class is a wrapper around
+/// `LogicalResult` that can be converted to a boolean `true` value on failure,
+/// or `false` on success. This allows for easily chaining together a set of
+/// parser rules. These rules are used to populate an `mlir::OperationState`
+/// similarly to the `build` methods described above.
+static mlir::ParseResult parsePrintOp(mlir::OpAsmParser &parser,
+                                      mlir::OperationState &result) {
+  // Parse the input operand, the attribute dictionary, and the type of the
+  // input.
+  mlir::OpAsmParser::OperandType inputOperand;
+  mlir::Type inputType;
+  if (parser.parseOperand(inputOperand) ||
+      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
+      parser.parseType(inputType))
+    return mlir::failure();
+
+  // Resolve the input operand to the type we parsed in.
+  if (parser.resolveOperand(inputOperand, inputType, result.operands))
+    return mlir::failure();
+
+  return mlir::success();
+}
+```
+
+With the C++ implementation defined, let's see how this can be mapped to the
+[declarative format](../../OpDefinitions.md#declarative-assembly-format). The
+declarative format is largely composed of three different components:
+
+*   Directives
+    -   A type of builtin function, with an optional set of arguments.
+*   Literals
+    -   A keyword or punctuation surrounded by \`\`.
+*   Variables
+    -   An entity that has been registered on the operation itself, i.e. an
+        argument(attribute or operand), result, successor, etc. In the `PrintOp`
+        example above, a variable would be `$input`.
+
+A direct mapping of our C++ format looks something like:
+
+```tablegen
+/// Consider a stripped definition of `toy.print` here.
+def PrintOp : Toy_Op<"print"> {
+  let arguments = (ins F64Tensor:$input);
+
+  // In the following format we have two directives, `attr-dict` and `type`.
+  // These correspond to the attribute dictionary and the type of a given
+  // variable represectively.
+  let assemblyFormat = "$input attr-dict `:` type($input)";
+}
+```
+
+The [declarative format](../../OpDefinitions.md#declarative-assembly-format) has
+many more interesting features, so be sure to check it out before implementing a
+custom format in C++. After beautifying the format of a few of our operations we
+now get a much more readable:
+
+```mlir
+module {
+  func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
+    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
+    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
+    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
+    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
+  } loc("test/codegen.toy":4:1)
+  func @main() {
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
+    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
+    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
+    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
+    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
+    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
+    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
+    toy.return loc("test/codegen.toy":8:1)
+  } loc("test/codegen.toy":8:1)
+} loc("test/codegen.toy":0:0)
+```
+
+Above we introduce several of the concepts for defining operations in the ODS
+framework, but there are many more that we haven't had a chance to: regions,
+variadic operands, etc. Check out the
+[full specification](../../OpDefinitions.md) for more details.
+
+## Complete Toy Example
+
+At this point we can generate our "Toy IR". A simplified version of the previous
+example:
+
+```toy
+# User defined generic function that operates on unknown shaped arguments.
+def multiply_transpose(a, b) {
+  return transpose(a) * transpose(b);
+}
+
+def main() {
+  var a<2, 3> = [[1, 2, 3], [4, 5, 6]];
+  var b<2, 3> = [1, 2, 3, 4, 5, 6];
+  var c = multiply_transpose(a, b);
+  var d = multiply_transpose(b, a);
+  print(d);
+}
+```
+
+Results in the following IR:
+
+```mlir
+module {
+  func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
+    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
+    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
+    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
+    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
+  } loc("test/codegen.toy":4:1)
+  func @main() {
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
+    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
+    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
+    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
+    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
+    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
+    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
+    toy.return loc("test/codegen.toy":8:1)
   } loc("test/codegen.toy":8:1)
 } loc("test/codegen.toy":0:0)
 ```

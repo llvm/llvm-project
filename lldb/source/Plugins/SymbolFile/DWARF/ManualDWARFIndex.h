@@ -14,13 +14,14 @@
 #include "llvm/ADT/DenseSet.h"
 
 class DWARFDebugInfo;
+class SymbolFileDWARFDwo;
 
 namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
-  ManualDWARFIndex(Module &module, DWARFDebugInfo &debug_info,
+  ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,
                    llvm::DenseSet<dw_offset_t> units_to_avoid = {})
-      : DWARFIndex(module), m_debug_info(&debug_info),
+      : DWARFIndex(module), m_dwarf(&dwarf),
         m_units_to_avoid(std::move(units_to_avoid)) {}
 
   void Preload() override { Index(); }
@@ -56,14 +57,15 @@ private:
     NameToDIE namespaces;
   };
   void Index();
-  void IndexUnit(DWARFUnit &unit, IndexSet &set);
+  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
   static void IndexUnitImpl(DWARFUnit &unit,
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 
-  /// Non-null value means we haven't built the index yet.
-  DWARFDebugInfo *m_debug_info;
+  /// The DWARF file which we are indexing. Set to nullptr after the index is
+  /// built.
+  SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
 

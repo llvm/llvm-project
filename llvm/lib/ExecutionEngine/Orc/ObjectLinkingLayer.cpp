@@ -148,6 +148,36 @@ public:
     if (const auto &InitSym = MR.getInitializerSymbol())
       InternedResult[InitSym] = JITEvaluatedSymbol();
 
+    {
+      // Check that InternedResult matches up with MR.getSymbols().
+      // This guards against faulty transformations / compilers / object caches.
+
+      if (InternedResult.size() > MR.getSymbols().size()) {
+        SymbolNameVector ExtraSymbols;
+        for (auto &KV : InternedResult)
+          if (!MR.getSymbols().count(KV.first))
+            ExtraSymbols.push_back(KV.first);
+        ES.reportError(
+          make_error<UnexpectedSymbolDefinitions>(G.getName(),
+                                                  std::move(ExtraSymbols)));
+        MR.failMaterialization();
+        return;
+      }
+
+      SymbolNameVector MissingSymbols;
+      for (auto &KV : MR.getSymbols())
+        if (!InternedResult.count(KV.first))
+          MissingSymbols.push_back(KV.first);
+
+      if (!MissingSymbols.empty()) {
+        ES.reportError(
+          make_error<MissingSymbolDefinitions>(G.getName(),
+                                               std::move(MissingSymbols)));
+        MR.failMaterialization();
+        return;
+      }
+    }
+
     if (auto Err = MR.notifyResolved(InternedResult)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();

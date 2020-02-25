@@ -23,6 +23,7 @@ namespace AMDGPU {
 std::tuple<Register, unsigned, MachineInstr *>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg);
 
+bool isLegalVOP3PShuffleMask(ArrayRef<int> Mask);
 }
 }
 

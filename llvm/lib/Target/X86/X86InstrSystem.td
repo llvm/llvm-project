@@ -149,12 +149,12 @@ def MOV64cr : I<0x22, MRMSrcReg, (outs CONTROL_REG:$dst), (ins GR64:$src),
 // Segment override instruction prefixes
 
 let SchedRW = [WriteNop] in {
-def CS_PREFIX : I<0x2E, RawFrm, (outs), (ins), "cs", []>;
-def SS_PREFIX : I<0x36, RawFrm, (outs), (ins), "ss", []>;
-def DS_PREFIX : I<0x3E, RawFrm, (outs), (ins), "ds", []>;
-def ES_PREFIX : I<0x26, RawFrm, (outs), (ins), "es", []>;
-def FS_PREFIX : I<0x64, RawFrm, (outs), (ins), "fs", []>;
-def GS_PREFIX : I<0x65, RawFrm, (outs), (ins), "gs", []>;
+def CS_PREFIX : I<0x2E, PrefixByte, (outs), (ins), "cs", []>;
+def SS_PREFIX : I<0x36, PrefixByte, (outs), (ins), "ss", []>;
+def DS_PREFIX : I<0x3E, PrefixByte, (outs), (ins), "ds", []>;
+def ES_PREFIX : I<0x26, PrefixByte, (outs), (ins), "es", []>;
+def FS_PREFIX : I<0x64, PrefixByte, (outs), (ins), "fs", []>;
+def GS_PREFIX : I<0x65, PrefixByte, (outs), (ins), "gs", []>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//

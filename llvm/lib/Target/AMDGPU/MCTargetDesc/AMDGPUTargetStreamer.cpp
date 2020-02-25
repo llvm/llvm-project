@@ -440,7 +440,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
 
   S.PushSection();
   S.SwitchSection(Context.getELFSection(
-    ElfNote::SectionName, ELF::SHT_NOTE, 0));
+    ElfNote::SectionName, ELF::SHT_NOTE, ELF::SHF_ALLOC));
   S.emitIntValue(NameSZ, 4);                                  // namesz
   S.emitValue(DescSZ, 4);                                     // descz
   S.emitIntValue(NoteType, 4);                                // type

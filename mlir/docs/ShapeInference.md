@@ -10,7 +10,7 @@ constraints/bounds in the system for that operation (e.g., the output of a
 valuable constraints that could be captured even without full knowledge of the
 shape.
 
-Type inference is currently modelled executionally for op creation using the
+Type inference is currently modelled executionally for operation creation using the
 [`InferTypeOpInterface`][InferTypeOpInterface], while
 `InferShapedTypeOpInterface` is used to implement the shape and element type
 inference. The return type can often be deduced from the deduced return shape
@@ -27,7 +27,7 @@ Initially the shape inference will be declaratively specified using:
 *   Constraints on the operands of an operation directly. For example
     constraining the input type to be tensor/vector elements or that the
     elemental type be of a specific type (e.g., output of computing the size
-    of a value is of elemental type `i1`) or class (e.g., float like).
+    of a value is of elemental type `i1`) or class (e.g., float-like).
 *   Constraints across operands and results of an operation.
 
     - For example, specifying equality constraints on type/constituents of a
@@ -41,7 +41,7 @@ exceptional case.
 ## Testing
 
 Shape inference is currently tested alongside type inference by
-`TestReturnTypeDriver` in the test dialect. The driver performs two checks:
+`TestReturnTypeDriver` in the test dialect. This driver performs two checks:
 
 1.  Verification that the return types specified matches the infered types. This
     explicit check will be removed and made part of Op verification instead.
@@ -63,7 +63,7 @@ This will focus on the shape functions (e.g., determine the rank and dimensions
 of the output shape). As shown in the shaped container type, shape will be one
 of 3 components, the others being elemental type and attribute (which is
 currently left open with the intention of supporting extensions such as layouts
-or bounded shapes). This allows for decoupling of these:
+or bounded shapes at a later point). This allows for decoupling of these:
 
 *   Not all the information is needed for all analysis;
 *   Not all shape functions need to provide all the information (e.g., one could
@@ -73,16 +73,16 @@ or bounded shapes). This allows for decoupling of these:
     representation of an operation;
     
 An argument could be made that these are metadata function instead of shape
-functions, with some considering shape and elemental type different and some as
+functions, with some considering shape and elemental types different and some considering them both as
 part of shape. But `shape function` is IMHO descriptive and metadata can span
 too large a range of potential uses/values.
 
 ### Requirements
 
-The requirements for the shape inference functions are shaped by the
+The requirements for the shape inference functions are determined by the
 requirements of shape inference, but we believe the requirements below still
-allow freedom to consider different shape inference approaches and so we don't
-constrain to a particular shape inference approach here.
+allow freedom to consider different shape inference approaches and so we do not
+impose a particular shape inference approach here.
 
 #### Shape inference functions
 
@@ -104,8 +104,8 @@ constrain to a particular shape inference approach here.
         guaranteed to pass.
         *   Ideally all would eventually (see section
             [Inlining shape checking](#inline)) be elided.
-    *   Only report error guaranteed to occur at runtime, if an error is only
-        possible rather use runtime assertion to fail and produce an error
+    *   Only reporting errors which are guaranteed to occur at runtime. If an error is only
+        possible (rather than guaranteed) then we use a runtime assertion to fail and produce an error
         message with the invariant violated.
 
 *   Shape functions usable by compiler and runtime.
@@ -130,7 +130,7 @@ constrain to a particular shape inference approach here.
 
 *   Shape inference functions are expressible at runtime
 
-    *   User can define a shape function for a new op dynamically at runtime,
+    *   User can define a shape function for a new operation dynamically at runtime,
         this allows for vendors to describe an operation and shape function
         dynamically.
 
@@ -140,10 +140,10 @@ constrain to a particular shape inference approach here.
     information)
 
     *   Shape functions should be cheap to invoke on each kernel launch.
-    *   Shape function dictated by arguments (operands, attributes and regions)
+    *   Shape function can be dictated by arguments (operands, attributes and regions)
         only (e.g., same operands as the corresponding operation could be
         constructed & invoked with).
-    *   Shape information that need higher-level/graph information should use
+    *   Shape information that needs higher-level/graph information should use
         richer types (e.g., `TensorList<F32>`);
     *   The function should be invocable before/while constructing an op (e.g.,
         can't rely on the op being constructed).
@@ -157,19 +157,19 @@ constrain to a particular shape inference approach here.
         determining the shape & then post to be able to actually consume the
         output of the file).
 
-*   The shape function op dialect should interop with non shape dialect ops.
+*   The shape function operation dialect should be interoperable with non-shape function dialect operations.
 
-    *   There may be a common set of ops that satisfy most uses (e.g., merge,
+    *   There may be a common set of operations that satisfy most uses (e.g., merge,
         equal_type, arithmetic expressions, slice, concat, pattern matching on
         attributes such as padding etc.) that will be discovered and could cover
-        a large percentage of the use cases. And among these there will be some
+        a large percentage of the use cases. Among these there will be some
         which carry extra semantic info that could be used for symbolic
         constraints (e.g., checking equality of two dimensions resulting in
         setting an equality constraint) and higher-order interpretation for
         constraint solving.
 
-        It is therefore beneficial to reuse operations but not required.
-        Especially as for statically known shapes, arbitrary arithmetic
+        It is therefore beneficial (but not required) to reuse operations, 
+        especially as for statically known shapes, arbitrary arithmetic
         computations could still be performed. This means that the computations
         performed statically may or may not be supported by an arbitrary solver,
         but would still be allowed.
@@ -239,7 +239,7 @@ operations).
 
 ### Possibly Asked Questions
 
-#### What about ODS specifications of ops?
+#### What about ODS specifications of operations?
 
 In ODS we have been recording the constraints for the operands & attributes of
 an operation. Where these are sufficient to constrain the output shape (e.g.,
@@ -251,7 +251,7 @@ serialization approach).
 #### Why not extract the shape function from reference implementation?
 
 This could be done in future! The extracted shape function would use the shape
-inference dialect, so we are starting there. Especially for ops described in a
+inference dialect, so we are starting there. Especially for operations described in a
 structured way, one could autogenerate the shape function.
 
 #### How/in what language will the shape functions be authored?

@@ -3,6 +3,7 @@
 # RUN: llvm-mc --filetype=obj --triple x86_64-pc-linux %s -o %t --defsym MAIN=0
 # RUN: llvm-mc --filetype=obj --triple x86_64-pc-linux %s -o %t.dwp --defsym DWP=0
 # RUN: %lldb %t -o "type lookup ENUM0" -o "target variable A" -b | FileCheck %s
+# RUN: lldb-test symbols %t | FileCheck %s --check-prefix=SYMBOLS
 
 # CHECK-LABEL: type lookup ENUM0
 # CHECK-NEXT: enum ENUM0 {
@@ -12,6 +13,19 @@
 # CHECK-LABEL: target variable A
 # CHECK: (ENUM0) A = case0
 # CHECK: (ENUM1) A = case0
+
+# Make sure each entity is present in the index only once.
+# SYMBOLS:      Globals and statics:
+# SYMBOLS-NEXT: 3fffffff/INFO/00000023 "A"
+# SYMBOLS-NEXT: 3fffffff/INFO/0000005a "A"
+# SYMBOLS-EMPTY:
+
+# SYMBOLS: Types:
+# SYMBOLS-NEXT: 3fffffff/TYPE/00000018 "ENUM0"
+# SYMBOLS-NEXT: 3fffffff/TYPE/0000002d "int"
+# SYMBOLS-NEXT: 3fffffff/TYPE/00000062 "int"
+# SYMBOLS-NEXT: 3fffffff/TYPE/0000004d "ENUM1"
+# SYMBOLS-EMPTY:
 
 .ifdef MAIN
         .section        .debug_abbrev,"",@progbits
@@ -203,9 +217,9 @@ A\I:
 .endr
 .endmacro
 
-        .section        .debug_cu_index,"e",@progbits
+        .section        .debug_cu_index,"",@progbits
         index 1, .debug_info.dwo, .Lcu_begin, .Ldebug_info_end
 
-        .section        .debug_tu_index,"e",@progbits
+        .section        .debug_tu_index,"",@progbits
         index 2, .debug_types.dwo, .Ltu_begin, .Ltype_info_end
 .endif

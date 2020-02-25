@@ -43,6 +43,9 @@ Note that there are some important implications of this definition:
 * Any two loops are either fully disjoint (no intersecting blocks), or
   one must be a sub-loop of the other.
 
+* Loops in a function form a forest. One implication of this fact
+  is that a loop either has no parent or a single parent.
+
 A loop may have an arbitrary number of exits, both explicit (via
 control flow) and implicit (via throwing calls which transfer control
 out of the containing function).  There is no special requirement on

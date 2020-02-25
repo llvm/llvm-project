@@ -76,8 +76,8 @@ protected:
     TU.ExtraArgs = Flags;
     auto AST = TU.build();
     llvm::Annotations::Range R = A.range();
-    SelectionTree Selection(AST.getASTContext(), AST.getTokens(), R.Begin,
-                            R.End);
+    auto Selection = SelectionTree::createRight(
+        AST.getASTContext(), AST.getTokens(), R.Begin, R.End);
     const SelectionTree::Node *N = Selection.commonAncestor();
     if (!N) {
       ADD_FAILURE() << "No node selected!\n" << Code;

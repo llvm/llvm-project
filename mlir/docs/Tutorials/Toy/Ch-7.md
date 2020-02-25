@@ -342,7 +342,7 @@ Which generates the following:
 ```mlir
 module {
   func @multiply_transpose(%arg0: !toy.struct<tensor<*xf64>, tensor<*xf64>>) {
-    "toy.return"() : () -> ()
+    toy.return
   }
 }
 ```
@@ -391,9 +391,9 @@ modeling, we just use an [array attribute](../../LangRef.md#array-attribute)
 that contains a set of constant values for each of the `struct` elements.
 
 ```mlir
-  %0 = "toy.struct_constant"() {
-    value = [dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>]
-  } : () -> !toy.struct<tensor<*xf64>>
+  %0 = toy.struct_constant [
+    dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>
+  ] : !toy.struct<tensor<*xf64>>
 ```
 
 ##### `toy.struct_access`
@@ -401,10 +401,10 @@ that contains a set of constant values for each of the `struct` elements.
 This new operation materializes the Nth element of a `struct` value.
 
 ```mlir
-  %0 = "toy.struct_constant"() {
-    value = [dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>]
-  } : () -> !toy.struct<tensor<*xf64>>
-  %1 = "toy.struct_access"(%0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>>) -> tensor<*xf64>
+  %0 = toy.struct_constant [
+    dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>
+  ] : !toy.struct<tensor<*xf64>>
+  %1 = toy.struct_access %0[0] : !toy.struct<tensor<*xf64>> -> tensor<*xf64>
 ```
 
 With these operations, we can revisit our original example:
@@ -436,18 +436,21 @@ and finally get a full MLIR module:
 ```mlir
 module {
   func @multiply_transpose(%arg0: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64> {
-    %0 = "toy.struct_access"(%arg0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %1 = "toy.transpose"(%0) : (tensor<*xf64>) -> tensor<*xf64>
-    %2 = "toy.struct_access"(%arg0) {index = 1 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %3 = "toy.transpose"(%2) : (tensor<*xf64>) -> tensor<*xf64>
-    %4 = "toy.mul"(%1, %3) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-    "toy.return"(%4) : (tensor<*xf64>) -> ()
+    %0 = toy.struct_access %arg0[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %1 = toy.transpose(%0 : tensor<*xf64>) to tensor<*xf64>
+    %2 = toy.struct_access %arg0[1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %3 = toy.transpose(%2 : tensor<*xf64>) to tensor<*xf64>
+    %4 = toy.mul %1, %3 : tensor<*xf64>
+    toy.return %4 : tensor<*xf64>
   }
   func @main() {
-    %0 = "toy.struct_constant"() {value = [dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>]} : () -> !toy.struct<tensor<*xf64>, tensor<*xf64>>
-    %1 = "toy.generic_call"(%0) {callee = @multiply_transpose} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    "toy.print"(%1) : (tensor<*xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.struct_constant [
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>,
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    ] : !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %1 = toy.generic_call @multiply_transpose(%0) : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
+    toy.print %1 : tensor<*xf64>
+    toy.return
   }
 }
 ```
@@ -462,14 +465,17 @@ After inlining, the MLIR module in the previous section looks something like:
 ```mlir
 module {
   func @main() {
-    %0 = "toy.struct_constant"() {value = [dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>]} : () -> !toy.struct<tensor<*xf64>, tensor<*xf64>>
-    %1 = "toy.struct_access"(%0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %2 = "toy.transpose"(%1) : (tensor<*xf64>) -> tensor<*xf64>
-    %3 = "toy.struct_access"(%0) {index = 1 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %4 = "toy.transpose"(%3) : (tensor<*xf64>) -> tensor<*xf64>
-    %5 = "toy.mul"(%2, %4) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-    "toy.print"(%5) : (tensor<*xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.struct_constant [
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>,
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    ] : !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %1 = toy.struct_access %0[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %2 = toy.transpose(%1 : tensor<*xf64>) to tensor<*xf64>
+    %3 = toy.struct_access %0[1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %4 = toy.transpose(%3 : tensor<*xf64>) to tensor<*xf64>
+    %5 = toy.mul %2, %4 : tensor<*xf64>
+    toy.print %5 : tensor<*xf64>
+    toy.return
   }
 }
 ```
@@ -524,11 +530,11 @@ changes to our pipeline.
 ```mlir
 module {
   func @main() {
-    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-    %1 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
-    %2 = "toy.mul"(%1, %1) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-    "toy.print"(%2) : (tensor<3x2xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    %1 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+    %2 = toy.mul %1, %1 : tensor<3x2xf64>
+    toy.print %2 : tensor<3x2xf64>
+    toy.return
   }
 }
 ```
