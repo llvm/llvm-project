@@ -2957,7 +2957,7 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
     if (ConvertToObjectEntity(symbol)) {
       Initialization(name, *init, false);
     }
-  } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
+  } else if (attrs.test(Attr::PARAMETER)) {  // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
 }
@@ -3925,13 +3925,11 @@ bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {
 
   const auto &groupName{std::get<parser::Name>(x.t)};
   auto *groupSymbol{FindInScope(currScope(), groupName)};
-  if (!groupSymbol) {
+  if (!groupSymbol || !groupSymbol->has<NamelistDetails>()) {
     groupSymbol = &MakeSymbol(groupName, std::move(details));
-  } else if (groupSymbol->has<NamelistDetails>()) {
-    groupSymbol->get<NamelistDetails>().add_objects(details.objects());
-  } else {
-    SayAlreadyDeclared(groupName, *groupSymbol);
+    groupSymbol->ReplaceName(groupName.source);
   }
+  groupSymbol->get<NamelistDetails>().add_objects(details.objects());
   return false;
 }
 
@@ -4408,7 +4406,7 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
       DerivedTypeDetails details;
       details.set_isForwardReferenced();
       symbol->set_details(std::move(details));
-    } else { // C883
+    } else {  // C883
       Say(name, "Derived type '%s' not found"_err_en_US);
       return std::nullopt;
     }
