@@ -208,6 +208,12 @@ Windows Support
 - Fixed handling of TLS variables that are shared between object files
   in MinGW environments
 
+- The ``-cfguard`` flag now emits Windows Control Flow Guard checks on indirect
+  function calls. The previous behavior is still available with the
+  ``-cfguard-nochecks`` flag. These checks can be disabled for specific
+  functions using the new ``__declspec(guard(nocf))`` modifier.
+
+
 C Language Changes in Clang
 ---------------------------
 
