@@ -2219,6 +2219,40 @@ bool SCEVExpander::isHighCostExpansionHelper(
                                      TTI, Processed);
   }
 
+  if (S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr) {
+    const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S);
+
+    unsigned Opcode;
+    switch (S->getSCEVType()) {
+    case scAddExpr:
+      Opcode = Instruction::Add;
+      break;
+    case scMulExpr:
+      Opcode = Instruction::Mul;
+      break;
+    default:
+      llvm_unreachable("There are no other variants here.");
+    }
+
+    Type *OpType = NAry->getType();
+    int PairCost = TTI.getOperationCost(Opcode, OpType);
+    // TODO: this is a very pessimistic cost modelling for Mul,
+    // because of Bin Pow algorithm actually used by the expander,
+    // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
+
+    assert(NAry->getNumOperands() > 1 &&
+           "Nary expr should have more than 1 operand.");
+    for (const SCEV *Op : NAry->operands()) {
+      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
+        return true;
+      if (Op == *NAry->op_begin())
+        continue;
+      BudgetRemaining -= PairCost;
+    }
+
+    return BudgetRemaining < 0;
+  }
+
   // HowManyLessThans uses a Max expression whenever the loop is not guarded by
   // the exit condition.
   if (isa<SCEVMinMaxExpr>(S))

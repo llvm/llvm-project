@@ -135,8 +135,8 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, i8* [[ADR2]]
 ; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, i8* [[ADR3]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
+; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    br i1 [[INNERCMP]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
 ; CHECK-NEXT:    [[INNERCOUNT_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[INNERLOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INNERCOUNT_LCSSA_WIDE]] to i32
