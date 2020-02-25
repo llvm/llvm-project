@@ -616,50 +616,7 @@ void ClangASTSource::FindExternalVisibleDecls(
   if (!m_target)
     return;
 
-  if (module_sp && namespace_decl) {
-    CompilerDeclContext found_namespace_decl;
-
-    if (SymbolFile *symbol_file = module_sp->GetSymbolFile()) {
-      found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
-
-      if (found_namespace_decl) {
-        context.m_namespace_map->push_back(
-            std::pair<lldb::ModuleSP, CompilerDeclContext>(
-                module_sp, found_namespace_decl));
-
-        LLDB_LOG(log, "  CAS::FEVD Found namespace {1} in module {2}", name,
-                 module_sp->GetFileSpec().GetFilename());
-      }
-    }
-  } else {
-    const ModuleList &target_images = m_target->GetImages();
-    std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
-
-    for (size_t i = 0, e = target_images.GetSize(); i < e; ++i) {
-      lldb::ModuleSP image = target_images.GetModuleAtIndexUnlocked(i);
-
-      if (!image)
-        continue;
-
-      CompilerDeclContext found_namespace_decl;
-
-      SymbolFile *symbol_file = image->GetSymbolFile();
-
-      if (!symbol_file)
-        continue;
-
-      found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
-
-      if (found_namespace_decl) {
-        context.m_namespace_map->push_back(
-            std::pair<lldb::ModuleSP, CompilerDeclContext>(
-                image, found_namespace_decl));
-
-        LLDB_LOG(log, "  CAS::FEVD Found namespace {1} in module {2}", name,
-                 image->GetFileSpec().GetFilename());
-      }
-    }
-  }
+  FillNamespaceMap(context, module_sp, namespace_decl);
 
   if (context.m_found_type)
     return;
@@ -709,6 +666,62 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   if (!context.m_found_type) {
     FindDeclInObjCRuntime(context, name);
+  }
+}
+
+void ClangASTSource::FillNamespaceMap(
+    NameSearchContext &context, lldb::ModuleSP module_sp,
+    const CompilerDeclContext &namespace_decl) {
+  const ConstString name(context.m_decl_name.getAsString().c_str());
+  if (IgnoreName(name, true))
+    return;
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  if (module_sp && namespace_decl) {
+    CompilerDeclContext found_namespace_decl;
+
+    if (SymbolFile *symbol_file = module_sp->GetSymbolFile()) {
+      found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
+
+      if (found_namespace_decl) {
+        context.m_namespace_map->push_back(
+            std::pair<lldb::ModuleSP, CompilerDeclContext>(
+                module_sp, found_namespace_decl));
+
+        LLDB_LOG(log, "  CAS::FEVD Found namespace {1} in module {2}", name,
+                 module_sp->GetFileSpec().GetFilename());
+      }
+    }
+    return;
+  }
+
+  const ModuleList &target_images = m_target->GetImages();
+  std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
+
+  for (size_t i = 0, e = target_images.GetSize(); i < e; ++i) {
+    lldb::ModuleSP image = target_images.GetModuleAtIndexUnlocked(i);
+
+    if (!image)
+      continue;
+
+    CompilerDeclContext found_namespace_decl;
+
+    SymbolFile *symbol_file = image->GetSymbolFile();
+
+    if (!symbol_file)
+      continue;
+
+    found_namespace_decl = symbol_file->FindNamespace(name, namespace_decl);
+
+    if (found_namespace_decl) {
+      context.m_namespace_map->push_back(
+          std::pair<lldb::ModuleSP, CompilerDeclContext>(image,
+                                                         found_namespace_decl));
+
+      LLDB_LOG(log, "  CAS::FEVD Found namespace {1} in module {2}", name,
+               image->GetFileSpec().GetFilename());
+    }
   }
 }
 

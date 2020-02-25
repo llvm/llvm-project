@@ -364,6 +364,15 @@ protected:
   void FindDeclInModules(NameSearchContext &context, ConstString name);
   void FindDeclInObjCRuntime(NameSearchContext &context, ConstString name);
 
+  /// Fills the namespace map of the given NameSearchContext.
+  ///
+  /// \param context The NameSearchContext with the namespace map to fill.
+  /// \param module_sp The module to search for namespaces or a nullptr if
+  ///                  the current target should be searched.
+  /// \param namespace_decl The DeclContext in which to search for namespaces.
+  void FillNamespaceMap(NameSearchContext &context, lldb::ModuleSP module_sp,
+                        const CompilerDeclContext &namespace_decl);
+
   friend struct NameSearchContext;
 
   bool m_import_in_progress;
