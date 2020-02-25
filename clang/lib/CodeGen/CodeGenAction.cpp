@@ -1146,6 +1146,9 @@ void CodeGenAction::ExecuteAction() {
                            CI.getTargetOpts(), CI.getLangOpts(),
                            CI.getFrontendOpts().ShowTimers,
                            std::move(LinkModules), *VMContext, nullptr);
+    // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
+    // true here because the valued names are needed for reading textual IR.
+    Ctx.setDiscardValueNames(false);
     Ctx.setDiagnosticHandler(
         std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
 
