@@ -3,8 +3,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-FUNC: {{^}}vccz_workaround:
-; GCN: s_load_dword s{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0x0
-; GCN: v_cmp_neq_f32_e64 {{[^,]*}}, s{{[0-9]+}}, 0{{$}}
+; GCN: s_load_dword [[REG:s[0-9]+]], s[{{[0-9]+:[0-9]+}}],
+; GCN: v_cmp_neq_f32_e64 {{[^,]*}}, [[REG]], 0{{$}}
 ; VCCZ-BUG: s_waitcnt lgkmcnt(0)
 ; VCCZ-BUG: s_mov_b64 vcc, vcc
 ; GCN-NOT: s_mov_b64 vcc, vcc
