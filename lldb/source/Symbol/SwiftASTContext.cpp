@@ -2247,6 +2247,7 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
 
 void SwiftASTContext::Initialize() {
   LanguageSet swift;
+  SwiftLanguageRuntime::Initialize();
   swift.Insert(lldb::eLanguageTypeSwift);
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "swift AST context plug-in",
@@ -2255,6 +2256,7 @@ void SwiftASTContext::Initialize() {
 
 void SwiftASTContext::Terminate() {
   PluginManager::UnregisterPlugin(CreateTypeSystemInstance);
+  SwiftLanguageRuntime::Terminate();
 }
 
 bool SwiftASTContext::SupportsLanguage(lldb::LanguageType language) {
