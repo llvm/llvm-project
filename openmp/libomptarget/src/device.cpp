@@ -189,7 +189,8 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     // maps are respected.
     // In addition to the mapping rules above, the close map
     // modifier forces the mapping of the variable to the device.
-    if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier) {
+    if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        !HasCloseModifier) {
       DP("Return HstPtrBegin " DPxMOD " Size=%ld RefCount=%s\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
       IsHostPtr = true;
@@ -235,7 +236,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
         (UpdateRefCount ? " updated" : ""),
         HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
-  } else if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -265,7 +266,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
                             bool HasCloseModifier) {
-  if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier)
+  if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier)
     return OFFLOAD_SUCCESS;
   // Check if the pointer is contained in any sub-nodes.
   int rc;
@@ -299,7 +300,7 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
 void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
-    RTL->init_requires(RTLs.RequiresFlags);
+    RTL->init_requires(RTLs->RequiresFlags);
   int32_t rc = RTL->init_device(RTLDeviceID);
   if (rc == OFFLOAD_SUCCESS) {
     IsInit = true;
@@ -363,9 +364,9 @@ bool device_is_ready(int device_num) {
   DP("Checking whether device %d is ready.\n", device_num);
   // Devices.size() can only change while registering a new
   // library, so try to acquire the lock of RTLs' mutex.
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   if (Devices_size <= (size_t)device_num) {
     DP("Device ID  %d does not have a matching RTL\n", device_num);
     return false;
