@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Issue 458 -- semantic checks for a normal DO loop.  The DO variable
 ! and the initial, final, and step expressions must be INTEGER if the
 ! options for standard conformance and turning warnings into errors

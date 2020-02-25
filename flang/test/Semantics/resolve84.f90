@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C729 A derived type type-name shall not be DOUBLEPRECISION or the same as 
 ! the name of any intrinsic type defined in this document.
 subroutine s()

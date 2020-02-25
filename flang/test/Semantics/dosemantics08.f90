@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C1138 -- 
 ! A branch (11.2) within a DO CONCURRENT construct shall not have a branch
 ! target that is outside the construct.

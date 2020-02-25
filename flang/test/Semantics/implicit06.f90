@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 subroutine s1
   implicit integer(a-c)
   !ERROR: More than one implicit type specified for 'c'

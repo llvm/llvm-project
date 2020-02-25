@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 module m
 !C778 The same binding-attr shall not appear more than once in a given
 !binding-attr-list.

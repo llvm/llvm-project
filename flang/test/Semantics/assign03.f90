@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
 module m

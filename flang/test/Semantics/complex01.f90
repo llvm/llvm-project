@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C718 Each named constant in a complex literal constant shall be of type 
 ! integer or real.
 subroutine s()

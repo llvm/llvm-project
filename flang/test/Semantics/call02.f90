@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! 15.5.1 procedure reference constraints and restrictions
 
 subroutine s01(elem, subr)

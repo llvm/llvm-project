@@ -17,3 +17,5 @@ CMakeCache.txt
 */*/Makefile
 cmake_install.cmake
 formatted
+.DS_Store 
+.vs_code 

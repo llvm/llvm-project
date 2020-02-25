@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C1003 - can't parenthesize function call returning procedure pointer
 module m1
   type :: dt

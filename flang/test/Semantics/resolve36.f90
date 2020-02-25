@@ -1,8 +1,7 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 
 ! C1568 The procedure-name shall have been declared to be a separate module
 ! procedure in the containing program unit or an ancestor of that program unit.
-
 module m1
   interface
     module subroutine sub1(arg1)

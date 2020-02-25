@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
   character(kind=1,len=50) internal_file
   character(kind=1,len=100) msg
   character(20) sign

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Test DO loop semantics for constraint C1130 --
 ! The constraint states that "If the locality-spec DEFAULT ( NONE ) appears in a
 ! DO CONCURRENT statement; a variable that is a local or construct entity of a

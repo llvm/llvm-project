@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Tests valid and invalid usage of forward references to procedures
 ! in specification expressions.
 module m

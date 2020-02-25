@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Test 8.5.10 & 8.5.18 constraints on dummy argument declarations
 
 module m

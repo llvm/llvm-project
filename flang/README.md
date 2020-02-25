@@ -150,15 +150,6 @@ or
 ```
 CXX=/opt/gcc-7.2/bin/g++-7.2 cmake ...
 ```
-There's a third option!
-The CMakeList.txt file uses the variable GCC
-as the path to the bin directory containing the C++ compiler.
-
-GCC can be defined on the cmake command line
-where `<GCC_DIRECTORY>` is the path to a GCC installation with bin, lib, etc:
-```
-cmake -DGCC=<GCC_DIRECTORY> ...
-```
 
 ### Building f18 with clang
 
@@ -166,27 +157,11 @@ To build f18 with clang,
 cmake needs to know how to find clang++
 and the GCC library and tools that were used to build clang++.
 
-The CMakeList.txt file expects either CXX or BUILD_WITH_CLANG to be set.
-
 CXX should include the full path to clang++
 or clang++ should be found on your PATH.
 ```
 export CXX=clang++
 ```
-BUILD_WITH_CLANG can be defined on the cmake command line
-where `<CLANG_DIRECTORY>`
-is the path to a clang installation with bin, lib, etc:
-```
-cmake -DBUILD_WITH_CLANG=<CLANG_DIRECTORY>
-```
-Or GCC can be defined on the f18 cmake command line
-where `<GCC_DIRECTORY>` is the path to a GCC installation with bin, lib, etc:
-```
-cmake -DGCC=<GCC_DIRECTORY> ...
-```
-To use f18 after it is built,
-the environment variables PATH and LD_LIBRARY_PATH
-must be set to use GCC and its associated libraries.
 
 ### Installation Directory
 

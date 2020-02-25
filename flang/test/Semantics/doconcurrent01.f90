@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C1141
 ! A reference to the procedure IEEE_SET_HALTING_MODE ! from the intrinsic 
 ! module IEEE_EXCEPTIONS, shall not ! appear within a DO CONCURRENT construct.

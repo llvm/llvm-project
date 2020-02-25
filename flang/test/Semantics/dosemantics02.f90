@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C1121 -- any procedure referenced in a concurrent header must be pure
 
 ! Also, check that the step expressions are not zero.  This is prohibited by

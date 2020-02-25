@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C1030 - pointers to intrinsic procedures
 program main
   intrinsic :: cos ! a specific & generic intrinsic name

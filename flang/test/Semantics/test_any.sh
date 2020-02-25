@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#/usr/bin/env bash
 # Compile a source file with '-funparse-with-symbols' and verify
 # we get the right symbols in the output, i.e. the output should be
 # the same as the input, except for the copyright comment.
@@ -7,7 +7,7 @@
 srcdir=$(dirname $0)
 source $srcdir/common.sh
 
-FileCheck=${FileCheck:=internal_check}
+FileCheck=internal_check
 
 function internal_check() {
   r=true

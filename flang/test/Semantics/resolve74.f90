@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %flang %t
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C722 A function name shall not be declared with an asterisk type-param-value 
 ! unless it is of type CHARACTER and is the name of a dummy function or the 
 ! name of the result of an external function.
