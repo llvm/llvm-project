@@ -19,6 +19,9 @@ define i32 @_Z3fooPKcjj(i8* nocapture readonly %s, i32 %len, i32 %c) {
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN:%.*]], 11
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[WHILE_BODY_LR_PH:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.body.lr.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -12
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], 12
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[KEYLEN_010:%.*]] = phi i32 [ [[LEN]], [[WHILE_BODY_LR_PH]] ], [ [[SUB:%.*]], [[WHILE_BODY]] ]
@@ -36,10 +39,10 @@ define i32 @_Z3fooPKcjj(i8* nocapture readonly %s, i32 %len, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUB]], 11
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_COND_WHILE_END_CRIT_EDGE:%.*]]
 ; CHECK:       while.cond.while.end_crit_edge:
-; CHECK-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[KEYLEN_0_LCSSA:%.*]] = phi i32 [ [[SUB_LCSSA]], [[WHILE_COND_WHILE_END_CRIT_EDGE]] ], [ [[LEN]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[KEYLEN_0_LCSSA:%.*]] = phi i32 [ [[TMP3]], [[WHILE_COND_WHILE_END_CRIT_EDGE]] ], [ [[LEN]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @_Z3mixRjj(i32* dereferenceable(4) [[A]], i32 [[KEYLEN_0_LCSSA]])
 ; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[T]])
