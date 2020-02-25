@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-//  Declarations that describe the ARC register file 
+//  Declarations that describe the ARC register file
 //===----------------------------------------------------------------------===//
 
 class ARCReg<string n, list<string> altNames> : Register<n, altNames> {
@@ -27,35 +27,35 @@ class Status<string n> : ARCReg<n, []> {
 // Integer registers
 def R0 : Core< 0, "%r0">, DwarfRegNum<[0]>;
 def R1 : Core< 1, "%r1">, DwarfRegNum<[1]>;
-def R2 : Core< 2, "%r2">, DwarfRegNum<[2]>; 
+def R2 : Core< 2, "%r2">, DwarfRegNum<[2]>;
 def R3 : Core< 3, "%r3">, DwarfRegNum<[3]>;
 let CostPerUse=1 in {
 def R4 : Core< 4, "%r4">, DwarfRegNum<[4]>;
-def R5 : Core< 5, "%r5">, DwarfRegNum<[5]>; 
+def R5 : Core< 5, "%r5">, DwarfRegNum<[5]>;
 def R6 : Core< 6, "%r6">, DwarfRegNum<[6]>;
 def R7 : Core< 7, "%r7">, DwarfRegNum<[7]>;
 def R8 : Core< 8, "%r8">, DwarfRegNum<[8]>;
 def R9 : Core< 9, "%r9">, DwarfRegNum<[9]>;
-def R10 : Core<10, "%r10">, DwarfRegNum<[10]>; 
+def R10 : Core<10, "%r10">, DwarfRegNum<[10]>;
 def R11 : Core<11, "%r11">, DwarfRegNum<[11]>;
 }
 def R12 : Core<12, "%r12">, DwarfRegNum<[12]>;
-def R13 : Core<13, "%r13">, DwarfRegNum<[13]>; 
+def R13 : Core<13, "%r13">, DwarfRegNum<[13]>;
 def R14 : Core<14, "%r14">, DwarfRegNum<[14]>;
 def R15 : Core<15, "%r15">, DwarfRegNum<[15]>;
 
 let CostPerUse=1 in {
 def R16 : Core<16, "%r16">, DwarfRegNum<[16]>;
 def R17 : Core<17, "%r17">, DwarfRegNum<[17]>;
-def R18 : Core<18, "%r18">, DwarfRegNum<[18]>; 
+def R18 : Core<18, "%r18">, DwarfRegNum<[18]>;
 def R19 : Core<19, "%r19">, DwarfRegNum<[19]>;
 def R20 : Core<20, "%r20">, DwarfRegNum<[20]>;
-def R21 : Core<21, "%r21">, DwarfRegNum<[21]>; 
+def R21 : Core<21, "%r21">, DwarfRegNum<[21]>;
 def R22 : Core<22, "%r22">, DwarfRegNum<[22]>;
 def R23 : Core<23, "%r23">, DwarfRegNum<[23]>;
 def R24 : Core<24, "%r24">, DwarfRegNum<[24]>;
 def R25 : Core<25, "%r25">, DwarfRegNum<[25]>;
-def GP : Core<26, "%gp",["%r26"]>, DwarfRegNum<[26]>; 
+def GP : Core<26, "%gp",["%r26"]>, DwarfRegNum<[26]>;
 def FP : Core<27, "%fp", ["%r27"]>, DwarfRegNum<[27]>;
 def SP : Core<28, "%sp", ["%r28"]>, DwarfRegNum<[28]>;
 def ILINK : Core<29, "%ilink">, DwarfRegNum<[29]>;
