@@ -47,7 +47,50 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-The improvements are...
+- Go-to-definition, hover, find-references etc use a new mechanism to identify
+  what is under the cursor, which is (hopefully) more consistent and accurate.
+
+- clangd should be able to reliably locate the standard library/SDK on macOS.
+
+- Shutdown more cleanly on receiving a signal. In particular temporary PCH files
+  should be cleaned up.
+
+- Find references now works on macros.
+
+- clangd can be more easily used remotely or in a docker container.
+
+  The `--path-mappings` flag translates between local and remote paths.
+
+- Experimental support for renaming across files (behind the
+  `--cross-file-rename` flag).
+
+- Hover now exposes more information, including the type of symbols and the
+  value of constant expressions.
+
+- Go to definition now works in dependent code in more cases, by assuming the
+  primary template is used.
+
+- Better recovery and reporting when the compile command for a file can't be
+  fully parsed.
+
+- Switch header/source (an extension) now uses index information in addition
+  to filename heuristics, and is much more robust.
+
+- Semantic selection (expand/contract selection) is supported.
+
+- Semantic highlighting is more robust, highlights more types of tokens, and
+  as an extension provides information about inactive preprocessor regions.
+
+- Code completion results now include an extension field `score`.
+
+  This allows clients to incorporate clangd quality signals when re-ranking code
+  completion after client-side fuzzy-matching.
+
+- New refactorings:
+  define function out-of-line, define function in-line, extract function,
+  remove using namespace directive, localize Objective-C string.
+
+- Bug fixes and performance improvements :-)
 
 Improvements to clang-doc
 -------------------------
