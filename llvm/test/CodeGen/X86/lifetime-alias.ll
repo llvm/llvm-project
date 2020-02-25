@@ -23,7 +23,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @__PRETTY_FUNCTION__.main = private unnamed_addr constant [11 x i8] c"int main()\00", align 1
 
 ; Function Attrs: norecurse uwtable
-define dso_local i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
 ; CHECK-NEXT:    pushq %rax
@@ -35,6 +35,8 @@ define dso_local i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (
 ; CHECK-NEXT:    movw $5632, {{[0-9]+}}(%rsp) # imm = 0x1600
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $11, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $8389209137051166804, %rax # imm = 0x746C754320656854
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $1701999988, -{{[0-9]+}}(%rsp) # imm = 0x65727574
@@ -47,7 +49,7 @@ define dso_local i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (
 ; CHECK-NEXT:    movups {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $792633534417207296, %rax # imm = 0xB00000000000000
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
@@ -68,9 +70,9 @@ define dso_local i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
 ; CHECK-NEXT:    cmpb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jns .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
