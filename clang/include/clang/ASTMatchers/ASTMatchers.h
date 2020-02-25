@@ -307,7 +307,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFileMatching,
 ///
 /// FIXME: Change to be a polymorphic matcher that works on any syntactic
 /// node. There's nothing `Stmt`-specific about it.
-AST_MATCHER_P(clang::Stmt, isExpandedFromMacro, llvm::StringRef, MacroName) {
+AST_MATCHER_P(Stmt, isExpandedFromMacro, llvm::StringRef, MacroName) {
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();
