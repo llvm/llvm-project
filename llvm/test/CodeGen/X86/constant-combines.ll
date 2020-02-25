@@ -7,7 +7,8 @@ target triple = "x86_64-unknown-unknown"
 define void @bitstore_fold() {
 ; CHECK-LABEL: bitstore_fold:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    movl $-2, 0
+; CHECK-NEXT:    movl $-1, 0
+; CHECK-NEXT:    movb $0, 0
 ; CHECK-NEXT:    retq
 BB:
    store i32 -1, i32* null

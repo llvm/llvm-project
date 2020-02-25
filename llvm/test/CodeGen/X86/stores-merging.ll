@@ -26,8 +26,9 @@ define void @redundant_stores_merging() {
 define void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
+; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -219,12 +220,11 @@ define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #
   ret void
 }
 
-; These are miscompiles - we should store '1', not '-1'.
 ; https://bugs.llvm.org/show_bug.cgi?id=43446
 define void @pr43446_0(i64 %x) {
 ; CHECK-LABEL: pr43446_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb $-1, (%rdi)
+; CHECK-NEXT:    movb $1, (%rdi)
 ; CHECK-NEXT:    retq
   %a = inttoptr i64 %x to i8*
   store i8 -2, i8* %a, align 1
@@ -235,7 +235,7 @@ define void @pr43446_0(i64 %x) {
 define void @pr43446_1(i8* %a) {
 ; CHECK-LABEL: pr43446_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb $-1, (%rdi)
+; CHECK-NEXT:    movb $1, (%rdi)
 ; CHECK-NEXT:    retq
   store i8 -2, i8* %a, align 1
   %b = bitcast i8* %a to i1*
