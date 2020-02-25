@@ -226,19 +226,9 @@ inline _LIBCPP_INLINE_VISIBILITY void  operator delete[](void*, void*) _NOEXCEPT
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_CXX03_LANG)
-union __libcpp_max_align_t {
-  void * __f1;
-  long long int __f2;
-  long double __f3;
-};
-#endif
-
 _LIBCPP_CONSTEXPR inline _LIBCPP_INLINE_VISIBILITY bool __is_overaligned_for_new(size_t __align) _NOEXCEPT {
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
   return __align > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-#elif defined(_LIBCPP_CXX03_LANG)
-  return __align > alignment_of<__libcpp_max_align_t>::value;
 #else
   return __align > alignment_of<max_align_t>::value;
 #endif
