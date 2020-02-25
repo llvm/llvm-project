@@ -227,9 +227,8 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
       ClangASTImporter::NamespaceMapSP namespace_map =
           m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-      if (log && log->GetVerbose())
-        LLDB_LOG(log, "      CTD Inspecting namespace map{1} ({2} entries)",
-                 namespace_map.get(), namespace_map->size());
+      LLDB_LOGV(log, "      CTD Inspecting namespace map{1} ({2} entries)",
+                namespace_map.get(), namespace_map->size());
 
       if (!namespace_map)
         return;
@@ -350,10 +349,8 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
       interface_decl->getSuperClass() != interface_decl)
     CompleteType(interface_decl->getSuperClass());
 
-  if (log) {
-    LLDB_LOG(log, "      [COID] After:");
-    LLDB_LOG(log, "      [COID] {0}", ClangUtil::DumpDecl(interface_decl));
-  }
+  LLDB_LOG(log, "      [COID] After:");
+  LLDB_LOG(log, "      [COID] {0}", ClangUtil::DumpDecl(interface_decl));
 }
 
 clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
@@ -865,12 +862,8 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
   if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
-  if (log) {
-    LLDB_LOG(log,
-             "  CAS::FEVD Matching entity found for \"{1}\" in "
-             "the modules",
-             name);
-  }
+  LLDB_LOG(log, "  CAS::FEVD Matching entity found for \"{1}\" in the modules",
+           name);
 
   clang::NamedDecl *const decl_from_modules = decls[0];
 
@@ -920,10 +913,8 @@ void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
   if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
-  if (log) {
-    LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\" in the runtime",
-             name);
-  }
+  LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\" in the runtime",
+           name);
 
   clang::Decl *copied_decl = CopyDecl(decls[0]);
   clang::NamedDecl *copied_named_decl =
@@ -1253,10 +1244,8 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
     DeclFromParser<ObjCIvarDecl> parser_ivar_decl(
         origin_ivar_decl.Import(source));
     if (parser_ivar_decl.IsValid()) {
-      if (log) {
-        LLDB_LOG(log, "  CAS::FOPD found\n{1}",
-                 ClangUtil::DumpDecl(parser_ivar_decl.decl));
-      }
+      LLDB_LOG(log, "  CAS::FOPD found\n{1}",
+               ClangUtil::DumpDecl(parser_ivar_decl.decl));
 
       context.AddNamedDecl(parser_ivar_decl.decl);
       found = true;
@@ -1408,9 +1397,8 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   ClangASTImporter::NamespaceMapSP namespace_map =
       m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-  if (log && log->GetVerbose())
-    LLDB_LOG(log, "  CAS::FEVD Inspecting namespace map {1} ({2} entries)",
-             namespace_map.get(), namespace_map->size());
+  LLDB_LOGV(log, "  CAS::FEVD Inspecting namespace map {1} ({2} entries)",
+            namespace_map.get(), namespace_map->size());
 
   if (!namespace_map)
     return;
