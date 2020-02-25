@@ -2138,6 +2138,9 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction *At, int &BudgetRemaining,
     const TargetTransformInfo &TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
+  if (BudgetRemaining < 0)
+    return true; // Already run out of budget, give up.
+
   // Was the cost of expansion of this expression already accounted for?
   if (!Processed.insert(S).second)
     return false; // We have already accounted for this expression.
@@ -2153,17 +2156,26 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return false; // Assume to be zero-cost.
   }
 
-  // Zero/One operand expressions
-  switch (S->getSCEVType()) {
-  case scTruncate:
-    return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(), L,
-                                     At, BudgetRemaining, TTI, Processed);
-  case scZeroExtend:
-    return isHighCostExpansionHelper(cast<SCEVZeroExtendExpr>(S)->getOperand(),
-                                     L, At, BudgetRemaining, TTI, Processed);
-  case scSignExtend:
-    return isHighCostExpansionHelper(cast<SCEVSignExtendExpr>(S)->getOperand(),
-                                     L, At, BudgetRemaining, TTI, Processed);
+  if (auto *CastExpr = dyn_cast<SCEVCastExpr>(S)) {
+    unsigned Opcode;
+    switch (S->getSCEVType()) {
+    case scTruncate:
+      Opcode = Instruction::Trunc;
+      break;
+    case scZeroExtend:
+      Opcode = Instruction::ZExt;
+      break;
+    case scSignExtend:
+      Opcode = Instruction::SExt;
+      break;
+    default:
+      llvm_unreachable("There are no other cast types.");
+    }
+    const SCEV *Op = CastExpr->getOperand();
+    BudgetRemaining -=
+        TTI.getOperationCost(Opcode, S->getType(), Op->getType());
+    return isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI,
+                                     Processed);
   }
 
 
