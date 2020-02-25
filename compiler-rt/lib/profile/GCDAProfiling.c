@@ -32,8 +32,9 @@
 #include <windows.h>
 #include "WindowsMMap.h"
 #else
-#include <sys/mman.h>
 #include <sys/file.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 #if defined(__FreeBSD__) && defined(__i386__)
@@ -62,27 +63,20 @@ typedef unsigned long long uint64_t;
 #include "InstrProfiling.h"
 #include "InstrProfilingUtil.h"
 
+/* #define DEBUG_GCDAPROFILING */
+
 #ifndef _WIN32
 #include <pthread.h>
-static pthread_mutex_t gcov_flush_mutex = PTHREAD_MUTEX_INITIALIZER;
-static __inline void gcov_flush_lock() {
-  pthread_mutex_lock(&gcov_flush_mutex);
-}
-static __inline void gcov_flush_unlock() {
-  pthread_mutex_unlock(&gcov_flush_mutex);
-}
+pthread_mutex_t gcov_mutex = PTHREAD_MUTEX_INITIALIZER;
+static __inline void gcov_lock() { pthread_mutex_lock(&gcov_mutex); }
+static __inline void gcov_unlock() { pthread_mutex_unlock(&gcov_mutex); }
 #else
 #include <windows.h>
-static SRWLOCK gcov_flush_mutex = SRWLOCK_INIT;
-static __inline void gcov_flush_lock() {
-  AcquireSRWLockExclusive(&gcov_flush_mutex);
-}
-static __inline void gcov_flush_unlock() {
-  ReleaseSRWLockExclusive(&gcov_flush_mutex);
-}
+SRWLOCK gcov_mutex = SRWLOCK_INIT;
+static __inline void gcov_lock() { AcquireSRWLockExclusive(&gcov_mutex); }
+static __inline void gcov_unlock() { ReleaseSRWLockExclusive(&gcov_mutex); }
 #endif
 
-/* #define DEBUG_GCDAPROFILING */
 /*
  * --- GCOV file format I/O primitives ---
  */
@@ -137,6 +131,12 @@ struct fn_list writeout_fn_list;
  *  A list of flush functions that our __gcov_flush() function should call, shared between all dynamic objects.
  */
 struct fn_list flush_fn_list;
+
+/*
+ *  A list of reset functions that our __gcov_reset() function should call,
+ * shared between all dynamic objects.
+ */
+struct fn_list reset_fn_list;
 
 static void fn_list_insert(struct fn_list* list, fn_ptr fn) {
   struct fn_node* new_node = malloc(sizeof(struct fn_node));
@@ -638,8 +638,25 @@ void llvm_register_flush_function(fn_ptr fn) {
   fn_list_insert(&flush_fn_list, fn);
 }
 
+COMPILER_RT_VISIBILITY
+void llvm_register_reset_function(fn_ptr fn) {
+  fn_list_insert(&reset_fn_list, fn);
+}
+
+COMPILER_RT_VISIBILITY
+void llvm_reset_counters(void) {
+  struct fn_node *curr = reset_fn_list.head;
+
+  while (curr) {
+    if (curr->id == CURRENT_ID) {
+      curr->fn();
+    }
+    curr = curr->next;
+  }
+}
+
 void __gcov_flush() {
-  gcov_flush_lock();
+  gcov_lock();
 
   struct fn_node* curr = flush_fn_list.head;
 
@@ -648,8 +665,36 @@ void __gcov_flush() {
     curr = curr->next;
   }
 
-  gcov_flush_unlock();
+  gcov_unlock();
 }
+
+#if !defined(_WIN32)
+pid_t __gcov_fork() {
+  pid_t parent_pid = getpid();
+  pid_t pid;
+
+  gcov_lock();
+  // Avoid a concurrent modification of the lists during the fork.
+  // For example, a thread is making a fork while another one is
+  // loading a CU and so executing global initializer in this case
+  // the child process could inherit a bad list (e.g. bad tail)
+  // or could have the malloc in a wrong state.
+  pid = fork();
+  gcov_unlock();
+
+  if (pid == 0) {
+    pid_t child_pid = getpid();
+    if (child_pid != parent_pid) {
+      // The pid changed so we've a fork (one could have its own fork function)
+      // Just reset the counters for this child process
+      // No need to lock here since we just forked and cannot have any other
+      // threads.
+      llvm_reset_counters();
+    }
+  }
+  return pid;
+}
+#endif
 
 COMPILER_RT_VISIBILITY
 void llvm_delete_flush_function_list(void) {
@@ -657,8 +702,13 @@ void llvm_delete_flush_function_list(void) {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
+void llvm_delete_reset_function_list(void) { fn_list_remove(&reset_fn_list); }
+
+COMPILER_RT_VISIBILITY
+void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn, fn_ptr rfn) {
   static int atexit_ran = 0;
+
+  gcov_lock();
 
   if (wfn)
     llvm_register_writeout_function(wfn);
@@ -666,12 +716,18 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
   if (ffn)
     llvm_register_flush_function(ffn);
 
+  if (rfn)
+    llvm_register_reset_function(rfn);
+
+  gcov_unlock();
+
   if (atexit_ran == 0) {
     atexit_ran = 1;
 
     /* Make sure we write out the data and delete the data structures. */
     atexit(llvm_delete_flush_function_list);
     atexit(llvm_delete_writeout_function_list);
+    atexit(llvm_delete_reset_function_list);
     atexit(llvm_writeout_files);
   }
 }

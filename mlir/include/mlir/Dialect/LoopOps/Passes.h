@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_LOOPOPS_PASSES_H_
 #define MLIR_DIALECT_LOOPOPS_PASSES_H_
 
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 
 namespace mlir {
@@ -21,6 +22,10 @@ class Pass;
 
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();
+
+/// Creates a pass which tiles innermost parallel loops.
+std::unique_ptr<Pass>
+createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
 
 } // namespace mlir
 

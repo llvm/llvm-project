@@ -998,6 +998,19 @@ public:
                               SmallVectorImpl<const SCEV *> &Subscripts,
                               SmallVectorImpl<const SCEV *> &Sizes);
 
+  /// Gathers the individual index expressions from a GEP instruction.
+  ///
+  /// This function optimistically assumes the GEP references into a fixed size
+  /// array. If this is actually true, this function returns a list of array
+  /// subscript expressions in \p Subscripts and a list of integers describing
+  /// the size of the individual array dimensions in \p Sizes. Both lists have
+  /// either equal length or the size list is one element shorter in case there
+  /// is no known size available for the outermost array dimension. Returns true
+  /// if successful and false otherwise.
+  bool getIndexExpressionsFromGEP(const GetElementPtrInst *GEP,
+                                  SmallVectorImpl<const SCEV *> &Subscripts,
+                                  SmallVectorImpl<int> &Sizes);
+
   /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
   /// subscripts and sizes of an array access.
   ///

@@ -1787,6 +1787,25 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // FMA3 and FMA4
 
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
+  def int_x86_fma_vfmaddsub_ps : GCCBuiltin<"__builtin_ia32_vfmaddsubps">,
+              Intrinsic<[llvm_v4f32_ty],
+                        [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty],
+                        [IntrNoMem]>;
+  def int_x86_fma_vfmaddsub_pd : GCCBuiltin<"__builtin_ia32_vfmaddsubpd">,
+              Intrinsic<[llvm_v2f64_ty],
+                        [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty],
+                        [IntrNoMem]>;
+  def int_x86_fma_vfmaddsub_ps_256 :
+               GCCBuiltin<"__builtin_ia32_vfmaddsubps256">,
+              Intrinsic<[llvm_v8f32_ty],
+                        [llvm_v8f32_ty, llvm_v8f32_ty, llvm_v8f32_ty],
+                        [IntrNoMem]>;
+  def int_x86_fma_vfmaddsub_pd_256 :
+              GCCBuiltin<"__builtin_ia32_vfmaddsubpd256">,
+              Intrinsic<[llvm_v4f64_ty],
+                        [llvm_v4f64_ty, llvm_v4f64_ty, llvm_v4f64_ty],
+                        [IntrNoMem]>;
+
   def int_x86_avx512_vfmadd_pd_512 :
           Intrinsic<[llvm_v8f64_ty],
           [llvm_v8f64_ty, llvm_v8f64_ty, llvm_v8f64_ty, llvm_i32_ty],
@@ -1797,7 +1816,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [llvm_v16f32_ty, llvm_v16f32_ty, llvm_v16f32_ty, llvm_i32_ty],
           [IntrNoMem, ImmArg<3>]>;
 
-  // TODO: Can we use 2 vfmadds+shufflevector?
   def int_x86_avx512_vfmaddsub_pd_512 :
           Intrinsic<[llvm_v8f64_ty],
           [llvm_v8f64_ty, llvm_v8f64_ty, llvm_v8f64_ty, llvm_i32_ty],

@@ -961,6 +961,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorElementType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_DUPQ_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_EXPA_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMVectorOfBitcastsToInt<0>],
@@ -1474,6 +1480,7 @@ def int_aarch64_sve_clasta_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_clastb    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_clastb_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_compact   : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_dupq_lane : AdvSIMD_SVE_DUPQ_Intrinsic;
 def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_lastb     : AdvSIMD_SVE_Reduce_Intrinsic;
@@ -2021,5 +2028,38 @@ def int_aarch64_sve_bsl    : AdvSIMD_3VectorArg_Intrinsic;
 def int_aarch64_sve_bsl1n  : AdvSIMD_3VectorArg_Intrinsic;
 def int_aarch64_sve_bsl2n  : AdvSIMD_3VectorArg_Intrinsic;
 def int_aarch64_sve_nbsl   : AdvSIMD_3VectorArg_Intrinsic;
+
+//
+// SVE2 - Optional AES, SHA-3 and SM4
+//
+
+def int_aarch64_sve_aesd    : GCCBuiltin<"__builtin_sve_svaesd_u8">,
+                              Intrinsic<[llvm_nxv16i8_ty],
+                                        [llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_aesimc  : GCCBuiltin<"__builtin_sve_svaesimc_u8">,
+                              Intrinsic<[llvm_nxv16i8_ty],
+                                        [llvm_nxv16i8_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_aese    : GCCBuiltin<"__builtin_sve_svaese_u8">,
+                              Intrinsic<[llvm_nxv16i8_ty],
+                                        [llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_aesmc   : GCCBuiltin<"__builtin_sve_svaesmc_u8">,
+                              Intrinsic<[llvm_nxv16i8_ty],
+                                        [llvm_nxv16i8_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_rax1    : GCCBuiltin<"__builtin_sve_svrax1_u64">,
+                              Intrinsic<[llvm_nxv2i64_ty],
+                                        [llvm_nxv2i64_ty, llvm_nxv2i64_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_sm4e    : GCCBuiltin<"__builtin_sve_svsm4e_u32">,
+                              Intrinsic<[llvm_nxv4i32_ty],
+                                        [llvm_nxv4i32_ty, llvm_nxv4i32_ty],
+                                        [IntrNoMem]>;
+def int_aarch64_sve_sm4ekey : GCCBuiltin<"__builtin_sve_svsm4ekey_u32">,
+                              Intrinsic<[llvm_nxv4i32_ty],
+                                        [llvm_nxv4i32_ty, llvm_nxv4i32_ty],
+                                        [IntrNoMem]>;
 
 }

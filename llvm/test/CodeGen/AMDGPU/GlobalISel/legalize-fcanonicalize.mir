@@ -287,21 +287,25 @@ body: |
     ; GFX9-LABEL: name: test_fcanonicalize_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; GFX9: [[COPY:%[0-9]+]]:_(<3 x s16>) = COPY [[EXTRACT]](<3 x s16>)
-    ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
-    ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[EXTRACT1]]
-    ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[COPY]](<3 x s16>), 0
-    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT1]], [[FCANONICALIZE]](<2 x s16>), 0
-    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT2]](<4 x s16>), 0
-    ; GFX9: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT3]](<4 x s16>), 32
-    ; GFX9: [[FCANONICALIZE1:%[0-9]+]]:_(s16) = G_FCANONICALIZE [[EXTRACT3]]
-    ; GFX9: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT2]](<3 x s16>), 0
-    ; GFX9: [[INSERT5:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT4]], [[FCANONICALIZE1]](s16), 32
-    ; GFX9: [[EXTRACT4:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT5]](<4 x s16>), 0
-    ; GFX9: S_NOP 0, implicit [[EXTRACT4]](<3 x s16>)
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY]](s32), [[COPY1]](s32)
+    ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; GFX9: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY2]](s32), [[DEF1]](s32)
+    ; GFX9: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[BUILD_VECTOR_TRUNC]]
+    ; GFX9: [[FCANONICALIZE1:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[BUILD_VECTOR_TRUNC1]]
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FCANONICALIZE]](<2 x s16>), [[FCANONICALIZE1]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FCANONICALIZE %0
     S_NOP 0, implicit %1

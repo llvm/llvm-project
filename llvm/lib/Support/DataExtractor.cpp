@@ -171,6 +171,21 @@ StringRef DataExtractor::getCStrRef(uint64_t *offset_ptr) const {
   return StringRef();
 }
 
+StringRef DataExtractor::getFixedLengthString(uint64_t *OffsetPtr,
+                                              uint64_t Length,
+                                              StringRef TrimChars) const {
+  StringRef Bytes(getBytes(OffsetPtr, Length));
+  return Bytes.trim(TrimChars);
+}
+
+StringRef DataExtractor::getBytes(uint64_t *OffsetPtr, uint64_t Length) const {
+  if (!isValidOffsetForDataOfSize(*OffsetPtr, Length))
+    return StringRef();
+  StringRef Result = Data.substr(*OffsetPtr, Length);
+  *OffsetPtr += Length;
+  return Result;
+}
+
 uint64_t DataExtractor::getULEB128(uint64_t *offset_ptr,
                                    llvm::Error *Err) const {
   assert(*offset_ptr <= Data.size());

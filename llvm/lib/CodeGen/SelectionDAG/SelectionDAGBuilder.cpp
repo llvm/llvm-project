@@ -2860,15 +2860,18 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   assert(isa<InlineAsm>(I.getCalledValue()) &&
          "Only know how to handle inlineasm callbr");
   visitInlineAsm(&I);
+  CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
+  Return->setInlineAsmBrDefaultTarget();
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return);
   for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
     MachineBasicBlock *Target = FuncInfo.MBBMap[I.getIndirectDest(i)];
     addSuccessorWithProb(CallBrMBB, Target);
+    CallBrMBB->addInlineAsmBrIndirectTarget(Target);
   }
   CallBrMBB->normalizeSuccProbs();
 
@@ -5451,7 +5454,8 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
                             SDValue LHS, SDValue RHS, SDValue Scale,
                             SelectionDAG &DAG, const TargetLowering &TLI) {
   EVT VT = LHS.getValueType();
-  bool Signed = Opcode == ISD::SDIVFIX;
+  bool Signed = Opcode == ISD::SDIVFIX || Opcode == ISD::SDIVFIXSAT;
+  bool Saturating = Opcode == ISD::SDIVFIXSAT || Opcode == ISD::UDIVFIXSAT;
   LLVMContext &Ctx = *DAG.getContext();
 
   // If the type is legal but the operation isn't, this node might survive all
@@ -5463,14 +5467,16 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
   // by bumping the size by one bit. This will force it to Promote, enabling the
   // early expansion and avoiding the need to expand later.
 
-  // We don't have to do this if Scale is 0; that can always be expanded.
+  // We don't have to do this if Scale is 0; that can always be expanded, unless
+  // it's a saturating signed operation. Those can experience true integer
+  // division overflow, a case which we must avoid.
 
   // FIXME: We wouldn't have to do this (or any of the early
   // expansion/promotion) if it was possible to expand a libcall of an
   // illegal type during operation legalization. But it's not, so things
   // get a bit hacky.
   unsigned ScaleInt = cast<ConstantSDNode>(Scale)->getZExtValue();
-  if (ScaleInt > 0 &&
+  if ((ScaleInt > 0 || (Saturating && Signed)) &&
       (TLI.isTypeLegal(VT) ||
        (VT.isVector() && TLI.isTypeLegal(VT.getVectorElementType())))) {
     TargetLowering::LegalizeAction Action = TLI.getFixedPointOperationAction(
@@ -5492,8 +5498,16 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
         LHS = DAG.getZExtOrTrunc(LHS, DL, PromVT);
         RHS = DAG.getZExtOrTrunc(RHS, DL, PromVT);
       }
-      // TODO: Saturation.
+      EVT ShiftTy = TLI.getShiftAmountTy(PromVT, DAG.getDataLayout());
+      // For saturating operations, we need to shift up the LHS to get the
+      // proper saturation width, and then shift down again afterwards.
+      if (Saturating)
+        LHS = DAG.getNode(ISD::SHL, DL, PromVT, LHS,
+                          DAG.getConstant(1, DL, ShiftTy));
       SDValue Res = DAG.getNode(Opcode, DL, PromVT, LHS, RHS, Scale);
+      if (Saturating)
+        Res = DAG.getNode(Signed ? ISD::SRA : ISD::SRL, DL, PromVT, Res,
+                          DAG.getConstant(1, DL, ShiftTy));
       return DAG.getZExtOrTrunc(Res, DL, VT);
     }
   }
@@ -5757,6 +5771,10 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
     return ISD::SDIVFIX;
   case Intrinsic::udiv_fix:
     return ISD::UDIVFIX;
+  case Intrinsic::sdiv_fix_sat:
+    return ISD::SDIVFIXSAT;
+  case Intrinsic::udiv_fix_sat:
+    return ISD::UDIVFIXSAT;
   default:
     llvm_unreachable("Unhandled fixed point intrinsic");
   }
@@ -6460,7 +6478,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::sdiv_fix:
-  case Intrinsic::udiv_fix: {
+  case Intrinsic::udiv_fix:
+  case Intrinsic::sdiv_fix_sat:
+  case Intrinsic::udiv_fix_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
@@ -8158,6 +8178,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
+  unsigned NumMatchingOps = 0;
   for (auto &T : TargetConstraints) {
     ConstraintOperands.push_back(SDISelAsmOperandInfo(T));
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands.back();
@@ -8171,8 +8192,12 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       // only in asm's.
       const Instruction *I = CS.getInstruction();
       if (isa<CallBrInst>(I) &&
-          (ArgNo - 1) >= (cast<CallBrInst>(I)->getNumArgOperands() -
-                          cast<CallBrInst>(I)->getNumIndirectDests())) {
+          ArgNo - 1 >= (cast<CallBrInst>(I)->getNumArgOperands() -
+                        cast<CallBrInst>(I)->getNumIndirectDests() -
+                        NumMatchingOps) &&
+          (NumMatchingOps == 0 ||
+           ArgNo - 1 < (cast<CallBrInst>(I)->getNumArgOperands() -
+                        NumMatchingOps))) {
         const auto *BA = cast<BlockAddress>(OpInfo.CallOperandVal);
         EVT VT = TLI.getValueType(DAG.getDataLayout(), BA->getType(), true);
         OpInfo.CallOperand = DAG.getTargetBlockAddress(BA, VT);
@@ -8202,6 +8227,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     } else {
       OpInfo.ConstraintVT = MVT::Other;
     }
+
+    if (OpInfo.hasMatchingInput())
+      ++NumMatchingOps;
 
     if (!HasSideEffect)
       HasSideEffect = OpInfo.hasMemory(TLI);

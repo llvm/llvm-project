@@ -692,6 +692,10 @@ class Base(unittest2.TestCase):
             # differ in the debug info, which is not being hashed.
             "settings set symbols.enable-external-lookup false",
 
+            # Disable fix-its by default so that incorrect expressions in tests don't
+            # pass just because Clang thinks it has a fix-it.
+            "settings set target.auto-apply-fixits false",
+
             # Testsuite runs in parallel and the host can have also other load.
             "settings set plugin.process.gdb-remote.packet-timeout 60",
 
@@ -2394,7 +2398,16 @@ FileCheck output:
         self.assertTrue(expr.strip() == expr, "Expression contains trailing/leading whitespace: '" + expr + "'")
 
         frame = self.frame()
-        eval_result = frame.EvaluateExpression(expr)
+        options = lldb.SBExpressionOptions()
+
+        # Disable fix-its that tests don't pass by accident.
+        options.SetAutoApplyFixIts(False)
+
+        # Set the usual default options for normal expressions.
+        options.SetIgnoreBreakpoints(True)
+        options.SetLanguage(frame.GuessLanguage())
+
+        eval_result = frame.EvaluateExpression(expr, options)
 
         if error_msg:
             self.assertFalse(eval_result.IsValid(), "Unexpected success with result: '" + str(eval_result) + "'")

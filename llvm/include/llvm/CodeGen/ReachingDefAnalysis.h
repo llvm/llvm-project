@@ -164,6 +164,10 @@ public:
   /// Return whether From can be moved backwards to just after To.
   bool isSafeToMoveBackwards(MachineInstr *From, MachineInstr *To) const;
 
+  /// Assuming MI is dead, recursively search the incoming operands which are
+  /// killed by MI and collect those that would become dead.
+  void collectLocalKilledOperands(MachineInstr *MI, InstSet &Dead) const;
+
   /// Return whether removing this instruction will have no effect on the
   /// program, returning the redundant use-def chain.
   bool isSafeToRemove(MachineInstr *MI, InstSet &ToRemove) const;

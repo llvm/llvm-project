@@ -25,7 +25,7 @@ Types:
 
     ptrdiff_t
     size_t
-    max_align_t
+    max_align_t // C++11
     nullptr_t
     byte // C++17
 
@@ -49,12 +49,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 using ::ptrdiff_t;
 using ::size_t;
 
-#if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T) || \
-    defined(__DEFINED_max_align_t) || defined(__NetBSD__)
-// Re-use the compiler's <stddef.h> max_align_t where possible.
+#if !defined(_LIBCPP_CXX03_LANG)
 using ::max_align_t;
-#else
-typedef long double max_align_t;
 #endif
 
 template <class _Tp> struct __libcpp_is_integral                     { enum { value = 0 }; };

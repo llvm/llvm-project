@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
   //% self.expect("expr static_cast<long>(c)", endstr=" 12\n")
   //% self.expect("expr c.operatorint()", endstr=" 13\n")
   //% self.expect("expr c.operatornew()", endstr=" 14\n")
-  //% self.expect("expr (new C)->custom_new", endstr=" true\n")
+  //% self.expect("expr (new struct C)->custom_new", endstr=" true\n")
   //% self.expect("expr (new struct C[1])->custom_new", endstr=" true\n")
   //% self.expect("expr delete c2; side_effect", endstr=" = 1\n")
   //% self.expect("expr delete[] c3; side_effect", endstr=" = 2\n")

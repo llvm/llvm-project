@@ -278,4 +278,51 @@ TEST(DataExtractorTest, size) {
   DataExtractor DE2(ArrayRef<uint8_t>(Data), false, 8);
   EXPECT_EQ(DE2.size(), sizeof(Data));
 }
+
+TEST(DataExtractorTest, FixedLengthString) {
+  const char Data[] = "hello\x00\x00\x00world  \thola\x00";
+  DataExtractor DE(StringRef(Data, sizeof(Data)-1), false, 8);
+  uint64_t Offset = 0;
+  StringRef Str;
+  // Test extracting too many bytes doesn't modify Offset and returns None.
+  Str = DE.getFixedLengthString(&Offset, sizeof(Data));
+  EXPECT_TRUE(Str.empty());
+  EXPECT_EQ(Offset, 0u);
+
+  // Test extracting a fixed width C string with trailing NULL characters.
+  Str = DE.getFixedLengthString(&Offset, 8);
+  EXPECT_EQ(Offset, 8u);
+  EXPECT_EQ(Str.size(), 5u);
+  EXPECT_EQ(Str, "hello");
+  // Test extracting a fixed width C string with trailing space and tab
+  // characters.
+  Str = DE.getFixedLengthString(&Offset, 8, " \t");
+  EXPECT_EQ(Offset, 16u);
+  EXPECT_EQ(Str.size(), 5u);
+  EXPECT_EQ(Str, "world");
+  // Now extract a normal C string.
+  Str = DE.getCStrRef(&Offset);
+  EXPECT_EQ(Str.size(), 4u);
+  EXPECT_EQ(Str, "hola");
+}
+
+
+TEST(DataExtractorTest, GetBytes) {
+  // Use data with an embedded NULL character for good measure.
+  const char Data[] = "\x01\x02\x00\x04";
+  StringRef Bytes(Data, sizeof(Data)-1);
+  DataExtractor DE(Bytes, false, 8);
+  uint64_t Offset = 0;
+  StringRef Str;
+  // Test extracting too many bytes doesn't modify Offset and returns None.
+  Str = DE.getBytes(&Offset, sizeof(Data));
+  EXPECT_TRUE(Str.empty());
+  EXPECT_EQ(Offset, 0u);
+  // Test extracting 4 bytes from the stream.
+  Str = DE.getBytes(&Offset, 4);
+  EXPECT_EQ(Offset, 4u);
+  EXPECT_EQ(Str.size(), 4u);
+  EXPECT_EQ(Str, Bytes);
+}
+
 }

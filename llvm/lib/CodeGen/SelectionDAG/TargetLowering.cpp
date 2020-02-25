@@ -6584,12 +6584,48 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   SDValue Chain = LD->getChain();
   SDValue BasePTR = LD->getBasePtr();
   EVT SrcVT = LD->getMemoryVT();
+  EVT DstVT = LD->getValueType(0);
   ISD::LoadExtType ExtType = LD->getExtensionType();
 
   unsigned NumElem = SrcVT.getVectorNumElements();
 
   EVT SrcEltVT = SrcVT.getScalarType();
-  EVT DstEltVT = LD->getValueType(0).getScalarType();
+  EVT DstEltVT = DstVT.getScalarType();
+
+  // A vector must always be stored in memory as-is, i.e. without any padding
+  // between the elements, since various code depend on it, e.g. in the
+  // handling of a bitcast of a vector type to int, which may be done with a
+  // vector store followed by an integer load. A vector that does not have
+  // elements that are byte-sized must therefore be stored as an integer
+  // built out of the extracted vector elements.
+  if (!SrcEltVT.isByteSized()) {
+    unsigned NumBits = SrcVT.getSizeInBits();
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
+
+    SDValue Load = DAG.getLoad(IntVT, SL, Chain, BasePTR, LD->getPointerInfo(),
+                               LD->getAlignment(),
+                               LD->getMemOperand()->getFlags(),
+                               LD->getAAInfo());
+
+    SmallVector<SDValue, 8> Vals;
+    for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
+      unsigned ShiftIntoIdx =
+          (DAG.getDataLayout().isBigEndian() ? (NumElem - 1) - Idx : Idx);
+      SDValue ShiftAmount =
+          DAG.getConstant(ShiftIntoIdx * SrcEltVT.getSizeInBits(), SL, IntVT);
+      SDValue ShiftedElt =
+          DAG.getNode(ISD::SRL, SL, IntVT, Load, ShiftAmount);
+      SDValue Scalar = DAG.getNode(ISD::TRUNCATE, SL, SrcEltVT, ShiftedElt);
+      if (ExtType != ISD::NON_EXTLOAD) {
+        unsigned ExtendOp = ISD::getExtForLoadExtType(false, ExtType);
+        Scalar = DAG.getNode(ExtendOp, SL, DstEltVT, Scalar);
+      }
+      Vals.push_back(Scalar);
+    }
+
+    SDValue Value = DAG.getBuildVector(DstVT, SL, Vals);
+    return std::make_pair(Value, Load.getValue(1));
+  }
 
   unsigned Stride = SrcEltVT.getSizeInBits() / 8;
   assert(SrcEltVT.isByteSized());
@@ -6611,7 +6647,7 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   }
 
   SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
-  SDValue Value = DAG.getBuildVector(LD->getValueType(0), SL, Vals);
+  SDValue Value = DAG.getBuildVector(DstVT, SL, Vals);
 
   return std::make_pair(Value, NewChain);
 }
@@ -7332,12 +7368,13 @@ SDValue
 TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
                                     SDValue LHS, SDValue RHS,
                                     unsigned Scale, SelectionDAG &DAG) const {
-  assert((Opcode == ISD::SDIVFIX ||
-          Opcode == ISD::UDIVFIX) &&
+  assert((Opcode == ISD::SDIVFIX || Opcode == ISD::SDIVFIXSAT ||
+          Opcode == ISD::UDIVFIX || Opcode == ISD::UDIVFIXSAT) &&
          "Expected a fixed point division opcode");
 
   EVT VT = LHS.getValueType();
-  bool Signed = Opcode == ISD::SDIVFIX;
+  bool Signed = Opcode == ISD::SDIVFIX || Opcode == ISD::SDIVFIXSAT;
+  bool Saturating = Opcode == ISD::SDIVFIXSAT || Opcode == ISD::UDIVFIXSAT;
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
   // If there is enough room in the type to upscale the LHS or downscale the
@@ -7349,7 +7386,15 @@ TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
                             : DAG.computeKnownBits(LHS).countMinLeadingZeros();
   unsigned RHSTrail = DAG.computeKnownBits(RHS).countMinTrailingZeros();
 
-  if (LHSLead + RHSTrail < Scale)
+  // For signed saturating operations, we need to be able to detect true integer
+  // division overflow; that is, when you have MIN / -EPS. However, this
+  // is undefined behavior and if we emit divisions that could take such
+  // values it may cause undesired behavior (arithmetic exceptions on x86, for
+  // example).
+  // Avoid this by requiring an extra bit so that we never get this case.
+  // FIXME: This is a bit unfortunate as it means that for an 8-bit 7-scale
+  // signed saturating division, we need to emit a whopping 32-bit division.
+  if (LHSLead + RHSTrail < Scale + (unsigned)(Saturating && Signed))
     return SDValue();
 
   unsigned LHSShift = std::min(LHSLead, Scale);
@@ -7402,8 +7447,6 @@ TargetLowering::expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
   } else
     Quot = DAG.getNode(ISD::UDIV, dl, VT,
                        LHS, RHS);
-
-  // TODO: Saturation.
 
   return Quot;
 }

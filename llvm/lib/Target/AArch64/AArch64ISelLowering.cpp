@@ -3036,6 +3036,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_ptrue:
     return DAG.getNode(AArch64ISD::PTRUE, dl, Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::aarch64_sve_dupq_lane:
+    return LowerDUPQLane(Op, DAG);
 
   case Intrinsic::aarch64_sve_insr: {
     SDValue Scalar = Op.getOperand(2);
@@ -7510,6 +7512,54 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   }
 
   return DAG.getNode(AArch64ISD::DUP, dl, VT, SplatVal);
+}
+
+SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  EVT VT = Op.getValueType();
+  if (!isTypeLegal(VT) || !VT.isScalableVector())
+    return SDValue();
+
+  // Current lowering only supports the SVE-ACLE types.
+  if (VT.getSizeInBits().getKnownMinSize() != AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  // The DUPQ operation is indepedent of element type so normalise to i64s.
+  SDValue V = DAG.getNode(ISD::BITCAST, DL, MVT::nxv2i64, Op.getOperand(1));
+  SDValue Idx128 = Op.getOperand(2);
+
+  // DUPQ can be used when idx is in range.
+  auto *CIdx = dyn_cast<ConstantSDNode>(Idx128);
+  if (CIdx && (CIdx->getZExtValue() <= 3)) {
+    SDValue CI = DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i64);
+    SDNode *DUPQ =
+        DAG.getMachineNode(AArch64::DUP_ZZI_Q, DL, MVT::nxv2i64, V, CI);
+    return DAG.getNode(ISD::BITCAST, DL, VT, SDValue(DUPQ, 0));
+  }
+
+  // The ACLE says this must produce the same result as:
+  //   svtbl(data, svadd_x(svptrue_b64(),
+  //                       svand_x(svptrue_b64(), svindex_u64(0, 1), 1),
+  //                       index * 2))
+  SDValue One = DAG.getConstant(1, DL, MVT::i64);
+  SDValue SplatOne = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv2i64, One);
+
+  // create the vector 0,1,0,1,...
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue SV = DAG.getNode(AArch64ISD::INDEX_VECTOR,
+                           DL, MVT::nxv2i64, Zero, One);
+  SV = DAG.getNode(ISD::AND, DL, MVT::nxv2i64, SV, SplatOne);
+
+  // create the vector idx64,idx64+1,idx64,idx64+1,...
+  SDValue Idx64 = DAG.getNode(ISD::ADD, DL, MVT::i64, Idx128, Idx128);
+  SDValue SplatIdx64 = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv2i64, Idx64);
+  SDValue ShuffleMask = DAG.getNode(ISD::ADD, DL, MVT::nxv2i64, SV, SplatIdx64);
+
+  // create the vector Val[idx64],Val[idx64+1],Val[idx64],Val[idx64+1],...
+  SDValue TBL = DAG.getNode(AArch64ISD::TBL, DL, MVT::nxv2i64, V, ShuffleMask);
+  return DAG.getNode(ISD::BITCAST, DL, VT, TBL);
 }
 
 static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,

@@ -32,6 +32,7 @@ void registerInliner();
 void registerMemRefBoundCheck();
 void registerPassManagerTestPass();
 void registerPatternsTestPass();
+void registerPrintOpAvailabilityPass();
 void registerSimpleParametricTilingPass();
 void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
@@ -84,6 +85,7 @@ void registerTestPasses() {
   registerMemRefBoundCheck();
   registerPassManagerTestPass();
   registerPatternsTestPass();
+  registerPrintOpAvailabilityPass();
   registerSimpleParametricTilingPass();
   registerSymbolTestPasses();
   registerTestAffineDataCopyPass();

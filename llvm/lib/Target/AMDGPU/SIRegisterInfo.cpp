@@ -1820,7 +1820,7 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 
-  return AMDGPUGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
+  llvm_unreachable("Unexpected register pressure set!");
 }
 
 const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {

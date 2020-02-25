@@ -103,6 +103,11 @@ def unify_arguments(args):
   args = re.sub(r'(^|\s)M\d?(\s)', r'\1Matcher<*>\2', args)
   return args
 
+def unify_type(result_type):
+  """Gets rid of anything the user doesn't care about in the type name."""
+  result_type = re.sub(r'^internal::(Bindable)?Matcher<([a-zA-Z_][a-zA-Z0-9_]*)>$', r'\2', result_type)
+  return result_type
+
 def add_matcher(result_type, name, args, comment, is_dyncast=False):
   """Adds a matcher to one of our categories."""
   if name == 'id':
@@ -111,6 +116,7 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   matcher_id = '%s%d' % (name, ids[name])
   ids[name] += 1
   args = unify_arguments(args)
+  result_type = unify_type(result_type)
   matcher_html = TD_TEMPLATE % {
     'result': esc('Matcher<%s>' % result_type),
     'name': name,

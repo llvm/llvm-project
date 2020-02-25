@@ -51,16 +51,16 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
     ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
     %2(s32) = G_SDIV %0, %1
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_udiv_i32
@@ -88,16 +88,16 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
     ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
     %2(s32) = G_UDIV %0, %1
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_sdiv_i16
@@ -139,9 +139,9 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
@@ -151,7 +151,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s16)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_udiv_i16
@@ -191,9 +191,9 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
@@ -203,7 +203,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s16)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_sdiv_i8
@@ -245,9 +245,9 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
@@ -257,7 +257,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s8)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_udiv_i8
@@ -297,9 +297,9 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
@@ -309,7 +309,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s8)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_srem_i32
@@ -339,17 +339,17 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
     ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
     %2(s32) = G_SREM %0, %1
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_urem_i32
@@ -379,17 +379,17 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
     ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
     %2(s32) = G_UREM %0, %1
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_srem_i16
@@ -433,10 +433,10 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
@@ -446,7 +446,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s16)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_urem_i16
@@ -488,10 +488,10 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
@@ -501,7 +501,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s16)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_srem_i8
@@ -545,10 +545,10 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
@@ -558,7 +558,7 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_SEXT %4(s8)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_urem_i8
@@ -600,10 +600,10 @@ body:             |
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
     ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
     ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
@@ -613,5 +613,5 @@ body:             |
     ; CHECK: $r0 = COPY [[R]]
     %5(s32) = G_ZEXT %4(s8)
     $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...

@@ -6,7 +6,7 @@
 #
 # CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
 # CHECK: DBG_VALUE $r4, $noreg, ![[ARG1]], !DIExpression(), debug-location
-# CHECK: $r5 = MOVr killed $r4, 14, $noreg, $noreg, debug-location
+# CHECK: $r5 = MOVr killed $r4, 14 /* CC::al */, $noreg, $noreg, debug-location
 # CHECK-NEXT: DBG_VALUE $r5, $noreg, ![[ARG1]], !DIExpression(), debug-location
 --- |
   ; ModuleID = 'live-debug-values-reg-copy.ll'

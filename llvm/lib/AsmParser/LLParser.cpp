@@ -6423,9 +6423,6 @@ bool LLParser::ParseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
                           /*IsCall=*/true))
     return true;
 
-  if (isa<InlineAsm>(Callee) && !Ty->getReturnType()->isVoidTy())
-    return Error(RetTypeLoc, "asm-goto outputs not supported");
-
   // Set up the Attribute for the function.
   SmallVector<Value *, 8> Args;
   SmallVector<AttributeSet, 8> ArgAttrs;

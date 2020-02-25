@@ -252,6 +252,7 @@ EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)
 EXTENSION(pragma_clang_attribute_external_declaration, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
+EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 
 #undef EXTENSION
 #undef FEATURE

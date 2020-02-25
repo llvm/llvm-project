@@ -61,8 +61,11 @@ struct InstrStage {
     Reserved = 1
   };
 
+  /// Bitmask representing a set of functional units.
+  typedef uint64_t FuncUnits;
+
   unsigned Cycles_;  ///< Length of stage in machine cycles
-  unsigned Units_;   ///< Choice of functional units
+  FuncUnits Units_;  ///< Choice of functional units
   int NextCycles_;   ///< Number of machine cycles to next stage
   ReservationKinds Kind_; ///< Kind of the FU reservation
 
@@ -72,7 +75,7 @@ struct InstrStage {
   }
 
   /// Returns the choice of FUs.
-  unsigned getUnits() const {
+  FuncUnits getUnits() const {
     return Units_;
   }
 

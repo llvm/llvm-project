@@ -926,14 +926,15 @@ void PPCRegisterInfo::lowerVRSAVERestore(MachineBasicBlock::iterator II,
 
 bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                            unsigned Reg, int &FrameIdx) const {
-  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
-  // For the nonvolatile condition registers (CR2, CR3, CR4) in an SVR4
-  // ABI, return true to prevent allocating an additional frame slot.
-  // For 64-bit, the CR save area is in the linkage area at SP+8; but we have
-  // created a FrameIndex to that spill slot to keep the CalleSaveInfos valid.
-  // For 32-bit, we have previously created the stack slot if needed, so return
-  // its FrameIdx.
-  if (Subtarget.isSVR4ABI() && PPC::CR2 <= Reg && Reg <= PPC::CR4) {
+  // For the nonvolatile condition registers (CR2, CR3, CR4) return true to
+  // prevent allocating an additional frame slot.
+  // For 64-bit ELF and AIX, the CR save area is in the linkage area at SP+8,
+  // for 32-bit AIX the CR save area is in the linkage area at SP+4.
+  // We have created a FrameIndex to that spill slot to keep the CalleSaveInfos
+  // valid.
+  // For 32-bit ELF, we have previously created the stack slot if needed, so
+  // return its FrameIdx.
+  if (PPC::CR2 <= Reg && Reg <= PPC::CR4) {
     FrameIdx = MF.getInfo<PPCFunctionInfo>()->getCRSpillFrameIndex();
     return true;
   }

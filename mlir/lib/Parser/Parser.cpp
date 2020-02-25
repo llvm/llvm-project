@@ -4482,10 +4482,9 @@ public:
   /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
   /// The list must contain at least one entry
   ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
-                                  SmallVectorImpl<OperandType> &rhs) {
+                                  SmallVectorImpl<OperandType> &rhs) override {
     auto parseElt = [&]() -> ParseResult {
       OperandType regionArg, operand;
-      Type type;
       if (parseRegionArgument(regionArg) || parseEqual() ||
           parseOperand(operand))
         return failure();

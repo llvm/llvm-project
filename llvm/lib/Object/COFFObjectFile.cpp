@@ -1067,7 +1067,7 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
     if (Name.startswith("//")) {
       if (decodeBase64StringEntry(Name.substr(2), Offset))
         return createStringError(object_error::parse_failed,
-                                 "inalid section name");
+                                 "invalid section name");
     } else {
       if (Name.substr(1).getAsInteger(10, Offset))
         return createStringError(object_error::parse_failed,

@@ -15431,256 +15431,282 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   return ConstLength.getSExtValue() != 1;
 }
 
-// Return the expression of the base of the mappable expression or null if it
-// cannot be determined and do all the necessary checks to see if the expression
-// is valid as a standalone mappable expression. In the process, record all the
-// components of the expression.
+// The base of elements of list in a map clause have to be either:
+//  - a reference to variable or field.
+//  - a member expression.
+//  - an array expression.
+//
+// E.g. if we have the expression 'r.S.Arr[:12]', we want to retrieve the
+// reference to 'r'.
+//
+// If we have:
+//
+// struct SS {
+//   Bla S;
+//   foo() {
+//     #pragma omp target map (S.Arr[:12]);
+//   }
+// }
+//
+// We want to retrieve the member expression 'this->S';
+
+// OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.2]
+//  If a list item is an array section, it must specify contiguous storage.
+//
+// For this restriction it is sufficient that we make sure only references
+// to variables or fields and array expressions, and that no array sections
+// exist except in the rightmost expression (unless they cover the whole
+// dimension of the array). E.g. these would be invalid:
+//
+//   r.ArrS[3:5].Arr[6:7]
+//
+//   r.ArrS[3:5].x
+//
+// but these would be valid:
+//   r.ArrS[3].Arr[6:7]
+//
+//   r.ArrS[3].x
+namespace {
+class MapBaseChecker final : public StmtVisitor<MapBaseChecker, bool> {
+  Sema &SemaRef;
+  OpenMPClauseKind CKind = OMPC_unknown;
+  OMPClauseMappableExprCommon::MappableExprComponentList &Components;
+  bool NoDiagnose = false;
+  const Expr *RelevantExpr = nullptr;
+  bool AllowUnitySizeArraySection = true;
+  bool AllowWholeSizeArraySection = true;
+  SourceLocation ELoc;
+  SourceRange ERange;
+
+  void emitErrorMsg() {
+    if (!NoDiagnose) {
+      // If nothing else worked, this is not a valid map clause expression.
+      SemaRef.Diag(ELoc, diag::err_omp_expected_named_var_member_or_array_expression)
+        << ERange;
+    }
+  }
+
+public:
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (!isa<VarDecl>(DRE->getDecl())) {
+      emitErrorMsg();
+      return false;
+    }
+    RelevantExpr = DRE;
+    // Record the component.
+    Components.emplace_back(DRE, DRE->getDecl());
+    return true;
+  }
+
+  bool VisitMemberExpr(MemberExpr *ME) {
+    Expr *E = ME;
+    Expr *BaseE = ME->getBase()->IgnoreParenCasts();
+
+    if (isa<CXXThisExpr>(BaseE))
+      // We found a base expression: this->Val.
+      RelevantExpr = ME;
+    else
+      E = BaseE;
+
+    if (!isa<FieldDecl>(ME->getMemberDecl())) {
+      if (!NoDiagnose) {
+        SemaRef.Diag(ELoc, diag::err_omp_expected_access_to_data_field)
+          << ME->getSourceRange();
+        return false;
+      }
+      if (RelevantExpr)
+        return false;
+      return Visit(E);
+    }
+
+    auto *FD = cast<FieldDecl>(ME->getMemberDecl());
+
+    // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.3]
+    //  A bit-field cannot appear in a map clause.
+    //
+    if (FD->isBitField()) {
+      if (!NoDiagnose) {
+        SemaRef.Diag(ELoc, diag::err_omp_bit_fields_forbidden_in_clause)
+          << ME->getSourceRange() << getOpenMPClauseName(CKind);
+        return false;
+      }
+      if (RelevantExpr)
+        return false;
+      return Visit(E);
+    }
+
+    // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
+    //  If the type of a list item is a reference to a type T then the type
+    //  will be considered to be T for all purposes of this clause.
+    QualType CurType = BaseE->getType().getNonReferenceType();
+
+    // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.2]
+    //  A list item cannot be a variable that is a member of a structure with
+    //  a union type.
+    //
+    if (CurType->isUnionType()) {
+      if (!NoDiagnose) {
+        SemaRef.Diag(ELoc, diag::err_omp_union_type_not_allowed)
+          << ME->getSourceRange();
+        return false;
+      }
+      return RelevantExpr || Visit(E);
+    }
+
+    // If we got a member expression, we should not expect any array section
+    // before that:
+    //
+    // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.7]
+    //  If a list item is an element of a structure, only the rightmost symbol
+    //  of the variable reference can be an array section.
+    //
+    AllowUnitySizeArraySection = false;
+    AllowWholeSizeArraySection = false;
+
+    // Record the component.
+    Components.emplace_back(ME, FD);
+    return RelevantExpr || Visit(E);
+  }
+
+  bool VisitArraySubscriptExpr(ArraySubscriptExpr *AE) {
+    Expr *E = AE->getBase()->IgnoreParenImpCasts();
+
+    if (!E->getType()->isAnyPointerType() && !E->getType()->isArrayType()) {
+      if (!NoDiagnose) {
+        SemaRef.Diag(ELoc, diag::err_omp_expected_base_var_name)
+          << 0 << AE->getSourceRange();
+        return false;
+      }
+      return RelevantExpr || Visit(E);
+    }
+
+    // If we got an array subscript that express the whole dimension we
+    // can have any array expressions before. If it only expressing part of
+    // the dimension, we can only have unitary-size array expressions.
+    if (checkArrayExpressionDoesNotReferToWholeSize(SemaRef, AE,
+                                                    E->getType()))
+      AllowWholeSizeArraySection = false;
+
+    if (const auto *TE = dyn_cast<CXXThisExpr>(E->IgnoreParenCasts())) {
+      Expr::EvalResult Result;
+      if (!AE->getIdx()->isValueDependent() &&
+          AE->getIdx()->EvaluateAsInt(Result, SemaRef.getASTContext()) &&
+          !Result.Val.getInt().isNullValue()) {
+        SemaRef.Diag(AE->getIdx()->getExprLoc(),
+                     diag::err_omp_invalid_map_this_expr);
+        SemaRef.Diag(AE->getIdx()->getExprLoc(),
+                     diag::note_omp_invalid_subscript_on_this_ptr_map);
+      }
+      RelevantExpr = TE;
+    }
+
+    // Record the component - we don't have any declaration associated.
+    Components.emplace_back(AE, nullptr);
+
+    return RelevantExpr || Visit(E);
+  }
+
+  bool VisitOMPArraySectionExpr(OMPArraySectionExpr *OASE) {
+    assert(!NoDiagnose && "Array sections cannot be implicitly mapped.");
+    Expr *E = OASE->getBase()->IgnoreParenImpCasts();
+    QualType CurType =
+      OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+
+    // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
+    //  If the type of a list item is a reference to a type T then the type
+    //  will be considered to be T for all purposes of this clause.
+    if (CurType->isReferenceType())
+      CurType = CurType->getPointeeType();
+
+    bool IsPointer = CurType->isAnyPointerType();
+
+    if (!IsPointer && !CurType->isArrayType()) {
+      SemaRef.Diag(ELoc, diag::err_omp_expected_base_var_name)
+        << 0 << OASE->getSourceRange();
+      return false;
+    }
+
+    bool NotWhole =
+      checkArrayExpressionDoesNotReferToWholeSize(SemaRef, OASE, CurType);
+    bool NotUnity =
+      checkArrayExpressionDoesNotReferToUnitySize(SemaRef, OASE, CurType);
+
+    if (AllowWholeSizeArraySection) {
+      // Any array section is currently allowed. Allowing a whole size array
+      // section implies allowing a unity array section as well.
+      //
+      // If this array section refers to the whole dimension we can still
+      // accept other array sections before this one, except if the base is a
+      // pointer. Otherwise, only unitary sections are accepted.
+      if (NotWhole || IsPointer)
+        AllowWholeSizeArraySection = false;
+    } else if (AllowUnitySizeArraySection && NotUnity) {
+      // A unity or whole array section is not allowed and that is not
+      // compatible with the properties of the current array section.
+      SemaRef.Diag(
+        ELoc, diag::err_array_section_does_not_specify_contiguous_storage)
+        << OASE->getSourceRange();
+      return false;
+    }
+
+    if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
+      Expr::EvalResult ResultR;
+      Expr::EvalResult ResultL;
+      if (!OASE->getLength()->isValueDependent() &&
+          OASE->getLength()->EvaluateAsInt(ResultR, SemaRef.getASTContext()) &&
+          !ResultR.Val.getInt().isOneValue()) {
+        SemaRef.Diag(OASE->getLength()->getExprLoc(),
+                     diag::err_omp_invalid_map_this_expr);
+        SemaRef.Diag(OASE->getLength()->getExprLoc(),
+                     diag::note_omp_invalid_length_on_this_ptr_mapping);
+      }
+      if (OASE->getLowerBound() && !OASE->getLowerBound()->isValueDependent() &&
+          OASE->getLowerBound()->EvaluateAsInt(ResultL,
+                                               SemaRef.getASTContext()) &&
+          !ResultL.Val.getInt().isNullValue()) {
+        SemaRef.Diag(OASE->getLowerBound()->getExprLoc(),
+                     diag::err_omp_invalid_map_this_expr);
+        SemaRef.Diag(OASE->getLowerBound()->getExprLoc(),
+                     diag::note_omp_invalid_lower_bound_on_this_ptr_mapping);
+      }
+      RelevantExpr = TE;
+    }
+
+    // Record the component - we don't have any declaration associated.
+    Components.emplace_back(OASE, nullptr);
+    return RelevantExpr || Visit(E);
+  }
+  bool VisitStmt(Stmt *) {
+    emitErrorMsg();
+    return false;
+  }
+  const Expr *getFoundBase() const {
+    return RelevantExpr;
+  }
+  explicit MapBaseChecker(
+      Sema &SemaRef, OpenMPClauseKind CKind,
+      OMPClauseMappableExprCommon::MappableExprComponentList &Components,
+      bool NoDiagnose, SourceLocation &ELoc, SourceRange &ERange)
+      : SemaRef(SemaRef), CKind(CKind), Components(Components),
+        NoDiagnose(NoDiagnose), ELoc(ELoc), ERange(ERange) {}
+};
+} // namespace
+
+/// Return the expression of the base of the mappable expression or null if it
+/// cannot be determined and do all the necessary checks to see if the expression
+/// is valid as a standalone mappable expression. In the process, record all the
+/// components of the expression.
 static const Expr *checkMapClauseExpressionBase(
     Sema &SemaRef, Expr *E,
     OMPClauseMappableExprCommon::MappableExprComponentList &CurComponents,
     OpenMPClauseKind CKind, bool NoDiagnose) {
   SourceLocation ELoc = E->getExprLoc();
   SourceRange ERange = E->getSourceRange();
-
-  // The base of elements of list in a map clause have to be either:
-  //  - a reference to variable or field.
-  //  - a member expression.
-  //  - an array expression.
-  //
-  // E.g. if we have the expression 'r.S.Arr[:12]', we want to retrieve the
-  // reference to 'r'.
-  //
-  // If we have:
-  //
-  // struct SS {
-  //   Bla S;
-  //   foo() {
-  //     #pragma omp target map (S.Arr[:12]);
-  //   }
-  // }
-  //
-  // We want to retrieve the member expression 'this->S';
-
-  const Expr *RelevantExpr = nullptr;
-
-  // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.2]
-  //  If a list item is an array section, it must specify contiguous storage.
-  //
-  // For this restriction it is sufficient that we make sure only references
-  // to variables or fields and array expressions, and that no array sections
-  // exist except in the rightmost expression (unless they cover the whole
-  // dimension of the array). E.g. these would be invalid:
-  //
-  //   r.ArrS[3:5].Arr[6:7]
-  //
-  //   r.ArrS[3:5].x
-  //
-  // but these would be valid:
-  //   r.ArrS[3].Arr[6:7]
-  //
-  //   r.ArrS[3].x
-
-  bool AllowUnitySizeArraySection = true;
-  bool AllowWholeSizeArraySection = true;
-
-  while (!RelevantExpr) {
-    E = E->IgnoreParenImpCasts();
-
-    if (auto *CurE = dyn_cast<DeclRefExpr>(E)) {
-      if (!isa<VarDecl>(CurE->getDecl()))
-        return nullptr;
-
-      RelevantExpr = CurE;
-
-      // If we got a reference to a declaration, we should not expect any array
-      // section before that.
-      AllowUnitySizeArraySection = false;
-      AllowWholeSizeArraySection = false;
-
-      // Record the component.
-      CurComponents.emplace_back(CurE, CurE->getDecl());
-    } else if (auto *CurE = dyn_cast<MemberExpr>(E)) {
-      Expr *BaseE = CurE->getBase()->IgnoreParenImpCasts();
-
-      if (isa<CXXThisExpr>(BaseE))
-        // We found a base expression: this->Val.
-        RelevantExpr = CurE;
-      else
-        E = BaseE;
-
-      if (!isa<FieldDecl>(CurE->getMemberDecl())) {
-        if (!NoDiagnose) {
-          SemaRef.Diag(ELoc, diag::err_omp_expected_access_to_data_field)
-              << CurE->getSourceRange();
-          return nullptr;
-        }
-        if (RelevantExpr)
-          return nullptr;
-        continue;
-      }
-
-      auto *FD = cast<FieldDecl>(CurE->getMemberDecl());
-
-      // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.3]
-      //  A bit-field cannot appear in a map clause.
-      //
-      if (FD->isBitField()) {
-        if (!NoDiagnose) {
-          SemaRef.Diag(ELoc, diag::err_omp_bit_fields_forbidden_in_clause)
-              << CurE->getSourceRange() << getOpenMPClauseName(CKind);
-          return nullptr;
-        }
-        if (RelevantExpr)
-          return nullptr;
-        continue;
-      }
-
-      // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
-      //  If the type of a list item is a reference to a type T then the type
-      //  will be considered to be T for all purposes of this clause.
-      QualType CurType = BaseE->getType().getNonReferenceType();
-
-      // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.2]
-      //  A list item cannot be a variable that is a member of a structure with
-      //  a union type.
-      //
-      if (CurType->isUnionType()) {
-        if (!NoDiagnose) {
-          SemaRef.Diag(ELoc, diag::err_omp_union_type_not_allowed)
-              << CurE->getSourceRange();
-          return nullptr;
-        }
-        continue;
-      }
-
-      // If we got a member expression, we should not expect any array section
-      // before that:
-      //
-      // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.7]
-      //  If a list item is an element of a structure, only the rightmost symbol
-      //  of the variable reference can be an array section.
-      //
-      AllowUnitySizeArraySection = false;
-      AllowWholeSizeArraySection = false;
-
-      // Record the component.
-      CurComponents.emplace_back(CurE, FD);
-    } else if (auto *CurE = dyn_cast<ArraySubscriptExpr>(E)) {
-      E = CurE->getBase()->IgnoreParenImpCasts();
-
-      if (!E->getType()->isAnyPointerType() && !E->getType()->isArrayType()) {
-        if (!NoDiagnose) {
-          SemaRef.Diag(ELoc, diag::err_omp_expected_base_var_name)
-              << 0 << CurE->getSourceRange();
-          return nullptr;
-        }
-        continue;
-      }
-
-      // If we got an array subscript that express the whole dimension we
-      // can have any array expressions before. If it only expressing part of
-      // the dimension, we can only have unitary-size array expressions.
-      if (checkArrayExpressionDoesNotReferToWholeSize(SemaRef, CurE,
-                                                      E->getType()))
-        AllowWholeSizeArraySection = false;
-
-      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
-        Expr::EvalResult Result;
-        if (CurE->getIdx()->EvaluateAsInt(Result, SemaRef.getASTContext())) {
-          if (!Result.Val.getInt().isNullValue()) {
-            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
-                         diag::err_omp_invalid_map_this_expr);
-            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
-                         diag::note_omp_invalid_subscript_on_this_ptr_map);
-          }
-        }
-        RelevantExpr = TE;
-      }
-
-      // Record the component - we don't have any declaration associated.
-      CurComponents.emplace_back(CurE, nullptr);
-    } else if (auto *CurE = dyn_cast<OMPArraySectionExpr>(E)) {
-      assert(!NoDiagnose && "Array sections cannot be implicitly mapped.");
-      E = CurE->getBase()->IgnoreParenImpCasts();
-
-      QualType CurType =
-          OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
-
-      // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
-      //  If the type of a list item is a reference to a type T then the type
-      //  will be considered to be T for all purposes of this clause.
-      if (CurType->isReferenceType())
-        CurType = CurType->getPointeeType();
-
-      bool IsPointer = CurType->isAnyPointerType();
-
-      if (!IsPointer && !CurType->isArrayType()) {
-        SemaRef.Diag(ELoc, diag::err_omp_expected_base_var_name)
-            << 0 << CurE->getSourceRange();
-        return nullptr;
-      }
-
-      bool NotWhole =
-          checkArrayExpressionDoesNotReferToWholeSize(SemaRef, CurE, CurType);
-      bool NotUnity =
-          checkArrayExpressionDoesNotReferToUnitySize(SemaRef, CurE, CurType);
-
-      if (AllowWholeSizeArraySection) {
-        // Any array section is currently allowed. Allowing a whole size array
-        // section implies allowing a unity array section as well.
-        //
-        // If this array section refers to the whole dimension we can still
-        // accept other array sections before this one, except if the base is a
-        // pointer. Otherwise, only unitary sections are accepted.
-        if (NotWhole || IsPointer)
-          AllowWholeSizeArraySection = false;
-      } else if (AllowUnitySizeArraySection && NotUnity) {
-        // A unity or whole array section is not allowed and that is not
-        // compatible with the properties of the current array section.
-        SemaRef.Diag(
-            ELoc, diag::err_array_section_does_not_specify_contiguous_storage)
-            << CurE->getSourceRange();
-        return nullptr;
-      }
-
-      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
-        Expr::EvalResult ResultR;
-        Expr::EvalResult ResultL;
-        if (CurE->getLength()->EvaluateAsInt(ResultR,
-                                             SemaRef.getASTContext())) {
-          if (!ResultR.Val.getInt().isOneValue()) {
-            SemaRef.Diag(CurE->getLength()->getExprLoc(),
-                         diag::err_omp_invalid_map_this_expr);
-            SemaRef.Diag(CurE->getLength()->getExprLoc(),
-                         diag::note_omp_invalid_length_on_this_ptr_mapping);
-          }
-        }
-        if (CurE->getLowerBound() && CurE->getLowerBound()->EvaluateAsInt(
-                                        ResultL, SemaRef.getASTContext())) {
-          if (!ResultL.Val.getInt().isNullValue()) {
-            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
-                         diag::err_omp_invalid_map_this_expr);
-            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
-                         diag::note_omp_invalid_lower_bound_on_this_ptr_mapping);
-          }
-        }
-        RelevantExpr = TE;
-      }
-
-      // Record the component - we don't have any declaration associated.
-      CurComponents.emplace_back(CurE, nullptr);
-    } else {
-      if (!NoDiagnose) {
-        // If nothing else worked, this is not a valid map clause expression.
-        SemaRef.Diag(
-            ELoc, diag::err_omp_expected_named_var_member_or_array_expression)
-            << ERange;
-      }
-      return nullptr;
-    }
-  }
-
-  return RelevantExpr;
+  MapBaseChecker Checker(SemaRef, CKind, CurComponents, NoDiagnose, ELoc,
+                         ERange);
+  if (Checker.Visit(E->IgnoreParenImpCasts()))
+    return Checker.getFoundBase();
+  return nullptr;
 }
 
 // Return true if expression E associated with value VD has conflicts with other

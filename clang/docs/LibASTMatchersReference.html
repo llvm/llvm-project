@@ -2948,6 +2948,19 @@ cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInstantiated0')"><a name="isInstantiated0Anchor">isInstantiated</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInstantiated0"><pre>Matches declarations that are template instantiations or are inside
+template instantiations.
+
+Given
+  template&lt;typename T&gt; void A(T t) { T i; }
+  A(0);
+  A(0U);
+functionDecl(isInstantiated())
+  matches 'A(int) {...};' and 'A(unsigned) {...}'.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isPrivate0')"><a name="isPrivate0Anchor">isPrivate</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isPrivate0"><pre>Matches private C++ declarations.
 
@@ -3516,6 +3529,16 @@ unresolvedMemberExpr(isArrow())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyName0')"><a name="hasAnyName0Anchor">hasAnyName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyName0"><pre>Matches NamedDecl nodes that have any of the specified names.
+
+This matcher is only provided as a performance optimization of hasName.
+    hasAnyName(a, b, c)
+ is equivalent to, but faster than
+    anyOf(hasName(a), hasName(b), hasName(c))
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasExternalFormalLinkage0')"><a name="hasExternalFormalLinkage0Anchor">hasExternalFormalLinkage</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="hasExternalFormalLinkage0"><pre>Matches a declaration that has external formal linkage.
 
@@ -3676,6 +3699,17 @@ a specific number of arguments (including absent default arguments).
 Example matches f(0, 0) (matcher = callExpr(argumentCountIs(2)))
   void f(int x, int y);
   f(0, 0);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnySelector0')"><a name="hasAnySelector0Anchor">hasAnySelector</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnySelector0"><pre>Matches when at least one of the supplied string equals to the
+Selector.getAsString()
+
+ matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
+ matches both of the expressions below:
+    [myObj methodA:argA];
+    [myObj methodB:argB];
 </pre></td></tr>
 
 
@@ -4015,6 +4049,17 @@ Stmt has pointer identity in the AST.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpandedFromMacro0')"><a name="isExpandedFromMacro0Anchor">isExpandedFromMacro</a></td><td>llvm::StringRef MacroName</td></tr>
+<tr><td colspan="4" class="doc" id="isExpandedFromMacro0"><pre>Matches statements that are (transitively) expanded from the named macro.
+Does not match if only part of the statement is expanded from that macro or
+if different parts of the the statement are expanded from different
+appearances of the macro.
+
+FIXME: Change to be a polymorphic matcher that works on any syntactic
+node. There's nothing `Stmt`-specific about it.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpansionInFileMatching1')"><a name="isExpansionInFileMatching1Anchor">isExpansionInFileMatching</a></td><td>std::string RegExp</td></tr>
 <tr><td colspan="4" class="doc" id="isExpansionInFileMatching1"><pre>Matches AST nodes that were expanded within files whose name is
 partially matching a given regex.
@@ -4055,6 +4100,22 @@ SystemHeader.h:
   class Y {};
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isInTemplateInstantiation0')"><a name="isInTemplateInstantiation0Anchor">isInTemplateInstantiation</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInTemplateInstantiation0"><pre>Matches statements inside of a template instantiation.
+
+Given
+  int j;
+  template&lt;typename T&gt; void A(T t) { T i; j += 42;}
+  A(0);
+  A(0U);
+declStmt(isInTemplateInstantiation())
+  matches 'int i;' and 'unsigned i'.
+unless(stmt(isInTemplateInstantiation()))
+  will NOT match j += 42; as it's shared between the template definition and
+  instantiation.
 </pre></td></tr>
 
 
@@ -4549,56 +4610,6 @@ cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   does not match, as X&lt;A&gt; is an explicit template specialization.
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;&gt;</td><td class="name" onclick="toggle('isInstantiated0')"><a name="isInstantiated0Anchor">isInstantiated</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInstantiated0"><pre>Matches declarations that are template instantiations or are inside
-template instantiations.
-
-Given
-  template&lt;typename T&gt; void A(T t) { T i; }
-  A(0);
-  A(0U);
-functionDecl(isInstantiated())
-  matches 'A(int) {...};' and 'A(unsigned) {...}'.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnyName0')"><a name="hasAnyName0Anchor">hasAnyName</a></td><td>StringRef, ..., StringRef</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyName0"><pre>Matches NamedDecl nodes that have any of the specified names.
-
-This matcher is only provided as a performance optimization of hasName.
-    hasAnyName(a, b, c)
- is equivalent to, but faster than
-    anyOf(hasName(a), hasName(b), hasName(c))
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnySelector0')"><a name="hasAnySelector0Anchor">hasAnySelector</a></td><td>StringRef, ..., StringRef</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnySelector0"><pre>Matches when at least one of the supplied string equals to the
-Selector.getAsString()
-
- matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
- matches both of the expressions below:
-    [myObj methodA:argA];
-    [myObj methodB:argB];
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;&gt;</td><td class="name" onclick="toggle('isInTemplateInstantiation0')"><a name="isInTemplateInstantiation0Anchor">isInTemplateInstantiation</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInTemplateInstantiation0"><pre>Matches statements inside of a template instantiation.
-
-Given
-  int j;
-  template&lt;typename T&gt; void A(T t) { T i; j += 42;}
-  A(0);
-  A(0U);
-declStmt(isInTemplateInstantiation())
-  matches 'int i;' and 'unsigned i'.
-unless(stmt(isInTemplateInstantiation()))
-  will NOT match j += 42; as it's shared between the template definition and
-  instantiation.
 </pre></td></tr>
 
 <!--END_NARROWING_MATCHERS -->
@@ -6600,6 +6611,12 @@ nestedNameSpecifierLoc(hasPrefix(loc(specifiesType(asString("struct A")))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('loc1')"><a name="loc1Anchor">loc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifier.html">NestedNameSpecifier</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="loc1"><pre>Matches NestedNameSpecifierLocs for which the given inner
+NestedNameSpecifier-matcher matches.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('specifiesTypeLoc0')"><a name="specifiesTypeLoc0Anchor">specifiesTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="specifiesTypeLoc0"><pre>Matches nested name specifier locs that specify a type matching the
 given TypeLoc.
@@ -7401,6 +7418,12 @@ matches the variable declaration with "init" bound to the "3.0".
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('loc0')"><a name="loc0Anchor">loc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="loc0"><pre>Matches TypeLocs for which the given inner
+QualType-matcher matches.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;</td><td class="name" onclick="toggle('hasType2')"><a name="hasType2Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasType2"><pre>Matches if the expression's or declaration's type matches a type
 matcher.
@@ -7634,18 +7657,6 @@ switch statement or conditional operator.
 
 Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
   if (true) {}
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::BindableMatcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;&gt;</td><td class="name" onclick="toggle('loc1')"><a name="loc1Anchor">loc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifier.html">NestedNameSpecifier</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="loc1"><pre>Matches NestedNameSpecifierLocs for which the given inner
-NestedNameSpecifier-matcher matches.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::BindableMatcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;&gt;</td><td class="name" onclick="toggle('loc0')"><a name="loc0Anchor">loc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="loc0"><pre>Matches TypeLocs for which the given inner
-QualType-matcher matches.
 </pre></td></tr>
 
 <!--END_TRAVERSAL_MATCHERS -->
