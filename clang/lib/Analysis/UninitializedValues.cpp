@@ -475,6 +475,7 @@ public:
   void VisitCallExpr(CallExpr *ce);
   void VisitDeclRefExpr(DeclRefExpr *dr);
   void VisitDeclStmt(DeclStmt *ds);
+  void VisitGCCAsmStmt(GCCAsmStmt *as);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS);
   void VisitObjCMessageExpr(ObjCMessageExpr *ME);
   void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
@@ -760,6 +761,16 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
+void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
+  // An "asm goto" statement is a terminator that may initialize some variables.
+  if (!as->isAsmGoto())
+    return;
+
+  for (const auto &o : as->outputs())
+    if (const VarDecl *VD = findVar(o).getDecl())
+      vals[VD] = Initialized;
+}
+
 void TransferFunctions::VisitObjCMessageExpr(ObjCMessageExpr *ME) {
   // If the Objective-C message expression is an implicit no-return that
   // is not modeled in the CFG, set the tracked dataflow values to Unknown.
@@ -797,6 +808,10 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
     if (Optional<CFGStmt> cs = I.getAs<CFGStmt>())
       tf.Visit(const_cast<Stmt *>(cs->getStmt()));
   }
+  CFGTerminator terminator = block->getTerminator();
+  if (GCCAsmStmt *as = dyn_cast_or_null<GCCAsmStmt>(terminator.getStmt()))
+    if (as->isAsmGoto())
+      tf.Visit(as);
   return vals.updateValueVectorWithScratch(block);
 }
 
