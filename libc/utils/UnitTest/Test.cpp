@@ -8,6 +8,7 @@
 
 #include "Test.h"
 
+#include "utils/testutils/ExecuteFunction.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -131,7 +132,10 @@ int Test::runTests() {
   int FailCount = 0;
   for (Test *T = Start; T != nullptr; T = T->Next, ++TestCount) {
     const char *TestName = T->getName();
-    llvm::outs() << "[ RUN      ] " << TestName << '\n';
+    constexpr auto GREEN = llvm::raw_ostream::GREEN;
+    constexpr auto RED = llvm::raw_ostream::RED;
+    constexpr auto RESET = llvm::raw_ostream::RESET;
+    llvm::outs() << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
     RunContext Ctx;
     T->SetUp();
     T->Run(Ctx);
@@ -139,11 +143,11 @@ int Test::runTests() {
     auto Result = Ctx.status();
     switch (Result) {
     case RunContext::Result_Fail:
-      llvm::outs() << "[  FAILED  ] " << TestName << '\n';
+      llvm::outs() << RED << "[  FAILED  ] " << RESET << TestName << '\n';
       ++FailCount;
       break;
     case RunContext::Result_Pass:
-      llvm::outs() << "[       OK ] " << TestName << '\n';
+      llvm::outs() << GREEN << "[       OK ] " << RESET << TestName << '\n';
       break;
     }
   }
@@ -226,6 +230,64 @@ bool Test::testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
                      unsigned long Line) {
   return internal::test(Ctx, Cond_NE, llvm::StringRef(LHS),
                         llvm::StringRef(RHS), LHSStr, RHSStr, File, Line);
+}
+
+bool Test::testProcessKilled(RunContext &Ctx, testutils::FunctionCaller *Func,
+                             int Signal, const char *LHSStr, const char *RHSStr,
+                             const char *File, unsigned long Line) {
+  testutils::ProcessStatus Result = testutils::invokeInSubprocess(Func);
+
+  if (Result.exitedNormally()) {
+    Ctx.markFail();
+    llvm::outs() << File << ":" << Line << ": FAILURE\n"
+                 << "Expected " << LHSStr
+                 << " to be killed by a signal\nBut it exited normally!\n";
+    return false;
+  }
+
+  int KilledBy = Result.getFatalSignal();
+  assert(KilledBy != 0 && "Not killed by any signal");
+  if (Signal == -1 || KilledBy == Signal)
+    return true;
+
+  using testutils::signalAsString;
+  Ctx.markFail();
+  llvm::outs() << File << ":" << Line << ": FAILURE\n"
+               << "              Expected: " << LHSStr << '\n'
+               << "To be killed by signal: " << Signal << '\n'
+               << "              Which is: " << signalAsString(Signal) << '\n'
+               << "  But it was killed by: " << KilledBy << '\n'
+               << "              Which is: " << signalAsString(KilledBy)
+               << '\n';
+  return false;
+}
+
+bool Test::testProcessExits(RunContext &Ctx, testutils::FunctionCaller *Func,
+                            int ExitCode, const char *LHSStr,
+                            const char *RHSStr, const char *File,
+                            unsigned long Line) {
+  testutils::ProcessStatus Result = testutils::invokeInSubprocess(Func);
+
+  if (!Result.exitedNormally()) {
+    Ctx.markFail();
+    llvm::outs() << File << ":" << Line << ": FAILURE\n"
+                 << "Expected " << LHSStr << '\n'
+                 << "to exit with exit code " << ExitCode << '\n'
+                 << "But it exited abnormally!\n";
+    return false;
+  }
+
+  int ActualExit = Result.getExitCode();
+  if (ActualExit == ExitCode)
+    return true;
+
+  Ctx.markFail();
+  llvm::outs() << File << ":" << Line << ": FAILURE\n"
+               << "Expected exit code of: " << LHSStr << '\n'
+               << "             Which is: " << ActualExit << '\n'
+               << "       To be equal to: " << RHSStr << '\n'
+               << "             Which is: " << ExitCode << '\n';
+  return false;
 }
 
 } // namespace testing

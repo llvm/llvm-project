@@ -442,12 +442,12 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_macinfo", DIDT_ID_DebugMacro,
                  DObj->getMacinfoSection())) {
-    getDebugMacro()->dump(OS);
+    getDebugMacinfo()->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_macinfo.dwo", DIDT_ID_DebugMacro,
                  DObj->getMacinfoDWOSection())) {
-    getDebugMacroDWO()->dump(OS);
+    getDebugMacinfoDWO()->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_aranges", DIDT_ID_DebugAranges,
@@ -474,6 +474,7 @@ void DWARFContext::dump(
       }
       OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())
          << "]\n";
+      OS.flush();
       if (DumpOpts.Verbose) {
         Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler, &OS);
       } else {
@@ -481,6 +482,7 @@ void DWARFContext::dump(
             Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler);
         LineTable.dump(OS, DumpOpts);
       }
+      OS.flush();
     }
   };
 
@@ -808,25 +810,25 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
   return DebugFrame.get();
 }
 
-const DWARFDebugMacro *DWARFContext::getDebugMacroDWO() {
-  if (MacroDWO)
-    return MacroDWO.get();
+const DWARFDebugMacro *DWARFContext::getDebugMacinfoDWO() {
+  if (MacinfoDWO)
+    return MacinfoDWO.get();
 
   DataExtractor MacinfoDWOData(DObj->getMacinfoDWOSection(), isLittleEndian(),
                                0);
-  MacroDWO.reset(new DWARFDebugMacro());
-  MacroDWO->parse(MacinfoDWOData);
-  return MacroDWO.get();
+  MacinfoDWO.reset(new DWARFDebugMacro());
+  MacinfoDWO->parse(MacinfoDWOData);
+  return MacinfoDWO.get();
 }
 
-const DWARFDebugMacro *DWARFContext::getDebugMacro() {
-  if (Macro)
-    return Macro.get();
+const DWARFDebugMacro *DWARFContext::getDebugMacinfo() {
+  if (Macinfo)
+    return Macinfo.get();
 
   DataExtractor MacinfoData(DObj->getMacinfoSection(), isLittleEndian(), 0);
-  Macro.reset(new DWARFDebugMacro());
-  Macro->parse(MacinfoData);
-  return Macro.get();
+  Macinfo.reset(new DWARFDebugMacro());
+  Macinfo->parse(MacinfoData);
+  return Macinfo.get();
 }
 
 template <typename T>

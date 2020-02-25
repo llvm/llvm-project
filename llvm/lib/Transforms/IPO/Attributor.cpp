@@ -2032,15 +2032,18 @@ struct AANonNullFloating
     const DataLayout &DL = A.getDataLayout();
 
     DominatorTree *DT = nullptr;
+    AssumptionCache *AC = nullptr;
     InformationCache &InfoCache = A.getInfoCache();
-    if (const Function *Fn = getAnchorScope())
+    if (const Function *Fn = getAnchorScope()) {
       DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*Fn);
+      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*Fn);
+    }
 
     auto VisitValueCB = [&](Value &V, AANonNull::StateType &T,
                             bool Stripped) -> bool {
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
-        if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr, getCtxI(), DT))
+        if (!isKnownNonZero(&V, DL, 0, AC, getCtxI(), DT))
           T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.

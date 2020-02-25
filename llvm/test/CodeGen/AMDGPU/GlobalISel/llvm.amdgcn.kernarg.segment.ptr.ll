@@ -26,9 +26,7 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out) #1 {
 
 ; 10 + 9 (36 prepended implicit bytes) + 2(out pointer) = 21 = 0x15
 
-; OS-UNKNOWN: s_add_u32 s[[LO:[0-9]+]], s0, 44
-; OS-UNKNOWN-NEXT: s_addc_u32 s[[HI:[0-9]+]], s1, 0
-; OS-UNKNOWN-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[LO]]:[[HI]]{{\]}}, 0xa
+; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x15
 define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
   %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
   %header.ptr = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*

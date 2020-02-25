@@ -218,6 +218,69 @@ def AndOp : IntArithmeticOp<"and", [Commutative]> {
   let hasFolder = 1;
 }
 
+def ATOMIC_RMW_KIND_ADDF    : I64EnumAttrCase<"addf", 0>;
+def ATOMIC_RMW_KIND_ADDI    : I64EnumAttrCase<"addi", 1>;
+def ATOMIC_RMW_KIND_ASSIGN  : I64EnumAttrCase<"assign", 2>;
+def ATOMIC_RMW_KIND_MAXF    : I64EnumAttrCase<"maxf", 3>;
+def ATOMIC_RMW_KIND_MAXS    : I64EnumAttrCase<"maxs", 4>;
+def ATOMIC_RMW_KIND_MAXU    : I64EnumAttrCase<"maxu", 5>;
+def ATOMIC_RMW_KIND_MINF    : I64EnumAttrCase<"minf", 6>;
+def ATOMIC_RMW_KIND_MINS    : I64EnumAttrCase<"mins", 7>;
+def ATOMIC_RMW_KIND_MINU    : I64EnumAttrCase<"minu", 8>;
+def ATOMIC_RMW_KIND_MULF    : I64EnumAttrCase<"mulf", 9>;
+def ATOMIC_RMW_KIND_MULI    : I64EnumAttrCase<"muli", 10>;
+
+def AtomicRMWKindAttr : I64EnumAttr<
+    "AtomicRMWKind", "",
+    [ATOMIC_RMW_KIND_ADDF, ATOMIC_RMW_KIND_ADDI, ATOMIC_RMW_KIND_ASSIGN,
+     ATOMIC_RMW_KIND_MAXF, ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU,
+     ATOMIC_RMW_KIND_MINF, ATOMIC_RMW_KIND_MINS, ATOMIC_RMW_KIND_MINU,
+     ATOMIC_RMW_KIND_MULF, ATOMIC_RMW_KIND_MULI]> {
+  let cppNamespace = "::mlir";
+}
+
+def AtomicRMWOp : Std_Op<"atomic_rmw", [
+      AllTypesMatch<["value", "result"]>,
+      TypesMatchWith<"value type matches element type of memref",
+                     "memref", "value",
+                     "$_self.cast<MemRefType>().getElementType()">
+    ]> {
+  let summary = "atomic read-modify-write operation";
+  let description = [{
+    The "atomic_rmw" operation provides a way to perform a read-modify-write
+    sequence that is free from data races. The kind enumeration specifies the
+    modification to perform. The value operand represents the new value to be
+    applied during the modification. The memref operand represents the buffer
+    that the read and write will be performed against, as accessed by the
+    specified indices. The arity of the indices is the rank of the memref. The
+    result represents the latest value that was stored.
+
+    Example:
+
+    ```mlir
+      %x = atomic_rmw "addf" %value, %I[%i] : (f32, memref<10xf32>) -> f32
+    ```
+  }];
+
+  let arguments = (ins
+      AtomicRMWKindAttr:$kind,
+      AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$value,
+      MemRefOf<[AnySignlessInteger, AnyFloat]>:$memref,
+      Variadic<Index>:$indices);
+  let results = (outs AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
+
+  let assemblyFormat = [{
+    $kind $value `,` $memref `[` $indices `]` attr-dict `:` `(` type($value) `,`
+    type($memref) `)` `->` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return memref().getType().cast<MemRefType>();
+    }
+  }];
+}
+
 def BranchOp : Std_Op<"br", [Terminator]> {
   let summary = "branch operation";
   let description = [{

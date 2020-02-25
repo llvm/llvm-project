@@ -114,13 +114,11 @@ class LLDBTest(TestFormat):
             return lit.Test.TIMEOUT, output
 
         if exitCode:
-            # Match FAIL but not XFAIL.
-            for line in out.splitlines() + err.splitlines():
-                if line.startswith('FAIL:'):
-                    return lit.Test.FAIL, output
-
             if 'XPASS:' in out or 'XPASS:' in err:
                 return lit.Test.XPASS, output
+
+            # Otherwise this is just a failure.
+            return lit.Test.FAIL, output
 
         has_unsupported_tests = 'UNSUPPORTED:' in out or 'UNSUPPORTED:' in err
         has_passing_tests = 'PASS:' in out or 'PASS:' in err

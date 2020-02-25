@@ -13,7 +13,7 @@
 @synthesize response;
 - (void) foo :(A*) a   // expected-error {{expected a type}}
 {
-  self.response = a; // expected-error{{assigning to 'int *' from incompatible type 'id'}}
+  self.response = a; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
 }
 @end
 

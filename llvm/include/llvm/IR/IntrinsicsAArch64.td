@@ -961,6 +961,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorElementType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_DUPQ_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i64_ty],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_EXPA_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMVectorOfBitcastsToInt<0>],
@@ -1185,7 +1191,7 @@ class AdvSIMD_SVE_WHILE_Intrinsic
                 [llvm_anyint_ty, LLVMMatchType<1>],
                 [IntrNoMem]>;
 
-class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
+class AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1194,7 +1200,7 @@ class AdvSIMD_GatherLoad_64bitOffset_Intrinsic
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
-class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
+class AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1203,7 +1209,7 @@ class AdvSIMD_GatherLoad_32bitOffset_Intrinsic
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
-class AdvSIMD_GatherLoad_VectorBase_Intrinsic
+class AdvSIMD_GatherLoad_VS_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1212,7 +1218,7 @@ class AdvSIMD_GatherLoad_VectorBase_Intrinsic
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
 
-class AdvSIMD_ScatterStore_64bitOffset_Intrinsic
+class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
     : Intrinsic<[],
                [
                  llvm_anyvector_ty,
@@ -1222,7 +1228,7 @@ class AdvSIMD_ScatterStore_64bitOffset_Intrinsic
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
 
-class AdvSIMD_ScatterStore_32bitOffset_Intrinsic
+class AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic
     : Intrinsic<[],
                [
                  llvm_anyvector_ty,
@@ -1232,7 +1238,7 @@ class AdvSIMD_ScatterStore_32bitOffset_Intrinsic
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
 
-class AdvSIMD_ScatterStore_VectorBase_Intrinsic
+class AdvSIMD_ScatterStore_VS_Intrinsic
     : Intrinsic<[],
                [
                  llvm_anyvector_ty,
@@ -1474,6 +1480,7 @@ def int_aarch64_sve_clasta_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_clastb    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_clastb_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_compact   : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_dupq_lane : AdvSIMD_SVE_DUPQ_Intrinsic;
 def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_lastb     : AdvSIMD_SVE_Reduce_Intrinsic;
@@ -1685,59 +1692,71 @@ def int_aarch64_sve_ptest_first : AdvSIMD_SVE_PTEST_Intrinsic;
 def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic;
 
 //
+// Reinterpreting data
+//
+
+def int_aarch64_sve_convert_from_svbool : Intrinsic<[llvm_anyvector_ty],
+                                                    [llvm_nxv16i1_ty],
+                                                    [IntrNoMem]>;
+
+def int_aarch64_sve_convert_to_svbool : Intrinsic<[llvm_nxv16i1_ty],
+                                                  [llvm_anyvector_ty],
+                                                  [IntrNoMem]>;
+
+//
 // Gather loads: scalar base + vector offsets
 //
 
 // 64 bit unscaled offsets
-def int_aarch64_sve_ld1_gather : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
 
 // 64 bit scaled offsets
-def int_aarch64_sve_ld1_gather_index : AdvSIMD_GatherLoad_64bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_index : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
 
 // 32 bit unscaled offsets, sign (sxtw) or zero (zxtw) extended to 64 bits
-def int_aarch64_sve_ld1_gather_sxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
-def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_sxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
 
 // 32 bit scaled offsets, sign (sxtw) or zero (zxtw) extended to 64 bits
-def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
-def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_32bitOffset_Intrinsic;
+def int_aarch64_sve_ld1_gather_sxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
 
 //
 // Gather loads: vector base + scalar offset
 //
 
-def int_aarch64_sve_ld1_gather_scalar_offset : AdvSIMD_GatherLoad_VectorBase_Intrinsic;
+def int_aarch64_sve_ld1_gather_scalar_offset : AdvSIMD_GatherLoad_VS_Intrinsic;
 
 //
 // Scatter stores: scalar base + vector offsets
 //
 
 // 64 bit unscaled offsets
-def int_aarch64_sve_st1_scatter : AdvSIMD_ScatterStore_64bitOffset_Intrinsic;
+def int_aarch64_sve_st1_scatter : AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic;
 
 // 64 bit scaled offsets
 def int_aarch64_sve_st1_scatter_index
-    : AdvSIMD_ScatterStore_64bitOffset_Intrinsic;
+    : AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic;
 
 // 32 bit unscaled offsets, sign (sxtw) or zero (zxtw) extended to 64 bits
 def int_aarch64_sve_st1_scatter_sxtw
-    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+    : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
 
 def int_aarch64_sve_st1_scatter_uxtw
-    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+    : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
 
 // 32 bit scaled offsets, sign (sxtw) or zero (zxtw) extended to 64 bits
 def int_aarch64_sve_st1_scatter_sxtw_index
-    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+    : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
 
 def int_aarch64_sve_st1_scatter_uxtw_index
-    : AdvSIMD_ScatterStore_32bitOffset_Intrinsic;
+    : AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic;
 
 //
 // Scatter stores: vector base + scalar offset
 //
 
-def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VectorBase_Intrinsic;
+def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VS_Intrinsic;
 
 //
 // SVE2 - Uniform DSP operations

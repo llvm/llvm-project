@@ -32,26 +32,26 @@ void test_pragmas_1(A * _Nonnull a, AA * _Nonnull aa) {
   [a method4: a]; // expected-error{{cannot initialize a parameter of type 'NSErrorPtr  _Nullable * _Nullable' (aka 'NSError **') with an lvalue of type 'A * _Nonnull'}}
 
   float *ptr;
-  ptr = f13(); // expected-error{{assigning to 'float *' from incompatible type 'int_ptr _Nonnull' (aka 'int *')}}
-  ptr = f14(); // expected-error{{assigning to 'float *' from incompatible type 'A * _Nonnull'}}
-  ptr = [a method1:a]; // expected-error{{assigning to 'float *' from incompatible type 'A * _Nonnull'}}
-  ptr = a.aProp; // expected-error{{assigning to 'float *' from incompatible type 'A * _Nonnull'}}
-  ptr = global_int_ptr; // expected-error{{assigning to 'float *' from incompatible type 'int * _Nonnull'}}
-  ptr = f15(); // expected-error{{assigning to 'float *' from incompatible type 'int * _Null_unspecified'}}
-  ptr = f16(); // expected-error{{assigning to 'float *' from incompatible type 'A * _Null_unspecified'}}
-  ptr = [a method2]; // expected-error{{assigning to 'float *' from incompatible type 'A * _Null_unspecified'}}
+  ptr = f13(); // expected-error{{incompatible pointer types assigning to 'float *' from 'int_ptr _Nonnull' (aka 'int *')}}
+  ptr = f14(); // expected-error{{incompatible pointer types assigning to 'float *' from 'A * _Nonnull'}}
+  ptr = [a method1:a]; // expected-error{{incompatible pointer types assigning to 'float *' from 'A * _Nonnull'}}
+  ptr = a.aProp; // expected-error{{incompatible pointer types assigning to 'float *' from 'A * _Nonnull'}}
+  ptr = global_int_ptr; // expected-error{{incompatible pointer types assigning to 'float *' from 'int * _Nonnull'}}
+  ptr = f15(); // expected-error{{incompatible pointer types assigning to 'float *' from 'int * _Null_unspecified'}}
+  ptr = f16(); // expected-error{{incompatible pointer types assigning to 'float *' from 'A * _Null_unspecified'}}
+  ptr = [a method2]; // expected-error{{incompatible pointer types assigning to 'float *' from 'A * _Null_unspecified'}}
 
-  ptr = aa->ivar1; // expected-error{{from incompatible type 'id'}}
-  ptr = aa->ivar2; // expected-error{{from incompatible type 'id _Nonnull'}}
+  ptr = aa->ivar1; // expected-error{{incompatible pointer types assigning to 'float *' from 'id'}}
+  ptr = aa->ivar2; // expected-error{{incompatible pointer types assigning to 'float *' from 'id _Nonnull'}}
 }
 
 void test_pragmas_generics(void) {
   float *fp;
 
   NSGeneric<C *> *genC;
-  fp = [genC tee]; // expected-error{{from incompatible type 'C *'}}
-  fp = [genC maybeTee]; // expected-error{{from incompatible type 'C * _Nullable'}}
+  fp = [genC tee]; // expected-error{{incompatible pointer types assigning to 'float *' from 'C *'}}
+  fp = [genC maybeTee]; // expected-error{{incompatible pointer types assigning to 'float *' from 'C * _Nullable'}}
 
   Generic_with_C genC2;
-  fp = genC2; // expected-error{{from incompatible type 'Generic_with_C' (aka 'NSGeneric<C *> *')}}
+  fp = genC2; // expected-error{{incompatible pointer types assigning to 'float *' from 'Generic_with_C' (aka 'NSGeneric<C *> *')}}
 }

@@ -2420,3 +2420,14 @@
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__14__fs10filesystem16filesystem_errorE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSNSt3__14__fs10filesystem16filesystem_errorE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__14__fs10filesystem16filesystem_errorE', 'size': 0}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__120__libcpp_atomic_waitEPVKvx'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_allEPVKv'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_oneEPVKv'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKv'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__134__construct_barrier_algorithm_baseERl'}

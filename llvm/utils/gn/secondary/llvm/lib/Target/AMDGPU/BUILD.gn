@@ -24,11 +24,20 @@ tablegen("AMDGPUGenGlobalISel") {
   td_file = "AMDGPUGISel.td"
 }
 
-tablegen("AMDGPUGenGICombiner") {
+tablegen("AMDGPUGenPreLegalizeGICombiner") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPUPreLegalizerCombinerHelper",
+  ]
+  td_file = "AMDGPUGISel.td"
+}
+
+tablegen("AMDGPUGenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=AMDGPUPostLegalizerCombinerHelper",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -68,7 +77,8 @@ static_library("LLVMAMDGPUCodeGen") {
     ":AMDGPUGenAsmMatcher",
     ":AMDGPUGenCallingConv",
     ":AMDGPUGenDAGISel",
-    ":AMDGPUGenGICombiner",
+    ":AMDGPUGenPostLegalizeGICombiner",
+    ":AMDGPUGenPreLegalizeGICombiner",
     ":AMDGPUGenGlobalISel",
     ":AMDGPUGenMCPseudoLowering",
     ":AMDGPUGenRegisterBank",
@@ -125,6 +135,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMacroFusion.cpp",
     "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
+    "AMDGPUPostLegalizerCombiner.cpp",
     "AMDGPUPreLegalizerCombiner.cpp",
     "AMDGPUPrintfRuntimeBinding.cpp",
     "AMDGPUPromoteAlloca.cpp",

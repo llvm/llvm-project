@@ -112,6 +112,39 @@ TEST(DataExtractorTest, GetCStrAtNullOffset) {
   EXPECT_EQ(4U, offset);
 }
 
+TEST(DataExtractorTest, UncommonAddressSize) {
+  uint8_t buffer[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  DataExtractor E2(buffer, sizeof buffer, lldb::eByteOrderLittle, 2);
+  DataExtractor E5(buffer, sizeof buffer, lldb::eByteOrderLittle, 5);
+  DataExtractor E7(buffer, sizeof buffer, lldb::eByteOrderLittle, 7);
+
+  lldb::offset_t offset;
+
+  // Test 2-byte addresses (for AVR).
+  offset = 0;
+  EXPECT_EQ(0x0201U, E2.GetMaxU64(&offset, 2));
+  EXPECT_EQ(2U, offset);
+  offset = 0;
+  EXPECT_EQ(0x0201U, E2.GetAddress(&offset));
+  EXPECT_EQ(2U, offset);
+
+  // Test 5-byte addresses.
+  offset = 0;
+  EXPECT_EQ(0x030201U, E5.GetMaxU64(&offset, 3));
+  EXPECT_EQ(3U, offset);
+  offset = 3;
+  EXPECT_EQ(0x0807060504U, E5.GetAddress(&offset));
+  EXPECT_EQ(8U, offset);
+
+  // Test 7-byte addresses.
+  offset = 0;
+  EXPECT_EQ(0x0504030201U, E7.GetMaxU64(&offset, 5));
+  EXPECT_EQ(5U, offset);
+  offset = 0;
+  EXPECT_EQ(0x07060504030201U, E7.GetAddress(&offset));
+  EXPECT_EQ(7U, offset);
+}
+
 TEST(DataExtractorTest, GetMaxU64) {
   uint8_t buffer[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,

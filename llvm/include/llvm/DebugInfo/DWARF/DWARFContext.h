@@ -66,7 +66,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugLine> Line;
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
   std::unique_ptr<DWARFDebugFrame> EHFrame;
-  std::unique_ptr<DWARFDebugMacro> Macro;
+  std::unique_ptr<DWARFDebugMacro> Macinfo;
   std::unique_ptr<DWARFDebugNames> Names;
   std::unique_ptr<AppleAcceleratorTable> AppleNames;
   std::unique_ptr<AppleAcceleratorTable> AppleTypes;
@@ -75,7 +75,7 @@ class DWARFContext : public DIContext {
 
   DWARFUnitVector DWOUnits;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
-  std::unique_ptr<DWARFDebugMacro> MacroDWO;
+  std::unique_ptr<DWARFDebugMacro> MacinfoDWO;
 
   /// The maximum DWARF version of all units.
   unsigned MaxVersion = 0;
@@ -273,10 +273,10 @@ public:
   const DWARFDebugFrame *getEHFrame();
 
   /// Get a pointer to the parsed DebugMacro object.
-  const DWARFDebugMacro *getDebugMacro();
+  const DWARFDebugMacro *getDebugMacinfo();
 
-  /// Get a pointer to the parsed DebugMacroDWO object.
-  const DWARFDebugMacro *getDebugMacroDWO();
+  /// Get a pointer to the parsed dwo DebugMacro object.
+  const DWARFDebugMacro *getDebugMacinfoDWO();
 
   /// Get a reference to the parsed accelerator table object.
   const DWARFDebugNames &getDebugNames();

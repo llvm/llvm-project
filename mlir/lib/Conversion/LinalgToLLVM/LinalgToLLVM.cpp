@@ -194,12 +194,10 @@ public:
 };
 
 /// Conversion pattern that transforms a linalg.slice op into:
-///   1. A function entry `alloca` operation to allocate a ViewDescriptor.
-///   2. A load of the ViewDescriptor from the pointer allocated in 1.
-///   3. Updates to the ViewDescriptor to introduce the data ptr, offset, size
+///   1. An "undef" value for the ViewDescriptor.
+///   2. Updates to the ViewDescriptor to introduce the data ptr, offset, size
 ///      and stride corresponding to the region of memory within the bounds of
 ///      the parent view.
-///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The linalg.slice op is replaced by the alloca'ed pointer.
 class SliceOpConversion : public ConvertToLLVMPattern {
 public:

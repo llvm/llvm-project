@@ -43,20 +43,20 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   $r2 = tMOVr $r0, 14, $noreg
-  ; CHECK:   $r0, dead $cpsr = tMOVi8 1, 14, $noreg
-  ; CHECK:   tCMPi8 $r1, 1, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 11, killed $cpsr
+  ; CHECK:   $r2 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tCMPi8 $r1, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.2, 11 /* CC::lt */, killed $cpsr
   ; CHECK: bb.1.for.body:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   $r0, dead $cpsr = tMUL $r2, killed $r0, 14, $noreg
-  ; CHECK:   $r2, dead $cpsr = tADDi8 killed $r2, 1, 14, $noreg
-  ; CHECK:   $r1, $cpsr = tSUBi8 killed $r1, 1, 14, $noreg
-  ; CHECK:   t2Bcc %bb.1, 1, killed $cpsr
+  ; CHECK:   $r0, dead $cpsr = tMUL $r2, killed $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   $r2, dead $cpsr = tADDi8 killed $r2, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   $r1, $cpsr = tSUBi8 killed $r1, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   t2Bcc %bb.1, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.2.for.cond.cleanup:
   ; CHECK:   liveins: $r0
-  ; CHECK:   tBX_RET 14, $noreg, implicit $r0
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
   bb.0.entry:
     successors: %bb.1.for.body, %bb.2.for.cond.cleanup
     liveins: $r0, $r1

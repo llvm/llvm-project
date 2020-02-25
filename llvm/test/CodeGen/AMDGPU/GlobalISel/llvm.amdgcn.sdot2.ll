@@ -276,21 +276,24 @@ define i32 @v_sdot2_fnegf32_c(<2 x i16> %a, <2 x i16> %b, float %c) {
 ; GFX906-LABEL: v_sdot2_fnegf32_c:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX906-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX906-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_sdot2_fnegf32_c:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX908-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX908-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot2_fnegf32_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    v_dot2_i32_i16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.c = fneg float %c
   %cast.neg.c = bitcast float %neg.c to i32

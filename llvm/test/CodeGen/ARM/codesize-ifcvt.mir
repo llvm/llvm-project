@@ -159,30 +159,30 @@ body:             |
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   renamable $r0 = t2MOVi 1, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   tTAILJMPdND @extfunc, 1, killed $cpsr, implicit $sp, implicit $sp
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   renamable $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   tTAILJMPdND @extfunc, 1 /* CC::ne */, killed $cpsr, implicit $sp, implicit $sp
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   renamable $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 1, killed $cpsr
+  ; CHECK:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.1.b2:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   tBL 14, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
-  ; CHECK:   t2B %bb.3, 14, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.b3:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
-  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
+  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK: bb.3.b5:
   ; CHECK:   liveins: $r0
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   tBX_RET 0, killed $cpsr
-  ; CHECK:   tTAILJMPdND @extfunc, 14, $noreg, implicit $sp, implicit $sp
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr
+  ; CHECK:   tTAILJMPdND @extfunc, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp
   bb.0 (%ir-block.0):
     successors: %bb.1(0x50000000), %bb.6(0x30000000)
     liveins: $lr, $r7
@@ -281,39 +281,39 @@ body:             |
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK:   successors: %bb.1(0x50000000), %bb.6(0x30000000)
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   renamable $r0 = t2MOVi 1, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.6, 1, killed $cpsr
+  ; CHECK:   renamable $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.6, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.1.b1:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $r7, $lr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   renamable $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.3, 1, killed $cpsr
+  ; CHECK:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.3, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.2.b2:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   tBL 14, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
-  ; CHECK:   t2B %bb.4, 14, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.b3:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
-  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
+  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK: bb.4.b5:
   ; CHECK:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
   ; CHECK:   liveins: $r0
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   t2Bcc %bb.6, 1, killed $cpsr
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   t2Bcc %bb.6, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.5.b8:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   ; CHECK: bb.6.b7:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tTAILJMPdND @extfunc, 14, $noreg, implicit $sp, implicit $sp
+  ; CHECK:   tTAILJMPdND @extfunc, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp
   bb.0 (%ir-block.0):
     successors: %bb.1(0x50000000), %bb.6(0x30000000)
     liveins: $lr, $r7
@@ -412,39 +412,39 @@ body:             |
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK:   successors: %bb.1(0x50000000), %bb.6(0x30000000)
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   renamable $r0 = t2MOVi 1, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.6, 1, killed $cpsr
+  ; CHECK:   renamable $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.6, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.1.b1:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $r7, $lr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   renamable $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.3, 1, killed $cpsr
+  ; CHECK:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.3, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.2.b2:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   tBL 14, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
-  ; CHECK:   t2B %bb.4, 14, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.b3:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
-  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
+  ; CHECK:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK: bb.4.b5:
   ; CHECK:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
   ; CHECK:   liveins: $r0
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   t2Bcc %bb.6, 1, killed $cpsr
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   t2Bcc %bb.6, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.5.b8:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   ; CHECK: bb.6.b7:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tTAILJMPdND @extfunc, 14, $noreg, implicit $sp, implicit $sp
+  ; CHECK:   tTAILJMPdND @extfunc, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp
   bb.0 (%ir-block.0):
     successors: %bb.1(0x50000000), %bb.6(0x30000000)
     liveins: $lr, $r7

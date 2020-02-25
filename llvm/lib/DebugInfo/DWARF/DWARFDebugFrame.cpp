@@ -313,10 +313,14 @@ void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
 }
 
 void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
-  OS << format("%08x %08x %08x FDE ", (uint32_t)Offset, (uint32_t)Length,
-               (int32_t)LinkedCIEOffset);
-  OS << format("cie=%08x pc=%08x...%08x\n", (int32_t)LinkedCIEOffset,
-               (uint32_t)InitialLocation,
+  OS << format("%08x %08x %08x", (uint32_t)Offset, (uint32_t)Length,
+               (uint32_t)CIEPointer)
+     << " FDE cie=";
+  if (LinkedCIE)
+    OS << format("%08x", (uint32_t)(LinkedCIE->getOffset()));
+  else
+    OS << "<invalid offset>";
+  OS << format(" pc=%08x...%08x\n", (uint32_t)InitialLocation,
                (uint32_t)InitialLocation + (uint32_t)AddressRange);
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);

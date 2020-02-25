@@ -668,8 +668,8 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
     std::tie(State, Target) =
-        prepareForObjectConstruction(Call.getOriginExpr(), State, LCtx,
-                                     RTC->getConstructionContext(), CallOpts);
+        handleConstructionContext(Call.getOriginExpr(), State, LCtx,
+                                  RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
     // Invalidate the region so that it didn't look uninitialized. If this is
@@ -788,6 +788,11 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     }
 
     break;
+  }
+  case CE_CXXInheritedConstructor: {
+    // This doesn't really increase the cost of inlining ever, because
+    // the stack frame of the inherited constructor is trivial.
+    return CIP_Allowed;
   }
   case CE_CXXDestructor: {
     if (!Opts.mayInlineCXXMemberFunction(CIMK_Destructors))

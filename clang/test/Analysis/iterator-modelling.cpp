@@ -100,6 +100,16 @@ void plus_equal(const std::vector<int> &v) {
   clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 2}}
 }
 
+void plus_equal_negative(const std::vector<int> &v) {
+  auto i = v.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
+
+  i += -2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 2}}
+}
+
 void minus_equal(const std::vector<int> &v) {
   auto i = v.end();
 
@@ -108,6 +118,16 @@ void minus_equal(const std::vector<int> &v) {
   i -= 2;
 
   clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 2}}
+}
+
+void minus_equal_negative(const std::vector<int> &v) {
+  auto i = v.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
+
+  i -= -2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 2}}
 }
 
 void copy(const std::vector<int> &v) {
@@ -132,6 +152,17 @@ void plus(const std::vector<int> &v) {
   clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin() + 2}}
 }
 
+void plus_negative(const std::vector<int> &v) {
+  auto i1 = v.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
+
+  auto i2 = i1 + (-2);
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 2}}
+}
+
 void minus(const std::vector<int> &v) {
   auto i1 = v.end();
 
@@ -141,6 +172,17 @@ void minus(const std::vector<int> &v) {
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
   clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 2}}
+}
+
+void minus_negative(const std::vector<int> &v) {
+  auto i1 = v.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
+
+  auto i2 = i1 - (-2);
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin() + 2}}
 }
 
 void copy_and_increment1(const std::vector<int> &v) {

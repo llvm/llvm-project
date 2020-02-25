@@ -2211,13 +2211,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     Constraints += InputConstraint;
   }
 
-  // Append the "input" part of inout constraints last.
-  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
-    ArgTypes.push_back(InOutArgTypes[i]);
-    Args.push_back(InOutArgs[i]);
-  }
-  Constraints += InOutConstraints;
-
   // Labels
   SmallVector<llvm::BasicBlock *, 16> Transfer;
   llvm::BasicBlock *Fallthrough = nullptr;
@@ -2225,7 +2218,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   if (const auto *GS =  dyn_cast<GCCAsmStmt>(&S)) {
     IsGCCAsmGoto = GS->isAsmGoto();
     if (IsGCCAsmGoto) {
-      for (auto *E : GS->labels()) {
+      for (const auto *E : GS->labels()) {
         JumpDest Dest = getJumpDestForLabel(E->getLabel());
         Transfer.push_back(Dest.getBlock());
         llvm::BlockAddress *BA =
@@ -2236,10 +2229,16 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Constraints += ',';
         Constraints += 'X';
       }
-      StringRef Name = "asm.fallthrough";
-      Fallthrough = createBasicBlock(Name);
+      Fallthrough = createBasicBlock("asm.fallthrough");
     }
   }
+
+  // Append the "input" part of inout constraints last.
+  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
+    ArgTypes.push_back(InOutArgTypes[i]);
+    Args.push_back(InOutArgs[i]);
+  }
+  Constraints += InOutConstraints;
 
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
@@ -2293,9 +2292,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   if (IsGCCAsmGoto) {
     llvm::CallBrInst *Result =
         Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
+    EmitBlock(Fallthrough);
     UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, ReadOnly,
                       ReadNone, S, ResultRegTypes, *this, RegResults);
-    EmitBlock(Fallthrough);
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));

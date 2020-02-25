@@ -529,7 +529,7 @@ let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
                        "ld [$addr], %csr", []>;
   }
 }
-  
+
 let DecoderMethod = "DecodeLoadFP" in
   let Defs = [FSR] in {
     let rd = 0 in {
@@ -571,12 +571,12 @@ let DecoderMethod = "DecodeStoreQFP" in
   defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeStoreCP" in 
-  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>; 
-  
-let DecoderMethod = "DecodeStoreCPPair" in 
+let DecoderMethod = "DecodeStoreCP" in
+  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+
+let DecoderMethod = "DecodeStoreCPPair" in
   defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
-  
+
 let DecoderMethod = "DecodeStoreCP", rd = 0 in {
   let Defs = [CPSR] in {
     def STCSRrr : F3_1<3, 0b110101, (outs MEMrr:$addr), (ins),
@@ -897,7 +897,7 @@ def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
                           [(SPbrfcc bb:$imm22, imm:$cond)]>;
 def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                            "cb$cond,a $imm22", []>;
-                           
+
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
 let Uses = [O6],
@@ -1186,7 +1186,7 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 // Floating-point Square Root Instructions, p.145
 // FSQRTS generates an erratum on LEON processors, so by disabling this instruction
 // this will be promoted to use FSQRTD with doubles instead.
-let Predicates = [HasNoFdivSqrtFix] in 
+let Predicates = [HasNoFdivSqrtFix] in
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",
@@ -1515,8 +1515,8 @@ let Predicates = [HasV9], hasSideEffects = 1, rd = 0, rs1 = 0b01111 in
  def MEMBARi : F3_2<2, 0b101000, (outs), (ins MembarTag:$simm13),
                     "membar $simm13", []>;
 
-// The CAS instruction, unlike other instructions, only comes in a 
-// form which requires an ASI be provided. The ASI value hardcoded 
+// The CAS instruction, unlike other instructions, only comes in a
+// form which requires an ASI be provided. The ASI value hardcoded
 // here is ASI_PRIMARY, the default unprivileged ASI for SparcV9.
 let Predicates = [HasV9], Constraints = "$swap = $rd", asi = 0b10000000 in
   def CASrr: F3_1_asi<3, 0b111100,
@@ -1536,18 +1536,18 @@ let Predicates = [HasLeonCASA], Constraints = "$swap = $rd", asi = 0b00001010 in
                  "casa [$rs1] 10, $rs2, $rd",
                  [(set i32:$rd,
                      (atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap))]>;
-                 
+
 // CASA supported on some LEON3 and all LEON4 processors. Same pattern as
 // CASrr, above, but with a different ASI. This version is supported for
-// inline assembly lowering only. 
+// inline assembly lowering only.
 let Predicates = [HasLeonCASA], Constraints = "$swap = $rd" in
   def CASArr: F3_1_asi<3, 0b111100,
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
                                      IntRegs:$swap, i8imm:$asi),
                  "casa [$rs1] $asi, $rs2, $rd", []>;
-                
+
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided
-// as inline assembler-supported instructions. 
+// as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
                    (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
@@ -1558,12 +1558,12 @@ let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
                   (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
-                 
+
   def UMACrr :  F3_1<2, 0b111110,
                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
-                 
+
   def UMACri :  F3_2<2, 0b111110,
                   (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
                    "umac $rs1, $simm13, $rd",

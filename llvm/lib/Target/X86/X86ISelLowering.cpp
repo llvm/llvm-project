@@ -7239,6 +7239,17 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         !getTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG, Depth + 1,
                                 true))
       return false;
+
+    // Shuffle inputs must be the same size as the result.
+    if (llvm::any_of(SrcInputs0, [VT](SDValue Op) {
+          return VT.getSizeInBits() != Op.getValueSizeInBits();
+        }))
+      return false;
+    if (llvm::any_of(SrcInputs1, [VT](SDValue Op) {
+          return VT.getSizeInBits() != Op.getValueSizeInBits();
+        }))
+      return false;
+
     size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
     scaleShuffleMask<int>(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
@@ -7287,6 +7298,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     if (!getTargetShuffleInputs(peekThroughOneUseBitcasts(Sub), SubInputs,
                                 SubMask, DAG, Depth + 1, ResolveKnownElts))
       return false;
+
+    // Shuffle inputs must be the same size as the subvector.
+    if (llvm::any_of(SubInputs, [SubVT](SDValue Op) {
+          return SubVT.getSizeInBits() != Op.getValueSizeInBits();
+        }))
+      return false;
+
     if (SubMask.size() != NumSubElts) {
       assert(((SubMask.size() % NumSubElts) == 0 ||
               (NumSubElts % SubMask.size()) == 0) && "Illegal submask scale");
@@ -24753,7 +24771,7 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl,
                                         TLI.getPointerTy(DAG.getDataLayout()));
   EVT MaskVT = Mask.getValueType().changeVectorElementTypeToInteger();
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other);
   // If source is undef or we know it won't be used, use a zero vector
   // to break register dependency.
   // TODO: use undef instead and let BreakFalseDeps deal with it?
@@ -24769,7 +24787,7 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   SDValue Res =
       DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
                               MemIntr->getMemoryVT(), MemIntr->getMemOperand());
-  return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
+  return DAG.getMergeValues({Res, Res.getValue(1)}, dl);
 }
 
 static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
@@ -24794,7 +24812,7 @@ static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
   if (Mask.getValueType() != MaskVT)
     Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other);
   // If source is undef or we know it won't be used, use a zero vector
   // to break register dependency.
   // TODO: use undef instead and let BreakFalseDeps deal with it?
@@ -24807,7 +24825,7 @@ static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
   SDValue Res =
       DAG.getMemIntrinsicNode(X86ISD::MGATHER, dl, VTs, Ops,
                               MemIntr->getMemoryVT(), MemIntr->getMemOperand());
-  return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
+  return DAG.getMergeValues({Res, Res.getValue(1)}, dl);
 }
 
 static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
@@ -24833,12 +24851,12 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
 
   MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
 
-  SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
+  SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale};
   SDValue Res =
       DAG.getMemIntrinsicNode(X86ISD::MSCATTER, dl, VTs, Ops,
                               MemIntr->getMemoryVT(), MemIntr->getMemOperand());
-  return Res.getValue(1);
+  return Res;
 }
 
 static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
@@ -28505,11 +28523,10 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
       Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Src, DAG.getUNDEF(VT));
-      SDVTList VTs = DAG.getVTList(MVT::v2i1, MVT::Other);
+      SDVTList VTs = DAG.getVTList(MVT::Other);
       SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-      SDValue NewScatter = DAG.getMemIntrinsicNode(
-          X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
-      return SDValue(NewScatter.getNode(), 1);
+      return DAG.getMemIntrinsicNode(X86ISD::MSCATTER, dl, VTs, Ops,
+                                     N->getMemoryVT(), N->getMemOperand());
     }
     return SDValue();
   }
@@ -28540,11 +28557,10 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
     Mask = ExtendToType(Mask, MaskVT, DAG, true);
   }
 
-  SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
+  SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
-  SDValue NewScatter = DAG.getMemIntrinsicNode(
-      X86ISD::MSCATTER, dl, VTs, Ops, N->getMemoryVT(), N->getMemOperand());
-  return SDValue(NewScatter.getNode(), 1);
+  return DAG.getMemIntrinsicNode(X86ISD::MSCATTER, dl, VTs, Ops,
+                                 N->getMemoryVT(), N->getMemOperand());
 }
 
 static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
@@ -28699,11 +28715,11 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     N->getScale() };
   SDValue NewGather = DAG.getMemIntrinsicNode(
-      X86ISD::MGATHER, dl, DAG.getVTList(VT, MaskVT, MVT::Other), Ops,
-      N->getMemoryVT(), N->getMemOperand());
+      X86ISD::MGATHER, dl, DAG.getVTList(VT, MVT::Other), Ops, N->getMemoryVT(),
+      N->getMemOperand());
   SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OrigVT,
                                 NewGather, DAG.getIntPtrConstant(0, dl));
-  return DAG.getMergeValues({Extract, NewGather.getValue(2)}, dl);
+  return DAG.getMergeValues({Extract, NewGather.getValue(1)}, dl);
 }
 
 static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
@@ -29815,11 +29831,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
                         Gather->getBasePtr(), Index, Gather->getScale() };
       SDValue Res = DAG.getMemIntrinsicNode(
-          X86ISD::MGATHER, dl,
-          DAG.getVTList(WideVT, Mask.getValueType(), MVT::Other), Ops,
+          X86ISD::MGATHER, dl, DAG.getVTList(WideVT, MVT::Other), Ops,
           Gather->getMemoryVT(), Gather->getMemOperand());
       Results.push_back(Res);
-      Results.push_back(Res.getValue(2));
+      Results.push_back(Res.getValue(1));
       return;
     }
     return;
@@ -34115,7 +34130,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
     Res = DAG.getBitcast(MaskVT, V1);
     unsigned AndOpcode =
-        FloatDomain ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
+        MaskVT.isFloatingPoint() ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
     Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);
     return DAG.getBitcast(RootVT, Res);
   }
@@ -34528,6 +34543,12 @@ static SDValue combineX86ShufflesRecursively(
   bool IsOpVariableMask = isTargetShuffleVariableMask(Op.getOpcode());
   if (!getTargetShuffleInputs(Op, OpDemandedElts, OpInputs, OpMask, OpUndef,
                               OpZero, DAG, Depth, false))
+    return SDValue();
+
+  // Shuffle inputs must be the same size as the result.
+  if (llvm::any_of(OpInputs, [VT](SDValue Op) {
+        return VT.getSizeInBits() != Op.getValueSizeInBits();
+      }))
     return SDValue();
 
   SmallVector<int, 64> Mask;
@@ -37685,6 +37706,12 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   SmallVector<int, 16> Mask;
   SmallVector<SDValue, 2> Ops;
   if (!getTargetShuffleInputs(SrcBC, Ops, Mask, DAG))
+    return SDValue();
+
+  // Shuffle inputs must be the same size as the result.
+  if (llvm::any_of(Ops, [SrcVT](SDValue Op) {
+        return SrcVT.getSizeInBits() != Op.getValueSizeInBits();
+      }))
     return SDValue();
 
   // Attempt to narrow/widen the shuffle mask to the correct size.

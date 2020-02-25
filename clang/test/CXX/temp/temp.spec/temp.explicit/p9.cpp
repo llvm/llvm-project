@@ -3,7 +3,7 @@
 template<typename T>
 struct X0 {
   void f(T &t) {
-    t = 1; // expected-error{{incompatible type}}
+    t = 1; // expected-error{{incompatible integer to pointer conversion}}
   }
   
   void g(T &t);
@@ -15,7 +15,7 @@ struct X0 {
 
 template<typename T>
 inline void X0<T>::g(T & t) {
-  t = 1; // expected-error{{incompatible type}}
+  t = 1; // expected-error{{incompatible integer to pointer conversion}}
 }
 
 template<typename T>
@@ -37,12 +37,12 @@ int *&test(X0<int*> xi, int *ip) {
 
 template<typename T>
 void f0(T& t) {
-  t = 1; // expected-error{{incompatible type}}
+  t = 1; // expected-error{{incompatible integer to pointer conversion}}
 }
 
 template<typename T>
 inline void f1(T& t) {
-  t = 1; // expected-error 2{{incompatible type}}
+  t = 1; // expected-error 2{{incompatible integer to pointer conversion}}
 }
 
 extern template void f0<>(int *&);

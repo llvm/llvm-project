@@ -293,7 +293,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .legalIf(isPointer(0));
 
-  if (ST.has16BitInsts()) {
+  if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
+      .legalFor({S32, S16, V2S16})
+      .clampScalar(0, S16, S32)
+      .clampMaxNumElements(0, S16, 2)
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32);
+  } else if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16})
       .clampScalar(0, S16, S32)
@@ -331,8 +338,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder({G_UADDO, G_USUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
     .legalFor({{S32, S1}, {S32, S32}})
-    .clampScalar(0, S32, S32)
-    .scalarize(0); // TODO: Implement.
+    .minScalar(0, S32)
+    // TODO: .scalarize(0)
+    .lower();
 
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
@@ -634,15 +642,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor({S32, S16, V2S16})
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
-        .clampScalar(0, S16, S32)
+        .minScalar(0, S16)
         .widenScalarToNextPow2(0)
-        .scalarize(0);
+        .scalarize(0)
+        .lower();
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
         .legalFor({S32, S16})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, S16, S32)
-        .scalarize(0);
+        .minScalar(0, S16)
+        .scalarize(0)
+        .lower();
     }
   } else {
     // TODO: Should have same legality without v_perm_b32
@@ -658,9 +668,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({S32})
-      .clampScalar(0, S32, S32)
+      .minScalar(0, S32)
       .widenScalarToNextPow2(0)
-      .scalarize(0);
+      .scalarize(0)
+      .lower();
   }
 
   getActionDefinitionsBuilder(G_INTTOPTR)

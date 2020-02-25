@@ -238,13 +238,25 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits> {
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
   let results = (outs Index);
+
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, AffineMap affineMap, "
+              "ValueRange mapOperands",
+    [{
+      build(builder, result, builder->getIndexType(), affineMap, mapOperands);
+    }]>
+  ];
+
   let extraClassDeclaration = [{
     static StringRef getMapAttrName() { return "map"; }
+    AffineMap getAffineMap() { return map(); }
+    ValueRange getMapOperands() { return operands(); }
   }];
   let verifier = [{ return ::verifyAffineMinMaxOp(*this); }];
   let printer = [{ return ::printAffineMinMaxOp(p, *this); }];
   let parser = [{ return ::parseAffineMinMaxOp<$cppClass>(parser, result); }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {

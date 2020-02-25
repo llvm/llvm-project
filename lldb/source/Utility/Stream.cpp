@@ -127,8 +127,9 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
 size_t Stream::EOL() { return PutChar('\n'); }
 
 size_t Stream::Indent(llvm::StringRef str) {
-  std::string indentation(m_indent_level, ' ');
-  return PutCString(indentation) + PutCString(str);
+  const size_t ind_length = PutCString(std::string(m_indent_level, ' '));
+  const size_t str_length = PutCString(str);
+  return ind_length + str_length;
 }
 
 // Stream a character "ch" out to this stream.

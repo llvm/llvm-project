@@ -230,6 +230,14 @@ TEST_F(ExtractVariableTest, Test) {
   )cpp";
   EXPECT_AVAILABLE(AvailableCases);
 
+  ExtraArgs = {"-xc"};
+  const char *AvailableButC = R"cpp(
+    void foo() {
+      int x = [[1]];
+    })cpp";
+  EXPECT_UNAVAILABLE(AvailableButC);
+  ExtraArgs = {};
+
   const char *NoCrashCases = R"cpp(
     // error-ok: broken code, but shouldn't crash
     template<typename T, typename ...Args>

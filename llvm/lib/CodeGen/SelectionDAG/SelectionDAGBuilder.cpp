@@ -2860,15 +2860,18 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   assert(isa<InlineAsm>(I.getCalledValue()) &&
          "Only know how to handle inlineasm callbr");
   visitInlineAsm(&I);
+  CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
+  Return->setInlineAsmBrDefaultTarget();
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return);
   for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
     MachineBasicBlock *Target = FuncInfo.MBBMap[I.getIndirectDest(i)];
     addSuccessorWithProb(CallBrMBB, Target);
+    CallBrMBB->addInlineAsmBrIndirectTarget(Target);
   }
   CallBrMBB->normalizeSuccProbs();
 
@@ -8175,6 +8178,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
+  unsigned NumMatchingOps = 0;
   for (auto &T : TargetConstraints) {
     ConstraintOperands.push_back(SDISelAsmOperandInfo(T));
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands.back();
@@ -8188,8 +8192,12 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       // only in asm's.
       const Instruction *I = CS.getInstruction();
       if (isa<CallBrInst>(I) &&
-          (ArgNo - 1) >= (cast<CallBrInst>(I)->getNumArgOperands() -
-                          cast<CallBrInst>(I)->getNumIndirectDests())) {
+          ArgNo - 1 >= (cast<CallBrInst>(I)->getNumArgOperands() -
+                        cast<CallBrInst>(I)->getNumIndirectDests() -
+                        NumMatchingOps) &&
+          (NumMatchingOps == 0 ||
+           ArgNo - 1 < (cast<CallBrInst>(I)->getNumArgOperands() -
+                        NumMatchingOps))) {
         const auto *BA = cast<BlockAddress>(OpInfo.CallOperandVal);
         EVT VT = TLI.getValueType(DAG.getDataLayout(), BA->getType(), true);
         OpInfo.CallOperand = DAG.getTargetBlockAddress(BA, VT);
@@ -8219,6 +8227,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     } else {
       OpInfo.ConstraintVT = MVT::Other;
     }
+
+    if (OpInfo.hasMatchingInput())
+      ++NumMatchingOps;
 
     if (!HasSideEffect)
       HasSideEffect = OpInfo.hasMemory(TLI);

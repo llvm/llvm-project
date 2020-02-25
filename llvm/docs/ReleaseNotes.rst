@@ -57,6 +57,12 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* The callsite attribute `vector-function-abi-variant
+  <https://llvm.org/docs/LangRef.html#call-site-attributes>`_ has been
+  added to describe the mapping between scalar functions and vector
+  functions, to enable vectorization of call sites. The information
+  provided by the attribute is interfaced via the API provided by the
+  ``VFDatabase`` class.
 
 Changes to building LLVM
 ------------------------

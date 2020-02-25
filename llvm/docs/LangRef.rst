@@ -7271,14 +7271,14 @@ Syntax:
 ::
 
       <result> = callbr [cconv] [ret attrs] [addrspace(<num>)] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs]
-                    [operand bundles] to label <normal label> [other labels]
+                    [operand bundles] to label <fallthrough label> [indirect labels]
 
 Overview:
 """""""""
 
 The '``callbr``' instruction causes control to transfer to a specified
 function, with the possibility of control flow transfer to either the
-'``normal``' label or one of the '``other``' labels.
+'``fallthrough``' label or one of the '``indirect``' labels.
 
 This instruction should only be used to implement the "goto" feature of gcc
 style inline assembly. Any other usage is an error in the IR verifier.
@@ -7305,17 +7305,17 @@ This instruction requires several arguments:
    type can be omitted if the function is not varargs.
 #. '``fnptrval``': An LLVM value containing a pointer to a function to
    be called. In most cases, this is a direct function call, but
-   indirect ``callbr``'s are just as possible, calling an arbitrary pointer
+   other ``callbr``'s are just as possible, calling an arbitrary pointer
    to function value.
 #. '``function args``': argument list whose types match the function
    signature argument types and parameter attributes. All arguments must
    be of :ref:`first class <t_firstclass>` type. If the function signature
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
-#. '``normal label``': the label reached when the called function
-   executes a '``ret``' instruction.
-#. '``other labels``': the labels reached when a callee transfers control
-   to a location other than the normal '``normal label``'. The blockaddress
+#. '``fallthrough label``': the label reached when the inline assembly's
+   execution exits the bottom.
+#. '``indirect labels``': the labels reached when a callee transfers control
+   to a location other than the '``fallthrough label``'. The blockaddress
    constant for these should also be in the list of '``function args``'.
 #. The optional :ref:`function attributes <fnattrs>` list.
 #. The optional :ref:`operand bundles <opbundles>` list.
@@ -7328,6 +7328,10 @@ instruction in most regards. The primary difference is that it
 establishes an association with additional labels to define where control
 flow goes after the call.
 
+Outputs of a '``callbr``' instruction are valid only on the '``fallthrough``'
+path.  Use of outputs on the '``indirect``' path(s) results in :ref:`poison
+values <poisonvalues>`.
+
 The only use of this today is to implement the "goto" feature of gcc inline
 assembly where additional labels can be provided as locations for the inline
 assembly to jump to.
@@ -7335,10 +7339,15 @@ assembly to jump to.
 Example:
 """"""""
 
-.. code-block:: text
+.. code-block:: llvm
 
-      callbr void asm "", "r,x"(i32 %x, i8 *blockaddress(@foo, %fail))
-                  to label %normal [label %fail]
+      ; "asm goto" without output constraints.
+      callbr void asm "", "r,X"(i32 %x, i8 *blockaddress(@foo, %indirect))
+                  to label %fallthrough [label %indirect]
+
+      ; "asm goto" with output constraints.
+      <result> = callbr i32 asm "", "=r,r,X"(i32 %x, i8 *blockaddress(@foo, %indirect))
+                  to label %fallthrough [label %indirect]
 
 .. _i_resume:
 

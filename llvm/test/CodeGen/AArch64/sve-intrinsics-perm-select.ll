@@ -297,6 +297,179 @@ define double @clastb_n_f64(<vscale x 2 x i1> %pg, double %a, <vscale x 2 x doub
 }
 
 ;
+; DUPQ
+;
+
+define <vscale x 16 x i8> @dupq_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: dupq_i8:
+; CHECK: mov z0.q, q0
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %a, i64 0)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @dupq_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: dupq_i16:
+; CHECK: mov z0.q, z0.q[1]
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %a, i64 1)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @dupq_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: dupq_i32:
+; CHECK: mov z0.q, z0.q[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %a, i64 2)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @dupq_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: dupq_i64:
+; CHECK: mov z0.q, z0.q[3]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 3)
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 8 x half> @dupq_f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: dupq_f16:
+; CHECK: mov z0.q, q0
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %a, i64 0)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @dupq_f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: dupq_f32:
+; CHECK: mov z0.q, z0.q[1]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %a, i64 1)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @dupq_f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: dupq_f64:
+; CHECK: mov z0.q, z0.q[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %a, i64 2)
+  ret <vscale x 2 x double> %out
+}
+
+;
+; DUPQ_LANE
+;
+
+define <vscale x 16 x i8> @dupq_lane_i8(<vscale x 16 x i8> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_i8:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK-NEXT: tbl   z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %a, i64 %idx)
+  ret <vscale x 16 x i8> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 8 x i16> @dupq_lane_i16(<vscale x 8 x i16> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_i16:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %a, i64 %idx)
+  ret <vscale x 8 x i16> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 4 x i32> @dupq_lane_i32(<vscale x 4 x i32> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_i32:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %a, i64 %idx)
+  ret <vscale x 4 x i32> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 2 x i64> @dupq_lane_i64(<vscale x 2 x i64> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_i64:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 %idx)
+  ret <vscale x 2 x i64> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 8 x half> @dupq_lane_f16(<vscale x 8 x half> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_f16:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %a, i64 %idx)
+  ret <vscale x 8 x half> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 4 x float> @dupq_lane_f32(<vscale x 4 x float> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_f32:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %a, i64 %idx)
+  ret <vscale x 4 x float> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 2 x double> @dupq_lane_f64(<vscale x 2 x double> %a, i64 %idx) {
+; CHECK-LABEL: dupq_lane_f64:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %a, i64 %idx)
+  ret <vscale x 2 x double> %out
+}
+
+; NOTE: Index out of range (0-3)
+define <vscale x 2 x i64> @dupq_i64_range(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: dupq_i64_range:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[Z3:z[0-9]+]].d, [[Z2]].d, #8
+; CHECK: tbl z0.d, { z0.d }, [[Z3]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 4)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; EXT
 ;
 
@@ -1615,6 +1788,14 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.compact.nxv4i32(<vscale x 4 x i1>, 
 declare <vscale x 2 x i64> @llvm.aarch64.sve.compact.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.compact.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.compact.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8>, i64)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16>, i64)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32>, i64)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64>, i64)
+declare <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half>, i64)
+declare <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float>, i64)
+declare <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double>, i64)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.ext.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, i32)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ext.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
