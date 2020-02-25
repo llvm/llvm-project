@@ -88,7 +88,7 @@ TEST_F(ClangExpressionDeclMapTest, TestUnknownIdentifierLookup) {
   clang::DeclarationName name =
       clang_utils::getDeclarationName(*target_ast, "foo");
   const clang::DeclContext *dc = target_ast->GetTranslationUnitDecl();
-  NameSearchContext search(*decl_map, decls, name, dc);
+  NameSearchContext search(*target_ast, decls, name, dc);
 
   decl_map->FindExternalVisibleDecls(search);
 
@@ -111,7 +111,7 @@ TEST_F(ClangExpressionDeclMapTest, TestPersistentDeclLookup) {
   clang::DeclarationName name =
       clang_utils::getDeclarationName(*target_ast, decl_name);
   const clang::DeclContext *dc = target_ast->GetTranslationUnitDecl();
-  NameSearchContext search(*decl_map, decls, name, dc);
+  NameSearchContext search(*target_ast, decls, name, dc);
 
   // Search and check that we found $persistent_class.
   decl_map->FindExternalVisibleDecls(search);
