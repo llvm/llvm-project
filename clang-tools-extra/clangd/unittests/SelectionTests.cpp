@@ -329,6 +329,12 @@ TEST(SelectionTest, CommonAncestor) {
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
+
+      {"struct foo { [[int has^h<:32:>]]; };", "FieldDecl"},
+      {"struct foo { [[op^erator int()]]; };", "CXXConversionDecl"},
+      {"struct foo { [[^~foo()]]; };", "CXXDestructorDecl"},
+      // FIXME: The following to should be class itself instead.
+      {"struct foo { [[fo^o(){}]] };", "CXXConstructorDecl"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
