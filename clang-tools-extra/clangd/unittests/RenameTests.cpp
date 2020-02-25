@@ -202,6 +202,13 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Incomplete class specializations
+      R"cpp(
+        template <typename T>
+        class [[Fo^o]] {};
+        void func([[Foo]]<int>);
+      )cpp",
+
       // Template class instantiations.
       R"cpp(
         template <typename T>
