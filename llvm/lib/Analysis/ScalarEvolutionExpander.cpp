@@ -2277,26 +2277,30 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return BudgetRemaining < 0;
   }
 
-  if (S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr) {
-    const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S);
+  if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
+    Type *OpType = NAry->getType();
 
-    unsigned Opcode;
+    int PairCost;
     switch (S->getSCEVType()) {
     case scAddExpr:
-      Opcode = Instruction::Add;
+      PairCost = TTI.getOperationCost(Instruction::Add, OpType);
       break;
     case scMulExpr:
-      Opcode = Instruction::Mul;
+      // TODO: this is a very pessimistic cost modelling for Mul,
+      // because of Bin Pow algorithm actually used by the expander,
+      // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
+      PairCost = TTI.getOperationCost(Instruction::Mul, OpType);
+      break;
+    case scSMaxExpr:
+    case scUMaxExpr:
+    case scSMinExpr:
+    case scUMinExpr:
+      PairCost = TTI.getOperationCost(Instruction::ICmp, OpType) +
+                 TTI.getOperationCost(Instruction::Select, OpType);
       break;
     default:
       llvm_unreachable("There are no other variants here.");
     }
-
-    Type *OpType = NAry->getType();
-    int PairCost = TTI.getOperationCost(Opcode, OpType);
-    // TODO: this is a very pessimistic cost modelling for Mul,
-    // because of Bin Pow algorithm actually used by the expander,
-    // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
 
     assert(NAry->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
@@ -2311,14 +2315,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return BudgetRemaining < 0;
   }
 
-  // HowManyLessThans uses a Max expression whenever the loop is not guarded by
-  // the exit condition.
-  if (isa<SCEVMinMaxExpr>(S))
-    return true;
-
-  // If we haven't recognized an expensive SCEV pattern, assume it's an
-  // expression produced by program code.
-  return false;
+  llvm_unreachable("No other scev expressions possible.");
 }
 
 Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,
