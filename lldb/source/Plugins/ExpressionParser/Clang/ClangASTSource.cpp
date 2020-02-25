@@ -556,26 +556,8 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   context.m_namespace_map = std::make_shared<ClangASTImporter::NamespaceMap>();
 
-  if (const NamespaceDecl *namespace_context =
-          dyn_cast<NamespaceDecl>(context.m_decl_context)) {
-    ClangASTImporter::NamespaceMapSP namespace_map =
-        m_ast_importer_sp->GetNamespaceMap(namespace_context);
-
-    if (log && log->GetVerbose())
-      LLDB_LOG(log, "  CAS::FEVD Inspecting namespace map {1} ({2} entries)",
-               namespace_map.get(), namespace_map->size());
-
-    if (!namespace_map)
-      return;
-
-    for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
-                                                  e = namespace_map->end();
-         i != e; ++i) {
-      LLDB_LOG(log, "  CAS::FEVD Searching namespace {1} in module {2}",
-               i->second.GetName(), i->first->GetFileSpec().GetFilename());
-
-      FindExternalVisibleDecls(context, i->first, i->second);
-    }
+  if (isa<NamespaceDecl>(context.m_decl_context)) {
+    LookupInNamespace(context);
   } else if (isa<ObjCInterfaceDecl>(context.m_decl_context)) {
     FindObjCPropertyAndIvarDecls(context);
   } else if (!isa<TranslationUnitDecl>(context.m_decl_context)) {
@@ -1415,6 +1397,32 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
                                                interface_decl_from_runtime))
       return;
   } while (false);
+}
+
+void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
+  const NamespaceDecl *namespace_context =
+      dyn_cast<NamespaceDecl>(context.m_decl_context);
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  ClangASTImporter::NamespaceMapSP namespace_map =
+      m_ast_importer_sp->GetNamespaceMap(namespace_context);
+
+  if (log && log->GetVerbose())
+    LLDB_LOG(log, "  CAS::FEVD Inspecting namespace map {1} ({2} entries)",
+             namespace_map.get(), namespace_map->size());
+
+  if (!namespace_map)
+    return;
+
+  for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
+                                                e = namespace_map->end();
+       i != e; ++i) {
+    LLDB_LOG(log, "  CAS::FEVD Searching namespace {1} in module {2}",
+             i->second.GetName(), i->first->GetFileSpec().GetFilename());
+
+    FindExternalVisibleDecls(context, i->first, i->second);
+  }
 }
 
 typedef llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsetMap;
