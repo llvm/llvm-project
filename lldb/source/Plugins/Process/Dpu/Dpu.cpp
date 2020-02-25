@@ -127,8 +127,8 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   if (!runtime)
     return false;
 
-  int nr_threads_enabled = runtime->nr_threads_enabled;
-  if (nr_threads_enabled != -1)
+  uint8_t nr_threads_enabled = runtime->nr_threads_enabled;
+  if (nr_threads_enabled != (uint8_t)-1)
     nr_threads = nr_threads_enabled;
 
   if (!SetPrintfSequenceAddrsFromRuntimeInfo(runtime))
