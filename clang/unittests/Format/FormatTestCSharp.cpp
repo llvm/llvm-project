@@ -240,18 +240,12 @@ TEST_F(FormatTestCSharp, Attributes) {
 
   verifyFormat("[TestMethod]\n"
                "public string Host\n"
-               "{\n"
-               "    set;\n"
-               "    get;\n"
-               "}");
+               "{ set; get; }");
 
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
                "public string Host\n"
-               "{\n"
-               "    set;\n"
-               "    get;\n"
-               "}");
+               "{ set; get; }");
 
   verifyFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
@@ -551,6 +545,33 @@ PrintOrderDetails(orderNum: 31, productName: "Red Mug",
   verifyFormat(R"(//
 PrintOrderDetails(orderNum: 31, productName: "Red Mug",  // comment
                   sellerName: "Gift Shop");)",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat("int Value { get }", Style);
+  verifyFormat("int Value { get; }", Style);
+  verifyFormat("int Value { internal get; }", Style);
+  verifyFormat("int Value { get; } = 0", Style);
+  verifyFormat("int Value { set }", Style);
+  verifyFormat("int Value { set; }", Style);
+  verifyFormat("int Value { internal set; }", Style);
+  verifyFormat("int Value { set; } = 0", Style);
+  verifyFormat("int Value { get; set }", Style);
+  verifyFormat("int Value { set; get }", Style);
+  verifyFormat("int Value { get; private set; }", Style);
+  verifyFormat("int Value { get; set; }", Style);
+  verifyFormat("int Value { get; set; } = 0", Style);
+  verifyFormat("int Value { internal get; internal set; }", Style);
+
+  // Do not wrap expression body definitions.
+  verifyFormat(R"(//
+public string Name {
+  get => _name;
+  set => _name = value;
+})",
                Style);
 }
 
