@@ -763,7 +763,9 @@ struct SimplifyAffineOp : public OpRewritePattern<AffineOpTy> {
     static_assert(std::is_same<AffineOpTy, AffineLoadOp>::value ||
                       std::is_same<AffineOpTy, AffinePrefetchOp>::value ||
                       std::is_same<AffineOpTy, AffineStoreOp>::value ||
-                      std::is_same<AffineOpTy, AffineApplyOp>::value,
+                      std::is_same<AffineOpTy, AffineApplyOp>::value ||
+                      std::is_same<AffineOpTy, AffineMinOp>::value ||
+                      std::is_same<AffineOpTy, AffineMaxOp>::value,
                   "affine load/store/apply op expected");
     auto map = affineOp.getAffineMap();
     AffineMap oldMap = map;
@@ -804,11 +806,13 @@ void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
   rewriter.replaceOpWithNewOp<AffineStoreOp>(
       store, store.getValueToStore(), store.getMemRef(), map, mapOperands);
 }
-template <>
-void SimplifyAffineOp<AffineApplyOp>::replaceAffineOp(
-    PatternRewriter &rewriter, AffineApplyOp apply, AffineMap map,
+
+// Generic version for ops that don't have extra operands.
+template <typename AffineOpTy>
+void SimplifyAffineOp<AffineOpTy>::replaceAffineOp(
+    PatternRewriter &rewriter, AffineOpTy op, AffineMap map,
     ArrayRef<Value> mapOperands) const {
-  rewriter.replaceOpWithNewOp<AffineApplyOp>(apply, map, mapOperands);
+  rewriter.replaceOpWithNewOp<AffineOpTy>(op, map, mapOperands);
 }
 } // end anonymous namespace.
 
@@ -2016,6 +2020,11 @@ OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
   return results[minIndex];
 }
 
+void AffineMinOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<SimplifyAffineOp<AffineMinOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // AffineMaxOp
 //===----------------------------------------------------------------------===//
@@ -2044,6 +2053,11 @@ OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
   if (maxIndex < 0)
     return {};
   return results[maxIndex];
+}
+
+void AffineMaxOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<SimplifyAffineOp<AffineMaxOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

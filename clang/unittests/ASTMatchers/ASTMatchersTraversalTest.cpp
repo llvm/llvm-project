@@ -1123,6 +1123,19 @@ TEST(MatchBinaryOperator, HasOperatorName) {
   EXPECT_TRUE(notMatches("void x() { true && false; }", OperatorOr));
 }
 
+TEST(MatchBinaryOperator, HasAnyOperatorName) {
+  StatementMatcher Matcher =
+      binaryOperator(hasAnyOperatorName("+", "-", "*", "/"));
+
+  EXPECT_TRUE(matches("int x(int I) { return I + 2; }", Matcher));
+  EXPECT_TRUE(matches("int x(int I) { return I - 2; }", Matcher));
+  EXPECT_TRUE(matches("int x(int I) { return I * 2; }", Matcher));
+  EXPECT_TRUE(matches("int x(int I) { return I / 2; }", Matcher));
+  EXPECT_TRUE(notMatches("int x(int I) { return I % 2; }", Matcher));
+  // Ensure '+= isn't mistaken.
+  EXPECT_TRUE(notMatches("void x(int &I) { I += 1; }", Matcher));
+}
+
 TEST(MatchBinaryOperator, HasLHSAndHasRHS) {
   StatementMatcher OperatorTrueFalse =
     binaryOperator(hasLHS(cxxBoolLiteral(equals(true))),
@@ -1253,6 +1266,18 @@ TEST(MatchUnaryOperator, HasOperatorName) {
 
   EXPECT_TRUE(matches("void x() { !true; } ", OperatorNot));
   EXPECT_TRUE(notMatches("void x() { true; } ", OperatorNot));
+}
+
+TEST(MatchUnaryOperator, HasAnyOperatorName) {
+  StatementMatcher Matcher = unaryOperator(hasAnyOperatorName("-", "*", "++"));
+
+  EXPECT_TRUE(matches("int x(int *I) { return *I; }", Matcher));
+  EXPECT_TRUE(matches("int x(int I) { return -I; }", Matcher));
+  EXPECT_TRUE(matches("void x(int &I) { I++; }", Matcher));
+  EXPECT_TRUE(matches("void x(int &I) { ++I; }", Matcher));
+  EXPECT_TRUE(notMatches("void x(int &I) { I--; }", Matcher));
+  EXPECT_TRUE(notMatches("void x(int &I) { --I; }", Matcher));
+  EXPECT_TRUE(notMatches("int *x(int &I) { return &I; }", Matcher));
 }
 
 TEST(MatchUnaryOperator, HasUnaryOperand) {

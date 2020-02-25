@@ -93,14 +93,15 @@ float _Complex mul_float_rc(float a, float _Complex b) {
   // X86: ret
   return a * b;
 }
+
 float _Complex mul_float_cc(float _Complex a, float _Complex b) {
   // X86-LABEL: @mul_float_cc(
   // X86: %[[AC:[^ ]+]] = fmul
   // X86: %[[BD:[^ ]+]] = fmul
   // X86: %[[AD:[^ ]+]] = fmul
   // X86: %[[BC:[^ ]+]] = fmul
-  // X86: %[[RR:[^ ]+]] = fsub float %[[AC]], %[[BD]]
-  // X86: %[[RI:[^ ]+]] = fadd float
+  // X86: %[[RR:[^ ]+]] = fsub
+  // X86: %[[RI:[^ ]+]] = fadd
   // X86-DAG: %[[AD]]
   // X86-DAG: ,
   // X86-DAG: %[[BC]]

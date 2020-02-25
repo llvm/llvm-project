@@ -26,7 +26,7 @@ float *accept_funcptr(int (*)(int, double)) __attribute__((overloadable)); //  \
 void test_funcptr(int (*f1)(int, double),
                   int (*f2)(int, float)) {
   float *fp = accept_funcptr(f1);
-  accept_funcptr(f2); // expected-error{{call to 'accept_funcptr' is ambiguous}}
+  accept_funcptr(f2); // expected-error{{no matching function for call to 'accept_funcptr'}}
 }
 
 struct X { int x; float y; };
@@ -119,8 +119,8 @@ void fn_type_conversions() {
   void disabled(char *c) __attribute__((overloadable, enable_if(1, "The function name lies.")));
   // To be clear, these should all point to the last overload of 'disabled'
   void (*dptr1)(char *c) = &disabled;
-  void (*dptr2)(void *c) = &disabled; // expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function made ineligible by enable_if}} expected-note@-3{{candidate function has type mismatch at 1st parameter (expected 'void *' but has 'char *')}}
-  void (*dptr3)(int *c) = &disabled; // expected-warning{{incompatible pointer types initializing 'void (*)(int *)' with an expression of type '<overloaded function type>'}} expected-note@-6{{candidate function made ineligible by enable_if}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function has type mismatch at 1st parameter (expected 'int *' but has 'char *')}}
+  void (*dptr2)(void *c) = &disabled; // expected-warning{{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function made ineligible by enable_if}} expected-note@-3{{candidate function has type mismatch at 1st parameter (expected 'void *' but has 'char *')}}
+  void (*dptr3)(int *c) = &disabled; // expected-warning{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type '<overloaded function type>'}} expected-note@-6{{candidate function made ineligible by enable_if}} expected-note@-5{{candidate function made ineligible by enable_if}} expected-note@-4{{candidate function has type mismatch at 1st parameter (expected 'int *' but has 'char *')}}
 
   void *specific_disabled = &disabled;
 }

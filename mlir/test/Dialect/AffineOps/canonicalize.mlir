@@ -552,3 +552,19 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK-NEXT:  return
   return
 }
+
+// -----
+
+// CHECK: #[[map:.*]] = affine_map<(d0, d1) -> (d0, d1 - 2)>
+
+func @affine_min(%arg0: index) {
+  affine.for %i = 0 to %arg0 {
+    affine.for %j = 0 to %arg0 {
+      %c2 = constant 2 : index
+      // CHECK: affine.min #[[map]]
+      %0 = affine.min affine_map<(d0,d1,d2)->(d0, d1 - d2)>(%i, %j, %c2)
+      "consumer"(%0) : (index) -> ()
+    }
+  }
+  return
+}

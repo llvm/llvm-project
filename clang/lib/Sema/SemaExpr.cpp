@@ -8144,11 +8144,13 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     }
 
     // General pointer incompatibility takes priority over qualifiers.
+    if (RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType())
+      return Sema::IncompatibleFunctionPointer;
     return Sema::IncompatiblePointer;
   }
   if (!S.getLangOpts().CPlusPlus &&
       S.IsFunctionConversion(ltrans, rtrans, ltrans))
-    return Sema::IncompatiblePointer;
+    return Sema::IncompatibleFunctionPointer;
   return ConvTy;
 }
 
@@ -14780,24 +14782,44 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       return false;
 
   case PointerToInt:
-    DiagKind = diag::ext_typecheck_convert_pointer_int;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_pointer_int;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::ext_typecheck_convert_pointer_int;
+    }
     ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     MayHaveConvFixit = true;
     break;
   case IntToPointer:
-    DiagKind = diag::ext_typecheck_convert_int_pointer;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_int_pointer;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::ext_typecheck_convert_int_pointer;
+    }
+    ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
+    MayHaveConvFixit = true;
+    break;
+  case IncompatibleFunctionPointer:
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::ext_typecheck_convert_incompatible_function_pointer;
+    }
     ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
-    if (Action == AA_Passing_CFAudited)
+    if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
-    else if (SrcType->isFunctionPointerType() &&
-             DstType->isFunctionPointerType())
-      DiagKind = diag::ext_typecheck_convert_incompatible_function_pointer;
-    else
+    } else if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_incompatible_pointer;
+      isInvalid = true;
+    } else {
       DiagKind = diag::ext_typecheck_convert_incompatible_pointer;
-
+    }
     CheckInferredResultType = DstType->isObjCObjectPointerType() &&
       SrcType->isObjCObjectPointerType();
     if (Hint.isNull() && !CheckInferredResultType) {
@@ -14810,14 +14832,26 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointerSign:
-    DiagKind = diag::ext_typecheck_convert_incompatible_pointer_sign;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_incompatible_pointer_sign;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::ext_typecheck_convert_incompatible_pointer_sign;
+    }
     break;
   case FunctionVoidPointer:
-    DiagKind = diag::ext_typecheck_convert_pointer_void_func;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_typecheck_convert_pointer_void_func;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::ext_typecheck_convert_pointer_void_func;
+    }
     break;
   case IncompatiblePointerDiscardsQualifiers: {
     // Perform array-to-pointer decay if necessary.
     if (SrcType->isArrayType()) SrcType = Context.getArrayDecayedType(SrcType);
+
+    isInvalid = true;
 
     Qualifiers lhq = SrcType->getPointeeType().getQualifiers();
     Qualifiers rhq = DstType->getPointeeType().getQualifiers();
@@ -14846,19 +14880,33 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (getLangOpts().CPlusPlus &&
         IsStringLiteralToNonConstPointerConversion(SrcExpr, DstType))
       return false;
-    DiagKind = diag::ext_typecheck_convert_discards_qualifiers;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind =  diag::err_typecheck_convert_discards_qualifiers;
+      isInvalid = true;
+    } else {
+      DiagKind =  diag::ext_typecheck_convert_discards_qualifiers;
+    }
+
     break;
   case IncompatibleNestedPointerQualifiers:
-    DiagKind = diag::ext_nested_pointer_qualifier_mismatch;
+    if (getLangOpts().CPlusPlus) {
+      isInvalid = true;
+      DiagKind = diag::err_nested_pointer_qualifier_mismatch;
+    } else {
+      DiagKind = diag::ext_nested_pointer_qualifier_mismatch;
+    }
     break;
   case IncompatibleNestedPointerAddressSpaceMismatch:
     DiagKind = diag::err_typecheck_incompatible_nested_address_space;
+    isInvalid = true;
     break;
   case IntToBlockPointer:
     DiagKind = diag::err_int_to_block_pointer;
+    isInvalid = true;
     break;
   case IncompatibleBlockPointer:
     DiagKind = diag::err_typecheck_convert_incompatible_block_pointer;
+    isInvalid = true;
     break;
   case IncompatibleObjCQualifiedId: {
     if (SrcType->isObjCQualifiedIdType()) {
@@ -14883,14 +14931,25 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
             SrcType->castAs<ObjCObjectPointerType>()->getInterfaceType())
         IFace = IFaceT->getDecl();
     }
-    DiagKind = diag::warn_incompatible_qualified_id;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_incompatible_qualified_id;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::warn_incompatible_qualified_id;
+    }
     break;
   }
   case IncompatibleVectors:
-    DiagKind = diag::warn_incompatible_vectors;
+    if (getLangOpts().CPlusPlus) {
+      DiagKind = diag::err_incompatible_vectors;
+      isInvalid = true;
+    } else {
+      DiagKind = diag::warn_incompatible_vectors;
+    }
     break;
   case IncompatibleObjCWeakRef:
     DiagKind = diag::err_arc_weak_unavailable_assign;
+    isInvalid = true;
     break;
   case Incompatible:
     if (maybeDiagnoseAssignmentToFunction(*this, DstType, SrcExpr)) {
@@ -14948,9 +15007,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     HandleFunctionTypeMismatch(FDiag, SecondType, FirstType);
 
   Diag(Loc, FDiag);
-  if (DiagKind == diag::warn_incompatible_qualified_id &&
+  if ((DiagKind == diag::warn_incompatible_qualified_id ||
+       DiagKind == diag::err_incompatible_qualified_id) &&
       PDecl && IFace && !IFace->hasDefinition())
-      Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
+    Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
         << IFace << PDecl;
 
   if (SecondType == Context.OverloadTy)

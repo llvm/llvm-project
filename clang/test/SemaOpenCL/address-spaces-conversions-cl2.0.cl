@@ -178,7 +178,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #if !__OPENCL_CPP_VERSION__
 // expected-error@-3{{assigning '__global int *__private' to '__constant int *__private' changes address space of pointer}}
 #else
-// expected-error@-5{{assigning to '__constant int *' from incompatible type '__global int *__private'}}
+// expected-error@-5{{assigning '__global int *__private' to '__constant int *' changes address space of pointer}}
 #endif
 #endif
 
@@ -187,7 +187,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #if !__OPENCL_CPP_VERSION__
 // expected-error-re@-3{{assigning '__local int *__private' to '__{{global|constant}} int *__private' changes address space of pointer}}
 #else
-// expected-error-re@-5{{assigning to '__{{global|constant}} int *' from incompatible type '__local int *__private'}}
+// expected-error-re@-5{{assigning '__local int *__private' to '__{{global|constant}} int *' changes address space of pointer}}
 #endif
 #endif
 
@@ -196,7 +196,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #if !__OPENCL_CPP_VERSION__
 // expected-error-re@-3{{assigning '__constant int *__private' to '__{{global|generic}} int *__private' changes address space of pointer}}
 #else
-// expected-error-re@-5{{assigning to '__{{global|generic}} int *' from incompatible type '__constant int *__private'}}
+// expected-error-re@-5{{assigning '__constant int *__private' to '__{{global|generic}} int *' changes address space of pointer}}
 #endif
 #endif
 
@@ -205,7 +205,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #if !__OPENCL_CPP_VERSION__
 // expected-error-re@-3{{assigning '__private int *__private' to '__{{global|constant}} int *__private' changes address space of pointer}}
 #else
-// expected-error-re@-5{{assigning to '__{{global|constant}} int *' from incompatible type '__private int *__private'}}
+// expected-error-re@-5{{assigning '__private int *__private' to '__{{global|constant}} int *' changes address space of pointer}}
 #endif
 #endif
 
@@ -214,7 +214,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #if !__OPENCL_CPP_VERSION__
 // expected-error-re@-3{{assigning '__generic int *__private' to '__{{global|constant}} int *__private' changes address space of pointer}}
 #else
-// expected-error-re@-5{{assigning to '__{{global|constant}} int *' from incompatible type '__generic int *__private'}}
+// expected-error-re@-5{{assigning '__generic int *__private' to '__{{global|constant}} int *' changes address space of pointer}}
 #endif
 #endif
 
@@ -518,7 +518,7 @@ void test_pointer_chains() {
 #if !__OPENCL_CPP_VERSION__
 // expected-error@-3 {{assigning '__local int *__local *__private' to '__generic int *__generic *__private' changes address space of nested pointer}}
 #else
-// expected-error@-5 {{assigning to '__generic int *__generic *' from incompatible type '__local int *__local *__private'}}
+// expected-error@-5 {{assigning '__local int *__local *__private' to '__generic int *__generic *' changes address space of nested pointer}}
 #endif
 #endif
 

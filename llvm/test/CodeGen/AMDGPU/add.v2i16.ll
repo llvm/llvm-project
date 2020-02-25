@@ -203,8 +203,8 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX9: buffer_store_dwordx4
 
 ; VI-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
-; VI: flat_load_dword v[[A:[0-9]+]]
-; VI: flat_load_dword v[[B:[0-9]+]]
+; VI-DAG: flat_load_dword v[[A:[0-9]+]]
+; VI-DAG: flat_load_dword v[[B:[0-9]+]]
 
 ; VI-DAG: v_add_u16_e32
 ; VI: v_add_u16_sdwa v[[ADD_HI:[0-9]+]], v[[A]], v[[B]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1

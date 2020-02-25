@@ -12,7 +12,7 @@
 
 # CHECK:   DW_CFA_def_cfa: reg29 +0
 
-# CHECK: 0000001c 00000018 00000020 FDE cie=00000020 pc=00400890...004008dc
+# CHECK: 0000001c 00000018 00000020 FDE cie=00000000 pc=00400890...004008dc
 # CHECK:   DW_CFA_advance_loc: 4
 # CHECK:   DW_CFA_def_cfa_offset: +24
 # CHECK:   DW_CFA_advance_loc: 4

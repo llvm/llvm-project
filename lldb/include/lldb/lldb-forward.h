@@ -271,7 +271,6 @@ class WatchpointList;
 class WatchpointOptions;
 struct CompilerContext;
 struct LineEntry;
-struct NameSearchContext;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;
 struct StringSummaryFormat;

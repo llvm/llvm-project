@@ -375,6 +375,10 @@ Matcher<ObjCMessageExpr> hasAnySelectorFunc(
   return hasAnySelectorMatcher(vectorFromRefs(NameRefs));
 }
 
+HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
+  return HasOpNameMatcher(vectorFromRefs(NameRefs));
+}
+
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
     : UseUnqualifiedMatch(llvm::all_of(
           N, [](StringRef Name) { return Name.find("::") == Name.npos; })),
@@ -849,6 +853,10 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
+
+const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
+                                 internal::hasAnyOperatorNameFunc>
+    hasAnyOperatorName = {};
 const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
                                  internal::hasAnySelectorFunc>
     hasAnySelector = {};

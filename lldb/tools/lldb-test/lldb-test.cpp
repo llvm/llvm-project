@@ -846,7 +846,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     if (opts::object::SectionContents) {
       lldb_private::DataExtractor Data;
       S->GetSectionData(Data);
-      ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
+      ArrayRef<uint8_t> Bytes(Data.GetDataStart(), Data.GetDataEnd());
       Printer.formatBinary("Data: ", Bytes, 0);
     }
 

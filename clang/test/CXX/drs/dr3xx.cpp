@@ -372,7 +372,7 @@ namespace dr330 { // dr330: 7
     s = q; // expected-error {{incompatible}}
     s = q2; // expected-error {{incompatible}}
     s = t; // ok, adding const
-    t = s; // expected-error {{incompatible}}
+    t = s; // expected-error {{discards qualifiers}}
     (void) const_cast<P>(q);
     (void) const_cast<P>(q2);
     (void) const_cast<Q>(p);

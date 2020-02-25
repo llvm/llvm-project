@@ -5,6 +5,7 @@ add_llvm_library(MLIRTestTransforms
   TestConstantFold.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
+  TestGpuParallelLoopMapping.cpp
   TestInlining.cpp
   TestLinalgTransforms.cpp
   TestLiveness.cpp

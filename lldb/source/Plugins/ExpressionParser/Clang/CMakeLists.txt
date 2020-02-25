@@ -26,6 +26,7 @@ add_lldb_library(lldbPluginExpressionParserClang
   CxxModuleHandler.cpp
   IRForTarget.cpp
   IRDynamicChecks.cpp
+  NameSearchContext.cpp
 
   DEPENDS
   ${tablegen_deps}

@@ -156,8 +156,9 @@ def _SLASH_Qvec : CLFlag<"Qvec">,
 def _SLASH_Qvec_ : CLFlag<"Qvec-">,
   HelpText<"Disable the loop vectorization passes">, Alias<fno_vectorize>;
 def _SLASH_showIncludes : CLFlag<"showIncludes">,
-  HelpText<"Print info about included files to stderr">,
-  Alias<show_includes>;
+  HelpText<"Print info about included files to stderr">;
+def _SLASH_showIncludes_user : CLFlag<"showIncludes:user">,
+  HelpText<"Like /showIncludes but omit system headers">;
 def _SLASH_showFilenames : CLFlag<"showFilenames">,
   HelpText<"Print the name of each compiled file">;
 def _SLASH_showFilenames_ : CLFlag<"showFilenames-">,

@@ -67,12 +67,12 @@ typedef unsigned long long uint64_t;
 
 #ifndef _WIN32
 #include <pthread.h>
-pthread_mutex_t gcov_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t gcov_mutex = PTHREAD_MUTEX_INITIALIZER;
 static __inline void gcov_lock() { pthread_mutex_lock(&gcov_mutex); }
 static __inline void gcov_unlock() { pthread_mutex_unlock(&gcov_mutex); }
 #else
 #include <windows.h>
-SRWLOCK gcov_mutex = SRWLOCK_INIT;
+static SRWLOCK gcov_mutex = SRWLOCK_INIT;
 static __inline void gcov_lock() { AcquireSRWLockExclusive(&gcov_mutex); }
 static __inline void gcov_unlock() { ReleaseSRWLockExclusive(&gcov_mutex); }
 #endif
