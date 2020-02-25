@@ -328,9 +328,13 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
 
   // If we don't have a Module for some reason, we're not going to find
   // symbol/function information - just stick in some reasonable defaults and
-  // hope we can unwind past this frame.
+  // hope we can unwind past this frame.  If we're above a trap handler,
+  // we may be at a bogus address because we jumped through a bogus function
+  // pointer and trapped, so don't force the arch default unwind plan in that 
+  // case.
   ModuleSP pc_module_sp(m_current_pc.GetModule());
-  if (!m_current_pc.IsValid() || !pc_module_sp) {
+  if ((!m_current_pc.IsValid() || !pc_module_sp) &&
+      above_trap_handler == false) {
     UnwindLogMsg("using architectural default unwind method");
 
     // Test the pc value to see if we know it's in an unmapped/non-executable
@@ -1203,9 +1207,13 @@ RegisterContextLLDB::SavedLocationForRegister(
       // If we're fetching the saved pc and this UnwindPlan defines a
       // ReturnAddress register (e.g. lr on arm), look for the return address
       // register number in the UnwindPlan's row.
+      // If this is a trap handler frame, we have access to the complete
+      // register context when the interrupt/async signal was received, so
+      // we need to fetch the actual saved $pc value.
       if (pc_regnum.IsValid() && pc_regnum == regnum &&
           m_full_unwind_plan_sp->GetReturnAddressRegister() !=
-              LLDB_INVALID_REGNUM) {
+              LLDB_INVALID_REGNUM &&
+          m_frame_type != eTrapHandlerFrame) {
 
         return_address_reg.init(
             m_thread, m_full_unwind_plan_sp->GetRegisterKind(),
