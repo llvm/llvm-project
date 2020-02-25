@@ -3,7 +3,7 @@
 
 int test1(int x) {
     int y;
-    asm goto("# %0 %1 %2" : "=r"(y) : "r"(x) : : err);
+    asm goto("# %0 %1 %l2" : "=r"(y) : "r"(x) : : err);
     return y;
   err:
     return -1;
