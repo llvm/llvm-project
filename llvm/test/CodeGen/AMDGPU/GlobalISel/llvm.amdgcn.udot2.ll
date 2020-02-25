@@ -136,19 +136,19 @@ define i32 @v_udot2_inline_literal_a_b(<2 x i16> %a, i32 %c) {
 ; GFX906-LABEL: v_udot2_inline_literal_a_b:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_pack_ll_b32_b16 s4, 4, 4
-; GFX906-NEXT:    s_pack_ll_b32_b16 s5, 8, 8
-; GFX906-NEXT:    v_mov_b32_e32 v0, s4
-; GFX906-NEXT:    v_dot2_u32_u16 v0, s5, v0, v1
+; GFX906-NEXT:    s_pack_ll_b32_b16 s5, 4, 4
+; GFX906-NEXT:    s_pack_ll_b32_b16 s4, 8, 8
+; GFX906-NEXT:    v_mov_b32_e32 v0, s5
+; GFX906-NEXT:    v_dot2_u32_u16 v0, s4, v0, v1
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_inline_literal_a_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_pack_ll_b32_b16 s4, 4, 4
-; GFX908-NEXT:    s_pack_ll_b32_b16 s5, 8, 8
-; GFX908-NEXT:    v_mov_b32_e32 v0, s4
-; GFX908-NEXT:    v_dot2_u32_u16 v0, s5, v0, v1
+; GFX908-NEXT:    s_pack_ll_b32_b16 s5, 4, 4
+; GFX908-NEXT:    s_pack_ll_b32_b16 s4, 8, 8
+; GFX908-NEXT:    v_mov_b32_e32 v0, s5
+; GFX908-NEXT:    v_dot2_u32_u16 v0, s4, v0, v1
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_inline_literal_a_b:
@@ -168,19 +168,19 @@ define i32 @v_udot2_inline_literal_a_b_c() {
 ; GFX906-LABEL: v_udot2_inline_literal_a_b_c:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_pack_ll_b32_b16 s4, 4, 4
-; GFX906-NEXT:    s_pack_ll_b32_b16 s5, 8, 8
-; GFX906-NEXT:    v_mov_b32_e32 v0, s4
-; GFX906-NEXT:    v_dot2_u32_u16 v0, s5, v0, 8
+; GFX906-NEXT:    s_pack_ll_b32_b16 s5, 4, 4
+; GFX906-NEXT:    s_pack_ll_b32_b16 s4, 8, 8
+; GFX906-NEXT:    v_mov_b32_e32 v0, s5
+; GFX906-NEXT:    v_dot2_u32_u16 v0, s4, v0, 8
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_inline_literal_a_b_c:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_pack_ll_b32_b16 s4, 4, 4
-; GFX908-NEXT:    s_pack_ll_b32_b16 s5, 8, 8
-; GFX908-NEXT:    v_mov_b32_e32 v0, s4
-; GFX908-NEXT:    v_dot2_u32_u16 v0, s5, v0, 8
+; GFX908-NEXT:    s_pack_ll_b32_b16 s5, 4, 4
+; GFX908-NEXT:    s_pack_ll_b32_b16 s4, 8, 8
+; GFX908-NEXT:    v_mov_b32_e32 v0, s5
+; GFX908-NEXT:    v_dot2_u32_u16 v0, s4, v0, 8
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_inline_literal_a_b_c:
