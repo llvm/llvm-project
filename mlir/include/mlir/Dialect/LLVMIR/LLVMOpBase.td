@@ -75,9 +75,7 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
 class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
     LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
 
-// Base class for LLVM intrinsics operation. It is the same as an LLVM_Op
-// but the operation has a ".intr." element in the prefix becoming
-// "llvm.intr.*".
+// Compatibility class for LLVM intrinsic operations.
 class LLVM_IntrOp<string mnemonic, list<OpTrait> traits = []> :
     LLVM_Op<"intr."#mnemonic, traits>;
 
@@ -115,42 +113,96 @@ class LLVM_EnumAttr<string name, string llvmName, string description,
   string llvmClassName = llvmName;
 }
 
-// LLVM vector reduction over a single vector.
-class LLVM_VectorReduction<string mnem> :
-  LLVM_IntrOp<"experimental.vector.reduce." # mnem, []>,
-  Arguments<(ins LLVM_Type)>, Results<(outs LLVM_Type:$res)> {
-    let llvmBuilder = [{
-      llvm::Module *module = builder.GetInsertBlock()->getModule();
-      llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::experimental_vector_reduce_}] #
-        !subst(".","_", mnem) # [{, {
-          opInst.getOperand(0).getType().cast<LLVM::LLVMType>()
-          .getUnderlyingType(),
-        });
-      auto operands = lookupValues(opInst.getOperands());
-      $res = builder.CreateCall(fn, operands);
-    }];
+// For every value in the list, substitutes the value in the place of "$0" in
+// "pattern" and stores the list of strings as "lst".
+class ListIntSubst<string pattern, list<int> values> {
+  list<string> lst = !foreach(x, values,
+                              !subst("$0", !cast<string>(x), pattern));
 }
 
-// LLVM vector reduction over a single vector, with an initial value.
-class LLVM_VectorReductionV2<string mnem> :
-  LLVM_IntrOp<"experimental.vector.reduce.v2." # mnem, []>,
-  Arguments<(ins LLVM_Type, LLVM_Type)>, Results<(outs LLVM_Type:$res)> {
-    let llvmBuilder = [{
-      llvm::Module *module = builder.GetInsertBlock()->getModule();
-      llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::experimental_vector_reduce_v2_}] #
-        !subst(".","_", mnem) # [{, {
-          opInst.getResult(0).getType().cast<LLVM::LLVMType>()
-          .getUnderlyingType(),
-          opInst.getOperand(1).getType().cast<LLVM::LLVMType>()
-          .getUnderlyingType(),
-        });
-      auto operands = lookupValues(opInst.getOperands());
-      $res = builder.CreateCall(fn, operands);
-    }];
+// Patterns with code obtaining the LLVM IR type of the given operand or result
+// of operation. "$0" is expected to be replaced by the position of the operand
+// or result in the operation.
+def LLVM_IntrPatterns {
+  string operand =
+    [{opInst.getOperand($0).getType()
+      .cast<LLVM::LLVMType>().getUnderlyingType()}];
+  string result =
+    [{opInst.getResult($0).getType()
+      .cast<LLVM::LLVMType>().getUnderlyingType()}];
 }
+
+
+// Base class for LLVM intrinsics operation. It is similar to LLVM_Op, but
+// provides the "llvmBuilder" field for constructing the intrinsic. The builder
+// relies on the contents on "overloadedResults" and "overloadedOperands" lists
+// that contain the positions of intrinsic results and operands that are
+// overloadable in the LLVM sense, that is their types must be passed in during
+// the construction of the intrinsic declaration to differentiate between
+// differently-typed versions of the intrinsic. "opName" contains the name of
+// the operation to be associated with the intrinsic and "enumName" contains the
+// name of the intrinsic as appears in `llvm::Intrinsic` enum; one usually wants
+// these to be related.
+class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
+                      list<int> overloadedResults, list<int> overloadedOperands,
+                      list<OpTrait> traits, bit hasResult>
+    : LLVM_OpBase<dialect, opName, traits>,
+      Results<!if(hasResult, (outs LLVM_Type:$res), (outs))> {
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+        module,
+        llvm::Intrinsic::}] # enumName # [{,
+        { }] # StrJoin<!listconcat(
+            ListIntSubst<LLVM_IntrPatterns.result, overloadedResults>.lst,
+            ListIntSubst<LLVM_IntrPatterns.operand,
+                         overloadedOperands>.lst)>.result # [{
+        });
+    auto operands = lookupValues(opInst.getOperands());
+    }] # !if(hasResult, "$res = ", "") # [{builder.CreateCall(fn, operands);
+  }];
+}
+
+// Base class for LLVM intrinsic operations returning no results. Places the
+// intrinsic into the LLVM dialect and prefixes its name with "intr.".
+//
+// Sample use: derive an entry from this class and populate the fields.
+//
+//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [NoSideEffect]>,
+//                    Arguments<(ins LLVM_Type, LLVM_Type)>;
+//
+// The mnemonic will be prefixed with "llvm.intr.", where the "llvm." part comes
+// from the LLVM dialect. The overloadedOperands list contains the indices of
+// the operands the type of which will be passed in the LLVM IR intrinsic
+// builder. In the example above, the Op has two arguments, but only the first
+// one (as indicated by `[0]`) is necessary to resolve the overloaded intrinsic.
+// The Op has no results.
+class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
+                            list<OpTrait> traits = []>
+    : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
+                      [], overloadedOperands, traits, 0>;
+
+// Base class for LLVM intrinsic operations returning one result. Places the
+// intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
+// similar to LLVM_ZeroResultIntrOp but allows one to define Ops returning one
+// result, called "res". Additionally, the overloadedResults list should contain
+// "0" if the result must be used to resolve overloaded intrinsics, or remain
+// empty otherwise.
+class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
+                           list<int> overloadedOperands = [],
+                           list<OpTrait> traits = []>
+    : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
+                      overloadedResults, overloadedOperands, traits, 1>;
+
+// LLVM vector reduction over a single vector.
+class LLVM_VectorReduction<string mnem>
+    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem, [], [0], []>,
+      Arguments<(ins LLVM_Type)>;
+
+// LLVM vector reduction over a single vector, with an initial value.
+class LLVM_VectorReductionV2<string mnem>
+    : LLVM_OneResultIntrOp<"experimental.vector.reduce.v2." # mnem,
+                           [0], [1], []>,
+      Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 #endif  // LLVMIR_OP_BASE
