@@ -9,5 +9,5 @@ extern "C" char *something(long long x) {
 void *operator new(size_t) __attribute__((alias("something")));
 
 // PR16715: don't assert here.
-// CHECK: call i8* @_Znwm(i64 4){{$}}
+// CHECK: call noalias nonnull i8* @_Znwm(i64 4) #3{{$}}
 int *pr16715 = new int;

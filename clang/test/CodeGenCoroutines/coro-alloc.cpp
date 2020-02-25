@@ -61,7 +61,7 @@ extern "C" void f0(global_new_delete_tag) {
 
   // CHECK: [[AllocBB]]:
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[MEM:.+]] = call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
   // CHECK: br label %[[InitBB]]
 
   // CHECK: [[InitBB]]:
@@ -156,7 +156,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_global_placeme
 // within the scope of the promise type's class.
 // CHECK-LABEL: f1b(
 extern "C" void f1b(promise_matching_global_placement_new_tag, dummy *) {
-  // CHECK: call i8* @_Znwm(i64
+  // CHECK: call noalias nonnull i8* @_Znwm(i64
   co_return;
 }
 
@@ -177,7 +177,7 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
 extern "C" void f2(promise_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
@@ -202,7 +202,7 @@ struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
 extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
@@ -230,7 +230,7 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[Gro:.+]] = alloca i32
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
+  // CHECK: %[[MEM:.+]] = call noalias i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 
