@@ -88,10 +88,10 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
     NewCost = VectorOpCost + ExtractCost + !Ext0->hasOneUse() * ExtractCost +
               !Ext1->hasOneUse() * ExtractCost;
   }
-  // TODO: The cost comparison should not differ based on opcode. Either we
-  //       want to be uniformly more or less aggressive in deciding if a vector
-  //       operation should replace the scalar operation.
-  return IsBinOp ? OldCost <= NewCost : OldCost < NewCost;
+  // Aggressively form a vector op if the cost is equal because the transform
+  // may enable further optimization.
+  // Codegen can reverse this transform (scalarize) if it was not profitable.
+  return OldCost < NewCost;
 }
 
 /// Try to reduce extract element costs by converting scalar compares to vector
