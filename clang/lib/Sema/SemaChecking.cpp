@@ -3901,8 +3901,9 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     auto *AA = FDecl->getAttr<AllocAlignAttr>();
     const Expr *Arg = Args[AA->getParamIndex().getASTIndex()];
     if (!Arg->isValueDependent()) {
-      llvm::APSInt I(64);
-      if (Arg->isIntegerConstantExpr(I, Context)) {
+      Expr::EvalResult Align;
+      if (Arg->EvaluateAsInt(Align, Context)) {
+        const llvm::APSInt &I = Align.Val.getInt();
         if (!I.isPowerOf2())
           Diag(Arg->getExprLoc(), diag::warn_alignment_not_power_of_two)
               << Arg->getSourceRange();
