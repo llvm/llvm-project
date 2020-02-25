@@ -30,7 +30,7 @@ h:
 
 // CHECK-ASM-ROUNDTRIP-LABEL: f:
 // CHECK-ASM-ROUNDTRIP: .cfi_startproc
-// CHECK-ASM-ROUNDTRIP-NEXT: .cfi_return_column 0
+// CHECK-ASM-ROUNDTRIP-NEXT: .cfi_return_column %eax
 // CHECK-ASM-ROUNDTRIP: .cfi_endproc
 
 // CHECK-EH_FRAME: 00000000 00000014 00000000 CIE

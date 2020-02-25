@@ -7,6 +7,7 @@
 
 ; CHECK-LABEL: use_all_i32_regs:
 ; CHECK: save %sp
+; CHECK: .cfi_register %o7, %i7
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
 ; CHECK-NOT: %g5
@@ -88,6 +89,7 @@ entry:
 
 ; CHECK-LABEL: use_all_i64_regs:
 ; CHECK: save %sp
+; CHECK: .cfi_register %o7, %i7
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
 ; CHECK-NOT: %g4
