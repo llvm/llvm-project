@@ -1858,6 +1858,47 @@ CompoundStmtMatcher<StmtExpr>::get(const StmtExpr &Node) {
 llvm::Optional<SourceLocation>
 getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
                        const ASTContext &Context);
+
+/// Matches overloaded operators with a specific name.
+///
+/// The type argument ArgT is not used by this matcher but is used by
+/// PolymorphicMatcherWithParam1 and should be std::vector<std::string>>.
+template <typename T, typename ArgT = std::vector<std::string>>
+class HasAnyOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
+  static_assert(std::is_same<T, BinaryOperator>::value ||
+                    std::is_same<T, UnaryOperator>::value,
+                "Matcher only supports `BinaryOperator` and `UnaryOperator`");
+  static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
+                "Matcher ArgT must be std::vector<std::string>");
+
+public:
+  explicit HasAnyOperatorNameMatcher(std::vector<std::string> Names)
+      : SingleNodeMatcherInterface<T>(), Names(std::move(Names)) {}
+
+  bool matchesNode(const T &Node) const override {
+    StringRef OpName = getOpName(Node);
+    return llvm::any_of(
+        Names, [&](const std::string &Name) { return Name == OpName; });
+  }
+
+private:
+  static StringRef getOpName(const UnaryOperator &Node) {
+    return Node.getOpcodeStr(Node.getOpcode());
+  }
+  static StringRef getOpName(const BinaryOperator &Node) {
+    return Node.getOpcodeStr();
+  }
+
+  const std::vector<std::string> Names;
+};
+
+using HasOpNameMatcher =
+    PolymorphicMatcherWithParam1<HasAnyOperatorNameMatcher,
+                                 std::vector<std::string>,
+                                 void(TypeList<BinaryOperator, UnaryOperator>)>;
+
+HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+
 } // namespace internal
 
 } // namespace ast_matchers
