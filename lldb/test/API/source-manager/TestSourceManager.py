@@ -93,7 +93,7 @@ class SourceManagerTestCase(TestBase):
         #    6    }
         self.expect(stream.GetData(), "Source code displayed correctly:\n" + stream.GetData(),
                     exe=False,
-                    patterns=['=> %d.*Hello world' % self.line,
+                    patterns=['=>', '%d.*Hello world' % self.line,
                               needle_regex])
 
         # Boundary condition testings for SBStream().  LLDB should not crash!
