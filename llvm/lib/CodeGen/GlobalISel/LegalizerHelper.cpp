@@ -2574,8 +2574,6 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
 
   assert(NumOps <= 3 && "expected instrution with 1 result and 1-3 sources");
 
-  LLT GCDTys[3];
-  LLT LCMTys[3];
   SmallVector<Register, 8> ExtractedRegs[3];
   SmallVector<Register, 8> Parts;
 
@@ -2584,11 +2582,11 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
   for (int I = 0; I != NumOps; ++I) {
     Register SrcReg =  MI.getOperand(I + 1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
-    GCDTys[I] = extractGCDType(ExtractedRegs[I], SrcTy, NarrowTy, SrcReg);
+    LLT GCDTy = extractGCDType(ExtractedRegs[I], SrcTy, NarrowTy, SrcReg);
 
     // Build a sequence of NarrowTy pieces in ExtractedRegs for this operand.
-    LCMTys[I] = buildLCMMergePieces(SrcTy, NarrowTy, GCDTys[I],
-                                    ExtractedRegs[I], TargetOpcode::G_ANYEXT);
+    buildLCMMergePieces(SrcTy, NarrowTy, GCDTy, ExtractedRegs[I],
+                        TargetOpcode::G_ANYEXT);
   }
 
   SmallVector<Register, 8> ResultRegs;
@@ -2620,7 +2618,9 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
     ResultRegs.append(NumUndefParts, MIRBuilder.buildUndef(NarrowTy).getReg(0));
 
   // Extract the possibly padded result to the original result register.
-  buildWidenedRemergeToDst(DstReg, LCMTys[0], ResultRegs);
+  LLT DstTy = MRI.getType(DstReg);
+  LLT LCMTy = getLCMType(DstTy, NarrowTy);
+  buildWidenedRemergeToDst(DstReg, LCMTy, ResultRegs);
 
   MI.eraseFromParent();
   return Legalized;
