@@ -26,8 +26,7 @@ define void @f(i32 %length.i.88, i32 %length.i, i8* %tmp12, i32 %tmp10, i8* %tmp
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp slt i32 [[TMP22]], [[TMP14]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[NOT_ZERO11]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
-; CHECK-NEXT:    [[TMP22_LCSSA:%.*]] = phi i32 [ [[TMP22]], [[NOT_ZERO11]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp slt i32 [[TMP22_LCSSA]], [[LENGTH_I]]
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp slt i32 [[TMP14]], [[LENGTH_I]]
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[NOT_ZERO11_POSTLOOP]], label [[LEAVE:%.*]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret void
