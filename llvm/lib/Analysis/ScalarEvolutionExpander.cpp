@@ -24,10 +24,17 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
+    "scev-cheap-expansion-budget", cl::Hidden, cl::init(4),
+    cl::desc("When performing SCEV expansion only if it is cheap to do, this "
+             "controls the budget that is considered cheap (default = 4)"));
+
 using namespace PatternMatch;
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -2129,7 +2136,7 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 }
 
 bool SCEVExpander::isHighCostExpansionHelper(
-    const SCEV *S, Loop *L, const Instruction *At,
+    const SCEV *S, Loop *L, const Instruction *At, int &BudgetRemaining,
     const TargetTransformInfo *TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
@@ -2143,13 +2150,13 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return false;
   case scTruncate:
     return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(), L,
-                                     At, TTI, Processed);
+                                     At, BudgetRemaining, TTI, Processed);
   case scZeroExtend:
     return isHighCostExpansionHelper(cast<SCEVZeroExtendExpr>(S)->getOperand(),
-                                     L, At, TTI, Processed);
+                                     L, At, BudgetRemaining, TTI, Processed);
   case scSignExtend:
     return isHighCostExpansionHelper(cast<SCEVSignExtendExpr>(S)->getOperand(),
-                                     L, At, TTI, Processed);
+                                     L, At, BudgetRemaining, TTI, Processed);
   }
 
   if (!Processed.insert(S).second)
@@ -2162,8 +2169,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // lowered into a right shift.
     if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
       if (SC->getAPInt().isPowerOf2()) {
-        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, TTI,
-                                      Processed))
+        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At,
+                                      BudgetRemaining, TTI, Processed))
           return true;
         const DataLayout &DL =
             L->getHeader()->getParent()->getParent()->getDataLayout();
@@ -2200,7 +2207,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   // they are not too expensive rematerialize.
   if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
     for (auto *Op : NAry->operands())
-      if (isHighCostExpansionHelper(Op, L, At, TTI, Processed))
+      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
         return true;
   }
 

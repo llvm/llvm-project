@@ -669,7 +669,7 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
     return false;
 
   // Do not generate something ridiculous even if S is loop invariant.
-  if (Rewriter.isHighCostExpansion(S, L, TTI, I))
+  if (Rewriter.isHighCostExpansion(S, L, SCEVCheapExpansionBudget, TTI, I))
     return false;
 
   auto *IP = GetLoopInvariantInsertPosition(L, I);
