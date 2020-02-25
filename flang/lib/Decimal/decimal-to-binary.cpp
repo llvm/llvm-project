@@ -399,7 +399,7 @@ template ConversionToBinaryResult<53> ConvertToBinary<53>(
     const char *&, enum FortranRounding);
 template ConversionToBinaryResult<64> ConvertToBinary<64>(
     const char *&, enum FortranRounding);
-template ConversionToBinaryResult<112> ConvertToBinary<112>(
+template ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding);
 
 extern "C" {

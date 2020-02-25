@@ -275,7 +275,7 @@ public:
 template<>
 class Type<TypeCategory::Real, 16> : public TypeBase<TypeCategory::Real, 16> {
 public:
-  using Scalar = value::Real<value::Integer<128>, 112>;
+  using Scalar = value::Real<value::Integer<128>, 113>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.

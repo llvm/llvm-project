@@ -370,9 +370,9 @@ template ConversionToDecimalResult ConvertToDecimal<53>(char *, std::size_t,
 template ConversionToDecimalResult ConvertToDecimal<64>(char *, std::size_t,
     enum DecimalConversionFlags, int, enum FortranRounding,
     BinaryFloatingPointNumber<64>);
-template ConversionToDecimalResult ConvertToDecimal<112>(char *, std::size_t,
+template ConversionToDecimalResult ConvertToDecimal<113>(char *, std::size_t,
     enum DecimalConversionFlags, int, enum FortranRounding,
-    BinaryFloatingPointNumber<112>);
+    BinaryFloatingPointNumber<113>);
 
 extern "C" {
 ConversionToDecimalResult ConvertFloatToDecimal(char *buffer, std::size_t size,

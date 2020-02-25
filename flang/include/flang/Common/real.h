@@ -26,7 +26,7 @@ static constexpr int BitsForBinaryPrecision(int binaryPrecision) {
   case 53: return 64;  // IEEE double precision: 1+11+52
   case 64: return 80;  // x87 extended precision: 1+15+64
   case 106: return 128;  // "double-double": 2*(1+11+52)
-  case 112: return 128;  // IEEE quad precision: 1+16+111
+  case 113: return 128;  // IEEE quad precision: 1+15+112
   default: return -1;
   }
 }
@@ -43,7 +43,7 @@ static constexpr int MaxDecimalConversionDigits(int binaryPrecision) {
   case 53: return 751;
   case 64: return 11495;
   case 106: return 2 * 751;
-  case 112: return 22981;
+  case 113: return 11530;
   default: return -1;
   }
 }
@@ -79,7 +79,7 @@ public:
 
   static_assert(binaryPrecision > 0);
   static_assert(exponentBits > 1);
-  static_assert(exponentBits <= 16);
+  static_assert(exponentBits <= 15);
 };
 
 }

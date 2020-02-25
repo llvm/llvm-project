@@ -96,6 +96,6 @@ extern template class Complex<Real<Integer<16>, 8>>;
 extern template class Complex<Real<Integer<32>, 24>>;
 extern template class Complex<Real<Integer<64>, 53>>;
 extern template class Complex<Real<Integer<80>, 64>>;
-extern template class Complex<Real<Integer<128>, 112>>;
+extern template class Complex<Real<Integer<128>, 113>>;
 }
 #endif  // FORTRAN_EVALUATE_COMPLEX_H_

@@ -367,7 +367,7 @@ extern template class Real<Integer<16>, 8>;  // the "other" half format
 extern template class Real<Integer<32>, 24>;  // IEEE single
 extern template class Real<Integer<64>, 53>;  // IEEE double
 extern template class Real<Integer<80>, 64>;  // 80387 extended precision
-extern template class Real<Integer<128>, 112>;  // IEEE quad
+extern template class Real<Integer<128>, 113>;  // IEEE quad
 // N.B. No "double-double" support.
 }
 #endif  // FORTRAN_EVALUATE_REAL_H_

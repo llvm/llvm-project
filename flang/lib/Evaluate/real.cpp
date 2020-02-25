@@ -520,5 +520,5 @@ template class Real<Integer<16>, 8>;
 template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
 template class Real<Integer<80>, 64>;
-template class Real<Integer<128>, 112>;
+template class Real<Integer<128>, 113>;
 }

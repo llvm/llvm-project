@@ -92,9 +92,9 @@ extern template ConversionToDecimalResult ConvertToDecimal<53>(char *, size_t,
 extern template ConversionToDecimalResult ConvertToDecimal<64>(char *, size_t,
     enum DecimalConversionFlags, int, enum FortranRounding,
     BinaryFloatingPointNumber<64>);
-extern template ConversionToDecimalResult ConvertToDecimal<112>(char *, size_t,
+extern template ConversionToDecimalResult ConvertToDecimal<113>(char *, size_t,
     enum DecimalConversionFlags, int, enum FortranRounding,
-    BinaryFloatingPointNumber<112>);
+    BinaryFloatingPointNumber<113>);
 
 template<int PREC> struct ConversionToBinaryResult {
   BinaryFloatingPointNumber<PREC> binary;
@@ -115,7 +115,7 @@ extern template ConversionToBinaryResult<53> ConvertToBinary<53>(
     const char *&, enum FortranRounding = RoundNearest);
 extern template ConversionToBinaryResult<64> ConvertToBinary<64>(
     const char *&, enum FortranRounding = RoundNearest);
-extern template ConversionToBinaryResult<112> ConvertToBinary<112>(
+extern template ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding = RoundNearest);
 }  // namespace Fortran::decimal
 extern "C" {
